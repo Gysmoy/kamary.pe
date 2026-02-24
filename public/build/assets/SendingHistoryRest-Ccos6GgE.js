@@ -1,0 +1,1 @@
+var e=Object.defineProperty;var r=(i,s,t)=>s in i?e(i,s,{enumerable:!0,configurable:!0,writable:!0,value:t}):i[s]=t;var a=(i,s,t)=>(r(i,typeof s!="symbol"?s+"":s,t),t);import{B as n}from"./BasicRest-He2fbRHj.js";class d extends n{constructor(){super(...arguments);a(this,"path","admin/mailing/history");a(this,"hasFiles",!0)}}export{d as S};

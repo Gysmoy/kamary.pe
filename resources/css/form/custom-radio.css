@@ -1,0 +1,32 @@
+.custom-radio input,
+.custom-checkbox input {
+    display: none;
+}
+
+.custom-radio .form-check-label,
+.custom-checkbox .form-check-label {
+    cursor: pointer;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #dee2e6;
+    border-radius: 0.15rem;
+    padding: 0.28rem 0.8rem;
+    font-size: 0.875rem;
+}
+
+.custom-checkbox .form-check-label {
+    border-radius: 999px;
+}
+
+.custom-radio input:checked + .form-check-label,
+.custom-checkbox input:checked + .form-check-label {
+    background-color: #71b6f9;
+    border-color: #71b6f9;
+    color: #fff;
+}
+
+.custom-radio input:disabled + .form-check-label,
+.custom-checkbox input:disabled + .form-check-label {
+    cursor: not-allowed;
+    /* opacity: 0.65; */
+}

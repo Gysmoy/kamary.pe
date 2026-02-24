@@ -1,0 +1,1370 @@
+[
+    {
+        "id": "me2",
+        "serie": "Mega Evolution",
+        "espansion": "Phantasmal Flames",
+        "cards": 130
+    },
+    {
+        "id": "me1",
+        "serie": "Mega Evolution",
+        "espansion": "Mega Evolution",
+        "cards": 188
+    },
+    {
+        "id": "mep",
+        "serie": "Mega Evolution",
+        "espansion": "Mega Evolution Promos",
+        "cards": 31
+    },
+    {
+        "id": "sv105w",
+        "serie": "Scarlet & Violet",
+        "espansion": "White Flare",
+        "cards": 173
+    },
+    {
+        "id": "sv105b",
+        "serie": "Scarlet & Violet",
+        "espansion": "Black Bolt",
+        "cards": 172
+    },
+    {
+        "id": "sv10",
+        "serie": "Scarlet & Violet",
+        "espansion": "Destined Rivals",
+        "cards": 244
+    },
+    {
+        "id": "sv9",
+        "serie": "Scarlet & Violet",
+        "espansion": "Journey Together",
+        "cards": 190
+    },
+    {
+        "id": "sv85",
+        "serie": "Scarlet & Violet",
+        "espansion": "Prismatic Evolutions",
+        "cards": 180
+    },
+    {
+        "id": "sv8",
+        "serie": "Scarlet & Violet",
+        "espansion": "Surging Sparks",
+        "cards": 252
+    },
+    {
+        "id": "sv7",
+        "serie": "Scarlet & Violet",
+        "espansion": "Stellar Crown",
+        "cards": 175
+    },
+    {
+        "id": "sv65",
+        "serie": "Scarlet & Violet",
+        "espansion": "Shrouded Fable",
+        "cards": 99
+    },
+    {
+        "id": "sv6",
+        "serie": "Scarlet & Violet",
+        "espansion": "Twilight Masquerade",
+        "cards": 226
+    },
+    {
+        "id": "sv5",
+        "serie": "Scarlet & Violet",
+        "espansion": "Temporal Forces",
+        "cards": 218
+    },
+    {
+        "id": "sv45",
+        "serie": "Scarlet & Violet",
+        "espansion": "Paldean Fates",
+        "cards": 245
+    },
+    {
+        "id": "sv4",
+        "serie": "Scarlet & Violet",
+        "espansion": "Paradox Rift",
+        "cards": 266
+    },
+    {
+        "id": "sv35",
+        "serie": "Scarlet & Violet",
+        "espansion": "151",
+        "cards": 207
+    },
+    {
+        "id": "sv3",
+        "serie": "Scarlet & Violet",
+        "espansion": "Obsidian Flames",
+        "cards": 230
+    },
+    {
+        "id": "sv2",
+        "serie": "Scarlet & Violet",
+        "espansion": "Paldea Evolved",
+        "cards": 279
+    },
+    {
+        "id": "sv1",
+        "serie": "Scarlet & Violet",
+        "espansion": "Scarlet & Violet",
+        "cards": 258
+    },
+    {
+        "id": "svp",
+        "serie": "Scarlet & Violet",
+        "espansion": "Scarlet & Violet Promos",
+        "cards": 225
+    },
+    {
+        "id": "swsh12pt5gg",
+        "serie": "Sword & Shield",
+        "espansion": "Crown Zenith: Galarian Gallery",
+        "cards": 70
+    },
+    {
+        "id": "swsh12pt5",
+        "serie": "Sword & Shield",
+        "espansion": "Crown Zenith",
+        "cards": 160
+    },
+    {
+        "id": "swsh12tg",
+        "serie": "Sword & Shield",
+        "espansion": "Silver Tempest: Trainer Gallery",
+        "cards": 30
+    },
+    {
+        "id": "swsh12",
+        "serie": "Sword & Shield",
+        "espansion": "Silver Tempest",
+        "cards": 215
+    },
+    {
+        "id": "swsh11tg",
+        "serie": "Sword & Shield",
+        "espansion": "Lost Origin: Trainer Gallery",
+        "cards": 30
+    },
+    {
+        "id": "swsh11",
+        "serie": "Sword & Shield",
+        "espansion": "Lost Origin",
+        "cards": 217
+    },
+    {
+        "id": "pgo",
+        "serie": "Sword & Shield",
+        "espansion": "Pokémon GO",
+        "cards": 88
+    },
+    {
+        "id": "swsh10tg",
+        "serie": "Sword & Shield",
+        "espansion": "Astral Radiance: Trainer Gallery",
+        "cards": 30
+    },
+    {
+        "id": "swsh10",
+        "serie": "Sword & Shield",
+        "espansion": "Astral Radiance",
+        "cards": 216
+    },
+    {
+        "id": "swsh9tg",
+        "serie": "Sword & Shield",
+        "espansion": "Brilliant Stars: Trainer Gallery",
+        "cards": 30
+    },
+    {
+        "id": "swsh9",
+        "serie": "Sword & Shield",
+        "espansion": "Brilliant Stars",
+        "cards": 186
+    },
+    {
+        "id": "swsh8",
+        "serie": "Sword & Shield",
+        "espansion": "Fusion Strike",
+        "cards": 284
+    },
+    {
+        "id": "cel25c",
+        "serie": "Sword & Shield",
+        "espansion": "Celebrations: Classic Collection",
+        "cards": 25
+    },
+    {
+        "id": "cel25",
+        "serie": "Sword & Shield",
+        "espansion": "Celebrations",
+        "cards": 25
+    },
+    {
+        "id": "swsh7",
+        "serie": "Sword & Shield",
+        "espansion": "Evolving Skies",
+        "cards": 237
+    },
+    {
+        "id": "swsh6",
+        "serie": "Sword & Shield",
+        "espansion": "Chilling Reign",
+        "cards": 233
+    },
+    {
+        "id": "swsh5",
+        "serie": "Sword & Shield",
+        "espansion": "Battle Styles",
+        "cards": 183
+    },
+    {
+        "id": "swsh45sv",
+        "serie": "Sword & Shield",
+        "espansion": "Shining Fates: Shiny Vault",
+        "cards": 122
+    },
+    {
+        "id": "swsh45",
+        "serie": "Sword & Shield",
+        "espansion": "Shining Fates",
+        "cards": 73
+    },
+    {
+        "id": "swsh4",
+        "serie": "Sword & Shield",
+        "espansion": "Vivid Voltage",
+        "cards": 203
+    },
+    {
+        "id": "swsh35",
+        "serie": "Sword & Shield",
+        "espansion": "Champion's Path",
+        "cards": 80
+    },
+    {
+        "id": "swsh3",
+        "serie": "Sword & Shield",
+        "espansion": "Darkness Ablaze",
+        "cards": 201
+    },
+    {
+        "id": "swsh2",
+        "serie": "Sword & Shield",
+        "espansion": "Rebel Clash",
+        "cards": 209
+    },
+    {
+        "id": "swsh1",
+        "serie": "Sword & Shield",
+        "espansion": "Sword & Shield",
+        "cards": 216
+    },
+    {
+        "id": "swshp",
+        "serie": "Sword & Shield",
+        "espansion": "Sword & Shield Promos",
+        "cards": 307
+    },
+    {
+        "id": "sm12",
+        "serie": "Sun & Moon",
+        "espansion": "Cosmic Eclipse",
+        "cards": 272
+    },
+    {
+        "id": "sma",
+        "serie": "Sun & Moon",
+        "espansion": "Hidden Fates: Shiny Vault",
+        "cards": 94
+    },
+    {
+        "id": "sm115",
+        "serie": "Sun & Moon",
+        "espansion": "Hidden Fates",
+        "cards": 69
+    },
+    {
+        "id": "sm11",
+        "serie": "Sun & Moon",
+        "espansion": "Unified Minds",
+        "cards": 261
+    },
+    {
+        "id": "sm10",
+        "serie": "Sun & Moon",
+        "espansion": "Unbroken Bonds",
+        "cards": 238
+    },
+    {
+        "id": "det1",
+        "serie": "Sun & Moon",
+        "espansion": "Detective Pikachu",
+        "cards": 18
+    },
+    {
+        "id": "sm9",
+        "serie": "Sun & Moon",
+        "espansion": "Team Up",
+        "cards": 198
+    },
+    {
+        "id": "sm8",
+        "serie": "Sun & Moon",
+        "espansion": "Lost Thunder",
+        "cards": 240
+    },
+    {
+        "id": "sm75",
+        "serie": "Sun & Moon",
+        "espansion": "Dragon Majesty",
+        "cards": 80
+    },
+    {
+        "id": "sm7",
+        "serie": "Sun & Moon",
+        "espansion": "Celestial Storm",
+        "cards": 187
+    },
+    {
+        "id": "sm6",
+        "serie": "Sun & Moon",
+        "espansion": "Forbidden Light",
+        "cards": 150
+    },
+    {
+        "id": "sm5",
+        "serie": "Sun & Moon",
+        "espansion": "Ultra Prism",
+        "cards": 178
+    },
+    {
+        "id": "sm4",
+        "serie": "Sun & Moon",
+        "espansion": "Crimson Invasion",
+        "cards": 126
+    },
+    {
+        "id": "sm35",
+        "serie": "Sun & Moon",
+        "espansion": "Shining Legends",
+        "cards": 81
+    },
+    {
+        "id": "sm3",
+        "serie": "Sun & Moon",
+        "espansion": "Burning Shadows",
+        "cards": 177
+    },
+    {
+        "id": "sm2",
+        "serie": "Sun & Moon",
+        "espansion": "Guardians Rising",
+        "cards": 180
+    },
+    {
+        "id": "sm1",
+        "serie": "Sun & Moon",
+        "espansion": "Sun & Moon",
+        "cards": 164
+    },
+    {
+        "id": "smp",
+        "serie": "Sun & Moon",
+        "espansion": "Sun & Moon Promos",
+        "cards": 251
+    },
+    {
+        "id": "xy12",
+        "serie": "XY",
+        "espansion": "Evolutions",
+        "cards": 113
+    },
+    {
+        "id": "xy11",
+        "serie": "XY",
+        "espansion": "Steam Siege",
+        "cards": 116
+    },
+    {
+        "id": "xy10",
+        "serie": "XY",
+        "espansion": "Fates Collide",
+        "cards": 129
+    },
+    {
+        "id": "g1",
+        "serie": "XY",
+        "espansion": "Generations",
+        "cards": 117
+    },
+    {
+        "id": "xy9",
+        "serie": "XY",
+        "espansion": "BREAKpoint",
+        "cards": 126
+    },
+    {
+        "id": "xy8",
+        "serie": "XY",
+        "espansion": "BREAKthrough",
+        "cards": 165
+    },
+    {
+        "id": "xy7",
+        "serie": "XY",
+        "espansion": "Ancient Origins",
+        "cards": 101
+    },
+    {
+        "id": "xy6",
+        "serie": "XY",
+        "espansion": "Roaring Skies",
+        "cards": 112
+    },
+    {
+        "id": "dc1",
+        "serie": "XY",
+        "espansion": "Double Crisis",
+        "cards": 34
+    },
+    {
+        "id": "xy5",
+        "serie": "XY",
+        "espansion": "Primal Clash",
+        "cards": 164
+    },
+    {
+        "id": "xy4",
+        "serie": "XY",
+        "espansion": "Phantom Forces",
+        "cards": 124
+    },
+    {
+        "id": "xy3",
+        "serie": "XY",
+        "espansion": "Furious Fists",
+        "cards": 114
+    },
+    {
+        "id": "xy2",
+        "serie": "XY",
+        "espansion": "Flashfire",
+        "cards": 110
+    },
+    {
+        "id": "xy1",
+        "serie": "XY",
+        "espansion": "XY",
+        "cards": 146
+    },
+    {
+        "id": "xy0",
+        "serie": "XY",
+        "espansion": "Kalos Starter Set",
+        "cards": 39
+    },
+    {
+        "id": "xyp",
+        "serie": "XY",
+        "espansion": "XY Promos",
+        "cards": 216
+    },
+    {
+        "id": "bw11",
+        "serie": "Black & White",
+        "espansion": "Legendary Treasures",
+        "cards": 140
+    },
+    {
+        "id": "bw10",
+        "serie": "Black & White",
+        "espansion": "Plasma Blast",
+        "cards": 105
+    },
+    {
+        "id": "bw9",
+        "serie": "Black & White",
+        "espansion": "Plasma Freeze",
+        "cards": 122
+    },
+    {
+        "id": "bw8",
+        "serie": "Black & White",
+        "espansion": "Plasma Storm",
+        "cards": 138
+    },
+    {
+        "id": "bw7",
+        "serie": "Black & White",
+        "espansion": "Boundaries Crossed",
+        "cards": 153
+    },
+    {
+        "id": "dv1",
+        "serie": "Black & White",
+        "espansion": "Dragon Vault",
+        "cards": 21
+    },
+    {
+        "id": "bw6",
+        "serie": "Black & White",
+        "espansion": "Dragons Exalted",
+        "cards": 128
+    },
+    {
+        "id": "bw5",
+        "serie": "Black & White",
+        "espansion": "Dark Explorers",
+        "cards": 111
+    },
+    {
+        "id": "bw4",
+        "serie": "Black & White",
+        "espansion": "Next Destinies",
+        "cards": 103
+    },
+    {
+        "id": "bw3",
+        "serie": "Black & White",
+        "espansion": "Noble Victories",
+        "cards": 102
+    },
+    {
+        "id": "bw2",
+        "serie": "Black & White",
+        "espansion": "Emerging Powers",
+        "cards": 98
+    },
+    {
+        "id": "bw1",
+        "serie": "Black & White",
+        "espansion": "Black & White",
+        "cards": 115
+    },
+    {
+        "id": "bwp",
+        "serie": "Black & White",
+        "espansion": "Black & White Promos",
+        "cards": 101
+    },
+    {
+        "id": "col1",
+        "serie": "HeartGold & SoulSilver",
+        "espansion": "Call of Legends",
+        "cards": 106
+    },
+    {
+        "id": "hgss4",
+        "serie": "HeartGold & SoulSilver",
+        "espansion": "Triumphant",
+        "cards": 103
+    },
+    {
+        "id": "hgss3",
+        "serie": "HeartGold & SoulSilver",
+        "espansion": "Undaunted",
+        "cards": 91
+    },
+    {
+        "id": "hgss2",
+        "serie": "HeartGold & SoulSilver",
+        "espansion": "Unleashed",
+        "cards": 96
+    },
+    {
+        "id": "hgss1",
+        "serie": "HeartGold & SoulSilver",
+        "espansion": "HeartGold & SoulSilver",
+        "cards": 124
+    },
+    {
+        "id": "hsp",
+        "serie": "HeartGold & SoulSilver",
+        "espansion": "HeartGold & SoulSilver Promos",
+        "cards": 25
+    },
+    {
+        "id": "pl4",
+        "serie": "Platinum",
+        "espansion": "Arceus",
+        "cards": 111
+    },
+    {
+        "id": "pl3",
+        "serie": "Platinum",
+        "espansion": "Supreme Victors",
+        "cards": 153
+    },
+    {
+        "id": "pl2",
+        "serie": "Platinum",
+        "espansion": "Rising Rivals",
+        "cards": 120
+    },
+    {
+        "id": "pl1",
+        "serie": "Platinum",
+        "espansion": "Platinum",
+        "cards": 133
+    },
+    {
+        "id": "dp7",
+        "serie": "Diamond & Pearl",
+        "espansion": "Stormfront",
+        "cards": 106
+    },
+    {
+        "id": "dp6",
+        "serie": "Diamond & Pearl",
+        "espansion": "Legends Awakened",
+        "cards": 146
+    },
+    {
+        "id": "dp5",
+        "serie": "Diamond & Pearl",
+        "espansion": "Majestic Dawn",
+        "cards": 100
+    },
+    {
+        "id": "dp4",
+        "serie": "Diamond & Pearl",
+        "espansion": "Great Encounters",
+        "cards": 106
+    },
+    {
+        "id": "dp3",
+        "serie": "Diamond & Pearl",
+        "espansion": "Secret Wonders",
+        "cards": 132
+    },
+    {
+        "id": "dp2",
+        "serie": "Diamond & Pearl",
+        "espansion": "Mysterious Treasures",
+        "cards": 124
+    },
+    {
+        "id": "dp1",
+        "serie": "Diamond & Pearl",
+        "espansion": "Diamond & Pearl",
+        "cards": 130
+    },
+    {
+        "id": "dpp",
+        "serie": "Diamond & Pearl",
+        "espansion": "Diamond & Pearl Promos",
+        "cards": 56
+    },
+    {
+        "id": "ex16",
+        "serie": "EX",
+        "espansion": "EX Power Keepers",
+        "cards": 108
+    },
+    {
+        "id": "ex15",
+        "serie": "EX",
+        "espansion": "EX Dragon Frontiers",
+        "cards": 101
+    },
+    {
+        "id": "ex14",
+        "serie": "EX",
+        "espansion": "EX Crystal Guardians",
+        "cards": 100
+    },
+    {
+        "id": "ex13",
+        "serie": "EX",
+        "espansion": "EX Holon Phantoms",
+        "cards": 111
+    },
+    {
+        "id": "ex12",
+        "serie": "EX",
+        "espansion": "EX Legend Maker",
+        "cards": 93
+    },
+    {
+        "id": "ex11",
+        "serie": "EX",
+        "espansion": "EX Delta Species",
+        "cards": 114
+    },
+    {
+        "id": "ex10",
+        "serie": "EX",
+        "espansion": "EX Unseen Forces",
+        "cards": 145
+    },
+    {
+        "id": "ex9",
+        "serie": "EX",
+        "espansion": "EX Emerald",
+        "cards": 107
+    },
+    {
+        "id": "ex8",
+        "serie": "EX",
+        "espansion": "EX Deoxys",
+        "cards": 108
+    },
+    {
+        "id": "ex7",
+        "serie": "EX",
+        "espansion": "EX Team Rocket Returns",
+        "cards": 111
+    },
+    {
+        "id": "ex6",
+        "serie": "EX",
+        "espansion": "EX FireRed & LeafGreen",
+        "cards": 116
+    },
+    {
+        "id": "ex5",
+        "serie": "EX",
+        "espansion": "EX Hidden Legends",
+        "cards": 102
+    },
+    {
+        "id": "ex4",
+        "serie": "EX",
+        "espansion": "EX Team Magma vs Team Aqua",
+        "cards": 97
+    },
+    {
+        "id": "ex3",
+        "serie": "EX",
+        "espansion": "EX Dragon",
+        "cards": 100
+    },
+    {
+        "id": "ex2",
+        "serie": "EX",
+        "espansion": "EX Sandstorm",
+        "cards": 100
+    },
+    {
+        "id": "ex1",
+        "serie": "EX",
+        "espansion": "EX Ruby & Sapphire",
+        "cards": 109
+    },
+    {
+        "id": "np",
+        "serie": "EX",
+        "espansion": "Nintendo Promos",
+        "cards": 40
+    },
+    {
+        "id": "ecard3",
+        "serie": "e-Card",
+        "espansion": "Skyridge",
+        "cards": 182
+    },
+    {
+        "id": "ecard2",
+        "serie": "e-Card",
+        "espansion": "Aquapolis",
+        "cards": 186
+    },
+    {
+        "id": "ecard1",
+        "serie": "e-Card",
+        "espansion": "Expedition Base Set",
+        "cards": 165
+    },
+    {
+        "id": "bt2",
+        "serie": "e-Card",
+        "espansion": "Box Toppers (e-Card series)",
+        "cards": 12
+    },
+    {
+        "id": "base6",
+        "serie": "Legendary Collection",
+        "espansion": "Legendary Collection",
+        "cards": 110
+    },
+    {
+        "id": "bt1",
+        "serie": "Legendary Collection",
+        "espansion": "Box Toppers (Legendary Collection)",
+        "cards": 4
+    },
+    {
+        "id": "neo4",
+        "serie": "Neo",
+        "espansion": "Neo Destiny",
+        "cards": 113
+    },
+    {
+        "id": "neo3",
+        "serie": "Neo",
+        "espansion": "Neo Revelation",
+        "cards": 66
+    },
+    {
+        "id": "neo2",
+        "serie": "Neo",
+        "espansion": "Neo Discovery",
+        "cards": 75
+    },
+    {
+        "id": "neo1",
+        "serie": "Neo",
+        "espansion": "Neo Genesis",
+        "cards": 111
+    },
+    {
+        "id": "gym2",
+        "serie": "Original",
+        "espansion": "Gym Challenge",
+        "cards": 132
+    },
+    {
+        "id": "gym1",
+        "serie": "Original",
+        "espansion": "Gym Heroes",
+        "cards": 132
+    },
+    {
+        "id": "base5",
+        "serie": "Original",
+        "espansion": "Team Rocket",
+        "cards": 83
+    },
+    {
+        "id": "base4",
+        "serie": "Original",
+        "espansion": "Base Set 2",
+        "cards": 130
+    },
+    {
+        "id": "base3",
+        "serie": "Original",
+        "espansion": "Fossil",
+        "cards": 62
+    },
+    {
+        "id": "base2",
+        "serie": "Original",
+        "espansion": "Jungle",
+        "cards": 64
+    },
+    {
+        "id": "base1",
+        "serie": "Original",
+        "espansion": "Base Set",
+        "cards": 102
+    },
+    {
+        "id": "basep",
+        "serie": "Original",
+        "espansion": "Wizards Promos",
+        "cards": 53
+    },
+    {
+        "id": "mcd24",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2024",
+        "cards": 15
+    },
+    {
+        "id": "mcd23",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2023",
+        "cards": 15
+    },
+    {
+        "id": "mcd22",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2022",
+        "cards": 15
+    },
+    {
+        "id": "mcd21",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2021",
+        "cards": 25
+    },
+    {
+        "id": "mcd19",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2019",
+        "cards": 12
+    },
+    {
+        "id": "mcd19fr",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2019 (🇫🇷)",
+        "cards": 40
+    },
+    {
+        "id": "mcd18",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2018",
+        "cards": 12
+    },
+    {
+        "id": "mcd18fr",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2018 (🇫🇷)",
+        "cards": 40
+    },
+    {
+        "id": "mcd17",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2017",
+        "cards": 12
+    },
+    {
+        "id": "mcd16",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2016",
+        "cards": 12
+    },
+    {
+        "id": "mcd15",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2015",
+        "cards": 12
+    },
+    {
+        "id": "mcd14",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2014",
+        "cards": 12
+    },
+    {
+        "id": "mcd13",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2013 (🇫🇷)",
+        "cards": 12
+    },
+    {
+        "id": "mcd12",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2012",
+        "cards": 12
+    },
+    {
+        "id": "mcd11",
+        "serie": "McDonald's Collections",
+        "espansion": "McDonald's Collection 2011",
+        "cards": 12
+    },
+    {
+        "id": "cclv",
+        "serie": "Decks",
+        "espansion": "Trading Card Game Classic: Venusaur & Lugia ex Deck",
+        "cards": 34
+    },
+    {
+        "id": "cclc",
+        "serie": "Decks",
+        "espansion": "Trading Card Game Classic: Charizard & Ho-Oh ex Deck",
+        "cards": 34
+    },
+    {
+        "id": "cclb",
+        "serie": "Decks",
+        "espansion": "Trading Card Game Classic: Blastoise & Suicune ex Deck",
+        "cards": 34
+    },
+    {
+        "id": "mfbb",
+        "serie": "Decks",
+        "espansion": "My First Battle: Bulbasaur Deck",
+        "cards": 12
+    },
+    {
+        "id": "mfbc",
+        "serie": "Decks",
+        "espansion": "My First Battle: Charmander Deck",
+        "cards": 12
+    },
+    {
+        "id": "mfbs",
+        "serie": "Decks",
+        "espansion": "My First Battle: Squirtle Deck",
+        "cards": 12
+    },
+    {
+        "id": "mfbp",
+        "serie": "Decks",
+        "espansion": "My First Battle: Pikachu Deck",
+        "cards": 12
+    },
+    {
+        "id": "ba22e",
+        "serie": "Decks",
+        "espansion": "Battle Academy 2022: Eevee Deck",
+        "cards": 18
+    },
+    {
+        "id": "ba22c",
+        "serie": "Decks",
+        "espansion": "Battle Academy 2022: Cinderace Deck",
+        "cards": 60
+    },
+    {
+        "id": "ba22p",
+        "serie": "Decks",
+        "espansion": "Battle Academy 2022: Pikachu Deck",
+        "cards": 60
+    },
+    {
+        "id": "ba20c",
+        "serie": "Decks",
+        "espansion": "Battle Academy 2020: Charizard Deck",
+        "cards": 60
+    },
+    {
+        "id": "ba20m",
+        "serie": "Decks",
+        "espansion": "Battle Academy 2020: Mewtwo Deck",
+        "cards": 17
+    },
+    {
+        "id": "ba20p",
+        "serie": "Decks",
+        "espansion": "Battle Academy 2020: Pikachu Deck",
+        "cards": 60
+    },
+    {
+        "id": "tk11a",
+        "serie": "Trainer Kits",
+        "espansion": "Sun & Moon Trainer Kit: Alolan Ninetales Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk11b",
+        "serie": "Trainer Kits",
+        "espansion": "Sun & Moon Trainer Kit: Alolan Sandslash Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk10b",
+        "serie": "Trainer Kits",
+        "espansion": "Sun & Moon Trainer Kit: Alolan Raichu Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk10a",
+        "serie": "Trainer Kits",
+        "espansion": "Sun & Moon Trainer Kit: Lycanroc Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk9b",
+        "serie": "Trainer Kits",
+        "espansion": "XY Trainer Kit: Suicune Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk9a",
+        "serie": "Trainer Kits",
+        "espansion": "XY Trainer Kit: Pikachu Libre Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk8b",
+        "serie": "Trainer Kits",
+        "espansion": "XY Trainer Kit: Latias Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk8a",
+        "serie": "Trainer Kits",
+        "espansion": "XY Trainer Kit: Latios Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk7b",
+        "serie": "Trainer Kits",
+        "espansion": "XY Trainer Kit: Wigglytuff Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk7a",
+        "serie": "Trainer Kits",
+        "espansion": "XY Trainer Kit: Bisharp Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk6b",
+        "serie": "Trainer Kits",
+        "espansion": "XY Trainer Kit: Sylveon Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk6a",
+        "serie": "Trainer Kits",
+        "espansion": "XY Trainer Kit: Noivern Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk5b",
+        "serie": "Trainer Kits",
+        "espansion": "Black & White Trainer Kit: Excadrill Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk5a",
+        "serie": "Trainer Kits",
+        "espansion": "Black & White Trainer Kit: Zoroark Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk4b",
+        "serie": "Trainer Kits",
+        "espansion": "HS Trainer Kit: Raichu Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk4a",
+        "serie": "Trainer Kits",
+        "espansion": "HS Trainer Kit: Gyarados Half Deck",
+        "cards": 30
+    },
+    {
+        "id": "tk3b",
+        "serie": "Trainer Kits",
+        "espansion": "Diamond & Pearl Trainer Kit: Lucario Half Deck",
+        "cards": 11
+    },
+    {
+        "id": "tk3a",
+        "serie": "Trainer Kits",
+        "espansion": "Diamond & Pearl Trainer Kit: Manaphy Half Deck",
+        "cards": 12
+    },
+    {
+        "id": "tk2b",
+        "serie": "Trainer Kits",
+        "espansion": "EX Trainer Kit: Minun Half Deck",
+        "cards": 12
+    },
+    {
+        "id": "tk2a",
+        "serie": "Trainer Kits",
+        "espansion": "EX Trainer Kit: Plusle Half Deck",
+        "cards": 12
+    },
+    {
+        "id": "tk1b",
+        "serie": "Trainer Kits",
+        "espansion": "EX Trainer Kit: Latios Half Deck",
+        "cards": 10
+    },
+    {
+        "id": "tk1a",
+        "serie": "Trainer Kits",
+        "espansion": "EX Trainer Kit: Latias Half Deck",
+        "cards": 10
+    },
+    {
+        "id": "pop9",
+        "serie": "POP Series",
+        "espansion": "POP Series 9",
+        "cards": 17
+    },
+    {
+        "id": "pop8",
+        "serie": "POP Series",
+        "espansion": "POP Series 8",
+        "cards": 17
+    },
+    {
+        "id": "pop7",
+        "serie": "POP Series",
+        "espansion": "POP Series 7",
+        "cards": 17
+    },
+    {
+        "id": "pop6",
+        "serie": "POP Series",
+        "espansion": "POP Series 6",
+        "cards": 17
+    },
+    {
+        "id": "pop5",
+        "serie": "POP Series",
+        "espansion": "POP Series 5",
+        "cards": 17
+    },
+    {
+        "id": "pop4",
+        "serie": "POP Series",
+        "espansion": "POP Series 4",
+        "cards": 17
+    },
+    {
+        "id": "pop3",
+        "serie": "POP Series",
+        "espansion": "POP Series 3",
+        "cards": 17
+    },
+    {
+        "id": "pop2",
+        "serie": "POP Series",
+        "espansion": "POP Series 2",
+        "cards": 17
+    },
+    {
+        "id": "pop1",
+        "serie": "POP Series",
+        "espansion": "POP Series 1",
+        "cards": 17
+    },
+    {
+        "id": "mee",
+        "serie": "Basic Energies",
+        "espansion": "Mega Evolution Basic Energies",
+        "cards": 8
+    },
+    {
+        "id": "uen23",
+        "serie": "Basic Energies",
+        "espansion": "Scarlet & Violet Basic Energies",
+        "cards": 24
+    },
+    {
+        "id": "uen22",
+        "serie": "Basic Energies",
+        "espansion": "Energies 2022",
+        "cards": 8
+    },
+    {
+        "id": "uen20",
+        "serie": "Basic Energies",
+        "espansion": "Energies 2020",
+        "cards": 9
+    },
+    {
+        "id": "uen19",
+        "serie": "Basic Energies",
+        "espansion": "Energies 2019",
+        "cards": 9
+    },
+    {
+        "id": "uen17",
+        "serie": "Basic Energies",
+        "espansion": "Energies 2017",
+        "cards": 9
+    },
+    {
+        "id": "uen13",
+        "serie": "Basic Energies",
+        "espansion": "Energies 2013",
+        "cards": 9
+    },
+    {
+        "id": "uen11",
+        "serie": "Basic Energies",
+        "espansion": "Energies 2011",
+        "cards": 8
+    },
+    {
+        "id": "uen10",
+        "serie": "Basic Energies",
+        "espansion": "Energies 2010",
+        "cards": 8
+    },
+    {
+        "id": "uen9",
+        "serie": "Basic Energies",
+        "espansion": "Energies 2009",
+        "cards": 8
+    },
+    {
+        "id": "uen7",
+        "serie": "Basic Energies",
+        "espansion": "Energies 2007",
+        "cards": 8
+    },
+    {
+        "id": "uen6",
+        "serie": "Basic Energies",
+        "espansion": "Energies 2006",
+        "cards": 6
+    },
+    {
+        "id": "uen5",
+        "serie": "Basic Energies",
+        "espansion": "Energies 2005",
+        "cards": 6
+    },
+    {
+        "id": "eyg02",
+        "serie": "Basic Energies",
+        "espansion": "Energize Your Game 2002",
+        "cards": 8
+    },
+    {
+        "id": "fut20",
+        "serie": "Miscellaneous Collections",
+        "espansion": "Pokémon Futsal",
+        "cards": 5
+    },
+    {
+        "id": "ru1",
+        "serie": "Miscellaneous Collections",
+        "espansion": "Pokémon Rumble",
+        "cards": 16
+    },
+    {
+        "id": "pccp",
+        "serie": "Miscellaneous Collections",
+        "espansion": "Poké Card Creator Pack",
+        "cards": 5
+    },
+    {
+        "id": "bp",
+        "serie": "Miscellaneous Collections",
+        "espansion": "Best of Game",
+        "cards": 9
+    },
+    {
+        "id": "si1",
+        "serie": "Miscellaneous Collections",
+        "espansion": "Southern Islands",
+        "cards": 18
+    },
+    {
+        "id": "aac",
+        "serie": "Unnumbered Releases",
+        "espansion": "Pokémon Art Academy Competition",
+        "cards": 12
+    },
+    {
+        "id": "pwt",
+        "serie": "Unnumbered Releases",
+        "espansion": "World Collection",
+        "cards": 9
+    },
+    {
+        "id": "vm1",
+        "serie": "Unnumbered Releases",
+        "espansion": "Battle Road: Victory Medals",
+        "cards": 9
+    },
+    {
+        "id": "tcgwc",
+        "serie": "Unnumbered Releases",
+        "espansion": "World Championships: Trainer Cards",
+        "cards": 71
+    },
+    {
+        "id": "unp",
+        "serie": "Unnumbered Releases",
+        "espansion": "Unnumbered Promos",
+        "cards": 14
+    }
+]

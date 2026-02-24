@@ -1,0 +1,104 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kamary/laravel-app
+    container_name: kamary-app
+    restart: unless-stopped
+    tty: true
+    environment:
+      - APP_NAME=${APP_NAME}
+      - APP_ENV=${APP_ENV}
+      - APP_KEY=${APP_KEY}
+      - APP_DEBUG=${APP_DEBUG}
+      - APP_PROTOCOL=${APP_PROTOCOL}
+      - APP_CORRELATIVE=${APP_CORRELATIVE}
+      - APP_DOMAIN=${APP_DOMAIN}
+      - APP_URL=${APP_URL}
+      - WA_URL=${WA_URL}
+      - EVOAPI_URL=${EVOAPI_URL}
+      - EVOAPI_INSTANCE=${EVOAPI_INSTANCE}
+      - EVOAPI_APIKEY=${EVOAPI_APIKEY}
+      - REPOSITORY_URL=${REPOSITORY_URL}
+      - WAGROUP_VENTAS_ID=${WAGROUP_VENTAS_ID}
+      - LOG_CHANNEL=${LOG_CHANNEL}
+      - LOG_DEPRECATIONS_CHANNEL=${LOG_DEPRECATIONS_CHANNEL}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - DB_CONNECTION=${DB_CONNECTION}
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - BROADCAST_DRIVER=${BROADCAST_DRIVER}
+      - CACHE_DRIVER=${CACHE_DRIVER}
+      - FILESYSTEM_DISK=${FILESYSTEM_DISK}
+      - QUEUE_CONNECTION=${QUEUE_CONNECTION}
+      - SESSION_COOKIE=${SESSION_COOKIE}
+      - SESSION_DOMAIN=${SESSION_DOMAIN}
+      - SESSION_DRIVER=${SESSION_DRIVER}
+      - SESSION_LIFETIME=${SESSION_LIFETIME}
+      - MEMCACHED_HOST=${MEMCACHED_HOST}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_PORT=${REDIS_PORT}
+      - MAIL_MAILER=${MAIL_MAILER}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME}
+      - CULQI_API=${CULQI_API}
+      - CULQI_PRIVATE_KEY=${CULQI_PRIVATE_KEY}
+      - CULQI_PUBLIC_KEY=${CULQI_PUBLIC_KEY}
+      - RECAPTCHA_SITE_KEY=${RECAPTCHA_SITE_KEY}
+      - RECAPTCHA_SECRET_KEY=${RECAPTCHA_SECRET_KEY}
+      - TINYMCE_KEY=${TINYMCE_KEY}
+    depends_on:
+      - db
+    volumes:
+      - storage:/var/www/html/storage
+      - cache:/var/www/html/bootstrap/cache
+      - ./docker-compose/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - app-network-kamary
+
+  db:
+    image: mysql:8.0
+    container_name: kamary-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - app-network-kamary
+
+  nginx:
+    image: nginx:latest
+    container_name: kamary-nginx
+    restart: unless-stopped
+    ports:
+      - "8040:80" # Mapea el puerto 80 del contenedor al puerto 8080 del host
+    volumes:
+      - ./docker-compose/nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - .:/var/www/html
+      - storage:/var/www/html/storage
+      # - ./romulio.factusode.xyz:/etc/letsencrypt/live/romulio.factusode.xyz  # Monta los certificados SSL
+    networks:
+      - app-network-kamary
+
+networks:
+  app-network-kamary:
+    driver: bridge
+
+volumes:
+  dbdata:
+    driver: local
+  storage:
+    driver: local
+  cache:
+    driver: local

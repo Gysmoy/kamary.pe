@@ -1,0 +1,62 @@
+{
+    "metropolitana": {
+        "name": "Lima Metropolitana",
+        "delivery": "Gratis",
+        "items": [
+            "Ate",
+            "Barranco",
+            "Breña",
+            "Cercado de Lima",
+            "Chorrillos",
+            "Comas",
+            "El Agustino",
+            "Independencia",
+            "Jesús María",
+            "La Molina",
+            "La Victoria",
+            "Lince",
+            "Los Olivos",
+            "Magdalena del Mar",
+            "Miraflores",
+            "Pueblo Libre",
+            "Rímac",
+            "San Borja",
+            "San Isidro",
+            "San Juan de Lurigancho",
+            "San Juan de Miraflores",
+            "San Luis",
+            "San Martin de Porres",
+            "San Miguel",
+            "Santa Anita",
+            "Santiago de Surco",
+            "Surquillo",
+            "Villa el Salvador",
+            "Villa Maria del Triunfo"
+        ]
+    },
+    "alrededores": {
+        "name": "Lima Alrededores",
+        "delivery": "Por Shalom - Pago en destino",
+        "items": [
+            "Ancón",
+            "Carabayllo",
+            "Chaclacayo",
+            "Cieneguilla",
+            "Lurín",
+            "Pachacámac",
+            "Pucusana",
+            "Puente Piedra",
+            "Punta Hermosa",
+            "Punta Negra",
+            "San Bartolo",
+            "Lurigancho (Chosica)",
+            "Santa María del Mar",
+            "Santa Rosa"
+        ]
+    },
+    "provincias": {
+        "name": "Provincias",
+        "delivery": "Por Shalom - Pago en destino",
+        "items": ""
+    }
+}

@@ -1,0 +1,20 @@
+[
+    { "id": "en", "label": "Inglés" },
+    { "id": "fr", "label": "Francés" },
+    { "id": "es", "label": "Español" },
+    { "id": "es-mx", "label": "Español (México)" },
+    { "id": "it", "label": "Italiano" },
+    { "id": "pt", "label": "Portugués" },
+    { "id": "pt-br", "label": "Portugués (Brasil)" },
+    { "id": "pt-pt", "label": "Portugués (Portugal)" },
+    { "id": "de", "label": "Alemán" },
+    { "id": "nl", "label": "Neerlandés" },
+    { "id": "pl", "label": "Polaco" },
+    { "id": "ru", "label": "Ruso" },
+    { "id": "ja", "label": "Japonés" },
+    { "id": "ko", "label": "Coreano" },
+    { "id": "zh-tw", "label": "Chino (Tradicional)" },
+    { "id": "id", "label": "Indonesio" },
+    { "id": "th", "label": "Tailandés" },
+    { "id": "zh-cn", "label": "Chino (Simplificado)" }
+]

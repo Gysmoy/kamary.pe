@@ -1,0 +1,32 @@
+[
+    {
+        "value": "NM",
+        "icon": "✨",
+        "label": "NM (Casi perfecta)",
+        "desc": "Prácticamente nueva, sin desgaste visible."
+    },
+    {
+        "value": "LP",
+        "icon": "👍",
+        "label": "LP (Ligero uso)",
+        "desc": "Marcas leves o bordes algo blanqueados."
+    },
+    {
+        "value": "MP",
+        "icon": "🚦",
+        "label": "MP (Uso medio)",
+        "desc": "Marcas visibles o ligera curvatura."
+    },
+    {
+        "value": "HP",
+        "icon": "📉",
+        "label": "HP (Uso fuerte)",
+        "desc": "Desgaste notable, rayas, curvatura / pliegues leves."
+    },
+    {
+        "value": "DM",
+        "icon": "🔴",
+        "label": "DM (Dañada)",
+        "desc": "Pliegues fuertes / roturas / manchas, rasguños, etc."
+    }
+]

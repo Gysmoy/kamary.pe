@@ -1,0 +1,97 @@
+
+
+#openpay-modal .header {
+    width: 60%;
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+#openpay-modal .header h1 {
+    background: #14C8BE;
+    padding: 10px 25px;
+    font: 25px Roboto;
+}
+
+#openpay-modal .form {
+    width: 350px;
+    height: 100%;
+    position: absolute;
+    top: 56px;
+    right: 0;
+}
+
+#openpay-modal input,
+#openpay-modal select,
+#openpay-modal fieldset,
+#openpay-modal button {
+    border: none;
+    outline: none;
+    font: 16px Roboto;
+}
+
+#openpay-modal fieldset {
+    display: block;
+}
+
+#openpay-modal label {
+    display: block;
+    color: #01bce6;
+    font: 500 13px Roboto;
+}
+
+#openpay-modal input,
+#openpay-modal select {
+    background: rgba(255, 255, 255, 0.18);
+    padding: 8px 12px;
+    margin: 5px 5px 5px 0;
+    border-radius: 3px;
+    color: #fff;
+}
+#openpay-modal input:nth-last-of-type(1),
+#openpay-modal select:nth-last-of-type(1) {
+    margin-right: 0;
+}
+
+#openpay-modal option {
+    background: #474747;
+}
+
+#openpay-modal .number input {
+    width: calc(25% - 7px);
+}
+
+#openpay-modal .name input {
+    width: 100%;
+}
+
+#openpay-modal .exp,
+#openpay-modal .ccv {
+    display: inline-block;
+}
+
+#openpay-modal .exp {
+    width: 60%;
+}
+#openpay-modal .exp select {
+    width: calc(50% - 5px);
+}
+
+#openpay-modal .ccv {
+    width: 40%;
+}
+#openpay-modal .ccv input {
+    width: 100%;
+}
+
+#openpay-modal button {
+    display: block;
+    background: linear-gradient(-45deg, #2ed6bc, #01bce6);
+    width: 200px;
+    color: white;
+    padding: 10px 18px;
+    margin: 40px auto;
+    font-size: 18px;
+    border-radius: 22px;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}

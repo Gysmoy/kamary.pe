@@ -1,0 +1,84 @@
+name: Deploy Kamary to Contabo
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Execute Docker Commands on Server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          AUTHOR_NAME: ${{ github.event.head_commit.author.name }}
+          AUTHOR_EMAIL: ${{ github.event.head_commit.author.email }}
+        run: |
+          sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << EOF
+            REPOSITORY="$REPOSITORY"
+            BRANCH="$BRANCH"
+            COMMIT="$COMMIT"
+            COMMIT_MSG="$COMMIT_MSG"
+            AUTHOR_NAME="$AUTHOR_NAME"
+            AUTHOR_EMAIL="$AUTHOR_EMAIL"
+
+            set -Ee
+
+            on_error() {
+              EXIT_CODE=$?
+              FAILED_COMMAND="$BASH_COMMAND"
+
+              curl -X POST https://devex.pe/free/deployments \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "service": "Kamary",
+                  "repository": "'"$REPOSITORY"'",
+                  "branch": "'"$BRANCH"'",
+                  "commit": "'"$COMMIT"'",
+                  "message": "'"$COMMIT_MSG"'",
+                  "author_name": "'"$AUTHOR_NAME"'",
+                  "author_email": "'"$AUTHOR_EMAIL"'",
+                  "env": "production",
+                  "status": "failed",
+                  "error": "'"$FAILED_COMMAND"'",
+                  "exit_code": "'"$EXIT_CODE"'",
+                  "timestamp": "'"$(date -Is)"'"
+                }'
+            }
+
+            trap on_error ERR
+
+            cd /var/docker/kamary
+            git pull
+
+            docker builder prune -f
+            docker network prune -f
+            docker image prune -f
+            docker compose up -d --build
+            
+            curl -X POST https://devex.pe/free/deployments \
+              -H "Content-Type: application/json" \
+              -d '{
+                "service": "Kamary",
+                "repository": "'"$REPOSITORY"'",
+                "branch": "'"$BRANCH"'",
+                "commit": "'"$COMMIT"'",
+                "message": "'"$COMMIT_MSG"'",
+                "author_name": "'"$AUTHOR_NAME"'",
+                "author_email": "'"$AUTHOR_EMAIL"'",
+                "env": "production",
+                "status": "success",
+                "timestamp": "'"$(date -Is)"'"
+              }'
+          EOF

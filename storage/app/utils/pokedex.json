@@ -1,0 +1,5127 @@
+[
+    {
+        "id": "1",
+        "region": "Kanto",
+        "pokemon": "Bulbasaur"
+    },
+    {
+        "id": "2",
+        "region": "Kanto",
+        "pokemon": "Ivysaur"
+    },
+    {
+        "id": "3",
+        "region": "Kanto",
+        "pokemon": "Venusaur"
+    },
+    {
+        "id": "4",
+        "region": "Kanto",
+        "pokemon": "Charmander"
+    },
+    {
+        "id": "5",
+        "region": "Kanto",
+        "pokemon": "Charmeleon"
+    },
+    {
+        "id": "6",
+        "region": "Kanto",
+        "pokemon": "Charizard"
+    },
+    {
+        "id": "7",
+        "region": "Kanto",
+        "pokemon": "Squirtle"
+    },
+    {
+        "id": "8",
+        "region": "Kanto",
+        "pokemon": "Wartortle"
+    },
+    {
+        "id": "9",
+        "region": "Kanto",
+        "pokemon": "Blastoise"
+    },
+    {
+        "id": "10",
+        "region": "Kanto",
+        "pokemon": "Caterpie"
+    },
+    {
+        "id": "11",
+        "region": "Kanto",
+        "pokemon": "Metapod"
+    },
+    {
+        "id": "12",
+        "region": "Kanto",
+        "pokemon": "Butterfree"
+    },
+    {
+        "id": "13",
+        "region": "Kanto",
+        "pokemon": "Weedle"
+    },
+    {
+        "id": "14",
+        "region": "Kanto",
+        "pokemon": "Kakuna"
+    },
+    {
+        "id": "15",
+        "region": "Kanto",
+        "pokemon": "Beedrill"
+    },
+    {
+        "id": "16",
+        "region": "Kanto",
+        "pokemon": "Pidgey"
+    },
+    {
+        "id": "17",
+        "region": "Kanto",
+        "pokemon": "Pidgeotto"
+    },
+    {
+        "id": "18",
+        "region": "Kanto",
+        "pokemon": "Pidgeot"
+    },
+    {
+        "id": "19",
+        "region": "Kanto",
+        "pokemon": "Rattata"
+    },
+    {
+        "id": "20",
+        "region": "Kanto",
+        "pokemon": "Raticate"
+    },
+    {
+        "id": "21",
+        "region": "Kanto",
+        "pokemon": "Spearow"
+    },
+    {
+        "id": "22",
+        "region": "Kanto",
+        "pokemon": "Fearow"
+    },
+    {
+        "id": "23",
+        "region": "Kanto",
+        "pokemon": "Ekans"
+    },
+    {
+        "id": "24",
+        "region": "Kanto",
+        "pokemon": "Arbok"
+    },
+    {
+        "id": "25",
+        "region": "Kanto",
+        "pokemon": "Pikachu"
+    },
+    {
+        "id": "26",
+        "region": "Kanto",
+        "pokemon": "Raichu"
+    },
+    {
+        "id": "27",
+        "region": "Kanto",
+        "pokemon": "Sandshrew"
+    },
+    {
+        "id": "28",
+        "region": "Kanto",
+        "pokemon": "Sandslash"
+    },
+    {
+        "id": "29",
+        "region": "Kanto",
+        "pokemon": "Nidoran ♀"
+    },
+    {
+        "id": "30",
+        "region": "Kanto",
+        "pokemon": "Nidorina"
+    },
+    {
+        "id": "31",
+        "region": "Kanto",
+        "pokemon": "Nidoqueen"
+    },
+    {
+        "id": "32",
+        "region": "Kanto",
+        "pokemon": "Nidoran ♂"
+    },
+    {
+        "id": "33",
+        "region": "Kanto",
+        "pokemon": "Nidorino"
+    },
+    {
+        "id": "34",
+        "region": "Kanto",
+        "pokemon": "Nidoking"
+    },
+    {
+        "id": "35",
+        "region": "Kanto",
+        "pokemon": "Clefairy"
+    },
+    {
+        "id": "36",
+        "region": "Kanto",
+        "pokemon": "Clefable"
+    },
+    {
+        "id": "37",
+        "region": "Kanto",
+        "pokemon": "Vulpix"
+    },
+    {
+        "id": "38",
+        "region": "Kanto",
+        "pokemon": "Ninetales"
+    },
+    {
+        "id": "39",
+        "region": "Kanto",
+        "pokemon": "Jigglypuff"
+    },
+    {
+        "id": "40",
+        "region": "Kanto",
+        "pokemon": "Wigglytuff"
+    },
+    {
+        "id": "41",
+        "region": "Kanto",
+        "pokemon": "Zubat"
+    },
+    {
+        "id": "42",
+        "region": "Kanto",
+        "pokemon": "Golbat"
+    },
+    {
+        "id": "43",
+        "region": "Kanto",
+        "pokemon": "Oddish"
+    },
+    {
+        "id": "44",
+        "region": "Kanto",
+        "pokemon": "Gloom"
+    },
+    {
+        "id": "45",
+        "region": "Kanto",
+        "pokemon": "Vileplume"
+    },
+    {
+        "id": "46",
+        "region": "Kanto",
+        "pokemon": "Paras"
+    },
+    {
+        "id": "47",
+        "region": "Kanto",
+        "pokemon": "Parasect"
+    },
+    {
+        "id": "48",
+        "region": "Kanto",
+        "pokemon": "Venonat"
+    },
+    {
+        "id": "49",
+        "region": "Kanto",
+        "pokemon": "Venomoth"
+    },
+    {
+        "id": "50",
+        "region": "Kanto",
+        "pokemon": "Diglett"
+    },
+    {
+        "id": "51",
+        "region": "Kanto",
+        "pokemon": "Dugtrio"
+    },
+    {
+        "id": "52",
+        "region": "Kanto",
+        "pokemon": "Meowth"
+    },
+    {
+        "id": "53",
+        "region": "Kanto",
+        "pokemon": "Persian"
+    },
+    {
+        "id": "54",
+        "region": "Kanto",
+        "pokemon": "Psyduck"
+    },
+    {
+        "id": "55",
+        "region": "Kanto",
+        "pokemon": "Golduck"
+    },
+    {
+        "id": "56",
+        "region": "Kanto",
+        "pokemon": "Mankey"
+    },
+    {
+        "id": "57",
+        "region": "Kanto",
+        "pokemon": "Primeape"
+    },
+    {
+        "id": "58",
+        "region": "Kanto",
+        "pokemon": "Growlithe"
+    },
+    {
+        "id": "59",
+        "region": "Kanto",
+        "pokemon": "Arcanine"
+    },
+    {
+        "id": "60",
+        "region": "Kanto",
+        "pokemon": "Poliwag"
+    },
+    {
+        "id": "61",
+        "region": "Kanto",
+        "pokemon": "Poliwhirl"
+    },
+    {
+        "id": "62",
+        "region": "Kanto",
+        "pokemon": "Poliwrath"
+    },
+    {
+        "id": "63",
+        "region": "Kanto",
+        "pokemon": "Abra"
+    },
+    {
+        "id": "64",
+        "region": "Kanto",
+        "pokemon": "Kadabra"
+    },
+    {
+        "id": "65",
+        "region": "Kanto",
+        "pokemon": "Alakazam"
+    },
+    {
+        "id": "66",
+        "region": "Kanto",
+        "pokemon": "Machop"
+    },
+    {
+        "id": "67",
+        "region": "Kanto",
+        "pokemon": "Machoke"
+    },
+    {
+        "id": "68",
+        "region": "Kanto",
+        "pokemon": "Machamp"
+    },
+    {
+        "id": "69",
+        "region": "Kanto",
+        "pokemon": "Bellsprout"
+    },
+    {
+        "id": "70",
+        "region": "Kanto",
+        "pokemon": "Weepinbell"
+    },
+    {
+        "id": "71",
+        "region": "Kanto",
+        "pokemon": "Victreebel"
+    },
+    {
+        "id": "72",
+        "region": "Kanto",
+        "pokemon": "Tentacool"
+    },
+    {
+        "id": "73",
+        "region": "Kanto",
+        "pokemon": "Tentacruel"
+    },
+    {
+        "id": "74",
+        "region": "Kanto",
+        "pokemon": "Geodude"
+    },
+    {
+        "id": "75",
+        "region": "Kanto",
+        "pokemon": "Graveler"
+    },
+    {
+        "id": "76",
+        "region": "Kanto",
+        "pokemon": "Golem"
+    },
+    {
+        "id": "77",
+        "region": "Kanto",
+        "pokemon": "Ponyta"
+    },
+    {
+        "id": "78",
+        "region": "Kanto",
+        "pokemon": "Rapidash"
+    },
+    {
+        "id": "79",
+        "region": "Kanto",
+        "pokemon": "Slowpoke"
+    },
+    {
+        "id": "80",
+        "region": "Kanto",
+        "pokemon": "Slowbro"
+    },
+    {
+        "id": "81",
+        "region": "Kanto",
+        "pokemon": "Magnemite"
+    },
+    {
+        "id": "82",
+        "region": "Kanto",
+        "pokemon": "Magneton"
+    },
+    {
+        "id": "83",
+        "region": "Kanto",
+        "pokemon": "Farfetch'd"
+    },
+    {
+        "id": "84",
+        "region": "Kanto",
+        "pokemon": "Doduo"
+    },
+    {
+        "id": "85",
+        "region": "Kanto",
+        "pokemon": "Dodrio"
+    },
+    {
+        "id": "86",
+        "region": "Kanto",
+        "pokemon": "Seel"
+    },
+    {
+        "id": "87",
+        "region": "Kanto",
+        "pokemon": "Dewgong"
+    },
+    {
+        "id": "88",
+        "region": "Kanto",
+        "pokemon": "Grimer"
+    },
+    {
+        "id": "89",
+        "region": "Kanto",
+        "pokemon": "Muk"
+    },
+    {
+        "id": "90",
+        "region": "Kanto",
+        "pokemon": "Shellder"
+    },
+    {
+        "id": "91",
+        "region": "Kanto",
+        "pokemon": "Cloyster"
+    },
+    {
+        "id": "92",
+        "region": "Kanto",
+        "pokemon": "Gastly"
+    },
+    {
+        "id": "93",
+        "region": "Kanto",
+        "pokemon": "Haunter"
+    },
+    {
+        "id": "94",
+        "region": "Kanto",
+        "pokemon": "Gengar"
+    },
+    {
+        "id": "95",
+        "region": "Kanto",
+        "pokemon": "Onix"
+    },
+    {
+        "id": "96",
+        "region": "Kanto",
+        "pokemon": "Drowzee"
+    },
+    {
+        "id": "97",
+        "region": "Kanto",
+        "pokemon": "Hypno"
+    },
+    {
+        "id": "98",
+        "region": "Kanto",
+        "pokemon": "Krabby"
+    },
+    {
+        "id": "99",
+        "region": "Kanto",
+        "pokemon": "Kingler"
+    },
+    {
+        "id": "100",
+        "region": "Kanto",
+        "pokemon": "Voltorb"
+    },
+    {
+        "id": "101",
+        "region": "Kanto",
+        "pokemon": "Electrode"
+    },
+    {
+        "id": "102",
+        "region": "Kanto",
+        "pokemon": "Exeggcute"
+    },
+    {
+        "id": "103",
+        "region": "Kanto",
+        "pokemon": "Exeggutor"
+    },
+    {
+        "id": "104",
+        "region": "Kanto",
+        "pokemon": "Cubone"
+    },
+    {
+        "id": "105",
+        "region": "Kanto",
+        "pokemon": "Marowak"
+    },
+    {
+        "id": "106",
+        "region": "Kanto",
+        "pokemon": "Hitmonlee"
+    },
+    {
+        "id": "107",
+        "region": "Kanto",
+        "pokemon": "Hitmonchan"
+    },
+    {
+        "id": "108",
+        "region": "Kanto",
+        "pokemon": "Lickitung"
+    },
+    {
+        "id": "109",
+        "region": "Kanto",
+        "pokemon": "Koffing"
+    },
+    {
+        "id": "110",
+        "region": "Kanto",
+        "pokemon": "Weezing"
+    },
+    {
+        "id": "111",
+        "region": "Kanto",
+        "pokemon": "Rhyhorn"
+    },
+    {
+        "id": "112",
+        "region": "Kanto",
+        "pokemon": "Rhydon"
+    },
+    {
+        "id": "113",
+        "region": "Kanto",
+        "pokemon": "Chansey"
+    },
+    {
+        "id": "114",
+        "region": "Kanto",
+        "pokemon": "Tangela"
+    },
+    {
+        "id": "115",
+        "region": "Kanto",
+        "pokemon": "Kangaskhan"
+    },
+    {
+        "id": "116",
+        "region": "Kanto",
+        "pokemon": "Horsea"
+    },
+    {
+        "id": "117",
+        "region": "Kanto",
+        "pokemon": "Seadra"
+    },
+    {
+        "id": "118",
+        "region": "Kanto",
+        "pokemon": "Goldeen"
+    },
+    {
+        "id": "119",
+        "region": "Kanto",
+        "pokemon": "Seaking"
+    },
+    {
+        "id": "120",
+        "region": "Kanto",
+        "pokemon": "Staryu"
+    },
+    {
+        "id": "121",
+        "region": "Kanto",
+        "pokemon": "Starmie"
+    },
+    {
+        "id": "122",
+        "region": "Kanto",
+        "pokemon": "Mr. Mime"
+    },
+    {
+        "id": "123",
+        "region": "Kanto",
+        "pokemon": "Scyther"
+    },
+    {
+        "id": "124",
+        "region": "Kanto",
+        "pokemon": "Jynx"
+    },
+    {
+        "id": "125",
+        "region": "Kanto",
+        "pokemon": "Electabuzz"
+    },
+    {
+        "id": "126",
+        "region": "Kanto",
+        "pokemon": "Magmar"
+    },
+    {
+        "id": "127",
+        "region": "Kanto",
+        "pokemon": "Pinsir"
+    },
+    {
+        "id": "128",
+        "region": "Kanto",
+        "pokemon": "Tauros"
+    },
+    {
+        "id": "129",
+        "region": "Kanto",
+        "pokemon": "Magikarp"
+    },
+    {
+        "id": "130",
+        "region": "Kanto",
+        "pokemon": "Gyarados"
+    },
+    {
+        "id": "131",
+        "region": "Kanto",
+        "pokemon": "Lapras"
+    },
+    {
+        "id": "132",
+        "region": "Kanto",
+        "pokemon": "Ditto"
+    },
+    {
+        "id": "133",
+        "region": "Kanto",
+        "pokemon": "Eevee"
+    },
+    {
+        "id": "134",
+        "region": "Kanto",
+        "pokemon": "Vaporeon"
+    },
+    {
+        "id": "135",
+        "region": "Kanto",
+        "pokemon": "Jolteon"
+    },
+    {
+        "id": "136",
+        "region": "Kanto",
+        "pokemon": "Flareon"
+    },
+    {
+        "id": "137",
+        "region": "Kanto",
+        "pokemon": "Porygon"
+    },
+    {
+        "id": "138",
+        "region": "Kanto",
+        "pokemon": "Omanyte"
+    },
+    {
+        "id": "139",
+        "region": "Kanto",
+        "pokemon": "Omastar"
+    },
+    {
+        "id": "140",
+        "region": "Kanto",
+        "pokemon": "Kabuto"
+    },
+    {
+        "id": "141",
+        "region": "Kanto",
+        "pokemon": "Kabutops"
+    },
+    {
+        "id": "142",
+        "region": "Kanto",
+        "pokemon": "Aerodactyl"
+    },
+    {
+        "id": "143",
+        "region": "Kanto",
+        "pokemon": "Snorlax"
+    },
+    {
+        "id": "144",
+        "region": "Kanto",
+        "pokemon": "Articuno"
+    },
+    {
+        "id": "145",
+        "region": "Kanto",
+        "pokemon": "Zapdos"
+    },
+    {
+        "id": "146",
+        "region": "Kanto",
+        "pokemon": "Moltres"
+    },
+    {
+        "id": "147",
+        "region": "Kanto",
+        "pokemon": "Dratini"
+    },
+    {
+        "id": "148",
+        "region": "Kanto",
+        "pokemon": "Dragonair"
+    },
+    {
+        "id": "149",
+        "region": "Kanto",
+        "pokemon": "Dragonite"
+    },
+    {
+        "id": "150",
+        "region": "Kanto",
+        "pokemon": "Mewtwo"
+    },
+    {
+        "id": "151",
+        "region": "Kanto",
+        "pokemon": "Mew"
+    },
+    {
+        "id": "152",
+        "region": "Johto",
+        "pokemon": "Chikorita"
+    },
+    {
+        "id": "153",
+        "region": "Johto",
+        "pokemon": "Bayleef"
+    },
+    {
+        "id": "154",
+        "region": "Johto",
+        "pokemon": "Meganium"
+    },
+    {
+        "id": "155",
+        "region": "Johto",
+        "pokemon": "Cyndaquil"
+    },
+    {
+        "id": "156",
+        "region": "Johto",
+        "pokemon": "Quilava"
+    },
+    {
+        "id": "157",
+        "region": "Johto",
+        "pokemon": "Typhlosion"
+    },
+    {
+        "id": "158",
+        "region": "Johto",
+        "pokemon": "Totodile"
+    },
+    {
+        "id": "159",
+        "region": "Johto",
+        "pokemon": "Croconaw"
+    },
+    {
+        "id": "160",
+        "region": "Johto",
+        "pokemon": "Feraligatr"
+    },
+    {
+        "id": "161",
+        "region": "Johto",
+        "pokemon": "Sentret"
+    },
+    {
+        "id": "162",
+        "region": "Johto",
+        "pokemon": "Furret"
+    },
+    {
+        "id": "163",
+        "region": "Johto",
+        "pokemon": "Hoothoot"
+    },
+    {
+        "id": "164",
+        "region": "Johto",
+        "pokemon": "Noctowl"
+    },
+    {
+        "id": "165",
+        "region": "Johto",
+        "pokemon": "Ledyba"
+    },
+    {
+        "id": "166",
+        "region": "Johto",
+        "pokemon": "Ledian"
+    },
+    {
+        "id": "167",
+        "region": "Johto",
+        "pokemon": "Spinarak"
+    },
+    {
+        "id": "168",
+        "region": "Johto",
+        "pokemon": "Ariados"
+    },
+    {
+        "id": "169",
+        "region": "Johto",
+        "pokemon": "Crobat"
+    },
+    {
+        "id": "170",
+        "region": "Johto",
+        "pokemon": "Chinchou"
+    },
+    {
+        "id": "171",
+        "region": "Johto",
+        "pokemon": "Lanturn"
+    },
+    {
+        "id": "172",
+        "region": "Johto",
+        "pokemon": "Pichu"
+    },
+    {
+        "id": "173",
+        "region": "Johto",
+        "pokemon": "Cleffa"
+    },
+    {
+        "id": "174",
+        "region": "Johto",
+        "pokemon": "Igglybuff"
+    },
+    {
+        "id": "175",
+        "region": "Johto",
+        "pokemon": "Togepi"
+    },
+    {
+        "id": "176",
+        "region": "Johto",
+        "pokemon": "Togetic"
+    },
+    {
+        "id": "177",
+        "region": "Johto",
+        "pokemon": "Natu"
+    },
+    {
+        "id": "178",
+        "region": "Johto",
+        "pokemon": "Xatu"
+    },
+    {
+        "id": "179",
+        "region": "Johto",
+        "pokemon": "Mareep"
+    },
+    {
+        "id": "180",
+        "region": "Johto",
+        "pokemon": "Flaaffy"
+    },
+    {
+        "id": "181",
+        "region": "Johto",
+        "pokemon": "Ampharos"
+    },
+    {
+        "id": "182",
+        "region": "Johto",
+        "pokemon": "Bellossom"
+    },
+    {
+        "id": "183",
+        "region": "Johto",
+        "pokemon": "Marill"
+    },
+    {
+        "id": "184",
+        "region": "Johto",
+        "pokemon": "Azumarill"
+    },
+    {
+        "id": "185",
+        "region": "Johto",
+        "pokemon": "Sudowoodo"
+    },
+    {
+        "id": "186",
+        "region": "Johto",
+        "pokemon": "Politoed"
+    },
+    {
+        "id": "187",
+        "region": "Johto",
+        "pokemon": "Hoppip"
+    },
+    {
+        "id": "188",
+        "region": "Johto",
+        "pokemon": "Skiploom"
+    },
+    {
+        "id": "189",
+        "region": "Johto",
+        "pokemon": "Jumpluff"
+    },
+    {
+        "id": "190",
+        "region": "Johto",
+        "pokemon": "Aipom"
+    },
+    {
+        "id": "191",
+        "region": "Johto",
+        "pokemon": "Sunkern"
+    },
+    {
+        "id": "192",
+        "region": "Johto",
+        "pokemon": "Sunflora"
+    },
+    {
+        "id": "193",
+        "region": "Johto",
+        "pokemon": "Yanma"
+    },
+    {
+        "id": "194",
+        "region": "Johto",
+        "pokemon": "Wooper"
+    },
+    {
+        "id": "195",
+        "region": "Johto",
+        "pokemon": "Quagsire"
+    },
+    {
+        "id": "196",
+        "region": "Johto",
+        "pokemon": "Espeon"
+    },
+    {
+        "id": "197",
+        "region": "Johto",
+        "pokemon": "Umbreon"
+    },
+    {
+        "id": "198",
+        "region": "Johto",
+        "pokemon": "Murkrow"
+    },
+    {
+        "id": "199",
+        "region": "Johto",
+        "pokemon": "Slowking"
+    },
+    {
+        "id": "200",
+        "region": "Johto",
+        "pokemon": "Misdreavus"
+    },
+    {
+        "id": "201",
+        "region": "Johto",
+        "pokemon": "Unown"
+    },
+    {
+        "id": "202",
+        "region": "Johto",
+        "pokemon": "Wobbuffet"
+    },
+    {
+        "id": "203",
+        "region": "Johto",
+        "pokemon": "Girafarig"
+    },
+    {
+        "id": "204",
+        "region": "Johto",
+        "pokemon": "Pineco"
+    },
+    {
+        "id": "205",
+        "region": "Johto",
+        "pokemon": "Forretress"
+    },
+    {
+        "id": "206",
+        "region": "Johto",
+        "pokemon": "Dunsparce"
+    },
+    {
+        "id": "207",
+        "region": "Johto",
+        "pokemon": "Gligar"
+    },
+    {
+        "id": "208",
+        "region": "Johto",
+        "pokemon": "Steelix"
+    },
+    {
+        "id": "209",
+        "region": "Johto",
+        "pokemon": "Snubbull"
+    },
+    {
+        "id": "210",
+        "region": "Johto",
+        "pokemon": "Granbull"
+    },
+    {
+        "id": "211",
+        "region": "Johto",
+        "pokemon": "Qwilfish"
+    },
+    {
+        "id": "212",
+        "region": "Johto",
+        "pokemon": "Scizor"
+    },
+    {
+        "id": "213",
+        "region": "Johto",
+        "pokemon": "Shuckle"
+    },
+    {
+        "id": "214",
+        "region": "Johto",
+        "pokemon": "Heracross"
+    },
+    {
+        "id": "215",
+        "region": "Johto",
+        "pokemon": "Sneasel"
+    },
+    {
+        "id": "216",
+        "region": "Johto",
+        "pokemon": "Teddiursa"
+    },
+    {
+        "id": "217",
+        "region": "Johto",
+        "pokemon": "Ursaring"
+    },
+    {
+        "id": "218",
+        "region": "Johto",
+        "pokemon": "Slugma"
+    },
+    {
+        "id": "219",
+        "region": "Johto",
+        "pokemon": "Magcargo"
+    },
+    {
+        "id": "220",
+        "region": "Johto",
+        "pokemon": "Swinub"
+    },
+    {
+        "id": "221",
+        "region": "Johto",
+        "pokemon": "Piloswine"
+    },
+    {
+        "id": "222",
+        "region": "Johto",
+        "pokemon": "Corsola"
+    },
+    {
+        "id": "223",
+        "region": "Johto",
+        "pokemon": "Remoraid"
+    },
+    {
+        "id": "224",
+        "region": "Johto",
+        "pokemon": "Octillery"
+    },
+    {
+        "id": "225",
+        "region": "Johto",
+        "pokemon": "Delibird"
+    },
+    {
+        "id": "226",
+        "region": "Johto",
+        "pokemon": "Mantine"
+    },
+    {
+        "id": "227",
+        "region": "Johto",
+        "pokemon": "Skarmory"
+    },
+    {
+        "id": "228",
+        "region": "Johto",
+        "pokemon": "Houndour"
+    },
+    {
+        "id": "229",
+        "region": "Johto",
+        "pokemon": "Houndoom"
+    },
+    {
+        "id": "230",
+        "region": "Johto",
+        "pokemon": "Kingdra"
+    },
+    {
+        "id": "231",
+        "region": "Johto",
+        "pokemon": "Phanpy"
+    },
+    {
+        "id": "232",
+        "region": "Johto",
+        "pokemon": "Donphan"
+    },
+    {
+        "id": "233",
+        "region": "Johto",
+        "pokemon": "Porygon2"
+    },
+    {
+        "id": "234",
+        "region": "Johto",
+        "pokemon": "Stantler"
+    },
+    {
+        "id": "235",
+        "region": "Johto",
+        "pokemon": "Smeargle"
+    },
+    {
+        "id": "236",
+        "region": "Johto",
+        "pokemon": "Tyrogue"
+    },
+    {
+        "id": "237",
+        "region": "Johto",
+        "pokemon": "Hitmontop"
+    },
+    {
+        "id": "238",
+        "region": "Johto",
+        "pokemon": "Smoochum"
+    },
+    {
+        "id": "239",
+        "region": "Johto",
+        "pokemon": "Elekid"
+    },
+    {
+        "id": "240",
+        "region": "Johto",
+        "pokemon": "Magby"
+    },
+    {
+        "id": "241",
+        "region": "Johto",
+        "pokemon": "Miltank"
+    },
+    {
+        "id": "242",
+        "region": "Johto",
+        "pokemon": "Blissey"
+    },
+    {
+        "id": "243",
+        "region": "Johto",
+        "pokemon": "Raikou"
+    },
+    {
+        "id": "244",
+        "region": "Johto",
+        "pokemon": "Entei"
+    },
+    {
+        "id": "245",
+        "region": "Johto",
+        "pokemon": "Suicune"
+    },
+    {
+        "id": "246",
+        "region": "Johto",
+        "pokemon": "Larvitar"
+    },
+    {
+        "id": "247",
+        "region": "Johto",
+        "pokemon": "Pupitar"
+    },
+    {
+        "id": "248",
+        "region": "Johto",
+        "pokemon": "Tyranitar"
+    },
+    {
+        "id": "249",
+        "region": "Johto",
+        "pokemon": "Lugia"
+    },
+    {
+        "id": "250",
+        "region": "Johto",
+        "pokemon": "Ho-oh"
+    },
+    {
+        "id": "251",
+        "region": "Johto",
+        "pokemon": "Celebi"
+    },
+    {
+        "id": "252",
+        "region": "Hoenn",
+        "pokemon": "Treecko"
+    },
+    {
+        "id": "253",
+        "region": "Hoenn",
+        "pokemon": "Grovyle"
+    },
+    {
+        "id": "254",
+        "region": "Hoenn",
+        "pokemon": "Sceptile"
+    },
+    {
+        "id": "255",
+        "region": "Hoenn",
+        "pokemon": "Torchic"
+    },
+    {
+        "id": "256",
+        "region": "Hoenn",
+        "pokemon": "Combusken"
+    },
+    {
+        "id": "257",
+        "region": "Hoenn",
+        "pokemon": "Blaziken"
+    },
+    {
+        "id": "258",
+        "region": "Hoenn",
+        "pokemon": "Mudkip"
+    },
+    {
+        "id": "259",
+        "region": "Hoenn",
+        "pokemon": "Marshtomp"
+    },
+    {
+        "id": "260",
+        "region": "Hoenn",
+        "pokemon": "Swampert"
+    },
+    {
+        "id": "261",
+        "region": "Hoenn",
+        "pokemon": "Poochyena"
+    },
+    {
+        "id": "262",
+        "region": "Hoenn",
+        "pokemon": "Mightyena"
+    },
+    {
+        "id": "263",
+        "region": "Hoenn",
+        "pokemon": "Zigzagoon"
+    },
+    {
+        "id": "264",
+        "region": "Hoenn",
+        "pokemon": "Linoone"
+    },
+    {
+        "id": "265",
+        "region": "Hoenn",
+        "pokemon": "Wurmple"
+    },
+    {
+        "id": "266",
+        "region": "Hoenn",
+        "pokemon": "Silcoon"
+    },
+    {
+        "id": "267",
+        "region": "Hoenn",
+        "pokemon": "Beautifly"
+    },
+    {
+        "id": "268",
+        "region": "Hoenn",
+        "pokemon": "Cascoon"
+    },
+    {
+        "id": "269",
+        "region": "Hoenn",
+        "pokemon": "Dustox"
+    },
+    {
+        "id": "270",
+        "region": "Hoenn",
+        "pokemon": "Lotad"
+    },
+    {
+        "id": "271",
+        "region": "Hoenn",
+        "pokemon": "Lombre"
+    },
+    {
+        "id": "272",
+        "region": "Hoenn",
+        "pokemon": "Ludicolo"
+    },
+    {
+        "id": "273",
+        "region": "Hoenn",
+        "pokemon": "Seedot"
+    },
+    {
+        "id": "274",
+        "region": "Hoenn",
+        "pokemon": "Nuzleaf"
+    },
+    {
+        "id": "275",
+        "region": "Hoenn",
+        "pokemon": "Shiftry"
+    },
+    {
+        "id": "276",
+        "region": "Hoenn",
+        "pokemon": "Taillow"
+    },
+    {
+        "id": "277",
+        "region": "Hoenn",
+        "pokemon": "Swellow"
+    },
+    {
+        "id": "278",
+        "region": "Hoenn",
+        "pokemon": "Wingull"
+    },
+    {
+        "id": "279",
+        "region": "Hoenn",
+        "pokemon": "Pelipper"
+    },
+    {
+        "id": "280",
+        "region": "Hoenn",
+        "pokemon": "Ralts"
+    },
+    {
+        "id": "281",
+        "region": "Hoenn",
+        "pokemon": "Kirlia"
+    },
+    {
+        "id": "282",
+        "region": "Hoenn",
+        "pokemon": "Gardevoir"
+    },
+    {
+        "id": "283",
+        "region": "Hoenn",
+        "pokemon": "Surskit"
+    },
+    {
+        "id": "284",
+        "region": "Hoenn",
+        "pokemon": "Masquerain"
+    },
+    {
+        "id": "285",
+        "region": "Hoenn",
+        "pokemon": "Shroomish"
+    },
+    {
+        "id": "286",
+        "region": "Hoenn",
+        "pokemon": "Breloom"
+    },
+    {
+        "id": "287",
+        "region": "Hoenn",
+        "pokemon": "Slakoth"
+    },
+    {
+        "id": "288",
+        "region": "Hoenn",
+        "pokemon": "Vigoroth"
+    },
+    {
+        "id": "289",
+        "region": "Hoenn",
+        "pokemon": "Slaking"
+    },
+    {
+        "id": "290",
+        "region": "Hoenn",
+        "pokemon": "Nincada"
+    },
+    {
+        "id": "291",
+        "region": "Hoenn",
+        "pokemon": "Ninjask"
+    },
+    {
+        "id": "292",
+        "region": "Hoenn",
+        "pokemon": "Shedinja"
+    },
+    {
+        "id": "293",
+        "region": "Hoenn",
+        "pokemon": "Whismur"
+    },
+    {
+        "id": "294",
+        "region": "Hoenn",
+        "pokemon": "Loudred"
+    },
+    {
+        "id": "295",
+        "region": "Hoenn",
+        "pokemon": "Exploud"
+    },
+    {
+        "id": "296",
+        "region": "Hoenn",
+        "pokemon": "Makuhita"
+    },
+    {
+        "id": "297",
+        "region": "Hoenn",
+        "pokemon": "Hariyama"
+    },
+    {
+        "id": "298",
+        "region": "Hoenn",
+        "pokemon": "Azurill"
+    },
+    {
+        "id": "299",
+        "region": "Hoenn",
+        "pokemon": "Nosepass"
+    },
+    {
+        "id": "300",
+        "region": "Hoenn",
+        "pokemon": "Skitty"
+    },
+    {
+        "id": "301",
+        "region": "Hoenn",
+        "pokemon": "Delcatty"
+    },
+    {
+        "id": "302",
+        "region": "Hoenn",
+        "pokemon": "Sableye"
+    },
+    {
+        "id": "303",
+        "region": "Hoenn",
+        "pokemon": "Mawile"
+    },
+    {
+        "id": "304",
+        "region": "Hoenn",
+        "pokemon": "Aron"
+    },
+    {
+        "id": "305",
+        "region": "Hoenn",
+        "pokemon": "Lairon"
+    },
+    {
+        "id": "306",
+        "region": "Hoenn",
+        "pokemon": "Aggron"
+    },
+    {
+        "id": "307",
+        "region": "Hoenn",
+        "pokemon": "Meditite"
+    },
+    {
+        "id": "308",
+        "region": "Hoenn",
+        "pokemon": "Medicham"
+    },
+    {
+        "id": "309",
+        "region": "Hoenn",
+        "pokemon": "Electrike"
+    },
+    {
+        "id": "310",
+        "region": "Hoenn",
+        "pokemon": "Manectric"
+    },
+    {
+        "id": "311",
+        "region": "Hoenn",
+        "pokemon": "Plusle"
+    },
+    {
+        "id": "312",
+        "region": "Hoenn",
+        "pokemon": "Minun"
+    },
+    {
+        "id": "313",
+        "region": "Hoenn",
+        "pokemon": "Volbeat"
+    },
+    {
+        "id": "314",
+        "region": "Hoenn",
+        "pokemon": "Illumise"
+    },
+    {
+        "id": "315",
+        "region": "Hoenn",
+        "pokemon": "Roselia"
+    },
+    {
+        "id": "316",
+        "region": "Hoenn",
+        "pokemon": "Gulpin"
+    },
+    {
+        "id": "317",
+        "region": "Hoenn",
+        "pokemon": "Swalot"
+    },
+    {
+        "id": "318",
+        "region": "Hoenn",
+        "pokemon": "Carvanha"
+    },
+    {
+        "id": "319",
+        "region": "Hoenn",
+        "pokemon": "Sharpedo"
+    },
+    {
+        "id": "320",
+        "region": "Hoenn",
+        "pokemon": "Wailmer"
+    },
+    {
+        "id": "321",
+        "region": "Hoenn",
+        "pokemon": "Wailord"
+    },
+    {
+        "id": "322",
+        "region": "Hoenn",
+        "pokemon": "Numel"
+    },
+    {
+        "id": "323",
+        "region": "Hoenn",
+        "pokemon": "Camerupt"
+    },
+    {
+        "id": "324",
+        "region": "Hoenn",
+        "pokemon": "Torkoal"
+    },
+    {
+        "id": "325",
+        "region": "Hoenn",
+        "pokemon": "Spoink"
+    },
+    {
+        "id": "326",
+        "region": "Hoenn",
+        "pokemon": "Grumpig"
+    },
+    {
+        "id": "327",
+        "region": "Hoenn",
+        "pokemon": "Spinda"
+    },
+    {
+        "id": "328",
+        "region": "Hoenn",
+        "pokemon": "Trapinch"
+    },
+    {
+        "id": "329",
+        "region": "Hoenn",
+        "pokemon": "Vibrava"
+    },
+    {
+        "id": "330",
+        "region": "Hoenn",
+        "pokemon": "Flygon"
+    },
+    {
+        "id": "331",
+        "region": "Hoenn",
+        "pokemon": "Cacnea"
+    },
+    {
+        "id": "332",
+        "region": "Hoenn",
+        "pokemon": "Cacturne"
+    },
+    {
+        "id": "333",
+        "region": "Hoenn",
+        "pokemon": "Swablu"
+    },
+    {
+        "id": "334",
+        "region": "Hoenn",
+        "pokemon": "Altaria"
+    },
+    {
+        "id": "335",
+        "region": "Hoenn",
+        "pokemon": "Zangoose"
+    },
+    {
+        "id": "336",
+        "region": "Hoenn",
+        "pokemon": "Seviper"
+    },
+    {
+        "id": "337",
+        "region": "Hoenn",
+        "pokemon": "Lunatone"
+    },
+    {
+        "id": "338",
+        "region": "Hoenn",
+        "pokemon": "Solrock"
+    },
+    {
+        "id": "339",
+        "region": "Hoenn",
+        "pokemon": "Barboach"
+    },
+    {
+        "id": "340",
+        "region": "Hoenn",
+        "pokemon": "Whiscash"
+    },
+    {
+        "id": "341",
+        "region": "Hoenn",
+        "pokemon": "Corphish"
+    },
+    {
+        "id": "342",
+        "region": "Hoenn",
+        "pokemon": "Crawdaunt"
+    },
+    {
+        "id": "343",
+        "region": "Hoenn",
+        "pokemon": "Baltoy"
+    },
+    {
+        "id": "344",
+        "region": "Hoenn",
+        "pokemon": "Claydol"
+    },
+    {
+        "id": "345",
+        "region": "Hoenn",
+        "pokemon": "Lileep"
+    },
+    {
+        "id": "346",
+        "region": "Hoenn",
+        "pokemon": "Cradily"
+    },
+    {
+        "id": "347",
+        "region": "Hoenn",
+        "pokemon": "Anorith"
+    },
+    {
+        "id": "348",
+        "region": "Hoenn",
+        "pokemon": "Armaldo"
+    },
+    {
+        "id": "349",
+        "region": "Hoenn",
+        "pokemon": "Feebas"
+    },
+    {
+        "id": "350",
+        "region": "Hoenn",
+        "pokemon": "Milotic"
+    },
+    {
+        "id": "351",
+        "region": "Hoenn",
+        "pokemon": "Castform"
+    },
+    {
+        "id": "352",
+        "region": "Hoenn",
+        "pokemon": "Kecleon"
+    },
+    {
+        "id": "353",
+        "region": "Hoenn",
+        "pokemon": "Shuppet"
+    },
+    {
+        "id": "354",
+        "region": "Hoenn",
+        "pokemon": "Banette"
+    },
+    {
+        "id": "355",
+        "region": "Hoenn",
+        "pokemon": "Duskull"
+    },
+    {
+        "id": "356",
+        "region": "Hoenn",
+        "pokemon": "Dusclops"
+    },
+    {
+        "id": "357",
+        "region": "Hoenn",
+        "pokemon": "Tropius"
+    },
+    {
+        "id": "358",
+        "region": "Hoenn",
+        "pokemon": "Chimecho"
+    },
+    {
+        "id": "359",
+        "region": "Hoenn",
+        "pokemon": "Absol"
+    },
+    {
+        "id": "360",
+        "region": "Hoenn",
+        "pokemon": "Wynaut"
+    },
+    {
+        "id": "361",
+        "region": "Hoenn",
+        "pokemon": "Snorunt"
+    },
+    {
+        "id": "362",
+        "region": "Hoenn",
+        "pokemon": "Glalie"
+    },
+    {
+        "id": "363",
+        "region": "Hoenn",
+        "pokemon": "Spheal"
+    },
+    {
+        "id": "364",
+        "region": "Hoenn",
+        "pokemon": "Sealeo"
+    },
+    {
+        "id": "365",
+        "region": "Hoenn",
+        "pokemon": "Walrein"
+    },
+    {
+        "id": "366",
+        "region": "Hoenn",
+        "pokemon": "Clamperl"
+    },
+    {
+        "id": "367",
+        "region": "Hoenn",
+        "pokemon": "Huntail"
+    },
+    {
+        "id": "368",
+        "region": "Hoenn",
+        "pokemon": "Gorebyss"
+    },
+    {
+        "id": "369",
+        "region": "Hoenn",
+        "pokemon": "Relicanth"
+    },
+    {
+        "id": "370",
+        "region": "Hoenn",
+        "pokemon": "Luvdisc"
+    },
+    {
+        "id": "371",
+        "region": "Hoenn",
+        "pokemon": "Bagon"
+    },
+    {
+        "id": "372",
+        "region": "Hoenn",
+        "pokemon": "Shelgon"
+    },
+    {
+        "id": "373",
+        "region": "Hoenn",
+        "pokemon": "Salamence"
+    },
+    {
+        "id": "374",
+        "region": "Hoenn",
+        "pokemon": "Beldum"
+    },
+    {
+        "id": "375",
+        "region": "Hoenn",
+        "pokemon": "Metang"
+    },
+    {
+        "id": "376",
+        "region": "Hoenn",
+        "pokemon": "Metagross"
+    },
+    {
+        "id": "377",
+        "region": "Hoenn",
+        "pokemon": "Regirock"
+    },
+    {
+        "id": "378",
+        "region": "Hoenn",
+        "pokemon": "Regice"
+    },
+    {
+        "id": "379",
+        "region": "Hoenn",
+        "pokemon": "Registeel"
+    },
+    {
+        "id": "380",
+        "region": "Hoenn",
+        "pokemon": "Latias"
+    },
+    {
+        "id": "381",
+        "region": "Hoenn",
+        "pokemon": "Latios"
+    },
+    {
+        "id": "382",
+        "region": "Hoenn",
+        "pokemon": "Kyogre"
+    },
+    {
+        "id": "383",
+        "region": "Hoenn",
+        "pokemon": "Groudon"
+    },
+    {
+        "id": "384",
+        "region": "Hoenn",
+        "pokemon": "Rayquaza"
+    },
+    {
+        "id": "385",
+        "region": "Hoenn",
+        "pokemon": "Jirachi"
+    },
+    {
+        "id": "386",
+        "region": "Hoenn",
+        "pokemon": "Deoxys"
+    },
+    {
+        "id": "387",
+        "region": "Sinnoh",
+        "pokemon": "Turtwig"
+    },
+    {
+        "id": "388",
+        "region": "Sinnoh",
+        "pokemon": "Grotle"
+    },
+    {
+        "id": "389",
+        "region": "Sinnoh",
+        "pokemon": "Torterra"
+    },
+    {
+        "id": "390",
+        "region": "Sinnoh",
+        "pokemon": "Chimchar"
+    },
+    {
+        "id": "391",
+        "region": "Sinnoh",
+        "pokemon": "Monferno"
+    },
+    {
+        "id": "392",
+        "region": "Sinnoh",
+        "pokemon": "Infernape"
+    },
+    {
+        "id": "393",
+        "region": "Sinnoh",
+        "pokemon": "Piplup"
+    },
+    {
+        "id": "394",
+        "region": "Sinnoh",
+        "pokemon": "Prinplup"
+    },
+    {
+        "id": "395",
+        "region": "Sinnoh",
+        "pokemon": "Empoleon"
+    },
+    {
+        "id": "396",
+        "region": "Sinnoh",
+        "pokemon": "Starly"
+    },
+    {
+        "id": "397",
+        "region": "Sinnoh",
+        "pokemon": "Staravia"
+    },
+    {
+        "id": "398",
+        "region": "Sinnoh",
+        "pokemon": "Staraptor"
+    },
+    {
+        "id": "399",
+        "region": "Sinnoh",
+        "pokemon": "Bidoof"
+    },
+    {
+        "id": "400",
+        "region": "Sinnoh",
+        "pokemon": "Bibarel"
+    },
+    {
+        "id": "401",
+        "region": "Sinnoh",
+        "pokemon": "Kricketot"
+    },
+    {
+        "id": "402",
+        "region": "Sinnoh",
+        "pokemon": "Kricketune"
+    },
+    {
+        "id": "403",
+        "region": "Sinnoh",
+        "pokemon": "Shinx"
+    },
+    {
+        "id": "404",
+        "region": "Sinnoh",
+        "pokemon": "Luxio"
+    },
+    {
+        "id": "405",
+        "region": "Sinnoh",
+        "pokemon": "Luxray"
+    },
+    {
+        "id": "406",
+        "region": "Sinnoh",
+        "pokemon": "Budew"
+    },
+    {
+        "id": "407",
+        "region": "Sinnoh",
+        "pokemon": "Roserade"
+    },
+    {
+        "id": "408",
+        "region": "Sinnoh",
+        "pokemon": "Cranidos"
+    },
+    {
+        "id": "409",
+        "region": "Sinnoh",
+        "pokemon": "Rampardos"
+    },
+    {
+        "id": "410",
+        "region": "Sinnoh",
+        "pokemon": "Shieldon"
+    },
+    {
+        "id": "411",
+        "region": "Sinnoh",
+        "pokemon": "Bastiodon"
+    },
+    {
+        "id": "412",
+        "region": "Sinnoh",
+        "pokemon": "Burmy"
+    },
+    {
+        "id": "413",
+        "region": "Sinnoh",
+        "pokemon": "Wormadam"
+    },
+    {
+        "id": "414",
+        "region": "Sinnoh",
+        "pokemon": "Mothim"
+    },
+    {
+        "id": "415",
+        "region": "Sinnoh",
+        "pokemon": "Combee"
+    },
+    {
+        "id": "416",
+        "region": "Sinnoh",
+        "pokemon": "Vespiquen"
+    },
+    {
+        "id": "417",
+        "region": "Sinnoh",
+        "pokemon": "Pachirisu"
+    },
+    {
+        "id": "418",
+        "region": "Sinnoh",
+        "pokemon": "Buizel"
+    },
+    {
+        "id": "419",
+        "region": "Sinnoh",
+        "pokemon": "Floatzel"
+    },
+    {
+        "id": "420",
+        "region": "Sinnoh",
+        "pokemon": "Cherubi"
+    },
+    {
+        "id": "421",
+        "region": "Sinnoh",
+        "pokemon": "Cherrim"
+    },
+    {
+        "id": "422",
+        "region": "Sinnoh",
+        "pokemon": "Shellos"
+    },
+    {
+        "id": "423",
+        "region": "Sinnoh",
+        "pokemon": "Gastrodon"
+    },
+    {
+        "id": "424",
+        "region": "Sinnoh",
+        "pokemon": "Ambipom"
+    },
+    {
+        "id": "425",
+        "region": "Sinnoh",
+        "pokemon": "Drifloon"
+    },
+    {
+        "id": "426",
+        "region": "Sinnoh",
+        "pokemon": "Drifblim"
+    },
+    {
+        "id": "427",
+        "region": "Sinnoh",
+        "pokemon": "Buneary"
+    },
+    {
+        "id": "428",
+        "region": "Sinnoh",
+        "pokemon": "Lopunny"
+    },
+    {
+        "id": "429",
+        "region": "Sinnoh",
+        "pokemon": "Mismagius"
+    },
+    {
+        "id": "430",
+        "region": "Sinnoh",
+        "pokemon": "Honchkrow"
+    },
+    {
+        "id": "431",
+        "region": "Sinnoh",
+        "pokemon": "Glameow"
+    },
+    {
+        "id": "432",
+        "region": "Sinnoh",
+        "pokemon": "Purugly"
+    },
+    {
+        "id": "433",
+        "region": "Sinnoh",
+        "pokemon": "Chingling"
+    },
+    {
+        "id": "434",
+        "region": "Sinnoh",
+        "pokemon": "Stunky"
+    },
+    {
+        "id": "435",
+        "region": "Sinnoh",
+        "pokemon": "Skuntank"
+    },
+    {
+        "id": "436",
+        "region": "Sinnoh",
+        "pokemon": "Bronzor"
+    },
+    {
+        "id": "437",
+        "region": "Sinnoh",
+        "pokemon": "Bronzong"
+    },
+    {
+        "id": "438",
+        "region": "Sinnoh",
+        "pokemon": "Bonsly"
+    },
+    {
+        "id": "439",
+        "region": "Sinnoh",
+        "pokemon": "Mime Jr."
+    },
+    {
+        "id": "440",
+        "region": "Sinnoh",
+        "pokemon": "Happiny"
+    },
+    {
+        "id": "441",
+        "region": "Sinnoh",
+        "pokemon": "Chatot"
+    },
+    {
+        "id": "442",
+        "region": "Sinnoh",
+        "pokemon": "Spiritomb"
+    },
+    {
+        "id": "443",
+        "region": "Sinnoh",
+        "pokemon": "Gible"
+    },
+    {
+        "id": "444",
+        "region": "Sinnoh",
+        "pokemon": "Gabite"
+    },
+    {
+        "id": "445",
+        "region": "Sinnoh",
+        "pokemon": "Garchomp"
+    },
+    {
+        "id": "446",
+        "region": "Sinnoh",
+        "pokemon": "Munchlax"
+    },
+    {
+        "id": "447",
+        "region": "Sinnoh",
+        "pokemon": "Riolu"
+    },
+    {
+        "id": "448",
+        "region": "Sinnoh",
+        "pokemon": "Lucario"
+    },
+    {
+        "id": "449",
+        "region": "Sinnoh",
+        "pokemon": "Hippopotas"
+    },
+    {
+        "id": "450",
+        "region": "Sinnoh",
+        "pokemon": "Hippowdon"
+    },
+    {
+        "id": "451",
+        "region": "Sinnoh",
+        "pokemon": "Skorupi"
+    },
+    {
+        "id": "452",
+        "region": "Sinnoh",
+        "pokemon": "Drapion"
+    },
+    {
+        "id": "453",
+        "region": "Sinnoh",
+        "pokemon": "Croagunk"
+    },
+    {
+        "id": "454",
+        "region": "Sinnoh",
+        "pokemon": "Toxicroak"
+    },
+    {
+        "id": "455",
+        "region": "Sinnoh",
+        "pokemon": "Carnivine"
+    },
+    {
+        "id": "456",
+        "region": "Sinnoh",
+        "pokemon": "Finneon"
+    },
+    {
+        "id": "457",
+        "region": "Sinnoh",
+        "pokemon": "Lumineon"
+    },
+    {
+        "id": "458",
+        "region": "Sinnoh",
+        "pokemon": "Mantyke"
+    },
+    {
+        "id": "459",
+        "region": "Sinnoh",
+        "pokemon": "Snover"
+    },
+    {
+        "id": "460",
+        "region": "Sinnoh",
+        "pokemon": "Abomasnow"
+    },
+    {
+        "id": "461",
+        "region": "Sinnoh",
+        "pokemon": "Weavile"
+    },
+    {
+        "id": "462",
+        "region": "Sinnoh",
+        "pokemon": "Magnezone"
+    },
+    {
+        "id": "463",
+        "region": "Sinnoh",
+        "pokemon": "Lickilicky"
+    },
+    {
+        "id": "464",
+        "region": "Sinnoh",
+        "pokemon": "Rhyperior"
+    },
+    {
+        "id": "465",
+        "region": "Sinnoh",
+        "pokemon": "Tangrowth"
+    },
+    {
+        "id": "466",
+        "region": "Sinnoh",
+        "pokemon": "Electivire"
+    },
+    {
+        "id": "467",
+        "region": "Sinnoh",
+        "pokemon": "Magmortar"
+    },
+    {
+        "id": "468",
+        "region": "Sinnoh",
+        "pokemon": "Togekiss"
+    },
+    {
+        "id": "469",
+        "region": "Sinnoh",
+        "pokemon": "Yanmega"
+    },
+    {
+        "id": "470",
+        "region": "Sinnoh",
+        "pokemon": "Leafeon"
+    },
+    {
+        "id": "471",
+        "region": "Sinnoh",
+        "pokemon": "Glaceon"
+    },
+    {
+        "id": "472",
+        "region": "Sinnoh",
+        "pokemon": "Gliscor"
+    },
+    {
+        "id": "473",
+        "region": "Sinnoh",
+        "pokemon": "Mamoswine"
+    },
+    {
+        "id": "474",
+        "region": "Sinnoh",
+        "pokemon": "Porygon-z"
+    },
+    {
+        "id": "475",
+        "region": "Sinnoh",
+        "pokemon": "Gallade"
+    },
+    {
+        "id": "476",
+        "region": "Sinnoh",
+        "pokemon": "Probopass"
+    },
+    {
+        "id": "477",
+        "region": "Sinnoh",
+        "pokemon": "Dusknoir"
+    },
+    {
+        "id": "478",
+        "region": "Sinnoh",
+        "pokemon": "Froslass"
+    },
+    {
+        "id": "479",
+        "region": "Sinnoh",
+        "pokemon": "Rotom"
+    },
+    {
+        "id": "480",
+        "region": "Sinnoh",
+        "pokemon": "Uxie"
+    },
+    {
+        "id": "481",
+        "region": "Sinnoh",
+        "pokemon": "Mesprit"
+    },
+    {
+        "id": "482",
+        "region": "Sinnoh",
+        "pokemon": "Azelf"
+    },
+    {
+        "id": "483",
+        "region": "Sinnoh",
+        "pokemon": "Dialga"
+    },
+    {
+        "id": "484",
+        "region": "Sinnoh",
+        "pokemon": "Palkia"
+    },
+    {
+        "id": "485",
+        "region": "Sinnoh",
+        "pokemon": "Heatran"
+    },
+    {
+        "id": "486",
+        "region": "Sinnoh",
+        "pokemon": "Regigigas"
+    },
+    {
+        "id": "487",
+        "region": "Sinnoh",
+        "pokemon": "Giratina"
+    },
+    {
+        "id": "488",
+        "region": "Sinnoh",
+        "pokemon": "Cresselia"
+    },
+    {
+        "id": "489",
+        "region": "Sinnoh",
+        "pokemon": "Phione"
+    },
+    {
+        "id": "490",
+        "region": "Sinnoh",
+        "pokemon": "Manaphy"
+    },
+    {
+        "id": "491",
+        "region": "Sinnoh",
+        "pokemon": "Darkrai"
+    },
+    {
+        "id": "492",
+        "region": "Sinnoh",
+        "pokemon": "Shaymin"
+    },
+    {
+        "id": "493",
+        "region": "Sinnoh",
+        "pokemon": "Arceus"
+    },
+    {
+        "id": "494",
+        "region": "Unova",
+        "pokemon": "Victini"
+    },
+    {
+        "id": "495",
+        "region": "Unova",
+        "pokemon": "Snivy"
+    },
+    {
+        "id": "496",
+        "region": "Unova",
+        "pokemon": "Servine"
+    },
+    {
+        "id": "497",
+        "region": "Unova",
+        "pokemon": "Serperior"
+    },
+    {
+        "id": "498",
+        "region": "Unova",
+        "pokemon": "Tepig"
+    },
+    {
+        "id": "499",
+        "region": "Unova",
+        "pokemon": "Pignite"
+    },
+    {
+        "id": "500",
+        "region": "Unova",
+        "pokemon": "Emboar"
+    },
+    {
+        "id": "501",
+        "region": "Unova",
+        "pokemon": "Oshawott"
+    },
+    {
+        "id": "502",
+        "region": "Unova",
+        "pokemon": "Dewott"
+    },
+    {
+        "id": "503",
+        "region": "Unova",
+        "pokemon": "Samurott"
+    },
+    {
+        "id": "504",
+        "region": "Unova",
+        "pokemon": "Patrat"
+    },
+    {
+        "id": "505",
+        "region": "Unova",
+        "pokemon": "Watchog"
+    },
+    {
+        "id": "506",
+        "region": "Unova",
+        "pokemon": "Lillipup"
+    },
+    {
+        "id": "507",
+        "region": "Unova",
+        "pokemon": "Herdier"
+    },
+    {
+        "id": "508",
+        "region": "Unova",
+        "pokemon": "Stoutland"
+    },
+    {
+        "id": "509",
+        "region": "Unova",
+        "pokemon": "Purrloin"
+    },
+    {
+        "id": "510",
+        "region": "Unova",
+        "pokemon": "Liepard"
+    },
+    {
+        "id": "511",
+        "region": "Unova",
+        "pokemon": "Pansage"
+    },
+    {
+        "id": "512",
+        "region": "Unova",
+        "pokemon": "Simisage"
+    },
+    {
+        "id": "513",
+        "region": "Unova",
+        "pokemon": "Pansear"
+    },
+    {
+        "id": "514",
+        "region": "Unova",
+        "pokemon": "Simisear"
+    },
+    {
+        "id": "515",
+        "region": "Unova",
+        "pokemon": "Panpour"
+    },
+    {
+        "id": "516",
+        "region": "Unova",
+        "pokemon": "Simipour"
+    },
+    {
+        "id": "517",
+        "region": "Unova",
+        "pokemon": "Munna"
+    },
+    {
+        "id": "518",
+        "region": "Unova",
+        "pokemon": "Musharna"
+    },
+    {
+        "id": "519",
+        "region": "Unova",
+        "pokemon": "Pidove"
+    },
+    {
+        "id": "520",
+        "region": "Unova",
+        "pokemon": "Tranquill"
+    },
+    {
+        "id": "521",
+        "region": "Unova",
+        "pokemon": "Unfezant"
+    },
+    {
+        "id": "522",
+        "region": "Unova",
+        "pokemon": "Blitzle"
+    },
+    {
+        "id": "523",
+        "region": "Unova",
+        "pokemon": "Zebstrika"
+    },
+    {
+        "id": "524",
+        "region": "Unova",
+        "pokemon": "Roggenrola"
+    },
+    {
+        "id": "525",
+        "region": "Unova",
+        "pokemon": "Boldore"
+    },
+    {
+        "id": "526",
+        "region": "Unova",
+        "pokemon": "Gigalith"
+    },
+    {
+        "id": "527",
+        "region": "Unova",
+        "pokemon": "Woobat"
+    },
+    {
+        "id": "528",
+        "region": "Unova",
+        "pokemon": "Swoobat"
+    },
+    {
+        "id": "529",
+        "region": "Unova",
+        "pokemon": "Drilbur"
+    },
+    {
+        "id": "530",
+        "region": "Unova",
+        "pokemon": "Excadrill"
+    },
+    {
+        "id": "531",
+        "region": "Unova",
+        "pokemon": "Audino"
+    },
+    {
+        "id": "532",
+        "region": "Unova",
+        "pokemon": "Timburr"
+    },
+    {
+        "id": "533",
+        "region": "Unova",
+        "pokemon": "Gurdurr"
+    },
+    {
+        "id": "534",
+        "region": "Unova",
+        "pokemon": "Conkeldurr"
+    },
+    {
+        "id": "535",
+        "region": "Unova",
+        "pokemon": "Tympole"
+    },
+    {
+        "id": "536",
+        "region": "Unova",
+        "pokemon": "Palpitoad"
+    },
+    {
+        "id": "537",
+        "region": "Unova",
+        "pokemon": "Seismitoad"
+    },
+    {
+        "id": "538",
+        "region": "Unova",
+        "pokemon": "Throh"
+    },
+    {
+        "id": "539",
+        "region": "Unova",
+        "pokemon": "Sawk"
+    },
+    {
+        "id": "540",
+        "region": "Unova",
+        "pokemon": "Sewaddle"
+    },
+    {
+        "id": "541",
+        "region": "Unova",
+        "pokemon": "Swadloon"
+    },
+    {
+        "id": "542",
+        "region": "Unova",
+        "pokemon": "Leavanny"
+    },
+    {
+        "id": "543",
+        "region": "Unova",
+        "pokemon": "Venipede"
+    },
+    {
+        "id": "544",
+        "region": "Unova",
+        "pokemon": "Whirlipede"
+    },
+    {
+        "id": "545",
+        "region": "Unova",
+        "pokemon": "Scolipede"
+    },
+    {
+        "id": "546",
+        "region": "Unova",
+        "pokemon": "Cottonee"
+    },
+    {
+        "id": "547",
+        "region": "Unova",
+        "pokemon": "Whimsicott"
+    },
+    {
+        "id": "548",
+        "region": "Unova",
+        "pokemon": "Petilil"
+    },
+    {
+        "id": "549",
+        "region": "Unova",
+        "pokemon": "Lilligant"
+    },
+    {
+        "id": "550",
+        "region": "Unova",
+        "pokemon": "Basculin"
+    },
+    {
+        "id": "551",
+        "region": "Unova",
+        "pokemon": "Sandile"
+    },
+    {
+        "id": "552",
+        "region": "Unova",
+        "pokemon": "Krokorok"
+    },
+    {
+        "id": "553",
+        "region": "Unova",
+        "pokemon": "Krookodile"
+    },
+    {
+        "id": "554",
+        "region": "Unova",
+        "pokemon": "Darumaka"
+    },
+    {
+        "id": "555",
+        "region": "Unova",
+        "pokemon": "Darmanitan"
+    },
+    {
+        "id": "556",
+        "region": "Unova",
+        "pokemon": "Maractus"
+    },
+    {
+        "id": "557",
+        "region": "Unova",
+        "pokemon": "Dwebble"
+    },
+    {
+        "id": "558",
+        "region": "Unova",
+        "pokemon": "Crustle"
+    },
+    {
+        "id": "559",
+        "region": "Unova",
+        "pokemon": "Scraggy"
+    },
+    {
+        "id": "560",
+        "region": "Unova",
+        "pokemon": "Scrafty"
+    },
+    {
+        "id": "561",
+        "region": "Unova",
+        "pokemon": "Sigilyph"
+    },
+    {
+        "id": "562",
+        "region": "Unova",
+        "pokemon": "Yamask"
+    },
+    {
+        "id": "563",
+        "region": "Unova",
+        "pokemon": "Cofagrigus"
+    },
+    {
+        "id": "564",
+        "region": "Unova",
+        "pokemon": "Tirtouga"
+    },
+    {
+        "id": "565",
+        "region": "Unova",
+        "pokemon": "Carracosta"
+    },
+    {
+        "id": "566",
+        "region": "Unova",
+        "pokemon": "Archen"
+    },
+    {
+        "id": "567",
+        "region": "Unova",
+        "pokemon": "Archeops"
+    },
+    {
+        "id": "568",
+        "region": "Unova",
+        "pokemon": "Trubbish"
+    },
+    {
+        "id": "569",
+        "region": "Unova",
+        "pokemon": "Garbodor"
+    },
+    {
+        "id": "570",
+        "region": "Unova",
+        "pokemon": "Zorua"
+    },
+    {
+        "id": "571",
+        "region": "Unova",
+        "pokemon": "Zoroark"
+    },
+    {
+        "id": "572",
+        "region": "Unova",
+        "pokemon": "Minccino"
+    },
+    {
+        "id": "573",
+        "region": "Unova",
+        "pokemon": "Cinccino"
+    },
+    {
+        "id": "574",
+        "region": "Unova",
+        "pokemon": "Gothita"
+    },
+    {
+        "id": "575",
+        "region": "Unova",
+        "pokemon": "Gothorita"
+    },
+    {
+        "id": "576",
+        "region": "Unova",
+        "pokemon": "Gothitelle"
+    },
+    {
+        "id": "577",
+        "region": "Unova",
+        "pokemon": "Solosis"
+    },
+    {
+        "id": "578",
+        "region": "Unova",
+        "pokemon": "Duosion"
+    },
+    {
+        "id": "579",
+        "region": "Unova",
+        "pokemon": "Reuniclus"
+    },
+    {
+        "id": "580",
+        "region": "Unova",
+        "pokemon": "Ducklett"
+    },
+    {
+        "id": "581",
+        "region": "Unova",
+        "pokemon": "Swanna"
+    },
+    {
+        "id": "582",
+        "region": "Unova",
+        "pokemon": "Vanillite"
+    },
+    {
+        "id": "583",
+        "region": "Unova",
+        "pokemon": "Vanillish"
+    },
+    {
+        "id": "584",
+        "region": "Unova",
+        "pokemon": "Vanilluxe"
+    },
+    {
+        "id": "585",
+        "region": "Unova",
+        "pokemon": "Deerling"
+    },
+    {
+        "id": "586",
+        "region": "Unova",
+        "pokemon": "Sawsbuck"
+    },
+    {
+        "id": "587",
+        "region": "Unova",
+        "pokemon": "Emolga"
+    },
+    {
+        "id": "588",
+        "region": "Unova",
+        "pokemon": "Karrablast"
+    },
+    {
+        "id": "589",
+        "region": "Unova",
+        "pokemon": "Escavalier"
+    },
+    {
+        "id": "590",
+        "region": "Unova",
+        "pokemon": "Foongus"
+    },
+    {
+        "id": "591",
+        "region": "Unova",
+        "pokemon": "Amoonguss"
+    },
+    {
+        "id": "592",
+        "region": "Unova",
+        "pokemon": "Frillish"
+    },
+    {
+        "id": "593",
+        "region": "Unova",
+        "pokemon": "Jellicent"
+    },
+    {
+        "id": "594",
+        "region": "Unova",
+        "pokemon": "Alomomola"
+    },
+    {
+        "id": "595",
+        "region": "Unova",
+        "pokemon": "Joltik"
+    },
+    {
+        "id": "596",
+        "region": "Unova",
+        "pokemon": "Galvantula"
+    },
+    {
+        "id": "597",
+        "region": "Unova",
+        "pokemon": "Ferroseed"
+    },
+    {
+        "id": "598",
+        "region": "Unova",
+        "pokemon": "Ferrothorn"
+    },
+    {
+        "id": "599",
+        "region": "Unova",
+        "pokemon": "Klink"
+    },
+    {
+        "id": "600",
+        "region": "Unova",
+        "pokemon": "Klang"
+    },
+    {
+        "id": "601",
+        "region": "Unova",
+        "pokemon": "Klinklang"
+    },
+    {
+        "id": "602",
+        "region": "Unova",
+        "pokemon": "Tynamo"
+    },
+    {
+        "id": "603",
+        "region": "Unova",
+        "pokemon": "Eelektrik"
+    },
+    {
+        "id": "604",
+        "region": "Unova",
+        "pokemon": "Eelektross"
+    },
+    {
+        "id": "605",
+        "region": "Unova",
+        "pokemon": "Elgyem"
+    },
+    {
+        "id": "606",
+        "region": "Unova",
+        "pokemon": "Beheeyem"
+    },
+    {
+        "id": "607",
+        "region": "Unova",
+        "pokemon": "Litwick"
+    },
+    {
+        "id": "608",
+        "region": "Unova",
+        "pokemon": "Lampent"
+    },
+    {
+        "id": "609",
+        "region": "Unova",
+        "pokemon": "Chandelure"
+    },
+    {
+        "id": "610",
+        "region": "Unova",
+        "pokemon": "Axew"
+    },
+    {
+        "id": "611",
+        "region": "Unova",
+        "pokemon": "Fraxure"
+    },
+    {
+        "id": "612",
+        "region": "Unova",
+        "pokemon": "Haxorus"
+    },
+    {
+        "id": "613",
+        "region": "Unova",
+        "pokemon": "Cubchoo"
+    },
+    {
+        "id": "614",
+        "region": "Unova",
+        "pokemon": "Beartic"
+    },
+    {
+        "id": "615",
+        "region": "Unova",
+        "pokemon": "Cryogonal"
+    },
+    {
+        "id": "616",
+        "region": "Unova",
+        "pokemon": "Shelmet"
+    },
+    {
+        "id": "617",
+        "region": "Unova",
+        "pokemon": "Accelgor"
+    },
+    {
+        "id": "618",
+        "region": "Unova",
+        "pokemon": "Stunfisk"
+    },
+    {
+        "id": "619",
+        "region": "Unova",
+        "pokemon": "Mienfoo"
+    },
+    {
+        "id": "620",
+        "region": "Unova",
+        "pokemon": "Mienshao"
+    },
+    {
+        "id": "621",
+        "region": "Unova",
+        "pokemon": "Druddigon"
+    },
+    {
+        "id": "622",
+        "region": "Unova",
+        "pokemon": "Golett"
+    },
+    {
+        "id": "623",
+        "region": "Unova",
+        "pokemon": "Golurk"
+    },
+    {
+        "id": "624",
+        "region": "Unova",
+        "pokemon": "Pawniard"
+    },
+    {
+        "id": "625",
+        "region": "Unova",
+        "pokemon": "Bisharp"
+    },
+    {
+        "id": "626",
+        "region": "Unova",
+        "pokemon": "Bouffalant"
+    },
+    {
+        "id": "627",
+        "region": "Unova",
+        "pokemon": "Rufflet"
+    },
+    {
+        "id": "628",
+        "region": "Unova",
+        "pokemon": "Braviary"
+    },
+    {
+        "id": "629",
+        "region": "Unova",
+        "pokemon": "Vullaby"
+    },
+    {
+        "id": "630",
+        "region": "Unova",
+        "pokemon": "Mandibuzz"
+    },
+    {
+        "id": "631",
+        "region": "Unova",
+        "pokemon": "Heatmor"
+    },
+    {
+        "id": "632",
+        "region": "Unova",
+        "pokemon": "Durant"
+    },
+    {
+        "id": "633",
+        "region": "Unova",
+        "pokemon": "Deino"
+    },
+    {
+        "id": "634",
+        "region": "Unova",
+        "pokemon": "Zweilous"
+    },
+    {
+        "id": "635",
+        "region": "Unova",
+        "pokemon": "Hydreigon"
+    },
+    {
+        "id": "636",
+        "region": "Unova",
+        "pokemon": "Larvesta"
+    },
+    {
+        "id": "637",
+        "region": "Unova",
+        "pokemon": "Volcarona"
+    },
+    {
+        "id": "638",
+        "region": "Unova",
+        "pokemon": "Cobalion"
+    },
+    {
+        "id": "639",
+        "region": "Unova",
+        "pokemon": "Terrakion"
+    },
+    {
+        "id": "640",
+        "region": "Unova",
+        "pokemon": "Virizion"
+    },
+    {
+        "id": "641",
+        "region": "Unova",
+        "pokemon": "Tornadus"
+    },
+    {
+        "id": "642",
+        "region": "Unova",
+        "pokemon": "Thundurus"
+    },
+    {
+        "id": "643",
+        "region": "Unova",
+        "pokemon": "Reshiram"
+    },
+    {
+        "id": "644",
+        "region": "Unova",
+        "pokemon": "Zekrom"
+    },
+    {
+        "id": "645",
+        "region": "Unova",
+        "pokemon": "Landorus"
+    },
+    {
+        "id": "646",
+        "region": "Unova",
+        "pokemon": "Kyurem"
+    },
+    {
+        "id": "647",
+        "region": "Unova",
+        "pokemon": "Keldeo"
+    },
+    {
+        "id": "648",
+        "region": "Unova",
+        "pokemon": "Meloetta"
+    },
+    {
+        "id": "649",
+        "region": "Unova",
+        "pokemon": "Genesect"
+    },
+    {
+        "id": "650",
+        "region": "Kalos",
+        "pokemon": "Chespin"
+    },
+    {
+        "id": "651",
+        "region": "Kalos",
+        "pokemon": "Quilladin"
+    },
+    {
+        "id": "652",
+        "region": "Kalos",
+        "pokemon": "Chesnaught"
+    },
+    {
+        "id": "653",
+        "region": "Kalos",
+        "pokemon": "Fennekin"
+    },
+    {
+        "id": "654",
+        "region": "Kalos",
+        "pokemon": "Braixen"
+    },
+    {
+        "id": "655",
+        "region": "Kalos",
+        "pokemon": "Delphox"
+    },
+    {
+        "id": "656",
+        "region": "Kalos",
+        "pokemon": "Froakie"
+    },
+    {
+        "id": "657",
+        "region": "Kalos",
+        "pokemon": "Frogadier"
+    },
+    {
+        "id": "658",
+        "region": "Kalos",
+        "pokemon": "Greninja"
+    },
+    {
+        "id": "659",
+        "region": "Kalos",
+        "pokemon": "Bunnelby"
+    },
+    {
+        "id": "660",
+        "region": "Kalos",
+        "pokemon": "Diggersby"
+    },
+    {
+        "id": "661",
+        "region": "Kalos",
+        "pokemon": "Fletchling"
+    },
+    {
+        "id": "662",
+        "region": "Kalos",
+        "pokemon": "Fletchinder"
+    },
+    {
+        "id": "663",
+        "region": "Kalos",
+        "pokemon": "Talonflame"
+    },
+    {
+        "id": "664",
+        "region": "Kalos",
+        "pokemon": "Scatterbug"
+    },
+    {
+        "id": "665",
+        "region": "Kalos",
+        "pokemon": "Spewpa"
+    },
+    {
+        "id": "666",
+        "region": "Kalos",
+        "pokemon": "Vivillon"
+    },
+    {
+        "id": "667",
+        "region": "Kalos",
+        "pokemon": "Litleo"
+    },
+    {
+        "id": "668",
+        "region": "Kalos",
+        "pokemon": "Pyroar"
+    },
+    {
+        "id": "669",
+        "region": "Kalos",
+        "pokemon": "Flabebe"
+    },
+    {
+        "id": "670",
+        "region": "Kalos",
+        "pokemon": "Floette"
+    },
+    {
+        "id": "671",
+        "region": "Kalos",
+        "pokemon": "Florges"
+    },
+    {
+        "id": "672",
+        "region": "Kalos",
+        "pokemon": "Skiddo"
+    },
+    {
+        "id": "673",
+        "region": "Kalos",
+        "pokemon": "Gogoat"
+    },
+    {
+        "id": "674",
+        "region": "Kalos",
+        "pokemon": "Pancham"
+    },
+    {
+        "id": "675",
+        "region": "Kalos",
+        "pokemon": "Pangoro"
+    },
+    {
+        "id": "676",
+        "region": "Kalos",
+        "pokemon": "Furfrou"
+    },
+    {
+        "id": "677",
+        "region": "Kalos",
+        "pokemon": "Espurr"
+    },
+    {
+        "id": "678",
+        "region": "Kalos",
+        "pokemon": "Meowstic"
+    },
+    {
+        "id": "679",
+        "region": "Kalos",
+        "pokemon": "Honedge"
+    },
+    {
+        "id": "680",
+        "region": "Kalos",
+        "pokemon": "Doublade"
+    },
+    {
+        "id": "681",
+        "region": "Kalos",
+        "pokemon": "Aegislash"
+    },
+    {
+        "id": "682",
+        "region": "Kalos",
+        "pokemon": "Spritzee"
+    },
+    {
+        "id": "683",
+        "region": "Kalos",
+        "pokemon": "Aromatisse"
+    },
+    {
+        "id": "684",
+        "region": "Kalos",
+        "pokemon": "Swirlix"
+    },
+    {
+        "id": "685",
+        "region": "Kalos",
+        "pokemon": "Slurpuff"
+    },
+    {
+        "id": "686",
+        "region": "Kalos",
+        "pokemon": "Inkay"
+    },
+    {
+        "id": "687",
+        "region": "Kalos",
+        "pokemon": "Malamar"
+    },
+    {
+        "id": "688",
+        "region": "Kalos",
+        "pokemon": "Binacle"
+    },
+    {
+        "id": "689",
+        "region": "Kalos",
+        "pokemon": "Barbaracle"
+    },
+    {
+        "id": "690",
+        "region": "Kalos",
+        "pokemon": "Skrelp"
+    },
+    {
+        "id": "691",
+        "region": "Kalos",
+        "pokemon": "Dragalge"
+    },
+    {
+        "id": "692",
+        "region": "Kalos",
+        "pokemon": "Clauncher"
+    },
+    {
+        "id": "693",
+        "region": "Kalos",
+        "pokemon": "Clawitzer"
+    },
+    {
+        "id": "694",
+        "region": "Kalos",
+        "pokemon": "Helioptile"
+    },
+    {
+        "id": "695",
+        "region": "Kalos",
+        "pokemon": "Heliolisk"
+    },
+    {
+        "id": "696",
+        "region": "Kalos",
+        "pokemon": "Tyrunt"
+    },
+    {
+        "id": "697",
+        "region": "Kalos",
+        "pokemon": "Tyrantrum"
+    },
+    {
+        "id": "698",
+        "region": "Kalos",
+        "pokemon": "Amaura"
+    },
+    {
+        "id": "699",
+        "region": "Kalos",
+        "pokemon": "Aurorus"
+    },
+    {
+        "id": "700",
+        "region": "Kalos",
+        "pokemon": "Sylveon"
+    },
+    {
+        "id": "701",
+        "region": "Kalos",
+        "pokemon": "Hawlucha"
+    },
+    {
+        "id": "702",
+        "region": "Kalos",
+        "pokemon": "Dedenne"
+    },
+    {
+        "id": "703",
+        "region": "Kalos",
+        "pokemon": "Carbink"
+    },
+    {
+        "id": "704",
+        "region": "Kalos",
+        "pokemon": "Goomy"
+    },
+    {
+        "id": "705",
+        "region": "Kalos",
+        "pokemon": "Sliggoo"
+    },
+    {
+        "id": "706",
+        "region": "Kalos",
+        "pokemon": "Goodra"
+    },
+    {
+        "id": "707",
+        "region": "Kalos",
+        "pokemon": "Klefki"
+    },
+    {
+        "id": "708",
+        "region": "Kalos",
+        "pokemon": "Phantump"
+    },
+    {
+        "id": "709",
+        "region": "Kalos",
+        "pokemon": "Trevenant"
+    },
+    {
+        "id": "710",
+        "region": "Kalos",
+        "pokemon": "Pumpkaboo"
+    },
+    {
+        "id": "711",
+        "region": "Kalos",
+        "pokemon": "Gourgeist"
+    },
+    {
+        "id": "712",
+        "region": "Kalos",
+        "pokemon": "Bergmite"
+    },
+    {
+        "id": "713",
+        "region": "Kalos",
+        "pokemon": "Avalugg"
+    },
+    {
+        "id": "714",
+        "region": "Kalos",
+        "pokemon": "Noibat"
+    },
+    {
+        "id": "715",
+        "region": "Kalos",
+        "pokemon": "Noivern"
+    },
+    {
+        "id": "716",
+        "region": "Kalos",
+        "pokemon": "Xerneas"
+    },
+    {
+        "id": "717",
+        "region": "Kalos",
+        "pokemon": "Yveltal"
+    },
+    {
+        "id": "718",
+        "region": "Kalos",
+        "pokemon": "Zygarde"
+    },
+    {
+        "id": "719",
+        "region": "Kalos",
+        "pokemon": "Diancie"
+    },
+    {
+        "id": "720",
+        "region": "Kalos",
+        "pokemon": "Hoopa"
+    },
+    {
+        "id": "721",
+        "region": "Kalos",
+        "pokemon": "Volcanion"
+    },
+    {
+        "id": "722",
+        "region": "Alola",
+        "pokemon": "Rowlet"
+    },
+    {
+        "id": "723",
+        "region": "Alola",
+        "pokemon": "Dartrix"
+    },
+    {
+        "id": "724",
+        "region": "Alola",
+        "pokemon": "Decidueye"
+    },
+    {
+        "id": "725",
+        "region": "Alola",
+        "pokemon": "Litten"
+    },
+    {
+        "id": "726",
+        "region": "Alola",
+        "pokemon": "Torracat"
+    },
+    {
+        "id": "727",
+        "region": "Alola",
+        "pokemon": "Incineroar"
+    },
+    {
+        "id": "728",
+        "region": "Alola",
+        "pokemon": "Popplio"
+    },
+    {
+        "id": "729",
+        "region": "Alola",
+        "pokemon": "Brionne"
+    },
+    {
+        "id": "730",
+        "region": "Alola",
+        "pokemon": "Primarina"
+    },
+    {
+        "id": "731",
+        "region": "Alola",
+        "pokemon": "Pikipek"
+    },
+    {
+        "id": "732",
+        "region": "Alola",
+        "pokemon": "Trumbeak"
+    },
+    {
+        "id": "733",
+        "region": "Alola",
+        "pokemon": "Toucannon"
+    },
+    {
+        "id": "734",
+        "region": "Alola",
+        "pokemon": "Yungoos"
+    },
+    {
+        "id": "735",
+        "region": "Alola",
+        "pokemon": "Gumshoos"
+    },
+    {
+        "id": "736",
+        "region": "Alola",
+        "pokemon": "Grubbin"
+    },
+    {
+        "id": "737",
+        "region": "Alola",
+        "pokemon": "Charjabug"
+    },
+    {
+        "id": "738",
+        "region": "Alola",
+        "pokemon": "Vikavolt"
+    },
+    {
+        "id": "739",
+        "region": "Alola",
+        "pokemon": "Crabrawler"
+    },
+    {
+        "id": "740",
+        "region": "Alola",
+        "pokemon": "Crabominable"
+    },
+    {
+        "id": "741",
+        "region": "Alola",
+        "pokemon": "Oricorio"
+    },
+    {
+        "id": "742",
+        "region": "Alola",
+        "pokemon": "Cutiefly"
+    },
+    {
+        "id": "743",
+        "region": "Alola",
+        "pokemon": "Ribombee"
+    },
+    {
+        "id": "744",
+        "region": "Alola",
+        "pokemon": "Rockruff"
+    },
+    {
+        "id": "745",
+        "region": "Alola",
+        "pokemon": "Lycanroc"
+    },
+    {
+        "id": "746",
+        "region": "Alola",
+        "pokemon": "Wishiwashi"
+    },
+    {
+        "id": "747",
+        "region": "Alola",
+        "pokemon": "Mareanie"
+    },
+    {
+        "id": "748",
+        "region": "Alola",
+        "pokemon": "Toxapex"
+    },
+    {
+        "id": "749",
+        "region": "Alola",
+        "pokemon": "Mudbray"
+    },
+    {
+        "id": "750",
+        "region": "Alola",
+        "pokemon": "Mudsdale"
+    },
+    {
+        "id": "751",
+        "region": "Alola",
+        "pokemon": "Dewpider"
+    },
+    {
+        "id": "752",
+        "region": "Alola",
+        "pokemon": "Araquanid"
+    },
+    {
+        "id": "753",
+        "region": "Alola",
+        "pokemon": "Fomantis"
+    },
+    {
+        "id": "754",
+        "region": "Alola",
+        "pokemon": "Lurantis"
+    },
+    {
+        "id": "755",
+        "region": "Alola",
+        "pokemon": "Morelull"
+    },
+    {
+        "id": "756",
+        "region": "Alola",
+        "pokemon": "Shiinotic"
+    },
+    {
+        "id": "757",
+        "region": "Alola",
+        "pokemon": "Salandit"
+    },
+    {
+        "id": "758",
+        "region": "Alola",
+        "pokemon": "Salazzle"
+    },
+    {
+        "id": "759",
+        "region": "Alola",
+        "pokemon": "Stufful"
+    },
+    {
+        "id": "760",
+        "region": "Alola",
+        "pokemon": "Bewear"
+    },
+    {
+        "id": "761",
+        "region": "Alola",
+        "pokemon": "Bounsweet"
+    },
+    {
+        "id": "762",
+        "region": "Alola",
+        "pokemon": "Steenee"
+    },
+    {
+        "id": "763",
+        "region": "Alola",
+        "pokemon": "Tsareena"
+    },
+    {
+        "id": "764",
+        "region": "Alola",
+        "pokemon": "Comfey"
+    },
+    {
+        "id": "765",
+        "region": "Alola",
+        "pokemon": "Oranguru"
+    },
+    {
+        "id": "766",
+        "region": "Alola",
+        "pokemon": "Passimian"
+    },
+    {
+        "id": "767",
+        "region": "Alola",
+        "pokemon": "Wimpod"
+    },
+    {
+        "id": "768",
+        "region": "Alola",
+        "pokemon": "Golisopod"
+    },
+    {
+        "id": "769",
+        "region": "Alola",
+        "pokemon": "Sandygast"
+    },
+    {
+        "id": "770",
+        "region": "Alola",
+        "pokemon": "Palossand"
+    },
+    {
+        "id": "771",
+        "region": "Alola",
+        "pokemon": "Pyukumuku"
+    },
+    {
+        "id": "772",
+        "region": "Alola",
+        "pokemon": "Type: Null"
+    },
+    {
+        "id": "773",
+        "region": "Alola",
+        "pokemon": "Silvally"
+    },
+    {
+        "id": "774",
+        "region": "Alola",
+        "pokemon": "Minior"
+    },
+    {
+        "id": "775",
+        "region": "Alola",
+        "pokemon": "Komala"
+    },
+    {
+        "id": "776",
+        "region": "Alola",
+        "pokemon": "Turtonator"
+    },
+    {
+        "id": "777",
+        "region": "Alola",
+        "pokemon": "Togedemaru"
+    },
+    {
+        "id": "778",
+        "region": "Alola",
+        "pokemon": "Mimikyu"
+    },
+    {
+        "id": "779",
+        "region": "Alola",
+        "pokemon": "Bruxish"
+    },
+    {
+        "id": "780",
+        "region": "Alola",
+        "pokemon": "Drampa"
+    },
+    {
+        "id": "781",
+        "region": "Alola",
+        "pokemon": "Dhelmise"
+    },
+    {
+        "id": "782",
+        "region": "Alola",
+        "pokemon": "Jangmo-o"
+    },
+    {
+        "id": "783",
+        "region": "Alola",
+        "pokemon": "Hakamo-o"
+    },
+    {
+        "id": "784",
+        "region": "Alola",
+        "pokemon": "Kommo-o"
+    },
+    {
+        "id": "785",
+        "region": "Alola",
+        "pokemon": "Tapu Koko"
+    },
+    {
+        "id": "786",
+        "region": "Alola",
+        "pokemon": "Tapu Lele"
+    },
+    {
+        "id": "787",
+        "region": "Alola",
+        "pokemon": "Tapu Bulu"
+    },
+    {
+        "id": "788",
+        "region": "Alola",
+        "pokemon": "Tapu Fini"
+    },
+    {
+        "id": "789",
+        "region": "Alola",
+        "pokemon": "Cosmog"
+    },
+    {
+        "id": "790",
+        "region": "Alola",
+        "pokemon": "Cosmoem"
+    },
+    {
+        "id": "791",
+        "region": "Alola",
+        "pokemon": "Solgaleo"
+    },
+    {
+        "id": "792",
+        "region": "Alola",
+        "pokemon": "Lunala"
+    },
+    {
+        "id": "793",
+        "region": "Alola",
+        "pokemon": "Nihilego"
+    },
+    {
+        "id": "794",
+        "region": "Alola",
+        "pokemon": "Buzzwole"
+    },
+    {
+        "id": "795",
+        "region": "Alola",
+        "pokemon": "Pheromosa"
+    },
+    {
+        "id": "796",
+        "region": "Alola",
+        "pokemon": "Xurkitree"
+    },
+    {
+        "id": "797",
+        "region": "Alola",
+        "pokemon": "Celesteela"
+    },
+    {
+        "id": "798",
+        "region": "Alola",
+        "pokemon": "Kartana"
+    },
+    {
+        "id": "799",
+        "region": "Alola",
+        "pokemon": "Guzzlord"
+    },
+    {
+        "id": "800",
+        "region": "Alola",
+        "pokemon": "Necrozma"
+    },
+    {
+        "id": "801",
+        "region": "Alola",
+        "pokemon": "Magearna"
+    },
+    {
+        "id": "802",
+        "region": "Alola",
+        "pokemon": "Marshadow"
+    },
+    {
+        "id": "803",
+        "region": "Alola",
+        "pokemon": "Poipole"
+    },
+    {
+        "id": "804",
+        "region": "Alola",
+        "pokemon": "Naganadel"
+    },
+    {
+        "id": "805",
+        "region": "Alola",
+        "pokemon": "Stakataka"
+    },
+    {
+        "id": "806",
+        "region": "Alola",
+        "pokemon": "Blacephalon"
+    },
+    {
+        "id": "807",
+        "region": "Alola",
+        "pokemon": "Zeraora"
+    },
+    {
+        "id": "808",
+        "region": "Alola",
+        "pokemon": "Meltan"
+    },
+    {
+        "id": "809",
+        "region": "Alola",
+        "pokemon": "Melmetal"
+    },
+    {
+        "id": "810",
+        "region": "Galar",
+        "pokemon": "Grookey"
+    },
+    {
+        "id": "811",
+        "region": "Galar",
+        "pokemon": "Thwackey"
+    },
+    {
+        "id": "812",
+        "region": "Galar",
+        "pokemon": "Rillaboom"
+    },
+    {
+        "id": "813",
+        "region": "Galar",
+        "pokemon": "Scorbunny"
+    },
+    {
+        "id": "814",
+        "region": "Galar",
+        "pokemon": "Raboot"
+    },
+    {
+        "id": "815",
+        "region": "Galar",
+        "pokemon": "Cinderace"
+    },
+    {
+        "id": "816",
+        "region": "Galar",
+        "pokemon": "Sobble"
+    },
+    {
+        "id": "817",
+        "region": "Galar",
+        "pokemon": "Drizzile"
+    },
+    {
+        "id": "818",
+        "region": "Galar",
+        "pokemon": "Inteleon"
+    },
+    {
+        "id": "819",
+        "region": "Galar",
+        "pokemon": "Skwovet"
+    },
+    {
+        "id": "820",
+        "region": "Galar",
+        "pokemon": "Greedent"
+    },
+    {
+        "id": "821",
+        "region": "Galar",
+        "pokemon": "Rookidee"
+    },
+    {
+        "id": "822",
+        "region": "Galar",
+        "pokemon": "Corvisquire"
+    },
+    {
+        "id": "823",
+        "region": "Galar",
+        "pokemon": "Corviknight"
+    },
+    {
+        "id": "824",
+        "region": "Galar",
+        "pokemon": "Blipbug"
+    },
+    {
+        "id": "825",
+        "region": "Galar",
+        "pokemon": "Dottler"
+    },
+    {
+        "id": "826",
+        "region": "Galar",
+        "pokemon": "Orbeetle"
+    },
+    {
+        "id": "827",
+        "region": "Galar",
+        "pokemon": "Nickit"
+    },
+    {
+        "id": "828",
+        "region": "Galar",
+        "pokemon": "Thievul"
+    },
+    {
+        "id": "829",
+        "region": "Galar",
+        "pokemon": "Gossifleur"
+    },
+    {
+        "id": "830",
+        "region": "Galar",
+        "pokemon": "Eldegoss"
+    },
+    {
+        "id": "831",
+        "region": "Galar",
+        "pokemon": "Wooloo"
+    },
+    {
+        "id": "832",
+        "region": "Galar",
+        "pokemon": "Dubwool"
+    },
+    {
+        "id": "833",
+        "region": "Galar",
+        "pokemon": "Chewtle"
+    },
+    {
+        "id": "834",
+        "region": "Galar",
+        "pokemon": "Drednaw"
+    },
+    {
+        "id": "835",
+        "region": "Galar",
+        "pokemon": "Yamper"
+    },
+    {
+        "id": "836",
+        "region": "Galar",
+        "pokemon": "Boltund"
+    },
+    {
+        "id": "837",
+        "region": "Galar",
+        "pokemon": "Rolycoly"
+    },
+    {
+        "id": "838",
+        "region": "Galar",
+        "pokemon": "Carkol"
+    },
+    {
+        "id": "839",
+        "region": "Galar",
+        "pokemon": "Coalossal"
+    },
+    {
+        "id": "840",
+        "region": "Galar",
+        "pokemon": "Applin"
+    },
+    {
+        "id": "841",
+        "region": "Galar",
+        "pokemon": "Flapple"
+    },
+    {
+        "id": "842",
+        "region": "Galar",
+        "pokemon": "Appletun"
+    },
+    {
+        "id": "843",
+        "region": "Galar",
+        "pokemon": "Silicobra"
+    },
+    {
+        "id": "844",
+        "region": "Galar",
+        "pokemon": "Sandaconda"
+    },
+    {
+        "id": "845",
+        "region": "Galar",
+        "pokemon": "Cramorant"
+    },
+    {
+        "id": "846",
+        "region": "Galar",
+        "pokemon": "Arrokuda"
+    },
+    {
+        "id": "847",
+        "region": "Galar",
+        "pokemon": "Barraskewda"
+    },
+    {
+        "id": "848",
+        "region": "Galar",
+        "pokemon": "Toxel"
+    },
+    {
+        "id": "849",
+        "region": "Galar",
+        "pokemon": "Toxtricity"
+    },
+    {
+        "id": "850",
+        "region": "Galar",
+        "pokemon": "Sizzlipede"
+    },
+    {
+        "id": "851",
+        "region": "Galar",
+        "pokemon": "Centiskorch"
+    },
+    {
+        "id": "852",
+        "region": "Galar",
+        "pokemon": "Clobbopus"
+    },
+    {
+        "id": "853",
+        "region": "Galar",
+        "pokemon": "Grapploct"
+    },
+    {
+        "id": "854",
+        "region": "Galar",
+        "pokemon": "Sinistea"
+    },
+    {
+        "id": "855",
+        "region": "Galar",
+        "pokemon": "Polteageist"
+    },
+    {
+        "id": "856",
+        "region": "Galar",
+        "pokemon": "Hatenna"
+    },
+    {
+        "id": "857",
+        "region": "Galar",
+        "pokemon": "Hattrem"
+    },
+    {
+        "id": "858",
+        "region": "Galar",
+        "pokemon": "Hatterene"
+    },
+    {
+        "id": "859",
+        "region": "Galar",
+        "pokemon": "Impidimp"
+    },
+    {
+        "id": "860",
+        "region": "Galar",
+        "pokemon": "Morgrem"
+    },
+    {
+        "id": "861",
+        "region": "Galar",
+        "pokemon": "Grimmsnarl"
+    },
+    {
+        "id": "862",
+        "region": "Galar",
+        "pokemon": "Obstagoon"
+    },
+    {
+        "id": "863",
+        "region": "Galar",
+        "pokemon": "Perrserker"
+    },
+    {
+        "id": "864",
+        "region": "Galar",
+        "pokemon": "Cursola"
+    },
+    {
+        "id": "865",
+        "region": "Galar",
+        "pokemon": "Sirfetch'd"
+    },
+    {
+        "id": "866",
+        "region": "Galar",
+        "pokemon": "Mr. Rime"
+    },
+    {
+        "id": "867",
+        "region": "Galar",
+        "pokemon": "Runerigus"
+    },
+    {
+        "id": "868",
+        "region": "Galar",
+        "pokemon": "Milcery"
+    },
+    {
+        "id": "869",
+        "region": "Galar",
+        "pokemon": "Alcremie"
+    },
+    {
+        "id": "870",
+        "region": "Galar",
+        "pokemon": "Falinks"
+    },
+    {
+        "id": "871",
+        "region": "Galar",
+        "pokemon": "Pincurchin"
+    },
+    {
+        "id": "872",
+        "region": "Galar",
+        "pokemon": "Snom"
+    },
+    {
+        "id": "873",
+        "region": "Galar",
+        "pokemon": "Frosmoth"
+    },
+    {
+        "id": "874",
+        "region": "Galar",
+        "pokemon": "Stonjourner"
+    },
+    {
+        "id": "875",
+        "region": "Galar",
+        "pokemon": "Eiscue"
+    },
+    {
+        "id": "876",
+        "region": "Galar",
+        "pokemon": "Indeedee"
+    },
+    {
+        "id": "877",
+        "region": "Galar",
+        "pokemon": "Morpeko"
+    },
+    {
+        "id": "878",
+        "region": "Galar",
+        "pokemon": "Cufant"
+    },
+    {
+        "id": "879",
+        "region": "Galar",
+        "pokemon": "Copperajah"
+    },
+    {
+        "id": "880",
+        "region": "Galar",
+        "pokemon": "Dracozolt"
+    },
+    {
+        "id": "881",
+        "region": "Galar",
+        "pokemon": "Arctozolt"
+    },
+    {
+        "id": "882",
+        "region": "Galar",
+        "pokemon": "Dracovish"
+    },
+    {
+        "id": "883",
+        "region": "Galar",
+        "pokemon": "Arctovish"
+    },
+    {
+        "id": "884",
+        "region": "Galar",
+        "pokemon": "Duraludon"
+    },
+    {
+        "id": "885",
+        "region": "Galar",
+        "pokemon": "Dreepy"
+    },
+    {
+        "id": "886",
+        "region": "Galar",
+        "pokemon": "Drakloak"
+    },
+    {
+        "id": "887",
+        "region": "Galar",
+        "pokemon": "Dragapult"
+    },
+    {
+        "id": "888",
+        "region": "Galar",
+        "pokemon": "Zacian"
+    },
+    {
+        "id": "889",
+        "region": "Galar",
+        "pokemon": "Zamazenta"
+    },
+    {
+        "id": "890",
+        "region": "Galar",
+        "pokemon": "Eternatus"
+    },
+    {
+        "id": "891",
+        "region": "Galar",
+        "pokemon": "Kubfu"
+    },
+    {
+        "id": "892",
+        "region": "Galar",
+        "pokemon": "Urshifu"
+    },
+    {
+        "id": "893",
+        "region": "Galar",
+        "pokemon": "Zarude"
+    },
+    {
+        "id": "894",
+        "region": "Galar",
+        "pokemon": "Regieleki"
+    },
+    {
+        "id": "895",
+        "region": "Galar",
+        "pokemon": "Regidrago"
+    },
+    {
+        "id": "896",
+        "region": "Galar",
+        "pokemon": "Glastrier"
+    },
+    {
+        "id": "897",
+        "region": "Galar",
+        "pokemon": "Spectrier"
+    },
+    {
+        "id": "898",
+        "region": "Galar",
+        "pokemon": "Calyrex"
+    },
+    {
+        "id": "899",
+        "region": "Galar",
+        "pokemon": "Wyrdeer"
+    },
+    {
+        "id": "900",
+        "region": "Galar",
+        "pokemon": "Kleavor"
+    },
+    {
+        "id": "901",
+        "region": "Galar",
+        "pokemon": "Ursaluna"
+    },
+    {
+        "id": "902",
+        "region": "Galar",
+        "pokemon": "Basculegion"
+    },
+    {
+        "id": "903",
+        "region": "Galar",
+        "pokemon": "Sneasler"
+    },
+    {
+        "id": "904",
+        "region": "Galar",
+        "pokemon": "Overqwil"
+    },
+    {
+        "id": "905",
+        "region": "Galar",
+        "pokemon": "Enamorus"
+    },
+    {
+        "id": "906",
+        "region": "Paldea",
+        "pokemon": "Sprigatito"
+    },
+    {
+        "id": "907",
+        "region": "Paldea",
+        "pokemon": "Floragato"
+    },
+    {
+        "id": "908",
+        "region": "Paldea",
+        "pokemon": "Meowscarada"
+    },
+    {
+        "id": "909",
+        "region": "Paldea",
+        "pokemon": "Fuecoco"
+    },
+    {
+        "id": "910",
+        "region": "Paldea",
+        "pokemon": "Crocalor"
+    },
+    {
+        "id": "911",
+        "region": "Paldea",
+        "pokemon": "Skeledirge"
+    },
+    {
+        "id": "912",
+        "region": "Paldea",
+        "pokemon": "Quaxly"
+    },
+    {
+        "id": "913",
+        "region": "Paldea",
+        "pokemon": "Quaxwell"
+    },
+    {
+        "id": "914",
+        "region": "Paldea",
+        "pokemon": "Quaquaval"
+    },
+    {
+        "id": "915",
+        "region": "Paldea",
+        "pokemon": "Lechonk"
+    },
+    {
+        "id": "916",
+        "region": "Paldea",
+        "pokemon": "Oinkologne"
+    },
+    {
+        "id": "917",
+        "region": "Paldea",
+        "pokemon": "Tarountula"
+    },
+    {
+        "id": "918",
+        "region": "Paldea",
+        "pokemon": "Spidops"
+    },
+    {
+        "id": "919",
+        "region": "Paldea",
+        "pokemon": "Nymble"
+    },
+    {
+        "id": "920",
+        "region": "Paldea",
+        "pokemon": "Lokix"
+    },
+    {
+        "id": "921",
+        "region": "Paldea",
+        "pokemon": "Pawmi"
+    },
+    {
+        "id": "922",
+        "region": "Paldea",
+        "pokemon": "Pawmo"
+    },
+    {
+        "id": "923",
+        "region": "Paldea",
+        "pokemon": "Pawmot"
+    },
+    {
+        "id": "924",
+        "region": "Paldea",
+        "pokemon": "Tandemaus"
+    },
+    {
+        "id": "925",
+        "region": "Paldea",
+        "pokemon": "Maushold"
+    },
+    {
+        "id": "926",
+        "region": "Paldea",
+        "pokemon": "Fidough"
+    },
+    {
+        "id": "927",
+        "region": "Paldea",
+        "pokemon": "Dachsbun"
+    },
+    {
+        "id": "928",
+        "region": "Paldea",
+        "pokemon": "Smoliv"
+    },
+    {
+        "id": "929",
+        "region": "Paldea",
+        "pokemon": "Dolliv"
+    },
+    {
+        "id": "930",
+        "region": "Paldea",
+        "pokemon": "Arboliva"
+    },
+    {
+        "id": "931",
+        "region": "Paldea",
+        "pokemon": "Squawkabilly"
+    },
+    {
+        "id": "932",
+        "region": "Paldea",
+        "pokemon": "Nacli"
+    },
+    {
+        "id": "933",
+        "region": "Paldea",
+        "pokemon": "Naclstack"
+    },
+    {
+        "id": "934",
+        "region": "Paldea",
+        "pokemon": "Garganacl"
+    },
+    {
+        "id": "935",
+        "region": "Paldea",
+        "pokemon": "Charcadet"
+    },
+    {
+        "id": "936",
+        "region": "Paldea",
+        "pokemon": "Armarouge"
+    },
+    {
+        "id": "937",
+        "region": "Paldea",
+        "pokemon": "Ceruledge"
+    },
+    {
+        "id": "938",
+        "region": "Paldea",
+        "pokemon": "Tadbulb"
+    },
+    {
+        "id": "939",
+        "region": "Paldea",
+        "pokemon": "Bellibolt"
+    },
+    {
+        "id": "940",
+        "region": "Paldea",
+        "pokemon": "Wattrel"
+    },
+    {
+        "id": "941",
+        "region": "Paldea",
+        "pokemon": "Kilowattrel"
+    },
+    {
+        "id": "942",
+        "region": "Paldea",
+        "pokemon": "Maschiff"
+    },
+    {
+        "id": "943",
+        "region": "Paldea",
+        "pokemon": "Mabosstiff"
+    },
+    {
+        "id": "944",
+        "region": "Paldea",
+        "pokemon": "Shroodle"
+    },
+    {
+        "id": "945",
+        "region": "Paldea",
+        "pokemon": "Grafaiai"
+    },
+    {
+        "id": "946",
+        "region": "Paldea",
+        "pokemon": "Bramblin"
+    },
+    {
+        "id": "947",
+        "region": "Paldea",
+        "pokemon": "Brambleghast"
+    },
+    {
+        "id": "948",
+        "region": "Paldea",
+        "pokemon": "Toedscool"
+    },
+    {
+        "id": "949",
+        "region": "Paldea",
+        "pokemon": "Toedscruel"
+    },
+    {
+        "id": "950",
+        "region": "Paldea",
+        "pokemon": "Klawf"
+    },
+    {
+        "id": "951",
+        "region": "Paldea",
+        "pokemon": "Capsakid"
+    },
+    {
+        "id": "952",
+        "region": "Paldea",
+        "pokemon": "Scovillain"
+    },
+    {
+        "id": "953",
+        "region": "Paldea",
+        "pokemon": "Rellor"
+    },
+    {
+        "id": "954",
+        "region": "Paldea",
+        "pokemon": "Rabsca"
+    },
+    {
+        "id": "955",
+        "region": "Paldea",
+        "pokemon": "Flittle"
+    },
+    {
+        "id": "956",
+        "region": "Paldea",
+        "pokemon": "Espathra"
+    },
+    {
+        "id": "957",
+        "region": "Paldea",
+        "pokemon": "Tinkatink"
+    },
+    {
+        "id": "958",
+        "region": "Paldea",
+        "pokemon": "Tinkatuff"
+    },
+    {
+        "id": "959",
+        "region": "Paldea",
+        "pokemon": "Tinkaton"
+    },
+    {
+        "id": "960",
+        "region": "Paldea",
+        "pokemon": "Wiglett"
+    },
+    {
+        "id": "961",
+        "region": "Paldea",
+        "pokemon": "Wugtrio"
+    },
+    {
+        "id": "962",
+        "region": "Paldea",
+        "pokemon": "Bombirdier"
+    },
+    {
+        "id": "963",
+        "region": "Paldea",
+        "pokemon": "Finizen"
+    },
+    {
+        "id": "964",
+        "region": "Paldea",
+        "pokemon": "Palafin"
+    },
+    {
+        "id": "965",
+        "region": "Paldea",
+        "pokemon": "Varoom"
+    },
+    {
+        "id": "966",
+        "region": "Paldea",
+        "pokemon": "Revavroom"
+    },
+    {
+        "id": "967",
+        "region": "Paldea",
+        "pokemon": "Cyclizar"
+    },
+    {
+        "id": "968",
+        "region": "Paldea",
+        "pokemon": "Orthworm"
+    },
+    {
+        "id": "969",
+        "region": "Paldea",
+        "pokemon": "Glimmet"
+    },
+    {
+        "id": "970",
+        "region": "Paldea",
+        "pokemon": "Glimmora"
+    },
+    {
+        "id": "971",
+        "region": "Paldea",
+        "pokemon": "Greavard"
+    },
+    {
+        "id": "972",
+        "region": "Paldea",
+        "pokemon": "Houndstone"
+    },
+    {
+        "id": "973",
+        "region": "Paldea",
+        "pokemon": "Flamigo"
+    },
+    {
+        "id": "974",
+        "region": "Paldea",
+        "pokemon": "Cetoddle"
+    },
+    {
+        "id": "975",
+        "region": "Paldea",
+        "pokemon": "Cetitan"
+    },
+    {
+        "id": "976",
+        "region": "Paldea",
+        "pokemon": "Veluza"
+    },
+    {
+        "id": "977",
+        "region": "Paldea",
+        "pokemon": "Dondozo"
+    },
+    {
+        "id": "978",
+        "region": "Paldea",
+        "pokemon": "Tatsugiri"
+    },
+    {
+        "id": "979",
+        "region": "Paldea",
+        "pokemon": "Annihilape"
+    },
+    {
+        "id": "980",
+        "region": "Paldea",
+        "pokemon": "Clodsire"
+    },
+    {
+        "id": "981",
+        "region": "Paldea",
+        "pokemon": "Farigiraf"
+    },
+    {
+        "id": "982",
+        "region": "Paldea",
+        "pokemon": "Dudunsparce"
+    },
+    {
+        "id": "983",
+        "region": "Paldea",
+        "pokemon": "Kingambit"
+    },
+    {
+        "id": "984",
+        "region": "Paldea",
+        "pokemon": "Great Tusk"
+    },
+    {
+        "id": "985",
+        "region": "Paldea",
+        "pokemon": "Scream Tail"
+    },
+    {
+        "id": "986",
+        "region": "Paldea",
+        "pokemon": "Brute Bonnet"
+    },
+    {
+        "id": "987",
+        "region": "Paldea",
+        "pokemon": "Flutter Mane"
+    },
+    {
+        "id": "988",
+        "region": "Paldea",
+        "pokemon": "Slither Wing"
+    },
+    {
+        "id": "989",
+        "region": "Paldea",
+        "pokemon": "Sandy Shocks"
+    },
+    {
+        "id": "990",
+        "region": "Paldea",
+        "pokemon": "Iron Treads"
+    },
+    {
+        "id": "991",
+        "region": "Paldea",
+        "pokemon": "Iron Bundle"
+    },
+    {
+        "id": "992",
+        "region": "Paldea",
+        "pokemon": "Iron Hands"
+    },
+    {
+        "id": "993",
+        "region": "Paldea",
+        "pokemon": "Iron Jugulis"
+    },
+    {
+        "id": "994",
+        "region": "Paldea",
+        "pokemon": "Iron Moth"
+    },
+    {
+        "id": "995",
+        "region": "Paldea",
+        "pokemon": "Iron Thorns"
+    },
+    {
+        "id": "996",
+        "region": "Paldea",
+        "pokemon": "Frigibax"
+    },
+    {
+        "id": "997",
+        "region": "Paldea",
+        "pokemon": "Arctibax"
+    },
+    {
+        "id": "998",
+        "region": "Paldea",
+        "pokemon": "Baxcalibur"
+    },
+    {
+        "id": "999",
+        "region": "Paldea",
+        "pokemon": "Gimmighoul"
+    },
+    {
+        "id": "1000",
+        "region": "Paldea",
+        "pokemon": "Gholdengo"
+    },
+    {
+        "id": "1001",
+        "region": "Paldea",
+        "pokemon": "Wo-chien"
+    },
+    {
+        "id": "1002",
+        "region": "Paldea",
+        "pokemon": "Chien-pao"
+    },
+    {
+        "id": "1003",
+        "region": "Paldea",
+        "pokemon": "Ting-lu"
+    },
+    {
+        "id": "1004",
+        "region": "Paldea",
+        "pokemon": "Chi-yu"
+    },
+    {
+        "id": "1005",
+        "region": "Paldea",
+        "pokemon": "Roaring Moon"
+    },
+    {
+        "id": "1006",
+        "region": "Paldea",
+        "pokemon": "Iron Valiant"
+    },
+    {
+        "id": "1007",
+        "region": "Paldea",
+        "pokemon": "Koraidon"
+    },
+    {
+        "id": "1008",
+        "region": "Paldea",
+        "pokemon": "Miraidon"
+    },
+    {
+        "id": "1009",
+        "region": "Paldea",
+        "pokemon": "Walking Wake"
+    },
+    {
+        "id": "1010",
+        "region": "Paldea",
+        "pokemon": "Iron Leaves"
+    },
+    {
+        "id": "1011",
+        "region": "Paldea",
+        "pokemon": "Dipplin"
+    },
+    {
+        "id": "1012",
+        "region": "Paldea",
+        "pokemon": "Poltchageist"
+    },
+    {
+        "id": "1013",
+        "region": "Paldea",
+        "pokemon": "Sinistcha"
+    },
+    {
+        "id": "1014",
+        "region": "Paldea",
+        "pokemon": "Okidogi"
+    },
+    {
+        "id": "1015",
+        "region": "Paldea",
+        "pokemon": "Munkidori"
+    },
+    {
+        "id": "1016",
+        "region": "Paldea",
+        "pokemon": "Fezandipiti"
+    },
+    {
+        "id": "1017",
+        "region": "Paldea",
+        "pokemon": "Ogerpon"
+    },
+    {
+        "id": "1018",
+        "region": "Paldea",
+        "pokemon": "Archaludon"
+    },
+    {
+        "id": "1019",
+        "region": "Paldea",
+        "pokemon": "Hydrapple"
+    },
+    {
+        "id": "1020",
+        "region": "Paldea",
+        "pokemon": "Gouging Fire"
+    },
+    {
+        "id": "1021",
+        "region": "Paldea",
+        "pokemon": "Raging Bolt"
+    },
+    {
+        "id": "1022",
+        "region": "Paldea",
+        "pokemon": "Iron Boulder"
+    },
+    {
+        "id": "1023",
+        "region": "Paldea",
+        "pokemon": "Iron Crown"
+    },
+    {
+        "id": "1024",
+        "region": "Paldea",
+        "pokemon": "Terapagos"
+    },
+    {
+        "id": "1025",
+        "region": "Paldea",
+        "pokemon": "Pecharunt"
+    }
+]

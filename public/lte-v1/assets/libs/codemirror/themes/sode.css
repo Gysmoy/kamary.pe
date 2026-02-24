@@ -1,0 +1,41 @@
+/* Based on Sublime Text's sode theme */
+
+.cm-s-sode.CodeMirror { background: #363e4b; color: #adb5bd; }
+.cm-s-sode div.CodeMirror-selected { background: rgba(255, 255, 255, 0.0625); }
+.cm-s-sode .CodeMirror-line::selection, .cm-s-sode .CodeMirror-line > span::selection, .cm-s-sode .CodeMirror-line > span > span::selection { background: rgba(73, 72, 62, .99); }
+.cm-s-sode .CodeMirror-line::-moz-selection, .cm-s-sode .CodeMirror-line > span::-moz-selection, .cm-s-sode .CodeMirror-line > span > span::-moz-selection { background: rgba(73, 72, 62, .99); }
+.cm-s-sode .CodeMirror-gutters { background: #272822; border-right: 0px; }
+.cm-s-sode .CodeMirror-guttermarker { color: white; }
+.cm-s-sode .CodeMirror-guttermarker-subtle { color: #d0d0d0; }
+.cm-s-sode .CodeMirror-linenumber { color: #d0d0d0; }
+.cm-s-sode .CodeMirror-cursor { border-left: 1px solid #f8f8f0; }
+
+.cm-s-sode span.cm-comment { color: #75715e; }
+.cm-s-sode span.cm-atom { color: #ae81ff; }
+.cm-s-sode span.cm-number { color: #ae81ff; }
+
+.cm-s-sode span.cm-comment.cm-attribute { color: #97b757; }
+.cm-s-sode span.cm-comment.cm-def { color: #bc9262; }
+.cm-s-sode span.cm-comment.cm-tag { color: #bc6283; }
+.cm-s-sode span.cm-comment.cm-type { color: #5998a6; }
+
+.cm-s-sode span.cm-property, .cm-s-sode span.cm-attribute { color: #f9c851; }
+.cm-s-sode span.cm-keyword { color: #fc4050; }
+.cm-s-sode span.cm-builtin { color: #66d9ef; }
+.cm-s-sode span.cm-string { color: #10c469; }
+
+.cm-s-sode span.cm-variable { color: #f8f8f2; }
+.cm-s-sode span.cm-variable-2 { color: #9effff; }
+.cm-s-sode span.cm-variable-3, .cm-s-sode span.cm-type { color: #66d9ef; }
+.cm-s-sode span.cm-def { color: #fd971f; }
+.cm-s-sode span.cm-bracket { color: #f8f8f2; }
+.cm-s-sode span.cm-tag { color: #fc4050; }
+.cm-s-sode span.cm-header { color: #ae81ff; }
+.cm-s-sode span.cm-link { color: #ae81ff; }
+.cm-s-sode span.cm-error { background: #fc4050; color: #f8f8f0; }
+
+.cm-s-sode .CodeMirror-activeline-background { background: #373831; }
+.cm-s-sode .CodeMirror-matchingbracket {
+  text-decoration: underline;
+  color: white !important;
+}
