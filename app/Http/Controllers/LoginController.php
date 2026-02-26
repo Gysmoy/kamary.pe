@@ -69,7 +69,7 @@ class LoginController extends BasicController
             if (!$userJpa->status) throw new Exception('Este usuario se encuentra inactivo');
 
             if (!Auth::attempt([
-                'email' => $email,
+                'username' => $email,
                 'password' => $password
             ])) {
                 throw new Exception('Credenciales invalidas');

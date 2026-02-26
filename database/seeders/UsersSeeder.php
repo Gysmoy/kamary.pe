@@ -14,19 +14,20 @@ class UsersSeeder extends Seeder
     public function run(): void
     {
         User::updateOrCreate([
-            'email' => 'admin@' . env('APP_CORRELATIVE') . '.pe'
+            'username' => 'kamary'
         ], [
+            'email' => 'admin@kamary.pe',
             'name' => 'Admin',
-            'lastname' => env('APP_NAME'),
+            'lastname' => 'Kamary',
             'password' => '4ccessme'
         ])->assignRole('Admin');
-
         User::updateOrCreate([
-            'email' => 'customer@' . env('APP_CORRELATIVE') . '.pe'
+            'username' => 'xplain'
         ], [
-            'name' => 'Customer',
-            'lastname' => env('APP_NAME'),
-            'password' => '12345678'
-        ])->assignRole('Customer');
+            'email' => 'admin@xplain.pe',
+            'name' => 'Admin',
+            'lastname' => 'xPlain',
+            'password' => '4ccessme'
+        ])->assignRole('Admin');
     }
 }

@@ -165,6 +165,28 @@ const Menu = ({ }) => {
           <MenuItem href="/admin/services-services" icon="ti ti-settings">Servicios</MenuItem>
         </MenuItemContainer>
 
+        <MenuItemContainer title='Muestras' icon='ti ti-flask'>
+          <MenuItem href="/admin/sample-orders" icon="ti ti-file-text">Pedido</MenuItem>
+        </MenuItemContainer>
+       
+        <MenuItemContainer title='Magistrales' icon='ti ti-pills'>
+          <MenuItem href="/admin/magistrales-articulos" icon="ti ti-box">Artículos</MenuItem>
+          <MenuItem href="/admin/magistrales-categoria" icon="ti ti-category">Categoría</MenuItem>
+          <MenuItem href="/admin/magistrales-formatos" icon="ti ti-file-description">Formatos</MenuItem>
+          <MenuItem href="/admin/magistrales-formulas" icon="ti ti-file-analytics">Fórmulas</MenuItem>
+          <MenuItem href="/admin/magistrales-ingresos" icon="ti ti-file-plus">Ingresos</MenuItem>
+          <MenuItem href="/admin/magistrales-inventario" icon="ti ti-stack-2">Inventario</MenuItem>
+          <MenuItem href="/admin/magistrales-kardex" icon="ti ti-file-text">Kardex</MenuItem>
+          <MenuItem href="/admin/magistrales-laboratorio" icon="ti ti-flask">Laboratorio</MenuItem>
+          <MenuItem href="/admin/magistrales-orden-compra" icon="ti ti-shopping-cart">O. Compra</MenuItem>
+          <MenuItem href="/admin/magistrales-orden-produccion" icon="ti ti-file-dollar">O. Producción</MenuItem>
+          <MenuItem href="/admin/magistrales-proveedor" icon="ti ti-truck">Proveedor</MenuItem>
+          <MenuItem href="/admin/magistrales-responsable" icon="ti ti-user-check">Responsable</MenuItem>
+          <MenuItem href="/admin/magistrales-salidas" icon="ti ti-file-minus">Salidas</MenuItem>
+          <MenuItem href="/admin/magistrales-unidad" icon="ti ti-scale">Unidad</MenuItem>
+          <MenuItem href="/admin/magistrales-ventas" icon="ti ti-currency-dollar">Ventas</MenuItem>
+        </MenuItemContainer>
+
         <li className="side-nav-title mt-2">Configuraciones</li>
         <MenuItemContainer title="Gestión" icon="ti ti-users">
           <MenuItem href="/admin/users" icon="ti ti-users">Usuarios</MenuItem>

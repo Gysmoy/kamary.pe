@@ -9,14 +9,14 @@ const Home = ({ }) => {
   return (
     <div className="d-flex justify-content-center align-items-center" style={{ minHeight: 'calc(100dvh - 150px)' }}>
       <div className="text-center">
-        <a href="/admin/users" className="btn btn-sm btn-success btn-lg mx-2">
-          <i className='mdi mdi-account-multiple me-1'></i>
-          Usuarios MasterSet
-        </a>
-        <a href="/admin/sales" className="btn btn-sm btn-info btn-lg mx-2">
-          <i className='mdi mdi-cart me-1'></i>
-          Ver Pedidos
-        </a>
+        {/* Three rotating gears using MDI icons */}
+        <div className="mb-3">
+          <i className="mdi mdi-cog mdi-spin text-primary" style={{ fontSize: '1.5rem' }}></i>
+          <i className="mdi mdi-cog mdi-spin text-primary" style={{ fontSize: '2.5rem' }}></i>
+          <i className="mdi mdi-cog mdi-spin text-primary" style={{ fontSize: '2rem' }}></i>
+        </div>
+        <h1 className="mb-2">Próximamente</h1>
+        <p className="text-muted">Esta sección está en construcción</p>
       </div>
     </div>
   );

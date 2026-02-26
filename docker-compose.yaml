@@ -82,7 +82,7 @@ services:
     container_name: kamary-nginx
     restart: unless-stopped
     ports:
-      - "8040:80" # Mapea el puerto 80 del contenedor al puerto 8080 del host
+      - "9020:80" # Mapea el puerto 80 del contenedor al puerto 8080 del host
     volumes:
       - ./docker-compose/nginx/default.conf:/etc/nginx/conf.d/default.conf
       - .:/var/www/html
