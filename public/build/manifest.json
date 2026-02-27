@@ -2968,7 +2968,7 @@
     ]
   },
   "resources/js/Components/Public/Auth/SummaryScreen.jsx": {
-    "file": "assets/SummaryScreen-B_CKjPyD.js",
+    "file": "assets/SummaryScreen-CeKzIQaI.js",
     "name": "SummaryScreen",
     "src": "resources/js/Components/Public/Auth/SummaryScreen.jsx",
     "isEntry": true,
@@ -3072,7 +3072,7 @@
     ]
   },
   "resources/js/Components/Public/Onboarding/SummaryScreen.jsx": {
-    "file": "assets/SummaryScreen-CeKzIQaI.js",
+    "file": "assets/SummaryScreen-B_CKjPyD.js",
     "name": "SummaryScreen",
     "src": "resources/js/Components/Public/Onboarding/SummaryScreen.jsx",
     "isEntry": true,
