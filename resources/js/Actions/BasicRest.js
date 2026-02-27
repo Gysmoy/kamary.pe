@@ -23,7 +23,6 @@ class BasicRest {
       toast.error("Error", {
         description: error.message,
         duration: 3000,
-        position: "top-right",
         richColors: true,
       });
       return null;
@@ -42,7 +41,6 @@ class BasicRest {
       toast.success("Operacion correcta", {
         description: 'Se inicio sesion correctamente',
         duration: 3000,
-        position: "top-right",
         richColors: true,
       });
 
@@ -51,7 +49,6 @@ class BasicRest {
       toast.error("Error", {
         description: error.message,
         duration: 3000,
-        position: "top-right",
         richColors: true,
       });
       return false
@@ -67,7 +64,6 @@ class BasicRest {
       toast.error("Error", {
         description: error.message,
         duration: 3000,
-        position: "top-right",
         richColors: true,
       });
       return null
@@ -119,7 +115,6 @@ class BasicRest {
       this.showSavedMessage && toast.success("Correcto", {
         description: result.message,
         duration: 3000,
-        position: "top-right",
         richColors: true,
       });
       return result
@@ -127,7 +122,6 @@ class BasicRest {
       toast.error("Error", {
         description: error.message,
         duration: 3000,
-        position: "top-right",
         richColors: true,
       });
       return null
@@ -145,7 +139,6 @@ class BasicRest {
       toast.success("Correcto", {
         description: result.message,
         duration: 3000,
-        position: "top-right",
         richColors: true,
       });
 
@@ -154,7 +147,6 @@ class BasicRest {
       toast.error("Error", {
         description: error.message,
         duration: 3000,
-        position: "top-right",
         richColors: true,
       });
 
@@ -173,7 +165,6 @@ class BasicRest {
       toast.success("Correcto", {
         description: result.message,
         duration: 3000,
-        position: "top-right",
         richColors: true,
       });
 
@@ -182,7 +173,6 @@ class BasicRest {
       toast.error("Error", {
         description: error.message,
         duration: 3000,
-        position: "top-right",
         richColors: true,
       });
 
@@ -200,7 +190,6 @@ class BasicRest {
       toast.success("Correcto", {
         description: result.message,
         duration: 3000,
-        position: "top-right",
         richColors: true,
       });
 
@@ -209,7 +198,6 @@ class BasicRest {
       toast.error("Error", {
         description: error.message,
         duration: 3000,
-        position: "top-right",
         richColors: true,
       });
 

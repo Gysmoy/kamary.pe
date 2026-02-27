@@ -1,1 +1,0 @@
-var t=Object.defineProperty;var r=(e,s,a)=>s in e?t(e,s,{enumerable:!0,configurable:!0,writable:!0,value:a}):e[s]=a;var o=(e,s,a)=>(r(e,typeof s!="symbol"?s+"":s,a),a);import{B as d}from"./BasicRest-He2fbRHj.js";class p extends d{constructor(){super(...arguments);o(this,"path","breakdowns");o(this,"showSavedMessage",!1)}}export{p as B};

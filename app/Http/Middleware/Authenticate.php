@@ -9,11 +9,6 @@ class Authenticate extends Middleware
 {
     protected function redirectTo(Request $request): ?string
     {
-        if ($request->expectsJson()) {
-            return null;
-        }
-        $intended = $request->path() === 'checkout' ? '/checkout' : null;
-
-        return route('login', $intended ? ['redirectTo' => $intended] : []);
+        return $request->expectsJson() ? null : route('Login.jsx');
     }
 }

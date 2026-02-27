@@ -12,12 +12,11 @@ import InputFormGroup from '@Adminto/form/InputFormGroup';
 import { renderToString } from 'react-dom/server';
 import UsersRest from '../Actions/Admin/UsersRest';
 import PasswordFormGroup from '../Components/Adminto/form/PasswordFormGroup';
-import { Clipboard } from 'sode-extend-react';
-import { toast } from 'sonner';
+import SelectFormGroup from '../Components/Adminto/Form/SelectFormGroup';
 
 const usersRest = new UsersRest()
 
-const Users = ({ }) => {
+const Users = ({ prefixes, roles }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const passwordModalRef = useRef()
@@ -27,13 +26,19 @@ const Users = ({ }) => {
   const nameRef = useRef()
   const lastnameRef = useRef()
   const emailRef = useRef()
+  const usernameRef = useRef()
+  const passwordRef = useRef()
+  const phonePrefixRef = useRef()
   const phoneRef = useRef()
+  const rolesRef = useRef()
 
   // Password form elements ref
   const passwordIdRef = useRef()
-  const passwordRef = useRef()
+  const newPasswordRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
+  const [phonePrefix, setPhonePrefix] = useState('51')
+  const [selectedRoles, setSelectedRoles] = useState([])
 
   const onModalOpen = (data) => {
     if (data?.uuid) setIsEditing(true)
@@ -44,6 +49,8 @@ const Users = ({ }) => {
     lastnameRef.current.value = data?.lastname ?? ''
     emailRef.current.value = data?.email ?? ''
     phoneRef.current.value = data?.phone ?? ''
+    const roleNames = data?.roles?.map(({ name }) => name) ?? []
+    setSelectedRoles(roleNames)
 
     $(modalRef.current).modal('show')
   }
@@ -52,7 +59,7 @@ const Users = ({ }) => {
     setIsEditing(true)
 
     passwordIdRef.current.value = data.uuid
-    passwordRef.current.value = ''
+    newPasswordRef.current.value = ''
 
     $(passwordModalRef.current).modal('show');
   }
@@ -64,8 +71,12 @@ const Users = ({ }) => {
       id: idRef.current.value || undefined,
       name: nameRef.current.value,
       lastname: lastnameRef.current.value,
+      username: isEditing ? undefined : usernameRef.current.value,
+      password: isEditing ? undefined : passwordRef.current.value,
       email: emailRef.current.value,
+      phone_prefix: phonePrefix,
       phone: phoneRef.current.value,
+      roles: selectedRoles
     }
 
     const result = await usersRest.save(request)
@@ -101,13 +112,23 @@ const Users = ({ }) => {
 
     const request = {
       id: passwordIdRef.current.value,
-      password: passwordRef.current.value,
+      password: newPasswordRef.current.value,
     }
 
     const result = await usersRest.save(request)
     if (!result) return
 
     $(passwordModalRef.current).modal('hide')
+  }
+
+  const handleRoleSelect = (roleName) => {
+    if (!selectedRoles.includes(roleName)) {
+      setSelectedRoles([...selectedRoles, roleName])
+    }
+  }
+
+  const handleRoleRemove = (roleName) => {
+    setSelectedRoles(selectedRoles.filter(r => r !== roleName))
   }
 
   return (<>
@@ -131,6 +152,7 @@ const Users = ({ }) => {
           }
         });
       }}
+      pageSize={25}
       columns={[
         {
           dataField: 'id',
@@ -158,6 +180,10 @@ const Users = ({ }) => {
         {
           dataField: 'phone',
           caption: 'Celular',
+          cellTemplate: (container, { data }) => {
+            if (!data.phone) return
+            container.text(`+${data.phone_prefix} ${data.phone}`)
+          }
         },
         {
           dataField: 'roles',
@@ -174,47 +200,10 @@ const Users = ({ }) => {
           }
         },
         {
-          dataField: 'billing',
-          caption: 'Facturación',
-          width: '120px',
-          lookup: {
-            dataSource: [
-              { value: 'masterset', text: 'Masterset' },
-              { value: 'seller', text: 'Vendedor' }
-            ],
-            valueExpr: 'value',
-            displayExpr: 'text'
-          },
-          cellTemplate: (container, { text, data }) => {
-            if (!data.roles || !data.roles.some(r => r.name === 'Seller')) return
-            $(container).css({
-              'padding': '0',
-              'overflow': 'unset'
-            });
-            ReactAppend(container, <div class="dropdown" style={{ width: '120px', height: '42px' }}>
-              <button class="btn btn-white dropdown-toggle w-100 p-1 text-start rounded-0 border-0 justify-content-between" type="button" data-bs-toggle="dropdown" aria-expanded="false"
-                style={{ width: '120px', height: '42px' }}>
-                {text}
-              </button>
-              <div class="dropdown-menu">
-                <button class="dropdown-item"
-                  onClick={() => onBooleanChange({ id: data.uuid, field: 'billing', value: 'masterset' })}
-                  disabled={data.billing === 'masterset'}>
-                  Masterset
-                </button>
-                <button class="dropdown-item"
-                  onClick={() => onBooleanChange({ id: data.uuid, field: 'billing', value: 'seller' })}
-                  disabled={data.billing === 'seller'}>
-                  Vendedor
-                </button>
-              </div>
-            </div>)
-          }
-        },
-        {
           dataField: 'status',
           caption: 'Estado',
           dataType: 'boolean',
+          width: '100px',
           cellTemplate: (container, { data }) => {
             $(container).empty()
             if (data.status === null) {
@@ -230,7 +219,7 @@ const Users = ({ }) => {
         },
         {
           caption: 'Acciones',
-          width: '200px',
+          width: '160px',
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
 
@@ -243,8 +232,8 @@ const Users = ({ }) => {
 
             container.append(DxButton({
               className: 'btn btn-xs btn-soft-info',
-              title: 'Generar link de Onboarding',
-              icon: 'mdi mdi-link-variant',
+              title: 'Cambiar contraseña',
+              icon: 'mdi mdi-key',
               onClick: () => onPasswordModalOpen(data)
             }))
 
@@ -265,14 +254,64 @@ const Users = ({ }) => {
       <div className='row'>
         <InputFormGroup eRef={nameRef} label='Nombre' col='col-md-6' required />
         <InputFormGroup eRef={lastnameRef} label='Apellido' col='col-md-6' required />
-        <InputFormGroup eRef={emailRef} label='Correo' required disabled />
-        <InputFormGroup eRef={phoneRef} label='Celular' />
+        <div className="col-12">
+          <div hidden={isEditing} className='row'>
+            <InputFormGroup eRef={usernameRef} label='Usuario' col='col-md-6' required={!isEditing} />
+            <InputFormGroup eRef={passwordRef} label='Contraseña' col='col-md-6' required={!isEditing} />
+          </div>
+        </div>
+        <InputFormGroup eRef={emailRef} label='Correo' required />
+        <SelectFormGroup eRef={phonePrefixRef} label='Prefijo' col='col-md-4' value={phonePrefix} onChange={e => setPhonePrefix(e.target.value)}>
+          {
+            prefixes.map((prefix, idx) => {
+              return <option value={prefix.realCode}>{prefix.beautyCode} • {prefix.country}</option>
+            })
+          }
+        </SelectFormGroup>
+        <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-8' />
+        <div className='col-12'>
+          <label className='form-label'>Roles</label>
+          <div className="dropdown">
+            <button
+              className="btn btn-secondary dropdown-toggle"
+              type="button"
+              id="rolesDropdown"
+              data-bs-toggle="dropdown"        // changed from data-toggle
+              aria-haspopup="true"
+              aria-expanded="false"
+            >
+              Seleccionar roles
+            </button>
+            <div className="dropdown-menu" aria-labelledby="rolesDropdown">
+              {roles.map((role, idx) => (
+                <button
+                  key={idx}
+                  className="dropdown-item"
+                  type="button"
+                  onClick={() => handleRoleSelect(role.name)}
+                >
+                  {role.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          {
+            selectedRoles.length > 0 &&
+            <div className="mt-2 d-flex flex-wrap gap-1">
+              {selectedRoles.map((role, idx) => (
+                <span key={idx} className="bg-primary text-white fs-14 px-2 py-1  rounded-pill">
+                  {role} <i className="mdi mdi-close fs-14 ms-1" onClick={() => handleRoleRemove(role)} style={{ cursor: 'pointer' }}></i>
+                </span>
+              ))}
+            </div>
+          }
+        </div>
       </div>
     </Modal>
 
     <Modal modalRef={passwordModalRef} title='Cambio de contraseña' onSubmit={onPasswordModalSubmit} size='sm'>
       <input ref={passwordIdRef} type='hidden' />
-      <PasswordFormGroup eRef={passwordRef} label='Contraseña nueva' />
+      <PasswordFormGroup eRef={newPasswordRef} label='Contraseña nueva' />
     </Modal>
   </>
   )

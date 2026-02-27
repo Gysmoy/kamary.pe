@@ -4,8 +4,12 @@ import MenuItem from './Menu/MenuItem'
 import MenuItemContainer from './Menu/MenuItemContainer'
 import LaravelSession from '../../Utils/LaravelSession'
 
-const Menu = ({ }) => {
+const Menu = ({ can, hasRole }) => {
   const mainRole = LaravelSession.roles?.[0] ?? { name: 'User' }
+
+  const canAccess = (permission) => {
+    return can(permission) || hasRole('Admin')
+  }
 
   return <div className="sidenav-menu">
 
@@ -110,85 +114,85 @@ const Menu = ({ }) => {
         <MenuItem href="/admin/home" icon="ti ti-home">Inicio</MenuItem>
 
         <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
-          <MenuItem href="/admin/articles" icon="ti ti-box">Artículos</MenuItem>
-          <MenuItem href="/admin/inventory" icon="ti ti-stack-2">Inventario</MenuItem>
-          <MenuItem href="/admin/kardex" icon="ti ti-file-text">Kardex</MenuItem>
-          <MenuItem href="/admin/laboratories" icon="ti ti-flask">Laboratorios</MenuItem>
-          <MenuItem href="/admin/batches" icon="ti ti-tags">Lotes</MenuItem>
-          <MenuItem href="/admin/entry-note" icon="ti ti-file-plus">Nota de Entrada</MenuItem>
-          <MenuItem href="/admin/exit-note" icon="ti ti-file-minus">Nota de Salida</MenuItem>
-          <MenuItem href="/admin/suppliers" icon="ti ti-truck">Proveedores</MenuItem>
-          <MenuItem href="/admin/units-of-measure" icon="ti ti-scale">Und. de medida</MenuItem>
+          {canAccess('articles') && <MenuItem href="/admin/articles" icon="ti ti-box">Artículos</MenuItem>}
+          {canAccess('inventory') && <MenuItem href="/admin/inventory" icon="ti ti-stack-2">Inventario</MenuItem>}
+          {canAccess('kardex') && <MenuItem href="/admin/kardex" icon="ti ti-file-text">Kardex</MenuItem>}
+          {canAccess('laboratories') && <MenuItem href="/admin/laboratories" icon="ti ti-flask">Laboratorios</MenuItem>}
+          {canAccess('batches') && <MenuItem href="/admin/batches" icon="ti ti-tags">Lotes</MenuItem>}
+          {canAccess('entry-note') && <MenuItem href="/admin/entry-note" icon="ti ti-file-plus">Nota de Entrada</MenuItem>}
+          {canAccess('exit-note') && <MenuItem href="/admin/exit-note" icon="ti ti-file-minus">Nota de Salida</MenuItem>}
+          {canAccess('suppliers') && <MenuItem href="/admin/suppliers" icon="ti ti-truck">Proveedores</MenuItem>}
+          {canAccess('units-of-measure') && <MenuItem href="/admin/units-of-measure" icon="ti ti-scale">Und. de medida</MenuItem>}
         </MenuItemContainer>
 
         <MenuItemContainer title='Administración' icon='ti ti-credit-card'>
-          <MenuItem href="/admin/accounts-payable" icon="ti ti-credit-card">Cuentas por pagar</MenuItem>
-          <MenuItem href="/admin/expenses" icon="ti ti-receipt">Gasto</MenuItem>
-          <MenuItem href="/admin/daily-summary" icon="ti ti-calendar-stats">Resumen diario</MenuItem>
+          {canAccess('accounts-payable') && <MenuItem href="/admin/accounts-payable" icon="ti ti-credit-card">Cuentas por pagar</MenuItem>}
+          {canAccess('expenses') && <MenuItem href="/admin/expenses" icon="ti ti-receipt">Gasto</MenuItem>}
+          {canAccess('daily-summary') && <MenuItem href="/admin/daily-summary" icon="ti ti-calendar-stats">Resumen diario</MenuItem>}
         </MenuItemContainer>
 
         <MenuItemContainer title='Comercial' icon='ti ti-briefcase'>
-          <MenuItem href="/admin/clients" icon="ti ti-users">Clientes</MenuItem>
-          <MenuItem href="/admin/eventual-clients" icon="ti ti-user-star">Clientes Eventual</MenuItem>
-          <MenuItem href="/admin/accounts-receivable" icon="ti ti-credit-card-off">Cuenta por Cobrar</MenuItem>
-          <MenuItem href="/admin/orders" icon="ti ti-shopping-cart">Pedido</MenuItem>
-          <MenuItem href="/admin/pricing" icon="ti ti-tag">Tarifario</MenuItem>
+          {canAccess('clients') && <MenuItem href="/admin/clients" icon="ti ti-users">Clientes</MenuItem>}
+          {canAccess('eventual-clients') && <MenuItem href="/admin/eventual-clients" icon="ti ti-user-star">Clientes Eventual</MenuItem>}
+          {canAccess('accounts-receivable') && <MenuItem href="/admin/accounts-receivable" icon="ti ti-credit-card-off">Cuenta por Cobrar</MenuItem>}
+          {canAccess('orders') && <MenuItem href="/admin/orders" icon="ti ti-shopping-cart">Pedido</MenuItem>}
+          {canAccess('pricing') && <MenuItem href="/admin/pricing" icon="ti ti-tag">Tarifario</MenuItem>}
         </MenuItemContainer>
 
         <MenuItemContainer title='Serv. Almacen...' icon='ti ti-building-warehouse'>
-          <MenuItem href="/admin/storage-inventory" icon="ti ti-stack-2">Inventario</MenuItem>
-          <MenuItem href="/admin/storage-clients" icon="ti ti-users">Clientes</MenuItem>
-          <MenuItem href="/admin/service-orders" icon="ti ti-file-dollar">O. Servicio</MenuItem>
-          <MenuItem href="/admin/storage-units" icon="ti ti-scale">Und. de medida</MenuItem>
-          <MenuItem href="/admin/storage-products" icon="ti ti-box">Creación del produ...</MenuItem>
-          <MenuItem href="/admin/storage-entry-note" icon="ti ti-file-plus">Nota de entrada</MenuItem>
-          <MenuItem href="/admin/storage-exit-note" icon="ti ti-file-minus">Nota de salida</MenuItem>
-          <MenuItem href="/admin/storage-kardex" icon="ti ti-file-text">Kardex</MenuItem>
-          <MenuItem href="/admin/storage-general-service" icon="ti ti-briefcase">Servicio General</MenuItem>
-          <MenuItem href="/admin/storage-billing-control" icon="ti ti-receipt-2">Control de Factura...</MenuItem>
-          <MenuItem href="/admin/storage-general-service-orders" icon="ti ti-file-invoice">O. Servicio General</MenuItem>
+          {canAccess('storage-inventory') && <MenuItem href="/admin/storage-inventory" icon="ti ti-stack-2">Inventario</MenuItem>}
+          {canAccess('storage-clients') && <MenuItem href="/admin/storage-clients" icon="ti ti-users">Clientes</MenuItem>}
+          {canAccess('service-orders') && <MenuItem href="/admin/service-orders" icon="ti ti-file-dollar">O. Servicio</MenuItem>}
+          {canAccess('storage-units') && <MenuItem href="/admin/storage-units" icon="ti ti-scale">Und. de medida</MenuItem>}
+          {canAccess('storage-products') && <MenuItem href="/admin/storage-products" icon="ti ti-box">Creación del produ...</MenuItem>}
+          {canAccess('storage-entry-note') && <MenuItem href="/admin/storage-entry-note" icon="ti ti-file-plus">Nota de entrada</MenuItem>}
+          {canAccess('storage-exit-note') && <MenuItem href="/admin/storage-exit-note" icon="ti ti-file-minus">Nota de salida</MenuItem>}
+          {canAccess('storage-kardex') && <MenuItem href="/admin/storage-kardex" icon="ti ti-file-text">Kardex</MenuItem>}
+          {canAccess('storage-general-service') && <MenuItem href="/admin/storage-general-service" icon="ti ti-briefcase">Servicio General</MenuItem>}
+          {canAccess('storage-billing-control') && <MenuItem href="/admin/storage-billing-control" icon="ti ti-receipt-2">Control de Factura...</MenuItem>}
+          {canAccess('storage-general-service-orders') && <MenuItem href="/admin/storage-general-service-orders" icon="ti ti-file-invoice">O. Servicio General</MenuItem>}
         </MenuItemContainer>
 
         <MenuItemContainer title='Despacho' icon='ti ti-truck'>
-          <MenuItem href="/admin/activity" icon="ti ti-activity">Actividad</MenuItem>
-          <MenuItem href="/admin/driver" icon="ti ti-user-circle">Conductor</MenuItem>
-          <MenuItem href="/admin/dispatch" icon="ti ti-truck-delivery">Despacho</MenuItem>
-          <MenuItem href="/admin/vehicle-zone" icon="ti ti-map-2">Vehículo / Zona</MenuItem>
+          {canAccess('activity') && <MenuItem href="/admin/activity" icon="ti ti-activity">Actividad</MenuItem>}
+          {canAccess('driver') && <MenuItem href="/admin/driver" icon="ti ti-user-circle">Conductor</MenuItem>}
+          {canAccess('dispatch') && <MenuItem href="/admin/dispatch" icon="ti ti-truck-delivery">Despacho</MenuItem>}
+          {canAccess('vehicle-zone') && <MenuItem href="/admin/vehicle-zone" icon="ti ti-map-2">Vehículo / Zona</MenuItem>}
         </MenuItemContainer>
 
         <MenuItemContainer title='Servicios' icon='ti ti-briefcase'>
-          <MenuItem href="/admin/services-client" icon="ti ti-user">Cliente</MenuItem>
-          <MenuItem href="/admin/services-billing" icon="ti ti-file-invoice">Facturación</MenuItem>
-          <MenuItem href="/admin/services-service-order" icon="ti ti-file-dollar">Orden de servicio</MenuItem>
-          <MenuItem href="/admin/services-services" icon="ti ti-settings">Servicios</MenuItem>
+          {canAccess('services-client') && <MenuItem href="/admin/services-client" icon="ti ti-user">Cliente</MenuItem>}
+          {canAccess('services-billing') && <MenuItem href="/admin/services-billing" icon="ti ti-file-invoice">Facturación</MenuItem>}
+          {canAccess('services-service-order') && <MenuItem href="/admin/services-service-order" icon="ti ti-file-dollar">Orden de servicio</MenuItem>}
+          {canAccess('services-services') && <MenuItem href="/admin/services-services" icon="ti ti-settings">Servicios</MenuItem>}
         </MenuItemContainer>
 
         <MenuItemContainer title='Muestras' icon='ti ti-flask'>
-          <MenuItem href="/admin/sample-orders" icon="ti ti-file-text">Pedido</MenuItem>
+          {canAccess('sample-orders') && <MenuItem href="/admin/sample-orders" icon="ti ti-file-text">Pedido</MenuItem>}
         </MenuItemContainer>
 
         <MenuItemContainer title='Magistrales' icon='ti ti-pills'>
-          <MenuItem href="/admin/magistrales-articles" icon="ti ti-box">Artículos</MenuItem>
-          <MenuItem href="/admin/magistrales-category" icon="ti ti-category">Categoría</MenuItem>
-          <MenuItem href="/admin/magistrales-formats" icon="ti ti-file-description">Formatos</MenuItem>
-          <MenuItem href="/admin/magistrales-formulas" icon="ti ti-file-analytics">Fórmulas</MenuItem>
-          <MenuItem href="/admin/magistrales-incomes" icon="ti ti-file-plus">Ingresos</MenuItem>
-          <MenuItem href="/admin/magistrales-inventory" icon="ti ti-stack-2">Inventario</MenuItem>
-          <MenuItem href="/admin/magistrales-kardex" icon="ti ti-file-text">Kardex</MenuItem>
-          <MenuItem href="/admin/magistrales-laboratory" icon="ti ti-flask">Laboratorio</MenuItem>
-          <MenuItem href="/admin/magistrales-purchase-order" icon="ti ti-shopping-cart">O. Compra</MenuItem>
-          <MenuItem href="/admin/magistrales-production-order" icon="ti ti-file-dollar">O. Producción</MenuItem>
-          <MenuItem href="/admin/magistrales-supplier" icon="ti ti-truck">Proveedor</MenuItem>
-          <MenuItem href="/admin/magistrales-responsible" icon="ti ti-user-check">Responsable</MenuItem>
-          <MenuItem href="/admin/magistrales-outputs" icon="ti ti-file-minus">Salidas</MenuItem>
-          <MenuItem href="/admin/magistrales-unit" icon="ti ti-scale">Unidad</MenuItem>
-          <MenuItem href="/admin/magistrales-sales" icon="ti ti-currency-dollar">Ventas</MenuItem>
+          {canAccess('magistrales-articles') && <MenuItem href="/admin/magistrales-articles" icon="ti ti-box">Artículos</MenuItem>}
+          {canAccess('magistrales-category') && <MenuItem href="/admin/magistrales-category" icon="ti ti-category">Categoría</MenuItem>}
+          {canAccess('magistrales-formats') && <MenuItem href="/admin/magistrales-formats" icon="ti ti-file-description">Formatos</MenuItem>}
+          {canAccess('magistrales-formulas') && <MenuItem href="/admin/magistrales-formulas" icon="ti ti-file-analytics">Fórmulas</MenuItem>}
+          {canAccess('magistrales-incomes') && <MenuItem href="/admin/magistrales-incomes" icon="ti ti-file-plus">Ingresos</MenuItem>}
+          {canAccess('magistrales-inventory') && <MenuItem href="/admin/magistrales-inventory" icon="ti ti-stack-2">Inventario</MenuItem>}
+          {canAccess('magistrales-kardex') && <MenuItem href="/admin/magistrales-kardex" icon="ti ti-file-text">Kardex</MenuItem>}
+          {canAccess('magistrales-laboratory') && <MenuItem href="/admin/magistrales-laboratory" icon="ti ti-flask">Laboratorio</MenuItem>}
+          {canAccess('magistrales-purchase-order') && <MenuItem href="/admin/magistrales-purchase-order" icon="ti ti-shopping-cart">O. Compra</MenuItem>}
+          {canAccess('magistrales-production-order') && <MenuItem href="/admin/magistrales-production-order" icon="ti ti-file-dollar">O. Producción</MenuItem>}
+          {canAccess('magistrales-supplier') && <MenuItem href="/admin/magistrales-supplier" icon="ti ti-truck">Proveedor</MenuItem>}
+          {canAccess('magistrales-responsible') && <MenuItem href="/admin/magistrales-responsible" icon="ti ti-user-check">Responsable</MenuItem>}
+          {canAccess('magistrales-outputs') && <MenuItem href="/admin/magistrales-outputs" icon="ti ti-file-minus">Salidas</MenuItem>}
+          {canAccess('magistrales-unit') && <MenuItem href="/admin/magistrales-unit" icon="ti ti-scale">Unidad</MenuItem>}
+          {canAccess('magistrales-sales') && <MenuItem href="/admin/magistrales-sales" icon="ti ti-currency-dollar">Ventas</MenuItem>}
         </MenuItemContainer>
 
         <li className="side-nav-title mt-2">Configuraciones</li>
         <MenuItemContainer title="Gestión" icon="ti ti-users">
-          <MenuItem href="/admin/users" icon="ti ti-users">Usuarios</MenuItem>
-          <MenuItem href="/admin/roles" icon="ti ti-user-check">Roles</MenuItem>
+          {canAccess('users') && <MenuItem href="/admin/users" icon="ti ti-users">Usuarios</MenuItem>}
+          {canAccess('roles') && <MenuItem href="/admin/roles" icon="ti ti-user-check">Roles</MenuItem>}
         </MenuItemContainer>
         <MenuItem href="/admin/profile" icon="ti ti-user">Mi perfil</MenuItem>
         <MenuItem href="/admin/account" icon="ti ti-settings">Mi cuenta</MenuItem>

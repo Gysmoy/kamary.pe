@@ -43,7 +43,7 @@ Route::get('/unsubscribe', [MailingController::class, 'reactView'])->name('Unsub
 
 Route::middleware('auth')->group(function () {
     // Admin routes
-    Route::middleware('can:Admin')->prefix('admin')->group(function () {
+    Route::prefix('admin')->group(function () {
         Route::get('/', fn() => redirect()->to('/admin/home'));
         Route::get('/home', [AdminComingSoonController::class, 'reactView']);
 

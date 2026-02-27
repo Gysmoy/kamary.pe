@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
-const SelectFormGroup = ({ id, col, className, label, specification, eRef, value = null, required = false, children, dropdownParent, noMargin = false, multiple = false, disabled = false, onChange = () => { }, style,
+const SelectFormGroup = ({ id, col, className, label, specification, eRef, value, required = false, children, dropdownParent, noMargin = false, multiple = false, disabled = false, onChange = () => { }, style,
   templateResult,
   templateSelection,
   minimumInputLength = 0,
@@ -13,6 +13,8 @@ const SelectFormGroup = ({ id, col, className, label, specification, eRef, value
   if (!id) id = `select-${crypto.randomUUID()}`
   const containerId = `container-${id}`
 
+  const [localValue, setLocalValue] = useState(value ?? null)
+
   useEffect(() => {
     $(eRef.current).select2({
       dropdownParent: `#${containerId}`,
@@ -22,8 +24,15 @@ const SelectFormGroup = ({ id, col, className, label, specification, eRef, value
       minimumResultsForSearch,
       tags
     })
-    $(eRef.current).off('change').on('change', onChange)
-  }, [dropdownParent, value, ...effectWith])
+    $(eRef.current).off('change').on('change', (e) => {
+      setLocalValue(e.target.value)
+      onChange(e)
+    })
+  }, [dropdownParent, value, localValue, ...effectWith])
+
+  useEffect(() => {
+    setLocalValue(value)
+  }, [value])
 
   return <div id={containerId} className={`form-group ${col} ${!noMargin && 'mb-2'}`} style={style}>
     <label htmlFor={id} className="form-label mb-1">
@@ -38,7 +47,8 @@ const SelectFormGroup = ({ id, col, className, label, specification, eRef, value
         </>
       }
     </label>
-    <select ref={eRef} id={id} required={required} className={`form-control ${className}`} style={{ width: '100%' }} disabled={disabled} multiple={multiple} value={value}>
+    <select ref={eRef} id={id} required={required} className={`form-control ${className}`} style={{ width: '100%' }} disabled={disabled} multiple={multiple} value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}>
       {children}
     </select>
   </div>

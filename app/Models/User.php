@@ -31,16 +31,7 @@ class User extends Authenticatable
         'document_number',
         'phone_prefix',
         'phone',
-        'department',
-        'province',
-        'district',
         'status',
-        'account_type',
-        'account_number',
-        'account_cci',
-        'holder_name',
-        'verified',
-        'billing'
     ];
 
     /**

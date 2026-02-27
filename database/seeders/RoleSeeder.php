@@ -16,7 +16,5 @@ class RoleSeeder extends Seeder
     public function run(): void
     {
         $adminJpa = Role::updateOrCreate(['name' => 'Admin']);
-        Permission::updateOrCreate(['name' => 'Admin'])
-            ->syncRoles([$adminJpa]);
     }
 }

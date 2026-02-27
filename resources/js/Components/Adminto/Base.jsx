@@ -8,7 +8,7 @@ import { Toaster } from 'sonner'
 
 // moment.tz.setDefault('UTC');
 
-const Base = ({ children, title }) => {
+const Base = ({ children, title, can, hasRole }) => {
 
   useEffect(() => {
     const app = new App
@@ -20,7 +20,7 @@ const Base = ({ children, title }) => {
 
   return (<>
     <div className="wrapper">
-      <Menu />
+      <Menu can={can} hasRole={hasRole} />
       <NavBar title={title} />
 
       <div className="modal fade" id="searchModal" tabIndex="-1" aria-labelledby="searchModalLabel" aria-hidden="true">

@@ -23,6 +23,7 @@ const Home = ({ }) => {
 };
 
 CreateReactScript((el, properties) => {
+  console.log(properties.hasRole('Admin'))
   createRoot(el).render(<BaseAdminto {...properties} title="Próximamente">
     <Home {...properties} />
   </BaseAdminto>);

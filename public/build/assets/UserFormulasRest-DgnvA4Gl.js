@@ -1,1 +1,0 @@
-var t=Object.defineProperty;var o=(a,s,e)=>s in a?t(a,s,{enumerable:!0,configurable:!0,writable:!0,value:e}):a[s]=e;var r=(a,s,e)=>(o(a,typeof s!="symbol"?s+"":s,e),e);import{B as m}from"./BasicRest-He2fbRHj.js";class u extends m{constructor(){super(...arguments);r(this,"path","user-formulas")}}export{u as U};
