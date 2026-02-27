@@ -60,16 +60,16 @@ class LoginController extends BasicController
     public function login(Request $request)
     {
         $response = Response::simpleTryCatch(function () use ($request) {
-            $email = self::decode($request->email);
+            $username = self::decode($request->username);
             $password = self::decode($request->password);
 
-            $userJpa = User::where('email', $email)->first();
+            $userJpa = User::where('username', $username)->first();
             if (!$userJpa) throw new Exception('Este usuario no existe, cree una cuenta nueva');
             if ($userJpa->status == null) throw new Exception('Este usuario se encuentra baneado del sistema');
             if (!$userJpa->status) throw new Exception('Este usuario se encuentra inactivo');
 
             if (!Auth::attempt([
-                'username' => $email,
+                'username' => $username,
                 'password' => $password
             ])) {
                 throw new Exception('Credenciales invalidas');

@@ -1,5 +1,3 @@
-import Tippy from '@tippyjs/react'
-import React from 'react'
 import 'tippy.js/dist/tippy.css'
 import Logout from '../../Actions/Logout'
 import MenuItem from './Menu/MenuItem'
@@ -43,7 +41,7 @@ const Menu = ({ }) => {
         <div className="dropdown-center text-center">
           <a className="topbar-link dropdown-toggle text-reset drop-arrow-none px-2" data-bs-toggle="dropdown"
             type="button" aria-haspopup="false" aria-expanded="false">
-            <img src={`/storage/images/user/${LaravelSession.image}`}
+            <img src={`/api/admin/profile/${LaravelSession.uuid}`}
               className="rounded-circle aspect-square border"
               style={{
                 width: '46px',
@@ -101,7 +99,7 @@ const Menu = ({ }) => {
             </a> */}
 
 
-            <button href="javascript:void(0);" className="dropdown-item active fw-semibold text-danger" onClick={() => Logout()}>
+            <button className="dropdown-item active fw-semibold text-danger" onClick={() => Logout()}>
               <i className="ri-logout-box-line me-1 fs-16 align-middle"></i>
               <span className="align-middle">Cerrar sesión</span>
             </button>
@@ -112,15 +110,15 @@ const Menu = ({ }) => {
         <MenuItem href="/admin/home" icon="ti ti-home">Inicio</MenuItem>
 
         <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
-          <MenuItem href="/admin/articulos" icon="ti ti-box">Artículos</MenuItem>
-          <MenuItem href="/admin/inventario" icon="ti ti-stack-2">Inventario</MenuItem>
+          <MenuItem href="/admin/articles" icon="ti ti-box">Artículos</MenuItem>
+          <MenuItem href="/admin/inventory" icon="ti ti-stack-2">Inventario</MenuItem>
           <MenuItem href="/admin/kardex" icon="ti ti-file-text">Kardex</MenuItem>
-          <MenuItem href="/admin/laboratorios" icon="ti ti-flask">Laboratorios</MenuItem>
-          <MenuItem href="/admin/lotes" icon="ti ti-tags">Lotes</MenuItem>
-          <MenuItem href="/admin/nota-entrada" icon="ti ti-file-plus">Nota de Entrada</MenuItem>
-          <MenuItem href="/admin/nota-salida" icon="ti ti-file-minus">Nota de Salida</MenuItem>
-          <MenuItem href="/admin/proveedores" icon="ti ti-truck">Proveedores</MenuItem>
-          <MenuItem href="/admin/unidades-medida" icon="ti ti-scale">Und. de medida</MenuItem>
+          <MenuItem href="/admin/laboratories" icon="ti ti-flask">Laboratorios</MenuItem>
+          <MenuItem href="/admin/batches" icon="ti ti-tags">Lotes</MenuItem>
+          <MenuItem href="/admin/entry-note" icon="ti ti-file-plus">Nota de Entrada</MenuItem>
+          <MenuItem href="/admin/exit-note" icon="ti ti-file-minus">Nota de Salida</MenuItem>
+          <MenuItem href="/admin/suppliers" icon="ti ti-truck">Proveedores</MenuItem>
+          <MenuItem href="/admin/units-of-measure" icon="ti ti-scale">Und. de medida</MenuItem>
         </MenuItemContainer>
 
         <MenuItemContainer title='Administración' icon='ti ti-credit-card'>
@@ -168,23 +166,23 @@ const Menu = ({ }) => {
         <MenuItemContainer title='Muestras' icon='ti ti-flask'>
           <MenuItem href="/admin/sample-orders" icon="ti ti-file-text">Pedido</MenuItem>
         </MenuItemContainer>
-       
+
         <MenuItemContainer title='Magistrales' icon='ti ti-pills'>
-          <MenuItem href="/admin/magistrales-articulos" icon="ti ti-box">Artículos</MenuItem>
-          <MenuItem href="/admin/magistrales-categoria" icon="ti ti-category">Categoría</MenuItem>
-          <MenuItem href="/admin/magistrales-formatos" icon="ti ti-file-description">Formatos</MenuItem>
+          <MenuItem href="/admin/magistrales-articles" icon="ti ti-box">Artículos</MenuItem>
+          <MenuItem href="/admin/magistrales-category" icon="ti ti-category">Categoría</MenuItem>
+          <MenuItem href="/admin/magistrales-formats" icon="ti ti-file-description">Formatos</MenuItem>
           <MenuItem href="/admin/magistrales-formulas" icon="ti ti-file-analytics">Fórmulas</MenuItem>
-          <MenuItem href="/admin/magistrales-ingresos" icon="ti ti-file-plus">Ingresos</MenuItem>
-          <MenuItem href="/admin/magistrales-inventario" icon="ti ti-stack-2">Inventario</MenuItem>
+          <MenuItem href="/admin/magistrales-incomes" icon="ti ti-file-plus">Ingresos</MenuItem>
+          <MenuItem href="/admin/magistrales-inventory" icon="ti ti-stack-2">Inventario</MenuItem>
           <MenuItem href="/admin/magistrales-kardex" icon="ti ti-file-text">Kardex</MenuItem>
-          <MenuItem href="/admin/magistrales-laboratorio" icon="ti ti-flask">Laboratorio</MenuItem>
-          <MenuItem href="/admin/magistrales-orden-compra" icon="ti ti-shopping-cart">O. Compra</MenuItem>
-          <MenuItem href="/admin/magistrales-orden-produccion" icon="ti ti-file-dollar">O. Producción</MenuItem>
-          <MenuItem href="/admin/magistrales-proveedor" icon="ti ti-truck">Proveedor</MenuItem>
-          <MenuItem href="/admin/magistrales-responsable" icon="ti ti-user-check">Responsable</MenuItem>
-          <MenuItem href="/admin/magistrales-salidas" icon="ti ti-file-minus">Salidas</MenuItem>
-          <MenuItem href="/admin/magistrales-unidad" icon="ti ti-scale">Unidad</MenuItem>
-          <MenuItem href="/admin/magistrales-ventas" icon="ti ti-currency-dollar">Ventas</MenuItem>
+          <MenuItem href="/admin/magistrales-laboratory" icon="ti ti-flask">Laboratorio</MenuItem>
+          <MenuItem href="/admin/magistrales-purchase-order" icon="ti ti-shopping-cart">O. Compra</MenuItem>
+          <MenuItem href="/admin/magistrales-production-order" icon="ti ti-file-dollar">O. Producción</MenuItem>
+          <MenuItem href="/admin/magistrales-supplier" icon="ti ti-truck">Proveedor</MenuItem>
+          <MenuItem href="/admin/magistrales-responsible" icon="ti ti-user-check">Responsable</MenuItem>
+          <MenuItem href="/admin/magistrales-outputs" icon="ti ti-file-minus">Salidas</MenuItem>
+          <MenuItem href="/admin/magistrales-unit" icon="ti ti-scale">Unidad</MenuItem>
+          <MenuItem href="/admin/magistrales-sales" icon="ti ti-currency-dollar">Ventas</MenuItem>
         </MenuItemContainer>
 
         <li className="side-nav-title mt-2">Configuraciones</li>

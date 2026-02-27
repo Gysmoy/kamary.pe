@@ -1,7 +1,7 @@
 {
-    "name": "Ursa Respuestos",
-    "short_name": "Ursa",
-    "description": "Tienda especializada en repuestos para motos Benelli. Encuentra motor, transmisión, frenos, suspensión y accesorios originales y alternativos a precios justos. Envío rápido y garantía de calidad.",
+    "name": "Kamary",
+    "short_name": "Kamary",
+    "description": "Kamary es una farmacia peruana que gestiona su almacén y ERP, ofreciendo soluciones integradas para el control de inventario, ventas, compras y la administración eficiente de recursos empresariales.",
     "scope": "/",
     "start_url": "/",
     "icons": [

@@ -14,32 +14,22 @@ use Illuminate\Http\Response as HttpResponse;
 
 class AccountController extends BasicController
 {
-  public $reactView = 'Account';
-  public function email(Request $request): HttpResponse|ResponseFactory
+  public $reactView = 'Admin/Account';
+
+  public function username(Request $request): HttpResponse|ResponseFactory
   {
-    $response = new Response();
-    try {
+    $response = Response::simpleTryCatch(function () use ($request) {
       $jpa = User::find(Auth::user()->id);
 
-      $password = Controller::decode($request->password);
+      $password = parent::decode($request->password);
       if (!password_verify($password, $jpa->password)) {
         throw new Exception('La contraseña es incorrecta');
       }
 
-      $jpa->email = $request->email;
+      $jpa->username = $request->username;
       $jpa->save();
-
-      $response->status = 200;
-      $response->message = 'Operacion correcta';
-    } catch (\Throwable $th) {
-      $response->status = 400;
-      $response->message = $th->getMessage();
-    } finally {
-      return response(
-        $response->toArray(),
-        $response->status
-      );
-    }
+    });
+    return response($response->toArray(), $response->status);
   }
 
   public function password(Request $request): HttpResponse|ResponseFactory
@@ -47,9 +37,9 @@ class AccountController extends BasicController
     $response = new Response();
     try {
 
-      $password = Controller::decode($request->password);
-      $newPassword = Controller::decode($request->newPassword);
-      $confirmPassword = Controller::decode($request->confirmPassword);
+      $password = parent::decode($request->password);
+      $newPassword = parent::decode($request->newPassword);
+      $confirmPassword = parent::decode($request->confirmPassword);
 
       if ($newPassword != $confirmPassword) {
         throw new Exception("Las contraseña nueva y la contraseña de confirmacion deben ser iguales");

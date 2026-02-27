@@ -1,14 +1,8 @@
 import React, { useEffect, useRef, useState } from "react"
 import Logout from "../../Actions/Logout"
 import Global from "../../Utils/Global"
-import WhatsAppStatuses from "../../Reutilizables/WhatsApp/WhatsAppStatuses"
-import SwitchFormGroup from "./Form/SwitchFormGroup"
-import GeneralsRest from "../../Actions/Admin/GeneralsRest"
-import Tippy from "@tippyjs/react"
 import LaravelSession from "../../Utils/LaravelSession"
 import Number2Currency from "../../Utils/Number2Currency"
-
-const generalsRest = new GeneralsRest()
 
 const NavBar = ({ title = 'Panel' }) => {
 
@@ -391,7 +385,7 @@ const NavBar = ({ title = 'Panel' }) => {
           <div className="dropdown">
             <a className="topbar-link dropdown-toggle drop-arrow-none px-2" data-bs-toggle="dropdown"
               data-bs-offset="0,25" type="button" aria-haspopup="false" aria-expanded="false">
-              <img src="assets/images/users/avatar-1.jpg" className="rounded-circle me-lg-2 d-flex"
+              <img src={`/api/admin/profile/${LaravelSession.uuid}`} className="rounded-circle me-lg-2 d-flex"
                 style={{
                   backgroundColor: '#252630',
                   width: '32px',

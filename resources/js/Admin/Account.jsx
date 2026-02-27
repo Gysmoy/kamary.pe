@@ -14,7 +14,7 @@ const Account = ({ session }) => {
   const jsEncrypt = new JSEncrypt()
   jsEncrypt.setPublicKey(Global.PUBLIC_RSA_KEY)
 
-  const emailRef = useRef()
+  const usernameRef = useRef()
   const confirmPasswordRef = useRef()
   const lastPasswordRef = useRef()
   const newPasswordRef = useRef()
@@ -23,10 +23,10 @@ const Account = ({ session }) => {
   const onEmailFormSubmit = async (e) => {
     e.preventDefault()
     const request = {
-      email: emailRef.current.value,
+      username: usernameRef.current.value,
       password: jsEncrypt.encrypt(confirmPasswordRef.current.value)
     }
-    const result = await AccountRest.email(request)
+    const result = await AccountRest.username(request)
     if (!result) return
     Logout()
   }
@@ -47,14 +47,14 @@ const Account = ({ session }) => {
     <div className='col-lg-6 col-md-8 col-sm-12'>
       <div className='card'>
         <div className='card-header'>
-          <h4 className='card-title mb-0'>Cuenta de usuario</h4>
+          <h4 className='card-title mb-0'>Configuración de accesos</h4>
         </div>
         <div className='card-body'>
           <div className='row'>
             <div className='col-sm-4'>
               <div className='nav flex-column nav-pills nav-pills-tab' id='v-pills-tab' role='tablist' aria-orientation='vertical'>
                 <a className='nav-link active show mb-1' id='email-container-tab' data-bs-toggle='pill' href='#email-container' role='tab' aria-controls='email-container' aria-selected='true'>
-                  Correo
+                  Nombre de usuario
                 </a>
                 <a className='nav-link mb-1' id='password-container-tab' data-bs-toggle='pill' href='#password-container' role='tab' aria-controls='password-container' aria-selected='false'>
                   Contraseña
@@ -65,9 +65,9 @@ const Account = ({ session }) => {
               <div className='tab-content pt-0'>
                 <form className='tab-pane fade active show' id='email-container' role='tabpanel' aria-labelledby='email-container-tab'
                   onSubmit={onEmailFormSubmit}>
-                  <h4 className='mt-0'>Actualizar correo de usuario</h4>
-                  <InputFormGroup eRef={emailRef} label='Correo de usuario' type='email' value={session.email} required />
-                  <PasswordFormGroup eRef={confirmPasswordRef} label='Contraseña de confirmacion' type='password' value={null} required />
+                  <h4 className='mt-0'>Actualizar nombre de usuario</h4>
+                  <InputFormGroup eRef={usernameRef} label='Nombre de usuario' type='text' required />
+                  <PasswordFormGroup eRef={confirmPasswordRef} label='Contraseña de confirmacion' type='password' required />
                   <button className='btn btn-primary btn-block' type='submit'>
                     <i className='fa fa-save'></i> Actualizar
                   </button>
@@ -75,9 +75,9 @@ const Account = ({ session }) => {
                 <form className='tab-pane fade' id='password-container' role='tabpanel' aria-labelledby='password-container-tab'
                   onSubmit={onPasswordFormSubmit}>
                   <h4 className='mt-0'>Actualizar contraseña de usuario</h4>
-                  <PasswordFormGroup eRef={lastPasswordRef} label='Contraseña anterior' type='password' value={null} required />
-                  <PasswordFormGroup eRef={newPasswordRef} label='Contraseña nueva' type='password' value={null} required />
-                  <PasswordFormGroup eRef={repeatPasswordRef} label='Repita la contraseña nueva' type='password' value={null} required />
+                  <PasswordFormGroup eRef={lastPasswordRef} label='Contraseña anterior' type='password' required />
+                  <PasswordFormGroup eRef={newPasswordRef} label='Contraseña nueva' type='password' required />
+                  <PasswordFormGroup eRef={repeatPasswordRef} label='Repita la contraseña nueva' type='password' required />
                   <button className='btn btn-primary btn-block' type='submit'>
                     <i className='fa fa-save'></i> Actualizar
                   </button>
@@ -96,7 +96,7 @@ const Account = ({ session }) => {
 }
 
 CreateReactScript((el, properties) => {
-  createRoot(el).render(<BaseAdminto {...properties} title='Cuenta de usuario'>
+  createRoot(el).render(<BaseAdminto {...properties} title='Mi cuenta'>
     <Account {...properties} />
   </BaseAdminto>);
 })

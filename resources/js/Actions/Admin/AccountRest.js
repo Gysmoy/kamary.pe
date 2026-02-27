@@ -1,9 +1,9 @@
 import { Fetch, Notify } from "sode-extend-react"
 
 class AccountRest {
-  static email = async (request) => {
+  static username = async (request) => {
     try {
-      const { status, result } = await Fetch('/api/admin/account/email', {
+      const { status, result } = await Fetch('/api/admin/account/username', {
         method: 'PATCH',
         body: JSON.stringify(request)
       })

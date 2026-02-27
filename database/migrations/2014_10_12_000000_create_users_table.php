@@ -15,6 +15,7 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
             $table->char('uuid', 36)->default(DB::raw('(UUID())'));
+
             $table->string('name');
             $table->string('lastname');
             $table->longText('fullname')->nullable();
@@ -24,10 +25,9 @@ return new class extends Migration
             $table->string('password');
             $table->string('document_type')->nullable();
             $table->string('document_number')->nullable();
+            $table->string('phone_prefix')->nullable();
             $table->string('phone')->nullable();
-            $table->string('department')->nullable();
-            $table->string('province')->nullable();
-            $table->string('district')->nullable();
+            
             $table->boolean('status')->nullable()->default(true);
 
             $table->rememberToken();

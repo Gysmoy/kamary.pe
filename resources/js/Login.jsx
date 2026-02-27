@@ -20,7 +20,7 @@ const Login = ({ token, APP_DOMAIN, APP_PROTOCOL }) => {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  const emailRef = useRef()
+  const usernameRef = useRef()
   const passwordRef = useRef()
   const rememberRef = useRef()
 
@@ -41,11 +41,11 @@ const Login = ({ token, APP_DOMAIN, APP_PROTOCOL }) => {
     if (loading) return
     setLoading(true)
 
-    const email = emailRef.current.value
+    const username = usernameRef.current.value
     const password = passwordRef.current.value
 
     const request = {
-      email: jsEncrypt.encrypt(email),
+      username: jsEncrypt.encrypt(username),
       password: jsEncrypt.encrypt(password)
     }
     const result = await AuthRest.login(request)
@@ -61,9 +61,9 @@ const Login = ({ token, APP_DOMAIN, APP_PROTOCOL }) => {
       <h4 class="fw-semibold mb-3 fs-18">Inicia sesión en tu cuenta</h4>
       <form onSubmit={onLoginSubmit} class="text-start mb-3">
         <div class="mb-3">
-          <label class="form-label" for="example-email">Correo o usuario</label>
-          <input ref={emailRef} type="email" id="example-email" name="example-email" class="form-control"
-            placeholder="Ingrese su correo o usuario" disabled={loading} />
+          <label class="form-label" for="example-username">Correo o usuario</label>
+          <input ref={usernameRef} type="text" id="example-username" name="example-username" class="form-control"
+            placeholder="Nombre de usuario" disabled={loading} />
         </div>
 
         <div class="mb-3 position-relative">

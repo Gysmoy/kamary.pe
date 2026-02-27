@@ -1,4 +1,4 @@
-const resizeImage = (file) => {
+const resizeImage = (file, maxSize = 1000) => {
     return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -6,7 +6,7 @@ const resizeImage = (file) => {
             img.onload = () => {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                const max = 1000;
+                const max = maxSize;
                 let { width, height } = img;
 
                 if (width > height) {

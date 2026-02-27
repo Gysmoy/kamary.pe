@@ -56,16 +56,16 @@ class ProfileController extends BasicController
         try {
             $userId = Auth::user()->id;
             $userJpa = User::find($userId);
-            if (!$userJpa->relative_id) {
-                $userJpa->relative_id = Crypto::randomUUID();
+            if (!$userJpa->uuid) {
+                $userJpa->uuid = Crypto::randomUUID();
                 $userJpa->save();
             }
 
             $thumbnail = $request->file('thumbnail');
             $full = $request->file('full');
 
-            $thumbnailPath = 'profile/thumbnail/' . $userJpa->relative_id . '.img';
-            $fullPath = 'profile/' . $userJpa->relative_id . '.img';
+            $thumbnailPath = 'profile/thumbnail/' . $userJpa->uuid . '.img';
+            $fullPath = 'profile/' . $userJpa->uuid . '.img';
 
             Storage::put($thumbnailPath, file_get_contents($thumbnail));
             Storage::put($fullPath, file_get_contents($full));
@@ -73,7 +73,7 @@ class ProfileController extends BasicController
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = [
-                'relative_id' => $userJpa->relative_id
+                'uuid' => $userJpa->uuid
             ];
         } catch (\Throwable $th) {
             $response->status = 400;

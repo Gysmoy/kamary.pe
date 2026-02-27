@@ -121,6 +121,15 @@ const Users = ({ }) => {
             onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
           }
         });
+        container.unshift({
+          widget: 'dxButton', location: 'after',
+          options: {
+            icon: 'add',
+            title: 'Agregar',
+            hint: 'Agregar usuario',
+            onClick: () => onModalOpen(null)
+          }
+        });
       }}
       columns={[
         {
@@ -224,43 +233,21 @@ const Users = ({ }) => {
           width: '200px',
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
-            // Add onboarding link button if user is not a seller
-            if (!data.roles || !data.roles.some(r => r.name === 'Seller')) {
-              container.append(DxButton({
-                className: 'btn btn-xs btn-soft-info',
-                title: 'Generar link de Onboarding',
-                icon: 'mdi mdi-link-variant',
-                onClick: () => {
-                  Clipboard.copy(`${location.origin}/onboarding/${data.uuid}`, () => {
-                    toast.success("Correcto", {
-                      description: `Enlace copiado correctamente`,
-                      duration: 3000,
-                      position: "top-right",
-                      richColors: true,
-                    });
-                  })
-                }
-              }))
-            }
-            // Add verify/unverify button only for sellers
-            if (data.roles && data.roles.some(r => r.name === 'Seller')) {
-              container.append(DxButton({
-                className: data.verified ? 'btn btn-xs btn-soft-warning' : 'btn btn-xs btn-soft-success',
-                title: data.verified ? 'Anular verificación' : 'Verificar',
-                icon: data.verified ? 'mdi mdi-close-circle' : 'mdi mdi-check-circle',
-                onClick: () => onBooleanChange({
-                  id: data.uuid,
-                  field: 'verified',
-                  value: !data.verified
-                })
-              }))
-            }
+
             container.append(DxButton({
               className: 'btn btn-xs btn-soft-primary',
               title: 'Editar',
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)
             }))
+
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-info',
+              title: 'Generar link de Onboarding',
+              icon: 'mdi mdi-link-variant',
+              onClick: () => onPasswordModalOpen(data)
+            }))
+
             container.append(DxButton({
               className: 'btn btn-xs btn-soft-danger',
               title: 'Eliminar usuario',
@@ -292,7 +279,7 @@ const Users = ({ }) => {
 }
 
 CreateReactScript((el, properties) => {
-
+  if (!properties.can('users') && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Usuarios'>
     <Users {...properties} />
   </BaseAdminto>);
