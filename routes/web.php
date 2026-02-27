@@ -34,7 +34,7 @@ use App\Http\Controllers\MailingController;
 Route::get('/', fn() => redirect('/login'));
 
 // Authentication Routes
-Route::get('/login', [LoginController::class, 'reactView'])->name('login');
+Route::get('/login', [LoginController::class, 'reactView'])->name('Login.jsx');
 
 Route::get('/confirm-email/{token}', [AuthController::class, 'confirmEmailView'])->name('ConfirmEmail.jsx');
 Route::get('/confirmation/{token}', [AuthController::class, 'loginView'])->name('confirmation');
