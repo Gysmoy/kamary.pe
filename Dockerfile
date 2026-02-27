@@ -26,7 +26,8 @@ WORKDIR /var/www/html
 COPY . /var/www/html
 
 # 6. Install PHP dependencies
-RUN composer install --no-interaction --no-dev --optimize-autoloader
+# RUN composer install --no-interaction --no-dev --optimize-autoloader
+RUN composer install --no-interaction --optimize-autoloader
 
 # 7. Set permissions
 RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache \
