@@ -7,7 +7,7 @@ const Footer = () => {
       <div className="row">
         <div className="col-md-6 text-center text-md-start">
           {fullYear} © {Global.APP_NAME}. Todos los derechos reservados.
-          {/* <div className="visually-hidden"> By <a href={`//devex.pe/?utm_source=${Global.APP_CORRELATIVE}`}>{Global.APP_BY}</a></div> */}
+          <div className="visually-hidden"> By <a href={`//devex.pe/?utm_source=${Global.APP_CORRELATIVE}`}>{Global.APP_BY}</a></div>
         </div>
         <div className="col-md-6">
           <div className="text-md-end footer-links d-none d-md-block">

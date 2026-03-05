@@ -17,13 +17,13 @@ const NavBar = ({ title = 'Panel' }) => {
 
         <a href="index.html" className="logo">
           <span className="logo-light">
-            <span className="logo-lg"><img src="/images/logo-white.png" alt="logo" /></span>
-            <span className="logo-sm"><img src="/images/icon.png" alt="small logo" /></span>
+            <span className="logo-lg"><img src="/assets/img/logo.svg" alt="logo" /></span>
+            <span className="logo-sm"><img src="/assets/img/icon.svg" alt="small logo" /></span>
           </span>
 
           <span className="logo-dark">
-            <span className="logo-lg"><img src="/images/logo.png" alt="dark logo" /></span>
-            <span className="logo-sm"><img src="/images/icon.png" alt="small logo" /></span>
+            <span className="logo-lg"><img src="/assets/img/logo.svg" alt="dark logo" /></span>
+            <span className="logo-sm"><img src="/assets/img/icon.svg" alt="small logo" /></span>
           </span>
         </a>
 
