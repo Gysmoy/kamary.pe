@@ -16,6 +16,11 @@ import SelectFormGroup from '../Components/Adminto/Form/SelectFormGroup';
 
 const usersRest = new UsersRest()
 
+const scopes = {
+  'kamary-peru': 'Kamary Perú',
+  'kamary-farma': 'Kamary Farma'
+}
+
 const Users = ({ prefixes, roles }) => {
   const gridRef = useRef()
   const modalRef = useRef()
@@ -36,6 +41,7 @@ const Users = ({ prefixes, roles }) => {
   const passwordIdRef = useRef()
   const newPasswordRef = useRef()
 
+  const [scope, setScope] = useState([]);
   const [isEditing, setIsEditing] = useState(false)
   const [phonePrefix, setPhonePrefix] = useState('51')
   const [selectedRoles, setSelectedRoles] = useState([])
@@ -186,6 +192,19 @@ const Users = ({ prefixes, roles }) => {
           }
         },
         {
+          dataField: 'scope',
+          caption: 'Con acceso a',
+          cellTemplate: (container, { data }) => {
+            if (!data.scope || !data.scope.length) return;
+            const labels = {
+              'kamary-peru': 'Kamary Perú',
+              'kamary-farma': 'Kamary Farma'
+            };
+            const badges = data.scope.map(s => `<span class="badge badge-soft-secondary me-1">${labels[s] || s}</span>`).join('');
+            container.html(`<div class="d-flex gap-1">${badges}</div>`);
+          }
+        },
+        {
           dataField: 'roles',
           caption: 'Roles',
           allowSorting: false,
@@ -269,6 +288,32 @@ const Users = ({ prefixes, roles }) => {
           }
         </SelectFormGroup>
         <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-8' />
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Con acceso a</label>
+          <div className='d-flex gap-2'>
+            {Object.keys(scopes).map((scp, idx) => (
+              <div key={idx} className='form-check'>
+                <input
+                  className='form-check-input'
+                  type='checkbox'
+                  id={`scope-${scp}`}
+                  value={scp}
+                  checked={scope.includes(scp)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setScope([...scope, scp]);
+                    } else {
+                      setScope(scope.filter((s) => s !== scp));
+                    }
+                  }}
+                />
+                <label className='form-check-label text-nowrap' htmlFor={`scope-${scp}`}>
+                  {scopes[scp]}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className='col-12'>
           <label className='form-label'>Roles</label>
           <div className="dropdown">
