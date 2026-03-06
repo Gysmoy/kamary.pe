@@ -3,8 +3,15 @@ import Logout from "../../Actions/Logout"
 import Global from "../../Utils/Global"
 import LaravelSession from "../../Utils/LaravelSession"
 import Number2Currency from "../../Utils/Number2Currency"
+import Tippy from "@tippyjs/react"
+import SwitchFormGroup from "./Form/SwitchFormGroup"
 
-const NavBar = ({ title = 'Panel' }) => {
+const NavBar = ({ title = 'Panel', panel = null, setPanel = () => { } }) => {
+
+  const panelRef = useRef(null)
+  const onPanelChange = (e) => {
+    setPanel(e.target.checked ? 'kamary-farma' : 'kamary-peru')
+  }
 
   useEffect(() => {
     document.title = `${title} | ${Global.APP_NAME}`
@@ -367,6 +374,15 @@ const NavBar = ({ title = 'Panel' }) => {
             <i className="ri-sun-line dark-mode-icon fs-22"></i>
           </button>
         </div> */}
+        <div className="topbar-item">
+          <Tippy content={`Cambia a ${panel === 'kamary-peru' ? 'Kamary Perú' : 'Kamary Farma'}`}>
+            <div className="d-flex nav-link align-items-center gap-1">
+              <img src="/assets/img/icons/kamary-peru.svg" alt="" style={{ width: '24px', height: '24px', objectFit: 'contain', objectPosition: 'center', filter: panel === 'kamary-peru' ? 'none' : 'grayscale(100%)' }} />
+              <SwitchFormGroup eRef={panelRef} checked={panel === null || panel === 'kamary-farma'} noMargin onChange={(e) => onPanelChange(e)} refreshable={[panel]} />
+              <img src="/assets/img/icons/kamary-farma.svg" alt="" style={{ width: '24px', height: '24px', objectFit: 'contain', objectPosition: 'center', filter: panel === 'kamary-farma' ? 'none' : 'grayscale(100%)' }} />
+            </div>
+          </Tippy>
+        </div>
 
         <div className="topbar-item d-flex flex-column align-items-center">
           <div className="d-flex align-items-center gap-2">
@@ -440,7 +456,7 @@ const NavBar = ({ title = 'Panel' }) => {
 
 
               <button href="javascript:void(0);" className="dropdown-item active fw-semibold text-danger" onClick={() => Logout()}>
-                <i className="ri-logout-box-line me-1 fs-16 align-middle"></i>
+                <i className="ti ti-logout me-1 fs-16 align-middle"></i>
                 <span className="align-middle">Cerrar sesión</span>
               </button>
             </div>

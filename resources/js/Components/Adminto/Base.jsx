@@ -18,10 +18,12 @@ const Base = ({ children, title, can, hasRole }) => {
     customJS()
   }, [])
 
+  const [panel, setPanel] = useState('kamary-peru')
+
   return (<>
     <div className="wrapper">
-      <Menu can={can} hasRole={hasRole} />
-      <NavBar title={title} />
+      <Menu can={can} hasRole={hasRole} panel={panel} setPanel={setPanel} />
+      <NavBar title={title} panel={panel} setPanel={setPanel} />
 
       <div className="modal fade" id="searchModal" tabIndex="-1" aria-labelledby="searchModalLabel" aria-hidden="true">
         <div className="modal-dialog modal-lg">

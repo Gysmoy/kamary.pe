@@ -3,8 +3,8 @@
     "file": "assets/ArrayJoin-2k6ba35P.js",
     "name": "ArrayJoin"
   },
-  "_Base-BSArSDnI.js": {
-    "file": "assets/Base-BSArSDnI.js",
+  "_Base-BUYTPwaS.js": {
+    "file": "assets/Base-BUYTPwaS.js",
     "name": "Base",
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
@@ -12,8 +12,8 @@
       "resources/js/Components/Tailwind/Base.jsx"
     ]
   },
-  "_Base-CQ_uTZb8.js": {
-    "file": "assets/Base-CQ_uTZb8.js",
+  "_Base-D-r8Dzo-.js": {
+    "file": "assets/Base-D-r8Dzo-.js",
     "name": "Base",
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
@@ -23,7 +23,7 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx"
     ],
     "css": [
@@ -45,12 +45,12 @@
       "_BasicRest-CJI7-_7K.js"
     ]
   },
-  "_CheckoutSummary-DYePXH0C.js": {
-    "file": "assets/CheckoutSummary-DYePXH0C.js",
+  "_CheckoutSummary-BY-bzgm-.js": {
+    "file": "assets/CheckoutSummary-BY-bzgm-.js",
     "name": "CheckoutSummary",
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx"
     ]
   },
@@ -80,13 +80,13 @@
     "file": "assets/DxButton-CsjWvhyj.js",
     "name": "DxButton"
   },
-  "_DxPanelButton-DG_b5bsQ.js": {
-    "file": "assets/DxPanelButton-DG_b5bsQ.js",
+  "_DxPanelButton-DNyzYoWk.js": {
+    "file": "assets/DxPanelButton-DNyzYoWk.js",
     "name": "DxPanelButton",
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_server.browser-D0dT10Bs.js"
     ],
     "css": [
@@ -105,12 +105,12 @@
       "_index-RYns6xqu.js"
     ]
   },
-  "_InputFormGroup-DoKKRc2T.js": {
-    "file": "assets/InputFormGroup-DoKKRc2T.js",
+  "_InputFormGroup-CHzsb8Ae.js": {
+    "file": "assets/InputFormGroup-CHzsb8Ae.js",
     "name": "InputFormGroup",
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_index-RYns6xqu.js"
     ]
   },
@@ -136,10 +136,6 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js"
     ]
-  },
-  "_Number2Currency-e57Tgsuk.js": {
-    "file": "assets/Number2Currency-e57Tgsuk.js",
-    "name": "Number2Currency"
   },
   "_PasswordFormGroup--iKnOtY3.js": {
     "file": "assets/PasswordFormGroup--iKnOtY3.js",
@@ -187,23 +183,14 @@
       "_BasicRest-CJI7-_7K.js"
     ]
   },
-  "_SetSelectValue-CwOuF6zW.js": {
-    "file": "assets/SetSelectValue-CwOuF6zW.js",
+  "_SetSelectValue-BicOkpkP.js": {
+    "file": "assets/SetSelectValue-BicOkpkP.js",
     "name": "SetSelectValue",
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_index-RYns6xqu.js",
       "_main-CxwoVhEh.js"
-    ]
-  },
-  "_SwitchFormGroup-BPip4E9_.js": {
-    "file": "assets/SwitchFormGroup-BPip4E9_.js",
-    "name": "SwitchFormGroup",
-    "imports": [
-      "resources/js/Components/About/AboutHeader.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
-      "_index-RYns6xqu.js"
     ]
   },
   "_Table-w3CnSDlG.js": {
@@ -357,8 +344,8 @@
     "file": "tippy.css",
     "src": "_tippy-!~{02W}~.js"
   },
-  "_tippy-react.esm-D8y2HtF_.js": {
-    "file": "assets/tippy-react.esm-D8y2HtF_.js",
+  "_tippy-react.esm-dPPLDbGp.js": {
+    "file": "assets/tippy-react.esm-dPPLDbGp.js",
     "name": "tippy-react.esm",
     "imports": [
       "_index-RYns6xqu.js",
@@ -371,7 +358,7 @@
     "isEntry": true
   },
   "resources/js/Admin/Account.jsx": {
-    "file": "assets/Account-DPt7w_jT.js",
+    "file": "assets/Account-BCk6W92O.js",
     "name": "Account",
     "src": "resources/js/Admin/Account.jsx",
     "isEntry": true,
@@ -380,10 +367,10 @@
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
       "_JSEncrypt-D3I3x59l.js",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_main-CxwoVhEh.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_PasswordFormGroup--iKnOtY3.js",
       "_Global-koVfYFPn.js",
       "_index-sbqOYYIm.js",
@@ -391,12 +378,11 @@
       "_index.esm-BnB3fZl0.js",
       "____vite-browser-external_commonjs-proxy-DbMF7jdq.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_sweetalert2.all-DJo0UVK6.js",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_BasicRest-CJI7-_7K.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_BasicRest-CJI7-_7K.js"
     ],
     "css": [
       "tippy.css",
@@ -404,7 +390,7 @@
     ]
   },
   "resources/js/Admin/Ads.jsx": {
-    "file": "assets/Ads-BAzymERh.js",
+    "file": "assets/Ads-Mua_fPKn.js",
     "name": "Ads",
     "src": "resources/js/Admin/Ads.jsx",
     "isEntry": true,
@@ -412,14 +398,13 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_ImageFormGroup-HdgfSlKu.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
@@ -432,10 +417,9 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
-      "_WhatsAppRest-Dd9tfpZp.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_WhatsAppRest-Dd9tfpZp.js"
     ],
     "css": [
       "tippy.css",
@@ -443,7 +427,7 @@
     ]
   },
   "resources/js/Admin/Bundles.jsx": {
-    "file": "assets/Bundles-J1FbTOd4.js",
+    "file": "assets/Bundles-QFt8twvX.js",
     "name": "Bundles",
     "src": "resources/js/Admin/Bundles.jsx",
     "isEntry": true,
@@ -451,7 +435,7 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
@@ -460,10 +444,10 @@
       "_TextareaFormGroup-Col4R6C6.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
-      "_SetSelectValue-CwOuF6zW.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_SetSelectValue-BicOkpkP.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_SelectFormGroup-ByG-2F3b.js",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_ImageFormGroup-HdgfSlKu.js",
       "_index-sbqOYYIm.js",
       "_Global-koVfYFPn.js",
@@ -472,7 +456,6 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
       "_server.browser-D0dT10Bs.js"
@@ -483,7 +466,7 @@
     ]
   },
   "resources/js/Admin/Cards.jsx": {
-    "file": "assets/Cards-DWmnrFm6.js",
+    "file": "assets/Cards-m_wC9HYz.js",
     "name": "Cards",
     "src": "resources/js/Admin/Cards.jsx",
     "isEntry": true,
@@ -491,7 +474,7 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_sweetalert2.all-DJo0UVK6.js",
@@ -504,7 +487,7 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
       "_server.browser-D0dT10Bs.js"
@@ -515,7 +498,7 @@
     ]
   },
   "resources/js/Admin/Categories.jsx": {
-    "file": "assets/Categories-DPlwu-uJ.js",
+    "file": "assets/Categories-CeuT3Nnf.js",
     "name": "Categories",
     "src": "resources/js/Admin/Categories.jsx",
     "isEntry": true,
@@ -523,16 +506,15 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_sweetalert2.all-DJo0UVK6.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_BasicRest-CJI7-_7K.js",
       "_index-sbqOYYIm.js",
       "_Global-koVfYFPn.js",
@@ -541,11 +523,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -553,7 +534,7 @@
     ]
   },
   "resources/js/Admin/Colors.jsx": {
-    "file": "assets/Colors-CTE8xsfz.js",
+    "file": "assets/Colors-CUrP1KzK.js",
     "name": "Colors",
     "src": "resources/js/Admin/Colors.jsx",
     "isEntry": true,
@@ -561,15 +542,14 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
       "_index-sbqOYYIm.js",
@@ -579,11 +559,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -591,14 +570,14 @@
     ]
   },
   "resources/js/Admin/ComingSoon.jsx": {
-    "file": "assets/ComingSoon-D4mLh0qr.js",
+    "file": "assets/ComingSoon-Dm66GP67.js",
     "name": "ComingSoon",
     "src": "resources/js/Admin/ComingSoon.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_index-RYns6xqu.js",
       "_index-sbqOYYIm.js",
@@ -608,7 +587,7 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_sweetalert2.all-DJo0UVK6.js",
       "_WhatsAppRest-Dd9tfpZp.js",
@@ -620,7 +599,7 @@
     ]
   },
   "resources/js/Admin/Coupons.jsx": {
-    "file": "assets/Coupons-KmZC1gjs.js",
+    "file": "assets/Coupons-BOn2nLuC.js",
     "name": "Coupons",
     "src": "resources/js/Admin/Coupons.jsx",
     "isEntry": true,
@@ -628,19 +607,18 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_SelectFormGroup-ByG-2F3b.js",
       "_BasicRest-CJI7-_7K.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_server.browser-D0dT10Bs.js",
       "_index-sbqOYYIm.js",
       "_Global-koVfYFPn.js",
@@ -650,8 +628,7 @@
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
-      "_WhatsAppRest-Dd9tfpZp.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_WhatsAppRest-Dd9tfpZp.js"
     ],
     "css": [
       "tippy.css",
@@ -659,7 +636,7 @@
     ]
   },
   "resources/js/Admin/DeliveryPoints.jsx": {
-    "file": "assets/DeliveryPoints-BfpF2H3_.js",
+    "file": "assets/DeliveryPoints-sFIP0QXn.js",
     "name": "DeliveryPoints",
     "src": "resources/js/Admin/DeliveryPoints.jsx",
     "isEntry": true,
@@ -667,16 +644,16 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_DxButton-CsjWvhyj.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
       "_buildSchedule-QAY4ZbMf.js",
-      "_SetSelectValue-CwOuF6zW.js",
+      "_SetSelectValue-BicOkpkP.js",
       "_index-sbqOYYIm.js",
       "_Global-koVfYFPn.js",
       "_main-CxwoVhEh.js",
@@ -684,11 +661,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -696,7 +672,7 @@
     ]
   },
   "resources/js/Admin/Expansions.jsx": {
-    "file": "assets/Expansions-BbU-7Ppo.js",
+    "file": "assets/Expansions-COj03SEC.js",
     "name": "Expansions",
     "src": "resources/js/Admin/Expansions.jsx",
     "isEntry": true,
@@ -704,17 +680,16 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_DxButton-CsjWvhyj.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
       "_ReactAppend-APfp1sF8.js",
-      "_SwitchFormGroup-BPip4E9_.js",
-      "_SetSelectValue-CwOuF6zW.js",
+      "_SetSelectValue-BicOkpkP.js",
       "_server.browser-D0dT10Bs.js",
       "_index-sbqOYYIm.js",
       "_Global-koVfYFPn.js",
@@ -723,10 +698,9 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
-      "_WhatsAppRest-Dd9tfpZp.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_WhatsAppRest-Dd9tfpZp.js"
     ],
     "css": [
       "tippy.css",
@@ -734,7 +708,7 @@
     ]
   },
   "resources/js/Admin/Faqs.jsx": {
-    "file": "assets/Faqs-DfgI8Gop.js",
+    "file": "assets/Faqs-DmJ5TGO3.js",
     "name": "Faqs",
     "src": "resources/js/Admin/Faqs.jsx",
     "isEntry": true,
@@ -742,14 +716,13 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
       "_index-sbqOYYIm.js",
@@ -759,11 +732,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -771,7 +743,7 @@
     ]
   },
   "resources/js/Admin/Formulas.jsx": {
-    "file": "assets/Formulas-CEqjoDEB.js",
+    "file": "assets/Formulas-C0_x5dRq.js",
     "name": "Formulas",
     "src": "resources/js/Admin/Formulas.jsx",
     "isEntry": true,
@@ -779,17 +751,17 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_BasicRest-CJI7-_7K.js",
       "_SelectFormGroup-ByG-2F3b.js",
-      "_SetSelectValue-CwOuF6zW.js",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_SetSelectValue-BicOkpkP.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_index-sbqOYYIm.js",
       "_Global-koVfYFPn.js",
       "_main-CxwoVhEh.js",
@@ -797,7 +769,6 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_sweetalert2.all-DJo0UVK6.js",
       "_WhatsAppRest-Dd9tfpZp.js",
@@ -809,7 +780,7 @@
     ]
   },
   "resources/js/Admin/Fragrances.jsx": {
-    "file": "assets/Fragrances-C62Ub8xr.js",
+    "file": "assets/Fragrances-DIwdGVTj.js",
     "name": "Fragrances",
     "src": "resources/js/Admin/Fragrances.jsx",
     "isEntry": true,
@@ -817,15 +788,14 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_ImageFormGroup-HdgfSlKu.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
@@ -836,11 +806,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -848,7 +817,7 @@
     ]
   },
   "resources/js/Admin/Gallery.jsx": {
-    "file": "assets/Gallery-DHqAhOLz.js",
+    "file": "assets/Gallery-DYQAIoh_.js",
     "name": "Gallery",
     "src": "resources/js/Admin/Gallery.jsx",
     "isEntry": true,
@@ -856,7 +825,7 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_BasicRest-CJI7-_7K.js",
       "_index-sbqOYYIm.js",
@@ -866,7 +835,7 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_sweetalert2.all-DJo0UVK6.js",
       "_WhatsAppRest-Dd9tfpZp.js"
@@ -877,7 +846,7 @@
     ]
   },
   "resources/js/Admin/Generals.jsx": {
-    "file": "assets/Generals-CL_VKHTA.js",
+    "file": "assets/Generals-D7iY6rU5.js",
     "name": "Generals",
     "src": "resources/js/Admin/Generals.jsx",
     "isEntry": true,
@@ -885,25 +854,24 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "_index-sbqOYYIm.js",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_BasicRest-CJI7-_7K.js",
       "_CreateReactScript-CYzvNmob.js",
       "resources/js/Utils/ReactAppend.jsx",
       "_QuillFormGroup-DNmhkTnW.js",
       "_TextareaFormGroup-Col4R6C6.js",
       "_Global-koVfYFPn.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_SelectFormGroup-ByG-2F3b.js",
       "_main-CxwoVhEh.js",
       "____vite-browser-external_commonjs-proxy-DbMF7jdq.js",
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_sweetalert2.all-DJo0UVK6.js",
-      "_WhatsAppRest-Dd9tfpZp.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_WhatsAppRest-Dd9tfpZp.js"
     ],
     "css": [
       "tippy.css",
@@ -911,7 +879,7 @@
     ]
   },
   "resources/js/Admin/Gifts.jsx": {
-    "file": "assets/Gifts-BvVs4_q2.js",
+    "file": "assets/Gifts-DfT0Nykl.js",
     "name": "Gifts",
     "src": "resources/js/Admin/Gifts.jsx",
     "isEntry": true,
@@ -919,15 +887,14 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_ImageFormGroup-HdgfSlKu.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_ItemsRest-CJZKPQ99.js",
@@ -938,12 +905,11 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
       "_BasicRest-CJI7-_7K.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -951,7 +917,7 @@
     ]
   },
   "resources/js/Admin/Indicators.jsx": {
-    "file": "assets/Indicators-D8h8qBGH.js",
+    "file": "assets/Indicators-B_GV_VI4.js",
     "name": "Indicators",
     "src": "resources/js/Admin/Indicators.jsx",
     "isEntry": true,
@@ -959,15 +925,14 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_BasicRest-CJI7-_7K.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_index-sbqOYYIm.js",
@@ -977,11 +942,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -989,7 +953,7 @@
     ]
   },
   "resources/js/Admin/Items.jsx": {
-    "file": "assets/Items-BsgXjzrt.js",
+    "file": "assets/Items-e7YVf2rz.js",
     "name": "Items",
     "src": "resources/js/Admin/Items.jsx",
     "isEntry": true,
@@ -997,15 +961,14 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_ImageFormGroup-HdgfSlKu.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_ItemsRest-CJZKPQ99.js",
@@ -1016,12 +979,11 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
       "_BasicRest-CJI7-_7K.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1029,7 +991,7 @@
     ]
   },
   "resources/js/Admin/Languages.jsx": {
-    "file": "assets/Languages-dL2qaOqI.js",
+    "file": "assets/Languages-DAGnsMV7.js",
     "name": "Languages",
     "src": "resources/js/Admin/Languages.jsx",
     "isEntry": true,
@@ -1037,12 +999,11 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
-      "_SwitchFormGroup-BPip4E9_.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_DxButton-CsjWvhyj.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
@@ -1054,11 +1015,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1066,7 +1026,7 @@
     ]
   },
   "resources/js/Admin/MailingTemplates.jsx": {
-    "file": "assets/MailingTemplates-Do5d_b35.js",
+    "file": "assets/MailingTemplates-_Cywe3T1.js",
     "name": "MailingTemplates",
     "src": "resources/js/Admin/MailingTemplates.jsx",
     "isEntry": true,
@@ -1078,26 +1038,24 @@
       "_ReactAppend-APfp1sF8.js",
       "_Modal-C3a6f5Kg.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_DxPanelButton-DG_b5bsQ.js",
+      "_DxPanelButton-DNyzYoWk.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_SelectFormGroup-ByG-2F3b.js",
       "_index-DNUR7M9R.js",
       "_BasicRest-CJI7-_7K.js",
       "_main-CxwoVhEh.js",
-      "_SwitchFormGroup-BPip4E9_.js",
+      "_Base-D-r8Dzo-.js",
       "_Table-w3CnSDlG.js",
       "_SendingHistoryRest-DwBY5chz.js",
       "_Global-koVfYFPn.js",
-      "_InputFormGroup-DoKKRc2T.js",
-      "_Base-CQ_uTZb8.js",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_InputFormGroup-CHzsb8Ae.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_index-sbqOYYIm.js",
       "_index.esm-BnB3fZl0.js",
       "____vite-browser-external_commonjs-proxy-DbMF7jdq.js",
       "_LaravelSession-CYcN0AKE.js",
       "_server.browser-D0dT10Bs.js",
       "_index-DLor_0Z8.js",
-      "_Number2Currency-e57Tgsuk.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js"
     ],
@@ -1107,7 +1065,7 @@
     ]
   },
   "resources/js/Admin/Messages.jsx": {
-    "file": "assets/Messages-4OVnPc2m.js",
+    "file": "assets/Messages-B-lfo4C4.js",
     "name": "Messages",
     "src": "resources/js/Admin/Messages.jsx",
     "isEntry": true,
@@ -1115,7 +1073,7 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_DxButton-CsjWvhyj.js",
@@ -1130,7 +1088,7 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
       "_server.browser-D0dT10Bs.js"
@@ -1141,7 +1099,7 @@
     ]
   },
   "resources/js/Admin/PaymentMethods.jsx": {
-    "file": "assets/PaymentMethods-PiJAAIVk.js",
+    "file": "assets/PaymentMethods-CotDtzM1.js",
     "name": "PaymentMethods",
     "src": "resources/js/Admin/PaymentMethods.jsx",
     "isEntry": true,
@@ -1149,13 +1107,12 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_SelectFormGroup-ByG-2F3b.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_DxButton-CsjWvhyj.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_ReactAppend-APfp1sF8.js",
@@ -1167,11 +1124,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1179,7 +1135,7 @@
     ]
   },
   "resources/js/Admin/Pokemons.jsx": {
-    "file": "assets/Pokemons-DcZECqWS.js",
+    "file": "assets/Pokemons-DLI-podl.js",
     "name": "Pokemons",
     "src": "resources/js/Admin/Pokemons.jsx",
     "isEntry": true,
@@ -1187,11 +1143,11 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_DxButton-CsjWvhyj.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
@@ -1203,11 +1159,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1215,7 +1170,7 @@
     ]
   },
   "resources/js/Admin/Posts.jsx": {
-    "file": "assets/Posts-CLRT28Wl.js",
+    "file": "assets/Posts-DMivYg6r.js",
     "name": "Posts",
     "src": "resources/js/Admin/Posts.jsx",
     "isEntry": true,
@@ -1223,18 +1178,18 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_ImageFormGroup-HdgfSlKu.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
       "_QuillFormGroup-DNmhkTnW.js",
-      "_SetSelectValue-CwOuF6zW.js",
+      "_SetSelectValue-BicOkpkP.js",
       "_index-sbqOYYIm.js",
       "_Global-koVfYFPn.js",
       "_main-CxwoVhEh.js",
@@ -1242,11 +1197,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1254,18 +1208,18 @@
     ]
   },
   "resources/js/Admin/Profile.jsx": {
-    "file": "assets/Profile-UrPHATLY.js",
+    "file": "assets/Profile-BQ10qylg.js",
     "name": "Profile",
     "src": "resources/js/Admin/Profile.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
       "_main-CxwoVhEh.js",
-      "_Base-CQ_uTZb8.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_Base-D-r8Dzo-.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_CreateReactScript-CYzvNmob.js",
       "_index-DLor_0Z8.js",
       "_resizeImage-CAkDvg_q.js",
@@ -1275,7 +1229,6 @@
       "_Global-koVfYFPn.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_sweetalert2.all-DJo0UVK6.js",
       "_WhatsAppRest-Dd9tfpZp.js"
@@ -1286,7 +1239,7 @@
     ]
   },
   "resources/js/Admin/Regions.jsx": {
-    "file": "assets/Regions-CwbzhyOX.js",
+    "file": "assets/Regions-4tj_NNwn.js",
     "name": "Regions",
     "src": "resources/js/Admin/Regions.jsx",
     "isEntry": true,
@@ -1294,11 +1247,11 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_DxButton-CsjWvhyj.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
@@ -1309,11 +1262,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1321,7 +1273,7 @@
     ]
   },
   "resources/js/Admin/Renewals.jsx": {
-    "file": "assets/Renewals-Dg9rW285.js",
+    "file": "assets/Renewals-CMmMAW2k.js",
     "name": "Renewals",
     "src": "resources/js/Admin/Renewals.jsx",
     "isEntry": true,
@@ -1329,14 +1281,13 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
       "_server.browser-D0dT10Bs.js",
@@ -1347,10 +1298,9 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
-      "_WhatsAppRest-Dd9tfpZp.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_WhatsAppRest-Dd9tfpZp.js"
     ],
     "css": [
       "tippy.css",
@@ -1358,7 +1308,7 @@
     ]
   },
   "resources/js/Admin/Roles.jsx": {
-    "file": "assets/Roles-Dr8Q2V4m.js",
+    "file": "assets/Roles-BiBdjG4N.js",
     "name": "Roles",
     "src": "resources/js/Admin/Roles.jsx",
     "isEntry": true,
@@ -1366,13 +1316,13 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
       "_DxButton-CsjWvhyj.js",
       "_sweetalert2.all-DJo0UVK6.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_server.browser-D0dT10Bs.js",
       "_BasicRest-CJI7-_7K.js",
       "_index-sbqOYYIm.js",
@@ -1382,10 +1332,9 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
-      "_WhatsAppRest-Dd9tfpZp.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_WhatsAppRest-Dd9tfpZp.js"
     ],
     "css": [
       "tippy.css",
@@ -1393,7 +1342,7 @@
     ]
   },
   "resources/js/Admin/SaleOrigins.jsx": {
-    "file": "assets/SaleOrigins-55IxL2sz.js",
+    "file": "assets/SaleOrigins-Dtwa1K0V.js",
     "name": "SaleOrigins",
     "src": "resources/js/Admin/SaleOrigins.jsx",
     "isEntry": true,
@@ -1401,16 +1350,15 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_sweetalert2.all-DJo0UVK6.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_BasicRest-CJI7-_7K.js",
       "_index-sbqOYYIm.js",
       "_Global-koVfYFPn.js",
@@ -1419,11 +1367,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1431,19 +1378,19 @@
     ]
   },
   "resources/js/Admin/Sales.jsx": {
-    "file": "assets/Sales-CWd8yXlC.js",
+    "file": "assets/Sales-Di2VGsOF.js",
     "name": "Sales",
     "src": "resources/js/Admin/Sales.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
       "_SalesRest-DkW4Xzsd.js",
       "_Table-w3CnSDlG.js",
       "_CreateReactScript-CYzvNmob.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_Modal-C3a6f5Kg.js",
@@ -1467,7 +1414,7 @@
     ]
   },
   "resources/js/Admin/SendingHistory.jsx": {
-    "file": "assets/SendingHistory-q5GdwS9j.js",
+    "file": "assets/SendingHistory-CHQ1E3qG.js",
     "name": "SendingHistory",
     "src": "resources/js/Admin/SendingHistory.jsx",
     "isEntry": true,
@@ -1477,8 +1424,8 @@
       "resources/js/Utils/ReactAppend.jsx",
       "_server.browser-D0dT10Bs.js",
       "_CreateReactScript-CYzvNmob.js",
-      "_Base-CQ_uTZb8.js",
-      "_DxPanelButton-DG_b5bsQ.js",
+      "_Base-D-r8Dzo-.js",
+      "_DxPanelButton-DNyzYoWk.js",
       "_ReactAppend-APfp1sF8.js",
       "_Table-w3CnSDlG.js",
       "_SendingHistoryRest-DwBY5chz.js",
@@ -1491,11 +1438,10 @@
       "_Global-koVfYFPn.js",
       "_LaravelSession-CYcN0AKE.js",
       "_index-DLor_0Z8.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_sweetalert2.all-DJo0UVK6.js",
-      "_WhatsAppRest-Dd9tfpZp.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_WhatsAppRest-Dd9tfpZp.js"
     ],
     "css": [
       "swiper.css",
@@ -1503,7 +1449,7 @@
     ]
   },
   "resources/js/Admin/Series.jsx": {
-    "file": "assets/Series-CNey2siJ.js",
+    "file": "assets/Series-BPfA_QJn.js",
     "name": "Series",
     "src": "resources/js/Admin/Series.jsx",
     "isEntry": true,
@@ -1511,11 +1457,11 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_DxButton-CsjWvhyj.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
@@ -1526,11 +1472,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1538,7 +1483,7 @@
     ]
   },
   "resources/js/Admin/Sliders.jsx": {
-    "file": "assets/Sliders-C-aRX6Qe.js",
+    "file": "assets/Sliders-DHpDjIMo.js",
     "name": "Sliders",
     "src": "resources/js/Admin/Sliders.jsx",
     "isEntry": true,
@@ -1546,15 +1491,14 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_BasicRest-CJI7-_7K.js",
       "_ImageFormGroup-HdgfSlKu.js",
       "_sweetalert2.all-DJo0UVK6.js",
@@ -1565,11 +1509,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1577,7 +1520,7 @@
     ]
   },
   "resources/js/Admin/Socials.jsx": {
-    "file": "assets/Socials-CO_rBSdn.js",
+    "file": "assets/Socials-BboF_QSX.js",
     "name": "Socials",
     "src": "resources/js/Admin/Socials.jsx",
     "isEntry": true,
@@ -1585,16 +1528,15 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_sweetalert2.all-DJo0UVK6.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_BasicRest-CJI7-_7K.js",
       "_SelectFormGroup-ByG-2F3b.js",
       "_server.browser-D0dT10Bs.js",
@@ -1605,10 +1547,9 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
-      "_WhatsAppRest-Dd9tfpZp.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_WhatsAppRest-Dd9tfpZp.js"
     ],
     "css": [
       "tippy.css",
@@ -1616,7 +1557,7 @@
     ]
   },
   "resources/js/Admin/Statuses.jsx": {
-    "file": "assets/Statuses-BqVdFU6V.js",
+    "file": "assets/Statuses-D6CIsVys.js",
     "name": "Statuses",
     "src": "resources/js/Admin/Statuses.jsx",
     "isEntry": true,
@@ -1624,13 +1565,13 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
       "_DxButton-CsjWvhyj.js",
       "_sweetalert2.all-DJo0UVK6.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_server.browser-D0dT10Bs.js",
       "_BasicRest-CJI7-_7K.js",
       "_TextareaFormGroup-Col4R6C6.js",
@@ -1641,10 +1582,9 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
-      "_WhatsAppRest-Dd9tfpZp.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_WhatsAppRest-Dd9tfpZp.js"
     ],
     "css": [
       "tippy.css",
@@ -1652,7 +1592,7 @@
     ]
   },
   "resources/js/Admin/Strengths.jsx": {
-    "file": "assets/Strengths-BOEFxcam.js",
+    "file": "assets/Strengths-xATI01ai.js",
     "name": "Strengths",
     "src": "resources/js/Admin/Strengths.jsx",
     "isEntry": true,
@@ -1660,16 +1600,15 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_sweetalert2.all-DJo0UVK6.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_BasicRest-CJI7-_7K.js",
       "_index-sbqOYYIm.js",
       "_Global-koVfYFPn.js",
@@ -1678,11 +1617,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1690,13 +1628,13 @@
     ]
   },
   "resources/js/Admin/Subscriptions.jsx": {
-    "file": "assets/Subscriptions-BgAETXdu.js",
+    "file": "assets/Subscriptions-C1eLsukf.js",
     "name": "Subscriptions",
     "src": "resources/js/Admin/Subscriptions.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_BasicRest-CJI7-_7K.js",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
@@ -1713,7 +1651,7 @@
       "_index-sbqOYYIm.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js"
     ],
@@ -1723,7 +1661,7 @@
     ]
   },
   "resources/js/Admin/Supplies.jsx": {
-    "file": "assets/Supplies-DMD592rZ.js",
+    "file": "assets/Supplies-CP9ZUMW8.js",
     "name": "Supplies",
     "src": "resources/js/Admin/Supplies.jsx",
     "isEntry": true,
@@ -1731,14 +1669,13 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_ImageFormGroup-HdgfSlKu.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
@@ -1749,11 +1686,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1761,7 +1697,7 @@
     ]
   },
   "resources/js/Admin/Tags.jsx": {
-    "file": "assets/Tags-cvvw4ZZl.js",
+    "file": "assets/Tags-CwlXI6wm.js",
     "name": "Tags",
     "src": "resources/js/Admin/Tags.jsx",
     "isEntry": true,
@@ -1769,16 +1705,15 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_sweetalert2.all-DJo0UVK6.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_BasicRest-CJI7-_7K.js",
       "_index-sbqOYYIm.js",
       "_Global-koVfYFPn.js",
@@ -1787,11 +1722,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1799,7 +1733,7 @@
     ]
   },
   "resources/js/Admin/Testimonies.jsx": {
-    "file": "assets/Testimonies-ChwRCEr-.js",
+    "file": "assets/Testimonies-D2wG5CiD.js",
     "name": "Testimonies",
     "src": "resources/js/Admin/Testimonies.jsx",
     "isEntry": true,
@@ -1807,15 +1741,14 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_BasicRest-CJI7-_7K.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_index-sbqOYYIm.js",
@@ -1825,11 +1758,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1837,7 +1769,7 @@
     ]
   },
   "resources/js/Admin/TransactionCategories.jsx": {
-    "file": "assets/TransactionCategories-BNmP-r-q.js",
+    "file": "assets/TransactionCategories-BEVprSaN.js",
     "name": "TransactionCategories",
     "src": "resources/js/Admin/TransactionCategories.jsx",
     "isEntry": true,
@@ -1845,16 +1777,15 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_sweetalert2.all-DJo0UVK6.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_BasicRest-CJI7-_7K.js",
       "_index-sbqOYYIm.js",
       "_Global-koVfYFPn.js",
@@ -1863,11 +1794,10 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1875,7 +1805,7 @@
     ]
   },
   "resources/js/Admin/Transactions.jsx": {
-    "file": "assets/Transactions-BAvmGqu2.js",
+    "file": "assets/Transactions-THSvGzD9.js",
     "name": "Transactions",
     "src": "resources/js/Admin/Transactions.jsx",
     "isEntry": true,
@@ -1883,18 +1813,18 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-Col4R6C6.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_BasicRest-CJI7-_7K.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_SelectFormGroup-ByG-2F3b.js",
-      "_SetSelectValue-CwOuF6zW.js",
+      "_SetSelectValue-BicOkpkP.js",
       "_index-sbqOYYIm.js",
       "_Global-koVfYFPn.js",
       "_main-CxwoVhEh.js",
@@ -1904,8 +1834,7 @@
       "_LaravelSession-CYcN0AKE.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_WhatsAppRest-Dd9tfpZp.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -1913,7 +1842,7 @@
     ]
   },
   "resources/js/Admin/Users.jsx": {
-    "file": "assets/Users-B-AosFfN.js",
+    "file": "assets/Users-CqedNnXC.js",
     "name": "Users",
     "src": "resources/js/Admin/Users.jsx",
     "isEntry": true,
@@ -1921,15 +1850,14 @@
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_Modal-C3a6f5Kg.js",
       "_ReactAppend-APfp1sF8.js",
       "_DxButton-CsjWvhyj.js",
-      "_SwitchFormGroup-BPip4E9_.js",
       "_sweetalert2.all-DJo0UVK6.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_server.browser-D0dT10Bs.js",
       "_BasicRest-CJI7-_7K.js",
       "_PasswordFormGroup--iKnOtY3.js",
@@ -1941,10 +1869,9 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
-      "_WhatsAppRest-Dd9tfpZp.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_WhatsAppRest-Dd9tfpZp.js"
     ],
     "css": [
       "tippy.css",
@@ -1952,22 +1879,21 @@
     ]
   },
   "resources/js/CardDetail.jsx": {
-    "file": "assets/CardDetail-Dw8vT7km.js",
+    "file": "assets/CardDetail-CgV3RbmU.js",
     "name": "CardDetail",
     "src": "resources/js/CardDetail.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_CreateReactScript-CYzvNmob.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_index-RYns6xqu.js",
       "_BasicRest-CJI7-_7K.js",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx",
       "_index-sbqOYYIm.js",
       "resources/js/Components/Tailwind/Base.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
       "_LaravelSession-CYcN0AKE.js",
       "_auth-rest-DWgWkUwu.js",
       "_main-CxwoVhEh.js",
@@ -1985,22 +1911,21 @@
     ]
   },
   "resources/js/Cart.jsx": {
-    "file": "assets/Cart-C4e7MHd-.js",
+    "file": "assets/Cart-BlzZJD5H.js",
     "name": "Cart",
     "src": "resources/js/Cart.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_CreateReactScript-CYzvNmob.js",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_index-RYns6xqu.js",
-      "_CheckoutSummary-DYePXH0C.js",
+      "_CheckoutSummary-BY-bzgm-.js",
       "_index-sbqOYYIm.js",
       "resources/js/Components/Tailwind/Base.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
       "_LaravelSession-CYcN0AKE.js",
       "_auth-rest-DWgWkUwu.js",
       "_main-CxwoVhEh.js",
@@ -2019,17 +1944,17 @@
     ]
   },
   "resources/js/Catalog.jsx": {
-    "file": "assets/Catalog-8L9dw1JK.js",
+    "file": "assets/Catalog-CiInIdoi.js",
     "name": "Catalog",
     "src": "resources/js/Catalog.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_CreateReactScript-CYzvNmob.js",
       "_index-RYns6xqu.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_main-CxwoVhEh.js",
       "_BasicRest-CJI7-_7K.js",
       "_index-sbqOYYIm.js",
@@ -2038,7 +1963,6 @@
       "_sweetalert2.all-DJo0UVK6.js",
       "_index-DLor_0Z8.js",
       "resources/js/Components/Tailwind/Base.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
       "_LaravelSession-CYcN0AKE.js",
       "_auth-rest-DWgWkUwu.js",
       "_index-w5L74WiD.js",
@@ -2052,25 +1976,24 @@
     ]
   },
   "resources/js/Checkout.jsx": {
-    "file": "assets/Checkout-DuPARnKS.js",
+    "file": "assets/Checkout-QXtsP_6M.js",
     "name": "Checkout",
     "src": "resources/js/Checkout.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_CreateReactScript-CYzvNmob.js",
       "_index-RYns6xqu.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_buildSchedule-QAY4ZbMf.js",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx",
-      "_CheckoutSummary-DYePXH0C.js",
+      "_CheckoutSummary-BY-bzgm-.js",
       "_resizeImage-CAkDvg_q.js",
       "_BasicRest-CJI7-_7K.js",
       "_index-sbqOYYIm.js",
       "resources/js/Components/Tailwind/Base.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
       "_LaravelSession-CYcN0AKE.js",
       "_auth-rest-DWgWkUwu.js",
       "_main-CxwoVhEh.js",
@@ -3004,7 +2927,7 @@
     ]
   },
   "resources/js/Components/Public/Auth/SummaryScreen.jsx": {
-    "file": "assets/SummaryScreen-B_CKjPyD.js",
+    "file": "assets/SummaryScreen-CeKzIQaI.js",
     "name": "SummaryScreen",
     "src": "resources/js/Components/Public/Auth/SummaryScreen.jsx",
     "isEntry": true,
@@ -3108,7 +3031,7 @@
     ]
   },
   "resources/js/Components/Public/Onboarding/SummaryScreen.jsx": {
-    "file": "assets/SummaryScreen-CeKzIQaI.js",
+    "file": "assets/SummaryScreen-B_CKjPyD.js",
     "name": "SummaryScreen",
     "src": "resources/js/Components/Public/Onboarding/SummaryScreen.jsx",
     "isEntry": true,
@@ -3138,18 +3061,17 @@
     ]
   },
   "resources/js/Components/Tailwind/Base.jsx": {
-    "file": "assets/Base-BxMwjCrd.js",
+    "file": "assets/Base-Bmz4yg3D.js",
     "name": "Base",
     "src": "resources/js/Components/Tailwind/Base.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_index-RYns6xqu.js",
       "_LaravelSession-CYcN0AKE.js",
       "_auth-rest-DWgWkUwu.js",
-      "_Number2Currency-e57Tgsuk.js",
       "_index-w5L74WiD.js",
       "_Global-koVfYFPn.js",
       "_main-CxwoVhEh.js",
@@ -3490,14 +3412,14 @@
     ]
   },
   "resources/js/Expansions.jsx": {
-    "file": "assets/Expansions-Q-k6-6D-.js",
+    "file": "assets/Expansions-nVjosckB.js",
     "name": "Expansions",
     "src": "resources/js/Expansions.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_CreateReactScript-CYzvNmob.js",
       "_index-RYns6xqu.js",
       "_BasicRest-CJI7-_7K.js",
@@ -3509,10 +3431,9 @@
       "_sweetalert2.all-DJo0UVK6.js",
       "_index-DLor_0Z8.js",
       "resources/js/Components/Tailwind/Base.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_LaravelSession-CYcN0AKE.js",
       "_auth-rest-DWgWkUwu.js",
-      "_Number2Currency-e57Tgsuk.js",
       "_index-w5L74WiD.js",
       "_index-DNUR7M9R.js",
       "_index.esm-BnB3fZl0.js"
@@ -3523,19 +3444,19 @@
     ]
   },
   "resources/js/Home.jsx": {
-    "file": "assets/Home-DiUS5Q2p.js",
+    "file": "assets/Home-0vzEczbY.js",
     "name": "Home",
     "src": "resources/js/Home.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_CreateReactScript-CYzvNmob.js",
       "resources/js/Components/Home/Banner.jsx",
       "_index-RYns6xqu.js",
       "resources/js/Components/Home/Bundles.jsx",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_index-sbqOYYIm.js",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx",
       "_Global-koVfYFPn.js",
@@ -3544,7 +3465,6 @@
       "_sweetalert2.all-DJo0UVK6.js",
       "_index-DLor_0Z8.js",
       "resources/js/Components/Tailwind/Base.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
       "_LaravelSession-CYcN0AKE.js",
       "_auth-rest-DWgWkUwu.js",
       "_BasicRest-CJI7-_7K.js",
@@ -3558,22 +3478,21 @@
     ]
   },
   "resources/js/ItemDetail.jsx": {
-    "file": "assets/ItemDetail-PS1ccDZk.js",
+    "file": "assets/ItemDetail-OGXsRBwt.js",
     "name": "ItemDetail",
     "src": "resources/js/ItemDetail.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_CreateReactScript-CYzvNmob.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_index-RYns6xqu.js",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx",
       "_buildSchedule-QAY4ZbMf.js",
       "_index-sbqOYYIm.js",
       "resources/js/Components/Tailwind/Base.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
       "_LaravelSession-CYcN0AKE.js",
       "_auth-rest-DWgWkUwu.js",
       "_main-CxwoVhEh.js",
@@ -3617,7 +3536,7 @@
     ]
   },
   "resources/js/Onboarding.jsx": {
-    "file": "assets/Onboarding-BGSmAv53.js",
+    "file": "assets/Onboarding-BsChUQQI.js",
     "name": "Onboarding",
     "src": "resources/js/Onboarding.jsx",
     "isEntry": true,
@@ -3628,7 +3547,7 @@
       "resources/js/Utils/ReactAppend.jsx",
       "_CreateReactScript-CYzvNmob.js",
       "_Global-koVfYFPn.js",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx",
       "_BasicRest-CJI7-_7K.js",
       "_buildSchedule-QAY4ZbMf.js",
@@ -3638,10 +3557,9 @@
       "_main-CxwoVhEh.js",
       "_LaravelSession-CYcN0AKE.js",
       "resources/js/Components/Tailwind/Base.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_auth-rest-DWgWkUwu.js",
       "_index-DLor_0Z8.js",
-      "_Number2Currency-e57Tgsuk.js",
       "_index-w5L74WiD.js",
       "_index-DNUR7M9R.js",
       "_sweetalert2.all-DJo0UVK6.js"
@@ -3652,21 +3570,20 @@
     ]
   },
   "resources/js/Orders.jsx": {
-    "file": "assets/Orders-DgV2uUPH.js",
+    "file": "assets/Orders-CxI4PJtJ.js",
     "name": "Orders",
     "src": "resources/js/Orders.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_CreateReactScript-CYzvNmob.js",
       "_index-RYns6xqu.js",
       "_BasicRest-CJI7-_7K.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_ArrayJoin-2k6ba35P.js",
       "_buildSchedule-QAY4ZbMf.js",
-      "_tippy-react.esm-D8y2HtF_.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_index-sbqOYYIm.js",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx",
@@ -3687,14 +3604,14 @@
     ]
   },
   "resources/js/Pokedex.jsx": {
-    "file": "assets/Pokedex-DymX0aVa.js",
+    "file": "assets/Pokedex-DEuzVFVI.js",
     "name": "Pokedex",
     "src": "resources/js/Pokedex.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_CreateReactScript-CYzvNmob.js",
       "_index-RYns6xqu.js",
       "_index-sbqOYYIm.js",
@@ -3705,11 +3622,10 @@
       "_sweetalert2.all-DJo0UVK6.js",
       "_index-DLor_0Z8.js",
       "resources/js/Components/Tailwind/Base.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_LaravelSession-CYcN0AKE.js",
       "_auth-rest-DWgWkUwu.js",
       "_BasicRest-CJI7-_7K.js",
-      "_Number2Currency-e57Tgsuk.js",
       "_index-w5L74WiD.js",
       "_index-DNUR7M9R.js",
       "_index.esm-BnB3fZl0.js"
@@ -3720,14 +3636,14 @@
     ]
   },
   "resources/js/Profile.jsx": {
-    "file": "assets/Profile-DJG04qXa.js",
+    "file": "assets/Profile-CW_c1xVQ.js",
     "name": "Profile",
     "src": "resources/js/Profile.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_CreateReactScript-CYzvNmob.js",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx",
       "_index-RYns6xqu.js",
@@ -3736,12 +3652,11 @@
       "_buildSchedule-QAY4ZbMf.js",
       "_index-sbqOYYIm.js",
       "resources/js/Components/Tailwind/Base.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_LaravelSession-CYcN0AKE.js",
       "_auth-rest-DWgWkUwu.js",
       "_main-CxwoVhEh.js",
       "____vite-browser-external_commonjs-proxy-DbMF7jdq.js",
-      "_Number2Currency-e57Tgsuk.js",
       "_index-w5L74WiD.js",
       "_index-DNUR7M9R.js",
       "_Global-koVfYFPn.js",
@@ -3754,7 +3669,7 @@
     ]
   },
   "resources/js/Register.jsx": {
-    "file": "assets/Register-CHHNq_lC.js",
+    "file": "assets/Register-DofxAhDm.js",
     "name": "Register",
     "src": "resources/js/Register.jsx",
     "isEntry": true,
@@ -3765,7 +3680,7 @@
       "resources/js/Utils/ReactAppend.jsx",
       "_CreateReactScript-CYzvNmob.js",
       "_Global-koVfYFPn.js",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_main-CxwoVhEh.js",
       "_index-DLor_0Z8.js",
       "_BasicRest-CJI7-_7K.js",
@@ -3775,9 +3690,8 @@
       "____vite-browser-external_commonjs-proxy-DbMF7jdq.js",
       "_LaravelSession-CYcN0AKE.js",
       "resources/js/Components/Tailwind/Base.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_auth-rest-DWgWkUwu.js",
-      "_Number2Currency-e57Tgsuk.js",
       "_index-w5L74WiD.js",
       "_index-DNUR7M9R.js",
       "_sweetalert2.all-DJo0UVK6.js"
@@ -3861,21 +3775,20 @@
     ]
   },
   "resources/js/Sales.jsx": {
-    "file": "assets/Sales-DmKhezsI.js",
+    "file": "assets/Sales-D5g3Iy1Z.js",
     "name": "Sales",
     "src": "resources/js/Sales.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_CreateReactScript-CYzvNmob.js",
       "_index-RYns6xqu.js",
       "_BasicRest-CJI7-_7K.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_ArrayJoin-2k6ba35P.js",
       "_buildSchedule-QAY4ZbMf.js",
-      "_tippy-react.esm-D8y2HtF_.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "_index-sbqOYYIm.js",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx",
@@ -3896,23 +3809,23 @@
     ]
   },
   "resources/js/Seller/Cards.jsx": {
-    "file": "assets/Cards-CxaTSw5v.js",
+    "file": "assets/Cards-DIwnC7CD.js",
     "name": "Cards",
     "src": "resources/js/Seller/Cards.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_Table-w3CnSDlG.js",
       "_index-RYns6xqu.js",
       "_cards-rest-CZQhDZ-p.js",
       "_Modal-C3a6f5Kg.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_Global-koVfYFPn.js",
       "_SelectFormGroup-ByG-2F3b.js",
-      "_InputFormGroup-DoKKRc2T.js",
+      "_InputFormGroup-CHzsb8Ae.js",
       "_index-sbqOYYIm.js",
       "_main-CxwoVhEh.js",
       "____vite-browser-external_commonjs-proxy-DbMF7jdq.js",
@@ -3923,8 +3836,7 @@
       "_sweetalert2.all-DJo0UVK6.js",
       "_WhatsAppRest-Dd9tfpZp.js",
       "_BasicRest-CJI7-_7K.js",
-      "_server.browser-D0dT10Bs.js",
-      "_tippy-react.esm-D8y2HtF_.js"
+      "_server.browser-D0dT10Bs.js"
     ],
     "css": [
       "tippy.css",
@@ -3932,14 +3844,14 @@
     ]
   },
   "resources/js/Seller/Home.jsx": {
-    "file": "assets/Home-CiiUosBc.js",
+    "file": "assets/Home-DgheI2L9.js",
     "name": "Home",
     "src": "resources/js/Seller/Home.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-CQ_uTZb8.js",
+      "_Base-D-r8Dzo-.js",
       "_CreateReactScript-CYzvNmob.js",
       "_index-RYns6xqu.js",
       "_index-sbqOYYIm.js",
@@ -3949,7 +3861,7 @@
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
       "_LaravelSession-CYcN0AKE.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
       "_sweetalert2.all-DJo0UVK6.js",
       "_WhatsAppRest-Dd9tfpZp.js",
@@ -3961,20 +3873,19 @@
     ]
   },
   "resources/js/Seller/MyCollection.jsx": {
-    "file": "assets/MyCollection-ifMRW79E.js",
+    "file": "assets/MyCollection-DvkNvqo2.js",
     "name": "MyCollection",
     "src": "resources/js/Seller/MyCollection.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "resources/js/Utils/ReactAppend.jsx",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "_CreateReactScript-CYzvNmob.js",
       "_index-RYns6xqu.js",
       "_cards-rest-CZQhDZ-p.js",
       "_Global-koVfYFPn.js",
-      "_Number2Currency-e57Tgsuk.js",
-      "_tippy-react.esm-D8y2HtF_.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_buildSchedule-QAY4ZbMf.js",
       "_sweetalert2.all-DJo0UVK6.js",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx",
@@ -3996,7 +3907,7 @@
     ]
   },
   "resources/js/Thanks.jsx": {
-    "file": "assets/Thanks-lZnqQnOc.js",
+    "file": "assets/Thanks-C7EAEjMp.js",
     "name": "Thanks",
     "src": "resources/js/Thanks.jsx",
     "isEntry": true,
@@ -4006,16 +3917,15 @@
       "resources/js/Utils/ReactAppend.jsx",
       "_CreateReactScript-CYzvNmob.js",
       "_Global-koVfYFPn.js",
-      "_Base-BSArSDnI.js",
+      "_Base-BUYTPwaS.js",
       "resources/js/Components/Public/Checkout/CheckoutSummary.jsx",
       "_main-CxwoVhEh.js",
-      "_Number2Currency-e57Tgsuk.js",
+      "_tippy-react.esm-dPPLDbGp.js",
       "_index-sbqOYYIm.js",
       "_index.esm-BnB3fZl0.js",
       "____vite-browser-external_commonjs-proxy-DbMF7jdq.js",
       "_LaravelSession-CYcN0AKE.js",
       "resources/js/Components/Tailwind/Base.jsx",
-      "_tippy-react.esm-D8y2HtF_.js",
       "_auth-rest-DWgWkUwu.js",
       "_index-DLor_0Z8.js",
       "_BasicRest-CJI7-_7K.js",

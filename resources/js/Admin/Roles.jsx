@@ -82,6 +82,10 @@ const Roles = ({ permissions }) => {
     )
   }
 
+  const handleSelectAllPermissions = () => {
+    setSelectedPermissions(permissions.map(({ name }) => name))
+  }
+
   return (<>
     <Table gridRef={gridRef} title='Roles' rest={rolesRest}
       toolBar={(container) => {
@@ -159,22 +163,44 @@ const Roles = ({ permissions }) => {
       <div className='row'>
         <InputFormGroup eRef={nameRef} label='Nombre del rol' required disabled={isEditing} />
         <div className='col-12'>
-          <label className='form-label'>Permisos</label>
-          <div className="d-flex flex-wrap gap-2">
-            {permissions.map((permission) => (
-              <div key={permission.name} className="form-check">
-                <input
-                  className="form-check-input"
-                  type="checkbox"
-                  id={`permission-${permission.name}`}
-                  checked={selectedPermissions.includes(permission.name)}
-                  onChange={() => handlePermissionToggle(permission.name)}
-                />
-                <label className="form-check-label" htmlFor={`permission-${permission.name}`}>
-                  {permission.beauty_name}
-                </label>
-              </div>
-            ))}
+          <div className='d-flex align-items-center justify-content-between mb-2'>
+            <label className='form-label mb-0'>Permisos</label>
+            <div className='d-flex align-items-center gap-2'>
+              <span className='badge badge-soft-primary'>
+                {selectedPermissions.length} seleccionados
+              </span>
+              <button
+                type='button'
+                className='btn btn-xs btn-soft-primary'
+                onClick={handleSelectAllPermissions}
+                disabled={permissions.length === 0 || selectedPermissions.length === permissions.length}
+              >
+                Seleccionar todo
+              </button>
+            </div>
+          </div>
+          <div className='border rounded p-2 bg-light' style={{ maxHeight: '260px', overflowY: 'auto' }}>
+            <div className='row'>
+              {permissions.map((permission) => {
+                const checked = selectedPermissions.includes(permission.name)
+                return (
+                  <div key={permission.name} className='col-12 col-md-6 mb-2'>
+                    <div className={`custom-control custom-checkbox border rounded px-2 py-2 ${checked ? 'bg-primary text-white border-primary' : 'bg-white border-light'}`}>
+                      <input
+                        className='custom-control-input'
+                        type='checkbox'
+                        id={`permission-${permission.name}`}
+                        checked={checked}
+                        onChange={() => handlePermissionToggle(permission.name)}
+                      />
+                      <label className='custom-control-label w-100' htmlFor={`permission-${permission.name}`} style={{ cursor: 'pointer' }}>
+                        {permission.beauty_name}
+                      </label>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>
