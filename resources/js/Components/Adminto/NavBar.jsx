@@ -375,7 +375,7 @@ const NavBar = ({ title = 'Panel', panel = null, setPanel = () => { } }) => {
           </button>
         </div> */}
         <div className="topbar-item">
-          <Tippy content={`Cambia a ${panel === 'kamary-peru' ? 'Kamary Perú' : 'Kamary Farma'}`}>
+          <Tippy content={`Cambia a ${panel === 'kamary-peru' ? 'Kamary Farma' : 'Kamary Perú'}`}>
             <div className="d-flex nav-link align-items-center gap-1">
               <img src="/assets/img/icons/kamary-peru.svg" alt="" style={{ width: '24px', height: '24px', objectFit: 'contain', objectPosition: 'center', filter: panel === 'kamary-peru' ? 'none' : 'grayscale(100%)' }} />
               <SwitchFormGroup eRef={panelRef} checked={panel === null || panel === 'kamary-farma'} noMargin onChange={(e) => onPanelChange(e)} refreshable={[panel]} />
