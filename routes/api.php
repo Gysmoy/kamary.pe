@@ -5,8 +5,10 @@ use Illuminate\Support\Facades\Route;
 // Admin
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\AccountController as AdminAccountController;
+use App\Http\Controllers\Admin\LaboratoryController as AdminLaboratoryController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\UnitController as AdminUnitController;
 
 // Public
 use App\Http\Controllers\AuthController;
@@ -41,6 +43,25 @@ Route::middleware('auth')->group(function () {
         Route::patch('/roles/status', [AdminRoleController::class, 'status']);
         Route::patch('/roles/{field}', [AdminRoleController::class, 'boolean']);
         Route::delete('/roles/{id}', [AdminRoleController::class, 'delete']);
+
+        Route::post('/units', [AdminUnitController::class, 'save']);
+        Route::post('/units/import', [AdminUnitController::class, 'import']);
+        Route::post('/units/paginate', [AdminUnitController::class, 'paginate']);
+        Route::patch('/units/status', [AdminUnitController::class, 'status']);
+        Route::patch('/units/{field}', [AdminUnitController::class, 'boolean']);
+        Route::delete('/units/{id}', [AdminUnitController::class, 'delete']);
+
+        Route::post('/laboratories', [AdminLaboratoryController::class, 'save']);
+        Route::post('/laboratories/import', [AdminLaboratoryController::class, 'import']);
+        Route::post('/laboratories/paginate', [AdminLaboratoryController::class, 'paginate']);
+        Route::patch('/laboratories/status', [AdminLaboratoryController::class, 'status']);
+        Route::patch('/laboratories/{field}', [AdminLaboratoryController::class, 'boolean']);
+        Route::delete('/laboratories/{id}', [AdminLaboratoryController::class, 'delete']);
+        Route::get('/laboratories/{id}/principles', [AdminLaboratoryController::class, 'principles']);
+        Route::post('/laboratories/{id}/principles', [AdminLaboratoryController::class, 'savePrinciple']);
+        Route::post('/laboratories/{id}/principles/import', [AdminLaboratoryController::class, 'importPrinciples']);
+        Route::patch('/laboratories/{id}/principles/{principleId}/{field}', [AdminLaboratoryController::class, 'principleBoolean']);
+        Route::delete('/laboratories/{id}/principles/{principleId}', [AdminLaboratoryController::class, 'deletePrinciple']);
 
         Route::get('/profile/{uuid}', [AdminProfileController::class, 'full']);
         Route::get('/profile/thumbnail/{uuid}', [AdminProfileController::class, 'thumbnail']);

@@ -12,7 +12,9 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\RepositoryController as AdminRepositoryController;
 use App\Http\Controllers\Admin\CardController as AdminCardController;
 use App\Http\Controllers\Admin\ComingSoonController as AdminComingSoonController;
+use App\Http\Controllers\Admin\LaboratoryController as AdminLaboratoryController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
+use App\Http\Controllers\Admin\UnitController as AdminUnitController;
 
 // Public 
 use App\Http\Controllers\AuthController;
@@ -51,12 +53,18 @@ Route::middleware('auth')->group(function () {
         Route::get('/articles', [AdminComingSoonController::class, 'reactView']);
         Route::get('/inventory', [AdminComingSoonController::class, 'reactView']);
         Route::get('/kardex', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/laboratories', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/laboratories', [AdminLaboratoryController::class, 'reactView']);
         Route::get('/batches', [AdminComingSoonController::class, 'reactView']);
         Route::get('/entry-note', [AdminComingSoonController::class, 'reactView']);
         Route::get('/exit-note', [AdminComingSoonController::class, 'reactView']);
         Route::get('/suppliers', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/units-of-measure', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/categories', fn() => redirect('/admin/laboratories'));
+        Route::get('/units', [AdminUnitController::class, 'reactView']);
+        Route::get('/units-of-measure', fn() => redirect('/admin/units'));
+        Route::get('/magistrales/units', [AdminUnitController::class, 'reactView']);
+        Route::get('/magistrales/units-of-measure', fn() => redirect('/admin/magistrales/units'));
+        Route::get('/magistrales/laboratories', [AdminLaboratoryController::class, 'reactView']);
+        Route::get('/magistrales/categories', fn() => redirect('/admin/magistrales/laboratories'));
 
         // Administración
         Route::get('/accounts-payable', [AdminComingSoonController::class, 'reactView']);

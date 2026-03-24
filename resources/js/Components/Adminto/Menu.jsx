@@ -123,8 +123,8 @@ const Menu = ({ can, hasRole, panel = null }) => {
         <MenuItemContainer title='Productos' icon='ti ti-package'>
           {canAccess('articles') && <MenuItem href="/admin/articles" icon="ti ti-box">Artículos</MenuItem>}
           {canAccess('batches') && <MenuItem href="/admin/batches" icon="ti ti-box-multiple">Lotes</MenuItem>}
-          {canAccess('categories') && <MenuItem href="/admin/categories" icon="ti ti-category">Categorías</MenuItem>}
-          {canAccess('units-of-measure') && <MenuItem href="/admin/units-of-measure" icon="ti ti-ruler-measure">Und. de medida</MenuItem>}
+          {canAccess('laboratories') && <MenuItem href="/admin/laboratories" icon="ti ti-flask">Laboratorios</MenuItem>}
+          {canAccess('units-of-measure') && <MenuItem href="/admin/units" icon="ti ti-ruler-measure">Und. de medida</MenuItem>}
           {canAccess('suppliers') && <MenuItem href="/admin/suppliers" icon="ti ti-truck-delivery">Proveedores</MenuItem>}
         </MenuItemContainer>
         <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
@@ -142,8 +142,8 @@ const Menu = ({ can, hasRole, panel = null }) => {
             <MenuItemContainer title='Productos' icon='ti ti-package'>
               {canAccess('articles') && <MenuItem href="/admin/magistrales/articles" icon="ti ti-box">Artículos</MenuItem>}
               {canAccess('batches') && <MenuItem href="/admin/magistrales/batches" icon="ti ti-box-multiple">Lotes</MenuItem>}
-              {canAccess('categories') && <MenuItem href="/admin/magistrales/categories" icon="ti ti-category">Categorías</MenuItem>}
-              {canAccess('units-of-measure') && <MenuItem href="/admin/magistrales/units-of-measure" icon="ti ti-ruler-measure">Und. de medida</MenuItem>}
+              {canAccess('laboratories') && <MenuItem href="/admin/magistrales/laboratories" icon="ti ti-flask">Laboratorios</MenuItem>}
+              {canAccess('units-of-measure') && <MenuItem href="/admin/magistrales/units" icon="ti ti-ruler-measure">Und. de medida</MenuItem>}
               {canAccess('suppliers') && <MenuItem href="/admin/magistrales/suppliers" icon="ti ti-truck-delivery">Proveedores</MenuItem>}
             </MenuItemContainer>
             <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
