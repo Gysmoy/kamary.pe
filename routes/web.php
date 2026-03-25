@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\HomeController as AdminHomeController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\AccountController as AdminAccountController;
+use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Admin\ItemController as AdminItemController;
 use App\Http\Controllers\Admin\SaleController as AdminSaleController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -50,7 +51,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/home', [AdminComingSoonController::class, 'reactView']);
 
         // Almacén
-        Route::get('/articles', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/articles', [AdminArticleController::class, 'reactView']);
         Route::get('/inventory', [AdminComingSoonController::class, 'reactView']);
         Route::get('/kardex', [AdminComingSoonController::class, 'reactView']);
         Route::get('/laboratories', [AdminLaboratoryController::class, 'reactView']);
@@ -107,7 +108,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/sample-orders', [AdminComingSoonController::class, 'reactView']);
 
         // Magistrales
-        Route::get('/magistrales-articles', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/magistrales/articles', [AdminArticleController::class, 'reactView']);
+        Route::get('/magistrales-articles', [AdminArticleController::class, 'reactView']);
         Route::get('/magistrales-category', [AdminComingSoonController::class, 'reactView']);
         Route::get('/magistrales-formats', [AdminComingSoonController::class, 'reactView']);
         Route::get('/magistrales-formulas', [AdminComingSoonController::class, 'reactView']);

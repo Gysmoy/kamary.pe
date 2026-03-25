@@ -9,6 +9,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use SoDe\Extend\Response;
 
 class UnitController extends BasicController
@@ -136,13 +137,38 @@ class UnitController extends BasicController
     {
         $body = $request->all();
         $userId = Auth::id();
+        $id = $body['id'] ?? null;
+
+        $name = trim((string)($body['name'] ?? ''));
+        $symbol = trim((string)($body['symbol'] ?? ''));
+
+        if ($name === '') {
+            throw new \Exception('El nombre de la unidad de medida es obligatorio');
+        }
+        if ($symbol === '') {
+            throw new \Exception('El codigo/simbolo de la unidad de medida es obligatorio');
+        }
+
+        $existsSymbol = Unit::whereRaw('LOWER(symbol) = ?', [mb_strtolower($symbol)])
+            ->when($id, fn($query) => $query->where('id', '!=', $id))
+            ->exists();
+        if ($existsSymbol) {
+            throw new \Exception('Ya existe una unidad de medida con este codigo. Intenta seleccionarla de la lista o usa un codigo nuevo');
+        }
 
         if (!isset($body['id']) || !$body['id']) {
             $body['created_by'] = $userId;
         }
         $body['updated_by'] = $userId;
+        $body['name'] = $name;
+        $body['symbol'] = Str::upper($symbol);
 
         return $body;
+    }
+
+    public function afterSave(Request $request, object $jpa, bool $isNew)
+    {
+        return $jpa;
     }
 
     public function boolean(Request $request)

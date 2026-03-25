@@ -160,7 +160,13 @@ class LaboratoryController extends BasicController
             if ($principleId) {
                 $principle = ActivePrinciple::where('laboratory_id', $laboratory->id)
                     ->where('id', $principleId)
-                    ->firstOrFail();
+                    ->first();
+                if (!$principle) {
+                    $principleId = null;
+                }
+            }
+
+            if ($principleId) {
                 $principle->update([
                     'name' => $principleName,
                     'status' => $request->status ?? $principle->status,

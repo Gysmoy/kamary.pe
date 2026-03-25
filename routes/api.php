@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 // Admin
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\AccountController as AdminAccountController;
+use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Admin\LaboratoryController as AdminLaboratoryController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -62,6 +63,13 @@ Route::middleware('auth')->group(function () {
         Route::post('/laboratories/{id}/principles/import', [AdminLaboratoryController::class, 'importPrinciples']);
         Route::patch('/laboratories/{id}/principles/{principleId}/{field}', [AdminLaboratoryController::class, 'principleBoolean']);
         Route::delete('/laboratories/{id}/principles/{principleId}', [AdminLaboratoryController::class, 'deletePrinciple']);
+
+        Route::post('/articles', [AdminArticleController::class, 'save']);
+        Route::post('/articles/paginate', [AdminArticleController::class, 'paginate']);
+        Route::patch('/articles/status', [AdminArticleController::class, 'status']);
+        Route::patch('/articles/{field}', [AdminArticleController::class, 'boolean']);
+        Route::delete('/articles/{id}', [AdminArticleController::class, 'delete']);
+        Route::get('/articles/laboratories/{id}/principles', [AdminArticleController::class, 'principles']);
 
         Route::get('/profile/{uuid}', [AdminProfileController::class, 'full']);
         Route::get('/profile/thumbnail/{uuid}', [AdminProfileController::class, 'thumbnail']);

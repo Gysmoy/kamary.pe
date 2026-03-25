@@ -121,10 +121,10 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {canAccess('pricing') && <MenuItem href="/admin/pricing" icon="ti ti-tags">Tarifario</MenuItem>}
         </MenuItemContainer>
         <MenuItemContainer title='Productos' icon='ti ti-package'>
-          {canAccess('articles') && <MenuItem href="/admin/articles" icon="ti ti-box">Artículos</MenuItem>}
+          {canAccess('articles') && <MenuItem href="/admin/articles" icon="ti ti-box" badge='✓'>Artículos</MenuItem>}
           {canAccess('batches') && <MenuItem href="/admin/batches" icon="ti ti-box-multiple">Lotes</MenuItem>}
-          {canAccess('laboratories') && <MenuItem href="/admin/laboratories" icon="ti ti-flask">Laboratorios</MenuItem>}
-          {canAccess('units-of-measure') && <MenuItem href="/admin/units" icon="ti ti-ruler-measure">Und. de medida</MenuItem>}
+          {canAccess('laboratories') && <MenuItem href="/admin/laboratories" icon="ti ti-flask" badge='✓'>Laboratorios</MenuItem>}
+          {canAccess('units-of-measure') && <MenuItem href="/admin/units" icon="ti ti-ruler-measure" badge='✓'>Und. de medida</MenuItem>}
           {canAccess('suppliers') && <MenuItem href="/admin/suppliers" icon="ti ti-truck-delivery">Proveedores</MenuItem>}
         </MenuItemContainer>
         <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
