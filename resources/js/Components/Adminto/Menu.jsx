@@ -125,7 +125,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {canAccess('batches') && <MenuItem href="/admin/batches" icon="ti ti-box-multiple">Lotes</MenuItem>}
           {canAccess('laboratories') && <MenuItem href="/admin/laboratories" icon="ti ti-flask" badge='✓'>Laboratorios</MenuItem>}
           {canAccess('units-of-measure') && <MenuItem href="/admin/units" icon="ti ti-ruler-measure" badge='✓'>Und. de medida</MenuItem>}
-          {canAccess('suppliers') && <MenuItem href="/admin/suppliers" icon="ti ti-truck-delivery">Proveedores</MenuItem>}
+          {canAccess('suppliers') && <MenuItem href="/admin/suppliers" icon="ti ti-truck-delivery" badge='✓'>Proveedores</MenuItem>}
         </MenuItemContainer>
         <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
           {canAccess('inventory') && <MenuItem href="/admin/inventory" icon="ti ti-boxes">Inventario</MenuItem>}
@@ -250,8 +250,8 @@ const Menu = ({ can, hasRole, panel = null }) => {
 
         <li className="side-nav-title mt-2">Configuraciones</li>
         <MenuItemContainer title="Gestión" icon="ti ti-users">
-          {canAccess('users') && <MenuItem href="/admin/users" icon="ti ti-users">Usuarios</MenuItem>}
-          {canAccess('roles') && <MenuItem href="/admin/roles" icon="ti ti-user-check">Roles</MenuItem>}
+          {canAccess('users') && <MenuItem href="/admin/users" icon="ti ti-users" badge='✓'>Usuarios</MenuItem>}
+          {canAccess('roles') && <MenuItem href="/admin/roles" icon="ti ti-user-check" badge='✓'>Roles</MenuItem>}
         </MenuItemContainer>
         <MenuItem href="/admin/profile" icon="ti ti-user">Mi perfil</MenuItem>
         <MenuItem href="/admin/account" icon="ti ti-settings">Mi cuenta</MenuItem>

@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Admin\LaboratoryController as AdminLaboratoryController;
+use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\UnitController as AdminUnitController;
@@ -70,6 +71,13 @@ Route::middleware('auth')->group(function () {
         Route::patch('/articles/{field}', [AdminArticleController::class, 'boolean']);
         Route::delete('/articles/{id}', [AdminArticleController::class, 'delete']);
         Route::get('/articles/laboratories/{id}/principles', [AdminArticleController::class, 'principles']);
+
+        Route::post('/suppliers', [AdminSupplierController::class, 'save']);
+        Route::post('/suppliers/paginate', [AdminSupplierController::class, 'paginate']);
+        Route::patch('/suppliers/status', [AdminSupplierController::class, 'status']);
+        Route::patch('/suppliers/{field}', [AdminSupplierController::class, 'boolean']);
+        Route::delete('/suppliers/{id}', [AdminSupplierController::class, 'delete']);
+        Route::get('/suppliers/ruc/{ruc}', [AdminSupplierController::class, 'lookupByRuc']);
 
         Route::get('/profile/{uuid}', [AdminProfileController::class, 'full']);
         Route::get('/profile/thumbnail/{uuid}', [AdminProfileController::class, 'thumbnail']);

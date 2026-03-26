@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Admin\ItemController as AdminItemController;
 use App\Http\Controllers\Admin\SaleController as AdminSaleController;
+use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\RepositoryController as AdminRepositoryController;
 use App\Http\Controllers\Admin\CardController as AdminCardController;
@@ -48,7 +49,7 @@ Route::middleware('auth')->group(function () {
     // Admin routes
     Route::prefix('admin')->group(function () {
         Route::get('/', fn() => redirect()->to('/admin/home'));
-        Route::get('/home', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/home', [AdminHomeController::class, 'reactView']);
 
         // Almacén
         Route::get('/articles', [AdminArticleController::class, 'reactView']);
@@ -58,7 +59,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/batches', [AdminComingSoonController::class, 'reactView']);
         Route::get('/entry-note', [AdminComingSoonController::class, 'reactView']);
         Route::get('/exit-note', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/suppliers', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/suppliers', [AdminSupplierController::class, 'reactView']);
         Route::get('/categories', fn() => redirect('/admin/laboratories'));
         Route::get('/units', [AdminUnitController::class, 'reactView']);
         Route::get('/units-of-measure', fn() => redirect('/admin/units'));
@@ -119,7 +120,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales-laboratory', [AdminComingSoonController::class, 'reactView']);
         Route::get('/magistrales-purchase-order', [AdminComingSoonController::class, 'reactView']);
         Route::get('/magistrales-production-order', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/magistrales-supplier', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/magistrales/suppliers', [AdminSupplierController::class, 'reactView']);
+        Route::get('/magistrales-supplier', [AdminSupplierController::class, 'reactView']);
         Route::get('/magistrales-responsible', [AdminComingSoonController::class, 'reactView']);
         Route::get('/magistrales-outputs', [AdminComingSoonController::class, 'reactView']);
         Route::get('/magistrales-unit', [AdminComingSoonController::class, 'reactView']);
