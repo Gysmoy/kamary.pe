@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
@@ -29,6 +30,47 @@ const formatAuditUser = (user) => {
   return ''
 }
 
+const normalizeHeader = (value) => (value ?? '')
+  .toString()
+  .trim()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replaceAll('_', '')
+  .replaceAll('-', '')
+  .replaceAll(' ', '')
+
+const parseFileRows = async (file) => {
+  const extension = (file.name.split('.').pop() || '').toLowerCase()
+  let rows = []
+
+  if (extension === 'json') {
+    const text = await file.text()
+    const parsed = JSON.parse(text)
+
+    if (Array.isArray(parsed)) {
+      rows = parsed
+    } else if (parsed && typeof parsed === 'object') {
+      const firstArray = Object.values(parsed).find(value => Array.isArray(value))
+      if (!firstArray) throw new Error('El JSON debe ser un array o contener un array en algun campo')
+      rows = firstArray
+    } else {
+      throw new Error('Formato JSON invalido')
+    }
+  } else {
+    const content = await file.arrayBuffer()
+    const workbook = XLSX.read(content, { type: 'array' })
+    const firstSheet = workbook.SheetNames[0]
+    if (!firstSheet) throw new Error('No se encontro ninguna hoja en el archivo')
+    rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: '' })
+  }
+
+  if (!Array.isArray(rows)) throw new Error('El archivo no contiene una coleccion de registros')
+  if (rows.length === 0) throw new Error('El archivo no tiene filas para importar')
+
+  return rows
+}
+
 const emptyPresentation = () => ({
   uid: crypto.randomUUID(),
   name: '',
@@ -39,6 +81,8 @@ const emptyPresentation = () => ({
 const Articles = () => {
   const gridRef = useRef()
   const modalRef = useRef()
+  const importModalRef = useRef()
+  const importFileRef = useRef()
   const principleCreateModalRef = useRef()
   const unitCreateModalRef = useRef()
 
@@ -65,6 +109,18 @@ const Articles = () => {
   const [selectedLaboratoryId, setSelectedLaboratoryId] = useState('')
   const [selectedPrincipleId, setSelectedPrincipleId] = useState('')
   const [selectedUnitId, setSelectedUnitId] = useState('')
+  const [isImporting, setIsImporting] = useState(false)
+  const [importRows, setImportRows] = useState([])
+  const [importHeaders, setImportHeaders] = useState([])
+  const [importFileName, setImportFileName] = useState('')
+  const [mapping, setMapping] = useState({
+    code: '',
+    name: '',
+    laboratory: '',
+    active_principle: '',
+    unit: '',
+    status: '',
+  })
 
   const loadUnits = async (preferredUnitId = null) => {
     const list = await articlesRest.getUnits()
@@ -181,6 +237,115 @@ const Articles = () => {
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
+  const onImportModalOpen = () => {
+    setImportRows([])
+    setImportHeaders([])
+    setImportFileName('')
+    setMapping({
+      code: '',
+      name: '',
+      laboratory: '',
+      active_principle: '',
+      unit: '',
+      status: '',
+    })
+    if (importFileRef.current) importFileRef.current.value = ''
+    $(importModalRef.current).modal('show')
+  }
+
+  const autoMapHeaders = (headers) => {
+    const withNorm = headers.map(header => ({
+      header,
+      norm: normalizeHeader(header)
+    }))
+    const findByNames = (candidates) => withNorm.find(({ norm }) => candidates.includes(norm))?.header ?? ''
+
+    return {
+      code: findByNames(['codigo', 'code', 'codigodearticulo', 'sku']),
+      name: findByNames(['descripcion', 'description', 'name', 'nombre', 'articulo', 'producto']),
+      laboratory: findByNames(['laboratorio', 'laboratory']),
+      active_principle: findByNames(['principioactivo', 'activeprinciple', 'principio']),
+      unit: findByNames(['unidad', 'unit', 'unidadmedida']),
+      status: findByNames(['estado', 'status', 'activo', 'active', 'habilitado']),
+    }
+  }
+
+  const onImportFileChanged = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      const rows = await parseFileRows(file)
+      const headersSet = new Set()
+      rows.forEach(row => {
+        if (row && typeof row === 'object') {
+          Object.keys(row).forEach(key => headersSet.add(key))
+        }
+      })
+
+      const headers = Array.from(headersSet)
+      setImportRows(rows)
+      setImportHeaders(headers)
+      setImportFileName(file.name)
+      setMapping(autoMapHeaders(headers))
+    } catch (error) {
+      setImportRows([])
+      setImportHeaders([])
+      setImportFileName('')
+      setMapping({
+        code: '',
+        name: '',
+        laboratory: '',
+        active_principle: '',
+        unit: '',
+        status: '',
+      })
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo leer el archivo',
+        text: error.message
+      })
+    }
+  }
+
+  const onImportSubmit = async (e) => {
+    e.preventDefault()
+
+    if (!importRows.length) {
+      Swal.fire({ icon: 'warning', title: 'Falta archivo', text: 'Primero carga un archivo con datos' })
+      return
+    }
+    if (!mapping.code) {
+      Swal.fire({ icon: 'warning', title: 'Campo obligatorio', text: 'Debes mapear el campo codigo' })
+      return
+    }
+
+    setIsImporting(true)
+    const result = await articlesRest.importRows({
+      rows: importRows,
+      mapping
+    })
+    setIsImporting(false)
+    if (!result) return
+
+    $(gridRef.current).dxDataGrid('instance').refresh()
+    $(importModalRef.current).modal('hide')
+
+    const errorsPreview = (result.errors || []).slice(0, 5).join('\n')
+    await Swal.fire({
+      icon: 'success',
+      title: 'Importacion completada',
+      html: `
+        <div style="text-align:left">
+          <p style="margin:0"><b>Creados:</b> ${result.created}</p>
+          <p style="margin:0"><b>Actualizados:</b> ${result.updated}</p>
+          <p style="margin:0"><b>Omitidos:</b> ${result.skipped}</p>
+          ${errorsPreview ? `<pre style="margin-top:8px;white-space:pre-wrap;font-size:12px">${errorsPreview}</pre>` : ''}
+        </div>
+      `
+    })
+  }
+
   const onLaboratoryChanged = async (e) => {
     const laboratoryId = e.target.value || ''
     setSelectedLaboratoryId(laboratoryId)
@@ -248,12 +413,31 @@ const Articles = () => {
     })
   }
 
+  const previewRows = importRows.slice(0, 5).map((row, idx) => ({
+    row: idx + 1,
+    code: mapping.code ? (row[mapping.code] ?? '') : '',
+    name: mapping.name ? (row[mapping.name] ?? '') : '',
+    laboratory: mapping.laboratory ? (row[mapping.laboratory] ?? '') : '',
+    principle: mapping.active_principle ? (row[mapping.active_principle] ?? '') : '',
+    unit: mapping.unit ? (row[mapping.unit] ?? '') : '',
+    status: mapping.status ? (row[mapping.status] ?? '') : '',
+  }))
+
   return (<>
     <Table
       gridRef={gridRef}
       title='Articulos'
       rest={articlesRest}
       toolBar={(container) => {
+        container.unshift({
+          widget: 'dxButton', location: 'after',
+          options: {
+            icon: 'upload',
+            title: 'Importar',
+            hint: 'Importar masivamente',
+            onClick: () => onImportModalOpen()
+          }
+        });
         container.unshift({
           widget: 'dxButton', location: 'after',
           options: {
@@ -288,8 +472,36 @@ const Articles = () => {
         { dataField: 'volume', caption: 'Volumen', width: '100px' },
         { dataField: 'units_per_article', caption: 'Und x articulo', width: '110px' },
         { dataField: 'unit_weight', caption: 'Peso unit.', width: '100px' },
-        { dataField: 'margin_rule', caption: 'Regla margen', dataType: 'boolean', width: '105px' },
-        { dataField: 'igv_rule', caption: 'Regla IGV', dataType: 'boolean', width: '95px' },
+        {
+          dataField: 'margin_rule',
+          caption: 'Regla margen',
+          dataType: 'boolean',
+          width: '105px',
+          cellTemplate: (container, { data }) => {
+            $(container).empty()
+            if (data.status === null) return
+            ReactAppend(container, <SwitchFormGroup checked={data.margin_rule == 1} onChange={() => onBooleanChange({
+              id: data.id,
+              field: 'margin_rule',
+              value: !data.margin_rule
+            })} />)
+          }
+        },
+        {
+          dataField: 'igv_rule',
+          caption: 'Regla IGV',
+          dataType: 'boolean',
+          width: '95px',
+          cellTemplate: (container, { data }) => {
+            $(container).empty()
+            if (data.status === null) return
+            ReactAppend(container, <SwitchFormGroup checked={data.igv_rule == 1} onChange={() => onBooleanChange({
+              id: data.id,
+              field: 'igv_rule',
+              value: !data.igv_rule
+            })} />)
+          }
+        },
         {
           dataField: 'presentations.name',
           caption: 'Presentaciones',
@@ -481,6 +693,108 @@ const Articles = () => {
                         <i className='mdi mdi-delete'></i>
                       </button>
                     </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </Modal>
+
+    <Modal
+      modalRef={importModalRef}
+      title='Importacion masiva de articulos'
+      onSubmit={onImportSubmit}
+      size='xl'
+      btnSubmitText={isImporting ? 'Importando...' : 'Importar'}
+    >
+      <div className='row'>
+        <div className='col-12 mb-3'>
+          <label className='form-label'>Archivo (JSON, XLSX, XLS o CSV)</label>
+          <input
+            ref={importFileRef}
+            type='file'
+            className='form-control'
+            accept='.xlsx,.xls,.csv,.json'
+            onChange={onImportFileChanged}
+          />
+          {importFileName && <div className='mt-1'><small className='text-muted'>Archivo: {importFileName} ({importRows.length} filas)</small></div>}
+        </div>
+
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Codigo *</label>
+          <select className='form-control' value={mapping.code} onChange={(e) => setMapping(prev => ({ ...prev, code: e.target.value }))}>
+            <option value=''>Seleccionar...</option>
+            {importHeaders.map(header => <option key={`code-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Descripcion</label>
+          <select className='form-control' value={mapping.name} onChange={(e) => setMapping(prev => ({ ...prev, name: e.target.value }))}>
+            <option value=''>Seleccionar...</option>
+            {importHeaders.map(header => <option key={`name-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Laboratorio</label>
+          <select className='form-control' value={mapping.laboratory} onChange={(e) => setMapping(prev => ({ ...prev, laboratory: e.target.value }))}>
+            <option value=''>Seleccionar...</option>
+            {importHeaders.map(header => <option key={`lab-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Principio activo</label>
+          <select className='form-control' value={mapping.active_principle} onChange={(e) => setMapping(prev => ({ ...prev, active_principle: e.target.value }))}>
+            <option value=''>Seleccionar...</option>
+            {importHeaders.map(header => <option key={`principle-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Unidad</label>
+          <select className='form-control' value={mapping.unit} onChange={(e) => setMapping(prev => ({ ...prev, unit: e.target.value }))}>
+            <option value=''>Seleccionar...</option>
+            {importHeaders.map(header => <option key={`unit-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Estado</label>
+          <select className='form-control' value={mapping.status} onChange={(e) => setMapping(prev => ({ ...prev, status: e.target.value }))}>
+            <option value=''>Seleccionar...</option>
+            {importHeaders.map(header => <option key={`status-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+
+        <div className='col-12 mt-3'>
+          <h6 className='mb-2'>Vista previa (primeras 5 filas)</h6>
+          <div className='table-responsive border rounded'>
+            <table className='table table-sm table-striped mb-0'>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Codigo</th>
+                  <th>Descripcion</th>
+                  <th>Laboratorio</th>
+                  <th>Principio activo</th>
+                  <th>Unidad</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {previewRows.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className='text-center text-muted'>Sin datos para previsualizar</td>
+                  </tr>
+                )}
+                {previewRows.map(item => (
+                  <tr key={`preview-${item.row}`}>
+                    <td>{item.row}</td>
+                    <td>{item.code?.toString?.() ?? ''}</td>
+                    <td>{item.name?.toString?.() ?? ''}</td>
+                    <td>{item.laboratory?.toString?.() ?? ''}</td>
+                    <td>{item.principle?.toString?.() ?? ''}</td>
+                    <td>{item.unit?.toString?.() ?? ''}</td>
+                    <td>{item.status?.toString?.() ?? ''}</td>
                   </tr>
                 ))}
               </tbody>

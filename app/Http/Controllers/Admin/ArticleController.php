@@ -26,6 +26,7 @@ class ArticleController extends BasicController
     public function setPaginationInstance(string $model)
     {
         return $model::select('articles.*')
+            ->distinct()
             ->with([
                 'laboratory:id,name,code',
                 'activePrinciple:id,laboratory_id,name',
@@ -34,8 +35,214 @@ class ArticleController extends BasicController
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ])
+            ->join('units as unit', 'unit.id', '=', 'articles.unit_id')
+            ->join('active_principles as active_principle', 'active_principle.id', '=', 'articles.active_principle_id')
+            ->join('laboratories as laboratory', 'laboratory.id', '=', 'articles.laboratory_id')
             ->join('users as creator', 'creator.id', '=', 'articles.created_by')
             ->join('users as updater', 'updater.id', '=', 'articles.updated_by');
+    }
+
+    public function import(Request $request): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+        try {
+            $rows = $request->rows;
+            $mapping = $request->mapping ?? [];
+            $userId = Auth::id();
+
+            if (!is_array($rows) || count($rows) === 0) {
+                throw new \Exception('No hay registros para importar');
+            }
+
+            $codeKey = $mapping['code'] ?? null;
+            if (!$codeKey) {
+                throw new \Exception('Debes mapear el campo codigo');
+            }
+
+            $nameKey = $mapping['name'] ?? null;
+            $laboratoryKey = $mapping['laboratory'] ?? null;
+            $principleKey = $mapping['active_principle'] ?? null;
+            $unitKey = $mapping['unit'] ?? null;
+            $statusKey = $mapping['status'] ?? null;
+
+            $created = 0;
+            $updated = 0;
+            $skipped = 0;
+            $errors = [];
+
+            DB::beginTransaction();
+
+            $existingArticles = Article::whereNotNull('code')->get(['id', 'code']);
+            $articleByCode = [];
+            foreach ($existingArticles as $item) {
+                $normalizedCode = $this->normalizeText($item->code);
+                if ($normalizedCode !== '') $articleByCode[$normalizedCode] = $item->id;
+            }
+
+            $existingLabs = Laboratory::whereNotNull('name')->get(['id', 'name', 'code']);
+            $labByName = [];
+            $labCodeTaken = [];
+            foreach ($existingLabs as $lab) {
+                $normalizedName = $this->normalizeText($lab->name);
+                $normalizedCode = $this->normalizeText($lab->code);
+                if ($normalizedName !== '') $labByName[$normalizedName] = $lab->id;
+                if ($normalizedCode !== '') $labCodeTaken[$normalizedCode] = true;
+            }
+
+            $existingUnits = Unit::all(['id', 'name', 'symbol']);
+            $unitByName = [];
+            $unitBySymbol = [];
+            foreach ($existingUnits as $unit) {
+                $normalizedName = $this->normalizeText($unit->name);
+                $normalizedSymbol = $this->normalizeText($unit->symbol);
+                if ($normalizedName !== '') $unitByName[$normalizedName] = $unit->id;
+                if ($normalizedSymbol !== '') $unitBySymbol[$normalizedSymbol] = $unit->id;
+            }
+
+            $existingPrinciples = ActivePrinciple::all(['id', 'laboratory_id', 'name']);
+            $principleByLabAndName = [];
+            foreach ($existingPrinciples as $principle) {
+                $normalizedName = $this->normalizeText($principle->name);
+                if ($normalizedName === '') continue;
+                $key = $principle->laboratory_id . ':' . $normalizedName;
+                $principleByLabAndName[$key] = $principle->id;
+            }
+
+            foreach ($rows as $idx => $row) {
+                if (!is_array($row)) {
+                    $skipped++;
+                    $errors[] = "Fila " . ($idx + 1) . ": formato invalido";
+                    continue;
+                }
+
+                $code = trim((string)($row[$codeKey] ?? ''));
+                if ($code === '') {
+                    $skipped++;
+                    $errors[] = "Fila " . ($idx + 1) . ": codigo vacio";
+                    continue;
+                }
+
+                $name = $nameKey ? trim((string)($row[$nameKey] ?? '')) : '';
+                if ($name === '') $name = $code;
+
+                $laboratoryName = $laboratoryKey ? trim((string)($row[$laboratoryKey] ?? '')) : '';
+                if ($laboratoryName === '') $laboratoryName = 'LABORATORIO GENERAL';
+
+                $principleName = $principleKey ? trim((string)($row[$principleKey] ?? '')) : '';
+                if ($principleName === '') $principleName = 'PRINCIPIO GENERAL';
+
+                $unitName = $unitKey ? trim((string)($row[$unitKey] ?? '')) : '';
+                if ($unitName === '') $unitName = 'UNIDAD';
+
+                $status = true;
+                if ($statusKey && array_key_exists($statusKey, $row)) {
+                    $status = $this->toBoolean($row[$statusKey]);
+                }
+
+                $normalizedLabName = $this->normalizeText($laboratoryName);
+                $laboratoryId = $labByName[$normalizedLabName] ?? null;
+                if (!$laboratoryId) {
+                    $newLabCode = $this->generateLaboratoryCode($laboratoryName, $labCodeTaken);
+                    $newLab = Laboratory::create([
+                        'name' => $laboratoryName,
+                        'code' => $newLabCode,
+                        'status' => true,
+                        'created_by' => $userId,
+                        'updated_by' => $userId,
+                    ]);
+                    $laboratoryId = $newLab->id;
+                    $labByName[$normalizedLabName] = $laboratoryId;
+                    $labCodeTaken[$this->normalizeText($newLabCode)] = true;
+                }
+
+                $normalizedPrincipleName = $this->normalizeText($principleName);
+                $principleLookup = $laboratoryId . ':' . $normalizedPrincipleName;
+                $activePrincipleId = $principleByLabAndName[$principleLookup] ?? null;
+                if (!$activePrincipleId) {
+                    $newPrinciple = ActivePrinciple::create([
+                        'laboratory_id' => $laboratoryId,
+                        'name' => $principleName,
+                        'status' => true,
+                        'created_by' => $userId,
+                        'updated_by' => $userId,
+                    ]);
+                    $activePrincipleId = $newPrinciple->id;
+                    $principleByLabAndName[$principleLookup] = $activePrincipleId;
+                }
+
+                $normalizedUnitName = $this->normalizeText($unitName);
+                $unitId = $unitByName[$normalizedUnitName] ?? null;
+                if (!$unitId) {
+                    $unitId = $unitBySymbol[$normalizedUnitName] ?? null;
+                }
+                if (!$unitId) {
+                    $newUnit = Unit::create([
+                        'name' => $unitName,
+                        'symbol' => $unitName,
+                        'status' => true,
+                        'created_by' => $userId,
+                        'updated_by' => $userId,
+                    ]);
+                    $unitId = $newUnit->id;
+                    $unitByName[$normalizedUnitName] = $unitId;
+                    $unitBySymbol[$normalizedUnitName] = $unitId;
+                } else {
+                    $unitByName[$normalizedUnitName] = $unitId;
+                }
+
+                $normalizedCode = $this->normalizeText($code);
+                $articleId = $articleByCode[$normalizedCode] ?? null;
+
+                if ($articleId) {
+                    Article::where('id', $articleId)->update([
+                        'code' => $code,
+                        'name' => $name,
+                        'laboratory_id' => $laboratoryId,
+                        'active_principle_id' => $activePrincipleId,
+                        'unit_id' => $unitId,
+                        'status' => $status,
+                        'updated_by' => $userId,
+                    ]);
+                    $updated++;
+                } else {
+                    $newArticle = Article::create([
+                        'code' => $code,
+                        'name' => $name,
+                        'laboratory_id' => $laboratoryId,
+                        'active_principle_id' => $activePrincipleId,
+                        'unit_id' => $unitId,
+                        'volume' => null,
+                        'status' => $status,
+                        'margin_rule' => false,
+                        'igv_rule' => false,
+                        'units_per_article' => 1,
+                        'unit_weight' => null,
+                        'notes' => null,
+                        'created_by' => $userId,
+                        'updated_by' => $userId,
+                    ]);
+                    $articleByCode[$normalizedCode] = $newArticle->id;
+                    $created++;
+                }
+            }
+
+            DB::commit();
+
+            $response->status = 200;
+            $response->message = 'Importacion masiva completada';
+            $response->data = [
+                'created' => $created,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'errors' => $errors,
+            ];
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
     }
 
     public function beforeSave(Request $request)
@@ -205,6 +412,30 @@ class ArticleController extends BasicController
 
         $normalized = mb_strtolower(trim((string)$value));
         return in_array($normalized, ['1', 'true', 'si', 'sÃ­', 'yes', 'y', 'activo', 'activa', 'on'], true);
+    }
+
+    private function normalizeText($value): string
+    {
+        return mb_strtolower(trim((string)$value));
+    }
+
+    private function generateLaboratoryCode(string $name, array $takenCodes): string
+    {
+        $base = preg_replace('/[^A-Za-z0-9]/', '', strtoupper(trim($name)));
+        if ($base === '') $base = 'LAB';
+        $base = substr($base, 0, 24);
+
+        $candidate = $base;
+        $i = 1;
+        while (isset($takenCodes[$this->normalizeText($candidate)])) {
+            $suffix = (string)$i;
+            $allowed = 24 - strlen($suffix);
+            if ($allowed <= 0) $allowed = 1;
+            $candidate = substr($base, 0, $allowed) . $suffix;
+            $i++;
+        }
+
+        return $candidate;
     }
 
     private function toNullableDecimal($value): ?float

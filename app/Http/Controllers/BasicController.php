@@ -197,7 +197,7 @@ class BasicController extends Controller
 
       if ($request->filter) {
         $instance->where(function ($query) use ($request) {
-          dxDataGrid::filter($query, $request->filter ?? [], false, $this->prefix4filter);
+          dxDataGrid::filter($query, $request->filter ?? [], false, $this->prefix4filter, $this->ignorePrefix);
         });
       }
 

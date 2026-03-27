@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
@@ -25,9 +26,51 @@ const formatAuditUser = (user) => {
   return ''
 }
 
+const normalizeHeader = (value) => (value ?? '')
+  .toString()
+  .trim()
+  .toLowerCase()
+  .replaceAll('_', '')
+  .replaceAll('-', '')
+  .replaceAll(' ', '')
+  .replaceAll('/', '')
+
+const parseFileRows = async (file) => {
+  const extension = (file.name.split('.').pop() || '').toLowerCase()
+  let rows = []
+
+  if (extension === 'json') {
+    const text = await file.text()
+    const parsed = JSON.parse(text)
+
+    if (Array.isArray(parsed)) {
+      rows = parsed
+    } else if (parsed && typeof parsed === 'object') {
+      const firstArray = Object.values(parsed).find(value => Array.isArray(value))
+      if (!firstArray) throw new Error('El JSON debe ser un array o contener un array en algun campo')
+      rows = firstArray
+    } else {
+      throw new Error('Formato JSON invalido')
+    }
+  } else {
+    const content = await file.arrayBuffer()
+    const workbook = XLSX.read(content, { type: 'array' })
+    const firstSheet = workbook.SheetNames[0]
+    if (!firstSheet) throw new Error('No se encontro ninguna hoja en el archivo')
+    rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: '' })
+  }
+
+  if (!Array.isArray(rows)) throw new Error('El archivo no contiene una coleccion de registros')
+  if (rows.length === 0) throw new Error('El archivo no tiene filas para importar')
+
+  return rows
+}
+
 const Suppliers = () => {
   const gridRef = useRef()
   const modalRef = useRef()
+  const importModalRef = useRef()
+  const importFileRef = useRef()
   const rucLookupTimeoutRef = useRef()
 
   const idRef = useRef()
@@ -49,6 +92,19 @@ const Suppliers = () => {
   const [isEditing, setIsEditing] = useState(false)
   const [isSearchingRuc, setIsSearchingRuc] = useState(false)
   const [lastLookedRuc, setLastLookedRuc] = useState('')
+  const [isImporting, setIsImporting] = useState(false)
+  const [importRows, setImportRows] = useState([])
+  const [importHeaders, setImportHeaders] = useState([])
+  const [importFileName, setImportFileName] = useState('')
+  const [mapping, setMapping] = useState({
+    ruc: '',
+    business_name: '',
+    address: '',
+    phone: '',
+    email_1: '',
+    bank_account_cci: '',
+    status: '',
+  })
 
   const clearSupplierForm = () => {
     idRef.current.value = ''
@@ -187,12 +243,138 @@ const Suppliers = () => {
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
+  const onImportModalOpen = () => {
+    setImportRows([])
+    setImportHeaders([])
+    setImportFileName('')
+    setMapping({
+      ruc: '',
+      business_name: '',
+      address: '',
+      phone: '',
+      email_1: '',
+      bank_account_cci: '',
+      status: '',
+    })
+    if (importFileRef.current) importFileRef.current.value = ''
+    $(importModalRef.current).modal('show')
+  }
+
+  const autoMapHeaders = (headers) => {
+    const withNorm = headers.map(header => ({
+      header,
+      norm: normalizeHeader(header)
+    }))
+
+    const findByNames = (candidates) => withNorm.find(({ norm }) => candidates.includes(norm))?.header ?? ''
+
+    return {
+      ruc: findByNames(['ruc', 'doc', 'documento']),
+      business_name: findByNames(['razonsocial', 'razonsocialonombre', 'businessname', 'nombre', 'proveedor']),
+      address: findByNames(['direccion', 'address', 'domicilio']),
+      phone: findByNames(['telefono', 'phone', 'celular', 'movil']),
+      email_1: findByNames(['email', 'correo', 'correoelectronico', 'mail']),
+      bank_account_cci: findByNames(['cuentabancariacci', 'cuentabancaria', 'cci', 'banco']),
+      status: findByNames(['estado', 'status', 'activo', 'active', 'habilitado']),
+    }
+  }
+
+  const onImportFileChanged = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      const rows = await parseFileRows(file)
+      const headersSet = new Set()
+      rows.forEach(row => {
+        if (row && typeof row === 'object') {
+          Object.keys(row).forEach(key => headersSet.add(key))
+        }
+      })
+
+      const headers = Array.from(headersSet)
+      const suggestedMapping = autoMapHeaders(headers)
+
+      setImportRows(rows)
+      setImportHeaders(headers)
+      setImportFileName(file.name)
+      setMapping(suggestedMapping)
+    } catch (error) {
+      setImportRows([])
+      setImportHeaders([])
+      setImportFileName('')
+      Swal.fire({
+        icon: 'error',
+        title: 'No se pudo leer el archivo',
+        text: error.message
+      })
+    }
+  }
+
+  const onImportSubmit = async (e) => {
+    e.preventDefault()
+    if (!importRows.length) {
+      Swal.fire({ icon: 'warning', title: 'Falta archivo', text: 'Primero carga un archivo con datos' })
+      return
+    }
+
+    if (!mapping.ruc || !mapping.business_name) {
+      Swal.fire({ icon: 'warning', title: 'Campos obligatorios', text: 'Debes mapear RUC y Razon Social' })
+      return
+    }
+
+    setIsImporting(true)
+    const result = await suppliersRest.importRows({
+      rows: importRows,
+      mapping
+    })
+    setIsImporting(false)
+    if (!result) return
+
+    $(gridRef.current).dxDataGrid('instance').refresh()
+    $(importModalRef.current).modal('hide')
+
+    const errorsPreview = (result.errors || []).slice(0, 5).join('\n')
+    await Swal.fire({
+      icon: 'success',
+      title: 'Importacion completada',
+      html: `
+        <div style="text-align:left">
+          <p style="margin:0"><b>Creados:</b> ${result.created}</p>
+          <p style="margin:0"><b>Actualizados:</b> ${result.updated}</p>
+          <p style="margin:0"><b>Omitidos:</b> ${result.skipped}</p>
+          ${errorsPreview ? `<pre style="margin-top:8px;white-space:pre-wrap;font-size:12px">${errorsPreview}</pre>` : ''}
+        </div>
+      `
+    })
+  }
+
+  const previewRows = importRows.slice(0, 5).map((row, idx) => ({
+    row: idx + 1,
+    ruc: mapping.ruc ? (row[mapping.ruc] ?? '') : '',
+    business_name: mapping.business_name ? (row[mapping.business_name] ?? '') : '',
+    address: mapping.address ? (row[mapping.address] ?? '') : '',
+    phone: mapping.phone ? (row[mapping.phone] ?? '') : '',
+    email_1: mapping.email_1 ? (row[mapping.email_1] ?? '') : '',
+    bank_account_cci: mapping.bank_account_cci ? (row[mapping.bank_account_cci] ?? '') : '',
+    status: mapping.status ? (row[mapping.status] ?? '') : '',
+  }))
+
   return (<>
     <Table
       gridRef={gridRef}
       title='Proveedores'
       rest={suppliersRest}
       toolBar={(container) => {
+        container.unshift({
+          widget: 'dxButton', location: 'after',
+          options: {
+            icon: 'upload',
+            title: 'Importar',
+            hint: 'Importar masivamente',
+            onClick: () => onImportModalOpen()
+          }
+        });
         container.unshift({
           widget: 'dxButton', location: 'after',
           options: {
@@ -279,7 +461,7 @@ const Suppliers = () => {
       ]}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar proveedor' : 'Agregar proveedor'} onSubmit={onModalSubmit} size='xl'>
+    <Modal modalRef={modalRef} title={isEditing ? 'Editar proveedor' : 'Agregar proveedor'} onSubmit={onModalSubmit} size='lg'>
       <div className='row'>
         <input ref={idRef} type='hidden' />
         <InputFormGroup
@@ -314,6 +496,116 @@ const Suppliers = () => {
         <div className='form-group col-12 mb-2'>
           <label className='form-label mb-1'>Evaluacion</label>
           <textarea ref={evaluationRef} className='form-control' rows={3} disabled={isSearchingRuc}></textarea>
+        </div>
+      </div>
+    </Modal>
+
+    <Modal
+      modalRef={importModalRef}
+      title='Importacion masiva de proveedores'
+      onSubmit={onImportSubmit}
+      size='xl'
+      btnSubmitText={isImporting ? 'Importando...' : 'Importar'}
+    >
+      <div className='row'>
+        <div className='col-12 mb-2'>
+          <label className='form-label'>Archivo (Excel, CSV o JSON)</label>
+          <input
+            ref={importFileRef}
+            className='form-control'
+            type='file'
+            accept='.xlsx,.xls,.csv,.json'
+            onChange={onImportFileChanged}
+          />
+          <small className='text-muted'>Clave de sincronizacion: <b>RUC</b>. Si existe se actualiza, si no existe se crea.</small>
+          {importFileName && <div className='mt-1'><small className='text-muted'>Archivo: {importFileName} ({importRows.length} filas)</small></div>}
+        </div>
+
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Mapeo: RUC *</label>
+          <select className='form-select' value={mapping.ruc} onChange={e => setMapping(prev => ({ ...prev, ruc: e.target.value }))}>
+            <option value=''>Sin mapear</option>
+            {importHeaders.map(header => <option key={`ruc-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Mapeo: Razon Social *</label>
+          <select className='form-select' value={mapping.business_name} onChange={e => setMapping(prev => ({ ...prev, business_name: e.target.value }))}>
+            <option value=''>Sin mapear</option>
+            {importHeaders.map(header => <option key={`business_name-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Mapeo: Direccion</label>
+          <select className='form-select' value={mapping.address} onChange={e => setMapping(prev => ({ ...prev, address: e.target.value }))}>
+            <option value=''>Sin mapear</option>
+            {importHeaders.map(header => <option key={`address-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Mapeo: Telefono</label>
+          <select className='form-select' value={mapping.phone} onChange={e => setMapping(prev => ({ ...prev, phone: e.target.value }))}>
+            <option value=''>Sin mapear</option>
+            {importHeaders.map(header => <option key={`phone-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Mapeo: Email</label>
+          <select className='form-select' value={mapping.email_1} onChange={e => setMapping(prev => ({ ...prev, email_1: e.target.value }))}>
+            <option value=''>Sin mapear</option>
+            {importHeaders.map(header => <option key={`email_1-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Mapeo: Cuenta bancaria / CCI</label>
+          <select className='form-select' value={mapping.bank_account_cci} onChange={e => setMapping(prev => ({ ...prev, bank_account_cci: e.target.value }))}>
+            <option value=''>Sin mapear</option>
+            {importHeaders.map(header => <option key={`bank_account_cci-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Mapeo: Estado</label>
+          <select className='form-select' value={mapping.status} onChange={e => setMapping(prev => ({ ...prev, status: e.target.value }))}>
+            <option value=''>Sin mapear</option>
+            {importHeaders.map(header => <option key={`status-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>
+
+        <div className='col-12 mt-2'>
+          <h6 className='mb-2'>Vista previa (primeros 5)</h6>
+          <div className='table-responsive border rounded'>
+            <table className='table table-sm table-striped mb-0'>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>RUC</th>
+                  <th>Razon Social</th>
+                  <th>Direccion</th>
+                  <th>Telefono</th>
+                  <th>Email</th>
+                  <th>Cuenta / CCI</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {previewRows.length === 0 && <tr><td colSpan='8' className='text-center text-muted py-3'>Carga archivo y mapea columnas para previsualizar</td></tr>}
+                {previewRows.map(item => (
+                  <tr key={`preview-${item.row}`}>
+                    <td>{item.row}</td>
+                    <td>{item.ruc?.toString?.() ?? ''}</td>
+                    <td>{item.business_name?.toString?.() ?? ''}</td>
+                    <td>{item.address?.toString?.() ?? ''}</td>
+                    <td>{item.phone?.toString?.() ?? ''}</td>
+                    <td>{item.email_1?.toString?.() ?? ''}</td>
+                    <td>{item.bank_account_cci?.toString?.() ?? ''}</td>
+                    <td>{item.status?.toString?.() ?? ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </Modal>

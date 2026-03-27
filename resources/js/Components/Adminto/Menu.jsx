@@ -122,17 +122,17 @@ const Menu = ({ can, hasRole, panel = null }) => {
         </MenuItemContainer>
         <MenuItemContainer title='Productos' icon='ti ti-package'>
           {canAccess('articles') && <MenuItem href="/admin/articles" icon="ti ti-box" badge='✓'>Artículos</MenuItem>}
-          {canAccess('batches') && <MenuItem href="/admin/batches" icon="ti ti-box-multiple">Lotes</MenuItem>}
+          {canAccess('batches') && <MenuItem href="/admin/batches" icon="ti ti-box-multiple" badge='✓'>Lotes</MenuItem>}
           {canAccess('laboratories') && <MenuItem href="/admin/laboratories" icon="ti ti-flask" badge='✓'>Laboratorios</MenuItem>}
           {canAccess('units-of-measure') && <MenuItem href="/admin/units" icon="ti ti-ruler-measure" badge='✓'>Und. de medida</MenuItem>}
           {canAccess('suppliers') && <MenuItem href="/admin/suppliers" icon="ti ti-truck-delivery" badge='✓'>Proveedores</MenuItem>}
         </MenuItemContainer>
         <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
-          {canAccess('inventory') && <MenuItem href="/admin/inventory" icon="ti ti-boxes">Inventario</MenuItem>}
-          {canAccess('kardex') && <MenuItem href="/admin/kardex" icon="ti ti-notebook">Kardex</MenuItem>}
-          {canAccess('entry-note') && <MenuItem href="/admin/entry-note" icon="ti ti-file-import">Notas de Entrada</MenuItem>}
-          {canAccess('exit-note') && <MenuItem href="/admin/exit-note" icon="ti ti-file-export">Notas de Salida</MenuItem>}
-          {canAccess('exit-note') && <MenuItem href="/admin/warehouses" icon="ti ti-building-warehouse">Almacenes</MenuItem>}
+          {canAccess('inventory') && <MenuItem href="/admin/inventory" icon="ti ti-stack-2" badge='✓'>Inventario</MenuItem>}
+          {canAccess('kardex') && <MenuItem href="/admin/kardex" icon="ti ti-notebook" badge='✓'>Kardex</MenuItem>}
+          {canAccess('entry-note') && <MenuItem href="/admin/entry-note" icon="ti ti-file-import" badge='✓'>Notas de Entrada</MenuItem>}
+          {canAccess('exit-note') && <MenuItem href="/admin/exit-note" icon="ti ti-file-export" badge='✓'>Notas de Salida</MenuItem>}
+          {canAccess('exit-note') && <MenuItem href="/admin/warehouses" icon="ti ti-building-warehouse" badge='✓' badgeColor='danger'>Almacenes</MenuItem>}
         </MenuItemContainer>
 
         {
@@ -147,7 +147,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
               {canAccess('suppliers') && <MenuItem href="/admin/magistrales/suppliers" icon="ti ti-truck-delivery">Proveedores</MenuItem>}
             </MenuItemContainer>
             <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
-              {canAccess('inventory') && <MenuItem href="/admin/magistrales/inventory" icon="ti ti-boxes">Inventario</MenuItem>}
+              {canAccess('inventory') && <MenuItem href="/admin/magistrales/inventory" icon="ti ti-stack-2">Inventario</MenuItem>}
               {canAccess('kardex') && <MenuItem href="/admin/magistrales/kardex" icon="ti ti-notebook">Kardex</MenuItem>}
               {canAccess('entry-note') && <MenuItem href="/admin/magistrales/entry-note" icon="ti ti-file-import">Notas de Entrada</MenuItem>}
               {canAccess('exit-note') && <MenuItem href="/admin/magistrales/exit-note" icon="ti ti-file-export">Notas de Salida</MenuItem>}
@@ -249,12 +249,13 @@ const Menu = ({ can, hasRole, panel = null }) => {
         </MenuItemContainer> */}
 
         <li className="side-nav-title mt-2">Configuraciones</li>
+        {canAccess('businesses') && <MenuItem href="/admin/businesses" icon="ti ti-building-store" badge='✓' badgeColor='danger'>Empresas</MenuItem>}
         <MenuItemContainer title="Gestión" icon="ti ti-users">
           {canAccess('users') && <MenuItem href="/admin/users" icon="ti ti-users" badge='✓'>Usuarios</MenuItem>}
           {canAccess('roles') && <MenuItem href="/admin/roles" icon="ti ti-user-check" badge='✓'>Roles</MenuItem>}
         </MenuItemContainer>
-        <MenuItem href="/admin/profile" icon="ti ti-user">Mi perfil</MenuItem>
-        <MenuItem href="/admin/account" icon="ti ti-settings">Mi cuenta</MenuItem>
+        <MenuItem href="/admin/profile" icon="ti ti-user" badge='✓'>Mi perfil</MenuItem>
+        <MenuItem href="/admin/account" icon="ti ti-settings" badge='✓'>Mi cuenta</MenuItem>
         <MenuItem onClick={() => Logout()} icon="ti ti-logout">Cerrar sesión</MenuItem>
       </ul>
       <div className="clearfix"></div>

@@ -9,6 +9,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\DB;
 use SoDe\Extend\Response;
 
 class SupplierController extends BasicController
@@ -60,6 +61,113 @@ class SupplierController extends BasicController
         $body['business_name'] = $businessName;
 
         return $body;
+    }
+
+    public function import(Request $request): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+        try {
+            $rows = $request->rows;
+            $mapping = $request->mapping ?? [];
+            $userId = Auth::id();
+
+            if (!is_array($rows) || count($rows) === 0) {
+                throw new \Exception('No hay registros para importar');
+            }
+
+            $rucKey = $mapping['ruc'] ?? null;
+            if (!$rucKey) {
+                throw new \Exception('Debes mapear el campo RUC');
+            }
+
+            $businessNameKey = $mapping['business_name'] ?? null;
+            if (!$businessNameKey) {
+                throw new \Exception('Debes mapear el campo razon social');
+            }
+
+            $addressKey = $mapping['address'] ?? null;
+            $phoneKey = $mapping['phone'] ?? null;
+            $emailKey = $mapping['email_1'] ?? null;
+            $bankAccountKey = $mapping['bank_account_cci'] ?? null;
+            $statusKey = $mapping['status'] ?? null;
+
+            $created = 0;
+            $updated = 0;
+            $skipped = 0;
+            $errors = [];
+
+            DB::beginTransaction();
+
+            $existingSuppliers = Supplier::whereNotNull('ruc')->get(['id', 'ruc']);
+            $existingByRuc = [];
+            foreach ($existingSuppliers as $supplier) {
+                $normalized = preg_replace('/\D+/', '', (string)$supplier->ruc);
+                if ($normalized !== '') {
+                    $existingByRuc[$normalized] = $supplier->id;
+                }
+            }
+
+            foreach ($rows as $idx => $row) {
+                if (!is_array($row)) {
+                    $skipped++;
+                    $errors[] = "Fila " . ($idx + 1) . ": formato invalido";
+                    continue;
+                }
+
+                $ruc = preg_replace('/\D+/', '', (string)($row[$rucKey] ?? ''));
+                if (strlen($ruc) !== 11) {
+                    $skipped++;
+                    $errors[] = "Fila " . ($idx + 1) . ": RUC invalido";
+                    continue;
+                }
+
+                $businessName = trim((string)($row[$businessNameKey] ?? ''));
+                if ($businessName === '') {
+                    $skipped++;
+                    $errors[] = "Fila " . ($idx + 1) . ": razon social vacia";
+                    continue;
+                }
+
+                $data = [
+                    'ruc' => $ruc,
+                    'business_name' => $businessName,
+                    'address' => $addressKey ? (trim((string)($row[$addressKey] ?? '')) ?: null) : null,
+                    'phone' => $phoneKey ? (trim((string)($row[$phoneKey] ?? '')) ?: null) : null,
+                    'email_1' => $emailKey ? (trim((string)($row[$emailKey] ?? '')) ?: null) : null,
+                    'bank_account_cci' => $bankAccountKey ? (trim((string)($row[$bankAccountKey] ?? '')) ?: null) : null,
+                    'status' => $statusKey && array_key_exists($statusKey, $row) ? $this->toBoolean($row[$statusKey]) : true,
+                    'updated_by' => $userId,
+                ];
+
+                $supplierId = $existingByRuc[$ruc] ?? null;
+                if ($supplierId) {
+                    Supplier::where('id', $supplierId)->update($data);
+                    $updated++;
+                } else {
+                    $data['created_by'] = $userId;
+                    $supplier = Supplier::create($data);
+                    $existingByRuc[$ruc] = $supplier->id;
+                    $created++;
+                }
+            }
+
+            DB::commit();
+
+            $response->status = 200;
+            $response->message = 'Importacion masiva completada';
+            $response->data = [
+                'created' => $created,
+                'updated' => $updated,
+                'skipped' => $skipped,
+                'errors' => $errors,
+            ];
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
     }
 
     public function afterSave(Request $request, object $jpa, bool $isNew)
@@ -171,5 +279,14 @@ class SupplierController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    private function toBoolean($value): bool
+    {
+        if (is_bool($value)) return $value;
+        if (is_numeric($value)) return (int)$value !== 0;
+
+        $normalized = mb_strtolower(trim((string)$value));
+        return in_array($normalized, ['1', 'true', 'si', 'sí', 'yes', 'y', 'activo', 'activa', 'on'], true);
     }
 }
