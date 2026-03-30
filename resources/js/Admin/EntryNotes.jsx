@@ -31,6 +31,8 @@ const formatAuditUser = (user) => {
 
 const emptyItem = () => ({
   uid: crypto.randomUUID(),
+  batch_id: '',
+  batch_label: '',
   batch_code: '',
   lot: '',
   article_id: '',
@@ -49,6 +51,7 @@ const emptyItem = () => ({
 const EntryNotes = () => {
   const gridRef = useRef()
   const modalRef = useRef()
+  const createBatchModalRef = useRef()
 
   const idRef = useRef()
   const businessRef = useRef()
@@ -65,7 +68,10 @@ const EntryNotes = () => {
   const guideSequenceRef = useRef()
   const guideRucRef = useRef()
   const guideFileRef = useRef()
-  const articleRefs = useRef({})
+  const batchRefs = useRef({})
+  const createBatchArticleRef = useRef()
+  const createBatchLotRef = useRef()
+  const createBatchExpirationRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
@@ -75,19 +81,21 @@ const EntryNotes = () => {
   const [branches, setBranches] = useState([])
   const [warehouses, setWarehouses] = useState([])
   const [items, setItems] = useState([emptyItem()])
+  const [createBatchTargetUid, setCreateBatchTargetUid] = useState('')
+  const [createBatchArticleId, setCreateBatchArticleId] = useState('')
 
-  const getArticleRef = (uid) => {
-    if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
-    return articleRefs.current[uid]
+  const getBatchRef = (uid) => {
+    if (!batchRefs.current[uid]) batchRefs.current[uid] = createRef()
+    return batchRefs.current[uid]
   }
 
   useEffect(() => {
     items.forEach(item => {
-      const ref = getArticleRef(item.uid)
-      if (!ref.current || !item.article_id || !item.article_label) return
+      const ref = getBatchRef(item.uid)
+      if (!ref.current || !item.batch_id || !item.batch_label) return
       const current = $(ref.current).val()
-      if (`${current}` === `${item.article_id}`) return
-      SetSelectValue(ref.current, item.article_id, item.article_label)
+      if (`${current}` === `${item.batch_id}`) return
+      SetSelectValue(ref.current, item.batch_id, item.batch_label)
     })
   }, [items])
 
@@ -110,6 +118,28 @@ const EntryNotes = () => {
       return
     }
     setSelectedBranchId('')
+  }
+
+  const getWarehouseName = (warehouseId) => {
+    if (!warehouseId) return ''
+    return warehouses.find(warehouse => `${warehouse.id}` === `${warehouseId}`)?.name ?? ''
+  }
+
+  const refreshItemStock = async (uid, articleId, warehouseId) => {
+    if (!uid) return
+    if (!articleId || !warehouseId) {
+      setItems(prev => prev.map(item => item.uid === uid ? { ...item, stock: 0 } : item))
+      return
+    }
+    const stockData = await entryNotesRest.getCurrentStock(articleId, warehouseId)
+    setItems(prev => prev.map(item => item.uid === uid ? { ...item, stock: Number(stockData?.stock || 0) } : item))
+  }
+
+  const refreshAllStocks = async (warehouseId, currentItems = null) => {
+    const current = currentItems ? [...currentItems] : [...items]
+    for (const item of current) {
+      await refreshItemStock(item.uid, item.article_id, warehouseId || item.warehouse_id)
+    }
   }
 
   const onModalOpen = async (data = null) => {
@@ -154,6 +184,8 @@ const EntryNotes = () => {
 
     const detail = (data?.items ?? []).map(row => ({
       uid: crypto.randomUUID(),
+      batch_id: row.lot ?? row.batch_code ?? '',
+      batch_label: row.lot ?? row.batch_code ?? '',
       batch_code: row.batch_code ?? '',
       lot: row.lot ?? '',
       article_id: row.article_id ? `${row.article_id}` : '',
@@ -161,18 +193,20 @@ const EntryNotes = () => {
       article_laboratory: row.article?.laboratory?.name ?? '',
       article_principle: row.article?.activePrinciple?.name ?? row.article?.active_principle?.name ?? '',
       article_unit: row.article?.unit?.symbol ?? row.article?.unit?.name ?? '',
-      warehouse_id: row.warehouse_id ? `${row.warehouse_id}` : '',
+      warehouse_id: row.warehouse_id ? `${row.warehouse_id}` : warehouseId,
       stock: row.stock ?? 0,
       cost_unit: row.cost_unit ?? 0,
       location: row.location ?? '',
       quantity: row.quantity ?? 0,
       total: row.total ?? 0,
     }))
-    setItems(detail.length ? detail : [emptyItem()])
+    const loadedItems = detail.length ? detail : [emptyItem()]
+    setItems(loadedItems)
 
     $(modalRef.current).modal('show')
     await loadWarehouses()
     await loadBranches(data?.business_id ?? null, data?.business_branch_id ?? null)
+    await refreshAllStocks(warehouseId, loadedItems)
   }
 
   const onModalSubmit = async (e) => {
@@ -244,6 +278,15 @@ const EntryNotes = () => {
     await loadBranches(businessId, null)
   }
 
+  const onWarehouseChanged = async (e) => {
+    const warehouseId = e.target.value || ''
+    setSelectedWarehouseId(warehouseId)
+    const updatedItems = items.map(item => ({ ...item, warehouse_id: warehouseId }))
+    setItems(updatedItems)
+    if (!warehouseId) return
+    await refreshAllStocks(warehouseId, updatedItems)
+  }
+
   const onItemUpdated = (uid, field, value) => {
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
@@ -256,34 +299,133 @@ const EntryNotes = () => {
     }))
   }
 
-  const onItemArticleChanged = (uid, e) => {
+  const onItemBatchChanged = async (uid, e) => {
     const selected = $(e.target).select2('data')?.[0]
-    const article = selected?.data ?? null
-    const articleId = e.target.value || ''
+    const batch = selected?.data ?? null
+    const batchId = e.target.value || ''
+    const currentItem = items.find(item => item.uid === uid)
+
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
-      if (!articleId) {
+      if (!batchId) {
         return {
           ...item,
+          batch_id: '',
+          batch_label: '',
+          batch_code: '',
+          lot: '',
           article_id: '',
           article_label: '',
           article_laboratory: '',
           article_principle: '',
           article_unit: '',
+          stock: 0,
         }
       }
+      if (!batch) {
+        return {
+          ...item,
+          batch_id: batchId,
+          batch_label: selected?.text ?? batchId,
+          batch_code: selected?.text ?? batchId,
+          lot: selected?.text ?? batchId,
+          warehouse_id: selectedWarehouseId || item.warehouse_id,
+        }
+      }
+
+      const article = batch.article ?? null
+      const nextArticleId = article?.id ? `${article.id}` : item.article_id
       return {
         ...item,
-        article_id: articleId,
-        article_label: selected?.text ?? item.article_label,
+        batch_id: batchId,
+        batch_label: selected?.text ?? batch.lot ?? item.batch_label,
+        batch_code: batch.lot ?? item.batch_code,
+        lot: batch.lot ?? item.lot,
+        article_id: nextArticleId,
+        article_label: article ? `${article.code ?? ''} - ${article.name ?? ''}`.trim() : item.article_label,
         article_laboratory: article?.laboratory?.name ?? item.article_laboratory,
         article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? item.article_principle,
         article_unit: article?.unit?.symbol ?? article?.unit?.name ?? item.article_unit,
+        warehouse_id: selectedWarehouseId || item.warehouse_id,
       }
     }))
+
+    if (!batch && currentItem?.article_id && selectedWarehouseId) {
+      await refreshItemStock(uid, currentItem.article_id, selectedWarehouseId)
+    }
+
+    if (batch?.article?.id && selectedWarehouseId) {
+      await refreshItemStock(uid, batch.article.id, selectedWarehouseId)
+    }
   }
 
-  const onItemAdded = () => setItems(prev => [...prev, emptyItem()])
+  const onCreateBatchForItem = async (uid) => {
+    if (!selectedBusinessId) {
+      await Swal.fire({ icon: 'warning', title: 'Empresa requerida', text: 'Selecciona la empresa antes de crear un lote' })
+      return
+    }
+
+    const currentItem = items.find(item => item.uid === uid)
+    setCreateBatchTargetUid(uid)
+    setCreateBatchArticleId(currentItem?.article_id || '')
+    if (createBatchLotRef.current) createBatchLotRef.current.value = currentItem?.lot || ''
+    if (createBatchExpirationRef.current) createBatchExpirationRef.current.value = ''
+    if (currentItem?.article_id && currentItem?.article_label && createBatchArticleRef.current) {
+      SetSelectValue(createBatchArticleRef.current, currentItem.article_id, currentItem.article_label)
+    } else if (createBatchArticleRef.current) {
+      $(createBatchArticleRef.current).empty().trigger('change')
+    }
+    $(createBatchModalRef.current).modal('show')
+  }
+
+  const onCreateBatchModalSubmit = async (e) => {
+    e.preventDefault()
+    if (!selectedBusinessId) return
+
+    const lot = (createBatchLotRef.current?.value ?? '').trim()
+    const expiration = createBatchExpirationRef.current?.value ?? ''
+    if (!createBatchArticleId || !lot || !expiration) return
+
+    const createdBatch = await entryNotesRest.createBatch({
+      business_id: selectedBusinessId,
+      article_id: createBatchArticleId,
+      lot,
+      expiration_date: expiration,
+    })
+    if (!createdBatch?.id) return
+
+    const selectedArticle = $(createBatchArticleRef.current).select2('data')?.[0] ?? null
+    const hydratedBatch = await entryNotesRest.getBatchById(createdBatch.id)
+    const batchData = hydratedBatch ?? createdBatch
+    const articleData = batchData?.article ?? await entryNotesRest.getArticleById(createBatchArticleId)
+    const selectedArticleText = selectedArticle?.text ?? ''
+
+    const articleLabel = articleData
+      ? [articleData.code, articleData.name].filter(Boolean).join(' - ')
+      : selectedArticleText
+
+    setItems(prev => prev.map(item => item.uid === createBatchTargetUid ? {
+      ...item,
+      batch_id: `${createdBatch.id}`,
+      batch_label: batchData?.lot ?? createdBatch.lot ?? lot,
+      batch_code: batchData?.lot ?? createdBatch.lot ?? lot,
+      lot: batchData?.lot ?? createdBatch.lot ?? lot,
+      article_id: `${createBatchArticleId}`,
+      article_label: articleLabel || item.article_label,
+      article_laboratory: articleData?.laboratory?.name ?? item.article_laboratory,
+      article_principle: articleData?.activePrinciple?.name ?? articleData?.active_principle?.name ?? item.article_principle,
+      article_unit: articleData?.unit?.symbol ?? articleData?.unit?.name ?? item.article_unit,
+      warehouse_id: selectedWarehouseId || item.warehouse_id,
+    } : item))
+
+    if (selectedWarehouseId) {
+      await refreshItemStock(createBatchTargetUid, createBatchArticleId, selectedWarehouseId)
+    }
+
+    $(createBatchModalRef.current).modal('hide')
+  }
+
+  const onItemAdded = () => setItems(prev => [...prev, { ...emptyItem(), warehouse_id: selectedWarehouseId || '' }])
   const onItemRemoved = (uid) => {
     setItems(prev => {
       const next = prev.filter(item => item.uid !== uid)
@@ -428,7 +570,7 @@ const EntryNotes = () => {
           searchAPI='/api/admin/warehouses/paginate'
           searchBy='name'
           dropdownParent='#entry-note-form-container'
-          onChange={(e) => setSelectedWarehouseId(e.target.value || '')}
+          onChange={onWarehouseChanged}
         />
         <SelectAPIFormGroup
           eRef={supplierRef}
@@ -504,29 +646,35 @@ const EntryNotes = () => {
                 {items.map(item => {
                   const articleExtra = item.article_id ? `${item.article_laboratory || '-'} | ${item.article_principle || '-'}` : '-'
                   const unitLabel = item.article_id ? (item.article_unit || '-') : '-'
+                  const batchFilter = selectedBusinessId
+                    ? ['business_id', '=', Number(selectedBusinessId)]
+                    : null
                   return (
                     <tr key={item.uid}>
-                      <td><input className='form-control form-control-sm' value={item.batch_code} onChange={(e) => onItemUpdated(item.uid, 'batch_code', e.target.value)} /></td>
-                      <td><input className='form-control form-control-sm' value={item.lot} onChange={(e) => onItemUpdated(item.uid, 'lot', e.target.value)} /></td>
                       <td style={{ width: '20%' }}>
-                        <SelectAPIFormGroup
-                          eRef={getArticleRef(item.uid)}
-                          col='col-12'
-                          searchAPI='/api/admin/articles/paginate'
-                          searchBy='name'
-                          dropdownParent='#entry-note-form-container'
-                          onChange={(e) => onItemArticleChanged(item.uid, e)}
-                        />
+                        <div className='d-flex gap-1 align-items-center'>
+                          <div style={{ flex: 1 }}>
+                            <SelectAPIFormGroup
+                              eRef={getBatchRef(item.uid)}
+                              col='col-12'
+                              searchAPI='/api/admin/batches/paginate'
+                              searchBy='lot'
+                              filter={batchFilter ?? undefined}
+                              dropdownParent='#entry-note-form-container'
+                              onChange={(e) => onItemBatchChanged(item.uid, e)}
+                            />
+                          </div>
+                          <button type='button' className='btn btn-xs btn-soft-success' title='Crear lote' onClick={() => onCreateBatchForItem(item.uid)}>
+                            <i className='mdi mdi-plus'></i>
+                          </button>
+                        </div>
                       </td>
+                      <td><input className='form-control form-control-sm' value={item.lot} readOnly /></td>
+                      <td><input className='form-control form-control-sm' value={item.article_label} readOnly /></td>
                       <td><small>{articleExtra}</small></td>
                       <td><small>{unitLabel}</small></td>
-                      <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.stock} onChange={(e) => onItemUpdated(item.uid, 'stock', e.target.value)} /></td>
-                      <td>
-                        <select className='form-control form-control-sm' value={item.warehouse_id || selectedWarehouseId || ''} onChange={(e) => onItemUpdated(item.uid, 'warehouse_id', e.target.value)}>
-                          <option value=''>Seleccionar...</option>
-                          {warehouses.map(warehouse => <option key={`warehouse-item-${item.uid}-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
-                        </select>
-                      </td>
+                      <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={Number(item.stock || 0).toFixed(3)} readOnly /></td>
+                      <td><input className='form-control form-control-sm' value={getWarehouseName(item.warehouse_id || selectedWarehouseId)} readOnly /></td>
                       <td><input className='form-control form-control-sm' type='number' min='0' step='0.0001' value={item.cost_unit} onChange={(e) => onItemUpdated(item.uid, 'cost_unit', e.target.value)} /></td>
                       <td><input className='form-control form-control-sm' value={item.location} onChange={(e) => onItemUpdated(item.uid, 'location', e.target.value)} /></td>
                       <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => onItemUpdated(item.uid, 'quantity', e.target.value)} /></td>
@@ -543,6 +691,23 @@ const EntryNotes = () => {
             </table>
           </div>
         </div>
+      </div>
+    </Modal>
+
+    <Modal modalRef={createBatchModalRef} title='Crear lote' onSubmit={onCreateBatchModalSubmit} size='md'>
+      <div className='row' id='entry-note-create-batch-container'>
+        <SelectAPIFormGroup
+          eRef={createBatchArticleRef}
+          label='Articulo'
+          col='col-12'
+          required
+          searchAPI='/api/admin/articles/paginate'
+          searchBy='name'
+          dropdownParent='#entry-note-create-batch-container'
+          onChange={(e) => setCreateBatchArticleId(e.target.value || '')}
+        />
+        <InputFormGroup eRef={createBatchLotRef} label='Lote' col='col-12' required />
+        <InputFormGroup eRef={createBatchExpirationRef} label='Fecha de vencimiento' col='col-12' type='date' required />
       </div>
     </Modal>
   </>)

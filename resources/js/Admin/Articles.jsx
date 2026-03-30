@@ -78,9 +78,34 @@ const emptyPresentation = () => ({
   price: 0,
 })
 
+const getStockByPresentation = (stockUnits, presentations) => {
+  const totalUnits = Number(stockUnits || 0)
+  const safeUnits = Number.isFinite(totalUnits) ? totalUnits : 0
+  const rows = Array.isArray(presentations) ? presentations : []
+
+  if (!rows.length) {
+    const full = Math.floor(Math.max(0, safeUnits))
+    return [{ label: 'Unidad', units: 1, full, totalUnits: safeUnits }]
+  }
+
+  return rows
+    .map((presentation) => {
+      const units = Number(presentation?.units || 0)
+      const safePresentationUnits = Number.isFinite(units) && units > 0 ? units : 1
+      const full = Math.floor(Math.max(0, safeUnits) / safePresentationUnits)
+      return {
+        label: presentation?.name || 'Presentacion',
+        units: safePresentationUnits,
+        full,
+        totalUnits: safeUnits,
+      }
+    })
+}
+
 const Articles = () => {
   const gridRef = useRef()
   const modalRef = useRef()
+  const stockModalRef = useRef()
   const importModalRef = useRef()
   const importFileRef = useRef()
   const principleCreateModalRef = useRef()
@@ -110,6 +135,9 @@ const Articles = () => {
   const [selectedPrincipleId, setSelectedPrincipleId] = useState('')
   const [selectedUnitId, setSelectedUnitId] = useState('')
   const [isImporting, setIsImporting] = useState(false)
+  const [isLoadingStock, setIsLoadingStock] = useState(false)
+  const [stockArticle, setStockArticle] = useState(null)
+  const [stockRows, setStockRows] = useState([])
   const [importRows, setImportRows] = useState([])
   const [importHeaders, setImportHeaders] = useState([])
   const [importFileName, setImportFileName] = useState('')
@@ -235,6 +263,27 @@ const Articles = () => {
     const result = await articlesRest.delete(id)
     if (!result) return
     $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
+  const onOpenStockModal = async (article) => {
+    setIsLoadingStock(true)
+    setStockRows([])
+    setStockArticle({
+      id: article?.id ?? null,
+      code: article?.code ?? '',
+      name: article?.name ?? '',
+    })
+    $(stockModalRef.current).modal('show')
+
+    const result = await articlesRest.getStockByWarehouse(article?.id)
+    if (!result) {
+      setIsLoadingStock(false)
+      return
+    }
+
+    setStockArticle(result.article ?? null)
+    setStockRows(result.warehouses ?? [])
+    setIsLoadingStock(false)
   }
 
   const onImportModalOpen = () => {
@@ -555,6 +604,12 @@ const Articles = () => {
               onClick: () => onModalOpen(data)
             }))
             container.append(DxButton({
+              className: 'btn btn-xs btn-soft-info',
+              title: 'Stock por almacen',
+              icon: 'mdi mdi-package-variant-closed',
+              onClick: () => onOpenStockModal(data)
+            }))
+            container.append(DxButton({
               className: 'btn btn-xs btn-soft-danger',
               title: 'Eliminar articulo',
               icon: 'mdi mdi-delete',
@@ -566,6 +621,73 @@ const Articles = () => {
         }
       ]}
     />
+
+    <Modal
+      modalRef={stockModalRef}
+      title={`Stock por almacen${stockArticle?.name ? ` - ${stockArticle.name}` : ''}`}
+      size='xl'
+      hideButtonSubmit
+    >
+      <div className='row'>
+        <div className='col-12 mb-2'>
+          <small className='text-muted'>
+            Articulo: <b>{stockArticle?.code || '-'}</b> {stockArticle?.name ? `- ${stockArticle.name}` : ''}
+          </small>
+        </div>
+        <div className='col-12'>
+          <div className='table-responsive border rounded'>
+            <table className='table table-sm table-striped mb-0'>
+              <thead>
+                <tr>
+                  <th>Empresa</th>
+                  <th>Sede</th>
+                  <th>Almacen</th>
+                  <th>Entradas</th>
+                  <th>Salidas</th>
+                  <th>Stock</th>
+                </tr>
+              </thead>
+              <tbody>
+                {isLoadingStock && (
+                  <tr>
+                    <td colSpan={6} className='text-center text-muted'>Cargando stock...</td>
+                  </tr>
+                )}
+                {!isLoadingStock && stockRows.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className='text-center text-muted'>Sin datos de stock</td>
+                  </tr>
+                )}
+                {!isLoadingStock && stockRows.map((row) => (
+                  <tr key={`stock-row-${row.id}`}>
+                    <td>{row.business_name || '-'}</td>
+                    <td>{row.branch_name || '-'}</td>
+                    <td>
+                      {row.name || '-'}
+                      {row.status == 0 && <span className='badge bg-soft-danger text-danger ms-2'>Inactivo</span>}
+                    </td>
+                    <td>{Number(row.qty_in || 0).toFixed(3)}</td>
+                    <td>{Number(row.qty_out || 0).toFixed(3)}</td>
+                    <td>
+                      <b>{Number(row.stock || 0).toFixed(3)} und</b>
+                      <div className='mt-1'>
+                        {getStockByPresentation(row.stock, stockArticle?.presentations).map((presentation, idx) => (
+                          <div key={`stock-presentation-${row.id}-${idx}`}>
+                            <small>
+                              {presentation.label} ({Number(presentation.units).toFixed(3)}): <b>{presentation.full}</b> en stock
+                            </small>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </Modal>
 
     <Modal modalRef={modalRef} title={isEditing ? 'Editar articulo' : 'Agregar articulo'} onSubmit={onModalSubmit} size='xl'>
       <div className='row' id='article-form-container'>

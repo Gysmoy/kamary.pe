@@ -124,7 +124,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {canAccess('articles') && <MenuItem href="/admin/articles" icon="ti ti-box" badge='✓'>Artículos</MenuItem>}
           {canAccess('batches') && <MenuItem href="/admin/batches" icon="ti ti-box-multiple" badge='✓'>Lotes</MenuItem>}
           {canAccess('laboratories') && <MenuItem href="/admin/laboratories" icon="ti ti-flask" badge='✓'>Laboratorios</MenuItem>}
-          {canAccess('units-of-measure') && <MenuItem href="/admin/units" icon="ti ti-ruler-measure" badge='✓'>Und. de medida</MenuItem>}
+          {canAccess('units-of-measure') && <MenuItem href="/admin/units" icon="ti ti-ruler-measure" badge='✓'>Und. medida</MenuItem>}
           {canAccess('suppliers') && <MenuItem href="/admin/suppliers" icon="ti ti-truck-delivery" badge='✓'>Proveedores</MenuItem>}
         </MenuItemContainer>
         <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>

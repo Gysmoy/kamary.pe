@@ -24,7 +24,10 @@ class BatchController extends BasicController
         return $model::select('batches.*')
             ->with([
                 'business:id,name',
-                'article:id,code,name',
+                'article:id,code,name,laboratory_id,active_principle_id,unit_id',
+                'article.laboratory:id,name',
+                'article.activePrinciple:id,name',
+                'article.unit:id,name,symbol',
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ])

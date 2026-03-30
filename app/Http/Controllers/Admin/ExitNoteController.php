@@ -124,12 +124,18 @@ class ExitNoteController extends BasicController
                 Article::findOrFail($articleId);
 
                 $warehouseId = $item['warehouse_id'] ?? $jpa->warehouse_id;
-                if ($warehouseId) Warehouse::findOrFail($warehouseId);
+                if (!$warehouseId) throw new \Exception('Cada linea debe tener almacen');
+                Warehouse::findOrFail($warehouseId);
 
                 $stock = $this->toNullableDecimal($item['stock'] ?? null) ?? 0;
                 $quantity = $this->toNullableDecimal($item['quantity'] ?? null) ?? 0;
                 $total = $this->toNullableDecimal($item['total'] ?? null) ?? 0;
                 if ($quantity <= 0) throw new \Exception('La cantidad debe ser mayor a 0');
+
+                $availableStock = $this->getAvailableStockByWarehouse((int)$articleId, (int)$warehouseId, (int)$jpa->id);
+                if ($quantity > $availableStock) {
+                    throw new \Exception("Stock insuficiente para el articulo {$articleId} en el almacen {$warehouseId}. Disponible: {$availableStock}");
+                }
 
                 $expirationDate = null;
                 $rawExpirationDate = trim((string)($item['expiration_date'] ?? ''));
@@ -164,6 +170,32 @@ class ExitNoteController extends BasicController
             DB::rollBack();
             throw $th;
         }
+    }
+
+    private function getAvailableStockByWarehouse(int $articleId, int $warehouseId, int $excludedExitNoteId = 0): float
+    {
+        $qtyIn = (float)DB::table('entry_note_items as entry_item')
+            ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
+            ->where('entry_note.status', 1)
+            ->where('entry_item.status', 1)
+            ->where('entry_item.article_id', $articleId)
+            ->where('entry_item.warehouse_id', $warehouseId)
+            ->sum('entry_item.quantity');
+
+        $qtyOutQuery = DB::table('exit_note_items as exit_item')
+            ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
+            ->where('exit_note.status', 1)
+            ->where('exit_item.status', 1)
+            ->where('exit_item.article_id', $articleId)
+            ->where('exit_item.warehouse_id', $warehouseId);
+
+        if ($excludedExitNoteId > 0) {
+            $qtyOutQuery->where('exit_note.id', '!=', $excludedExitNoteId);
+        }
+
+        $qtyOut = (float)$qtyOutQuery->sum('exit_item.quantity');
+
+        return (float)max(0, $qtyIn - $qtyOut);
     }
 
     public function branches(Request $request, string $businessId): HttpResponse|ResponseFactory
@@ -204,8 +236,22 @@ class ExitNoteController extends BasicController
     {
         $response = new Response();
         try {
-            $this->model::where($this->identifier, $request->id)->update([
-                'status' => $request->status ? 0 : 1,
+            $jpa = $this->model::with(['items:id,exit_note_id,article_id,warehouse_id,quantity,status'])
+                ->findOrFail($request->id);
+
+            $nextStatus = $request->status ? 0 : 1;
+            if ((int)$nextStatus === 1) {
+                foreach ($jpa->items as $item) {
+                    if (!$item->article_id || !$item->warehouse_id || (float)$item->quantity <= 0) continue;
+                    $availableStock = $this->getAvailableStockByWarehouse((int)$item->article_id, (int)$item->warehouse_id, (int)$jpa->id);
+                    if ((float)$item->quantity > $availableStock) {
+                        throw new \Exception("No se puede activar la nota. Stock insuficiente para articulo {$item->article_id} en almacen {$item->warehouse_id}. Disponible: {$availableStock}");
+                    }
+                }
+            }
+
+            $jpa->update([
+                'status' => $nextStatus,
                 'updated_by' => Auth::id(),
             ]);
             $response->status = 200;

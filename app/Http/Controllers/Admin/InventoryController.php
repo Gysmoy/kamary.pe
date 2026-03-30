@@ -20,8 +20,8 @@ class InventoryController extends BasicController
 
         $entryQtySubquery = DB::table('entry_note_items as entry_item')
             ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
-            ->whereNotNull('entry_item.status')
-            ->whereNotNull('entry_note.status')
+            ->where('entry_item.status', 1)
+            ->where('entry_note.status', 1)
             ->groupBy('entry_item.article_id')
             ->selectRaw('entry_item.article_id, COALESCE(SUM(entry_item.quantity), 0) as qty_in');
         if ($businessId !== '') {
@@ -33,8 +33,8 @@ class InventoryController extends BasicController
 
         $exitQtySubquery = DB::table('exit_note_items as exit_item')
             ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
-            ->whereNotNull('exit_item.status')
-            ->whereNotNull('exit_note.status')
+            ->where('exit_item.status', 1)
+            ->where('exit_note.status', 1)
             ->groupBy('exit_item.article_id')
             ->selectRaw('exit_item.article_id, COALESCE(SUM(exit_item.quantity), 0) as qty_out');
         if ($businessId !== '') {

@@ -31,6 +31,8 @@ const formatAuditUser = (user) => {
 
 const emptyItem = () => ({
   uid: crypto.randomUUID(),
+  batch_id: '',
+  batch_label: '',
   batch_code: '',
   article_id: '',
   article_label: '',
@@ -58,6 +60,7 @@ const ExitNotes = () => {
   const observationsRef = useRef()
   const motiveInputRef = useRef()
   const articleRefs = useRef({})
+  const batchRefs = useRef({})
 
   const [isEditing, setIsEditing] = useState(false)
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
@@ -73,6 +76,11 @@ const ExitNotes = () => {
     return articleRefs.current[uid]
   }
 
+  const getBatchRef = (uid) => {
+    if (!batchRefs.current[uid]) batchRefs.current[uid] = createRef()
+    return batchRefs.current[uid]
+  }
+
   useEffect(() => {
     items.forEach(item => {
       const ref = getArticleRef(item.uid)
@@ -80,6 +88,16 @@ const ExitNotes = () => {
       const current = $(ref.current).val()
       if (`${current}` === `${item.article_id}`) return
       SetSelectValue(ref.current, item.article_id, item.article_label)
+    })
+  }, [items])
+
+  useEffect(() => {
+    items.forEach(item => {
+      const ref = getBatchRef(item.uid)
+      if (!ref.current || !item.batch_id || !item.batch_label) return
+      const current = $(ref.current).val()
+      if (`${current}` === `${item.batch_id}`) return
+      SetSelectValue(ref.current, item.batch_id, item.batch_label)
     })
   }, [items])
 
@@ -130,6 +148,8 @@ const ExitNotes = () => {
 
     const detail = (data?.items ?? []).map(row => ({
       uid: crypto.randomUUID(),
+      batch_id: row.batch_code ?? '',
+      batch_label: row.batch_code ?? '',
       batch_code: row.batch_code ?? '',
       article_id: row.article_id ? `${row.article_id}` : '',
       article_label: row.article ? `${row.article.code ?? ''} - ${row.article.name ?? ''}`.trim() : '',
@@ -230,6 +250,53 @@ const ExitNotes = () => {
     }))
   }
 
+  const onItemBatchChanged = (uid, e) => {
+    const selected = $(e.target).select2('data')?.[0]
+    const batch = selected?.data ?? null
+    const batchId = e.target.value || ''
+
+    setItems(prev => prev.map(item => {
+      if (item.uid !== uid) return item
+      if (!batchId) {
+        return {
+          ...item,
+          batch_id: '',
+          batch_label: '',
+          batch_code: '',
+          expiration_date: '',
+          article_id: '',
+          article_label: '',
+          article_laboratory: '',
+          article_principle: '',
+          article_unit: '',
+        }
+      }
+      if (!batch) {
+        return {
+          ...item,
+          batch_id: batchId,
+          batch_label: selected?.text ?? batchId,
+          batch_code: selected?.text ?? batchId,
+        }
+      }
+
+      const article = batch.article ?? null
+      const nextArticleId = article?.id ? `${article.id}` : item.article_id
+      return {
+        ...item,
+        batch_id: batchId,
+        batch_label: selected?.text ?? batch.lot ?? item.batch_label,
+        batch_code: batch.lot ?? item.batch_code,
+        expiration_date: batch.expiration_date ? batch.expiration_date.toString().slice(0, 10) : item.expiration_date,
+        article_id: nextArticleId,
+        article_label: article ? `${article.code ?? ''} - ${article.name ?? ''}`.trim() : item.article_label,
+        article_laboratory: article?.laboratory?.name ?? item.article_laboratory,
+        article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? item.article_principle,
+        article_unit: article?.unit?.symbol ?? article?.unit?.name ?? item.article_unit,
+      }
+    }))
+  }
+
   const onItemArticleChanged = (uid, e) => {
     const selected = $(e.target).select2('data')?.[0]
     const article = selected?.data ?? null
@@ -239,6 +306,8 @@ const ExitNotes = () => {
       if (!articleId) {
         return {
           ...item,
+          batch_id: '',
+          batch_label: '',
           article_id: '',
           article_label: '',
           article_laboratory: '',
@@ -248,6 +317,8 @@ const ExitNotes = () => {
       }
       return {
         ...item,
+        batch_id: item.article_id && item.article_id !== articleId ? '' : item.batch_id,
+        batch_label: item.article_id && item.article_id !== articleId ? '' : item.batch_label,
         article_id: articleId,
         article_label: selected?.text ?? item.article_label,
         article_laboratory: article?.laboratory?.name ?? item.article_laboratory,
@@ -255,6 +326,61 @@ const ExitNotes = () => {
         article_unit: article?.unit?.symbol ?? article?.unit?.name ?? item.article_unit,
       }
     }))
+  }
+
+  const onCreateBatchForItem = async (uid) => {
+    const currentItem = items.find(item => item.uid === uid)
+    if (!selectedBusinessId) {
+      await Swal.fire({ icon: 'warning', title: 'Empresa requerida', text: 'Selecciona la empresa antes de crear un lote' })
+      return
+    }
+    if (!currentItem?.article_id) {
+      await Swal.fire({ icon: 'warning', title: 'Articulo requerido', text: 'Selecciona un articulo antes de crear un lote' })
+      return
+    }
+
+    const { value: formValues } = await Swal.fire({
+      title: 'Crear lote',
+      html: `
+        <input id="swal-exit-batch-lot" class="swal2-input" placeholder="Lote" />
+        <input id="swal-exit-batch-exp" type="date" class="swal2-input" />
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Crear',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const lot = document.getElementById('swal-exit-batch-lot')?.value?.trim() || ''
+        const expiration = document.getElementById('swal-exit-batch-exp')?.value || ''
+        if (!lot) {
+          Swal.showValidationMessage('El lote es obligatorio')
+          return null
+        }
+        if (!expiration) {
+          Swal.showValidationMessage('La fecha de vencimiento es obligatoria')
+          return null
+        }
+        return { lot, expiration }
+      }
+    })
+
+    if (!formValues) return
+
+    const createdBatch = await exitNotesRest.createBatch({
+      business_id: selectedBusinessId,
+      article_id: currentItem.article_id,
+      lot: formValues.lot,
+      expiration_date: formValues.expiration,
+    })
+    if (!createdBatch?.id) return
+
+    setItems(prev => prev.map(item => item.uid === uid ? {
+      ...item,
+      batch_id: `${createdBatch.id}`,
+      batch_label: createdBatch.lot ?? formValues.lot,
+      batch_code: createdBatch.lot ?? formValues.lot,
+      expiration_date: createdBatch.expiration_date ? createdBatch.expiration_date.toString().slice(0, 10) : formValues.expiration,
+    } : item))
   }
 
   const onItemAdded = () => setItems(prev => [...prev, emptyItem()])
@@ -361,7 +487,7 @@ const ExitNotes = () => {
             <table className='table table-sm table-striped mb-0'>
               <thead>
                 <tr>
-                  <th>Codigo de lote</th>
+                  <th>Lote registrado</th>
                   <th>Nombre</th>
                   <th>Laboratorio | Principio activo</th>
                   <th>Unidad</th>
@@ -379,9 +505,34 @@ const ExitNotes = () => {
                 {items.map(item => {
                   const articleExtra = item.article_id ? `${item.article_laboratory || '-'} | ${item.article_principle || '-'}` : '-'
                   const unitLabel = item.article_id ? (item.article_unit || '-') : '-'
+                  let batchFilter = null
+                  if (selectedBusinessId && item.article_id) {
+                    batchFilter = [['business_id', '=', Number(selectedBusinessId)], 'and', ['article_id', '=', Number(item.article_id)]]
+                  } else if (selectedBusinessId) {
+                    batchFilter = ['business_id', '=', Number(selectedBusinessId)]
+                  } else if (item.article_id) {
+                    batchFilter = ['article_id', '=', Number(item.article_id)]
+                  }
                   return (
                     <tr key={item.uid}>
-                      <td><input className='form-control form-control-sm' value={item.batch_code} onChange={(e) => onItemUpdated(item.uid, 'batch_code', e.target.value)} /></td>
+                      <td style={{ width: '20%' }}>
+                        <div className='d-flex gap-1 align-items-center'>
+                          <div style={{ flex: 1 }}>
+                            <SelectAPIFormGroup
+                              eRef={getBatchRef(item.uid)}
+                              col='col-12'
+                              searchAPI='/api/admin/batches/paginate'
+                              searchBy='lot'
+                              filter={batchFilter ?? undefined}
+                              dropdownParent='#exit-note-form-container'
+                              onChange={(e) => onItemBatchChanged(item.uid, e)}
+                            />
+                          </div>
+                          <button type='button' className='btn btn-xs btn-soft-success' title='Crear lote' onClick={() => onCreateBatchForItem(item.uid)}>
+                            <i className='mdi mdi-plus'></i>
+                          </button>
+                        </div>
+                      </td>
                       <td style={{width: '20%'}}>
                         <SelectAPIFormGroup
                           eRef={getArticleRef(item.uid)}

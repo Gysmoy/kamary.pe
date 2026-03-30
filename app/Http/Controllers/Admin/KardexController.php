@@ -28,8 +28,8 @@ class KardexController extends BasicController
                 ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'movement_item.warehouse_id')
                 ->leftJoin('businesses as business', 'business.id', '=', 'movement_note.business_id')
                 ->leftJoin('business_branches as branch', 'branch.id', '=', 'movement_note.business_branch_id')
-                ->whereNotNull('movement_note.status')
-                ->whereNotNull('movement_item.status')
+                ->where('movement_note.status', 1)
+                ->where('movement_item.status', 1)
                 ->selectRaw("
                     CONCAT('entry-', movement_item.id) as id,
                     movement_note.id as note_id,
@@ -64,8 +64,8 @@ class KardexController extends BasicController
                 ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'movement_item.warehouse_id')
                 ->leftJoin('businesses as business', 'business.id', '=', 'movement_note.business_id')
                 ->leftJoin('business_branches as branch', 'branch.id', '=', 'movement_note.business_branch_id')
-                ->whereNotNull('movement_note.status')
-                ->whereNotNull('movement_item.status')
+                ->where('movement_note.status', 1)
+                ->where('movement_item.status', 1)
                 ->selectRaw("
                     CONCAT('exit-', movement_item.id) as id,
                     movement_note.id as note_id,

@@ -89,6 +89,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/articles/{field}', [AdminArticleController::class, 'boolean']);
         Route::delete('/articles/{id}', [AdminArticleController::class, 'delete']);
         Route::get('/articles/laboratories/{id}/principles', [AdminArticleController::class, 'principles']);
+        Route::get('/articles/{id}/stock-by-warehouse', [AdminArticleController::class, 'stockByWarehouse']);
 
         Route::post('/batches', [AdminBatchController::class, 'save']);
         Route::post('/batches/import', [AdminBatchController::class, 'import']);
@@ -103,6 +104,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/entry-notes/{field}', [AdminEntryNoteController::class, 'boolean']);
         Route::delete('/entry-notes/{id}', [AdminEntryNoteController::class, 'delete']);
         Route::get('/entry-notes/businesses/{id}/branches', [AdminEntryNoteController::class, 'branches']);
+        Route::get('/entry-notes/current-stock', [AdminEntryNoteController::class, 'currentStock']);
 
         Route::post('/exit-notes', [AdminExitNoteController::class, 'save']);
         Route::post('/exit-notes/paginate', [AdminExitNoteController::class, 'paginate']);

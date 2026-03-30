@@ -54,7 +54,29 @@ class ExitNotesRest extends BasicRest {
       return []
     }
   }
+
+  createBatch = async (request) => {
+    try {
+      const { status, result } = await Fetch('/api/admin/batches', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo crear el lote')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data ?? null
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
 }
 
 export default ExitNotesRest
-

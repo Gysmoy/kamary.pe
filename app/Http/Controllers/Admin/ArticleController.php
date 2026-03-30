@@ -8,6 +8,7 @@ use App\Models\Article;
 use App\Models\ArticlePresentation;
 use App\Models\Laboratory;
 use App\Models\Unit;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -203,6 +204,7 @@ class ArticleController extends BasicController
                         'status' => $status,
                         'updated_by' => $userId,
                     ]);
+                    $this->ensureDefaultPresentation($articleId);
                     $updated++;
                 } else {
                     $newArticle = Article::create([
@@ -222,6 +224,7 @@ class ArticleController extends BasicController
                         'updated_by' => $userId,
                     ]);
                     $articleByCode[$normalizedCode] = $newArticle->id;
+                    $this->ensureDefaultPresentation($newArticle->id);
                     $created++;
                 }
             }
@@ -405,6 +408,82 @@ class ArticleController extends BasicController
         }
     }
 
+    public function stockByWarehouse(Request $request, string $articleId): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+        try {
+            $article = Article::with([
+                'presentations' => function ($query) {
+                    $query->where('status', 1)->orderBy('sort_order')->orderBy('id');
+                }
+            ])->findOrFail($articleId);
+
+            $entrySubquery = DB::table('entry_note_items as entry_item')
+                ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
+                ->where('entry_note.status', 1)
+                ->where('entry_item.status', 1)
+                ->where('entry_item.article_id', $article->id)
+                ->groupBy('entry_item.warehouse_id')
+                ->selectRaw('entry_item.warehouse_id, COALESCE(SUM(entry_item.quantity), 0) as qty_in');
+
+            $exitSubquery = DB::table('exit_note_items as exit_item')
+                ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
+                ->where('exit_note.status', 1)
+                ->where('exit_item.status', 1)
+                ->where('exit_item.article_id', $article->id)
+                ->groupBy('exit_item.warehouse_id')
+                ->selectRaw('exit_item.warehouse_id, COALESCE(SUM(exit_item.quantity), 0) as qty_out');
+
+            $stockByWarehouse = Warehouse::query()
+                ->selectRaw('
+                    warehouses.id,
+                    warehouses.name,
+                    warehouses.business_branch_id,
+                    warehouses.status,
+                    COALESCE(branch.name, "") as branch_name,
+                    COALESCE(business.name, "") as business_name,
+                    COALESCE(entry_qty.qty_in, 0) as qty_in,
+                    COALESCE(exit_qty.qty_out, 0) as qty_out,
+                    (COALESCE(entry_qty.qty_in, 0) - COALESCE(exit_qty.qty_out, 0)) as stock
+                ')
+                ->leftJoinSub($entrySubquery, 'entry_qty', function ($join) {
+                    $join->on('entry_qty.warehouse_id', '=', 'warehouses.id');
+                })
+                ->leftJoinSub($exitSubquery, 'exit_qty', function ($join) {
+                    $join->on('exit_qty.warehouse_id', '=', 'warehouses.id');
+                })
+                ->leftJoin('business_branches as branch', 'branch.id', '=', 'warehouses.business_branch_id')
+                ->leftJoin('businesses as business', 'business.id', '=', 'branch.business_id')
+                ->whereNotNull('warehouses.status')
+                ->orderBy('business_name')
+                ->orderBy('branch_name')
+                ->orderBy('warehouses.name')
+                ->get();
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = [
+                'article' => [
+                    'id' => $article->id,
+                    'code' => $article->code,
+                    'name' => $article->name,
+                    'presentations' => $article->presentations->map(fn($presentation) => [
+                        'id' => $presentation->id,
+                        'name' => $presentation->name,
+                        'units' => (float)$presentation->units,
+                        'price' => (float)$presentation->price,
+                    ])->values(),
+                ],
+                'warehouses' => $stockByWarehouse,
+            ];
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
     private function toBoolean($value): bool
     {
         if (is_bool($value)) return $value;
@@ -447,5 +526,20 @@ class ArticleController extends BasicController
             throw new \Exception("Valor numerico invalido: {$value}");
         }
         return (float)$text;
+    }
+
+    private function ensureDefaultPresentation(int $articleId): void
+    {
+        $hasPresentation = ArticlePresentation::where('article_id', $articleId)->exists();
+        if ($hasPresentation) return;
+
+        ArticlePresentation::create([
+            'article_id' => $articleId,
+            'name' => 'Unidad',
+            'units' => 1,
+            'price' => 0,
+            'sort_order' => 0,
+            'status' => true,
+        ]);
     }
 }

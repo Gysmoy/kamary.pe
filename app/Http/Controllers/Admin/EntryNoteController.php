@@ -187,6 +187,50 @@ class EntryNoteController extends BasicController
         }
     }
 
+    public function currentStock(Request $request): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+        try {
+            $articleId = (int)($request->article_id ?? 0);
+            $warehouseId = (int)($request->warehouse_id ?? 0);
+
+            if ($articleId <= 0) throw new \Exception('El articulo es obligatorio');
+            if ($warehouseId <= 0) throw new \Exception('El almacen es obligatorio');
+
+            Article::findOrFail($articleId);
+            Warehouse::findOrFail($warehouseId);
+
+            $qtyIn = (float)DB::table('entry_note_items as entry_item')
+                ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
+                ->where('entry_note.status', 1)
+                ->where('entry_item.status', 1)
+                ->where('entry_item.article_id', $articleId)
+                ->where('entry_item.warehouse_id', $warehouseId)
+                ->sum('entry_item.quantity');
+
+            $qtyOut = (float)DB::table('exit_note_items as exit_item')
+                ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
+                ->where('exit_note.status', 1)
+                ->where('exit_item.status', 1)
+                ->where('exit_item.article_id', $articleId)
+                ->where('exit_item.warehouse_id', $warehouseId)
+                ->sum('exit_item.quantity');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = [
+                'qty_in' => $qtyIn,
+                'qty_out' => $qtyOut,
+                'stock' => max(0, $qtyIn - $qtyOut),
+            ];
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
     public function boolean(Request $request)
     {
         $response = new Response();

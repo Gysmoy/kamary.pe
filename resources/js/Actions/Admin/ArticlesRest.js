@@ -103,6 +103,22 @@ class ArticlesRest extends BasicRest {
       return null
     }
   }
+
+  getStockByWarehouse = async (articleId) => {
+    if (!articleId) return null
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${articleId}/stock-by-warehouse`)
+      if (!status) throw new Error(result?.message || 'No se pudo obtener el stock por almacen')
+      return result.data ?? null
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
 }
 
 export default ArticlesRest
