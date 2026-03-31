@@ -267,6 +267,15 @@
       "_BasicRest-CJI7-_7K.js"
     ]
   },
+  "_esm-8omwTAX9.js": {
+    "file": "assets/esm-8omwTAX9.js",
+    "name": "esm",
+    "imports": [
+      "resources/js/Components/About/AboutHeader.jsx",
+      "_index-RYns6xqu.js",
+      "_index-sbqOYYIm.js"
+    ]
+  },
   "_index-DLor_0Z8.js": {
     "file": "assets/index-DLor_0Z8.js",
     "name": "index",
@@ -336,13 +345,13 @@
       "_index-RYns6xqu.js"
     ]
   },
-  "_swiper-!~{03h}~.js": {
+  "_swiper-!~{03j}~.js": {
     "file": "swiper.css",
-    "src": "_swiper-!~{03h}~.js"
+    "src": "_swiper-!~{03j}~.js"
   },
-  "_tippy-!~{036}~.js": {
+  "_tippy-!~{038}~.js": {
     "file": "tippy.css",
-    "src": "_tippy-!~{036}~.js"
+    "src": "_tippy-!~{038}~.js"
   },
   "_tippy-react.esm-dPPLDbGp.js": {
     "file": "assets/tippy-react.esm-dPPLDbGp.js",
@@ -638,6 +647,42 @@
       "____vite-browser-external_commonjs-proxy-DbMF7jdq.js",
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
+      "_LaravelSession-CYcN0AKE.js",
+      "_tippy-react.esm-dPPLDbGp.js",
+      "resources/js/Components/modals/WhatsAppModal.jsx",
+      "_WhatsAppRest-Dd9tfpZp.js",
+      "_server.browser-D0dT10Bs.js"
+    ],
+    "css": [
+      "tippy.css",
+      "swiper.css"
+    ]
+  },
+  "resources/js/Admin/Clients.jsx": {
+    "file": "assets/Clients-CSX94hPW.js",
+    "name": "Clients",
+    "src": "resources/js/Admin/Clients.jsx",
+    "isEntry": true,
+    "imports": [
+      "resources/js/Components/About/AboutHeader.jsx",
+      "_index-RYns6xqu.js",
+      "resources/js/Utils/ReactAppend.jsx",
+      "_Base-CjrE8TNX.js",
+      "_CreateReactScript-CYzvNmob.js",
+      "_Table-w3CnSDlG.js",
+      "_Modal-C3a6f5Kg.js",
+      "_ReactAppend-APfp1sF8.js",
+      "_DxButton-CsjWvhyj.js",
+      "_sweetalert2.all-DJo0UVK6.js",
+      "_InputFormGroup-CHzsb8Ae.js",
+      "_SelectFormGroup-ByG-2F3b.js",
+      "_BasicRest-CJI7-_7K.js",
+      "_main-CxwoVhEh.js",
+      "_index-DLor_0Z8.js",
+      "_index-sbqOYYIm.js",
+      "_Global-koVfYFPn.js",
+      "_index.esm-BnB3fZl0.js",
+      "____vite-browser-external_commonjs-proxy-DbMF7jdq.js",
       "_LaravelSession-CYcN0AKE.js",
       "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",
@@ -1038,14 +1083,14 @@
     ]
   },
   "resources/js/Admin/Generals.jsx": {
-    "file": "assets/Generals-gbZ5TzHa.js",
+    "file": "assets/Generals-C0KImDrn.js",
     "name": "Generals",
     "src": "resources/js/Admin/Generals.jsx",
     "isEntry": true,
     "imports": [
       "resources/js/Components/About/AboutHeader.jsx",
       "_index-RYns6xqu.js",
-      "_index-sbqOYYIm.js",
+      "_esm-8omwTAX9.js",
       "_Base-CjrE8TNX.js",
       "_BasicRest-CJI7-_7K.js",
       "_CreateReactScript-CYzvNmob.js",
@@ -1055,6 +1100,7 @@
       "_Global-koVfYFPn.js",
       "_InputFormGroup-CHzsb8Ae.js",
       "_SelectFormGroup-ByG-2F3b.js",
+      "_index-sbqOYYIm.js",
       "_main-CxwoVhEh.js",
       "____vite-browser-external_commonjs-proxy-DbMF7jdq.js",
       "_index-DLor_0Z8.js",
@@ -1407,6 +1453,44 @@
       "____vite-browser-external_commonjs-proxy-DbMF7jdq.js",
       "_index-DLor_0Z8.js",
       "_index.esm-BnB3fZl0.js",
+      "_LaravelSession-CYcN0AKE.js",
+      "_tippy-react.esm-dPPLDbGp.js",
+      "resources/js/Components/modals/WhatsAppModal.jsx",
+      "_WhatsAppRest-Dd9tfpZp.js",
+      "_server.browser-D0dT10Bs.js"
+    ],
+    "css": [
+      "tippy.css",
+      "swiper.css"
+    ]
+  },
+  "resources/js/Admin/Orders.jsx": {
+    "file": "assets/Orders-BmKyWx8S.js",
+    "name": "Orders",
+    "src": "resources/js/Admin/Orders.jsx",
+    "isEntry": true,
+    "imports": [
+      "resources/js/Components/About/AboutHeader.jsx",
+      "_index-RYns6xqu.js",
+      "resources/js/Utils/ReactAppend.jsx",
+      "_esm-8omwTAX9.js",
+      "_Base-CjrE8TNX.js",
+      "_CreateReactScript-CYzvNmob.js",
+      "_Table-w3CnSDlG.js",
+      "_Modal-C3a6f5Kg.js",
+      "_ReactAppend-APfp1sF8.js",
+      "_DxButton-CsjWvhyj.js",
+      "_sweetalert2.all-DJo0UVK6.js",
+      "_InputFormGroup-CHzsb8Ae.js",
+      "_SetSelectValue-BicOkpkP.js",
+      "_SelectFormGroup-ByG-2F3b.js",
+      "_Global-koVfYFPn.js",
+      "_BasicRest-CJI7-_7K.js",
+      "_main-CxwoVhEh.js",
+      "_index-DLor_0Z8.js",
+      "_index-sbqOYYIm.js",
+      "_index.esm-BnB3fZl0.js",
+      "____vite-browser-external_commonjs-proxy-DbMF7jdq.js",
       "_LaravelSession-CYcN0AKE.js",
       "_tippy-react.esm-dPPLDbGp.js",
       "resources/js/Components/modals/WhatsAppModal.jsx",

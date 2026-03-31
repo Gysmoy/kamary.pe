@@ -9,11 +9,13 @@ use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Admin\BatchController as AdminBatchController;
 use App\Http\Controllers\Admin\BusinessController as AdminBusinessController;
+use App\Http\Controllers\Admin\ClientController as AdminClientController;
 use App\Http\Controllers\Admin\EntryNoteController as AdminEntryNoteController;
 use App\Http\Controllers\Admin\ExitNoteController as AdminExitNoteController;
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Admin\ItemController as AdminItemController;
 use App\Http\Controllers\Admin\KardexController as AdminKardexController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\SaleController as AdminSaleController;
 use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -82,10 +84,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/daily-summary', [AdminComingSoonController::class, 'reactView']);
 
         // Comercial
-        Route::get('/clients', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/clients', [AdminClientController::class, 'reactView']);
         Route::get('/eventual-clients', [AdminComingSoonController::class, 'reactView']);
         Route::get('/accounts-receivable', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/orders', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/orders', [AdminOrderController::class, 'reactView']);
         Route::get('/pricing', [AdminComingSoonController::class, 'reactView']);
 
         // Serv. Almacen...

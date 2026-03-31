@@ -8,11 +8,13 @@ use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Admin\BatchController as AdminBatchController;
 use App\Http\Controllers\Admin\BusinessController as AdminBusinessController;
+use App\Http\Controllers\Admin\ClientController as AdminClientController;
 use App\Http\Controllers\Admin\EntryNoteController as AdminEntryNoteController;
 use App\Http\Controllers\Admin\ExitNoteController as AdminExitNoteController;
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Admin\KardexController as AdminKardexController;
 use App\Http\Controllers\Admin\LaboratoryController as AdminLaboratoryController;
+use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -123,6 +125,20 @@ Route::middleware('auth')->group(function () {
         Route::patch('/suppliers/{field}', [AdminSupplierController::class, 'boolean']);
         Route::delete('/suppliers/{id}', [AdminSupplierController::class, 'delete']);
         Route::get('/suppliers/ruc/{ruc}', [AdminSupplierController::class, 'lookupByRuc']);
+
+        Route::post('/clients', [AdminClientController::class, 'save']);
+        Route::post('/clients/paginate', [AdminClientController::class, 'paginate']);
+        Route::patch('/clients/status', [AdminClientController::class, 'status']);
+        Route::patch('/clients/{field}', [AdminClientController::class, 'boolean']);
+        Route::delete('/clients/{id}', [AdminClientController::class, 'delete']);
+        Route::get('/clients/document/{type}/{number}', [AdminClientController::class, 'lookupByDocument']);
+
+        Route::post('/orders', [AdminOrderController::class, 'save']);
+        Route::post('/orders/paginate', [AdminOrderController::class, 'paginate']);
+        Route::patch('/orders/status', [AdminOrderController::class, 'status']);
+        Route::patch('/orders/{field}', [AdminOrderController::class, 'boolean']);
+        Route::delete('/orders/{id}', [AdminOrderController::class, 'delete']);
+        Route::get('/orders/businesses/{id}/branches', [AdminOrderController::class, 'branches']);
 
         Route::post('/warehouses', [AdminWarehouseController::class, 'save']);
         Route::post('/warehouses/paginate', [AdminWarehouseController::class, 'paginate']);
