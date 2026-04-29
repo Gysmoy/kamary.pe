@@ -76,9 +76,14 @@ const Suppliers = () => {
   const idRef = useRef()
   const rucRef = useRef()
   const businessNameRef = useRef()
+  const tradeNameRef = useRef()
   const addressRef = useRef()
   const phoneRef = useRef()
   const mobileRef = useRef()
+  const contactNameRef = useRef()
+  const contactPositionRef = useRef()
+  const contactPhoneRef = useRef()
+  const contactEmailRef = useRef()
   const email1Ref = useRef()
   const email2Ref = useRef()
   const businessLineRef = useRef()
@@ -87,6 +92,7 @@ const Suppliers = () => {
   const bankRef = useRef()
   const bankAccountCciRef = useRef()
   const paymentSystemRef = useRef()
+  const paymentTermDaysRef = useRef()
   const evaluationRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
@@ -110,9 +116,14 @@ const Suppliers = () => {
     idRef.current.value = ''
     rucRef.current.value = ''
     businessNameRef.current.value = ''
+    tradeNameRef.current.value = ''
     addressRef.current.value = ''
     phoneRef.current.value = ''
     mobileRef.current.value = ''
+    contactNameRef.current.value = ''
+    contactPositionRef.current.value = ''
+    contactPhoneRef.current.value = ''
+    contactEmailRef.current.value = ''
     email1Ref.current.value = ''
     email2Ref.current.value = ''
     businessLineRef.current.value = ''
@@ -121,11 +132,13 @@ const Suppliers = () => {
     bankRef.current.value = ''
     bankAccountCciRef.current.value = ''
     paymentSystemRef.current.value = ''
+    paymentTermDaysRef.current.value = ''
     evaluationRef.current.value = ''
   }
 
   const applyProviderData = (provider = {}) => {
     businessNameRef.current.value = provider.business_name ?? businessNameRef.current.value
+    tradeNameRef.current.value = provider.business_name ?? tradeNameRef.current.value
     addressRef.current.value = provider.address ?? addressRef.current.value
     mobileRef.current.value = provider.mobile ?? mobileRef.current.value
     email1Ref.current.value = provider.email_1 ?? email1Ref.current.value
@@ -177,9 +190,14 @@ const Suppliers = () => {
       idRef.current.value = data.id
       rucRef.current.value = data.ruc ?? ''
       businessNameRef.current.value = data.business_name ?? ''
+      tradeNameRef.current.value = data.trade_name ?? ''
       addressRef.current.value = data.address ?? ''
       phoneRef.current.value = data.phone ?? ''
       mobileRef.current.value = data.mobile ?? ''
+      contactNameRef.current.value = data.contact_name ?? ''
+      contactPositionRef.current.value = data.contact_position ?? ''
+      contactPhoneRef.current.value = data.contact_phone ?? ''
+      contactEmailRef.current.value = data.contact_email ?? ''
       email1Ref.current.value = data.email_1 ?? ''
       email2Ref.current.value = data.email_2 ?? ''
       businessLineRef.current.value = data.business_line ?? ''
@@ -188,6 +206,7 @@ const Suppliers = () => {
       bankRef.current.value = data.bank ?? ''
       bankAccountCciRef.current.value = data.bank_account_cci ?? ''
       paymentSystemRef.current.value = data.payment_system ?? ''
+      paymentTermDaysRef.current.value = data.payment_term_days ?? ''
       evaluationRef.current.value = data.evaluation ?? ''
     }
 
@@ -201,9 +220,14 @@ const Suppliers = () => {
       id: idRef.current.value || undefined,
       ruc: (rucRef.current.value ?? '').replace(/\D+/g, ''),
       business_name: businessNameRef.current.value.trim(),
+      trade_name: tradeNameRef.current.value.trim(),
       address: addressRef.current.value.trim(),
       phone: phoneRef.current.value.trim(),
       mobile: mobileRef.current.value.trim(),
+      contact_name: contactNameRef.current.value.trim(),
+      contact_position: contactPositionRef.current.value.trim(),
+      contact_phone: contactPhoneRef.current.value.trim(),
+      contact_email: contactEmailRef.current.value.trim(),
       email_1: email1Ref.current.value.trim(),
       email_2: email2Ref.current.value.trim(),
       business_line: businessLineRef.current.value.trim(),
@@ -212,6 +236,7 @@ const Suppliers = () => {
       bank: bankRef.current.value.trim(),
       bank_account_cci: bankAccountCciRef.current.value.trim(),
       payment_system: paymentSystemRef.current.value.trim(),
+      payment_term_days: paymentTermDaysRef.current.value.trim(),
       evaluation: evaluationRef.current.value.trim(),
     }
 
@@ -398,17 +423,31 @@ const Suppliers = () => {
         { dataField: 'id', caption: 'ID', visible: false },
         { dataField: 'ruc', caption: 'RUC', width: '130px' },
         { dataField: 'business_name', caption: 'Razon Social', minWidth: 220 },
-        { dataField: 'mobile', caption: 'Celular', width: '120px' },
-        { dataField: 'phone', caption: 'Telefono fijo', width: '120px', visible: false },
-        { dataField: 'email_1', caption: 'Correo 1', width: '190px' },
-        { dataField: 'email_2', caption: 'Correo 2', width: '190px', visible: false },
-        { dataField: 'address', caption: 'Direccion', visible: false },
+        { dataField: 'trade_name', caption: 'Nombre comercial', minWidth: 180, visible: false },
+        { dataField: 'address', caption: 'Direccion', minWidth: 220 },
+        {
+          dataField: 'phone_display',
+          caption: 'Telefono',
+          width: 140,
+          calculateCellValue: (data) => data.phone || data.mobile || data.contact_phone || ''
+        },
+        {
+          dataField: 'email_display',
+          caption: 'Email',
+          minWidth: 180,
+          calculateCellValue: (data) => data.email_1 || data.contact_email || data.email_2 || ''
+        },
+        { dataField: 'bank_account_cci', caption: 'Cuenta / CCI', minWidth: 170 },
+        { dataField: 'contact_name', caption: 'Contacto', minWidth: 160, visible: false },
+        { dataField: 'contact_position', caption: 'Cargo contacto', minWidth: 140, visible: false },
+        { dataField: 'contact_phone', caption: 'Celular contacto', width: 130, visible: false },
+        { dataField: 'contact_email', caption: 'Email contacto', minWidth: 180, visible: false },
         { dataField: 'business_line', caption: 'Giro del negocio', visible: false },
         { dataField: 'billing_type', caption: 'Tipo de facturacion', visible: false },
         { dataField: 'credit_type', caption: 'Tipo de credito', visible: false },
         { dataField: 'bank', caption: 'Banco', visible: false },
-        { dataField: 'bank_account_cci', caption: 'Cuenta / CCI', visible: false },
         { dataField: 'payment_system', caption: 'Sistema de pago', visible: false },
+        { dataField: 'payment_term_days', caption: 'Dias de pago', width: 110, visible: false },
         { dataField: 'evaluation', caption: 'Evaluacion', visible: false },
         {
           dataField: 'creator.fullname',
@@ -478,20 +517,29 @@ const Suppliers = () => {
         />
         <InputFormGroup eRef={businessNameRef} label='Razon Social' col='col-md-8' required disabled={isSearchingRuc} />
 
-        <InputFormGroup eRef={addressRef} label='Direccion' col='col-md-8' disabled={isSearchingRuc} />
-        <InputFormGroup eRef={businessLineRef} label='Giro del Negocio' col='col-md-4' disabled={isSearchingRuc} />
+        <InputFormGroup eRef={tradeNameRef} label='Nombre comercial' col='col-md-6' disabled={isSearchingRuc} />
+        <InputFormGroup eRef={businessLineRef} label='Giro del Negocio' col='col-md-6' disabled={isSearchingRuc} />
 
-        <InputFormGroup eRef={phoneRef} label='Telefono Fijo' col='col-md-3' disabled={isSearchingRuc} />
-        <InputFormGroup eRef={mobileRef} label='Telefono Celular' col='col-md-3' disabled={isSearchingRuc} />
+        <InputFormGroup eRef={addressRef} label='Direccion' col='col-12' disabled={isSearchingRuc} />
+
+        <InputFormGroup eRef={phoneRef} label='Telefono fijo' col='col-md-3' disabled={isSearchingRuc} />
+        <InputFormGroup eRef={mobileRef} label='Telefono celular' col='col-md-3' disabled={isSearchingRuc} />
         <InputFormGroup eRef={email1Ref} label='Correo Electronico 1' col='col-md-3' type='email' disabled={isSearchingRuc} />
         <InputFormGroup eRef={email2Ref} label='Correo Electronico 2' col='col-md-3' type='email' disabled={isSearchingRuc} />
 
+        <InputFormGroup eRef={contactNameRef} label='Contacto principal' col='col-md-4' />
+        <InputFormGroup eRef={contactPositionRef} label='Cargo del contacto' col='col-md-4' />
+        <InputFormGroup eRef={contactPhoneRef} label='Telefono contacto' col='col-md-4' />
+
+        <InputFormGroup eRef={contactEmailRef} label='Correo contacto' col='col-md-4' type='email' />
         <InputFormGroup eRef={billingTypeRef} label='Tipo de Facturacion' col='col-md-4' disabled={isSearchingRuc} />
         <InputFormGroup eRef={creditTypeRef} label='Tipo de Credito' col='col-md-4' disabled={isSearchingRuc} />
-        <InputFormGroup eRef={paymentSystemRef} label='Sistema de Pago' col='col-md-4' disabled={isSearchingRuc} />
 
+        <InputFormGroup eRef={paymentSystemRef} label='Sistema de Pago' col='col-md-4' disabled={isSearchingRuc} />
+        <InputFormGroup eRef={paymentTermDaysRef} label='Dias de pago' col='col-md-4' type='number' min='0' />
         <InputFormGroup eRef={bankRef} label='Banco' col='col-md-4' disabled={isSearchingRuc} />
-        <InputFormGroup eRef={bankAccountCciRef} label='Cuenta Bancaria / CCI' col='col-md-8' disabled={isSearchingRuc} />
+
+        <InputFormGroup eRef={bankAccountCciRef} label='Cuenta Bancaria / CCI' col='col-12' disabled={isSearchingRuc} />
 
         <div className='form-group col-12 mb-2'>
           <label className='form-label mb-1'>Evaluacion</label>
@@ -521,90 +569,73 @@ const Suppliers = () => {
           {importFileName && <div className='mt-1'><small className='text-muted'>Archivo: {importFileName} ({importRows.length} filas)</small></div>}
         </div>
 
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Mapeo: RUC *</label>
-          <select className='form-select' value={mapping.ruc} onChange={e => setMapping(prev => ({ ...prev, ruc: e.target.value }))}>
-            <option value=''>Sin mapear</option>
-            {importHeaders.map(header => <option key={`ruc-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Mapeo: Razon Social *</label>
-          <select className='form-select' value={mapping.business_name} onChange={e => setMapping(prev => ({ ...prev, business_name: e.target.value }))}>
-            <option value=''>Sin mapear</option>
-            {importHeaders.map(header => <option key={`business_name-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Mapeo: Direccion</label>
-          <select className='form-select' value={mapping.address} onChange={e => setMapping(prev => ({ ...prev, address: e.target.value }))}>
-            <option value=''>Sin mapear</option>
-            {importHeaders.map(header => <option key={`address-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Mapeo: Telefono</label>
-          <select className='form-select' value={mapping.phone} onChange={e => setMapping(prev => ({ ...prev, phone: e.target.value }))}>
-            <option value=''>Sin mapear</option>
-            {importHeaders.map(header => <option key={`phone-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Mapeo: Email</label>
-          <select className='form-select' value={mapping.email_1} onChange={e => setMapping(prev => ({ ...prev, email_1: e.target.value }))}>
-            <option value=''>Sin mapear</option>
-            {importHeaders.map(header => <option key={`email_1-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Mapeo: Cuenta bancaria / CCI</label>
-          <select className='form-select' value={mapping.bank_account_cci} onChange={e => setMapping(prev => ({ ...prev, bank_account_cci: e.target.value }))}>
-            <option value=''>Sin mapear</option>
-            {importHeaders.map(header => <option key={`bank_account_cci-${header}`} value={header}>{header}</option>)}
-          </select>
+        <div className='col-lg-4'>
+          <div className='card border'>
+            <div className='card-body'>
+              <h5 className='card-title mb-2'>Mapeo de columnas</h5>
+              {[
+                ['ruc', 'RUC *'],
+                ['business_name', 'Razon social *'],
+                ['address', 'Direccion'],
+                ['phone', 'Telefono/Celular'],
+                ['email_1', 'Correo'],
+                ['bank_account_cci', 'Cuenta / CCI'],
+                ['status', 'Estado'],
+              ].map(([key, label]) => (
+                <div className='form-group mb-2' key={key}>
+                  <label className='form-label mb-1'>{label}</label>
+                  <select
+                    className='form-control'
+                    value={mapping[key]}
+                    onChange={(e) => setMapping((old) => ({ ...old, [key]: e.target.value }))}
+                  >
+                    <option value=''>-- No mapear --</option>
+                    {importHeaders.map(header => <option key={`${key}-${header}`} value={header}>{header}</option>)}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Mapeo: Estado</label>
-          <select className='form-select' value={mapping.status} onChange={e => setMapping(prev => ({ ...prev, status: e.target.value }))}>
-            <option value=''>Sin mapear</option>
-            {importHeaders.map(header => <option key={`status-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-
-        <div className='col-12 mt-2'>
-          <h6 className='mb-2'>Vista previa (primeros 5)</h6>
-          <div className='table-responsive border rounded'>
-            <table className='table table-sm table-striped mb-0'>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>RUC</th>
-                  <th>Razon Social</th>
-                  <th>Direccion</th>
-                  <th>Telefono</th>
-                  <th>Email</th>
-                  <th>Cuenta / CCI</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {previewRows.length === 0 && <tr><td colSpan='8' className='text-center text-muted py-3'>Carga archivo y mapea columnas para previsualizar</td></tr>}
-                {previewRows.map(item => (
-                  <tr key={`preview-${item.row}`}>
-                    <td>{item.row}</td>
-                    <td>{item.ruc?.toString?.() ?? ''}</td>
-                    <td>{item.business_name?.toString?.() ?? ''}</td>
-                    <td>{item.address?.toString?.() ?? ''}</td>
-                    <td>{item.phone?.toString?.() ?? ''}</td>
-                    <td>{item.email_1?.toString?.() ?? ''}</td>
-                    <td>{item.bank_account_cci?.toString?.() ?? ''}</td>
-                    <td>{item.status?.toString?.() ?? ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div className='col-lg-8'>
+          <div className='card border'>
+            <div className='card-body'>
+              <h5 className='card-title mb-2'>Vista previa</h5>
+              {!previewRows.length && <p className='text-muted mb-0'>Carga un archivo para ver una muestra.</p>}
+              {!!previewRows.length && (
+                <div className='table-responsive'>
+                  <table className='table table-sm table-bordered mb-0'>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>RUC</th>
+                        <th>Razon Social</th>
+                        <th>Direccion</th>
+                        <th>Telefono</th>
+                        <th>Correo</th>
+                        <th>Cuenta / CCI</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewRows.map(item => (
+                        <tr key={`preview-${item.row}`}>
+                          <td>{item.row}</td>
+                          <td>{item.ruc}</td>
+                          <td>{item.business_name}</td>
+                          <td>{item.address}</td>
+                          <td>{item.phone}</td>
+                          <td>{item.email_1}</td>
+                          <td>{item.bank_account_cci}</td>
+                          <td>{item.status}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

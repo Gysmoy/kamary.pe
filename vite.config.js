@@ -1,8 +1,13 @@
+import fs from 'fs';
 import glob from 'glob';
 import laravel from 'laravel-vite-plugin';
 import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+
+const reactEntryPoints = glob
+    .sync('resources/js/**/*.jsx')
+    .filter(file => fs.readFileSync(file, 'utf8').includes('CreateReactScript('));
 
 export default defineConfig({
     server: {
@@ -13,7 +18,7 @@ export default defineConfig({
     plugins: [
         laravel({
             input: [
-                ...glob.sync('resources/js/**/*.jsx'),
+                ...reactEntryPoints,
                 'resources/css/app.css',
             ],
             refresh: true,

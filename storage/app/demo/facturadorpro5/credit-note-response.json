@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "provider": "facturadorpro5",
+  "mode": "demo",
+  "operation": "credit_note",
+  "external_status": "accepted",
+  "cdr_code": "0",
+  "cdr_description": "Nota de credito aceptada por SUNAT",
+  "notes": [
+    "Simulacion local"
+  ]
+}

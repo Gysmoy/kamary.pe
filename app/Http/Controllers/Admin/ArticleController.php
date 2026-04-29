@@ -9,6 +9,7 @@ use App\Models\ArticlePresentation;
 use App\Models\Laboratory;
 use App\Models\Unit;
 use App\Models\Warehouse;
+use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -418,13 +419,7 @@ class ArticleController extends BasicController
                 }
             ])->findOrFail($articleId);
 
-            $entrySubquery = DB::table('entry_note_items as entry_item')
-                ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
-                ->where('entry_note.status', 1)
-                ->where('entry_item.status', 1)
-                ->where('entry_item.article_id', $article->id)
-                ->groupBy('entry_item.warehouse_id')
-                ->selectRaw('entry_item.warehouse_id, COALESCE(SUM(entry_item.quantity), 0) as qty_in');
+            $entrySubquery = app(StockService::class)->incomingWarehouseTotalsForArticleSubquery((int)$article->id);
 
             $exitSubquery = DB::table('exit_note_items as exit_item')
                 ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
@@ -490,7 +485,7 @@ class ArticleController extends BasicController
         if (is_numeric($value)) return (int)$value !== 0;
 
         $normalized = mb_strtolower(trim((string)$value));
-        return in_array($normalized, ['1', 'true', 'si', 'sÃ­', 'yes', 'y', 'activo', 'activa', 'on'], true);
+        return in_array($normalized, ['1', 'true', 'si', 'yes', 'y', 'activo', 'activa', 'on'], true);
     }
 
     private function normalizeText($value): string

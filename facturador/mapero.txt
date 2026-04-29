@@ -1,0 +1,749 @@
+﻿# MAPEO BACKEND FACTU_LITE
+
+Fecha de actualizacion: 2026-02-17 16:13:15
+Objetivos evaluados: emitir comprobantes, ver estado, job de medianoche, modulo productos, modulo clientes, APIs REST y PDFs.
+
+Leyenda de importancia:
+- CRITICO: bloquea los objetivos si falla o falta.
+- ALTA: soporte directo del flujo de negocio.
+- MEDIA: soporte de configuracion/infra/compatibilidad.
+- BAJA: no participa directamente del flujo objetivo.
+
+Resumen de inventario backend actual:
+- Total archivos backend mapeados: 711
+- ALTA: 430
+- BAJA: 144
+- CRITICO: 35
+- MEDIA: 102
+
+Archivos eliminados en esta limpieza (no necesarios para el alcance solicitado):
+- app/Http/Controllers/Billing/CertificateController.php
+- app/Http/Controllers/Billing/ContingencyController.php
+- app/Http/Controllers/Billing/HomeController.php
+- app/Http/Controllers/Billing/NoteController.php
+- app/Http/Controllers/Billing/OptionController.php
+- app/Http/Controllers/Billing/SearchController.php
+- app/Http/Controllers/Billing/SettingController.php
+- app/Http/Controllers/Billing/UserController.php
+- app/Http/Controllers/Billing/Api/CompanyController.php
+- app/Http/Controllers/FunctionController.php
+- app/Http/Controllers/SearchCustomerController.php
+- app/Console/Commands/BackupDatabase.php
+- app/Console/Commands/BackupFiles.php
+- app/Console/Commands/ConsultVoidedDocumentsCommand.php
+- app/Console/Commands/QueryAllServerCommand.php
+- app/Console/Commands/SendAllServerCommand.php
+- app/Console/Commands/SummaryQueryCommand.php
+
+Inventario completo backend (archivo por archivo):
+[CRITICO] app/Console/Commands/SendAllSunatCommand.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Console/Commands/StatusServerCommand.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Console/Commands/SummarySendCommand.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Console/Commands/ValidateDocumentsCommand.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Console/Kernel.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/CoreFacturalo/Facturalo.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[ALTA] app/CoreFacturalo/Helpers/Certificate/GenerateCertificate.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Helpers/Functions/FunctionsHelper.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Helpers/Number/NumberLetter.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Helpers/QrCode/QrCodeGenerate.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Helpers/Storage/StorageDocument.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Helpers/Template/ReportHelper.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Helpers/Template/TemplateHelper.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Helpers/Xml/XmlFormat.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Helpers/Xml/XmlHash.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/InputRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/Common/ActionTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/Common/DocumentVoidedTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/Common/EstablishmentTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/Common/ExchangeTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/Common/LegendTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/Common/OperationDataTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/Common/PaymentTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/Common/PersonTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/DispatchTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/DocumentTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/Functions.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/PerceptionTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/PurchaseSettlementTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/RetentionTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/SummaryTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Transform/VoidedTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Validation/DispatchValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Validation/DocumentValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Validation/Functions.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Validation/PerceptionValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Validation/PurchaseSettlementValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Validation/RetentionValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Validation/SummaryValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Api/Validation/VoidedValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/Common/ActionInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/Common/BankInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/Common/EstablishmentInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/Common/ExchangeInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/Common/LegendInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/Common/OperationDataInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/Common/PaymentInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/Common/PersonInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/DispatchInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/DocumentInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/DocumentUpdateInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/Functions.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/PerceptionInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/PurchaseSettlementInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/RetentionInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/SummaryInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/Transform/DocumentWebTransform.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Inputs/VoidedInput.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Web/Validation/Dispatch2Validation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Web/Validation/DispatchValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Web/Validation/DocumentUpdateValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Web/Validation/DocumentValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Web/Validation/Functions.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Web/Validation/PerceptionValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Web/Validation/RetentionValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Web/Validation/SummaryValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Requests/Web/Validation/VoidedValidation.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Cpe/ConsultCdrService.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Dni/Dni.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Dni/Essalud.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Dni/Jne.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Dni/Reniec.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Extras/ExchangeRate.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Extras/ValidateCpe.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Extras/ValidateCpe2.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Helpers/CaptchaCodes.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Helpers/Functions.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Helpers/HtmlParser.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Helpers/Http/ClientInterface.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Helpers/Http/ContextClient.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Helpers/SendDocumentPse.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/IntegratedQuery/AuthApi.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/IntegratedQuery/ValidateCpe.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Models/Company.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Models/Person.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Ruc/Sunat.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Services/Ruc/UserValidator.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Template.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/FunctionTribute.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/preprinted_pdf/custom/invoice_a4.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/preprinted_pdf/custom/partials/footer.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/preprinted_pdf/static/dispatch_a4.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/preprinted_pdf/static/partials/footer.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/preprinted_pdf/static/partials/footer_legend.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/preprinted_pdf/static/partials/footer_term_condition.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/xml/credit.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/xml/debit.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/xml/dispatch.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/xml/invoice.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/xml/perception.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/xml/purchase_settlement.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/xml/retention.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/xml/summary.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/Templates/xml/voided.blade.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Client/Resources/wsdl/billConsultService.ns1.wsdl :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Client/Resources/wsdl/billConsultService.wsdl :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Client/Resources/wsdl/billConsultService.xsd :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Client/Resources/wsdl/billService.ns1.wsdl :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Client/Resources/wsdl/billService.wsdl :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Client/Resources/wsdl/billService.xsd2.xsd :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Client/WsClient.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Client/WsSecurityHeader.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Reader/DomCdrReader.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Response/BaseResult.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Response/BillResult.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Response/CdrResponse.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Response/Error.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Response/StatusCdrResult.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Response/StatusResult.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Response/SummaryResult.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Services/BaseSunat.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Services/BillSender.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Services/ConsultCdrService.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Services/ExtService.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Services/SummarySender.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Services/SunatEndpoints.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Signed/Certificate/X509Certificate.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Signed/Certificate/X509ContentType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Signed/XmlSigned.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Validator/data/CodeErrors.xml :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Validator/XmlErrorCodeProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Zip/ZipFileDecompress.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/CoreFacturalo/WS/Zip/ZipFly.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[BAJA] app/Exceptions/Handler.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Controllers/Auth/ForgotPasswordController.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[CRITICO] app/Http/Controllers/Auth/LoginController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[BAJA] app/Http/Controllers/Auth/RegisterController.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Controllers/Auth/ResetPasswordController.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Controllers/Auth/VerificationController.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[CRITICO] app/Http/Controllers/Billing/Api/DocumentController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/Api/ItemController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/Api/PersonController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/Api/ServiceController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/Api/SummaryController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/Api/VoidedController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/ApiDocsController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/CompanyController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/ConfigurationController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/DocumentController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/DownloadController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[BAJA] app/Http/Controllers/Billing/EmailController.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[CRITICO] app/Http/Controllers/Billing/EstablishmentController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/ItemController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/PersonController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/SeriesController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/SummaryController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] app/Http/Controllers/Billing/VoidedController.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[BAJA] app/Http/Controllers/Controller.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Controllers/PdfUnionController.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Controllers/SearchItemController.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Kernel.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[ALTA] app/Http/Middleware/Authenticate.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Middleware/CheckForMaintenanceMode.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Middleware/CheckModule.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Middleware/EncryptCookies.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Middleware/InternalModeTenant.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Middleware/LockedAdmin.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Middleware/LockedTenant.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Middleware/RedirectIfAuthenticated.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Middleware/RedirectModule.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Middleware/RedirectModuleLevel.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Middleware/TrimStrings.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Middleware/TrustProxies.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Middleware/VerifyCsrfToken.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[BAJA] app/Http/Requests/System/ClientPaymentRequest.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Requests/System/ClientRequest.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Requests/System/CompanyRequest.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Requests/System/PlanRequest.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Requests/System/UserRequest.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[ALTA] app/Http/Requests/Tenant/Api/DocumentRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/BankAccountRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/BankRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/CardBrandRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/CashRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/ChargeDiscountRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/ColumnsToReportRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/CompanyRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/ConfigurationEcommerceRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/ConfigurationRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/CurrencyTypeRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/DetractionTypeRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/DispatchRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/DocumentEmailRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/DocumentPaymentRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/DocumentRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/DocumentUpdateRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/DocumentVoidedRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/EcommerceCartDetailRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/EstablishmentRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/ItemRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/PaymentMethodTypeRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/PerceptionRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/PersonRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/PersonTypeRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/PromotionRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/PurchaseImportRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/PurchaseOrderRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/PurchaseRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/QuotationRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/RetentionRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/SaleNotePaymentRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/SaleNoteRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/SearchRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/SeriesRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/ServiceRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/SummaryDocumentsRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/SummaryRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/TagRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/TaskRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/TransferReasonTypeRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/TributeConceptTypeRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/UnitTypeRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/UserRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Http/Requests/Tenant/VoidedRequest.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[BAJA] app/Http/Resources/Billing/AccountPaymentCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/BankAccountCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/BankAccountResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/BankCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/BankResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/CashCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/CashResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/ChargeDiscountCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/ChargeDiscountResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/ClientCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/CompanyResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/ConfigurationEcommerceResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/ConfigurationResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/CurrencyTypeCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/CurrencyTypeResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/CustomerCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/CustomerResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/DetractionTypeCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/DetractionTypeResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/DispatchCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/DispatchItemCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/DocumentCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/DocumentPaymentCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/DocumentResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/EstablishmentCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/EstablishmentResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/ExchangeRateCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/FormatTemplateCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/InventoryCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/InventoryCollection2.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/InventoryResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/ItemCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/ItemEcommerceCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/ItemResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/ItemWarehouseCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/OrderCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/OrderResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PaymentMethodTypeCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PaymentMethodTypeResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PerceptionCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PerceptionResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PersonCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PersonResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PersonTypeCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PosCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PromotionCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PromotionResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PurchaseCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PurchaseItemCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PurchaseResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/PurchaseSettlementCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/QuotationCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/QuotationResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/QuotationResource2.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/RetentionCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/RetentionResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/SaleNoteCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/SaleNotePaymentCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/SaleNoteResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/SaleNoteResource2.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/SearchResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/SeriesCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/SummaryCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/SummaryResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/SupplierCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/SupplierResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/TagCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/TagResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/TransferReasonTypeCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/TransferReasonTypeResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/TributeConceptTypeCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/TributeConceptTypeResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/UnitTypeCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/UnitTypeResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/UserCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/UserResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/Billing/VoidedCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/System/ClientCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/System/ClientPaymentCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/System/ClientResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/System/CompanyResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/System/HostnameCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/System/HostnameResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/System/PlanCollection.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/System/PlanResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/Resources/System/UserResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/ViewComposers/Tenant/CompactSidebarViewComposer.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/ViewComposers/Tenant/CompanyViewComposer.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/ViewComposers/Tenant/ConfigurationVisualViewComposer.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/ViewComposers/Tenant/Ecommerce/FeaturedProductsViewComposer.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/ViewComposers/Tenant/Ecommerce/MenuViewComposer.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/ViewComposers/Tenant/Ecommerce/PromotionsViewComposer.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/ViewComposers/Tenant/ModuleViewComposer.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Http/ViewComposers/Tenant/UserViewComposer.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Mail/Billing/DocumentEmail.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[ALTA] app/Models/Billing/Catalogs/AddressType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/AffectationIgvType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/AttributeType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/CatColorsItem.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/CatItemMoldCavity.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/CatItemMoldProperty.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/CatItemPackageMeasurement.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/CatItemProductFamily.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/CatItemStatus.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/CatItemUnitBusiness.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/CatItemUnitsPerPackage.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/ChargeDiscountType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/Country.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/CurrencyType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/Department.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/DetractionType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/District.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/DocumentType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/IdentityDocumentType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/LegendType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/ModelCatalog.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/NoteCreditType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/NoteDebitType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/OperationType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/OtherTaxConceptType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/PaymentMethodType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/PerceptionType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/PriceType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/Province.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/RelatedDocumentType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/RelatedTaxDocumentType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/RetentionType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/SummaryStatusType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/SystemIscType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/Tag.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/TransferReasonType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/TransportModeType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Catalogs/UnitType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/CatIdentityDocumentTypes.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Company.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Configuration.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[CRITICO] app/Models/Billing/Document.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[ALTA] app/Models/Billing/DocumentFee.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/DocumentItem.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/DocumentPayment.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Establishment.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/ExchangeRate.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/FormatTemplate.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[CRITICO] app/Models/Billing/Item.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[ALTA] app/Models/Billing/ItemType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/ItemUnitType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/ModelTenant.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Note.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/PaymentCondition.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/PaymentMethodType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[CRITICO] app/Models/Billing/Person.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[ALTA] app/Models/Billing/PersonAddress.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/PersonType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/Series.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/SoapType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/StateType.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[CRITICO] app/Models/Billing/Summary.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[ALTA] app/Models/Billing/SummaryDocument.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Models/Billing/User.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[CRITICO] app/Models/Billing/Voided.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[ALTA] app/Models/Billing/VoidedDocument.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[BAJA] app/Models/System/CardBrand.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/Client.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/ClientPayment.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/Configuration.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/FormatTemplate.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/HistoryResource.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/Module.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/ModuleLevel.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/PaymentMethodType.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/Plan.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/PlanDocument.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/RestaurantPartner.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/TrackApiPeruServices.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Models/System/User.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Notifications/Tenant/PasswordResetNotification.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Observers/DocumentObserver.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[ALTA] app/Providers/AnulationServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/AppServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/AuthServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/BroadcastServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/CacheServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/CashServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/DocumentPaymentProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/EventServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/InventoryAnulationServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/InventoryKardexServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/InventoryServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/KardexServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/LockedEmissionProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/RouteServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] app/Providers/ViewServiceProvider.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[BAJA] app/Rules/SubdomainNotLatin.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Services/DetractionTypeService.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Services/ItemLotsGroupService.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Services/ItemSetService.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Services/TagsIntersect.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Services/UnitTypeService.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Services/UserAdminService.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Traits/AttributePerItems.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Traits/BackupTrait.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Traits/CommandTrait.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Traits/InventoryKardexTrait.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Traits/KardexTrait.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Traits/OfflineTrait.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Traits/ReportTrait.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Traits/SellerIdTrait.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] app/Traits/SummaryTrait.php :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[BAJA] artisan :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[CRITICO] compose.yaml :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[CRITICO] config/api_docs.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[MEDIA] config/app.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/auth.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/broadcasting.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/cache.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/configuration.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/cors.php :: Soporte secundario o configuracion/infraestructura del backend.
+[CRITICO] config/database.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[MEDIA] config/dompdf.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/excel.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/extra.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/filesystems.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/hashing.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/image.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/larecipe.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/logging.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/mail.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/markdown.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/modules.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/queue.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/services.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/session.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/tables.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/tenancy.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/tenant.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/view.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] config/webserver.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] database/factories/UserFactory.php :: Soporte secundario o configuracion/infraestructura del backend.
+[ALTA] database/migrations/2014_10_12_000000_create_users_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2014_10_12_100000_create_password_resets_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_00_00_000000_tenant_catalogs_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_01_00_000000_tenant_system_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_01_01_000000_tenant_users_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_01_01_000001_tenant_password_resets_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_01_01_000004_tenant_modules_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_01_01_000006_tenant_module_user_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_01_01_000013_tenant_location_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_05_16_000800_tenant_companies_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_05_16_000810_tenant_establishments_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_05_16_000900_tenant_configurations_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_05_17_000002_tenant_series_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_05_17_000101_tenant_persons_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_06_17_000001_tenant_items_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_06_17_000002_tenant_documents_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_06_17_000005_tenant_document_items_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_06_19_000020_tenant_invoices_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_06_19_000021_tenant_notes_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_06_21_000002_tenant_summaries_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_06_21_000003_tenant_summary_documents_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_06_21_000004_tenant_voided_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2018_06_21_000005_tenant_voided_documents_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_01_29_170027_create_clients_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_02_13_150334_tenant_add_cront_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_02_13_175903_tenant_change_type_column_quantity_to_document_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_02_13_190940_tenant_add_information_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_02_14_100645_tenant_add_establishment_id_to_users.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_02_19_150123_tenant_change_columns_to_exchange_rates.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_02_25_074400_tenant_add_data_json_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_02_27_093803_tenant_add_send_online_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_02_27_150015_create_tasks_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_02_28_100503_tenant_add_calculate_quantity_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_02_28_154355_tenant_delete_unique_class_to_tasks.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_02_28_215128_tenant_change_decimal_column_quantity_to_document_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_03_01_100028_tenant_change_decimal_column_stock_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_03_01_163938_tenant_add_locked_to_users.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_03_19_155345_tenant_sale_notes_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_03_19_155546_tenant_sale_note_items_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_03_29_100503_tenant_add_has_igv_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_04_24_151702_tenant_add_stock_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_04_26_105302_tenant_add_contingency_to_series.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_04_30_140509_tenant_add_type_to_users.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_05_06_174801_tenant_change_column_type_to_users.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_05_07_160954_tenant_item_unit_types_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_05_10_172128_tenant_add_price_default_to_item_unit_types.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_05_14_091046_tenant_description_to_item_unit_types.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_05_27_185903_tenant_change_type_column_qr_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_06_12_000005_tenant_document_payments_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_06_12_000015_tenant_sale_note_payments_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_06_12_172128_tenant_add_total_canceled_to_sale_notes.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_06_13_100503_tenant_change_unit_price_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_06_14_100503_tenant_person_address_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_06_24_122116_tenant_add_changed_to_sale_notes.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_03_094112_create_card_brands_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_03_094441_create_payment_method_types_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_03_100132_create_client_payments_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_12_181618_tenant_add_columns_aditional_to_establishments.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_19_163317_add_locked_emission_to_clients.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_19_163617_tenant_add_columns_system_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_22_094725_tenant_add_image_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_22_102243_tenant_accounts_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_22_103459_tenant_add_account_id_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_23_175808_tenant_modify_decimals_to_item_unit_types.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_25_144505_tenant_add_ose_to_companies.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_27_181623_tenant_add_name_name2_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_07_31_165537_tenant_add_subtotal_account_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_01_002801_tenant_add_status_to_item.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_01_005553_tenant_add_status_to_persons.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_01_095140_tenant_add_status_to_bank_accounts.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_01_101234_tenant_add_active_to_banks.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_01_102419_tenant_add_active_to_card_brands.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_01_105836_tenant_delete_subtotal_account_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_01_110045_tenant_company_accounts_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_03_162431_tenant_add_data_modules_for_dashboard.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_05_130830_tenant_add_index_external_id_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_12_125016_tenant_up_unit_price_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_13_082230_tenant_add_column_limit_user_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_16_153648_tenant_add_more_decimal_column_stock_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_16_161756_tenant_add_total_plastic_bag_taxes_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_16_161824_tenant_add_total_plastic_bag_taxes_to_document_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_16_161854_tenant_add_amount_plastic_bag_taxes_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_19_115344_tenant_add_sale_note_id_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_19_124610_tenant_add_state_condition_to_persons.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_20_121326_tenant_add_indexes_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_20_144511_tenant_add_indexes_to_summaries.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_20_151037_tenant_add_indexes_to_persons.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_21_145954_tenant_modify_name_name2_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_08_23_160411_tenant_modify_description_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_09_03_153427_tenant_change_nullable_column_affected_document_id_to_notes.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_09_03_153656_tenant_add_data_affected_document_to_notes.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_09_11_131559_tenant_add_apply_store_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_09_13_112026_tenant_add_column_image_medium_and_image_small_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_09_16_121938_tenant_add_date_of_due_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_09_17_131050_tenant_add_type_client_to_users.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_09_30_151349_tenant_add_has_prepayment_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_04_092658_tenant_business_turns_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_09_100840_add_locked_tenant_to_clients.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_09_101229_tenant_add_locked_tenant_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_09_141307_create_configurations_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_10_155554_tenant_add_quantity_documents_date_time_start_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_11_153451_add_locked_users_to_clients.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_11_153948_tenant_add_locked_users_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_14_101501_tenant_add_column_set_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_14_102317_tenant_item_sets_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_14_235308_tenant_orders_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_15_122633_tenant_person_types_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_15_123201_tenant_add_person_types_to_persons.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_16_001052_tenant_add_identity_and_number_to_users.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_17_100307_tenant_add_data_to_document_types.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_18_150004_tenant_categories_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_18_150414_tenant_brands_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_18_150604_tenant_brand_category_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_20_195730_tenant_add_cuenta_to_modules.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_20_200958_tenant_account_payments_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_22_173407_tenant_add_was_deducted_prepayment_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_24_103947_tenant_add_sunat_alternate_server_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_24_183250_tenant_add_document_id_to_orders.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_24_210806_tenant_items_rating_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_10_26_213130_tenant_add_logo_store_to_companies.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_11_06_095251_tenant_add_success_shipping_status_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_11_06_102422_tenant_add_success_sunat_shipping_status_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_11_06_110606_tenant_add_success_query_status_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_11_07_155742_create_modules_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_11_11_102124_tenant_series_configurations_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_11_13_124821_tenant_add_document_type_id_to_series_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_11_29_093342_tenant_add_detraction_account_to_companies.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_12_02_161856_tenant_add_data_to_payment_method_types.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_12_16_103759_tenant_add_decimal_quantity_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_12_19_105644_tenant_add_lot_code_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_12_19_141604_tenant_add_operation_amazonia_to_companies.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_12_23_144236_tenant_add_apply_concurrency_to_sale_notes.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_12_23_171335_tenant_add_columns_periods_to_sale_notes.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2019_12_30_095201_tenant_add_lots_enabled_to_items.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_03_111747_tenant_add_amount_plastic_bag_taxes_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_08_102051_tenant_add_total_canceled_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_09_153023_tenant_add_compact_sidebar_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_10_095143_tenant_add_cci_to_bank_accounts.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_15_095621_tenant_add_change_decimal_exchange_rate_sale_tables.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_15_100032_tenant_add_data_to_cat_document_types.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_15_144606_tenant_add_series_number_to_sale_notes.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_15_172447_tenant_add_paid_to_sale_notes.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_15_181229_tenant_add_plate_to_sale_notes.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_16_103741_tenant_change_decimals_unit_price_tables.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_17_095233_tenant_document_transports_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_17_115328_tenant_add_plate_number_to_documents.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_23_120700_tenant_drop_compact_sidebar_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_23_120830_tenant_re_create_compact_sidebar_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_27_150915_tenant_change_column_number_to_sale_notes.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_01_31_122444_tenant_add_config_system_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_02_01_131218_add_certificate_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_02_01_182806_add_soap_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_02_07_164026_tenant_create_person_addresses.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_03_31_151819_add_phone_users.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2020_09_07_110230_add_data_module_for_establishments_users.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2021_03_08_154204_add_login_settings_column_to_configurations_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2021_03_10_160908_add_extra_modules_to_modules_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2021_03_19_201634_add_sort_column_to_modules_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2021_03_20_110950_change_order_item_to_modules_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2021_05_03_131833_add_mail_configuration.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2021_10_05_171912_add_configuration_module_to_admin.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2022_01_30_104230_update_token_to_users.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2022_02_23_001946_create_jobs_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2022_02_25_001413_create_failed_jobs_table.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2022_03_11_120508_add_trace_to_api_peru_service.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2022_04_19_101832_add_default_to_client_id_track.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2022_04_30_124731_addwhatsapp_to_configurations.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2022_05_07_165152_update_user_to_users.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[ALTA] database/migrations/2022_05_09_212031_register_app_generate_link_to_modules.php :: Soporte tecnico directo del motor de facturacion y datos de negocio.
+[MEDIA] database/seeds/DatabaseSeeder.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] database/seeds/tenants/TenancyDatabaseSeeder.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] database/seeds/UserSeeder.php :: Soporte secundario o configuracion/infraestructura del backend.
+[CRITICO] docker/entrypoint.sh :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[BAJA] Dockerfile :: Fuera del flujo principal; mantener solo por compatibilidad interna.
+[MEDIA] modules/Document/composer.json :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Config/config.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Database/Seeders/DocumentDatabaseSeeder.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Helpers/ConsultCdr.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Helpers/DocumentHelper.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Http/Controllers/DocumentController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Http/Controllers/DocumentRegularizeShippingController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Http/Controllers/SeriesConfigurationController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Http/Controllers/ValidateDocumentController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Http/Requests/SeriesConfigurationsRequest.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Http/Requests/ValidateDocumentsRequest.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Http/Resources/DocumentNotSentCollection.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Http/Resources/DocumentRegularizeShippingCollection.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Http/Resources/ItemLotCollection.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Http/Resources/ValidateDocumentsCollection.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Http/ViewComposers/DocumentViewComposer.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Models/SeriesConfiguration.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/module.json :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/package.json :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Providers/DocumentServiceProvider.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Providers/RouteServiceProvider.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Routes/api.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Routes/web.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Services/DocumentXmlService.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Document/Traits/SearchTrait.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/composer.json :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Config/config.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Database/Seeders/ItemDatabaseSeeder.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Exports/ItemLotExport.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Controllers/Api/BrandController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Controllers/Api/CategoryController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Controllers/Api/ItemController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Controllers/BrandController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Controllers/CategoryController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Controllers/IncentiveController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Controllers/ItemController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Controllers/ItemLotController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Controllers/ItemSetController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Controllers/WebPlatformController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Controllers/ZoneController.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Requests/Api/ItemRequest.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Requests/BrandRequest.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Requests/CategoryRequest.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Requests/ItemLotRequest.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Requests/ItemRequest.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Requests/ItemUpdateRequest.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Requests/WebPlatformRequest.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Requests/ZoneRequest.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Resources/BrandCollection.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Resources/CategoryCollection.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Resources/IncentiveCollection.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Resources/ItemHistoryPurchasesCollection.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Resources/ItemHistorySalesCollection.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Resources/ItemLotCollection.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Http/Resources/ZoneCollection.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Imports/ItemListPriceImport.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Imports/ItemListWithExtraData.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Imports/ItemSetImport.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Imports/ItemSetIndividualImport.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Imports/ItemUpdatePriceImport.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Models/Brand.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Models/Category.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Models/ItemLot.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Models/ItemLotsGroup.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Models/WebPlatform.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/module.json :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/package.json :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Providers/ItemServiceProvider.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Providers/RouteServiceProvider.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Routes/api.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] modules/Item/Routes/web.php :: Soporte secundario o configuracion/infraestructura del backend.
+[CRITICO] routes/api.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.
+[MEDIA] routes/channels.php :: Soporte secundario o configuracion/infraestructura del backend.
+[MEDIA] routes/console.php :: Soporte secundario o configuracion/infraestructura del backend.
+[CRITICO] routes/web.php :: Requerido de forma directa por API, emision, estado, PDF, scheduler o autenticacion.

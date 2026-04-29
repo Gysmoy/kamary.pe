@@ -34,7 +34,7 @@ const Generals = ({ generals }) => {
       lat: Number(location.split(',').map(x => x.trim())[0]),
       lng: Number(location.split(',').map(x => x.trim())[1])
     },
-    freeShipping: generals.find(x => x.correlative == 'free_shipping')?.description == 'true' ?? false,
+    freeShipping: generals.find(x => x.correlative == 'free_shipping')?.description === 'true',
     freeShippingMinimumAmount: generals.find(x => x.correlative == 'free_shipping_minimum_amount')?.description ?? '100',
     freeShippingAmount: generals.find(x => x.correlative == 'free_shipping_amount')?.description ?? '10',
     freeShippingZones: (generals.find(x => x.correlative == 'free_shipping_zones')?.description ?? 'metropolitana').split(','),

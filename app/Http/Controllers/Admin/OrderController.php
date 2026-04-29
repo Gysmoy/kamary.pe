@@ -10,6 +10,7 @@ use App\Models\Client;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Warehouse;
+use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -259,22 +260,6 @@ class OrderController extends BasicController
 
     private function getAvailableStockByWarehouse(int $articleId, int $warehouseId): float
     {
-        $qtyIn = (float)DB::table('entry_note_items as entry_item')
-            ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
-            ->where('entry_note.status', 1)
-            ->where('entry_item.status', 1)
-            ->where('entry_item.article_id', $articleId)
-            ->where('entry_item.warehouse_id', $warehouseId)
-            ->sum('entry_item.quantity');
-
-        $qtyOut = (float)DB::table('exit_note_items as exit_item')
-            ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
-            ->where('exit_note.status', 1)
-            ->where('exit_item.status', 1)
-            ->where('exit_item.article_id', $articleId)
-            ->where('exit_item.warehouse_id', $warehouseId)
-            ->sum('exit_item.quantity');
-
-        return (float)max(0, $qtyIn - $qtyOut);
+        return app(StockService::class)->getAvailableStockByWarehouse($articleId, $warehouseId);
     }
 }

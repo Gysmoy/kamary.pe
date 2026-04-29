@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
 use App\Models\Article;
+use App\Services\StockService;
 use Illuminate\Support\Facades\DB;
 
 class InventoryController extends BasicController
@@ -17,19 +18,8 @@ class InventoryController extends BasicController
     {
         $businessId = trim((string)request('business_id', ''));
         $branchId = trim((string)request('business_branch_id', ''));
-
-        $entryQtySubquery = DB::table('entry_note_items as entry_item')
-            ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
-            ->where('entry_item.status', 1)
-            ->where('entry_note.status', 1)
-            ->groupBy('entry_item.article_id')
-            ->selectRaw('entry_item.article_id, COALESCE(SUM(entry_item.quantity), 0) as qty_in');
-        if ($businessId !== '') {
-            $entryQtySubquery->where('entry_note.business_id', $businessId);
-        }
-        if ($branchId !== '') {
-            $entryQtySubquery->where('entry_note.business_branch_id', $branchId);
-        }
+        $stockService = app(StockService::class);
+        $entryQtySubquery = $stockService->incomingArticleTotalsSubquery($businessId, $branchId);
 
         $exitQtySubquery = DB::table('exit_note_items as exit_item')
             ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')

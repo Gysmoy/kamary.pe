@@ -1,5 +1,5 @@
 import BasicRest from "../BasicRest";
-import { Fetch } from "sode-extend-react";
+import { Cookies, Fetch } from "sode-extend-react";
 import { toast } from "sonner";
 
 class BusinessesRest extends BasicRest {
@@ -74,6 +74,84 @@ class BusinessesRest extends BasicRest {
         richColors: true,
       });
       return false
+    }
+  }
+
+  uploadFiscalAssets = async (businessId, request) => {
+    try {
+      const formData = new FormData()
+      if (request.logo) formData.append('logo', request.logo)
+      if (request.certificate) formData.append('certificate', request.certificate)
+      if (request.certificate_password) formData.append('certificate_password', request.certificate_password)
+
+      const res = await fetch(`/api/${this.path}/${businessId}/fiscal-assets`, {
+        method: 'POST',
+        headers: {
+          'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+        },
+        body: formData
+      })
+
+      const result = JSON.parse(await res.text())
+      if (!res.ok) throw new Error(result?.message || 'Error al guardar archivos fiscales')
+
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
+  deleteFiscalAsset = async (businessId, type) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${businessId}/fiscal-assets/${type}`, {
+        method: 'DELETE'
+      })
+      if (!status) throw new Error(result?.message || 'Error al eliminar archivo fiscal')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
+  syncFacturador = async (businessId) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${businessId}/facturador-sync`, {
+        method: 'POST'
+      })
+      if (!status) throw new Error(result?.message || 'Error al sincronizar con facturador')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
     }
   }
 }

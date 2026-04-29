@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "provider": "facturadorpro5",
+  "mode": "demo",
+  "operation": "issue",
+  "external_status": "accepted",
+  "cdr_code": "0",
+  "cdr_description": "Documento aceptado por SUNAT",
+  "notes": [
+    "Simulacion local"
+  ]
+}

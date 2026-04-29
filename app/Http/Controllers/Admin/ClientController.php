@@ -22,8 +22,14 @@ class ClientController extends BasicController
     public function setReactViewProperties(Request $request)
     {
         $prefixes = JSON::parse(File::get(storage_path('app/utils/phone_prefixes.json')));
+        $isEventualClients = str_contains($request->path(), 'eventual-clients');
+
         return [
-            'prefixes' => $prefixes
+            'prefixes' => $prefixes,
+            'sectionTitle' => $isEventualClients ? 'Clientes Eventuales' : 'Clientes',
+            'defaultClientKind' => $isEventualClients ? 'eventual' : 'regular',
+            'requiredPermission' => $isEventualClients ? 'eventual-clients' : 'clients',
+            'filterValue' => ['client_kind', '=', $isEventualClients ? 'eventual' : 'regular'],
         ];
     }
 
@@ -46,9 +52,13 @@ class ClientController extends BasicController
 
         $documentType = strtolower(trim((string)($body['document_type'] ?? '')));
         $documentNumber = preg_replace('/\D+/', '', (string)($body['document_number'] ?? ''));
+        $clientKind = strtolower(trim((string)($body['client_kind'] ?? 'regular')));
 
         if (!in_array($documentType, ['dni', 'ce', 'ruc'], true)) {
             throw new \Exception('Tipo de documento invalido');
+        }
+        if (!in_array($clientKind, ['regular', 'eventual'], true)) {
+            throw new \Exception('Tipo de cliente invalido');
         }
 
         if ($documentType === 'dni' && strlen($documentNumber) !== 8) {
@@ -82,11 +92,21 @@ class ClientController extends BasicController
 
         $body['document_type'] = $documentType;
         $body['document_number'] = $documentNumber;
+        $body['client_kind'] = $clientKind;
         $body['full_name'] = $fullName !== '' ? $fullName : null;
+        $body['is_platform'] = $this->toBoolean($body['is_platform'] ?? false);
+        $body['has_storage_service'] = $this->toBoolean($body['has_storage_service'] ?? false);
+        $body['contract_due_days'] = $this->toNullableInt($body['contract_due_days'] ?? null);
+        $body['commercial_channel'] = trim((string)($body['commercial_channel'] ?? '')) ?: null;
+        $body['segment'] = trim((string)($body['segment'] ?? '')) ?: null;
         $body['email'] = trim((string)($body['email'] ?? '')) ?: null;
+        $body['billing_email'] = trim((string)($body['billing_email'] ?? '')) ?: null;
+        $body['primary_contact'] = trim((string)($body['primary_contact'] ?? '')) ?: null;
+        $body['primary_contact_phone'] = trim((string)($body['primary_contact_phone'] ?? '')) ?: null;
         $body['phone'] = trim((string)($body['phone'] ?? '')) ?: null;
         $body['phone_prefix'] = trim((string)($body['phone_prefix'] ?? '')) ?: null;
         $body['short_code'] = trim((string)($body['short_code'] ?? '')) ?: null;
+        $body['ubigeo'] = trim((string)($body['ubigeo'] ?? '')) ?: null;
         $body['full_address'] = trim((string)($body['full_address'] ?? '')) ?: null;
 
         return $body;
@@ -217,5 +237,29 @@ class ClientController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    private function toBoolean($value): bool
+    {
+        if (is_bool($value)) return $value;
+        if (is_numeric($value)) return (int)$value !== 0;
+
+        $normalized = mb_strtolower(trim((string)$value));
+        return in_array($normalized, ['1', 'true', 'si', 'sí', 'yes', 'y', 'activo', 'activa', 'on'], true);
+    }
+
+    private function toNullableInt($value): ?int
+    {
+        if ($value === null) return null;
+        $text = trim((string)$value);
+        if ($text === '') return null;
+        if (!is_numeric($text)) throw new \Exception("Valor numerico invalido: {$value}");
+
+        $number = (int)$text;
+        if ($number < 0) {
+            throw new \Exception('Los dias de vencimiento no pueden ser negativos');
+        }
+
+        return $number;
     }
 }

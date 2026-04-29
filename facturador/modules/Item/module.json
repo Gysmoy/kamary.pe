@@ -1,0 +1,15 @@
+{
+    "name": "Item",
+    "alias": "item",
+    "description": "",
+    "keywords": [],
+    "active": 0,
+    "order": 0,
+    "providers": [
+        "Modules\\Item\\Providers\\ItemServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": []
+}
+

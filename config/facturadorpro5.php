@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'mode' => env('FACTURADORPRO5_MODE', 'demo'),
+    'base_url' => env('FACTURADORPRO5_BASE_URL'),
+    'token' => env('FACTURADORPRO5_TOKEN'),
+    'auth_mode' => env('FACTURADORPRO5_AUTH_MODE', 'token'),
+    'api_email' => env('FACTURADORPRO5_API_EMAIL'),
+    'api_password' => env('FACTURADORPRO5_API_PASSWORD'),
+    'timeout' => (int) env('FACTURADORPRO5_TIMEOUT', 30),
+    'verify_ssl' => filter_var(env('FACTURADORPRO5_VERIFY_SSL', false), FILTER_VALIDATE_BOOL),
+    'login_endpoint' => env('FACTURADORPRO5_AUTH_LOGIN_ENDPOINT', '/api/auth/login'),
+    'issue_endpoint' => env('FACTURADORPRO5_ISSUE_ENDPOINT', '/api/documents'),
+    'status_endpoint' => env('FACTURADORPRO5_STATUS_ENDPOINT', '/api/documents/status'),
+    'cancel_endpoint' => env('FACTURADORPRO5_CANCEL_ENDPOINT', '/api/voided'),
+    'cancel_status_endpoint' => env('FACTURADORPRO5_CANCEL_STATUS_ENDPOINT', '/api/voided/status'),
+    'credit_note_endpoint' => env('FACTURADORPRO5_CREDIT_NOTE_ENDPOINT', '/api/documents'),
+    'company_endpoint' => env('FACTURADORPRO5_COMPANY_ENDPOINT', '/api/company'),
+    'establishments_endpoint' => env('FACTURADORPRO5_ESTABLISHMENTS_ENDPOINT', '/api/establishments'),
+    'series_endpoint' => env('FACTURADORPRO5_SERIES_ENDPOINT', '/api/series'),
+    'demo_template_path' => env('FACTURADORPRO5_DEMO_TEMPLATE_PATH', 'demo/facturadorpro5'),
+    'series' => [
+        'factura' => env('FACTURADORPRO5_SERIES_FACTURA', 'F001'),
+        'boleta' => env('FACTURADORPRO5_SERIES_BOLETA', 'B001'),
+        'nota_credito' => env('FACTURADORPRO5_SERIES_NOTA_CREDITO', 'FC01'),
+    ],
+];

@@ -1,0 +1,136 @@
+erDiagram
+  ACCOUNTS
+  BANK_ACCOUNTS
+  BANKS
+  BRANDS
+  CARD_BRANDS
+  CAT_AFFECTATION_IGV_TYPES
+  CAT_ATTRIBUTE_TYPES
+  CAT_CHARGE_DISCOUNT_TYPES
+  CAT_CURRENCY_TYPES
+  CAT_DOCUMENT_TYPES
+  CAT_IDENTITY_DOCUMENT_TYPES
+  CAT_LEGEND_TYPES
+  CAT_NOTE_CREDIT_TYPES
+  CAT_NOTE_DEBIT_TYPES
+  CAT_OPERATION_TYPES
+  CAT_OTHER_TAX_CONCEPT_TYPES
+  CAT_PAYMENT_METHOD_TYPES
+  CAT_PERCEPTION_TYPES
+  CAT_PRICE_TYPES
+  CAT_RELATED_DOCUMENTS_TYPES
+  CAT_RELATED_TAX_DOCUMENT_TYPES
+  CAT_RETENTION_TYPES
+  CAT_SUMMARY_STATUS_TYPES
+  CAT_SYSTEM_ISC_TYPES
+  CAT_TRANSFER_REASON_TYPES
+  CAT_TRANSPORT_MODE_TYPES
+  CAT_UNIT_TYPES
+  CATEGORIES
+  COMPANIES
+  CONFIGURATIONS
+  COUNTRIES
+  DEPARTMENTS
+  DISTRICTS
+  DOCUMENT_ITEMS
+  DOCUMENT_PAYMENTS
+  DOCUMENT_TRANSPORTS
+  DOCUMENTS
+  ESTABLISHMENTS
+  EXCHANGE_RATES
+  GROUPS
+  INVOICES
+  ITEM_SETS
+  ITEM_TYPES
+  ITEM_UNIT_TYPES
+  ITEMS
+  MODULE_USER
+  MODULES
+  NOTES
+  PASSWORD_RESETS
+  PAYMENT_METHOD_TYPES
+  PERSON_ADDRESSES
+  PERSONS
+  PROVINCES
+  SERIES
+  SOAP_TYPES
+  STATE_TYPES
+  SUMMARIES
+  SUMMARY_DOCUMENTS
+  USERS
+  VOIDED
+  VOIDED_DOCUMENTS
+
+  BANKS ||--o{ BANK_ACCOUNTS : bank_id
+  CAT_CURRENCY_TYPES ||--o{ BANK_ACCOUNTS : currency_type_id
+  CAT_IDENTITY_DOCUMENT_TYPES ||--o{ COMPANIES : identity_document_type_id
+  SOAP_TYPES ||--o{ COMPANIES : soap_type_id
+  PROVINCES ||--o{ DISTRICTS : province_id
+  CAT_AFFECTATION_IGV_TYPES ||--o{ DOCUMENT_ITEMS : affectation_igv_type_id
+  DOCUMENTS ||--o{ DOCUMENT_ITEMS : document_id
+  ITEMS ||--o{ DOCUMENT_ITEMS : item_id
+  CAT_PRICE_TYPES ||--o{ DOCUMENT_ITEMS : price_type_id
+  CAT_SYSTEM_ISC_TYPES ||--o{ DOCUMENT_ITEMS : system_isc_type_id
+  CARD_BRANDS ||--o{ DOCUMENT_PAYMENTS : card_brand_id
+  DOCUMENTS ||--o{ DOCUMENT_PAYMENTS : document_id
+  PAYMENT_METHOD_TYPES ||--o{ DOCUMENT_PAYMENTS : payment_method_type_id
+  DOCUMENTS ||--o{ DOCUMENT_TRANSPORTS : document_id
+  CAT_IDENTITY_DOCUMENT_TYPES ||--o{ DOCUMENT_TRANSPORTS : identity_document_type_id
+  CAT_CURRENCY_TYPES ||--o{ DOCUMENTS : currency_type_id
+  PERSONS ||--o{ DOCUMENTS : customer_id
+  CAT_DOCUMENT_TYPES ||--o{ DOCUMENTS : document_type_id
+  ESTABLISHMENTS ||--o{ DOCUMENTS : establishment_id
+  GROUPS ||--o{ DOCUMENTS : group_id
+  SOAP_TYPES ||--o{ DOCUMENTS : soap_type_id
+  STATE_TYPES ||--o{ DOCUMENTS : state_type_id
+  USERS ||--o{ DOCUMENTS : user_id
+  COUNTRIES ||--o{ ESTABLISHMENTS : country_id
+  DEPARTMENTS ||--o{ ESTABLISHMENTS : department_id
+  DISTRICTS ||--o{ ESTABLISHMENTS : district_id
+  PROVINCES ||--o{ ESTABLISHMENTS : province_id
+  DOCUMENTS ||--o{ INVOICES : document_id
+  CAT_OPERATION_TYPES ||--o{ INVOICES : operation_type_id
+  ITEMS ||--o{ ITEM_SETS : individual_item_id
+  ITEMS ||--o{ ITEM_SETS : item_id
+  ITEMS ||--o{ ITEM_UNIT_TYPES : item_id
+  CAT_UNIT_TYPES ||--o{ ITEM_UNIT_TYPES : unit_type_id
+  ACCOUNTS ||--o{ ITEMS : account_id
+  BRANDS ||--o{ ITEMS : brand_id
+  CATEGORIES ||--o{ ITEMS : category_id
+  CAT_CURRENCY_TYPES ||--o{ ITEMS : currency_type_id
+  ITEM_TYPES ||--o{ ITEMS : item_type_id
+  CAT_AFFECTATION_IGV_TYPES ||--o{ ITEMS : purchase_affectation_igv_type_id
+  CAT_AFFECTATION_IGV_TYPES ||--o{ ITEMS : sale_affectation_igv_type_id
+  CAT_SYSTEM_ISC_TYPES ||--o{ ITEMS : system_isc_type_id
+  CAT_UNIT_TYPES ||--o{ ITEMS : unit_type_id
+  MODULES ||--o{ MODULE_USER : module_id
+  USERS ||--o{ MODULE_USER : user_id
+  DOCUMENTS ||--o{ NOTES : affected_document_id
+  DOCUMENTS ||--o{ NOTES : document_id
+  CAT_NOTE_CREDIT_TYPES ||--o{ NOTES : note_credit_type_id
+  CAT_NOTE_DEBIT_TYPES ||--o{ NOTES : note_debit_type_id
+  COUNTRIES ||--o{ PERSON_ADDRESSES : country_id
+  DEPARTMENTS ||--o{ PERSON_ADDRESSES : department_id
+  DISTRICTS ||--o{ PERSON_ADDRESSES : district_id
+  PERSONS ||--o{ PERSON_ADDRESSES : person_id
+  PROVINCES ||--o{ PERSON_ADDRESSES : province_id
+  COUNTRIES ||--o{ PERSONS : country_id
+  DEPARTMENTS ||--o{ PERSONS : department_id
+  DISTRICTS ||--o{ PERSONS : district_id
+  CAT_IDENTITY_DOCUMENT_TYPES ||--o{ PERSONS : identity_document_type_id
+  PROVINCES ||--o{ PERSONS : province_id
+  DEPARTMENTS ||--o{ PROVINCES : department_id
+  CAT_DOCUMENT_TYPES ||--o{ SERIES : document_type_id
+  ESTABLISHMENTS ||--o{ SERIES : establishment_id
+  SOAP_TYPES ||--o{ SUMMARIES : soap_type_id
+  STATE_TYPES ||--o{ SUMMARIES : state_type_id
+  CAT_SUMMARY_STATUS_TYPES ||--o{ SUMMARIES : summary_status_type_id
+  USERS ||--o{ SUMMARIES : user_id
+  DOCUMENTS ||--o{ SUMMARY_DOCUMENTS : document_id
+  SUMMARIES ||--o{ SUMMARY_DOCUMENTS : summary_id
+  ESTABLISHMENTS ||--o{ USERS : establishment_id
+  SOAP_TYPES ||--o{ VOIDED : soap_type_id
+  STATE_TYPES ||--o{ VOIDED : state_type_id
+  USERS ||--o{ VOIDED : user_id
+  DOCUMENTS ||--o{ VOIDED_DOCUMENTS : document_id
+  VOIDED ||--o{ VOIDED_DOCUMENTS : voided_id

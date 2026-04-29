@@ -1,0 +1,25 @@
+﻿erDiagram
+  COMPANIES ||--o{ ESTABLISHMENTS : tiene
+  ESTABLISHMENTS ||--o{ USERS : asigna
+  ESTABLISHMENTS ||--o{ SERIES : usa
+  CAT_DOCUMENT_TYPES ||--o{ SERIES : tipo
+
+  USERS ||--o{ DOCUMENTS : emite
+  PERSONS ||--o{ DOCUMENTS : cliente
+  ESTABLISHMENTS ||--o{ DOCUMENTS : emisor
+  CAT_DOCUMENT_TYPES ||--o{ DOCUMENTS : tipo
+  CAT_CURRENCY_TYPES ||--o{ DOCUMENTS : moneda
+  SOAP_TYPES ||--o{ DOCUMENTS : soap
+  STATE_TYPES ||--o{ DOCUMENTS : estado
+
+  DOCUMENTS ||--|{ DOCUMENT_ITEMS : detalle
+  ITEMS ||--o{ DOCUMENT_ITEMS : item
+  DOCUMENTS ||--o| INVOICES : factura
+  DOCUMENTS ||--o| NOTES : nota
+  DOCUMENTS ||--o{ DOCUMENT_PAYMENTS : pagos
+  DOCUMENTS ||--o| DOCUMENT_TRANSPORTS : traslado
+
+  USERS ||--o{ SUMMARIES : genera
+  SUMMARIES ||--o{ SUMMARY_DOCUMENTS : incluye
+  USERS ||--o{ VOIDED : genera
+  VOIDED ||--o{ VOIDED_DOCUMENTS : incluye

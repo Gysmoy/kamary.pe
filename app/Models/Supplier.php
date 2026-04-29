@@ -12,9 +12,14 @@ class Supplier extends Model
     protected $fillable = [
         'ruc',
         'business_name',
+        'trade_name',
         'address',
         'phone',
         'mobile',
+        'contact_name',
+        'contact_position',
+        'contact_phone',
+        'contact_email',
         'email_1',
         'email_2',
         'business_line',
@@ -23,6 +28,7 @@ class Supplier extends Model
         'bank',
         'bank_account_cci',
         'payment_system',
+        'payment_term_days',
         'evaluation',
         'status',
         'created_by',
@@ -31,6 +37,7 @@ class Supplier extends Model
 
     protected $casts = [
         'status' => 'boolean',
+        'payment_term_days' => 'integer',
     ];
 
     public function creator()

@@ -1,0 +1,76 @@
+{
+  "serie_documento": "F001",
+  "numero_documento": "#",
+  "fecha_de_emision": "2026-02-18",
+  "hora_de_emision": "12:00:00",
+  "codigo_tipo_documento": "01",
+  "codigo_tipo_operacion": "0101",
+  "fecha_de_vencimiento": "2026-02-18",
+  "codigo_tipo_moneda": "PEN",
+  "factor_tipo_de_cambio": 1,
+  "datos_del_cliente_o_receptor": {
+    "codigo_tipo_documento_identidad": "6",
+    "numero_documento": "20111111111",
+    "apellidos_y_nombres_o_razon_social": "CLIENTE DEMO SAC",
+    "nombre_comercial": "CLIENTE DEMO SAC",
+    "codigo_pais": "PE",
+    "ubigeo": "010101",
+    "direccion": "Direccion demo",
+    "correo_electronico": "cliente.demo@example.com",
+    "telefono": "999999999"
+  },
+  "totales": {
+    "total_anticipos": 0,
+    "total_descuentos": 0,
+    "total_cargos": 0,
+    "total_exportacion": 0,
+    "total_operaciones_gratuitas": 0,
+    "total_operaciones_gravadas": 100,
+    "total_operaciones_inafectas": 0,
+    "total_operaciones_exoneradas": 0,
+    "total_igv": 18,
+    "total_igv_operaciones_gratuitas": 0,
+    "total_base_isc": 0,
+    "total_isc": 0,
+    "total_base_otros_impuestos": 0,
+    "total_otros_impuestos": 0,
+    "total_impuestos_bolsa_plastica": 0,
+    "total_impuestos": 18,
+    "total_valor": 100,
+    "subtotal_venta": 118,
+    "total_venta": 118,
+    "total_pendiente_pago": 0
+  },
+  "items": [
+    {
+      "codigo_interno": "PRD-001",
+      "descripcion": "PRODUCTO DEMO LITE 1",
+      "codigo_tipo_item": "01",
+      "codigo_producto_sunat": "",
+      "unidad_de_medida": "NIU",
+      "cantidad": 1,
+      "valor_unitario": 100,
+      "codigo_tipo_precio": "01",
+      "precio_unitario": 118,
+      "codigo_tipo_afectacion_igv": "10",
+      "total_base_igv": 100,
+      "porcentaje_igv": 18,
+      "total_igv": 18,
+      "total_impuestos": 18,
+      "total_valor_item": 100,
+      "total_item": 118
+    }
+  ],
+  "acciones": {
+    "enviar_email": false,
+    "formato_pdf": "a4"
+  },
+  "pagos": [
+    {
+      "fecha_de_emision": "2026-02-18",
+      "codigo_metodo_pago": "01",
+      "codigo_destino_pago": "cash",
+      "monto": 118
+    }
+  ]
+}

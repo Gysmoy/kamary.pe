@@ -45,7 +45,7 @@ const Catalog = ({ conditions = [], languages = [], deliveryPoints = [] }) => {
 
   const [query, setQuery] = useState(GET.search || null);
   const [filter, setFilter] = useState({
-    categories: [GET.categories] ?? null,
+    categories: GET.categories ? [GET.categories] : null,
     conditions: [],
     language: GET.language ?? null,
     delivery: null,

@@ -59,6 +59,24 @@ class SupplierController extends BasicController
         $body['updated_by'] = $userId;
         $body['ruc'] = $ruc;
         $body['business_name'] = $businessName;
+        $body['trade_name'] = trim((string)($body['trade_name'] ?? '')) ?: null;
+        $body['address'] = trim((string)($body['address'] ?? '')) ?: null;
+        $body['phone'] = trim((string)($body['phone'] ?? '')) ?: null;
+        $body['mobile'] = trim((string)($body['mobile'] ?? '')) ?: null;
+        $body['contact_name'] = trim((string)($body['contact_name'] ?? '')) ?: null;
+        $body['contact_position'] = trim((string)($body['contact_position'] ?? '')) ?: null;
+        $body['contact_phone'] = trim((string)($body['contact_phone'] ?? '')) ?: null;
+        $body['contact_email'] = trim((string)($body['contact_email'] ?? '')) ?: null;
+        $body['email_1'] = trim((string)($body['email_1'] ?? '')) ?: null;
+        $body['email_2'] = trim((string)($body['email_2'] ?? '')) ?: null;
+        $body['business_line'] = trim((string)($body['business_line'] ?? '')) ?: null;
+        $body['billing_type'] = trim((string)($body['billing_type'] ?? '')) ?: null;
+        $body['credit_type'] = trim((string)($body['credit_type'] ?? '')) ?: null;
+        $body['bank'] = trim((string)($body['bank'] ?? '')) ?: null;
+        $body['bank_account_cci'] = trim((string)($body['bank_account_cci'] ?? '')) ?: null;
+        $body['payment_system'] = trim((string)($body['payment_system'] ?? '')) ?: null;
+        $body['payment_term_days'] = $this->toNullableInt($body['payment_term_days'] ?? null);
+        $body['evaluation'] = trim((string)($body['evaluation'] ?? '')) ?: null;
 
         return $body;
     }
@@ -110,21 +128,21 @@ class SupplierController extends BasicController
             foreach ($rows as $idx => $row) {
                 if (!is_array($row)) {
                     $skipped++;
-                    $errors[] = "Fila " . ($idx + 1) . ": formato invalido";
+                    $errors[] = 'Fila ' . ($idx + 1) . ': formato invalido';
                     continue;
                 }
 
                 $ruc = preg_replace('/\D+/', '', (string)($row[$rucKey] ?? ''));
                 if (strlen($ruc) !== 11) {
                     $skipped++;
-                    $errors[] = "Fila " . ($idx + 1) . ": RUC invalido";
+                    $errors[] = 'Fila ' . ($idx + 1) . ': RUC invalido';
                     continue;
                 }
 
                 $businessName = trim((string)($row[$businessNameKey] ?? ''));
                 if ($businessName === '') {
                     $skipped++;
-                    $errors[] = "Fila " . ($idx + 1) . ": razon social vacia";
+                    $errors[] = 'Fila ' . ($idx + 1) . ': razon social vacia';
                     continue;
                 }
 
@@ -288,5 +306,22 @@ class SupplierController extends BasicController
 
         $normalized = mb_strtolower(trim((string)$value));
         return in_array($normalized, ['1', 'true', 'si', 'sí', 'yes', 'y', 'activo', 'activa', 'on'], true);
+    }
+
+    private function toNullableInt($value): ?int
+    {
+        if ($value === null) return null;
+        $text = trim((string)$value);
+        if ($text === '') return null;
+        if (!is_numeric($text)) {
+            throw new \Exception("Valor numerico invalido: {$value}");
+        }
+
+        $number = (int)$text;
+        if ($number < 0) {
+            throw new \Exception('Los dias de plazo no pueden ser negativos');
+        }
+
+        return $number;
     }
 }

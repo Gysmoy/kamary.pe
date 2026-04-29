@@ -8,7 +8,9 @@ echo "========================================="
 cd /var/www/html
 
 # 0. Ensure storage folders exist (por si volúmenes)
-mkdir -p storage/framework/{sessions,views,cache}
+mkdir -p storage/logs
+mkdir -p storage/framework/{sessions,views,cache,testing}
+mkdir -p storage/framework/cache/data
 mkdir -p bootstrap/cache
 touch storage/logs/laravel.log
 

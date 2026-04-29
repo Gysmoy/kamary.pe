@@ -1,0 +1,12 @@
+{
+  "success": true,
+  "provider": "facturadorpro5",
+  "mode": "demo",
+  "operation": "cancel",
+  "external_status": "cancelled",
+  "cdr_code": "0",
+  "cdr_description": "Comprobante anulado correctamente",
+  "notes": [
+    "Simulacion local"
+  ]
+}

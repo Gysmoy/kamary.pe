@@ -14,6 +14,16 @@ import ClientsRest from '../Actions/Admin/ClientsRest';
 
 const clientsRest = new ClientsRest()
 
+const setRefValue = (ref, value) => {
+  if (!ref?.current) return
+  ref.current.value = value
+}
+
+const getRefValue = (ref) => {
+  if (!ref?.current) return ''
+  return ref.current.value ?? ''
+}
+
 const formatAuditUser = (user) => {
   if (!user) return ''
   const firstName = (user.name ?? '').toString().trim().split(' ')[0] ?? ''
@@ -28,50 +38,89 @@ const formatAuditUser = (user) => {
 
 const normalizePrefix = (value) => (value ?? '').toString().replace(/\D+/g, '')
 
-const Clients = ({ prefixes = [] }) => {
+const booleanLabel = (value) => value ? 'Si' : 'No'
+
+const Clients = ({
+  prefixes = [],
+  sectionTitle = 'Clientes',
+  filterValue = null,
+  defaultClientKind = 'regular',
+  requiredPermission = 'clients'
+}) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const lookupTimeoutRef = useRef()
   const pendingModalDataRef = useRef(null)
 
   const idRef = useRef()
+  const clientKindRef = useRef()
   const documentTypeRef = useRef()
   const documentNumberRef = useRef()
   const fullNameRef = useRef()
+  const isPlatformRef = useRef()
+  const hasStorageServiceRef = useRef()
+  const contractDueDaysRef = useRef()
+  const commercialChannelRef = useRef()
+  const segmentRef = useRef()
   const emailRef = useRef()
+  const billingEmailRef = useRef()
+  const primaryContactRef = useRef()
+  const primaryContactPhoneRef = useRef()
   const phoneRef = useRef()
   const phonePrefixRef = useRef()
   const shortCodeRef = useRef()
+  const ubigeoRef = useRef()
   const addressRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
+  const [clientKind, setClientKind] = useState(defaultClientKind)
   const [documentType, setDocumentType] = useState('dni')
   const [isSearchingDocument, setIsSearchingDocument] = useState(false)
   const [isDocumentDataLocked, setIsDocumentDataLocked] = useState(false)
   const [lastLookedDocumentKey, setLastLookedDocumentKey] = useState('')
   const [phonePrefix, setPhonePrefix] = useState('51')
+  const [platformValue, setPlatformValue] = useState('0')
+  const [storageServiceValue, setStorageServiceValue] = useState('0')
 
   const isRuc = documentType === 'ruc'
   const docMaxLength = documentType === 'dni' ? 8 : (documentType === 'ruc' ? 11 : 20)
-  const docMinLength = documentType === 'dni' ? 8 : (documentType === 'ruc' ? 11 : 6)
+  const kindLabel = clientKind === 'eventual' ? 'Eventual' : 'Regular'
 
   const clearForm = () => {
     setRefValue(idRef, '')
+    setRefValue(clientKindRef, defaultClientKind)
     setRefValue(documentTypeRef, 'dni')
     setRefValue(documentNumberRef, '')
     setRefValue(fullNameRef, '')
+    setPlatformValue('0')
+    setStorageServiceValue('0')
+    setRefValue(isPlatformRef, '0')
+    setRefValue(hasStorageServiceRef, '0')
+    setRefValue(contractDueDaysRef, '')
+    setRefValue(commercialChannelRef, '')
+    setRefValue(segmentRef, '')
     setRefValue(emailRef, '')
+    setRefValue(billingEmailRef, '')
+    setRefValue(primaryContactRef, '')
+    setRefValue(primaryContactPhoneRef, '')
     setRefValue(phoneRef, '')
     setPhonePrefix('51')
     setRefValue(phonePrefixRef, '51')
     setRefValue(shortCodeRef, '')
+    setRefValue(ubigeoRef, '')
     setRefValue(addressRef, '')
   }
 
   const applyApiClientData = (client = {}) => {
     if (client.full_name || client.business_name) setRefValue(fullNameRef, client.full_name ?? client.business_name)
-    if (client.email) setRefValue(emailRef, client.email)
-    if (client.phone) setRefValue(phoneRef, client.phone)
+    if (client.email) {
+      setRefValue(emailRef, client.email)
+      setRefValue(billingEmailRef, client.email)
+    }
+    if (client.phone) {
+      setRefValue(phoneRef, client.phone)
+      setRefValue(primaryContactPhoneRef, client.phone)
+    }
     if (client.full_address) setRefValue(addressRef, client.full_address)
   }
 
@@ -125,15 +174,30 @@ const Clients = ({ prefixes = [] }) => {
 
   const populateModalData = (data) => {
     setRefValue(idRef, data.id)
+    setRefValue(clientKindRef, data.client_kind ?? defaultClientKind)
+    setClientKind(data.client_kind ?? defaultClientKind)
     setRefValue(documentTypeRef, data.document_type ?? 'dni')
     setRefValue(documentNumberRef, data.document_number ?? '')
     setRefValue(fullNameRef, data.full_name ?? data.business_name ?? '')
+    const nextPlatformValue = data.is_platform ? '1' : '0'
+    const nextStorageValue = data.has_storage_service ? '1' : '0'
+    setPlatformValue(nextPlatformValue)
+    setStorageServiceValue(nextStorageValue)
+    setRefValue(isPlatformRef, nextPlatformValue)
+    setRefValue(hasStorageServiceRef, nextStorageValue)
+    setRefValue(contractDueDaysRef, data.contract_due_days ?? '')
+    setRefValue(commercialChannelRef, data.commercial_channel ?? '')
+    setRefValue(segmentRef, data.segment ?? '')
     setRefValue(emailRef, data.email ?? '')
+    setRefValue(billingEmailRef, data.billing_email ?? '')
+    setRefValue(primaryContactRef, data.primary_contact ?? '')
+    setRefValue(primaryContactPhoneRef, data.primary_contact_phone ?? '')
     setRefValue(phoneRef, data.phone ?? '')
     const normalizedPrefix = normalizePrefix(data.phone_prefix) || '51'
     setPhonePrefix(normalizedPrefix)
     setRefValue(phonePrefixRef, normalizedPrefix)
     setRefValue(shortCodeRef, data.short_code ?? '')
+    setRefValue(ubigeoRef, data.ubigeo ?? '')
     setRefValue(addressRef, data.full_address ?? '')
   }
 
@@ -154,6 +218,7 @@ const Clients = ({ prefixes = [] }) => {
         populateModalData(data)
       }
     } else {
+      setClientKind(defaultClientKind)
       setDocumentType('dni')
       setPhonePrefix('51')
       pendingModalDataRef.current = null
@@ -173,13 +238,23 @@ const Clients = ({ prefixes = [] }) => {
 
     const request = {
       id: getRefValue(idRef) || undefined,
+      client_kind: getRefValue(clientKindRef),
       document_type: getRefValue(documentTypeRef),
       document_number: getRefValue(documentNumberRef).replace(/\D+/g, ''),
       full_name: getRefValue(fullNameRef).trim(),
+      is_platform: getRefValue(isPlatformRef),
+      has_storage_service: getRefValue(hasStorageServiceRef),
+      contract_due_days: getRefValue(contractDueDaysRef).trim(),
+      commercial_channel: getRefValue(commercialChannelRef).trim(),
+      segment: getRefValue(segmentRef).trim(),
       email: getRefValue(emailRef).trim(),
+      billing_email: getRefValue(billingEmailRef).trim(),
+      primary_contact: getRefValue(primaryContactRef).trim(),
+      primary_contact_phone: getRefValue(primaryContactPhoneRef).trim(),
       phone: getRefValue(phoneRef).trim(),
       phone_prefix: normalizePrefix(getRefValue(phonePrefixRef)),
       short_code: getRefValue(shortCodeRef).trim(),
+      ubigeo: getRefValue(ubigeoRef).trim(),
       full_address: getRefValue(addressRef).trim(),
     }
 
@@ -217,8 +292,9 @@ const Clients = ({ prefixes = [] }) => {
   return (<>
     <Table
       gridRef={gridRef}
-      title='Clientes'
+      title={sectionTitle}
       rest={clientsRest}
+      filterValue={filterValue}
       toolBar={(container) => {
         container.unshift({
           widget: 'dxButton', location: 'after',
@@ -233,16 +309,28 @@ const Clients = ({ prefixes = [] }) => {
           options: {
             icon: 'add',
             title: 'Agregar',
-            hint: 'Agregar cliente',
+            hint: `Agregar cliente ${kindLabel.toLowerCase()}`,
             onClick: () => onModalOpen()
           }
         });
       }}
       pageSize={25}
       columns={[
-        { dataField: 'id', caption: 'ID', visible: false },
+        { dataField: 'id', caption: 'ID', width: 70 },
         { dataField: 'document_type', caption: 'Tipo Doc.', width: 95 },
         { dataField: 'document_number', caption: 'Numero', width: 120 },
+        {
+          dataField: 'client_kind',
+          caption: 'Tipo',
+          width: 100,
+          calculateCellValue: (data) => data.client_kind === 'eventual' ? 'Eventual' : 'Regular'
+        },
+        {
+          dataField: 'is_platform',
+          caption: 'Plataforma',
+          width: 100,
+          calculateCellValue: (data) => booleanLabel(data.is_platform)
+        },
         {
           dataField: 'display_name',
           caption: 'Cliente',
@@ -250,6 +338,7 @@ const Clients = ({ prefixes = [] }) => {
           calculateCellValue: (data) => data.full_name ?? data.business_name ?? ''
         },
         { dataField: 'email', caption: 'Correo', minWidth: 180 },
+        { dataField: 'billing_email', caption: 'Correo Facturacion', minWidth: 180, visible: false },
         {
           dataField: 'mobile_full',
           caption: 'Celular',
@@ -259,8 +348,20 @@ const Clients = ({ prefixes = [] }) => {
             return `${prefix ? `+${prefix}` : ''} ${data.phone ?? ''}`.trim()
           }
         },
+        { dataField: 'primary_contact', caption: 'Contacto', minWidth: 160, visible: false },
+        { dataField: 'primary_contact_phone', caption: 'Tel. contacto', width: 130, visible: false },
+        { dataField: 'commercial_channel', caption: 'Canal', minWidth: 120, visible: false },
+        { dataField: 'segment', caption: 'Segmento', minWidth: 120, visible: false },
         { dataField: 'short_code', caption: 'Codigo corto', width: 120 },
-        { dataField: 'full_address', caption: 'Direccion completa', visible: false },
+        { dataField: 'ubigeo', caption: 'Ubigeo', width: 110, visible: false },
+        { dataField: 'contract_due_days', caption: 'Dias Vcto.', width: 110 },
+        {
+          dataField: 'has_storage_service',
+          caption: 'Almacenamiento',
+          width: 130,
+          calculateCellValue: (data) => booleanLabel(data.has_storage_service)
+        },
+        { dataField: 'full_address', caption: 'Direccion', minWidth: 220 },
         {
           dataField: 'creator.fullname',
           caption: 'Creado por',
@@ -312,14 +413,28 @@ const Clients = ({ prefixes = [] }) => {
       ]}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar cliente' : 'Agregar cliente'} onSubmit={onModalSubmit} size='md' btnSubmitText='Guardar'>
+    <Modal modalRef={modalRef} title={isEditing ? `Editar cliente ${kindLabel.toLowerCase()}` : `Agregar cliente ${kindLabel.toLowerCase()}`} onSubmit={onModalSubmit} size='lg' btnSubmitText='Guardar'>
       <div className='row'>
         <input ref={idRef} type='hidden' />
 
         <SelectFormGroup
+          eRef={clientKindRef}
+          label='Tipo de cliente'
+          col='col-md-4'
+          required
+          disabled={isEditing && !!filterValue}
+          value={clientKind}
+          onChange={(e) => setClientKind(e.target.value || defaultClientKind)}
+          effectWith={[clientKind]}
+        >
+          <option value='regular'>Regular</option>
+          <option value='eventual'>Eventual</option>
+        </SelectFormGroup>
+
+        <SelectFormGroup
           eRef={documentTypeRef}
           label='Tipo Doc.'
-          col='col-md-6'
+          col='col-md-4'
           required
           disabled={isEditing}
           value={documentType}
@@ -334,7 +449,7 @@ const Clients = ({ prefixes = [] }) => {
         <InputFormGroup
           eRef={documentNumberRef}
           label={`Documento${isSearchingDocument ? ' (consultando...)' : ''}`}
-          col='col-md-6'
+          col='col-md-4'
           required
           disabled={isEditing}
           max={docMaxLength}
@@ -347,11 +462,28 @@ const Clients = ({ prefixes = [] }) => {
 
         <InputFormGroup eRef={fullNameRef} label={displayNameLabel} col='col-12' required disabled={isIdentityBlocked} />
 
-        <InputFormGroup eRef={emailRef} label='Correo' col='col-12' type='email' />
+        <SelectFormGroup eRef={isPlatformRef} label='Es plataforma' col='col-md-4' value={platformValue} onChange={(e) => setPlatformValue(e.target.value)} effectWith={[platformValue]}>
+          <option value='0'>No</option>
+          <option value='1'>Si</option>
+        </SelectFormGroup>
+
+        <SelectFormGroup eRef={hasStorageServiceRef} label='Cuenta con servicio de almacenamiento' col='col-md-4' value={storageServiceValue} onChange={(e) => setStorageServiceValue(e.target.value)} effectWith={[storageServiceValue]}>
+          <option value='0'>No</option>
+          <option value='1'>Si</option>
+        </SelectFormGroup>
+
+        <InputFormGroup eRef={contractDueDaysRef} label='Dias vcto. contrato' col='col-md-4' type='number' min='0' />
+
+        <InputFormGroup eRef={emailRef} label='Correo principal' col='col-md-6' type='email' />
+        <InputFormGroup eRef={billingEmailRef} label='Correo facturacion' col='col-md-6' type='email' />
+
+        <InputFormGroup eRef={primaryContactRef} label='Contacto principal' col='col-md-6' />
+        <InputFormGroup eRef={primaryContactPhoneRef} label='Telefono contacto' col='col-md-6' />
+
         <SelectFormGroup
           eRef={phonePrefixRef}
           label='Prefijo celular'
-          col='col-md-5'
+          col='col-md-4'
           value={phonePrefix}
           onChange={(e) => setPhonePrefix(normalizePrefix(e.target.value))}
           effectWith={[phonePrefix]}
@@ -363,8 +495,12 @@ const Clients = ({ prefixes = [] }) => {
             </option>
           ))}
         </SelectFormGroup>
-        <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-7' />
-        <InputFormGroup eRef={shortCodeRef} label='Codigo corto (identificador)' col='col-12' />
+        <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-4' />
+        <InputFormGroup eRef={shortCodeRef} label='Codigo corto' col='col-md-4' />
+
+        <InputFormGroup eRef={commercialChannelRef} label='Canal comercial' col='col-md-4' />
+        <InputFormGroup eRef={segmentRef} label='Segmento' col='col-md-4' />
+        <InputFormGroup eRef={ubigeoRef} label='Ubigeo' col='col-md-4' />
 
         <InputFormGroup eRef={addressRef} label='Direccion completa' col='col-12' />
       </div>
@@ -373,16 +509,11 @@ const Clients = ({ prefixes = [] }) => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('clients') && !properties.hasRole('Admin')) location.href = '/admin/';
-  createRoot(el).render(<BaseAdminto {...properties} title='Clientes'>
+  const canAccess = properties.can(properties.requiredPermission) || properties.can('clients') || properties.hasRole('Admin')
+  if (!canAccess) location.href = '/admin/';
+
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.sectionTitle ?? 'Clientes'}>
     <Clients {...properties} />
   </BaseAdminto>);
 })
-  const setRefValue = (ref, value) => {
-    if (!ref?.current) return
-    ref.current.value = value
-  }
-  const getRefValue = (ref) => {
-    if (!ref?.current) return ''
-    return ref.current.value ?? ''
-  }
+

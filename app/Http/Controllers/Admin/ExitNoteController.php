@@ -8,6 +8,7 @@ use App\Models\Business;
 use App\Models\ExitNote;
 use App\Models\ExitNoteItem;
 use App\Models\Warehouse;
+use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -174,28 +175,7 @@ class ExitNoteController extends BasicController
 
     private function getAvailableStockByWarehouse(int $articleId, int $warehouseId, int $excludedExitNoteId = 0): float
     {
-        $qtyIn = (float)DB::table('entry_note_items as entry_item')
-            ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
-            ->where('entry_note.status', 1)
-            ->where('entry_item.status', 1)
-            ->where('entry_item.article_id', $articleId)
-            ->where('entry_item.warehouse_id', $warehouseId)
-            ->sum('entry_item.quantity');
-
-        $qtyOutQuery = DB::table('exit_note_items as exit_item')
-            ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
-            ->where('exit_note.status', 1)
-            ->where('exit_item.status', 1)
-            ->where('exit_item.article_id', $articleId)
-            ->where('exit_item.warehouse_id', $warehouseId);
-
-        if ($excludedExitNoteId > 0) {
-            $qtyOutQuery->where('exit_note.id', '!=', $excludedExitNoteId);
-        }
-
-        $qtyOut = (float)$qtyOutQuery->sum('exit_item.quantity');
-
-        return (float)max(0, $qtyIn - $qtyOut);
+        return app(StockService::class)->getAvailableStockByWarehouse($articleId, $warehouseId, $excludedExitNoteId);
     }
 
     public function branches(Request $request, string $businessId): HttpResponse|ResponseFactory

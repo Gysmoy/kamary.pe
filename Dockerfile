@@ -25,6 +25,14 @@ WORKDIR /var/www/html
 # 5. Copy application code
 COPY . /var/www/html
 
+# 5.1 Prepare Laravel runtime directories before Composer scripts run
+RUN mkdir -p \
+  /var/www/html/storage/framework/cache/data \
+  /var/www/html/storage/framework/sessions \
+  /var/www/html/storage/framework/views \
+  /var/www/html/storage/framework/testing \
+  /var/www/html/bootstrap/cache
+
 # 6. Install PHP dependencies
 # RUN composer install --no-interaction --no-dev --optimize-autoloader
 RUN composer install --no-interaction --optimize-autoloader
