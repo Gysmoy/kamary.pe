@@ -8,6 +8,13 @@ import {
   normalizeUbigeoSelection
 } from '../../../Utils/ubigeoInei'
 
+const EMPTY_UBIGEO_CATALOG = {
+  departments: [],
+  provincesByDepartment: new Map(),
+  districtsByDepartmentProvince: new Map(),
+  recordByCode: new Map(),
+}
+
 const UbigeoCascade = ({
   value = EMPTY_UBIGEO_SELECTION,
   onChange = () => {},
@@ -38,7 +45,7 @@ const UbigeoCascade = ({
       })
       .catch(() => {
         if (!active) return
-        setCatalog(null)
+        setCatalog(EMPTY_UBIGEO_CATALOG)
         setIsLoading(false)
       })
 

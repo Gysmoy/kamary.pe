@@ -13,6 +13,7 @@ const emptyCatalog = {
 }
 
 const toText = (value) => `${value ?? ''}`.trim()
+const resolveCatalog = (catalog) => catalog ?? emptyCatalog
 
 const sortByName = (values) => [...values].sort((a, b) => a.localeCompare(b, 'es'))
 
@@ -78,16 +79,19 @@ export const getUbigeoCatalog = async () => {
 }
 
 export const getUbigeoProvinces = (catalog = emptyCatalog, department) => {
-  const provinces = catalog.provincesByDepartment.get(toText(department))
+  const safeCatalog = resolveCatalog(catalog)
+  const provinces = safeCatalog.provincesByDepartment.get(toText(department))
   return provinces ? sortByName(provinces) : []
 }
 
 export const getUbigeoDistricts = (catalog = emptyCatalog, department, province) => {
-  const districts = catalog.districtsByDepartmentProvince.get(`${toText(department)}|${toText(province)}`) ?? []
+  const safeCatalog = resolveCatalog(catalog)
+  const districts = safeCatalog.districtsByDepartmentProvince.get(`${toText(department)}|${toText(province)}`) ?? []
   return [...districts].sort((a, b) => a.district.localeCompare(b.district, 'es'))
 }
 
 export const normalizeUbigeoSelection = (selection = EMPTY_UBIGEO_SELECTION, catalog = emptyCatalog) => {
+  const safeCatalog = resolveCatalog(catalog)
   const ubigeo = toText(selection.ubigeo)
   const department = toText(selection.department)
   const province = toText(selection.province)
@@ -97,8 +101,8 @@ export const normalizeUbigeoSelection = (selection = EMPTY_UBIGEO_SELECTION, cat
     return { ubigeo, department, province, district }
   }
 
-  if (ubigeo && catalog.recordByCode.has(ubigeo)) {
-    const match = catalog.recordByCode.get(ubigeo)
+  if (ubigeo && safeCatalog.recordByCode.has(ubigeo)) {
+    const match = safeCatalog.recordByCode.get(ubigeo)
 
     return {
       ubigeo: match.code,
@@ -108,11 +112,11 @@ export const normalizeUbigeoSelection = (selection = EMPTY_UBIGEO_SELECTION, cat
     }
   }
 
-  if (!department || !catalog.provincesByDepartment.has(department)) {
+  if (!department || !safeCatalog.provincesByDepartment.has(department)) {
     return { ...EMPTY_UBIGEO_SELECTION }
   }
 
-  const provinceOptions = getUbigeoProvinces(catalog, department)
+  const provinceOptions = getUbigeoProvinces(safeCatalog, department)
   if (!province || !provinceOptions.includes(province)) {
     return {
       ubigeo: '',
@@ -122,7 +126,7 @@ export const normalizeUbigeoSelection = (selection = EMPTY_UBIGEO_SELECTION, cat
     }
   }
 
-  const districtOptions = getUbigeoDistricts(catalog, department, province)
+  const districtOptions = getUbigeoDistricts(safeCatalog, department, province)
   const districtMatch = districtOptions.find((item) => item.district === district)
   if (!districtMatch) {
     return {
