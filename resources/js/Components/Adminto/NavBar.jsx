@@ -374,7 +374,7 @@ const NavBar = ({ title = 'Panel', panel = null, setPanel = () => { } }) => {
             <i className="ri-sun-line dark-mode-icon fs-22"></i>
           </button>
         </div> */}
-        <div className="topbar-item">
+        {/* <div className="topbar-item">
           <Tippy content={`Cambia a ${panel === 'kamary-peru' ? 'Kamary Farma' : 'Kamary Perú'}`}>
             <div className="d-flex nav-link align-items-center gap-1">
               <img src="/assets/img/icons/kamary-peru.svg" alt="" style={{ width: '24px', height: '24px', objectFit: 'contain', objectPosition: 'center', filter: panel === 'kamary-peru' ? 'none' : 'grayscale(100%)' }} />
@@ -382,7 +382,7 @@ const NavBar = ({ title = 'Panel', panel = null, setPanel = () => { } }) => {
               <img src="/assets/img/icons/kamary-farma.svg" alt="" style={{ width: '24px', height: '24px', objectFit: 'contain', objectPosition: 'center', filter: panel === 'kamary-farma' ? 'none' : 'grayscale(100%)' }} />
             </div>
           </Tippy>
-        </div>
+        </div> */}
 
         <div className="topbar-item d-flex flex-column align-items-center">
           <div className="d-flex align-items-center gap-2">
