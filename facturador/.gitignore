@@ -24,6 +24,21 @@
 /storage/framework/views/*
 /storage/framework/.composer_lock_hash_*
 /docker-data/
+/tmp/
+
+# Legacy frontend artifacts removed from the backend-only billing service.
+/public/css/app.css
+/public/css/app.css.map
+/public/css/auth.css
+/public/css/auth.css.map
+/public/js/app.js
+/public/js/app.js.map
+/public/js/vendor.js
+/public/js/vendor.js.map
+/public/js/manifest.js
+/public/js/manifest.js.map
+/public/mix-manifest.json
+/public/vendor/binarytorch/larecipe/
 
 # Test / coverage artifacts
 /.phpunit.result.cache

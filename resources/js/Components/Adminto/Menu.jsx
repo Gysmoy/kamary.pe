@@ -114,31 +114,31 @@ const Menu = ({ can, hasRole, panel = null }) => {
 
         {canAccess('expenses') && <MenuItem href="/admin/expenses" icon="ti ti-receipt">Gastos</MenuItem>}
 
-        <li className="side-nav-title mt-2">En implementacion</li>
+        <li className="side-nav-title mt-2">En implementación</li>
         <MenuItemContainer title='Proveedores y Compras' icon='ti ti-shopping-cart'>
           {canAccess('suppliers') && <MenuItem href="/admin/suppliers" icon="ti ti-truck-delivery">Proveedores</MenuItem>}
-          {canAccess('purchase-orders') && <MenuItem href="/admin/purchase-orders" icon="ti ti-shopping-cart">Ordenes de compra</MenuItem>}
+          {canAccess('purchase-orders') && <MenuItem href="/admin/purchase-orders" icon="ti ti-shopping-cart">Órdenes de compra</MenuItem>}
           {canAccess('purchase-receipts') && <MenuItem href="/admin/purchase-receipts" icon="ti ti-file-import">Recepciones de compra</MenuItem>}
           {canAccess('accounts-payable') && <MenuItem href="/admin/accounts-payable" icon="ti ti-credit-card">Cuentas por pagar</MenuItem>}
         </MenuItemContainer>
         <MenuItemContainer title='Clientes y Comercial' icon='ti ti-briefcase'>
           {canAccess('clients') && <MenuItem href="/admin/clients" icon="ti ti-users">Clientes</MenuItem>}
           {canAccess('eventual-clients') && <MenuItem href="/admin/eventual-clients" icon="ti ti-user-star">Clientes eventuales</MenuItem>}
-          {canAccess('client-distribution') && <MenuItem href="/admin/client-distribution" icon="ti ti-map-pin-share">Red distribucion</MenuItem>}
+          {canAccess('client-distribution') && <MenuItem href="/admin/client-distribution" icon="ti ti-map-pin-share">Red distribución</MenuItem>}
           {canAccess('pricing') && <MenuItem href="/admin/pricing" icon="ti ti-tags">Tarifario</MenuItem>}
           {canAccess('orders') && <MenuItem href="/admin/commercial-orders" icon="ti ti-basket">Pedidos</MenuItem>}
           {canAccess('accounts-receivable') && <MenuItem href="/admin/accounts-receivable" icon="ti ti-cash-banknote">Cuentas por cobrar</MenuItem>}
         </MenuItemContainer>
-        <MenuItemContainer title='Facturacion' icon='ti ti-file-invoice'>
-          {(canAccess('businesses') || canAccess('services-billing')) && <MenuItem href="/admin/billing-settings" icon="ti ti-settings-cog">Configuracion facturacion</MenuItem>}
+        <MenuItemContainer title='Facturación' icon='ti ti-file-invoice'>
+          {(canAccess('businesses') || canAccess('services-billing')) && <MenuItem href="/admin/billing-settings" icon="ti ti-settings-cog">Configuración facturación</MenuItem>}
           {canAccess('services-billing') && <MenuItem href="/admin/billing-documents" icon="ti ti-receipt-2">Comprobantes</MenuItem>}
         </MenuItemContainer>
         <MenuItemContainer title='Servicios y Operaciones' icon='ti ti-truck-delivery'>
-          {canAccess('services-service-order') && <MenuItem href="/admin/services-service-order" icon="ti ti-file-dollar">Ordenes de servicio</MenuItem>}
+          {canAccess('services-service-order') && <MenuItem href="/admin/services-service-order" icon="ti ti-file-dollar">Órdenes de servicio</MenuItem>}
           {canAccess('services-services') && <MenuItem href="/admin/services-services" icon="ti ti-settings">Servicios</MenuItem>}
           {canAccess('dispatch') && <MenuItem href="/admin/dispatch" icon="ti ti-truck-delivery">Despacho</MenuItem>}
           {canAccess('driver') && <MenuItem href="/admin/driver" icon="ti ti-user-circle">Conductores</MenuItem>}
-          {canAccess('vehicle-zone') && <MenuItem href="/admin/vehicle-zone" icon="ti ti-map-2">Vehiculos / Zonas</MenuItem>}
+          {canAccess('vehicle-zone') && <MenuItem href="/admin/vehicle-zone" icon="ti ti-map-2">Vehículos / Zonas</MenuItem>}
           {canAccess('activity') && <MenuItem href="/admin/activity" icon="ti ti-activity">Actividades</MenuItem>}
         </MenuItemContainer>
         <MenuItemContainer title='Reportes' icon='ti ti-report-analytics'>
