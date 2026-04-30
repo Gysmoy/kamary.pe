@@ -13,6 +13,11 @@ import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
 
 const vehiclesRest = new VehiclesRest()
 const zonesRest = new ZonesRest()
+const VIEW_FILTERS = [
+  { key: 'all', label: 'Todo' },
+  { key: 'zones', label: 'Solo zonas' },
+  { key: 'vehicles', label: 'Solo vehiculos' },
+]
 
 const VehicleZones = () => {
   const zoneGridRef = useRef()
@@ -42,6 +47,7 @@ const VehicleZones = () => {
   const [businesses, setBusinesses] = useState([])
   const [zones, setZones] = useState([])
   const [zoneLocation, setZoneLocation] = useState(EMPTY_UBIGEO_SELECTION)
+  const [viewFilter, setViewFilter] = useState('all')
 
   const refreshZones = async () => {
     const data = await zonesRest.paginate({ take: 1000, skip: 0, isLoadingAll: true })
@@ -144,54 +150,82 @@ const VehicleZones = () => {
     $(vehicleGridRef.current).dxDataGrid('instance').refresh()
   }
 
-  return <>
-    <Table
-      gridRef={zoneGridRef}
-      title='Zonas'
-      rest={zonesRest}
-      pageSize={15}
-      toolBar={(items) => {
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: async () => { $(zoneGridRef.current).dxDataGrid('instance').refresh(); await refreshZones() } } })
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openZoneModal() } })
-      }}
-      columns={[
-        { dataField: 'code', caption: 'Codigo', width: 110 },
-        { dataField: 'name', caption: 'Zona', minWidth: 180 },
-        { dataField: 'district', caption: 'Distrito', width: 140 },
-        { dataField: 'province', caption: 'Provincia', width: 140 },
-        { dataField: 'department', caption: 'Departamento', width: 160 },
-        { dataField: 'ubigeo', caption: 'Ubigeo', width: 100 },
-        { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
-          container.css('text-overflow', 'unset')
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openZoneModal(data) }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => deleteZone(data.id) }))
-        } }
-      ]}
-    />
+  const showZonesTable = viewFilter !== 'vehicles'
+  const showVehiclesTable = viewFilter !== 'zones'
 
-    <Table
-      gridRef={vehicleGridRef}
-      title='Vehiculos'
-      rest={vehiclesRest}
-      pageSize={15}
-      toolBar={(items) => {
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(vehicleGridRef.current).dxDataGrid('instance').refresh() } })
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openVehicleModal() } })
-      }}
-      columns={[
-        { dataField: 'code', caption: 'Codigo', width: 110 },
-        { dataField: 'plate', caption: 'Placa', width: 100 },
-        { dataField: 'label', caption: 'Unidad', minWidth: 160 },
-        { dataField: 'vehicle_type', caption: 'Tipo', width: 120 },
-        { caption: 'Zona', minWidth: 140, calculateCellValue: (row) => row.zone?.name ?? '-' },
-        { dataField: 'capacity', caption: 'Cap.', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
-          container.css('text-overflow', 'unset')
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openVehicleModal(data) }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => deleteVehicle(data.id) }))
-        } }
-      ]}
-    />
+  return <>
+    <div className='card mb-3'>
+      <div className='card-body d-flex flex-wrap align-items-center justify-content-between gap-3'>
+        <div>
+          <h4 className='mb-1'>Vehiculos / Zonas</h4>
+          <small className='text-muted'>Cambia la vista para trabajar solo con zonas o solo con vehiculos.</small>
+        </div>
+        <div className='d-flex flex-wrap align-items-center gap-2'>
+          {VIEW_FILTERS.map((item) => (
+            <button
+              key={item.key}
+              type='button'
+              className={`btn btn-sm ${viewFilter === item.key ? 'btn-primary' : 'btn-outline-primary'}`}
+              onClick={() => setViewFilter(item.key)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {showZonesTable && (
+      <Table
+        gridRef={zoneGridRef}
+        title='Zonas'
+        rest={zonesRest}
+        pageSize={15}
+        toolBar={(items) => {
+          items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: async () => { $(zoneGridRef.current).dxDataGrid('instance').refresh(); await refreshZones() } } })
+          items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openZoneModal() } })
+        }}
+        columns={[
+          { dataField: 'code', caption: 'Codigo', width: 110 },
+          { dataField: 'name', caption: 'Zona', minWidth: 180 },
+          { dataField: 'district', caption: 'Distrito', width: 140 },
+          { dataField: 'province', caption: 'Provincia', width: 140 },
+          { dataField: 'department', caption: 'Departamento', width: 160 },
+          { dataField: 'ubigeo', caption: 'Ubigeo', width: 100 },
+          { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
+            container.css('text-overflow', 'unset')
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openZoneModal(data) }))
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => deleteZone(data.id) }))
+          } }
+        ]}
+      />
+    )}
+
+    {showVehiclesTable && (
+      <Table
+        gridRef={vehicleGridRef}
+        title='Vehiculos'
+        rest={vehiclesRest}
+        pageSize={15}
+        toolBar={(items) => {
+          items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(vehicleGridRef.current).dxDataGrid('instance').refresh() } })
+          items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openVehicleModal() } })
+        }}
+        columns={[
+          { dataField: 'code', caption: 'Codigo', width: 110 },
+          { dataField: 'plate', caption: 'Placa', width: 100 },
+          { dataField: 'label', caption: 'Unidad', minWidth: 160 },
+          { dataField: 'vehicle_type', caption: 'Tipo', width: 120 },
+          { caption: 'Zona', minWidth: 140, calculateCellValue: (row) => row.zone?.name ?? '-' },
+          { dataField: 'capacity', caption: 'Cap.', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+          { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
+            container.css('text-overflow', 'unset')
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openVehicleModal(data) }))
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => deleteVehicle(data.id) }))
+          } }
+        ]}
+      />
+    )}
 
     <Modal modalRef={zoneModalRef} title='Zona' size='lg' onSubmit={saveZone}>
       <div className='row'>
