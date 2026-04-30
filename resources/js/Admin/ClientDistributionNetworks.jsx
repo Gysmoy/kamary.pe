@@ -405,10 +405,10 @@ const ClientDistributionNetworks = ({ requiredPermission = 'client-distribution'
                   <UbigeoCascade
                     value={item}
                     onChange={(nextValue) => patchAddress(item.rowKey, nextValue)}
-                    ubigeoCol='col-md-3'
-                    departmentCol='col-md-3'
-                    provinceCol='col-md-3'
-                    districtCol='col-md-3'
+                    showUbigeo={false}
+                    departmentCol='col-md-4'
+                    provinceCol='col-md-4'
+                    districtCol='col-md-4'
                     required
                   />
                   <div className='form-group col-md-8 mb-2'>

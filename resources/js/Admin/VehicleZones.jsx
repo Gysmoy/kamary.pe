@@ -204,7 +204,15 @@ const VehicleZones = () => {
           </select>
         </div>
         <div className='col-md-8 mb-3'><label className='form-label'>Nombre</label><input ref={zoneNameRef} className='form-control' required /></div>
-        <UbigeoCascade value={zoneLocation} onChange={setZoneLocation} required />
+        <UbigeoCascade
+          value={zoneLocation}
+          onChange={setZoneLocation}
+          showUbigeo={false}
+          departmentCol='col-md-4'
+          provinceCol='col-md-4'
+          districtCol='col-md-4'
+          required
+        />
         <div className='col-12 mb-3'><label className='form-label'>Referencia</label><textarea ref={zoneReferenceRef} className='form-control' rows='2' /></div>
         <div className='col-12'><label className='form-label'>Observaciones</label><textarea ref={zoneObservationsRef} className='form-control' rows='2' /></div>
       </div>
