@@ -57,7 +57,7 @@ class SeriesController extends Controller
 
         return [
             'success' => true,
-            'message' => ($id)?'Serie editada con Ã©xito':'Serie registrada con Ã©xito'
+            'message' => ($id)?'Serie editada con éxito':'Serie registrada con éxito'
         ];
     }
 
@@ -68,7 +68,7 @@ class SeriesController extends Controller
 
         return [
             'success' => true,
-            'message' => 'Serie eliminada con Ã©xito'
+            'message' => 'Serie eliminada con éxito'
         ];
     }
 }

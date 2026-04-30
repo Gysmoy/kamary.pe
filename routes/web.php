@@ -79,7 +79,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', fn() => redirect()->to('/admin/home'));
         Route::get('/home', [AdminHomeController::class, 'reactView']);
 
-        // AlmacÃ©n
+        // Almacén
         Route::get('/articles', [AdminArticleController::class, 'reactView']);
         Route::get('/inventory', [AdminInventoryController::class, 'reactView']);
         Route::get('/kardex', [AdminKardexController::class, 'reactView']);
@@ -97,7 +97,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales/laboratories', [AdminLaboratoryController::class, 'reactView']);
         Route::get('/magistrales/categories', fn() => redirect('/admin/magistrales/laboratories'));
 
-        // AdministraciÃ³n
+        // Administración
         Route::get('/purchase-orders', [AdminPurchaseOrderController::class, 'reactView']);
         Route::get('/purchase-receipts', [AdminPurchaseReceiptController::class, 'reactView']);
         Route::get('/accounts-payable', [AdminAccountsPayableController::class, 'reactView']);

@@ -1,4 +1,4 @@
-﻿import 'tippy.js/dist/tippy.css'
+import 'tippy.js/dist/tippy.css'
 import Logout from '../../Actions/Logout'
 import MenuItem from './Menu/MenuItem'
 import MenuItemContainer from './Menu/MenuItemContainer'
@@ -104,7 +104,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
 
             <button className="dropdown-item active fw-semibold text-danger" onClick={() => Logout()}>
               <i className="ti ti-logout me-1 fs-16 align-middle"></i>
-              <span className="align-middle">Cerrar sesiÃ³n</span>
+              <span className="align-middle">Cerrar sesión</span>
             </button>
           </div>
         </div>
@@ -147,17 +147,17 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {canAccess('daily-summary') && <MenuItem href="/admin/daily-summary" icon="ti ti-calendar-stats">Resumen diario</MenuItem>}
         </MenuItemContainer>
         <MenuItemContainer title='Productos' icon='ti ti-package'>
-          {canAccess('articles') && <MenuItem href="/admin/articles" icon="ti ti-box" badge='âœ“'>ArtÃ­culos</MenuItem>}
-          {canAccess('batches') && <MenuItem href="/admin/batches" icon="ti ti-box-multiple" badge='âœ“'>Lotes</MenuItem>}
-          {canAccess('laboratories') && <MenuItem href="/admin/laboratories" icon="ti ti-flask" badge='âœ“'>Laboratorios</MenuItem>}
-          {canAccess('units-of-measure') && <MenuItem href="/admin/units" icon="ti ti-ruler-measure" badge='âœ“'>Und. medida</MenuItem>}
+          {canAccess('articles') && <MenuItem href="/admin/articles" icon="ti ti-box" badge='✓'>Artículos</MenuItem>}
+          {canAccess('batches') && <MenuItem href="/admin/batches" icon="ti ti-box-multiple" badge='✓'>Lotes</MenuItem>}
+          {canAccess('laboratories') && <MenuItem href="/admin/laboratories" icon="ti ti-flask" badge='✓'>Laboratorios</MenuItem>}
+          {canAccess('units-of-measure') && <MenuItem href="/admin/units" icon="ti ti-ruler-measure" badge='✓'>Und. medida</MenuItem>}
         </MenuItemContainer>
-        <MenuItemContainer title='AlmacÃ©n' icon='ti ti-building-warehouse'>
-          {canAccess('inventory') && <MenuItem href="/admin/inventory" icon="ti ti-stack-2" badge='âœ“'>Inventario</MenuItem>}
-          {canAccess('kardex') && <MenuItem href="/admin/kardex" icon="ti ti-notebook" badge='âœ“'>Kardex</MenuItem>}
-          {canAccess('entry-note') && <MenuItem href="/admin/entry-note" icon="ti ti-file-import" badge='âœ“'>Notas de Entrada</MenuItem>}
-          {canAccess('exit-note') && <MenuItem href="/admin/exit-note" icon="ti ti-file-export" badge='âœ“'>Notas de Salida</MenuItem>}
-          {canAccess('exit-note') && <MenuItem href="/admin/warehouses" icon="ti ti-building-warehouse" badge='âœ“' badgeColor='danger'>Almacenes</MenuItem>}
+        <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
+          {canAccess('inventory') && <MenuItem href="/admin/inventory" icon="ti ti-stack-2" badge='✓'>Inventario</MenuItem>}
+          {canAccess('kardex') && <MenuItem href="/admin/kardex" icon="ti ti-notebook" badge='✓'>Kardex</MenuItem>}
+          {canAccess('entry-note') && <MenuItem href="/admin/entry-note" icon="ti ti-file-import" badge='✓'>Notas de Entrada</MenuItem>}
+          {canAccess('exit-note') && <MenuItem href="/admin/exit-note" icon="ti ti-file-export" badge='✓'>Notas de Salida</MenuItem>}
+          {canAccess('exit-note') && <MenuItem href="/admin/warehouses" icon="ti ti-building-warehouse" badge='✓' badgeColor='danger'>Almacenes</MenuItem>}
         </MenuItemContainer>
 
         {
@@ -165,13 +165,13 @@ const Menu = ({ can, hasRole, panel = null }) => {
             <li className="side-nav-title mt-2">Magistrales</li>
 
             <MenuItemContainer title='Productos' icon='ti ti-package'>
-              {canAccess('articles') && <MenuItem href="/admin/magistrales/articles" icon="ti ti-box">ArtÃ­culos</MenuItem>}
+              {canAccess('articles') && <MenuItem href="/admin/magistrales/articles" icon="ti ti-box">Artículos</MenuItem>}
               {canAccess('batches') && <MenuItem href="/admin/magistrales/batches" icon="ti ti-box-multiple">Lotes</MenuItem>}
               {canAccess('laboratories') && <MenuItem href="/admin/magistrales/laboratories" icon="ti ti-flask">Laboratorios</MenuItem>}
               {canAccess('units-of-measure') && <MenuItem href="/admin/magistrales/units" icon="ti ti-ruler-measure">Und. de medida</MenuItem>}
               {canAccess('suppliers') && <MenuItem href="/admin/magistrales/suppliers" icon="ti ti-truck-delivery">Proveedores</MenuItem>}
             </MenuItemContainer>
-            <MenuItemContainer title='AlmacÃ©n' icon='ti ti-building-warehouse'>
+            <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
               {canAccess('inventory') && <MenuItem href="/admin/magistrales/inventory" icon="ti ti-stack-2">Inventario</MenuItem>}
               {canAccess('kardex') && <MenuItem href="/admin/magistrales/kardex" icon="ti ti-notebook">Kardex</MenuItem>}
               {canAccess('entry-note') && <MenuItem href="/admin/magistrales/entry-note" icon="ti ti-file-import">Notas de Entrada</MenuItem>}
@@ -183,7 +183,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
             {canAccess('activity') && <MenuItem href="/admin/activity" icon="ti ti-activity">Actividad</MenuItem>}
             {canAccess('driver') && <MenuItem href="/admin/driver" icon="ti ti-user-circle">Conductor</MenuItem>}
             {canAccess('dispatch') && <MenuItem href="/admin/dispatch" icon="ti ti-truck-delivery">Despacho</MenuItem>}
-            {canAccess('vehicle-zone') && <MenuItem href="/admin/vehicle-zone" icon="ti ti-map-2">VehÃ­culo / Zona</MenuItem>}
+            {canAccess('vehicle-zone') && <MenuItem href="/admin/vehicle-zone" icon="ti ti-map-2">Vehículo / Zona</MenuItem>}
           </>
         }
         {
@@ -192,13 +192,13 @@ const Menu = ({ can, hasRole, panel = null }) => {
 
             {canAccess('service-orders') && <MenuItem href="/admin/service-orders" icon="ti ti-file-dollar">O. Servicio</MenuItem>}
             {canAccess('storage-general-service') && <MenuItem href="/admin/storage-general-service" icon="ti ti-briefcase">Servicio General</MenuItem>}
-            {canAccess('storage-billing-control') && <MenuItem href="/admin/storage-billing-control" icon="ti ti-receipt-2">Control de FacturaciÃ³n</MenuItem>}
+            {canAccess('storage-billing-control') && <MenuItem href="/admin/storage-billing-control" icon="ti ti-receipt-2">Control de Facturación</MenuItem>}
             {canAccess('storage-general-service-orders') && <MenuItem href="/admin/storage-general-service-orders" icon="ti ti-file-invoice">O. Servicio General</MenuItem>}
           </>
         }
 
-        {/* <MenuItemContainer title='AlmacÃ©n' icon='ti ti-building-warehouse'>
-          {canAccess('articles') && <MenuItem href="/admin/articles" icon="ti ti-box">ArtÃ­culos</MenuItem>}
+        {/* <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
+          {canAccess('articles') && <MenuItem href="/admin/articles" icon="ti ti-box">Artículos</MenuItem>}
           {canAccess('inventory') && <MenuItem href="/admin/inventory" icon="ti ti-stack-2">Inventario</MenuItem>}
           {canAccess('kardex') && <MenuItem href="/admin/kardex" icon="ti ti-file-text">Kardex</MenuItem>}
           {canAccess('laboratories') && <MenuItem href="/admin/laboratories" icon="ti ti-flask">Laboratorios</MenuItem>}
@@ -209,7 +209,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {canAccess('units-of-measure') && <MenuItem href="/admin/units-of-measure" icon="ti ti-scale">Und. de medida</MenuItem>}
         </MenuItemContainer>
 
-        <MenuItemContainer title='AdministraciÃ³n' icon='ti ti-credit-card'>
+        <MenuItemContainer title='Administración' icon='ti ti-credit-card'>
           {canAccess('accounts-payable') && <MenuItem href="/admin/accounts-payable" icon="ti ti-credit-card">Cuentas por pagar</MenuItem>}
           {canAccess('expenses') && <MenuItem href="/admin/expenses" icon="ti ti-receipt">Gasto</MenuItem>}
           {canAccess('daily-summary') && <MenuItem href="/admin/daily-summary" icon="ti ti-calendar-stats">Resumen diario</MenuItem>}
@@ -229,7 +229,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {canAccess('storage-clients') && <MenuItem href="/admin/storage-clients" icon="ti ti-users">Clientes</MenuItem>}
           {canAccess('service-orders') && <MenuItem href="/admin/service-orders" icon="ti ti-file-dollar">O. Servicio</MenuItem>}
           {canAccess('storage-units') && <MenuItem href="/admin/storage-units" icon="ti ti-scale">Und. de medida</MenuItem>}
-          {canAccess('storage-products') && <MenuItem href="/admin/storage-products" icon="ti ti-box">CreaciÃ³n del produ...</MenuItem>}
+          {canAccess('storage-products') && <MenuItem href="/admin/storage-products" icon="ti ti-box">Creación del produ...</MenuItem>}
           {canAccess('storage-entry-note') && <MenuItem href="/admin/storage-entry-note" icon="ti ti-file-plus">Nota de entrada</MenuItem>}
           {canAccess('storage-exit-note') && <MenuItem href="/admin/storage-exit-note" icon="ti ti-file-minus">Nota de salida</MenuItem>}
           {canAccess('storage-kardex') && <MenuItem href="/admin/storage-kardex" icon="ti ti-file-text">Kardex</MenuItem>}
@@ -242,12 +242,12 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {canAccess('activity') && <MenuItem href="/admin/activity" icon="ti ti-activity">Actividad</MenuItem>}
           {canAccess('driver') && <MenuItem href="/admin/driver" icon="ti ti-user-circle">Conductor</MenuItem>}
           {canAccess('dispatch') && <MenuItem href="/admin/dispatch" icon="ti ti-truck-delivery">Despacho</MenuItem>}
-          {canAccess('vehicle-zone') && <MenuItem href="/admin/vehicle-zone" icon="ti ti-map-2">VehÃ­culo / Zona</MenuItem>}
+          {canAccess('vehicle-zone') && <MenuItem href="/admin/vehicle-zone" icon="ti ti-map-2">Vehículo / Zona</MenuItem>}
         </MenuItemContainer>
 
         <MenuItemContainer title='Servicios' icon='ti ti-briefcase'>
           {canAccess('services-client') && <MenuItem href="/admin/services-client" icon="ti ti-user">Cliente</MenuItem>}
-          {canAccess('services-billing') && <MenuItem href="/admin/services-billing" icon="ti ti-file-invoice">FacturaciÃ³n</MenuItem>}
+          {canAccess('services-billing') && <MenuItem href="/admin/services-billing" icon="ti ti-file-invoice">Facturación</MenuItem>}
           {canAccess('services-service-order') && <MenuItem href="/admin/services-service-order" icon="ti ti-file-dollar">Orden de servicio</MenuItem>}
           {canAccess('services-services') && <MenuItem href="/admin/services-services" icon="ti ti-settings">Servicios</MenuItem>}
         </MenuItemContainer>
@@ -257,16 +257,16 @@ const Menu = ({ can, hasRole, panel = null }) => {
         </MenuItemContainer>
 
         <MenuItemContainer title='Magistrales' icon='ti ti-pills'>
-          {canAccess('magistrales-articles') && <MenuItem href="/admin/magistrales-articles" icon="ti ti-box">ArtÃ­culos</MenuItem>}
-          {canAccess('magistrales-category') && <MenuItem href="/admin/magistrales-category" icon="ti ti-category">CategorÃ­a</MenuItem>}
+          {canAccess('magistrales-articles') && <MenuItem href="/admin/magistrales-articles" icon="ti ti-box">Artículos</MenuItem>}
+          {canAccess('magistrales-category') && <MenuItem href="/admin/magistrales-category" icon="ti ti-category">Categoría</MenuItem>}
           {canAccess('magistrales-formats') && <MenuItem href="/admin/magistrales-formats" icon="ti ti-file-description">Formatos</MenuItem>}
-          {canAccess('magistrales-formulas') && <MenuItem href="/admin/magistrales-formulas" icon="ti ti-file-analytics">FÃ³rmulas</MenuItem>}
+          {canAccess('magistrales-formulas') && <MenuItem href="/admin/magistrales-formulas" icon="ti ti-file-analytics">Fórmulas</MenuItem>}
           {canAccess('magistrales-incomes') && <MenuItem href="/admin/magistrales-incomes" icon="ti ti-file-plus">Ingresos</MenuItem>}
           {canAccess('magistrales-inventory') && <MenuItem href="/admin/magistrales-inventory" icon="ti ti-stack-2">Inventario</MenuItem>}
           {canAccess('magistrales-kardex') && <MenuItem href="/admin/magistrales-kardex" icon="ti ti-file-text">Kardex</MenuItem>}
           {canAccess('magistrales-laboratory') && <MenuItem href="/admin/magistrales-laboratory" icon="ti ti-flask">Laboratorio</MenuItem>}
           {canAccess('magistrales-purchase-order') && <MenuItem href="/admin/magistrales-purchase-order" icon="ti ti-shopping-cart">O. Compra</MenuItem>}
-          {canAccess('magistrales-production-order') && <MenuItem href="/admin/magistrales-production-order" icon="ti ti-file-dollar">O. ProducciÃ³n</MenuItem>}
+          {canAccess('magistrales-production-order') && <MenuItem href="/admin/magistrales-production-order" icon="ti ti-file-dollar">O. Producción</MenuItem>}
           {canAccess('magistrales-supplier') && <MenuItem href="/admin/magistrales-supplier" icon="ti ti-truck">Proveedor</MenuItem>}
           {canAccess('magistrales-responsible') && <MenuItem href="/admin/magistrales-responsible" icon="ti ti-user-check">Responsable</MenuItem>}
           {canAccess('magistrales-outputs') && <MenuItem href="/admin/magistrales-outputs" icon="ti ti-file-minus">Salidas</MenuItem>}
@@ -275,14 +275,14 @@ const Menu = ({ can, hasRole, panel = null }) => {
         </MenuItemContainer> */}
 
         <li className="side-nav-title mt-2">Configuraciones</li>
-        {canAccess('businesses') && <MenuItem href="/admin/businesses" icon="ti ti-building-store" badge='âœ“' badgeColor='danger'>Empresas</MenuItem>}
-        <MenuItemContainer title="GestiÃ³n" icon="ti ti-users">
-          {canAccess('users') && <MenuItem href="/admin/users" icon="ti ti-users" badge='âœ“'>Usuarios</MenuItem>}
-          {canAccess('roles') && <MenuItem href="/admin/roles" icon="ti ti-user-check" badge='âœ“'>Roles</MenuItem>}
+        {canAccess('businesses') && <MenuItem href="/admin/businesses" icon="ti ti-building-store" badge='✓' badgeColor='danger'>Empresas</MenuItem>}
+        <MenuItemContainer title="Gestión" icon="ti ti-users">
+          {canAccess('users') && <MenuItem href="/admin/users" icon="ti ti-users" badge='✓'>Usuarios</MenuItem>}
+          {canAccess('roles') && <MenuItem href="/admin/roles" icon="ti ti-user-check" badge='✓'>Roles</MenuItem>}
         </MenuItemContainer>
-        <MenuItem href="/admin/profile" icon="ti ti-user" badge='âœ“'>Mi perfil</MenuItem>
-        <MenuItem href="/admin/account" icon="ti ti-settings" badge='âœ“'>Mi cuenta</MenuItem>
-        <MenuItem onClick={() => Logout()} icon="ti ti-logout">Cerrar sesiÃ³n</MenuItem>
+        <MenuItem href="/admin/profile" icon="ti ti-user" badge='✓'>Mi perfil</MenuItem>
+        <MenuItem href="/admin/account" icon="ti ti-settings" badge='✓'>Mi cuenta</MenuItem>
+        <MenuItem onClick={() => Logout()} icon="ti ti-logout">Cerrar sesión</MenuItem>
       </ul>
       <div className="clearfix"></div>
     </div>

@@ -90,7 +90,7 @@ class EstablishmentController extends Controller
         ) {
             $warehouse = new Warehouse();
             $warehouse->establishment_id = $establishment->id;
-            $warehouse->description = 'AlmacÃ©n - '.$establishment->description;
+            $warehouse->description = 'Almacén - '.$establishment->description;
             $warehouse->save();
         }
 
@@ -114,7 +114,7 @@ class EstablishmentController extends Controller
 
         return [
             'success' => true,
-            'message' => 'Establecimiento eliminado con Ã©xito'
+            'message' => 'Establecimiento eliminado con éxito'
         ];
     }
 }

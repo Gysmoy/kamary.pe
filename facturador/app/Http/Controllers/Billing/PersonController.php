@@ -42,8 +42,8 @@ class PersonController extends Controller
     {
         return [
             'name' => 'Nombre',
-            'barcode' => 'CÃ³digo de barras',
-            'number' => 'NÃºmero',
+            'barcode' => 'Código de barras',
+            'number' => 'Número',
             'document_type' => 'Tipo de documento'
         ];
     }
@@ -202,7 +202,7 @@ class PersonController extends Controller
         }
         return [
             'success' => true,
-            'message' => ($id)?'Cliente editado con Ã©xito':'Cliente registrado con Ã©xito',
+            'message' => ($id)?'Cliente editado con éxito':'Cliente registrado con éxito',
             'id' => $person->id
         ];
     }
@@ -217,7 +217,7 @@ class PersonController extends Controller
 
             return [
                 'success' => true,
-                'message' => $person_type.' eliminado con Ã©xito'
+                'message' => $person_type.' eliminado con éxito'
             ];
 
         } catch (Exception $e) {
@@ -306,7 +306,7 @@ class PersonController extends Controller
 
         return [
             'success' => true,
-            'message' => "Cliente {$type_message} con Ã©xito"
+            'message' => "Cliente {$type_message} con éxito"
         ];
 
     }

@@ -133,7 +133,7 @@ class ConfigurationController extends Controller
 
     //     return [
     //         'success' => true,
-    //         'message' => "Se creo la guÃ­a de remisiÃ³n {$document->series}-{$document->number}",
+    //         'message' => "Se creo la guía de remisión {$document->series}-{$document->number}",
     //         'data' => [
     //             'id' => $document->id,
     //         ],
@@ -172,7 +172,7 @@ class ConfigurationController extends Controller
             ]);
         }
 
-        // revisiÃ³n custom //obsoleto
+        // revisión custom //obsoleto
         // $exists = Storage::disk('core')->exists('Templates/pdf/custom/style.css');
         // if (!$exists) {
         //     Storage::disk('core')->copy('Templates/pdf/default/style.css', 'Templates/pdf/custom/style.css');
@@ -182,7 +182,7 @@ class ConfigurationController extends Controller
 
         return [
             'success' => true,
-            'message' => 'ConfiguraciÃ³n actualizada'
+            'message' => 'Configuración actualizada'
         ];
     }
 
@@ -192,7 +192,7 @@ class ConfigurationController extends Controller
 
         return [
             'success' => true,
-            'message' => 'ConfiguraciÃ³n actualizada'
+            'message' => 'Configuración actualizada'
         ];
     }
 
@@ -226,7 +226,7 @@ class ConfigurationController extends Controller
             ->insert(['formats' => $insertar[2]]);
         }
 
-        // revisiÃ³n custom
+        // revisión custom
         $exists = Storage::disk('core')->exists('Templates/preprinted_pdf/custom/style.css');
         if (!$exists) {
             Storage::disk('core')->copy('Templates/preprinted_pdf/default/style.css', 'Templates/preprinted_pdf/custom/style.css');
@@ -236,7 +236,7 @@ class ConfigurationController extends Controller
 
         return [
             'success' => true,
-            'message' => 'ConfiguraciÃ³n actualizada'
+            'message' => 'Configuración actualizada'
         ];
     }
 
@@ -252,7 +252,7 @@ class ConfigurationController extends Controller
         // fclose($fp);
         return [
             'success' => true,
-            'message' => 'ConfiguraciÃ³n actualizada'
+            'message' => 'Configuración actualizada'
         ];
     }
 
@@ -264,7 +264,7 @@ class ConfigurationController extends Controller
 
         return [
             'success' => true,
-            'message' => 'ConfiguraciÃ³n actualizada'
+            'message' => 'Configuración actualizada'
         ];
     }
 
@@ -328,7 +328,7 @@ class ConfigurationController extends Controller
         return [
             'success' => true,
             'configuration' => $configuration->getCollectionData(),
-            'message' => 'ConfiguraciÃ³n actualizada',
+            'message' => 'Configuración actualizada',
         ];
     }
 
@@ -353,7 +353,7 @@ class ConfigurationController extends Controller
         return [
             'success' => true,
             'configuration' => $configuration->getCollectionData(),
-            'message' => 'ConfiguraciÃ³n actualizada',
+            'message' => 'Configuración actualizada',
         ];
     }
 
@@ -375,7 +375,7 @@ class ConfigurationController extends Controller
 
         return [
             'success' => true,
-            'message' => 'ConfiguraciÃ³n actualizada'
+            'message' => 'Configuración actualizada'
         ];
     }
 
@@ -401,7 +401,7 @@ class ConfigurationController extends Controller
 
         return [
             'success' => true,
-            'message' => 'ConfiguraciÃ³n actualizada'
+            'message' => 'Configuración actualizada'
         ];
     }
 
@@ -422,7 +422,7 @@ class ConfigurationController extends Controller
 
         return [
             'success' => true,
-            'message' => 'ConfiguraciÃ³n actualizada'
+            'message' => 'Configuración actualizada'
         ];
     }
 
@@ -538,7 +538,7 @@ class ConfigurationController extends Controller
         return [
             'success' => true,
             'menu' => $this->getMenu(),
-            'message' => 'ConfiguraciÃ³n actualizada',
+            'message' => 'Configuración actualizada',
         ];
     }
 

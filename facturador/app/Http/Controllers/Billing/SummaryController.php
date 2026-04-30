@@ -52,7 +52,7 @@ class SummaryController extends Controller
     public function columns()
     {
         return [
-            'date_of_issue' => 'Fecha de emisiÃ³n'
+            'date_of_issue' => 'Fecha de emisión'
         ];
     }
     
@@ -126,7 +126,7 @@ class SummaryController extends Controller
 
         return [
             'success' => true,
-            'message' => 'Resumen eliminada con Ã©xito'
+            'message' => 'Resumen eliminada con éxito'
         ];
     }
     
@@ -175,7 +175,7 @@ class SummaryController extends Controller
 
         return [
             'success' => true,
-            'message' => 'La operaciÃ³n fue cancelada'
+            'message' => 'La operación fue cancelada'
         ];
 
     }

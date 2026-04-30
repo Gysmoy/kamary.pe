@@ -91,12 +91,12 @@ class ItemController extends Controller
     {
         return [
             'description' => 'Nombre',
-            'internal_id' => 'CÃ³digo interno',
-            'barcode' => 'CÃ³digo de barras',
+            'internal_id' => 'Código interno',
+            'barcode' => 'Código de barras',
             'model' => 'Modelo',
             'brand' => 'Marca',
             'date_of_due' => 'Fecha vencimiento',
-            'lot_code' => 'CÃ³digo lote',
+            'lot_code' => 'Código lote',
             'active' => 'Habilitados',
             'inactive' => 'Inhabilitados',
             'category' => 'Categoria'
@@ -668,7 +668,7 @@ class ItemController extends Controller
 						]);
 					}
                 } catch (\Throwable $th) {
-                    \Log::error('No se pudo agregar el precio del producto al almacÃ©n ' . $warehousePrice['id']);
+                    \Log::error('No se pudo agregar el precio del producto al almacén ' . $warehousePrice['id']);
                 }
             }
             */
@@ -676,7 +676,7 @@ class ItemController extends Controller
 
         return [
             'success' => true,
-            'message' => ($id)?'Producto editado con Ã©xito':'Producto registrado con Ã©xito',
+            'message' => ($id)?'Producto editado con éxito':'Producto registrado con éxito',
             'id' => $item->id
         ];
     }
@@ -718,7 +718,7 @@ class ItemController extends Controller
 
             return [
                 'success' => true,
-                'message' => 'Producto eliminado con Ã©xito'
+                'message' => 'Producto eliminado con éxito'
             ];
 
         } catch (Exception $e) {
@@ -737,7 +737,7 @@ class ItemController extends Controller
 
         return [
             'success' => true,
-            'message' => 'Registro eliminado con Ã©xito'
+            'message' => 'Registro eliminado con éxito'
         ];
     }
 
@@ -908,7 +908,7 @@ class ItemController extends Controller
 
             return [
                 'success' => true,
-                'message' => 'Producto inhabilitado con Ã©xito'
+                'message' => 'Producto inhabilitado con éxito'
             ];
 
         } catch (Exception $e) {
@@ -943,7 +943,7 @@ class ItemController extends Controller
 
         return [
             'success' => true,
-            'message' => 'Imagen eliminada con Ã©xito'
+            'message' => 'Imagen eliminada con éxito'
         ];
     }
 
@@ -958,7 +958,7 @@ class ItemController extends Controller
 
             return [
                 'success' => true,
-                'message' => 'Producto habilitado con Ã©xito'
+                'message' => 'Producto habilitado con éxito'
             ];
 
         } catch (Exception $e) {
