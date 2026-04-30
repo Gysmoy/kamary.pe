@@ -122,8 +122,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {canAccess('accounts-payable') && <MenuItem href="/admin/accounts-payable" icon="ti ti-credit-card">Cuentas por pagar</MenuItem>}
         </MenuItemContainer>
         <MenuItemContainer title='Clientes y Comercial' icon='ti ti-briefcase'>
-          {canAccess('clients') && <MenuItem href="/admin/clients" icon="ti ti-users">Clientes</MenuItem>}
-          {canAccess('eventual-clients') && <MenuItem href="/admin/eventual-clients" icon="ti ti-user-star">Clientes eventuales</MenuItem>}
+          {(canAccess('clients') || canAccess('eventual-clients')) && <MenuItem href="/admin/clients" icon="ti ti-users">Clientes</MenuItem>}
           {canAccess('client-distribution') && <MenuItem href="/admin/client-distribution" icon="ti ti-map-pin-share">Red distribución</MenuItem>}
           {canAccess('pricing') && <MenuItem href="/admin/pricing" icon="ti ti-tags">Tarifario</MenuItem>}
           {canAccess('orders') && <MenuItem href="/admin/commercial-orders" icon="ti ti-basket">Pedidos</MenuItem>}

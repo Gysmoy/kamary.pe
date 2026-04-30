@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use SoDe\Extend\JSON;
 use SoDe\Extend\Text;
 
 class dxDataGrid
 {
-    static function filter(Builder $builder, array $dxFilter, bool $flat = true, $prefix4undotted = null, $ignorePrefix = [])
+    static function filter(Builder|QueryBuilder $builder, array $dxFilter, bool $flat = true, $prefix4undotted = null, $ignorePrefix = [])
     {
         if (\count($dxFilter) == 0) return;
         $hasArray = JSON::find($dxFilter, function ($x) {

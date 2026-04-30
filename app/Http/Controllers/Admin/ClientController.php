@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Classes\dxResponse;
 use App\Http\Controllers\BasicController;
 use App\Models\Client;
+use App\Models\EventualClient;
+use App\Models\dxDataGrid;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use SoDe\Extend\File;
 use SoDe\Extend\JSON;
@@ -22,26 +26,178 @@ class ClientController extends BasicController
     public function setReactViewProperties(Request $request)
     {
         $prefixes = JSON::parse(File::get(storage_path('app/utils/phone_prefixes.json')));
-        $isEventualClients = str_contains($request->path(), 'eventual-clients');
+        $initialQuickFilter = str_contains($request->path(), 'eventual-clients') ? 'eventual' : 'all';
+
+        if (($request->query('kind') ?? '') === 'habitual') {
+            $initialQuickFilter = 'habitual';
+        }
 
         return [
             'prefixes' => $prefixes,
-            'sectionTitle' => $isEventualClients ? 'Clientes Eventuales' : 'Clientes',
-            'defaultClientKind' => $isEventualClients ? 'eventual' : 'regular',
-            'requiredPermission' => $isEventualClients ? 'eventual-clients' : 'clients',
-            'filterValue' => ['client_kind', '=', $isEventualClients ? 'eventual' : 'regular'],
+            'sectionTitle' => 'Clientes',
+            'defaultClientKind' => $initialQuickFilter === 'eventual' ? 'eventual' : 'regular',
+            'requiredPermission' => 'clients',
+            'initialQuickFilter' => $initialQuickFilter,
         ];
     }
 
-    public function setPaginationInstance(string $model)
+    public function paginate(Request $request): HttpResponse|ResponseFactory
     {
-        return $model::select('clients.*')
-            ->with([
-                'creator:id,name,lastname,username,fullname',
-                'updater:id,name,lastname,username,fullname',
-            ])
-            ->join('users as creator', 'creator.id', '=', 'clients.created_by')
-            ->join('users as updater', 'updater.id', '=', 'clients.updated_by');
+        $response = new dxResponse();
+
+        try {
+            $instance = $this->buildUnifiedPaginationQuery();
+
+            if ($request->group != null) {
+                [$grouping] = $request->group;
+                $selector = $grouping['selector'];
+                $instance = $instance->select(DB::raw("{$selector} AS `key`"))->groupBy($selector);
+            }
+
+            if ($request->filter) {
+                $instance->where(function ($query) use ($request) {
+                    dxDataGrid::filter($query, $request->filter ?? [], false, null, []);
+                });
+            }
+
+            if ($request->group == null) {
+                if ($request->sort != null) {
+                    foreach ($request->sort as $sorting) {
+                        $instance->orderBy($sorting['selector'], $sorting['desc'] ? 'DESC' : 'ASC');
+                    }
+                } else {
+                    $instance->orderBy('entity_id', 'DESC');
+                }
+            }
+
+            $totalCount = 0;
+            if ($request->requireTotalCount) {
+                $instance4count = clone $instance;
+                $instance4count->getQuery()->groups = null;
+
+                if ($request->group != null) {
+                    $totalCount = $instance4count->distinct()->count(DB::raw($selector));
+                } else {
+                    $totalCount = $instance4count->count();
+                }
+            }
+
+            $rows = $request->isLoadingAll
+                ? $instance->get()
+                : $instance->skip($request->skip ?? 0)->take($request->take ?? 10)->get();
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = $rows;
+            $response->summary = [];
+            $response->totalCount = $totalCount;
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage() . ' Ln.' . $th->getLine();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function buildUnifiedPaginationQuery()
+    {
+        $regularOrders = DB::table('commercial_orders')
+            ->selectRaw('client_id AS customer_id, COUNT(*) AS purchase_count, MAX(issue_date) AS last_purchase_at, COALESCE(SUM(total), 0) AS purchase_total')
+            ->whereNotNull('client_id')
+            ->groupBy('client_id');
+
+        $eventualOrders = DB::table('commercial_orders')
+            ->selectRaw('eventual_client_id AS customer_id, COUNT(*) AS purchase_count, MAX(issue_date) AS last_purchase_at, COALESCE(SUM(total), 0) AS purchase_total')
+            ->whereNotNull('eventual_client_id')
+            ->groupBy('eventual_client_id');
+
+        $regularQuery = DB::table('clients')
+            ->leftJoinSub($regularOrders, 'purchase_summary', function ($join) {
+                $join->on('purchase_summary.customer_id', '=', 'clients.id');
+            })
+            ->leftJoin('users as creator', 'creator.id', '=', 'clients.created_by')
+            ->leftJoin('users as updater', 'updater.id', '=', 'clients.updated_by')
+            ->whereNotNull('clients.status')
+            ->selectRaw(<<<SQL
+                CONCAT('client-', clients.id) AS id,
+                clients.id AS entity_id,
+                'client' AS data_source,
+                CASE WHEN clients.client_kind = 'eventual' THEN 'eventual' ELSE 'regular' END AS client_kind,
+                clients.document_type,
+                clients.document_number,
+                clients.full_name,
+                NULL AS business_name,
+                COALESCE(clients.full_name, '') AS display_name,
+                clients.is_platform,
+                clients.has_storage_service,
+                clients.contract_due_days,
+                clients.commercial_channel,
+                clients.segment,
+                clients.email,
+                clients.billing_email,
+                clients.primary_contact,
+                clients.primary_contact_phone,
+                clients.phone,
+                clients.phone_prefix,
+                clients.short_code,
+                clients.ubigeo,
+                clients.full_address,
+                clients.full_address AS address,
+                clients.primary_contact AS contact_name,
+                NULL AS notes,
+                clients.status,
+                COALESCE(purchase_summary.purchase_count, 0) AS purchase_count,
+                purchase_summary.last_purchase_at,
+                COALESCE(purchase_summary.purchase_total, 0) AS purchase_total,
+                CASE WHEN COALESCE(purchase_summary.purchase_count, 0) >= 3 THEN 1 ELSE 0 END AS is_habitual,
+                TRIM(CONCAT(COALESCE(creator.name, ''), ' ', COALESCE(creator.lastname, ''))) AS creator_label,
+                TRIM(CONCAT(COALESCE(updater.name, ''), ' ', COALESCE(updater.lastname, ''))) AS updater_label
+            SQL);
+
+        $eventualQuery = DB::table('eventual_clients')
+            ->leftJoinSub($eventualOrders, 'purchase_summary', function ($join) {
+                $join->on('purchase_summary.customer_id', '=', 'eventual_clients.id');
+            })
+            ->leftJoin('users as creator', 'creator.id', '=', 'eventual_clients.created_by')
+            ->leftJoin('users as updater', 'updater.id', '=', 'eventual_clients.updated_by')
+            ->whereNotNull('eventual_clients.status')
+            ->selectRaw(<<<SQL
+                CONCAT('eventual-', eventual_clients.id) AS id,
+                eventual_clients.id AS entity_id,
+                'eventual_client' AS data_source,
+                'eventual' AS client_kind,
+                eventual_clients.document_type,
+                eventual_clients.document_number,
+                NULL AS full_name,
+                eventual_clients.business_name,
+                COALESCE(eventual_clients.business_name, '') AS display_name,
+                0 AS is_platform,
+                0 AS has_storage_service,
+                NULL AS contract_due_days,
+                NULL AS commercial_channel,
+                NULL AS segment,
+                eventual_clients.email,
+                NULL AS billing_email,
+                eventual_clients.contact_name AS primary_contact,
+                NULL AS primary_contact_phone,
+                eventual_clients.phone,
+                eventual_clients.phone_prefix,
+                NULL AS short_code,
+                NULL AS ubigeo,
+                eventual_clients.address AS full_address,
+                eventual_clients.address,
+                eventual_clients.contact_name,
+                eventual_clients.notes,
+                eventual_clients.status,
+                COALESCE(purchase_summary.purchase_count, 0) AS purchase_count,
+                purchase_summary.last_purchase_at,
+                COALESCE(purchase_summary.purchase_total, 0) AS purchase_total,
+                CASE WHEN COALESCE(purchase_summary.purchase_count, 0) >= 3 THEN 1 ELSE 0 END AS is_habitual,
+                TRIM(CONCAT(COALESCE(creator.name, ''), ' ', COALESCE(creator.lastname, ''))) AS creator_label,
+                TRIM(CONCAT(COALESCE(updater.name, ''), ' ', COALESCE(updater.lastname, ''))) AS updater_label
+            SQL);
+
+        return DB::query()->fromSub($regularQuery->unionAll($eventualQuery), 'customer_index');
     }
 
     public function beforeSave(Request $request)
@@ -245,7 +401,7 @@ class ClientController extends BasicController
         if (is_numeric($value)) return (int)$value !== 0;
 
         $normalized = mb_strtolower(trim((string)$value));
-        return in_array($normalized, ['1', 'true', 'si', 'sí', 'yes', 'y', 'activo', 'activa', 'on'], true);
+        return in_array($normalized, ['1', 'true', 'si', 'yes', 'y', 'activo', 'activa', 'on'], true);
     }
 
     private function toNullableInt($value): ?int

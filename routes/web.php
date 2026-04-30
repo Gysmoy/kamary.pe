@@ -21,7 +21,6 @@ use App\Http\Controllers\Admin\CommercialOrderController as AdminCommercialOrder
 use App\Http\Controllers\Admin\DispatchController as AdminDispatchController;
 use App\Http\Controllers\Admin\DailySummaryController as AdminDailySummaryController;
 use App\Http\Controllers\Admin\DriverController as AdminDriverController;
-use App\Http\Controllers\Admin\EventualClientController as AdminEventualClientController;
 use App\Http\Controllers\Admin\EntryNoteController as AdminEntryNoteController;
 use App\Http\Controllers\Admin\ExitNoteController as AdminExitNoteController;
 use App\Http\Controllers\Admin\InventoryReportController as AdminInventoryReportController;
@@ -106,7 +105,7 @@ Route::middleware('auth')->group(function () {
 
         // Comercial
         Route::get('/clients', [AdminClientController::class, 'reactView']);
-        Route::get('/eventual-clients', [AdminEventualClientController::class, 'reactView']);
+        Route::get('/eventual-clients', [AdminClientController::class, 'reactView']);
         Route::get('/client-distribution', [AdminClientDistributionNetworkController::class, 'reactView']);
         Route::get('/accounts-receivable', [AdminAccountsReceivableController::class, 'reactView']);
         Route::get('/commercial-orders', [AdminCommercialOrderController::class, 'reactView']);
