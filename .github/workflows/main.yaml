@@ -60,6 +60,11 @@ jobs:
             trap on_error ERR
 
             cd /var/docker/kamary
+
+            if [ -f facturador/.env ] && ! git ls-files --error-unmatch facturador/.env >/dev/null 2>&1; then
+              rm facturador/.env
+            fi
+
             git pull
 
             if [ ! -f facturador/.env ] && [ -f facturador/.env.example ]; then
