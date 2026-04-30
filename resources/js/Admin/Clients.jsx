@@ -10,7 +10,10 @@ import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import SelectFormGroup from '@Adminto/form/SelectFormGroup';
+import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
+import UbigeoCascade from '@Adminto/form/UbigeoCascade';
 import ClientsRest from '../Actions/Admin/ClientsRest';
+import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
 
 const clientsRest = new ClientsRest()
 
@@ -90,7 +93,6 @@ const Clients = ({
   const phoneRef = useRef()
   const phonePrefixRef = useRef()
   const shortCodeRef = useRef()
-  const ubigeoRef = useRef()
   const addressRef = useRef()
   const notesRef = useRef()
 
@@ -105,6 +107,7 @@ const Clients = ({
   const [storageServiceValue, setStorageServiceValue] = useState('0')
   const [quickFilter, setQuickFilter] = useState(initialQuickFilter)
   const [totalRows, setTotalRows] = useState(0)
+  const [ubigeoLocation, setUbigeoLocation] = useState(EMPTY_UBIGEO_SELECTION)
 
   const isEventual = clientKind === 'eventual'
   const isRuc = documentType === 'ruc'
@@ -138,7 +141,7 @@ const Clients = ({
     setPhonePrefix('51')
     setRefValue(phonePrefixRef, '51')
     setRefValue(shortCodeRef, '')
-    setRefValue(ubigeoRef, '')
+    setUbigeoLocation(EMPTY_UBIGEO_SELECTION)
     setRefValue(addressRef, '')
     setRefValue(notesRef, '')
   }
@@ -237,7 +240,10 @@ const Clients = ({
     setPhonePrefix(normalizedPrefix)
     setRefValue(phonePrefixRef, normalizedPrefix)
     setRefValue(shortCodeRef, data.short_code ?? '')
-    setRefValue(ubigeoRef, data.ubigeo ?? '')
+    setUbigeoLocation({
+      ...EMPTY_UBIGEO_SELECTION,
+      ubigeo: data.ubigeo ?? '',
+    })
     setRefValue(addressRef, data.full_address ?? data.address ?? '')
     setRefValue(notesRef, data.notes ?? '')
   }
@@ -301,7 +307,7 @@ const Clients = ({
       phone: getRefValue(phoneRef).trim(),
       phone_prefix: normalizePrefix(getRefValue(phonePrefixRef)),
       short_code: getRefValue(shortCodeRef).trim(),
-      ubigeo: getRefValue(ubigeoRef).trim(),
+      ubigeo: ubigeoLocation.ubigeo?.trim?.() ?? '',
       full_address: getRefValue(addressRef).trim(),
       notes: getRefValue(notesRef).trim(),
     }
@@ -537,6 +543,17 @@ const Clients = ({
         />
 
         <InputFormGroup eRef={fullNameRef} label={displayNameLabel} col='col-12' required disabled={isIdentityBlocked} />
+        {!isEventual && (
+          <UbigeoCascade
+            value={ubigeoLocation}
+            onChange={setUbigeoLocation}
+            showUbigeo={false}
+            departmentCol='col-md-4'
+            provinceCol='col-md-4'
+            districtCol='col-md-4'
+          />
+        )}
+        <TextareaFormGroup eRef={addressRef} label='Direccion completa' col='col-12' rows={2} />
 
         {!isEventual && (
           <>
@@ -580,13 +597,10 @@ const Clients = ({
 
         {!isEventual && (
           <>
-            <InputFormGroup eRef={commercialChannelRef} label='Canal comercial' col='col-md-4' />
-            <InputFormGroup eRef={segmentRef} label='Segmento' col='col-md-4' />
-            <InputFormGroup eRef={ubigeoRef} label='Ubigeo' col='col-md-4' />
+            <InputFormGroup eRef={commercialChannelRef} label='Canal comercial' col='col-md-6' />
+            <InputFormGroup eRef={segmentRef} label='Segmento' col='col-md-6' />
           </>
         )}
-
-        <InputFormGroup eRef={addressRef} label='Direccion completa' col='col-12' />
 
         {isEventual && (
           <div className='col-12'>

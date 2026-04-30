@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import {
   EMPTY_UBIGEO_SELECTION,
   getUbigeoCatalog,
@@ -7,6 +7,7 @@ import {
   isSameUbigeoSelection,
   normalizeUbigeoSelection
 } from '../../../Utils/ubigeoInei'
+import SelectFormGroup from './SelectFormGroup'
 
 const EMPTY_UBIGEO_CATALOG = {
   departments: [],
@@ -33,6 +34,10 @@ const UbigeoCascade = ({
 }) => {
   const [catalog, setCatalog] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
+  const fieldKeyRef = useRef(`ubigeo-cascade-${crypto.randomUUID()}`)
+  const departmentRef = useRef()
+  const provinceRef = useRef()
+  const districtRef = useRef()
 
   useEffect(() => {
     let active = true
@@ -111,59 +116,59 @@ const UbigeoCascade = ({
         </div>
       )}
 
-      <div className={`form-group ${departmentCol} mb-2`}>
-        <label className='form-label mb-1'>
-          {departmentLabel} {required && <b className='text-danger'>*</b>}
-        </label>
-        <select
-          className='form-control'
-          value={current.department}
-          onChange={handleDepartmentChange}
-          disabled={isSelectDisabled}
-          required={required}
-        >
+      <SelectFormGroup
+        id={`${fieldKeyRef.current}-department`}
+        eRef={departmentRef}
+        col={departmentCol}
+        label={departmentLabel}
+        value={current.department}
+        onChange={handleDepartmentChange}
+        disabled={isSelectDisabled}
+        required={required}
+        minimumResultsForSearch={0}
+        effectWith={[isLoading, catalog?.departments?.length ?? 0]}
+      >
           <option value=''>{selectPlaceholder}</option>
           {(catalog?.departments ?? []).map((item) => (
             <option key={`ubigeo-department-${item}`} value={item}>{item}</option>
           ))}
-        </select>
-      </div>
+      </SelectFormGroup>
 
-      <div className={`form-group ${provinceCol} mb-2`}>
-        <label className='form-label mb-1'>
-          {provinceLabel} {required && <b className='text-danger'>*</b>}
-        </label>
-        <select
-          className='form-control'
-          value={current.province}
-          onChange={handleProvinceChange}
-          disabled={isSelectDisabled || !current.department}
-          required={required}
-        >
+      <SelectFormGroup
+        id={`${fieldKeyRef.current}-province`}
+        eRef={provinceRef}
+        col={provinceCol}
+        label={provinceLabel}
+        value={current.province}
+        onChange={handleProvinceChange}
+        disabled={isSelectDisabled || !current.department}
+        required={required}
+        minimumResultsForSearch={0}
+        effectWith={[isLoading, current.department, provinces.length]}
+      >
           <option value=''>{selectPlaceholder}</option>
           {provinces.map((item) => (
             <option key={`ubigeo-province-${current.department}-${item}`} value={item}>{item}</option>
           ))}
-        </select>
-      </div>
+      </SelectFormGroup>
 
-      <div className={`form-group ${districtCol} mb-2`}>
-        <label className='form-label mb-1'>
-          {districtLabel} {required && <b className='text-danger'>*</b>}
-        </label>
-        <select
-          className='form-control'
-          value={current.district}
-          onChange={handleDistrictChange}
-          disabled={isSelectDisabled || !current.province}
-          required={required}
-        >
+      <SelectFormGroup
+        id={`${fieldKeyRef.current}-district`}
+        eRef={districtRef}
+        col={districtCol}
+        label={districtLabel}
+        value={current.district}
+        onChange={handleDistrictChange}
+        disabled={isSelectDisabled || !current.province}
+        required={required}
+        minimumResultsForSearch={0}
+        effectWith={[isLoading, current.department, current.province, districts.length]}
+      >
           <option value=''>{selectPlaceholder}</option>
           {districts.map((item) => (
             <option key={`ubigeo-district-${item.code}`} value={item.district}>{item.district}</option>
           ))}
-        </select>
-      </div>
+      </SelectFormGroup>
     </div>
   )
 }
