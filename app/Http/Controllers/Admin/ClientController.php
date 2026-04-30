@@ -7,6 +7,7 @@ use App\Http\Controllers\BasicController;
 use App\Models\Client;
 use App\Models\EventualClient;
 use App\Models\dxDataGrid;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -73,7 +74,13 @@ class ClientController extends BasicController
             $totalCount = 0;
             if ($request->requireTotalCount) {
                 $instance4count = clone $instance;
-                $instance4count->getQuery()->groups = null;
+                if ($instance4count instanceof EloquentBuilder) {
+                    $instance4count->getQuery()->groups = null;
+                    $instance4count->getQuery()->orders = null;
+                } else {
+                    $instance4count->groups = null;
+                    $instance4count->orders = null;
+                }
 
                 if ($request->group != null) {
                     $totalCount = $instance4count->distinct()->count(DB::raw($selector));
