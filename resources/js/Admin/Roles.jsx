@@ -144,9 +144,6 @@ const resolveProfileLabel = (permissionNames = []) => {
 
 const surfaceClass = 'border rounded-3 bg-white shadow-sm h-100'
 const surfaceMutedClass = 'border rounded-3 bg-light-subtle shadow-sm h-100'
-const statCardClass = 'border rounded-3 bg-white px-3 py-3 h-100'
-const sectionTitleClass = 'text-dark fw-semibold mb-1'
-const sectionTextClass = 'text-muted small mb-0'
 
 const Roles = ({ permissions }) => {
   const gridRef = useRef()
@@ -406,153 +403,97 @@ const Roles = ({ permissions }) => {
       btnSubmitText='Guardar'
     >
       <input ref={idRef} type='hidden' />
-      <div className='row g-3'>
-        <div className='col-12 col-lg-7'>
-          <div className={surfaceClass}>
-            <div className='px-3 pt-3'>
-              <h5 className={sectionTitleClass}>Datos del rol</h5>
-              <p className={sectionTextClass}>Define el nombre y luego ajusta los permisos por grupo o por flag.</p>
-            </div>
-            <div className='px-3 pb-3'>
-              <InputFormGroup eRef={nameRef} label='Nombre del rol' required disabled={isEditing} col='col-12' />
-            </div>
-          </div>
-        </div>
-
-        <div className='col-12 col-lg-5'>
-          <div className={surfaceMutedClass}>
-            <div className='px-3 pt-3'>
-              <h5 className={sectionTitleClass}>Resumen rapido</h5>
-              <p className={sectionTextClass}>Referencia visual del estado actual del rol.</p>
-            </div>
-            <div className='px-3 pb-3'>
-              <div className='row g-2'>
-                <div className='col-12 col-sm-6'>
-                  <div className={statCardClass}>
-                    <small className='text-muted d-block mb-1'>Permisos</small>
-                    <div className='d-flex align-items-center justify-content-between gap-2'>
-                      <strong className='fs-4 text-primary'>{selectedPermissions.length}</strong>
-                      <span className='badge badge-soft-primary'>Activos</span>
-                    </div>
-                  </div>
-                </div>
-                <div className='col-12 col-sm-6'>
-                  <div className={statCardClass}>
-                    <small className='text-muted d-block mb-1'>Perfil</small>
-                    <div className='d-flex align-items-center justify-content-between gap-2'>
-                      <strong className='fs-6'>{currentProfileLabel}</strong>
-                      <span className='badge badge-soft-secondary'>Detectado</span>
-                    </div>
-                  </div>
-                </div>
-                <div className='col-12'>
-                  <div className={statCardClass}>
-                    <small className='text-muted d-block mb-1'>Seguridad</small>
-                    {CRITICAL_PERMISSIONS.some(permission => selectedPermissionsSet.has(permission))
-                      ? <span className='badge badge-soft-danger'>Incluye permisos criticos</span>
-                      : <span className='badge badge-soft-success'>Sin permisos criticos</span>}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
+      <div className='row g-2'>
         <div className='col-12'>
           <div className={surfaceMutedClass}>
-            <div className='px-3 pt-3 pb-2 d-flex flex-wrap align-items-start justify-content-between gap-3'>
-              <div>
-                <h5 className={sectionTitleClass}>Atajos de asignacion</h5>
-                <p className={sectionTextClass}>Usalos para marcar rapido permisos de Kamary Farma o Kamary Peru.</p>
-              </div>
-              <div className='d-flex flex-wrap gap-2'>
-                <button type='button' className='btn btn-sm btn-outline-dark' onClick={handleSelectAllPermissions}>Seleccionar todo</button>
-                <button type='button' className='btn btn-sm btn-outline-danger' onClick={handleClearAllPermissions}>Limpiar</button>
-              </div>
-            </div>
-            <div className='px-3 pb-3'>
-              <div className='row g-3'>
+            <div className='p-3'>
+              <div className='row g-2 align-items-end'>
                 <div className='col-12 col-xl-4'>
-                  <div className={surfaceClass}>
-                    <div className='px-3 py-3'>
-                      <div className='d-flex align-items-start justify-content-between gap-2 mb-3'>
-                        <div>
-                          <h6 className='mb-1 fw-semibold text-primary'>Kamary Farma</h6>
-                          <small className='text-muted'>Preset orientado a magistrales.</small>
-                        </div>
-                        <span className={`badge ${hasAll(selectedPermissions, availableFlags.kamaryFarma) ? 'bg-primary' : 'badge-soft-primary'}`}>
+                  <InputFormGroup eRef={nameRef} label='Nombre del rol' required disabled={isEditing} col='col-12' />
+                </div>
+                <div className='col-12 col-xl-4'>
+                  <label className='form-label mb-1'>Resumen rapido</label>
+                  <div className='border rounded-3 bg-white px-3 py-2 d-flex flex-wrap align-items-center gap-2 h-100'>
+                    <span className='badge badge-soft-primary'>{selectedPermissions.length} permisos</span>
+                    <span className='badge badge-soft-secondary'>{currentProfileLabel}</span>
+                    {CRITICAL_PERMISSIONS.some(permission => selectedPermissionsSet.has(permission))
+                      ? <span className='badge badge-soft-danger'>Criticos activos</span>
+                      : <span className='badge badge-soft-success'>Sin criticos</span>}
+                  </div>
+                </div>
+                <div className='col-12 col-sm-6 col-xl-2'>
+                  <label className='form-label mb-1'>Acciones</label>
+                  <div className='d-grid gap-2'>
+                    <button type='button' className='btn btn-sm btn-outline-dark' onClick={handleSelectAllPermissions}>Seleccionar todo</button>
+                    <button type='button' className='btn btn-sm btn-outline-danger' onClick={handleClearAllPermissions}>Limpiar</button>
+                  </div>
+                </div>
+                <div className='col-12 col-sm-6 col-xl-2'>
+                  <label className='form-label mb-1'>Buscar permiso</label>
+                  <input
+                    className='form-control'
+                    placeholder='Nombre o codigo'
+                    value={permissionSearch}
+                    onChange={(e) => setPermissionSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className='row g-2 mt-1'>
+                <div className='col-12 col-xl-6'>
+                  <div className='border rounded-3 bg-white px-3 py-2 h-100'>
+                    <div className='d-flex flex-wrap align-items-center justify-content-between gap-2'>
+                      <div>
+                        <strong className='text-primary d-block'>Kamary Farma</strong>
+                        <small className='text-muted'>Preset orientado a magistrales</small>
+                      </div>
+                      <div className='d-flex flex-wrap gap-2'>
+                        <span className={`badge align-self-center ${hasAll(selectedPermissions, availableFlags.kamaryFarma) ? 'bg-primary' : 'badge-soft-primary'}`}>
                           {availableFlags.kamaryFarma.length}
                         </span>
-                      </div>
-                      <div className='d-grid gap-2'>
                         <button
                           type='button'
                           className={`btn btn-sm ${hasAll(selectedPermissions, availableFlags.kamaryFarma) ? 'btn-primary' : 'btn-outline-primary'}`}
                           onClick={() => handleToggleFlag('kamaryFarma')}
                         >
-                          Activar flag
+                          Activar
                         </button>
                         <button
                           type='button'
                           className='btn btn-sm btn-outline-primary'
                           onClick={() => handleReplaceWithFlag('kamaryFarma')}
                         >
-                          Usar solo este preset
+                          Solo este
                         </button>
                       </div>
                     </div>
                   </div>
                 </div>
-                <div className='col-12 col-xl-4'>
-                  <div className={surfaceClass}>
-                    <div className='px-3 py-3'>
-                      <div className='d-flex align-items-start justify-content-between gap-2 mb-3'>
-                        <div>
-                          <h6 className='mb-1 fw-semibold text-success'>Kamary Peru</h6>
-                          <small className='text-muted'>Preset orientado al resto del negocio.</small>
-                        </div>
-                        <span className={`badge ${hasAll(selectedPermissions, availableFlags.kamaryPeru) ? 'bg-success' : 'badge-soft-success'}`}>
+                <div className='col-12 col-xl-6'>
+                  <div className='border rounded-3 bg-white px-3 py-2 h-100'>
+                    <div className='d-flex flex-wrap align-items-center justify-content-between gap-2'>
+                      <div>
+                        <strong className='text-success d-block'>Kamary Peru</strong>
+                        <small className='text-muted'>Preset orientado al negocio principal</small>
+                      </div>
+                      <div className='d-flex flex-wrap gap-2'>
+                        <span className={`badge align-self-center ${hasAll(selectedPermissions, availableFlags.kamaryPeru) ? 'bg-success' : 'badge-soft-success'}`}>
                           {availableFlags.kamaryPeru.length}
                         </span>
-                      </div>
-                      <div className='d-grid gap-2'>
                         <button
                           type='button'
                           className={`btn btn-sm ${hasAll(selectedPermissions, availableFlags.kamaryPeru) ? 'btn-success' : 'btn-outline-success'}`}
                           onClick={() => handleToggleFlag('kamaryPeru')}
                         >
-                          Activar flag
+                          Activar
                         </button>
                         <button
                           type='button'
                           className='btn btn-sm btn-outline-success'
                           onClick={() => handleReplaceWithFlag('kamaryPeru')}
                         >
-                          Usar solo este preset
+                          Solo este
                         </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className='col-12 col-xl-4'>
-                  <div className={surfaceClass}>
-                    <div className='px-3 py-3 d-flex flex-column h-100'>
-                      <div className='mb-3'>
-                        <h6 className='mb-1 fw-semibold'>Busqueda y estado</h6>
-                        <small className='text-muted'>Filtra rapido y valida el perfil detectado.</small>
-                      </div>
-                      <div className='mb-3'>
-                        <label className='form-label mb-1'>Buscar permiso</label>
-                        <input
-                          className='form-control'
-                          placeholder='Buscar por nombre o codigo'
-                          value={permissionSearch}
-                          onChange={(e) => setPermissionSearch(e.target.value)}
-                        />
-                      </div>
-                      <div className='mt-auto border rounded-3 px-3 py-2 bg-light'>
-                        <small className='text-muted d-block mb-1'>Estado actual</small>
-                        <strong>{currentProfileLabel}</strong>
                       </div>
                     </div>
                   </div>
@@ -572,7 +513,7 @@ const Roles = ({ permissions }) => {
               return (
                 <div key={group.key} className='col-12 col-xl-6'>
                   <div className={surfaceClass}>
-                    <div className='d-flex flex-wrap align-items-center justify-content-between gap-2 border-bottom px-3 py-3 bg-light-subtle'>
+                    <div className='d-flex flex-wrap align-items-center justify-content-between gap-2 border-bottom px-3 py-2 bg-light-subtle'>
                       <div>
                         <h5 className='mb-1'>{group.title}</h5>
                         <small className='text-muted'>{selectedInGroup}/{groupPermissionNames.length} seleccionados</small>
@@ -585,7 +526,7 @@ const Roles = ({ permissions }) => {
                         {allSelected ? 'Quitar grupo' : 'Marcar grupo'}
                       </button>
                     </div>
-                    <div className='p-3' style={{ maxHeight: '340px', overflowY: 'auto' }}>
+                    <div className='p-2' style={{ maxHeight: '400px', overflowY: 'auto' }}>
                       <div className='row g-2'>
                         {group.items.map(permission => {
                           const checked = selectedPermissionsSet.has(permission.name)
@@ -595,7 +536,7 @@ const Roles = ({ permissions }) => {
                             <div key={permission.name} className='col-12'>
                               <label
                                 htmlFor={`permission-${permission.name}`}
-                                className={`d-flex align-items-start justify-content-between gap-3 border rounded-3 px-3 py-3 w-100 ${checked ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white border-light-subtle'}`}
+                                className={`d-flex align-items-start justify-content-between gap-3 border rounded-3 px-3 py-2 w-100 ${checked ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white border-light-subtle'}`}
                                 style={{ cursor: 'pointer' }}
                               >
                                 <span>
