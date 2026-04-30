@@ -8,6 +8,8 @@ import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import VehiclesRest from '../Actions/Admin/VehiclesRest';
 import ZonesRest from '../Actions/Admin/ZonesRest';
+import UbigeoCascade from '@Adminto/form/UbigeoCascade';
+import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
 
 const vehiclesRest = new VehiclesRest()
 const zonesRest = new ZonesRest()
@@ -21,10 +23,6 @@ const VehicleZones = () => {
   const zoneIdRef = useRef()
   const zoneBusinessRef = useRef()
   const zoneNameRef = useRef()
-  const zoneUbigeoRef = useRef()
-  const zoneDepartmentRef = useRef()
-  const zoneProvinceRef = useRef()
-  const zoneDistrictRef = useRef()
   const zoneReferenceRef = useRef()
   const zoneObservationsRef = useRef()
 
@@ -43,6 +41,7 @@ const VehicleZones = () => {
 
   const [businesses, setBusinesses] = useState([])
   const [zones, setZones] = useState([])
+  const [zoneLocation, setZoneLocation] = useState(EMPTY_UBIGEO_SELECTION)
 
   const refreshZones = async () => {
     const data = await zonesRest.paginate({ take: 1000, skip: 0, isLoadingAll: true })
@@ -61,10 +60,12 @@ const VehicleZones = () => {
     zoneIdRef.current.value = row?.id ?? ''
     zoneBusinessRef.current.value = row?.business_id ?? ''
     zoneNameRef.current.value = row?.name ?? ''
-    zoneUbigeoRef.current.value = row?.ubigeo ?? ''
-    zoneDepartmentRef.current.value = row?.department ?? ''
-    zoneProvinceRef.current.value = row?.province ?? ''
-    zoneDistrictRef.current.value = row?.district ?? ''
+    setZoneLocation({
+      ubigeo: row?.ubigeo ?? '',
+      department: row?.department ?? '',
+      province: row?.province ?? '',
+      district: row?.district ?? '',
+    })
     zoneReferenceRef.current.value = row?.reference ?? ''
     zoneObservationsRef.current.value = row?.observations ?? ''
     $(zoneModalRef.current).modal('show')
@@ -76,10 +77,10 @@ const VehicleZones = () => {
       id: zoneIdRef.current.value || undefined,
       business_id: zoneBusinessRef.current.value || null,
       name: zoneNameRef.current.value.trim(),
-      ubigeo: zoneUbigeoRef.current.value.trim(),
-      department: zoneDepartmentRef.current.value.trim(),
-      province: zoneProvinceRef.current.value.trim(),
-      district: zoneDistrictRef.current.value.trim(),
+      ubigeo: zoneLocation.ubigeo.trim(),
+      department: zoneLocation.department.trim(),
+      province: zoneLocation.province.trim(),
+      district: zoneLocation.district.trim(),
       reference: zoneReferenceRef.current.value.trim(),
       observations: zoneObservationsRef.current.value.trim(),
     })
@@ -203,10 +204,7 @@ const VehicleZones = () => {
           </select>
         </div>
         <div className='col-md-8 mb-3'><label className='form-label'>Nombre</label><input ref={zoneNameRef} className='form-control' required /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Ubigeo</label><input ref={zoneUbigeoRef} className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Departamento</label><input ref={zoneDepartmentRef} className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Provincia</label><input ref={zoneProvinceRef} className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Distrito</label><input ref={zoneDistrictRef} className='form-control' /></div>
+        <UbigeoCascade value={zoneLocation} onChange={setZoneLocation} required />
         <div className='col-12 mb-3'><label className='form-label'>Referencia</label><textarea ref={zoneReferenceRef} className='form-control' rows='2' /></div>
         <div className='col-12'><label className='form-label'>Observaciones</label><textarea ref={zoneObservationsRef} className='form-control' rows='2' /></div>
       </div>

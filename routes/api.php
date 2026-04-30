@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\File;
 
 // Admin
 use App\Http\Controllers\Admin\ActivityController as AdminActivityController;
@@ -62,6 +63,28 @@ Route::middleware('auth')->group(function () {
 
 
     Route::prefix('admin')->group(function () {
+        Route::get('/ubigeo/inei', function () {
+            $path = storage_path('app/utils/ubigeo-inei.json');
+
+            abort_unless(File::exists($path), 404, 'Archivo de ubigeo no encontrado.');
+
+            $rows = collect(json_decode(File::get($path), true) ?? [])
+                ->map(function ($item) {
+                    return [
+                        'code' => trim((string) ($item['code'] ?? '')),
+                        'department' => trim((string) ($item['department'] ?? '')),
+                        'province' => trim((string) ($item['province'] ?? '')),
+                        'district' => trim((string) ($item['district'] ?? '')),
+                    ];
+                })
+                ->filter(function ($item) {
+                    return $item['code'] && $item['department'] && $item['province'] && $item['district'];
+                })
+                ->values();
+
+            return response()->json($rows);
+        });
+
         Route::post('/users', [AdminUserController::class, 'save']);
         Route::post('/users/paginate', [AdminUserController::class, 'paginate']);
         Route::patch('/users/status', [AdminUserController::class, 'status']);

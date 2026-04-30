@@ -12,6 +12,8 @@ import DxButton from '../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import ClientDistributionNetworksRest from '../Actions/Admin/ClientDistributionNetworksRest';
+import UbigeoCascade from '@Adminto/form/UbigeoCascade';
+import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
 
 const clientDistributionNetworksRest = new ClientDistributionNetworksRest()
 
@@ -19,10 +21,7 @@ const emptyAddress = () => ({
   rowKey: crypto.randomUUID(),
   code: '',
   name: '',
-  ubigeo: '',
-  department: '',
-  province: '',
-  district: '',
+  ...EMPTY_UBIGEO_SELECTION,
   address: '',
   reference: '',
   latitude: '',
@@ -142,6 +141,13 @@ const ClientDistributionNetworks = ({ requiredPermission = 'client-distribution'
         return item
       }
       return { ...item, [field]: value }
+    }))
+  }
+
+  const patchAddress = (rowKey, patch) => {
+    setAddresses(prev => prev.map(item => {
+      if (item.rowKey !== rowKey) return item
+      return { ...item, ...patch }
     }))
   }
 
@@ -396,22 +402,15 @@ const ClientDistributionNetworks = ({ requiredPermission = 'client-distribution'
                     <label className='form-label'>Nombre</label>
                     <input className='form-control' value={item.name} onChange={(e) => updateAddress(item.rowKey, 'name', e.target.value)} required />
                   </div>
-                  <div className='form-group col-md-4 mb-2'>
-                    <label className='form-label'>Ubigeo</label>
-                    <input className='form-control' value={item.ubigeo} onChange={(e) => updateAddress(item.rowKey, 'ubigeo', e.target.value)} />
-                  </div>
-                  <div className='form-group col-md-4 mb-2'>
-                    <label className='form-label'>Departamento</label>
-                    <input className='form-control' value={item.department} onChange={(e) => updateAddress(item.rowKey, 'department', e.target.value)} />
-                  </div>
-                  <div className='form-group col-md-4 mb-2'>
-                    <label className='form-label'>Provincia</label>
-                    <input className='form-control' value={item.province} onChange={(e) => updateAddress(item.rowKey, 'province', e.target.value)} />
-                  </div>
-                  <div className='form-group col-md-4 mb-2'>
-                    <label className='form-label'>Distrito</label>
-                    <input className='form-control' value={item.district} onChange={(e) => updateAddress(item.rowKey, 'district', e.target.value)} />
-                  </div>
+                  <UbigeoCascade
+                    value={item}
+                    onChange={(nextValue) => patchAddress(item.rowKey, nextValue)}
+                    ubigeoCol='col-md-3'
+                    departmentCol='col-md-3'
+                    provinceCol='col-md-3'
+                    districtCol='col-md-3'
+                    required
+                  />
                   <div className='form-group col-md-8 mb-2'>
                     <label className='form-label'>Direccion</label>
                     <input className='form-control' value={item.address} onChange={(e) => updateAddress(item.rowKey, 'address', e.target.value)} required />

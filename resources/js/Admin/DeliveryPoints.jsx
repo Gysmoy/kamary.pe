@@ -11,6 +11,8 @@ import DeliveryPointsRest from '../Actions/Admin/delivery-points-rest';
 import buildSchedule from '../Utils/buildSchedule';
 import SelectAPIFormGroup from '../Components/Adminto/Form/SelectAPIFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
+import UbigeoCascade from '@Adminto/form/UbigeoCascade';
+import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
 
 const deliveryPointsRest = new DeliveryPointsRest()
 
@@ -32,9 +34,6 @@ const DeliveryPoints = ({ }) => {
   // Form elements ref
   const idRef = useRef()
   const nameRef = useRef()
-  const departmentRef = useRef()
-  const provinceRef = useRef()
-  const districtRef = useRef()
   const addressRef = useRef()
   const numberRef = useRef()
   const referenceRef = useRef()
@@ -42,6 +41,7 @@ const DeliveryPoints = ({ }) => {
   const openingHoursRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
+  const [location, setLocation] = useState(EMPTY_UBIGEO_SELECTION)
 
   const onModalOpen = (data) => {
     if (data?.id) setIsEditing(true)
@@ -49,9 +49,12 @@ const DeliveryPoints = ({ }) => {
 
     idRef.current.value = data?.id ?? ''
     nameRef.current.value = data?.name ?? ''
-    departmentRef.current.value = data?.department ?? ''
-    provinceRef.current.value = data?.province ?? ''
-    districtRef.current.value = data?.district ?? ''
+    setLocation({
+      ubigeo: '',
+      department: data?.department ?? '',
+      province: data?.province ?? '',
+      district: data?.district ?? '',
+    })
     addressRef.current.value = data?.address ?? ''
     numberRef.current.value = data?.number ?? ''
     referenceRef.current.value = data?.reference ?? ''
@@ -67,9 +70,9 @@ const DeliveryPoints = ({ }) => {
     const request = {
       id: idRef.current.value || undefined,
       name: nameRef.current.value,
-      department: departmentRef.current.value,
-      province: provinceRef.current.value,
-      district: districtRef.current.value,
+      department: location.department,
+      province: location.province,
+      district: location.district,
       address: addressRef.current.value,
       number: numberRef.current.value,
       reference: referenceRef.current.value,
@@ -198,9 +201,15 @@ const DeliveryPoints = ({ }) => {
       <div className='row' id='delivery-points-container'>
         <input ref={idRef} type='hidden' />
         <InputFormGroup eRef={nameRef} label='Nombre' required />
-        <InputFormGroup eRef={departmentRef} label='Departamento' col='col-md-4' required />
-        <InputFormGroup eRef={provinceRef} label='Provincia' col='col-md-4' required />
-        <InputFormGroup eRef={districtRef} label='Distrito' col='col-md-4' required />
+        <UbigeoCascade
+          value={location}
+          onChange={setLocation}
+          showUbigeo={false}
+          departmentCol='col-md-4'
+          provinceCol='col-md-4'
+          districtCol='col-md-4'
+          required
+        />
         <InputFormGroup eRef={addressRef} label='Dirección' col='col-md-8' required />
         <InputFormGroup eRef={numberRef} label='Número' col='col-md-4' required />
         <InputFormGroup eRef={referenceRef} label='Referencia' />
