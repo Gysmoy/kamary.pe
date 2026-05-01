@@ -69,6 +69,11 @@ class PurchaseOrder extends Model
         return $this->hasMany(PurchaseReceipt::class)->orderByDesc('id');
     }
 
+    public function accountsPayable()
+    {
+        return $this->hasOne(AccountsPayable::class, 'source_id')->where('source_type', 'purchase_order');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

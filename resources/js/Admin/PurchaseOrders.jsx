@@ -502,7 +502,6 @@ const PurchaseOrders = () => {
                   <th>Lab. | Principio</th>
                   <th>Unidad</th>
                   <th>Cant. solicitada</th>
-                  <th>Cant. recibida</th>
                   <th>P. Unit.</th>
                   <th>Total</th>
                   <th>Acciones</th>
@@ -531,16 +530,6 @@ const PurchaseOrders = () => {
                         step='0.001'
                         value={item.requested_quantity}
                         onChange={(e) => onItemUpdated(item.uid, 'requested_quantity', e.target.value)}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        className='form-control form-control-sm'
-                        type='number'
-                        min='0'
-                        step='0.001'
-                        value={item.received_quantity}
-                        onChange={(e) => onItemUpdated(item.uid, 'received_quantity', e.target.value)}
                       />
                     </td>
                     <td>

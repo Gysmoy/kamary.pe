@@ -7,6 +7,7 @@ use App\Models\Article;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
+use App\Services\AccountsPayableService;
 use App\Models\Warehouse;
 use App\Support\BusinessScope;
 use Illuminate\Http\Request;
@@ -169,6 +170,8 @@ class PurchaseOrderController extends BasicController
                 'total' => $total,
             ]);
 
+            $this->syncAccountsPayable($jpa->fresh());
+
             DB::commit();
 
             return $jpa->fresh([
@@ -207,14 +210,46 @@ class PurchaseOrderController extends BasicController
     public function boolean(Request $request)
     {
         $response = new Response();
+        DB::beginTransaction();
         try {
             $data = [];
             $data[$request->field] = $request->value;
             $data['updated_by'] = Auth::id();
             $this->model::where($this->identifier, $request->id)->update($data);
+
+            $purchaseOrder = PurchaseOrder::findOrFail($request->id);
+            $this->syncAccountsPayable($purchaseOrder->fresh());
+
+            DB::commit();
             $response->status = 200;
             $response->message = 'Operacion correcta';
         } catch (\Throwable $th) {
+            DB::rollBack();
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        $response = new Response();
+        DB::beginTransaction();
+        try {
+            $purchaseOrder = PurchaseOrder::findOrFail($id);
+            $purchaseOrder->update([
+                'status' => null,
+                'updated_by' => Auth::id(),
+            ]);
+
+            $this->syncAccountsPayable($purchaseOrder->fresh());
+
+            DB::commit();
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            DB::rollBack();
             $response->status = 400;
             $response->message = $th->getMessage();
         } finally {
@@ -279,6 +314,11 @@ class PurchaseOrderController extends BasicController
         $allowed = ['pending', 'approved', 'rejected'];
         $normalized = mb_strtolower(trim((string)$value));
         return in_array($normalized, $allowed, true) ? $normalized : 'pending';
+    }
+
+    private function syncAccountsPayable(PurchaseOrder $purchaseOrder): void
+    {
+        app(AccountsPayableService::class)->syncFromPurchaseOrder($purchaseOrder);
     }
 
     private function nextCode(): string

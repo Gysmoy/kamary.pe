@@ -111,8 +111,8 @@ const AccountsPayable = () => {
       columns={[
         { dataField: 'id', caption: 'ID', width: 80 },
         { dataField: 'code', caption: 'Codigo', width: 130 },
-        { dataField: 'purchaseReceipt.code', caption: 'Recepcion', width: 130 },
-        { dataField: 'purchaseReceipt.purchaseOrder.code', caption: 'OC', width: 130 },
+        { dataField: 'purchase_receipt_code', caption: 'Recepcion', width: 130 },
+        { dataField: 'purchase_order_code', caption: 'OC', width: 130 },
         { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 220 },
         { dataField: 'document_type', caption: 'Tipo doc', width: 100 },
         { dataField: 'series', caption: 'Serie', width: 90 },
@@ -173,8 +173,8 @@ const AccountsPayable = () => {
     <Modal modalRef={modalRef} title='Detalle de cuenta por pagar' size='xl' hideFooter>
       <div className='row'>
         <div className='col-md-4 mb-2'><strong>Codigo:</strong> {selectedRow?.code || '-'}</div>
-        <div className='col-md-4 mb-2'><strong>Recepcion:</strong> {selectedRow?.purchaseReceipt?.code || '-'}</div>
-        <div className='col-md-4 mb-2'><strong>Orden compra:</strong> {selectedRow?.purchaseReceipt?.purchaseOrder?.code || '-'}</div>
+        <div className='col-md-4 mb-2'><strong>Recepcion:</strong> {selectedRow?.purchase_receipt_code || '-'}</div>
+        <div className='col-md-4 mb-2'><strong>Orden compra:</strong> {selectedRow?.purchase_order_code || '-'}</div>
         <div className='col-md-6 mb-2'><strong>Proveedor:</strong> {selectedRow?.supplier?.business_name || '-'}</div>
         <div className='col-md-3 mb-2'><strong>Documento:</strong> {[selectedRow?.document_type, selectedRow?.series, selectedRow?.sequence].filter(Boolean).join(' ') || '-'}</div>
         <div className='col-md-3 mb-2'><strong>Estado pago:</strong> {getPaymentStatusLabel(selectedRow?.payment_status || '-')}</div>

@@ -106,13 +106,22 @@ class AccountsPayableController extends BasicController
     private function baseQuery()
     {
         return AccountsPayable::select('accounts_payable.*')
+            ->selectRaw('source_receipt.code as purchase_receipt_code')
+            ->selectRaw('COALESCE(source_order.code, source_receipt_order.code) as purchase_order_code')
+            ->leftJoin('purchase_receipts as source_receipt', function ($join) {
+                $join->on('source_receipt.id', '=', 'accounts_payable.source_id')
+                    ->where('accounts_payable.source_type', '=', 'purchase_receipt');
+            })
+            ->leftJoin('purchase_orders as source_order', function ($join) {
+                $join->on('source_order.id', '=', 'accounts_payable.source_id')
+                    ->where('accounts_payable.source_type', '=', 'purchase_order');
+            })
+            ->leftJoin('purchase_orders as source_receipt_order', 'source_receipt_order.id', '=', 'source_receipt.purchase_order_id')
             ->with([
                 'business:id,name',
                 'branch:id,business_id,name',
                 'warehouse:id,name',
                 'supplier:id,ruc,business_name',
-                'purchaseReceipt:id,code,purchase_order_id,issue_date,receipt_status',
-                'purchaseReceipt.purchaseOrder:id,code',
                 'installments:id,accounts_payable_id,installment_number,due_date,amount,paid_amount,balance_amount,paid_at,payment_status,status',
                 'payments' => fn($query) => $query
                     ->select('id', 'accounts_payable_id', 'amount', 'payment_date', 'payment_method', 'bank', 'operation_number', 'payment_file', 'observations', 'status', 'created_by', 'updated_by', 'created_at')

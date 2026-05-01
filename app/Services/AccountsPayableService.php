@@ -4,14 +4,87 @@ namespace App\Services;
 
 use App\Models\AccountsPayable;
 use App\Models\AccountsPayableInstallment;
+use App\Models\PurchaseOrder;
 use App\Models\PurchaseReceipt;
 use Illuminate\Support\Carbon;
 
 class AccountsPayableService
 {
+    public function syncFromPurchaseOrder(PurchaseOrder $order): ?AccountsPayable
+    {
+        $order->loadMissing('supplier', 'business', 'branch', 'warehouse');
+        $this->purgeLegacyReceiptPayablesForOrder($order);
+        $isEligibleSource = $this->isEligiblePurchaseOrderSource($order);
+
+        $accountsPayable = AccountsPayable::query()
+            ->where('source_type', 'purchase_order')
+            ->where('source_id', $order->id)
+            ->first();
+
+        if (!$accountsPayable) {
+            $accountsPayable = new AccountsPayable([
+                'source_type' => 'purchase_order',
+                'source_id' => $order->id,
+            ]);
+        }
+
+        $accountsPayable->loadMissing('payments');
+        $hasPayments = $accountsPayable->exists && $accountsPayable->payments()->where('status', 1)->exists();
+
+        if (!$isEligibleSource) {
+            if ($accountsPayable->exists) {
+                if ($hasPayments) {
+                    throw new \Exception('No puedes anular o desactivar una orden de compra a credito con pagos registrados');
+                }
+                AccountsPayableInstallment::where('accounts_payable_id', $accountsPayable->id)->delete();
+                $accountsPayable->delete();
+            }
+            return null;
+        }
+
+        if (!$accountsPayable->exists) {
+            $accountsPayable->code = $this->nextCode();
+            $accountsPayable->created_by = $order->created_by;
+        } elseif ($hasPayments && $this->hasLockedFinancialChangesFromPurchaseOrder($accountsPayable, $order)) {
+            throw new \Exception('No puedes modificar los datos financieros de la orden de compra porque la cuenta por pagar ya tiene pagos registrados');
+        }
+
+        $dueDate = $this->resolvePurchaseOrderDueDate($order);
+
+        $accountsPayable->fill([
+            'business_id' => $order->business_id,
+            'business_branch_id' => $order->business_branch_id,
+            'warehouse_id' => $order->warehouse_id,
+            'supplier_id' => $order->supplier_id,
+            'document_type' => 'Orden compra',
+            'series' => null,
+            'sequence' => null,
+            'issue_date' => $order->issue_date,
+            'due_date' => $dueDate,
+            'currency' => $order->currency,
+            'payment_condition' => $order->payment_condition,
+            'subtotal' => $order->subtotal,
+            'tax_amount' => $order->tax_amount,
+            'total' => $order->total,
+            'observations' => $order->observations,
+            'status' => true,
+            'updated_by' => $order->updated_by,
+        ]);
+        $accountsPayable->save();
+
+        $this->syncInstallmentsFromPurchaseOrder($accountsPayable, $order);
+
+        return $this->recalculateFromPayments($accountsPayable->fresh());
+    }
+
     public function syncFromPurchaseReceipt(PurchaseReceipt $receipt): ?AccountsPayable
     {
-        $receipt->loadMissing('supplier', 'business', 'branch', 'warehouse');
+        $receipt->loadMissing('supplier', 'business', 'branch', 'warehouse', 'purchaseOrder');
+
+        if ($receipt->purchaseOrder && $this->shouldUsePurchaseOrderSource($receipt->purchaseOrder)) {
+            return $this->syncFromPurchaseOrder($receipt->purchaseOrder);
+        }
+
         $isConfirmed = (bool)$receipt->status && $receipt->receipt_status === 'confirmed';
 
         $accountsPayable = AccountsPayable::query()
@@ -119,7 +192,6 @@ class AccountsPayableService
                 'branch',
                 'warehouse',
                 'supplier',
-                'purchaseReceipt.purchaseOrder',
                 'installments',
                 'payments.creator',
                 'creator',
@@ -193,7 +265,6 @@ class AccountsPayableService
             'branch',
             'warehouse',
             'supplier',
-            'purchaseReceipt.purchaseOrder',
             'installments',
             'payments.creator',
             'creator',
@@ -231,6 +302,52 @@ class AccountsPayableService
         }
     }
 
+    private function purgeLegacyReceiptPayablesForOrder(PurchaseOrder $order): void
+    {
+        $relatedReceiptIds = PurchaseReceipt::query()
+            ->where('purchase_order_id', $order->id)
+            ->pluck('id');
+
+        if ($relatedReceiptIds->isEmpty()) {
+            return;
+        }
+
+        $legacyPayables = AccountsPayable::query()
+            ->where('source_type', 'purchase_receipt')
+            ->whereIn('source_id', $relatedReceiptIds)
+            ->get();
+
+        foreach ($legacyPayables as $legacyPayable) {
+            $legacyHasPayments = $legacyPayable->payments()->where('status', 1)->exists();
+            if ($legacyHasPayments) {
+                throw new \Exception('La orden de compra ya tiene pagos registrados en cuentas por pagar previas creadas desde recepciones y no se puede migrar automaticamente');
+            }
+
+            AccountsPayableInstallment::where('accounts_payable_id', $legacyPayable->id)->delete();
+            $legacyPayable->delete();
+        }
+    }
+
+    private function syncInstallmentsFromPurchaseOrder(AccountsPayable $accountsPayable, PurchaseOrder $order): void
+    {
+        AccountsPayableInstallment::where('accounts_payable_id', $accountsPayable->id)->delete();
+
+        $dueDate = $this->resolvePurchaseOrderDueDate($order);
+        $amount = round((float)$order->total, 2);
+
+        AccountsPayableInstallment::create([
+            'accounts_payable_id' => $accountsPayable->id,
+            'installment_number' => 1,
+            'due_date' => $dueDate,
+            'amount' => $amount,
+            'paid_amount' => 0,
+            'balance_amount' => $amount,
+            'paid_at' => null,
+            'payment_status' => 'pending',
+            'status' => true,
+        ]);
+    }
+
     private function hasLockedFinancialChanges(AccountsPayable $accountsPayable, PurchaseReceipt $receipt): bool
     {
         $currentDueDate = $receipt->first_due_date ?: $receipt->issue_date;
@@ -247,6 +364,23 @@ class AccountsPayableService
             || round((float)$accountsPayable->total, 2) !== round((float)$receipt->total, 2);
     }
 
+    private function hasLockedFinancialChangesFromPurchaseOrder(AccountsPayable $accountsPayable, PurchaseOrder $order): bool
+    {
+        $currentDueDate = $this->resolvePurchaseOrderDueDate($order);
+        $accountsPayable->loadMissing('installments');
+
+        return (int)$accountsPayable->supplier_id !== (int)$order->supplier_id
+            || $this->normalizeNullableString($accountsPayable->document_type) !== 'Orden compra'
+            || $this->normalizeDateString($accountsPayable->issue_date) !== $this->normalizeDateString($order->issue_date)
+            || $this->normalizeDateString($accountsPayable->due_date) !== $this->normalizeDateString($currentDueDate)
+            || $this->normalizeNullableString($accountsPayable->currency) !== $this->normalizeNullableString($order->currency)
+            || $this->normalizeNullableString($accountsPayable->payment_condition) !== $this->normalizeNullableString($order->payment_condition)
+            || round((float)$accountsPayable->subtotal, 2) !== round((float)$order->subtotal, 2)
+            || round((float)$accountsPayable->tax_amount, 2) !== round((float)$order->tax_amount, 2)
+            || round((float)$accountsPayable->total, 2) !== round((float)$order->total, 2)
+            || $accountsPayable->installments()->count() !== 1;
+    }
+
     private function normalizeNullableString($value): ?string
     {
         if ($value === null) return null;
@@ -259,6 +393,38 @@ class AccountsPayableService
         if (!$value) return null;
         if ($value instanceof Carbon) return $value->format('Y-m-d');
         return Carbon::parse($value)->format('Y-m-d');
+    }
+
+    private function isEligiblePurchaseOrderSource(PurchaseOrder $order): bool
+    {
+        return (bool)$order->status
+            && $order->payment_condition === 'Credito'
+            && $order->order_status !== 'cancelled';
+    }
+
+    private function shouldUsePurchaseOrderSource(PurchaseOrder $order): bool
+    {
+        if ($order->payment_condition === 'Credito') {
+            return true;
+        }
+
+        return AccountsPayable::query()
+            ->where('source_type', 'purchase_order')
+            ->where('source_id', $order->id)
+            ->exists();
+    }
+
+    private function resolvePurchaseOrderDueDate(PurchaseOrder $order): ?Carbon
+    {
+        if ($order->expected_date) {
+            return $order->expected_date instanceof Carbon
+                ? $order->expected_date->copy()
+                : Carbon::parse($order->expected_date);
+        }
+
+        return $order->issue_date instanceof Carbon
+            ? $order->issue_date->copy()
+            : Carbon::parse($order->issue_date);
     }
 
     private function nextCode(): string
