@@ -51,7 +51,7 @@ jobs:
 
             set -Ee
 
-            post_deployment() {
+            notify_deployment() {
               DEPLOY_STATUS="$1"
               DEPLOY_ERROR="${2:-}"
               DEPLOY_EXIT_CODE="${3:-0}"
@@ -63,15 +63,20 @@ jobs:
               fi
               PAYLOAD="$PAYLOAD,\"timestamp\":\"$(json_escape "$TIMESTAMP")\"}"
 
-              curl -X POST https://devex.pe/free/deployments \
+              curl -fsS -X POST https://devex.pe/free/deployments \
                 -H "Content-Type: application/json" \
-                -d "$PAYLOAD" || true
+                -d "$PAYLOAD"
             }
 
             on_error() {
               EXIT_CODE=$?
               FAILED_COMMAND="${BASH_COMMAND:-unknown}"
-              post_deployment "failed" "$FAILED_COMMAND" "$EXIT_CODE"
+              set +e
+              notify_deployment "failed" "$FAILED_COMMAND" "$EXIT_CODE"
+              NOTIFY_EXIT=$?
+              if [ "$NOTIFY_EXIT" -ne 0 ]; then
+                echo "Deployment notification failed with exit code $NOTIFY_EXIT" >&2
+              fi
               exit "$EXIT_CODE"
             }
 
@@ -98,5 +103,5 @@ jobs:
             docker compose exec -T app sh -lc 'if [ ! -f storage/app/.production-module-seeders-v2-ran ]; then php artisan db:seed --class=ProductionModuleDataSeeder --force; php artisan kamary:audit-operational-scope --fix; php artisan kamary:audit-operational-scope; mkdir -p storage/app; date -Is > storage/app/.production-module-seeders-v2-ran; else echo "Production module seeders v2 already ran"; fi'
             docker compose exec -T app php artisan optimize:clear
             
-            post_deployment "success"
+            notify_deployment "success"
           EOF
