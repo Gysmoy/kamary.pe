@@ -1,6 +1,12 @@
 name: Seed Production Module Data
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - database/seeders/ProductionModuleDataSeeder.php
+      - .github/workflows/seed-production-data.yaml
   workflow_dispatch:
 
 jobs:
@@ -20,9 +26,5 @@ jobs:
             cd /var/docker/kamary
             git pull
 
-            docker compose exec -T app php artisan migrate --force
-            docker compose exec -T app php artisan db:seed --class=ProductionModuleDataSeeder --force
-            docker compose exec -T app php artisan kamary:audit-operational-scope --fix
-            docker compose exec -T app php artisan kamary:audit-operational-scope
-            docker compose exec -T app php artisan optimize:clear
+            docker compose exec -T app sh -lc 'if [ ! -f storage/app/.production-module-data-seeded-v1 ]; then php artisan migrate --force && php artisan db:seed --class=ProductionModuleDataSeeder --force && php artisan kamary:audit-operational-scope --fix && php artisan kamary:audit-operational-scope && php artisan optimize:clear && mkdir -p storage/app && date -Is > storage/app/.production-module-data-seeded-v1; else echo "Production module data already seeded"; fi'
           EOF
