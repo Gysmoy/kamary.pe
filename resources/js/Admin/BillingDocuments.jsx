@@ -7,6 +7,11 @@ import Modal from '../Components/Adminto/Modal';
 import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import BillingDocumentsRest from '../Actions/Admin/BillingDocumentsRest';
+import {
+  billingDocumentStatusOptions,
+  getBillingDocumentStatusLabel,
+  getSourceTypeLabel,
+} from '../Utils/statusLabels';
 
 const billingDocumentsRest = new BillingDocumentsRest()
 
@@ -294,7 +299,7 @@ const BillingDocuments = () => {
       columns={[
         { dataField: 'id', caption: 'ID', width: 70 },
         { dataField: 'code', caption: 'Codigo', width: 120 },
-        { dataField: 'source_type', caption: 'Origen', width: 120 },
+        { dataField: 'source_type', caption: 'Origen', width: 120, calculateCellValue: (data) => getSourceTypeLabel(data.source_type) },
         { caption: 'Documento origen', minWidth: 150, calculateCellValue: (data) => data.commercial_order?.code ?? data.commercialOrder?.code ?? data.service_order?.code ?? data.serviceOrder?.code ?? '-' },
         { dataField: 'document_type', caption: 'Comprobante', width: 120 },
         { caption: 'Referencia', minWidth: 140, calculateCellValue: (data) => data.reference_document?.code ?? data.referenceDocument?.code ?? '-' },
@@ -318,8 +323,8 @@ const BillingDocuments = () => {
             container.append(button)
           }
         },
-        { dataField: 'local_status', caption: 'Estado local', width: 110 },
-        { dataField: 'external_status', caption: 'Estado externo', width: 120 },
+        { dataField: 'local_status', caption: 'Estado local', width: 110, calculateCellValue: (data) => getBillingDocumentStatusLabel(data.local_status) },
+        { dataField: 'external_status', caption: 'Estado externo', width: 120, calculateCellValue: (data) => getBillingDocumentStatusLabel(data.external_status) },
         { caption: 'Acciones', width: 470, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           const readiness = data?.fiscal_readiness ?? {}
           const canIssue = readiness?.can_issue !== false
@@ -400,12 +405,11 @@ const BillingDocuments = () => {
         <div className='col-md-6 mb-3'>
           <label className='form-label'>Estado local</label>
           <select ref={localStatusRef} className='form-control'>
-            <option value='pending'>pending</option>
-            <option value='sent'>sent</option>
-            <option value='accepted'>accepted</option>
-            <option value='observed'>observed</option>
-            <option value='rejected'>rejected</option>
-            <option value='cancelled'>cancelled</option>
+            {billingDocumentStatusOptions
+              .filter((option) => ['pending', 'sent', 'accepted', 'observed', 'rejected', 'cancelled'].includes(option.value))
+              .map((option) => (
+                <option key={`billing-document-local-status-${option.value}`} value={option.value}>{option.label}</option>
+              ))}
           </select>
         </div>
         <div className='col-md-6 mb-3'><label className='form-label'>Estado externo</label><input ref={externalStatusRef} className='form-control' /></div>

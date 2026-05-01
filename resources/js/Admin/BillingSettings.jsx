@@ -11,6 +11,7 @@ import InputFormGroup from '@Adminto/form/InputFormGroup'
 import UbigeoCascade from '../Components/Adminto/Form/UbigeoCascade'
 import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei'
 import BusinessesRest from '../Actions/Admin/BusinessesRest'
+import { getFacturadorSyncMeta } from '../Utils/statusLabels'
 
 const businessesRest = new BusinessesRest()
 
@@ -318,13 +319,8 @@ const BillingSettings = ({ can }) => {
           caption: 'Sync facturador',
           width: 145,
           cellTemplate: (container, { data }) => {
-            const status = data.facturador_sync_status ?? 'sin sync'
-            const color = status === 'success'
-              ? 'success'
-              : status === 'error'
-                ? 'danger'
-                : 'secondary'
-            container.html(`<span class="badge bg-${color}-subtle text-${color} text-uppercase">${status}</span>`)
+            const meta = getFacturadorSyncMeta(data.facturador_sync_status)
+            container.html(`<span class="badge bg-${meta.color}-subtle text-${meta.color}">${meta.label}</span>`)
           }
         },
         {
@@ -412,7 +408,7 @@ const BillingSettings = ({ can }) => {
       <div className='row'>
         <div className='col-12 mb-2 d-flex justify-content-between align-items-center gap-2 flex-wrap'>
           <div className='small text-muted'>
-            Sync actual: <b>{selectedFiscalBusiness?.facturador_sync_status ?? 'sin sync'}</b>
+            Sync actual: <b>{getFacturadorSyncMeta(selectedFiscalBusiness?.facturador_sync_status).label}</b>
             {selectedFiscalBusiness?.facturador_last_sync_at && <> | Ultimo sync: <b>{selectedFiscalBusiness.facturador_last_sync_at.toString()}</b></>}
           </div>
           <button type='button' className='btn btn-sm btn-outline-primary' onClick={onSyncFacturador}>
@@ -498,9 +494,12 @@ const BillingSettings = ({ can }) => {
                 <td>{branch.establishment_code ?? '-'}</td>
                 <td>{branch.facturador_establishment_id ?? '-'}</td>
                 <td>
-                  {branch.facturador_sync_status
-                    ? <span className={`badge bg-${branch.facturador_sync_status === 'success' ? 'success' : 'danger'}-subtle text-${branch.facturador_sync_status === 'success' ? 'success' : 'danger'}`}>{branch.facturador_sync_status}</span>
-                    : <span className='text-muted'>sin sync</span>}
+                  {(() => {
+                    const meta = getFacturadorSyncMeta(branch.facturador_sync_status)
+                    return branch.facturador_sync_status
+                      ? <span className={`badge bg-${meta.color}-subtle text-${meta.color}`}>{meta.label}</span>
+                      : <span className='text-muted'>{meta.label}</span>
+                  })()}
                 </td>
                 <td>{branch.ubigeo ?? '-'}</td>
                 <td>{branch.address ?? '-'}</td>

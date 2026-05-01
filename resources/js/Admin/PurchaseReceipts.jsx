@@ -14,6 +14,10 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import PurchaseReceiptsRest from '../Actions/Admin/PurchaseReceiptsRest';
+import {
+  purchaseReceiptStatusOptions,
+  toLookup,
+} from '../Utils/statusLabels';
 
 const purchaseReceiptsRest = new PurchaseReceiptsRest()
 
@@ -454,7 +458,7 @@ const PurchaseReceipts = () => {
         { dataField: 'document_series', caption: 'Serie', width: 90 },
         { dataField: 'document_sequence', caption: 'Secuencia', width: 110 },
         { dataField: 'payment_condition', caption: 'Pago', width: 100 },
-        { dataField: 'receipt_status', caption: 'Estado', width: 110 },
+        { dataField: 'receipt_status', caption: 'Estado', width: 110, lookup: toLookup(purchaseReceiptStatusOptions) },
         { dataField: 'currency', caption: 'Moneda', width: 90 },
         { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
         {
@@ -584,9 +588,9 @@ const PurchaseReceipts = () => {
         <div className='form-group col-md-2 mb-2'>
           <label className='form-label'>Estado recepcion</label>
           <select ref={receiptStatusRef} className='form-control'>
-            <option value='draft'>Borrador</option>
-            <option value='confirmed'>Confirmado</option>
-            <option value='cancelled'>Anulado</option>
+            {purchaseReceiptStatusOptions.map((option) => (
+              <option key={`purchase-receipt-status-${option.value}`} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
         <div className='form-group col-md-2 mb-2'>

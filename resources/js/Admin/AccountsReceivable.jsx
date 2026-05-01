@@ -6,6 +6,13 @@ import Table from '../Components/Adminto/Table';
 import Modal from '../Components/Adminto/Modal';
 import DxButton from '../Components/dx/DxButton';
 import AccountsReceivableRest from '../Actions/Admin/AccountsReceivableRest';
+import {
+  getOperationalOrderStatusLabel,
+  getPaymentStatusLabel,
+  getSourceTypeLabel,
+  paymentStatusOptions,
+  toLookup,
+} from '../Utils/statusLabels';
 
 const accountsReceivableRest = new AccountsReceivableRest()
 
@@ -110,7 +117,7 @@ const AccountsReceivable = () => {
           dataField: 'source_type',
           caption: 'Origen',
           width: 120,
-          calculateCellValue: (data) => data.source_type === 'service_order' ? 'Orden servicio' : 'Pedido comercial'
+          calculateCellValue: (data) => getSourceTypeLabel(data.source_type)
         },
         {
           dataField: 'source_code',
@@ -132,7 +139,7 @@ const AccountsReceivable = () => {
         { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
         { dataField: 'paid_amount', caption: 'Pagado', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
         { dataField: 'balance_amount', caption: 'Saldo', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        { dataField: 'payment_status', caption: 'Estado pago', width: 110 },
+        { dataField: 'payment_status', caption: 'Estado pago', width: 110, lookup: toLookup(paymentStatusOptions) },
         {
           dataField: 'installments.id',
           caption: 'Cuotas',
@@ -181,12 +188,12 @@ const AccountsReceivable = () => {
     <Modal modalRef={modalRef} title='Detalle de cuenta por cobrar' size='xl' hideFooter>
       <div className='row'>
         <div className='col-md-4 mb-2'><strong>Codigo:</strong> {selectedRow?.code || '-'}</div>
-        <div className='col-md-4 mb-2'><strong>Origen:</strong> {selectedRow?.source_type === 'service_order' ? 'Orden de servicio' : 'Pedido comercial'}</div>
+        <div className='col-md-4 mb-2'><strong>Origen:</strong> {getSourceTypeLabel(selectedRow?.source_type)}</div>
         <div className='col-md-4 mb-2'><strong>Documento origen:</strong> {selectedRow?.commercial_order?.code || selectedRow?.commercialOrder?.code || selectedRow?.service_order?.code || selectedRow?.serviceOrder?.code || '-'}</div>
-        <div className='col-md-4 mb-2'><strong>Estado origen:</strong> {selectedRow?.commercial_order?.order_status || selectedRow?.commercialOrder?.order_status || selectedRow?.service_order?.order_status || selectedRow?.serviceOrder?.order_status || '-'}</div>
+        <div className='col-md-4 mb-2'><strong>Estado origen:</strong> {getOperationalOrderStatusLabel(selectedRow?.commercial_order?.order_status || selectedRow?.commercialOrder?.order_status || selectedRow?.service_order?.order_status || selectedRow?.serviceOrder?.order_status || '-')}</div>
         <div className='col-md-6 mb-2'><strong>Cliente:</strong> {selectedRow?.client?.full_name || selectedRow?.eventual_client?.business_name || selectedRow?.eventualClient?.business_name || '-'}</div>
         <div className='col-md-3 mb-2'><strong>Documento:</strong> {[selectedRow?.document_type, selectedRow?.series, selectedRow?.sequence].filter(Boolean).join(' ') || '-'}</div>
-        <div className='col-md-3 mb-2'><strong>Estado pago:</strong> {selectedRow?.payment_status || '-'}</div>
+        <div className='col-md-3 mb-2'><strong>Estado pago:</strong> {getPaymentStatusLabel(selectedRow?.payment_status || '-')}</div>
         <div className='col-md-3 mb-2'><strong>Fecha emision:</strong> {formatDate(selectedRow?.issue_date)}</div>
         <div className='col-md-3 mb-2'><strong>Fecha vencimiento:</strong> {formatDate(selectedRow?.due_date)}</div>
         <div className='col-md-3 mb-2'><strong>Moneda:</strong> {selectedRow?.currency || '-'}</div>
@@ -226,7 +233,7 @@ const AccountsReceivable = () => {
                     <td>{formatMoney(installment.amount)}</td>
                     <td>{formatMoney(installment.paid_amount)}</td>
                     <td>{formatMoney(installment.balance_amount)}</td>
-                    <td>{installment.payment_status}</td>
+                    <td>{getPaymentStatusLabel(installment.payment_status)}</td>
                     <td>{formatDate(installment?.paid_at)}</td>
                   </tr>
                 ))}

@@ -7,6 +7,12 @@ import Modal from '../Components/Adminto/Modal';
 import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import ActivitiesRest from '../Actions/Admin/ActivitiesRest';
+import {
+  activityStatusOptions,
+  activityTypeOptions,
+  getDispatchStatusLabel,
+  toLookup,
+} from '../Utils/statusLabels';
 
 const activitiesRest = new ActivitiesRest()
 const emptyItem = () => ({ uid: crypto.randomUUID(), commercial_order_item_id: '', article_id: '', item_code: '', description: '', quantity: 1, delivered_quantity: 0 })
@@ -253,14 +259,14 @@ const Activities = () => {
       columns={[
         { dataField: 'code', caption: 'Codigo', width: 110 },
         { dataField: 'transfer_date', caption: 'Fecha', dataType: 'date', width: 110 },
-        { dataField: 'activity_type', caption: 'Tipo', width: 110 },
+        { dataField: 'activity_type', caption: 'Tipo', width: 110, lookup: toLookup(activityTypeOptions) },
         { dataField: 'customer_name', caption: 'Cliente', minWidth: 180 },
         { caption: 'Pedido', width: 120, calculateCellValue: (row) => row.commercial_order?.code ?? row.commercialOrder?.code ?? '-' },
         { caption: 'Despacho', width: 120, calculateCellValue: (row) => row.dispatch?.code ?? '-' },
         { caption: 'Conductor', minWidth: 160, calculateCellValue: (row) => row.driver?.full_name ?? '-' },
         { caption: 'Vehiculo', minWidth: 140, calculateCellValue: (row) => row.vehicle?.plate ?? '-' },
         { caption: 'Zona', minWidth: 140, calculateCellValue: (row) => row.zone?.name ?? '-' },
-        { dataField: 'activity_status', caption: 'Estado', width: 110 },
+        { dataField: 'activity_status', caption: 'Estado', width: 110, lookup: toLookup(activityStatusOptions) },
         { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           container.css('text-overflow', 'unset')
           container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
@@ -305,7 +311,7 @@ const Activities = () => {
           <label className='form-label'>Despacho</label>
           <select className='form-control' value={selectedDispatchId} onChange={(e) => { setSelectedDispatchId(e.target.value); hydrateDispatch(dispatchMap[e.target.value]); }}>
             <option value=''>Sin despacho</option>
-            {dispatches.map(row => <option key={`activity-dispatch-${row.id}`} value={row.id}>{row.code} - {row.dispatch_status}</option>)}
+            {dispatches.map(row => <option key={`activity-dispatch-${row.id}`} value={row.id}>{row.code} - {getDispatchStatusLabel(row.dispatch_status)}</option>)}
           </select>
         </div>
         <div className='col-md-2 mb-3'><label className='form-label'>Fecha</label><input ref={transferDateRef} type='date' className='form-control' required /></div>
@@ -327,21 +333,17 @@ const Activities = () => {
         <div className='col-md-3 mb-3'>
           <label className='form-label'>Tipo</label>
           <select ref={activityTypeRef} className='form-control'>
-            <option value='delivery'>delivery</option>
-            <option value='pickup'>pickup</option>
-            <option value='transfer'>transfer</option>
-            <option value='visit'>visit</option>
+            {activityTypeOptions.map((option) => (
+              <option key={`activity-type-${option.value}`} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
         <div className='col-md-3 mb-3'>
           <label className='form-label'>Estado</label>
           <select ref={activityStatusRef} className='form-control'>
-            <option value='scheduled'>scheduled</option>
-            <option value='assigned'>assigned</option>
-            <option value='in_progress'>in_progress</option>
-            <option value='completed'>completed</option>
-            <option value='incident'>incident</option>
-            <option value='cancelled'>cancelled</option>
+            {activityStatusOptions.map((option) => (
+              <option key={`activity-status-${option.value}`} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
         <div className='col-md-4 mb-3'>

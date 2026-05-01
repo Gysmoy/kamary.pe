@@ -14,6 +14,11 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import PurchaseOrdersRest from '../Actions/Admin/PurchaseOrdersRest';
+import {
+  approvalStatusOptions,
+  purchaseOrderStatusOptions,
+  toLookup,
+} from '../Utils/statusLabels';
 
 const purchaseOrdersRest = new PurchaseOrdersRest()
 
@@ -313,8 +318,8 @@ const PurchaseOrders = () => {
         { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 130 },
         { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 220 },
         { dataField: 'payment_condition', caption: 'Pago', width: 100 },
-        { dataField: 'approval_status', caption: 'Aprobacion', width: 110 },
-        { dataField: 'order_status', caption: 'Estado OC', width: 110 },
+        { dataField: 'approval_status', caption: 'Aprobacion', width: 110, lookup: toLookup(approvalStatusOptions) },
+        { dataField: 'order_status', caption: 'Estado OC', width: 110, lookup: toLookup(purchaseOrderStatusOptions) },
         { dataField: 'currency', caption: 'Moneda', width: 90 },
         { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
         {
@@ -452,19 +457,17 @@ const PurchaseOrders = () => {
         <div className='form-group col-md-2 mb-2'>
           <label className='form-label'>Estado OC</label>
           <select ref={orderStatusRef} className='form-control'>
-            <option value='draft'>Borrador</option>
-            <option value='approved'>Aprobada</option>
-            <option value='partial'>Parcial</option>
-            <option value='completed'>Completada</option>
-            <option value='cancelled'>Anulada</option>
+            {purchaseOrderStatusOptions.map((option) => (
+              <option key={`purchase-order-status-${option.value}`} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
         <div className='form-group col-md-2 mb-2'>
           <label className='form-label'>Aprobacion</label>
           <select ref={approvalStatusRef} className='form-control'>
-            <option value='pending'>Pendiente</option>
-            <option value='approved'>Aprobada</option>
-            <option value='rejected'>Rechazada</option>
+            {approvalStatusOptions.map((option) => (
+              <option key={`purchase-order-approval-status-${option.value}`} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
         <InputFormGroup

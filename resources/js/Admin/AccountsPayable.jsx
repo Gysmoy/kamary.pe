@@ -6,6 +6,11 @@ import Table from '../Components/Adminto/Table';
 import Modal from '../Components/Adminto/Modal';
 import DxButton from '../Components/dx/DxButton';
 import AccountsPayableRest from '../Actions/Admin/AccountsPayableRest';
+import {
+  getPaymentStatusLabel,
+  paymentStatusOptions,
+  toLookup,
+} from '../Utils/statusLabels';
 
 const accountsPayableRest = new AccountsPayableRest()
 
@@ -119,7 +124,7 @@ const AccountsPayable = () => {
         { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
         { dataField: 'paid_amount', caption: 'Pagado', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
         { dataField: 'balance_amount', caption: 'Saldo', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        { dataField: 'payment_status', caption: 'Estado pago', width: 110 },
+        { dataField: 'payment_status', caption: 'Estado pago', width: 110, lookup: toLookup(paymentStatusOptions) },
         {
           dataField: 'installments.id',
           caption: 'Cuotas',
@@ -172,7 +177,7 @@ const AccountsPayable = () => {
         <div className='col-md-4 mb-2'><strong>Orden compra:</strong> {selectedRow?.purchaseReceipt?.purchaseOrder?.code || '-'}</div>
         <div className='col-md-6 mb-2'><strong>Proveedor:</strong> {selectedRow?.supplier?.business_name || '-'}</div>
         <div className='col-md-3 mb-2'><strong>Documento:</strong> {[selectedRow?.document_type, selectedRow?.series, selectedRow?.sequence].filter(Boolean).join(' ') || '-'}</div>
-        <div className='col-md-3 mb-2'><strong>Estado pago:</strong> {selectedRow?.payment_status || '-'}</div>
+        <div className='col-md-3 mb-2'><strong>Estado pago:</strong> {getPaymentStatusLabel(selectedRow?.payment_status || '-')}</div>
         <div className='col-md-3 mb-2'><strong>Fecha emision:</strong> {formatDate(selectedRow?.issue_date)}</div>
         <div className='col-md-3 mb-2'><strong>Fecha vencimiento:</strong> {formatDate(selectedRow?.due_date)}</div>
         <div className='col-md-3 mb-2'><strong>Moneda:</strong> {selectedRow?.currency || '-'}</div>
@@ -212,7 +217,7 @@ const AccountsPayable = () => {
                     <td>{formatMoney(installment.amount)}</td>
                     <td>{formatMoney(installment.paid_amount)}</td>
                     <td>{formatMoney(installment.balance_amount)}</td>
-                    <td>{installment.payment_status}</td>
+                    <td>{getPaymentStatusLabel(installment.payment_status)}</td>
                     <td>{formatDate(installment?.paid_at)}</td>
                   </tr>
                 ))}

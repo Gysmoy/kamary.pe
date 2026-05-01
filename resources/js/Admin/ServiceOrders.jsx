@@ -7,6 +7,12 @@ import Modal from '../Components/Adminto/Modal';
 import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import ServiceOrdersRest from '../Actions/Admin/ServiceOrdersRest';
+import {
+  billingStatusOptions,
+  getPaymentStatusLabel,
+  serviceOrderStatusOptions,
+  toLookup,
+} from '../Utils/statusLabels';
 
 const serviceOrdersRest = new ServiceOrdersRest()
 const emptyItem = () => ({ uid: crypto.randomUUID(), service_id: '', description: '', quantity: 1, unit_price: 0, detraction_percent: 0, commission_percent: 0, total: 0 })
@@ -156,10 +162,10 @@ const ServiceOrders = () => {
           dataField: 'payment_status',
           caption: 'Cobranza',
           width: 110,
-          calculateCellValue: (data) => data.accounts_receivable?.payment_status ?? data.accountsReceivable?.payment_status ?? data.payment_status ?? '-'
+          calculateCellValue: (data) => getPaymentStatusLabel(data.accounts_receivable?.payment_status ?? data.accountsReceivable?.payment_status ?? data.payment_status ?? '-')
         },
-        { dataField: 'order_status', caption: 'Estado', width: 110 },
-        { dataField: 'billing_status', caption: 'Facturacion', width: 110 },
+        { dataField: 'order_status', caption: 'Estado', width: 110, lookup: toLookup(serviceOrderStatusOptions) },
+        { dataField: 'billing_status', caption: 'Facturacion', width: 110, lookup: toLookup(billingStatusOptions) },
         { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           container.css('text-overflow', 'unset')
           container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
@@ -183,8 +189,8 @@ const ServiceOrders = () => {
         <div className='col-md-2 mb-3'><label className='form-label'>Moneda</label><select ref={currencyRef} className='form-control'><option value='PEN'>PEN</option><option value='USD'>USD</option></select></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Pago</label><select ref={paymentConditionRef} className='form-control'><option value='Contado'>Contado</option><option value='Credito'>Credito</option></select></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Cuotas</label><input ref={installmentsRef} type='number' min='1' className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Estado</label><select ref={orderStatusRef} className='form-control'><option value='draft'>draft</option><option value='approved'>approved</option><option value='scheduled'>scheduled</option><option value='executing'>executing</option><option value='prefactured'>prefactured</option><option value='invoiced'>invoiced</option><option value='closed'>closed</option><option value='cancelled'>cancelled</option></select></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Facturacion</label><select ref={billingStatusRef} className='form-control'><option value='pending'>pending</option><option value='partial'>partial</option><option value='billed'>billed</option><option value='cancelled'>cancelled</option></select></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Estado</label><select ref={orderStatusRef} className='form-control'>{serviceOrderStatusOptions.map((option) => <option key={`service-order-status-${option.value}`} value={option.value}>{option.label}</option>)}</select></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Facturacion</label><select ref={billingStatusRef} className='form-control'>{billingStatusOptions.map((option) => <option key={`service-order-billing-status-${option.value}`} value={option.value}>{option.label}</option>)}</select></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Impuesto</label><input ref={taxAmountRef} type='number' step='0.01' className='form-control' /></div>
         <div className='col-12 mb-3'>
           <label className='form-label'>Servicios</label>

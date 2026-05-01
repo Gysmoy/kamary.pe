@@ -13,6 +13,13 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import CommercialOrdersRest from '../Actions/Admin/CommercialOrdersRest';
+import {
+  billingStatusOptions,
+  commercialOrderStatusOptions,
+  dispatchStatusOptions,
+  paymentStatusOptions,
+  toLookup,
+} from '../Utils/statusLabels';
 
 const commercialOrdersRest = new CommercialOrdersRest()
 
@@ -589,10 +596,10 @@ const CommercialOrders = ({ requiredPermission = 'orders' }) => {
           minWidth: 160,
           calculateCellValue: (data) => data.distribution_network?.name ?? data.distributionNetwork?.name ?? '-'
         },
-        { dataField: 'order_status', caption: 'Estado pedido', width: 110 },
-        { dataField: 'dispatch_status', caption: 'Despacho', width: 110 },
-        { dataField: 'billing_status', caption: 'Facturacion', width: 110 },
-        { dataField: 'payment_status', caption: 'Cobranza', width: 110 },
+        { dataField: 'order_status', caption: 'Estado pedido', width: 110, lookup: toLookup(commercialOrderStatusOptions) },
+        { dataField: 'dispatch_status', caption: 'Despacho', width: 110, lookup: toLookup(dispatchStatusOptions) },
+        { dataField: 'billing_status', caption: 'Facturacion', width: 110, lookup: toLookup(billingStatusOptions) },
+        { dataField: 'payment_status', caption: 'Cobranza', width: 110, lookup: toLookup(paymentStatusOptions) },
         { dataField: 'currency', caption: 'Moneda', width: 90 },
         { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
         {
@@ -764,32 +771,27 @@ const CommercialOrders = ({ requiredPermission = 'orders' }) => {
         <div className='col-md-3'>
           <label className='form-label'>Estado pedido</label>
           <select ref={orderStatusRef} className='form-control'>
-            <option value='draft'>draft</option>
-            <option value='confirmed'>confirmed</option>
-            <option value='preparing'>preparing</option>
-            <option value='dispatched'>dispatched</option>
-            <option value='billed'>billed</option>
-            <option value='closed'>closed</option>
-            <option value='cancelled'>cancelled</option>
+            {commercialOrderStatusOptions.map((option) => (
+              <option key={`commercial-order-status-${option.value}`} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
         <div className='col-md-2'>
           <label className='form-label'>Despacho</label>
           <select ref={dispatchStatusRef} className='form-control'>
-            <option value='pending'>pending</option>
-            <option value='preparing'>preparing</option>
-            <option value='dispatched'>dispatched</option>
-            <option value='delivered'>delivered</option>
-            <option value='cancelled'>cancelled</option>
+            {dispatchStatusOptions
+              .filter((option) => ['pending', 'preparing', 'dispatched', 'delivered', 'cancelled'].includes(option.value))
+              .map((option) => (
+                <option key={`commercial-order-dispatch-status-${option.value}`} value={option.value}>{option.label}</option>
+              ))}
           </select>
         </div>
         <div className='col-md-3'>
           <label className='form-label'>Facturacion</label>
           <select ref={billingStatusRef} className='form-control'>
-            <option value='pending'>pending</option>
-            <option value='partial'>partial</option>
-            <option value='billed'>billed</option>
-            <option value='cancelled'>cancelled</option>
+            {billingStatusOptions.map((option) => (
+              <option key={`commercial-order-billing-status-${option.value}`} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
 

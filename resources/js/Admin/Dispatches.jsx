@@ -7,6 +7,12 @@ import Modal from '../Components/Adminto/Modal';
 import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import DispatchesRest from '../Actions/Admin/DispatchesRest';
+import {
+  dispatchStatusOptions,
+  getShiftLabel,
+  shiftOptions,
+  toLookup,
+} from '../Utils/statusLabels';
 
 const dispatchesRest = new DispatchesRest()
 const emptyAssignment = () => ({ uid: crypto.randomUUID(), commercial_order_id: '', customer_name: '', total: 0 })
@@ -155,11 +161,11 @@ const Dispatches = () => {
         { dataField: 'id', caption: 'ID', width: 70 },
         { dataField: 'code', caption: 'Codigo', width: 120 },
         { dataField: 'scheduled_date', caption: 'Fecha', dataType: 'date', width: 110 },
-        { dataField: 'shift', caption: 'Turno', width: 90 },
+        { dataField: 'shift', caption: 'Turno', width: 90, calculateCellValue: (data) => getShiftLabel(data.shift) },
         { caption: 'Placa', width: 110, calculateCellValue: (data) => data.vehicle?.plate ?? data.vehicle_plate ?? '-' },
         { caption: 'Conductor', minWidth: 180, calculateCellValue: (data) => data.driver?.full_name ?? data.driver_name ?? '-' },
         { caption: 'Zona', minWidth: 140, calculateCellValue: (data) => data.zone_master?.name ?? data.zoneMaster?.name ?? data.zone ?? '-' },
-        { dataField: 'dispatch_status', caption: 'Estado', width: 110 },
+        { dataField: 'dispatch_status', caption: 'Estado', width: 110, lookup: toLookup(dispatchStatusOptions) },
         { caption: 'Pedidos', width: 90, cellTemplate: (container, { data }) => container.text((data.assignments ?? []).length) },
         { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           container.css('text-overflow', 'unset')
@@ -201,9 +207,9 @@ const Dispatches = () => {
         <div className='col-md-3 mb-3'>
           <label className='form-label'>Turno</label>
           <select ref={shiftRef} className='form-control'>
-            <option value='Manana'>Manana</option>
-            <option value='Tarde'>Tarde</option>
-            <option value='Noche'>Noche</option>
+            {shiftOptions.map((option) => (
+              <option key={`dispatch-shift-${option.value}`} value={option.value}>{option.label}</option>
+            ))}
           </select>
         </div>
         <div className='col-md-3 mb-3'>
@@ -232,13 +238,11 @@ const Dispatches = () => {
         <div className='col-md-3 mb-3'>
           <label className='form-label'>Estado</label>
           <select ref={dispatchStatusRef} className='form-control'>
-            <option value='waiting'>waiting</option>
-            <option value='assigned'>assigned</option>
-            <option value='in_route'>in_route</option>
-            <option value='delivered'>delivered</option>
-            <option value='incident'>incident</option>
-            <option value='closed'>closed</option>
-            <option value='cancelled'>cancelled</option>
+            {dispatchStatusOptions
+              .filter((option) => ['waiting', 'assigned', 'in_route', 'delivered', 'incident', 'closed', 'cancelled'].includes(option.value))
+              .map((option) => (
+                <option key={`dispatch-status-${option.value}`} value={option.value}>{option.label}</option>
+              ))}
           </select>
         </div>
         <div className='col-md-3 mb-3'><label className='form-label'>Licencia</label><input className='form-control' value={currentDriver?.license_number ?? ''} disabled /></div>
