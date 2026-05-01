@@ -29,7 +29,9 @@ class WarehouseController extends BasicController
             ->join('users as creator', 'creator.id', '=', 'warehouses.created_by')
             ->join('users as updater', 'updater.id', '=', 'warehouses.updated_by');
 
-        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $scopeKey = BusinessScope::scopedKeyForRequest(request(), [
+            '/admin/warehouses',
+        ]);
         $query->whereHas('branch.business', function ($business) use ($scopeKey) {
             $business->whereIn('business_key', BusinessScope::fixedKeys());
             if ($scopeKey) $business->where('business_key', $scopeKey);
@@ -52,7 +54,9 @@ class WarehouseController extends BasicController
             throw new \Exception('La sede es obligatoria');
         }
 
-        $branch = BusinessScope::findFixedBranchForRequest($branchId, $request);
+        $branch = BusinessScope::findFixedBranchForRequest($branchId, $request, [
+            '/admin/warehouses',
+        ]);
 
         if (!isset($body['id']) || !$body['id']) {
             $body['created_by'] = $userId;

@@ -104,9 +104,9 @@ class BusinessScope
         return $business;
     }
 
-    public static function findFixedBranchForRequest($id, Request $request): BusinessBranch
+    public static function findFixedBranchForRequest($id, Request $request, array $neutralPaths = []): BusinessBranch
     {
-        $scopeKey = self::keyFromRequestPath($request);
+        $scopeKey = self::keyFromRequestPath($request, $neutralPaths);
         $branch = BusinessBranch::query()
             ->whereKey($id)
             ->whereNotNull('status')

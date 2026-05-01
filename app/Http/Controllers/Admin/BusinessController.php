@@ -578,6 +578,7 @@ class BusinessController extends BasicController
         return BusinessScope::scopedKeyForRequest($request, [
             '/admin/businesses',
             '/admin/billing-settings',
+            '/admin/warehouses',
         ]);
     }
 
