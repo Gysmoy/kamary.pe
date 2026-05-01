@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
@@ -19,11 +19,84 @@ const VIEW_FILTERS = [
   { key: 'vehicles', label: 'Solo vehiculos' },
 ]
 
+const normalizeText = (value) => `${value ?? ''}`.toLowerCase()
+
+const getFieldValue = (row, field) => {
+  if (!field) return ''
+  return field.split('.').reduce((current, key) => current?.[key], row)
+}
+
+const compareValue = (left, operator, right) => {
+  const leftText = normalizeText(left)
+  const rightText = normalizeText(right)
+
+  switch (operator) {
+    case '=': return `${left ?? ''}` == `${right ?? ''}`
+    case '<>': return `${left ?? ''}` != `${right ?? ''}`
+    case 'contains': return leftText.includes(rightText)
+    case 'notcontains': return !leftText.includes(rightText)
+    case 'startswith': return leftText.startsWith(rightText)
+    case 'endswith': return leftText.endsWith(rightText)
+    case '>': return Number(left) > Number(right)
+    case '>=': return Number(left) >= Number(right)
+    case '<': return Number(left) < Number(right)
+    case '<=': return Number(left) <= Number(right)
+    default: return true
+  }
+}
+
+const evaluateFilter = (row, filter) => {
+  if (!filter) return true
+  if (!Array.isArray(filter)) return true
+
+  if (filter[0] === '!') return !evaluateFilter(row, filter[1])
+
+  if (typeof filter[0] === 'string' && typeof filter[1] === 'string' && filter.length >= 3) {
+    return compareValue(getFieldValue(row, filter[0]), filter[1], filter[2])
+  }
+
+  let result = evaluateFilter(row, filter[0])
+  for (let i = 1; i < filter.length; i += 2) {
+    const operator = `${filter[i]}`.toLowerCase()
+    const next = evaluateFilter(row, filter[i + 1])
+    result = operator === 'or' ? result || next : result && next
+  }
+  return result
+}
+
+const applySearch = (rows, params) => {
+  const searchValue = normalizeText(params?.searchValue)
+  if (!searchValue) return rows
+
+  const searchExpr = Array.isArray(params?.searchExpr)
+    ? params.searchExpr
+    : ['category_label', 'code', 'name', 'business_name', 'plate', 'vehicle_type', 'zone_name', 'district', 'province', 'department', 'ubigeo']
+
+  return rows.filter(row => searchExpr.some(field => normalizeText(getFieldValue(row, field)).includes(searchValue)))
+}
+
+const applySort = (rows, sort = []) => {
+  if (!Array.isArray(sort) || sort.length === 0) return rows
+
+  return [...rows].sort((a, b) => {
+    for (const item of sort) {
+      const selector = typeof item === 'string' ? item : item.selector
+      const desc = typeof item === 'object' && item.desc
+      const left = getFieldValue(a, selector)
+      const right = getFieldValue(b, selector)
+      if (left == right) continue
+      const comparison = left > right ? 1 : -1
+      return desc ? comparison * -1 : comparison
+    }
+    return 0
+  })
+}
+
 const VehicleZones = () => {
-  const zoneGridRef = useRef()
-  const vehicleGridRef = useRef()
+  const gridRef = useRef()
   const zoneModalRef = useRef()
   const vehicleModalRef = useRef()
+  const viewFilterRef = useRef('all')
 
   const zoneIdRef = useRef()
   const zoneBusinessRef = useRef()
@@ -49,6 +122,11 @@ const VehicleZones = () => {
   const [zoneLocation, setZoneLocation] = useState(EMPTY_UBIGEO_SELECTION)
   const [viewFilter, setViewFilter] = useState('all')
 
+  const refreshGrid = async () => {
+    const instance = gridRef.current ? $(gridRef.current).dxDataGrid('instance') : null
+    if (instance) await instance.refresh()
+  }
+
   const refreshZones = async () => {
     const data = await zonesRest.paginate({ take: 1000, skip: 0, isLoadingAll: true })
     const rows = data?.data ?? []
@@ -56,14 +134,74 @@ const VehicleZones = () => {
     return rows
   }
 
+  const combinedRest = useMemo(() => ({
+    paginate: async (params = {}) => {
+      const [zoneData, vehicleData] = await Promise.all([
+        zonesRest.paginate({ take: 1000, skip: 0, isLoadingAll: true }),
+        vehiclesRest.paginate({ take: 1000, skip: 0, isLoadingAll: true }),
+      ])
+
+      const zoneRows = (zoneData?.data ?? []).map(row => ({
+        ...row,
+        row_key: `zone-${row.id}`,
+        source_id: row.id,
+        category: 'zone',
+        category_label: 'Zona',
+        name: row.name,
+        business_name: row.business?.name ?? 'Global',
+        zone_name: row.name,
+        plate: '',
+        vehicle_type: '',
+        capacity: null,
+      }))
+
+      const vehicleRows = (vehicleData?.data ?? []).map(row => ({
+        ...row,
+        row_key: `vehicle-${row.id}`,
+        source_id: row.id,
+        category: 'vehicle',
+        category_label: 'Vehiculo',
+        name: row.label ?? row.plate,
+        business_name: row.business?.name ?? 'Global',
+        zone_name: row.zone?.name ?? '-',
+        district: row.zone?.district ?? '',
+        province: row.zone?.province ?? '',
+        department: row.zone?.department ?? '',
+        ubigeo: row.zone?.ubigeo ?? '',
+      }))
+
+      let rows = [...zoneRows, ...vehicleRows]
+      if (viewFilterRef.current === 'zones') rows = rows.filter(row => row.category === 'zone')
+      if (viewFilterRef.current === 'vehicles') rows = rows.filter(row => row.category === 'vehicle')
+      rows = rows.filter(row => evaluateFilter(row, params.filter))
+      rows = applySearch(rows, params)
+      rows = applySort(rows, params.sort)
+
+      const totalCount = rows.length
+      const skip = Number(params.skip ?? 0)
+      const take = Number(params.take ?? (totalCount || 10))
+
+      return {
+        data: rows.slice(skip, skip + take),
+        totalCount,
+        summary: [],
+      }
+    }
+  }), [])
+
   useEffect(() => {
     Promise.all([zonesRest.getBusinesses(), refreshZones()]).then(([businessRows]) => {
       setBusinesses(businessRows ?? [])
     })
   }, [])
 
+  useEffect(() => {
+    viewFilterRef.current = viewFilter
+    refreshGrid()
+  }, [viewFilter])
+
   const openZoneModal = (row = null) => {
-    zoneIdRef.current.value = row?.id ?? ''
+    zoneIdRef.current.value = row?.source_id ?? row?.id ?? ''
     zoneBusinessRef.current.value = row?.business_id ?? ''
     zoneNameRef.current.value = row?.name ?? ''
     setZoneLocation({
@@ -91,8 +229,8 @@ const VehicleZones = () => {
       observations: zoneObservationsRef.current.value.trim(),
     })
     if (!result) return
-    $(zoneGridRef.current).dxDataGrid('instance').refresh()
     await refreshZones()
+    await refreshGrid()
     $(zoneModalRef.current).modal('hide')
   }
 
@@ -101,12 +239,12 @@ const VehicleZones = () => {
     if (!isConfirmed) return
     const ok = await zonesRest.delete(id)
     if (!ok) return
-    $(zoneGridRef.current).dxDataGrid('instance').refresh()
     await refreshZones()
+    await refreshGrid()
   }
 
   const openVehicleModal = (row = null) => {
-    vehicleIdRef.current.value = row?.id ?? ''
+    vehicleIdRef.current.value = row?.source_id ?? row?.id ?? ''
     vehicleBusinessRef.current.value = row?.business_id ?? ''
     vehicleZoneRef.current.value = row?.zone_id ?? ''
     vehiclePlateRef.current.value = row?.plate ?? ''
@@ -138,7 +276,7 @@ const VehicleZones = () => {
       observations: vehicleObservationsRef.current.value.trim(),
     })
     if (!result) return
-    $(vehicleGridRef.current).dxDataGrid('instance').refresh()
+    await refreshGrid()
     $(vehicleModalRef.current).modal('hide')
   }
 
@@ -147,18 +285,25 @@ const VehicleZones = () => {
     if (!isConfirmed) return
     const ok = await vehiclesRest.delete(id)
     if (!ok) return
-    $(vehicleGridRef.current).dxDataGrid('instance').refresh()
+    await refreshGrid()
   }
 
-  const showZonesTable = viewFilter !== 'vehicles'
-  const showVehiclesTable = viewFilter !== 'zones'
+  const openRowModal = (row) => {
+    if (row.category === 'zone') return openZoneModal(row)
+    return openVehicleModal(row)
+  }
+
+  const deleteRow = (row) => {
+    if (row.category === 'zone') return deleteZone(row.source_id)
+    return deleteVehicle(row.source_id)
+  }
 
   return <>
     <div className='card mb-3'>
       <div className='card-body d-flex flex-wrap align-items-center justify-content-between gap-3'>
         <div>
           <h4 className='mb-1'>Vehiculos / Zonas</h4>
-          <small className='text-muted'>Cambia la vista para trabajar solo con zonas o solo con vehiculos.</small>
+          <small className='text-muted'>Una sola tabla para administrar zonas y vehiculos. Usa los filtros rapidos para ver una categoria especifica.</small>
         </div>
         <div className='d-flex flex-wrap align-items-center gap-2'>
           {VIEW_FILTERS.map((item) => (
@@ -175,57 +320,36 @@ const VehicleZones = () => {
       </div>
     </div>
 
-    {showZonesTable && (
-      <Table
-        gridRef={zoneGridRef}
-        title='Zonas'
-        rest={zonesRest}
-        pageSize={15}
-        toolBar={(items) => {
-          items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: async () => { $(zoneGridRef.current).dxDataGrid('instance').refresh(); await refreshZones() } } })
-          items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openZoneModal() } })
-        }}
-        columns={[
-          { dataField: 'code', caption: 'Codigo', width: 110 },
-          { dataField: 'name', caption: 'Zona', minWidth: 180 },
-          { dataField: 'district', caption: 'Distrito', width: 140 },
-          { dataField: 'province', caption: 'Provincia', width: 140 },
-          { dataField: 'department', caption: 'Departamento', width: 160 },
-          { dataField: 'ubigeo', caption: 'Ubigeo', width: 100 },
-          { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openZoneModal(data) }))
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => deleteZone(data.id) }))
-          } }
-        ]}
-      />
-    )}
-
-    {showVehiclesTable && (
-      <Table
-        gridRef={vehicleGridRef}
-        title='Vehiculos'
-        rest={vehiclesRest}
-        pageSize={15}
-        toolBar={(items) => {
-          items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(vehicleGridRef.current).dxDataGrid('instance').refresh() } })
-          items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openVehicleModal() } })
-        }}
-        columns={[
-          { dataField: 'code', caption: 'Codigo', width: 110 },
-          { dataField: 'plate', caption: 'Placa', width: 100 },
-          { dataField: 'label', caption: 'Unidad', minWidth: 160 },
-          { dataField: 'vehicle_type', caption: 'Tipo', width: 120 },
-          { caption: 'Zona', minWidth: 140, calculateCellValue: (row) => row.zone?.name ?? '-' },
-          { dataField: 'capacity', caption: 'Cap.', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-          { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openVehicleModal(data) }))
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => deleteVehicle(data.id) }))
-          } }
-        ]}
-      />
-    )}
+    <Table
+      gridRef={gridRef}
+      title='Vehiculos / Zonas'
+      rest={combinedRest}
+      pageSize={15}
+      toolBar={(items) => {
+        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: async () => { await refreshZones(); await refreshGrid() } } })
+        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'car', hint: 'Agregar vehiculo', onClick: () => openVehicleModal() } })
+        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'map', hint: 'Agregar zona', onClick: () => openZoneModal() } })
+      }}
+      columns={[
+        { dataField: 'category_label', caption: 'Categoria', width: 110 },
+        { dataField: 'code', caption: 'Codigo', width: 110 },
+        { dataField: 'name', caption: 'Nombre', minWidth: 180 },
+        { dataField: 'business_name', caption: 'Empresa', minWidth: 160 },
+        { dataField: 'plate', caption: 'Placa', width: 100 },
+        { dataField: 'vehicle_type', caption: 'Tipo vehiculo', width: 130 },
+        { dataField: 'zone_name', caption: 'Zona asignada', minWidth: 150 },
+        { dataField: 'district', caption: 'Distrito', width: 140 },
+        { dataField: 'province', caption: 'Provincia', width: 140 },
+        { dataField: 'department', caption: 'Departamento', width: 150 },
+        { dataField: 'ubigeo', caption: 'Ubigeo', width: 100 },
+        { dataField: 'capacity', caption: 'Cap.', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+        { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
+          container.css('text-overflow', 'unset')
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: `Editar ${data.category_label.toLowerCase()}`, icon: 'mdi mdi-pencil', onClick: () => openRowModal(data) }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: `Eliminar ${data.category_label.toLowerCase()}`, icon: 'mdi mdi-delete', onClick: () => deleteRow(data) }))
+        } }
+      ]}
+    />
 
     <Modal modalRef={zoneModalRef} title='Zona' size='lg' onSubmit={saveZone}>
       <div className='row'>
