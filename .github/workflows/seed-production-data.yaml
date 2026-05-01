@@ -1,0 +1,28 @@
+name: Seed Production Module Data
+
+on:
+  workflow_dispatch:
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run production seeders on server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=no $SSH_USER@$SSH_HOST << EOF
+            set -Ee
+
+            cd /var/docker/kamary
+            git pull
+
+            docker compose exec -T app php artisan migrate --force
+            docker compose exec -T app php artisan db:seed --class=ProductionModuleDataSeeder --force
+            docker compose exec -T app php artisan kamary:audit-operational-scope --fix
+            docker compose exec -T app php artisan kamary:audit-operational-scope
+            docker compose exec -T app php artisan optimize:clear
+          EOF
