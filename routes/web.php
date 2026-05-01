@@ -156,7 +156,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales-formats', [AdminComingSoonController::class, 'reactView']);
         Route::get('/magistrales-formulas', [AdminComingSoonController::class, 'reactView']);
         Route::get('/magistrales-incomes', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/magistrales/inventory', [AdminInventoryController::class, 'reactView']);
         Route::get('/magistrales-inventory', [AdminInventoryController::class, 'reactView']);
+        Route::get('/magistrales/kardex', [AdminKardexController::class, 'reactView']);
         Route::get('/magistrales-kardex', [AdminKardexController::class, 'reactView']);
         Route::get('/magistrales-laboratory', [AdminComingSoonController::class, 'reactView']);
         Route::get('/magistrales-purchase-order', [AdminComingSoonController::class, 'reactView']);

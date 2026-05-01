@@ -59,9 +59,10 @@ const Businesses = ({ can }) => {
   return <>
     <div className='alert alert-info border mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2'>
       <div>
-        La configuracion fiscal, sucursales, series y certificados ya no se gestionan aqui.
+        Estructura: Empresa &gt; Sucursales &gt; Almacenes.
+        {' '}La configuracion fiscal, sucursales, series y certificados se gestionan en configuracion facturacion.
         {can('services-billing') || can('businesses')
-          ? <> Usa <b>Facturacion &gt; Configuracion facturacion</b>.</>
+          ? <> Los almacenes se gestionan en <b>Configuraciones &gt; Estructura operativa &gt; Almacenes</b>.</>
           : null}
       </div>
       {(can('services-billing') || can('businesses')) && (

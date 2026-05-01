@@ -184,7 +184,13 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {canAccess('storage-general-service-orders') && <MenuItem href='/admin/storage-general-service-orders' icon='ti ti-file-invoice'>O. Servicio General</MenuItem>}
 
           <li className='side-nav-title mt-2'>Configuraciones</li>
-          {canAccess('businesses') && <MenuItem href='/admin/businesses' icon='ti ti-building-store'>Empresas</MenuItem>}
+          {(canAccess('businesses') || canAccess('services-billing') || canAccess('exit-note')) && (
+            <MenuItemContainer title='Estructura operativa' icon='ti ti-building'>
+              {canAccess('businesses') && <MenuItem href='/admin/businesses' icon='ti ti-building-store'>Empresas</MenuItem>}
+              {(canAccess('businesses') || canAccess('services-billing')) && <MenuItem href='/admin/billing-settings' icon='ti ti-building-community'>Sucursales y facturacion</MenuItem>}
+              {(canAccess('businesses') || canAccess('exit-note')) && <MenuItem href='/admin/warehouses' icon='ti ti-building-warehouse'>Almacenes</MenuItem>}
+            </MenuItemContainer>
+          )}
           <MenuItemContainer title='Gestión' icon='ti ti-users'>
             {canAccess('users') && <MenuItem href='/admin/users' icon='ti ti-users'>Usuarios</MenuItem>}
             {canAccess('roles') && <MenuItem href='/admin/roles' icon='ti ti-user-check'>Roles</MenuItem>}

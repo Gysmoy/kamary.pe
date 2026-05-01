@@ -263,7 +263,7 @@ const Warehouses = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('exit-note') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can('exit-note') && !properties.can('businesses') && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Almacenes'>
     <Warehouses {...properties} />
   </BaseAdminto>);
