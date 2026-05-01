@@ -75,10 +75,6 @@ jobs:
             docker network prune -f
             docker image prune -f
             docker compose up -d --build
-
-            docker compose exec -T app sh -lc 'for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30; do php artisan migrate --force && exit 0; sleep 2; done; exit 1'
-            docker compose exec -T app sh -lc 'if [ ! -f storage/app/.production-module-seeders-v2-ran ]; then php artisan db:seed --class=ProductionModuleDataSeeder --force; php artisan kamary:audit-operational-scope --fix; php artisan kamary:audit-operational-scope; mkdir -p storage/app; date -Is > storage/app/.production-module-seeders-v2-ran; else echo "Production module seeders v2 already ran"; fi'
-            docker compose exec -T app php artisan optimize:clear
             
             curl -X POST https://devex.pe/free/deployments \
               -H "Content-Type: application/json" \
