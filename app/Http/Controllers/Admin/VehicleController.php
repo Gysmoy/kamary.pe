@@ -6,6 +6,7 @@ use App\Http\Controllers\BasicController;
 use App\Models\Business;
 use App\Models\Vehicle;
 use App\Models\Zone;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -16,8 +17,19 @@ class VehicleController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('vehicles.*')
+        $query = $model::select('vehicles.*')
             ->with(['business:id,name', 'zone:id,name,code', 'creator:id,name,lastname,fullname', 'updater:id,name,lastname,fullname']);
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->where(function ($rows) use ($scopeKey) {
+            $rows->whereNull('business_id')
+                ->orWhereHas('business', function ($business) use ($scopeKey) {
+                    $business->whereIn('business_key', BusinessScope::fixedKeys());
+                    if ($scopeKey) $business->where('business_key', $scopeKey);
+                });
+        });
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -28,7 +40,7 @@ class VehicleController extends BasicController
         $zoneId = $this->toNullableInt($body['zone_id'] ?? null);
         $plate = mb_strtoupper(trim((string) ($body['plate'] ?? '')));
         if ($plate === '') throw new \Exception('La placa es obligatoria');
-        if ($businessId) Business::findOrFail($businessId);
+        if ($businessId) BusinessScope::findFixedBusinessForRequest($businessId, $request);
         if ($zoneId) Zone::findOrFail($zoneId);
 
         $duplicatePlate = Vehicle::query()

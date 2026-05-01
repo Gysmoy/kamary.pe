@@ -11,6 +11,7 @@ use App\Models\Renewal;
 use App\Models\Sale;
 use App\Models\Social;
 use App\Models\User;
+use App\Support\BusinessScope;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -138,6 +139,8 @@ class BasicController extends Controller
 
     $properties = [
       'session' => $userJpa,
+      'businessScopeKey' => BusinessScope::keyForPath($request->path()),
+      'businessScopes' => BusinessScope::labels(),
       'global' => [
         'PUBLIC_RSA_KEY' => self::$publicRsaKey,
         'APP_NAME' => env('APP_NAME', 'Ursa'),

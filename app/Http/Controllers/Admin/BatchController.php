@@ -6,6 +6,7 @@ use App\Http\Controllers\BasicController;
 use App\Models\Article;
 use App\Models\Batch;
 use App\Models\Business;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -21,7 +22,7 @@ class BatchController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('batches.*')
+        $query = $model::select('batches.*')
             ->with([
                 'business:id,name',
                 'article:id,code,name,laboratory_id,active_principle_id,unit_id',
@@ -35,6 +36,14 @@ class BatchController extends BasicController
             ->join('articles as article', 'article.id', '=', 'batches.article_id')
             ->join('users as creator', 'creator.id', '=', 'batches.created_by')
             ->join('users as updater', 'updater.id', '=', 'batches.updated_by');
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->whereIn('business.business_key', BusinessScope::fixedKeys());
+        if ($scopeKey) {
+            $query->where('business.business_key', $scopeKey);
+        }
+
+        return $query;
     }
 
     public function import(Request $request): HttpResponse|ResponseFactory
@@ -66,11 +75,20 @@ class BatchController extends BasicController
 
             DB::beginTransaction();
 
-            $businesses = Business::whereNotNull('name')->get(['id', 'name']);
+            $businesses = Business::whereIn('business_key', BusinessScope::fixedKeys())
+                ->whereNotNull('name')
+                ->get(['id', 'name', 'business_key']);
             $businessByName = [];
             foreach ($businesses as $business) {
                 $normalized = $this->normalizeText($business->name);
                 if ($normalized !== '') $businessByName[$normalized] = $business->id;
+            }
+
+            $scopeKey = BusinessScope::keyForUrl((string) $request->headers->get('referer', ''));
+            $defaultBusiness = $businesses->firstWhere('business_key', $scopeKey)
+                ?: $businesses->firstWhere('business_key', BusinessScope::KAMARY_PERU);
+            if (!$defaultBusiness) {
+                throw new \Exception('No se encontraron las empresas fijas para importar lotes');
             }
 
             $articles = Article::whereNotNull('status')->get(['id', 'code', 'name']);
@@ -106,19 +124,18 @@ class BatchController extends BasicController
                 }
 
                 $businessName = $businessKey ? trim((string)($row[$businessKey] ?? '')) : '';
-                if ($businessName === '') $businessName = 'EMPRESA GENERAL';
-                $normalizedBusinessName = $this->normalizeText($businessName);
-                $businessId = $businessByName[$normalizedBusinessName] ?? null;
+                $businessId = null;
+                if ($businessName === '') {
+                    $businessId = $defaultBusiness->id;
+                    $businessName = $defaultBusiness->name;
+                } else {
+                    $normalizedBusinessName = $this->normalizeText($businessName);
+                    $businessId = $businessByName[$normalizedBusinessName] ?? null;
+                }
                 if (!$businessId) {
-                    $newBusiness = Business::create([
-                        'name' => $businessName,
-                        'description' => null,
-                        'status' => true,
-                        'created_by' => $userId,
-                        'updated_by' => $userId,
-                    ]);
-                    $businessId = $newBusiness->id;
-                    $businessByName[$normalizedBusinessName] = $businessId;
+                    $skipped++;
+                    $errors[] = "Fila " . ($idx + 1) . ": empresa no encontrada ({$businessName})";
+                    continue;
                 }
 
                 $normalizedArticle = $this->normalizeText($articleText);
@@ -203,7 +220,7 @@ class BatchController extends BasicController
         if ($lot === '') throw new \Exception('El lote es obligatorio');
         if (!$expirationDate) throw new \Exception('La fecha de vencimiento es obligatoria');
 
-        Business::findOrFail($businessId);
+        BusinessScope::findFixedBusinessForRequest($businessId, $request);
         Article::findOrFail($articleId);
 
         $exists = Batch::where('business_id', $businessId)

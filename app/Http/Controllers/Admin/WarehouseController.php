@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\BasicController;
 use App\Models\BusinessBranch;
 use App\Models\Warehouse;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use SoDe\Extend\Response;
@@ -17,7 +18,7 @@ class WarehouseController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('warehouses.*')
+        $query = $model::select('warehouses.*')
             ->with([
                 'branch:id,business_id,name,status',
                 'branch.business:id,name,status',
@@ -27,6 +28,14 @@ class WarehouseController extends BasicController
             ->leftJoin('business_branches as branch', 'branch.id', '=', 'warehouses.business_branch_id')
             ->join('users as creator', 'creator.id', '=', 'warehouses.created_by')
             ->join('users as updater', 'updater.id', '=', 'warehouses.updated_by');
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->whereHas('branch.business', function ($business) use ($scopeKey) {
+            $business->whereIn('business_key', BusinessScope::fixedKeys());
+            if ($scopeKey) $business->where('business_key', $scopeKey);
+        });
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -43,10 +52,7 @@ class WarehouseController extends BasicController
             throw new \Exception('La sede es obligatoria');
         }
 
-        $branch = BusinessBranch::where('id', $branchId)->whereNotNull('status')->first();
-        if (!$branch) {
-            throw new \Exception('La sede seleccionada no existe o esta inactiva');
-        }
+        $branch = BusinessScope::findFixedBranchForRequest($branchId, $request);
 
         if (!isset($body['id']) || !$body['id']) {
             $body['created_by'] = $userId;

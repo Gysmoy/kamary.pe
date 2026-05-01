@@ -7,7 +7,6 @@ use App\Models\Activity;
 use App\Models\ActivityItem;
 use App\Models\ActivityLog;
 use App\Models\Article;
-use App\Models\Business;
 use App\Models\Client;
 use App\Models\CommercialOrder;
 use App\Models\CommercialOrderItem;
@@ -17,6 +16,7 @@ use App\Models\EventualClient;
 use App\Models\Vehicle;
 use App\Models\Warehouse;
 use App\Models\Zone;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -40,7 +40,7 @@ class ActivityController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('activities.*')
+        $query = $model::select('activities.*')
             ->with([
                 'business:id,name',
                 'branch:id,business_id,name',
@@ -58,6 +58,14 @@ class ActivityController extends BasicController
                 'creator:id,name,lastname,fullname',
                 'updater:id,name,lastname,fullname',
             ]);
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->whereHas('business', function ($business) use ($scopeKey) {
+            $business->whereIn('business_key', BusinessScope::fixedKeys());
+            if ($scopeKey) $business->where('business_key', $scopeKey);
+        });
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -99,16 +107,12 @@ class ActivityController extends BasicController
         }
 
         if (!$businessId) throw new \Exception('La empresa es obligatoria');
-        Business::findOrFail($businessId);
-        if ($branchId) {
-            $branch = Business::findOrFail($businessId)->branches()->where('id', $branchId)->first();
-            if (!$branch) throw new \Exception('La sede no pertenece a la empresa seleccionada');
-        }
+        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
         if ($warehouseId) {
             $warehouse = Warehouse::findOrFail($warehouseId);
-            if ($warehouse->business_branch_id && $branchId && (int) $warehouse->business_branch_id !== (int) $branchId) {
-                throw new \Exception('El almacen no pertenece a la sede seleccionada');
-            }
+            $branchId = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
+        } elseif ($branchId) {
+            BusinessScope::requireBranchForBusiness($business, $branchId);
         }
         if ($clientId && $eventualClientId) throw new \Exception('No puedes mezclar cliente regular y eventual en la misma actividad');
         if ($clientId) Client::findOrFail($clientId);
@@ -265,7 +269,7 @@ class ActivityController extends BasicController
     {
         $response = new Response();
         try {
-            $business = Business::findOrFail($businessId);
+            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = $business->branches()->whereNotNull('status')->orderBy('name')->get(['id', 'business_id', 'name', 'status']);

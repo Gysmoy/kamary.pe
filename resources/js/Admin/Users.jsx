@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+﻿import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
@@ -18,7 +18,7 @@ const usersRest = new UsersRest()
 
 const scopes = {
   'kamary-peru': 'Kamary Perú',
-  'kamary-farma': 'Kamary Farma'
+  'kamary-medicals': 'Kamary Medicals'
 }
 
 const Users = ({ prefixes, roles }) => {
@@ -198,7 +198,7 @@ const Users = ({ prefixes, roles }) => {
             if (!data.scope || !data.scope.length) return;
             const labels = {
               'kamary-peru': 'Kamary Perú',
-              'kamary-farma': 'Kamary Farma'
+              'kamary-medicals': 'Kamary Medicals'
             };
             const badges = data.scope.map(s => `<span class="badge badge-soft-secondary me-1">${labels[s] || s}</span>`).join('');
             container.html(`<div class="d-flex gap-1">${badges}</div>`);
@@ -368,3 +368,4 @@ CreateReactScript((el, properties) => {
     <Users {...properties} />
   </BaseAdminto>);
 })
+

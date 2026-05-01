@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
 use App\Models\Article;
-use App\Models\Business;
 use App\Models\EntryNote;
 use App\Models\EntryNoteItem;
 use App\Models\Warehouse;
 use App\Services\StockService;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -28,7 +28,7 @@ class EntryNoteController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('entry_notes.*')
+        $query = $model::select('entry_notes.*')
             ->with([
                 'business:id,name',
                 'branch:id,business_id,name',
@@ -45,6 +45,14 @@ class EntryNoteController extends BasicController
             ])
             ->join('users as creator', 'creator.id', '=', 'entry_notes.created_by')
             ->join('users as updater', 'updater.id', '=', 'entry_notes.updated_by');
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->whereHas('business', function ($business) use ($scopeKey) {
+            $business->whereIn('business_key', BusinessScope::fixedKeys());
+            if ($scopeKey) $business->where('business_key', $scopeKey);
+        });
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -64,28 +72,10 @@ class EntryNoteController extends BasicController
         if ($documentType === '') throw new \Exception('El tipo de documento es obligatorio');
         if ($currency === '') throw new \Exception('La moneda es obligatoria');
 
-        Business::findOrFail($businessId);
+        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
         $warehouse = Warehouse::findOrFail($warehouseId);
-        $body['business_branch_id'] = ($branchId === '' || is_null($branchId)) ? null : (int)$branchId;
+        $body['business_branch_id'] = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
         $body['supplier_id'] = ($supplierId === '' || is_null($supplierId)) ? null : (int)$supplierId;
-
-        if (!is_null($warehouse->business_branch_id)) {
-            if (is_null($body['business_branch_id'])) {
-                $body['business_branch_id'] = (int)$warehouse->business_branch_id;
-            } else if ((int)$body['business_branch_id'] !== (int)$warehouse->business_branch_id) {
-                throw new \Exception('El almacen seleccionado no pertenece a la sede elegida');
-            }
-        }
-
-        if ($body['business_branch_id']) {
-            $branch = Business::findOrFail($businessId)
-                ->branches()
-                ->where('id', $body['business_branch_id'])
-                ->first();
-            if (!$branch) {
-                throw new \Exception('La sede no pertenece a la empresa seleccionada');
-            }
-        }
 
         $rawItems = $body['items'] ?? [];
         if (is_string($rawItems)) {
@@ -121,6 +111,7 @@ class EntryNoteController extends BasicController
             EntryNoteItem::where('entry_note_id', $jpa->id)->delete();
 
             $inserted = 0;
+            $business = BusinessScope::findFixedBusiness($jpa->business_id);
             foreach ($this->itemsPayload as $idx => $item) {
                 if (!is_array($item)) continue;
 
@@ -131,7 +122,9 @@ class EntryNoteController extends BasicController
 
                 $article = Article::findOrFail($articleId);
                 $warehouseId = $item['warehouse_id'] ?? $jpa->warehouse_id;
-                if ($warehouseId) Warehouse::findOrFail($warehouseId);
+                if (!$warehouseId) throw new \Exception('Cada linea debe tener almacen');
+                $itemWarehouse = Warehouse::findOrFail($warehouseId);
+                BusinessScope::branchIdFromWarehouse($business, $itemWarehouse, $jpa->business_branch_id);
 
                 $stock = $this->toNullableDecimal($item['stock'] ?? null) ?? 0;
                 $costUnit = $this->toNullableDecimal($item['cost_unit'] ?? null) ?? 0;
@@ -176,7 +169,7 @@ class EntryNoteController extends BasicController
     {
         $response = new Response();
         try {
-            $business = Business::findOrFail($businessId);
+            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = $business->branches()->whereNotNull('status')->orderBy('name')->get(['id', 'business_id', 'name', 'status']);

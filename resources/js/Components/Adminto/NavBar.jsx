@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react"
+﻿import React, { useEffect, useRef, useState } from "react"
 import Logout from "../../Actions/Logout"
 import Global from "../../Utils/Global"
 import LaravelSession from "../../Utils/LaravelSession"
@@ -10,7 +10,7 @@ const NavBar = ({ title = 'Panel', panel = null, setPanel = () => { } }) => {
 
   const panelRef = useRef(null)
   const onPanelChange = (e) => {
-    setPanel(e.target.checked ? 'kamary-farma' : 'kamary-peru')
+    setPanel(e.target.checked ? 'kamary-medicals' : 'kamary-peru')
   }
 
   useEffect(() => {
@@ -375,11 +375,11 @@ const NavBar = ({ title = 'Panel', panel = null, setPanel = () => { } }) => {
           </button>
         </div> */}
         {/* <div className="topbar-item">
-          <Tippy content={`Cambia a ${panel === 'kamary-peru' ? 'Kamary Farma' : 'Kamary Perú'}`}>
+          <Tippy content={`Cambia a ${panel === 'kamary-peru' ? 'Kamary Medicals' : 'Kamary Perú'}`}>
             <div className="d-flex nav-link align-items-center gap-1">
               <img src="/assets/img/icons/kamary-peru.svg" alt="" style={{ width: '24px', height: '24px', objectFit: 'contain', objectPosition: 'center', filter: panel === 'kamary-peru' ? 'none' : 'grayscale(100%)' }} />
-              <SwitchFormGroup eRef={panelRef} checked={panel === null || panel === 'kamary-farma'} noMargin onChange={(e) => onPanelChange(e)} refreshable={[panel]} />
-              <img src="/assets/img/icons/kamary-farma.svg" alt="" style={{ width: '24px', height: '24px', objectFit: 'contain', objectPosition: 'center', filter: panel === 'kamary-farma' ? 'none' : 'grayscale(100%)' }} />
+              <SwitchFormGroup eRef={panelRef} checked={panel === null || panel === 'kamary-medicals'} noMargin onChange={(e) => onPanelChange(e)} refreshable={[panel]} />
+              <img src="/assets/img/icons/kamary-medicals.svg" alt="" style={{ width: '24px', height: '24px', objectFit: 'contain', objectPosition: 'center', filter: panel === 'kamary-medicals' ? 'none' : 'grayscale(100%)' }} />
             </div>
           </Tippy>
         </div> */}

@@ -6,8 +6,10 @@ use App\Http\Controllers\BasicController;
 use App\Models\BillingDocument;
 use App\Models\CommercialOrder;
 use App\Models\ServiceOrder;
+use App\Models\Warehouse;
 use App\Services\BillingDocumentService;
 use App\Services\FacturadorPro5Service;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -29,7 +31,7 @@ class BillingDocumentController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('billing_documents.*')
+        $query = $model::select('billing_documents.*')
             ->with([
                 'business:id,name,tax_number,soap_send_id,soap_type_id,soap_username,soap_password,facturador_company_id,facturador_sync_status,status',
                 'branch:id,business_id,name,establishment_code,ubigeo,address,email,telephone,facturador_establishment_id,facturador_sync_status,facturador_sync_message,facturador_last_sync_at,series_factura,series_boleta,series_nota_credito,status',
@@ -45,6 +47,14 @@ class BillingDocumentController extends BasicController
             ])
             ->join('users as creator', 'creator.id', '=', 'billing_documents.created_by')
             ->join('users as updater', 'updater.id', '=', 'billing_documents.updated_by');
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->whereHas('business', function ($business) use ($scopeKey) {
+            $business->whereIn('business_key', BusinessScope::fixedKeys());
+            if ($scopeKey) $business->where('business_key', $scopeKey);
+        });
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -111,6 +121,18 @@ class BillingDocumentController extends BasicController
             $paymentCondition = $paymentCondition ?: $source->payment_condition;
             $dueDate = $dueDate ?: optional($source->first_due_date)->format('Y-m-d');
             $defaultDocumentType = $defaultDocumentType ?: ($source->expected_document_type ?: 'Factura');
+        }
+
+        if (!$businessId) {
+            throw new \Exception('Falta la empresa del origen de facturacion');
+        }
+        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
+        if ($warehouseId) {
+            $warehouse = Warehouse::findOrFail($warehouseId);
+            $branchId = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
+        } else {
+            $branch = BusinessScope::requireBranchForBusiness($business, $branchId);
+            $branchId = (int) $branch->id;
         }
 
         $metadata = $this->normalizeArray($body['metadata'] ?? ($document?->metadata ?? []));

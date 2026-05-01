@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\BasicController;
 use App\Models\Business;
 use App\Models\Driver;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -21,8 +22,19 @@ class DriverController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('drivers.*')
+        $query = $model::select('drivers.*')
             ->with(['business:id,name', 'creator:id,name,lastname,fullname', 'updater:id,name,lastname,fullname']);
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->where(function ($rows) use ($scopeKey) {
+            $rows->whereNull('business_id')
+                ->orWhereHas('business', function ($business) use ($scopeKey) {
+                    $business->whereIn('business_key', BusinessScope::fixedKeys());
+                    if ($scopeKey) $business->where('business_key', $scopeKey);
+                });
+        });
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -32,7 +44,7 @@ class DriverController extends BasicController
         $businessId = $this->toNullableInt($body['business_id'] ?? null);
         $fullName = trim((string) ($body['full_name'] ?? ''));
         if ($fullName === '') throw new \Exception('El nombre del conductor es obligatorio');
-        if ($businessId) Business::findOrFail($businessId);
+        if ($businessId) BusinessScope::findFixedBusinessForRequest($businessId, $request);
 
         if (!$id) {
             $body['code'] = $this->nextCode();

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
 use App\Models\Article;
-use App\Models\Business;
 use App\Models\Client;
 use App\Models\ClientDistributionNetwork;
 use App\Models\EventualClient;
@@ -12,6 +11,7 @@ use App\Models\Laboratory;
 use App\Models\PriceList;
 use App\Models\PriceListItem;
 use App\Models\Warehouse;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -36,7 +36,7 @@ class PriceListController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('price_lists.*')
+        $query = $model::select('price_lists.*')
             ->with([
                 'business:id,name',
                 'branch:id,business_id,name',
@@ -54,6 +54,14 @@ class PriceListController extends BasicController
             ->join('users as creator', 'creator.id', '=', 'price_lists.created_by')
             ->join('users as updater', 'updater.id', '=', 'price_lists.updated_by')
             ->join('businesses as business', 'business.id', '=', 'price_lists.business_id');
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->whereIn('business.business_key', BusinessScope::fixedKeys());
+        if ($scopeKey) {
+            $query->where('business.business_key', $scopeKey);
+        }
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -71,18 +79,13 @@ class PriceListController extends BasicController
         $code = trim((string)($body['code'] ?? ''));
 
         if ($businessId <= 0) throw new \Exception('La empresa es obligatoria');
-        Business::findOrFail($businessId);
-
-        if ($branchId) {
-            $branch = Business::findOrFail($businessId)->branches()->where('id', $branchId)->first();
-            if (!$branch) throw new \Exception('La sede no pertenece a la empresa seleccionada');
-        }
+        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
 
         if ($warehouseId) {
             $warehouse = Warehouse::findOrFail($warehouseId);
-            if ($branchId && (int)$warehouse->business_branch_id !== (int)$branchId) {
-                throw new \Exception('El almacen no pertenece a la sede seleccionada');
-            }
+            $branchId = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
+        } elseif ($branchId) {
+            BusinessScope::requireBranchForBusiness($business, $branchId);
         }
 
         if ($clientId && $eventualClientId) {
@@ -227,7 +230,7 @@ class PriceListController extends BasicController
     {
         $response = new Response();
         try {
-            $business = Business::findOrFail($businessId);
+            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = $business->branches()->whereNotNull('status')->orderBy('name')->get(['id', 'business_id', 'name', 'status']);

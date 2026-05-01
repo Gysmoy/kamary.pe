@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\BasicController;
 use App\Models\Article;
 use App\Models\Batch;
-use App\Models\Business;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\PurchaseReceipt;
@@ -14,6 +13,7 @@ use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Services\AccountsPayableService;
 use App\Services\StockService;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -34,7 +34,7 @@ class PurchaseReceiptController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('purchase_receipts.*')
+        $query = $model::select('purchase_receipts.*')
             ->with([
                 'purchaseOrder:id,code,business_id,business_branch_id,warehouse_id,supplier_id,issue_date,expected_date,currency,payment_condition,order_status,approval_status,subtotal,tax_amount,total,status',
                 'business:id,name',
@@ -54,6 +54,14 @@ class PurchaseReceiptController extends BasicController
             ])
             ->join('users as creator', 'creator.id', '=', 'purchase_receipts.created_by')
             ->join('users as updater', 'updater.id', '=', 'purchase_receipts.updated_by');
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->whereHas('business', function ($business) use ($scopeKey) {
+            $business->whereIn('business_key', BusinessScope::fixedKeys());
+            if ($scopeKey) $business->where('business_key', $scopeKey);
+        });
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -90,7 +98,7 @@ class PurchaseReceiptController extends BasicController
             throw new \Exception('Debes indicar al menos una cuota para compras al credito');
         }
 
-        Business::findOrFail($businessId);
+        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
         $warehouse = Warehouse::findOrFail($warehouseId);
         Supplier::findOrFail($supplierId);
 
@@ -108,22 +116,7 @@ class PurchaseReceiptController extends BasicController
             }
         }
 
-        $body['business_branch_id'] = ($branchId === '' || is_null($branchId)) ? null : (int)$branchId;
-        if (!is_null($warehouse->business_branch_id)) {
-            if (is_null($body['business_branch_id'])) {
-                $body['business_branch_id'] = (int)$warehouse->business_branch_id;
-            } elseif ((int)$body['business_branch_id'] !== (int)$warehouse->business_branch_id) {
-                throw new \Exception('El almacen seleccionado no pertenece a la sede elegida');
-            }
-        }
-
-        if ($body['business_branch_id']) {
-            $branch = Business::findOrFail($businessId)
-                ->branches()
-                ->where('id', $body['business_branch_id'])
-                ->first();
-            if (!$branch) throw new \Exception('La sede no pertenece a la empresa seleccionada');
-        }
+        $body['business_branch_id'] = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
 
         $rawItems = $body['items'] ?? [];
         if (is_string($rawItems)) {
@@ -183,6 +176,7 @@ class PurchaseReceiptController extends BasicController
             $inserted = 0;
             $subtotal = 0;
             $isConfirmed = $jpa->receipt_status === 'confirmed';
+            $business = BusinessScope::findFixedBusiness($jpa->business_id);
 
             foreach ($this->itemsPayload as $item) {
                 if (!is_array($item)) continue;
@@ -216,7 +210,9 @@ class PurchaseReceiptController extends BasicController
                 }
 
                 $warehouseId = $item['warehouse_id'] ?? $jpa->warehouse_id;
-                if ($warehouseId) Warehouse::findOrFail($warehouseId);
+                if (!$warehouseId) throw new \Exception('Cada linea debe tener almacen');
+                $itemWarehouse = Warehouse::findOrFail($warehouseId);
+                BusinessScope::branchIdFromWarehouse($business, $itemWarehouse, $jpa->business_branch_id);
 
                 $quantity = $this->toNullableDecimal($item['quantity'] ?? null) ?? 0;
                 $stockBefore = $this->toNullableDecimal($item['stock_before'] ?? null) ?? 0;
@@ -327,7 +323,7 @@ class PurchaseReceiptController extends BasicController
     {
         $response = new Response();
         try {
-            $business = Business::findOrFail($businessId);
+            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = $business->branches()->whereNotNull('status')->orderBy('name')->get(['id', 'business_id', 'name', 'status']);

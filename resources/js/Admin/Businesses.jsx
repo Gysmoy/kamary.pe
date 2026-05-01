@@ -4,10 +4,7 @@ import BaseAdminto from '@Adminto/Base'
 import CreateReactScript from '../Utils/CreateReactScript'
 import Table from '../Components/Adminto/Table'
 import Modal from '../Components/Adminto/Modal'
-import ReactAppend from '../Utils/ReactAppend'
 import DxButton from '../Components/dx/DxButton'
-import SwitchFormGroup from '@Adminto/form/SwitchFormGroup'
-import Swal from 'sweetalert2'
 import InputFormGroup from '@Adminto/form/InputFormGroup'
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup'
 import BusinessesRest from '../Actions/Admin/BusinessesRest'
@@ -59,29 +56,6 @@ const Businesses = ({ can }) => {
     $(modalRef.current).modal('hide')
   }
 
-  const onBooleanChange = async ({ id, field, value }) => {
-    const result = await businessesRest.boolean({ id, field, value })
-    if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
-  }
-
-  const onDeleteClicked = async (id) => {
-    const { isConfirmed } = await Swal.fire({
-      title: 'Eliminar empresa',
-      text: 'Estas seguro de eliminar esta empresa? Esta accion no se puede revertir',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Si, eliminar',
-      cancelButtonText: 'Cancelar'
-    })
-    if (!isConfirmed) return
-
-    const result = await businessesRest.delete(id)
-    if (!result) return
-
-    $(gridRef.current).dxDataGrid('instance').refresh()
-  }
-
   return <>
     <div className='alert alert-info border mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2'>
       <div>
@@ -110,15 +84,6 @@ const Businesses = ({ can }) => {
             onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
           }
         })
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar empresa',
-            onClick: () => onModalOpen(null)
-          }
-        })
       }}
       pageSize={25}
       columns={[
@@ -126,6 +91,16 @@ const Businesses = ({ can }) => {
           dataField: 'id',
           caption: 'ID',
           visible: false
+        },
+        {
+          dataField: 'business_key',
+          caption: 'Grupo',
+          width: 130,
+          cellTemplate: (container, { data }) => {
+            const label = data.business_key === 'kamary_medicals' ? 'Kamary Medicals' : 'Kamary Peru'
+            const color = data.business_key === 'kamary_medicals' ? 'success' : 'primary'
+            container.html(`<span class="badge bg-${color}-subtle text-${color}">${label}</span>`)
+          }
         },
         {
           dataField: 'name',
@@ -156,21 +131,17 @@ const Businesses = ({ can }) => {
         {
           dataField: 'status',
           caption: 'Estado',
-          dataType: 'boolean',
           width: '100px',
           cellTemplate: (container, { data }) => {
             $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-              id: data.id,
-              field: 'status',
-              value: !data.status
-            })} />)
+            const status = data.status == 1 ? 'Activo' : 'Inactivo'
+            const color = data.status == 1 ? 'success' : 'secondary'
+            container.html(`<span class="badge bg-${color}-subtle text-${color}">${status}</span>`)
           }
         },
         {
           caption: 'Acciones',
-          width: '180px',
+          width: '90px',
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
 
@@ -179,13 +150,6 @@ const Businesses = ({ can }) => {
               title: 'Editar',
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)
-            }))
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar empresa',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.id)
             }))
           },
           allowFiltering: false,

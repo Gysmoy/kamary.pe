@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
-use App\Models\Business;
 use App\Models\CommercialOrder;
 use App\Models\Dispatch;
 use App\Models\DispatchAssignment;
@@ -12,6 +11,7 @@ use App\Models\Vehicle;
 use App\Models\Warehouse;
 use App\Models\Zone;
 use App\Services\DispatchService;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -35,7 +35,7 @@ class DispatchController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('dispatches.*')
+        $query = $model::select('dispatches.*')
             ->with([
                 'business:id,name', 'branch:id,business_id,name', 'warehouse:id,name',
                 'driver:id,full_name,license_number', 'vehicle:id,plate,label,vehicle_type', 'zoneMaster:id,name,code',
@@ -48,6 +48,14 @@ class DispatchController extends BasicController
             ])
             ->join('users as creator', 'creator.id', '=', 'dispatches.created_by')
             ->join('users as updater', 'updater.id', '=', 'dispatches.updated_by');
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->whereHas('business', function ($business) use ($scopeKey) {
+            $business->whereIn('business_key', BusinessScope::fixedKeys());
+            if ($scopeKey) $business->where('business_key', $scopeKey);
+        });
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -68,22 +76,14 @@ class DispatchController extends BasicController
         if ($warehouseId <= 0) throw new \Exception('El almacen es obligatorio');
         if (!$scheduledDate) throw new \Exception('La fecha programada es obligatoria');
 
-        Business::findOrFail($businessId);
+        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
         $warehouse = Warehouse::findOrFail($warehouseId);
         $driver = $driverId ? Driver::findOrFail($driverId) : null;
         $vehicle = $vehicleId ? Vehicle::findOrFail($vehicleId) : null;
         if (!$zoneId && $vehicle?->zone_id) $zoneId = (int) $vehicle->zone_id;
         $zone = $zoneId ? Zone::findOrFail($zoneId) : null;
 
-        if (!is_null($warehouse->business_branch_id)) {
-            if (is_null($branchId)) $branchId = (int) $warehouse->business_branch_id;
-            elseif ((int) $branchId !== (int) $warehouse->business_branch_id) throw new \Exception('El almacen seleccionado no pertenece a la sede elegida');
-        }
-
-        if ($branchId) {
-            $branch = Business::findOrFail($businessId)->branches()->where('id', $branchId)->first();
-            if (!$branch) throw new \Exception('La sede no pertenece a la empresa seleccionada');
-        }
+        $branchId = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
 
         $rawAssignments = $body['assignments'] ?? [];
         if (is_string($rawAssignments)) {
@@ -187,7 +187,7 @@ class DispatchController extends BasicController
     {
         $response = new Response();
         try {
-            $business = Business::findOrFail($businessId);
+            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = $business->branches()->whereNotNull('status')->orderBy('name')->get(['id', 'business_id', 'name', 'status']);

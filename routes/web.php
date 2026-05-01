@@ -150,6 +150,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales/batches', [AdminBatchController::class, 'reactView']);
         Route::get('/magistrales/entry-note', [AdminEntryNoteController::class, 'reactView']);
         Route::get('/magistrales/exit-note', [AdminExitNoteController::class, 'reactView']);
+        Route::get('/magistrales/billing-settings', [AdminBillingSettingsController::class, 'reactView']);
+        Route::get('/magistrales/billing-documents', [AdminBillingDocumentController::class, 'reactView']);
         Route::get('/magistrales-category', [AdminComingSoonController::class, 'reactView']);
         Route::get('/magistrales-formats', [AdminComingSoonController::class, 'reactView']);
         Route::get('/magistrales-formulas', [AdminComingSoonController::class, 'reactView']);

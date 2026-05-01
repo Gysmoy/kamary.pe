@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\BasicController;
 use App\Models\Article;
 use App\Models\ArticlePresentation;
-use App\Models\Business;
 use App\Models\Client;
 use App\Models\ClientDeliveryAddress;
 use App\Models\ClientDistributionNetwork;
@@ -17,6 +16,7 @@ use App\Models\Warehouse;
 use App\Services\AccountsReceivableService;
 use App\Services\PriceListResolverService;
 use App\Services\StockService;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -42,7 +42,7 @@ class CommercialOrderController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('commercial_orders.*')
+        $query = $model::select('commercial_orders.*')
             ->with([
                 'business:id,name',
                 'branch:id,business_id,name',
@@ -67,6 +67,14 @@ class CommercialOrderController extends BasicController
             ])
             ->join('users as creator', 'creator.id', '=', 'commercial_orders.created_by')
             ->join('users as updater', 'updater.id', '=', 'commercial_orders.updated_by');
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->whereHas('business', function ($business) use ($scopeKey) {
+            $business->whereIn('business_key', BusinessScope::fixedKeys());
+            if ($scopeKey) $business->where('business_key', $scopeKey);
+        });
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -93,25 +101,11 @@ class CommercialOrderController extends BasicController
         if (!$clientId && !$eventualClientId) throw new \Exception('Debes seleccionar un cliente regular o eventual');
         if ($clientId && $eventualClientId) throw new \Exception('No puedes mezclar cliente regular y eventual en el mismo pedido');
 
-        Business::findOrFail($businessId);
+        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
         $warehouse = Warehouse::findOrFail($warehouseId);
         User::findOrFail($sellerId);
 
-        if (!is_null($warehouse->business_branch_id)) {
-            if (is_null($branchId)) {
-                $branchId = (int)$warehouse->business_branch_id;
-            } elseif ((int)$branchId !== (int)$warehouse->business_branch_id) {
-                throw new \Exception('El almacen seleccionado no pertenece a la sede elegida');
-            }
-        }
-
-        if ($branchId) {
-            $branch = Business::findOrFail($businessId)
-                ->branches()
-                ->where('id', $branchId)
-                ->first();
-            if (!$branch) throw new \Exception('La sede no pertenece a la empresa seleccionada');
-        }
+        $branchId = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
 
         $client = null;
         $eventualClient = null;
@@ -244,6 +238,7 @@ class CommercialOrderController extends BasicController
             $inserted = 0;
             $subtotal = 0;
             $matchedPriceListIds = [];
+            $business = BusinessScope::findFixedBusiness($jpa->business_id);
 
             foreach ($this->itemsPayload as $item) {
                 if (!is_array($item)) continue;
@@ -264,7 +259,8 @@ class CommercialOrderController extends BasicController
                 if ($presentationUnits <= 0) $presentationUnits = 1;
 
                 $warehouseId = $this->toNullableInt($item['warehouse_id'] ?? null) ?? (int)$jpa->warehouse_id;
-                Warehouse::findOrFail($warehouseId);
+                $itemWarehouse = Warehouse::findOrFail($warehouseId);
+                BusinessScope::branchIdFromWarehouse($business, $itemWarehouse, $jpa->business_branch_id);
 
                 $quantity = $this->toNullableDecimal($item['quantity'] ?? null) ?? 0;
                 if ($quantity <= 0) {
@@ -363,7 +359,7 @@ class CommercialOrderController extends BasicController
     {
         $response = new Response();
         try {
-            $business = Business::findOrFail($businessId);
+            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = $business->branches()->whereNotNull('status')->orderBy('name')->get(['id', 'business_id', 'name', 'status']);

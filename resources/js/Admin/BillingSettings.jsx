@@ -8,6 +8,8 @@ import DxButton from '../Components/dx/DxButton'
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup'
 import Swal from 'sweetalert2'
 import InputFormGroup from '@Adminto/form/InputFormGroup'
+import UbigeoCascade from '../Components/Adminto/Form/UbigeoCascade'
+import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei'
 import BusinessesRest from '../Actions/Admin/BusinessesRest'
 
 const businessesRest = new BusinessesRest()
@@ -53,7 +55,6 @@ const BillingSettings = ({ can }) => {
   const branchIdRef = useRef()
   const branchNameRef = useRef()
   const branchCodeRef = useRef()
-  const branchUbigeoRef = useRef()
   const branchAddressRef = useRef()
   const branchEmailRef = useRef()
   const branchTelephoneRef = useRef()
@@ -66,6 +67,7 @@ const BillingSettings = ({ can }) => {
   const [branches, setBranches] = useState([])
   const [isBranchEditing, setIsBranchEditing] = useState(false)
   const [selectedFiscalBusiness, setSelectedFiscalBusiness] = useState(null)
+  const [branchUbigeoSelection, setBranchUbigeoSelection] = useState(EMPTY_UBIGEO_SELECTION)
 
   const fillFiscalForm = (business) => {
     fiscalBusinessIdRef.current.value = business?.id ?? ''
@@ -193,7 +195,10 @@ const BillingSettings = ({ can }) => {
     branchIdRef.current.value = branch?.id ?? ''
     branchNameRef.current.value = branch?.name ?? ''
     branchCodeRef.current.value = branch?.establishment_code ?? ''
-    branchUbigeoRef.current.value = branch?.ubigeo ?? ''
+    setBranchUbigeoSelection({
+      ...EMPTY_UBIGEO_SELECTION,
+      ubigeo: branch?.ubigeo ?? '',
+    })
     branchAddressRef.current.value = branch?.address ?? ''
     branchEmailRef.current.value = branch?.email ?? ''
     branchTelephoneRef.current.value = branch?.telephone ?? ''
@@ -212,7 +217,7 @@ const BillingSettings = ({ can }) => {
       id: (branchModeRef.current.value === 'update' ? (branchIdRef.current.value || undefined) : undefined),
       name: branchNameRef.current.value.trim(),
       establishment_code: branchCodeRef.current.value.trim(),
-      ubigeo: branchUbigeoRef.current.value.trim(),
+      ubigeo: branchUbigeoSelection.ubigeo.trim(),
       address: branchAddressRef.current.value.trim(),
       email: branchEmailRef.current.value.trim(),
       telephone: branchTelephoneRef.current.value.trim(),
@@ -538,7 +543,18 @@ const BillingSettings = ({ can }) => {
       <div className='row'>
         <InputFormGroup eRef={branchNameRef} label='Nombre de la sucursal' col='col-md-6' required />
         <InputFormGroup eRef={branchCodeRef} label='Codigo fiscal de sede' col='col-md-3' />
-        <InputFormGroup eRef={branchUbigeoRef} label='Ubigeo' col='col-md-3' />
+        <div className='col-12'>
+          <UbigeoCascade
+            value={branchUbigeoSelection}
+            onChange={setBranchUbigeoSelection}
+            required
+            showUbigeo={false}
+            departmentCol='col-md-4'
+            provinceCol='col-md-4'
+            districtCol='col-md-4'
+            rowClassName='row'
+          />
+        </div>
         <InputFormGroup eRef={branchAddressRef} label='Direccion fiscal' col='col-md-12' />
         <InputFormGroup eRef={branchEmailRef} label='Correo sede' col='col-md-6' type='email' />
         <InputFormGroup eRef={branchTelephoneRef} label='Telefono sede' col='col-md-6' />

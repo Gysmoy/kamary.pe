@@ -172,6 +172,11 @@ const Menu = ({ can, hasRole, panel = null }) => {
             {canAccess('exit-note') && <MenuItem href='/admin/magistrales/warehouses' icon='ti ti-building-warehouse'>Almacenes</MenuItem>}
           </MenuItemContainer>
 
+          <MenuItemContainer title='Facturación' icon='ti ti-file-invoice'>
+            {(canAccess('businesses') || canAccess('services-billing')) && <MenuItem href='/admin/magistrales/billing-settings' icon='ti ti-settings-cog'>Configuración de facturación</MenuItem>}
+            {canAccess('services-billing') && <MenuItem href='/admin/magistrales/billing-documents' icon='ti ti-receipt-2'>Comprobantes</MenuItem>}
+          </MenuItemContainer>
+
           <li className='side-nav-title mt-2'>Serv. Almacenamiento</li>
           {canAccess('service-orders') && <MenuItem href='/admin/service-orders' icon='ti ti-file-dollar'>O. Servicio</MenuItem>}
           {canAccess('storage-general-service') && <MenuItem href='/admin/storage-general-service' icon='ti ti-briefcase'>Servicio General</MenuItem>}

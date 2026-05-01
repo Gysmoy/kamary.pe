@@ -39,4 +39,9 @@ class BusinessBranch extends Model
     {
         return $this->belongsTo(Business::class);
     }
+
+    public function warehouses()
+    {
+        return $this->hasMany(Warehouse::class, 'business_branch_id')->orderBy('name');
+    }
 }

@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
-use App\Models\Business;
 use App\Models\Client;
 use App\Models\ServiceCatalog;
 use App\Models\ServiceOrder;
 use App\Models\ServiceOrderItem;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +27,7 @@ class ServiceOrderController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('service_orders.*')
+        $query = $model::select('service_orders.*')
             ->with([
                 'business:id,name', 'branch:id,business_id,name', 'client:id,full_name,document_number', 'seller:id,name,lastname,username,fullname',
                 'accountsReceivable:id,service_order_id,code,total,paid_amount,balance_amount,payment_status,status',
@@ -37,11 +37,19 @@ class ServiceOrderController extends BasicController
             ])
             ->join('users as creator', 'creator.id', '=', 'service_orders.created_by')
             ->join('users as updater', 'updater.id', '=', 'service_orders.updated_by');
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->whereHas('business', function ($business) use ($scopeKey) {
+            $business->whereIn('business_key', BusinessScope::fixedKeys());
+            if ($scopeKey) $business->where('business_key', $scopeKey);
+        });
+
+        return $query;
     }
 
     public function branches(Request $request, string $businessId)
     {
-        $business = Business::findOrFail($businessId);
+        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
         return response([
             'status' => 200,
             'message' => 'Operacion correcta',
@@ -64,14 +72,12 @@ class ServiceOrderController extends BasicController
         if ($clientId <= 0) throw new \Exception('El cliente es obligatorio');
         if (!$issueDate) throw new \Exception('La fecha es obligatoria');
 
-        Business::findOrFail($businessId);
+        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
         $client = Client::findOrFail($clientId);
         if ($client->client_kind !== 'regular') throw new \Exception('La orden de servicio debe trabajar con cliente regular');
 
-        if ($branchId) {
-            $branch = Business::findOrFail($businessId)->branches()->where('id', $branchId)->first();
-            if (!$branch) throw new \Exception('La sede no pertenece a la empresa seleccionada');
-        }
+        $branch = BusinessScope::requireBranchForBusiness($business, $branchId);
+        $branchId = (int) $branch->id;
 
         $rawItems = $body['items'] ?? [];
         if (is_string($rawItems)) {

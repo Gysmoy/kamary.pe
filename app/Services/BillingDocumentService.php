@@ -8,6 +8,7 @@ use App\Models\BillingEvent;
 use App\Models\BusinessBranch;
 use App\Models\CommercialOrder;
 use App\Models\ServiceOrder;
+use App\Support\BusinessScope;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -21,16 +22,17 @@ class BillingDocumentService
         }
 
         if ($document->source_type === 'commercial_order') {
-            $order = CommercialOrder::with(['items.article', 'client', 'eventualClient'])->findOrFail($document->source_id);
+            $order = CommercialOrder::with(['items.article', 'client', 'eventualClient', 'business', 'warehouse'])->findOrFail($document->source_id);
             if (!$order->status || in_array($order->order_status, ['draft', 'cancelled'], true)) {
                 throw new \Exception('No se puede preparar facturacion para un pedido no aprobado');
             }
+            $sourceBranchId = $this->resolveSourceBranchId($order->business, $order->business_branch_id, $order->warehouse);
 
             $document->fill([
                 'commercial_order_id' => $order->id,
                 'service_order_id' => null,
                 'business_id' => $order->business_id,
-                'business_branch_id' => $order->business_branch_id,
+                'business_branch_id' => $sourceBranchId,
                 'warehouse_id' => $order->warehouse_id,
                 'client_id' => $order->client_id,
                 'eventual_client_id' => $order->eventual_client_id,
@@ -86,16 +88,17 @@ class BillingDocumentService
                 ]);
             }
         } elseif ($document->source_type === 'service_order') {
-            $order = ServiceOrder::with(['items.service', 'client'])->findOrFail($document->source_id);
+            $order = ServiceOrder::with(['items.service', 'client', 'business'])->findOrFail($document->source_id);
             if (!$order->status || in_array($order->order_status, ['draft', 'cancelled'], true)) {
                 throw new \Exception('No se puede preparar facturacion para una orden de servicio no aprobada');
             }
+            $sourceBranchId = $this->resolveSourceBranchId($order->business, $order->business_branch_id, null);
 
             $document->fill([
                 'commercial_order_id' => null,
                 'service_order_id' => $order->id,
                 'business_id' => $order->business_id,
-                'business_branch_id' => $order->business_branch_id,
+                'business_branch_id' => $sourceBranchId,
                 'warehouse_id' => null,
                 'client_id' => $order->client_id,
                 'eventual_client_id' => null,
@@ -508,11 +511,13 @@ class BillingDocumentService
 
     public function createCreditNote(BillingDocument $reference, array $data = []): BillingDocument
     {
+        $reference->loadMissing('business', 'branch', 'warehouse');
         if (!$reference->status) throw new \Exception('El comprobante de referencia esta inactivo');
         if ($reference->local_status !== 'accepted') throw new \Exception('Solo puedes generar nota de credito desde un comprobante aceptado');
         if (mb_strtolower(trim((string) $reference->document_type)) === 'nota de credito') {
             throw new \Exception('No puedes generar nota de credito sobre otra nota de credito');
         }
+        $referenceBranchId = $this->resolveSourceBranchId($reference->business, $reference->business_branch_id, $reference->warehouse);
 
         $issueDate = $data['issue_date'] ?? now()->toDateString();
         $document = BillingDocument::create([
@@ -523,7 +528,7 @@ class BillingDocumentService
             'service_order_id' => $reference->service_order_id,
             'reference_billing_document_id' => $reference->id,
             'business_id' => $reference->business_id,
-            'business_branch_id' => $reference->business_branch_id,
+            'business_branch_id' => $referenceBranchId,
             'warehouse_id' => $reference->warehouse_id,
             'client_id' => $reference->client_id,
             'eventual_client_id' => $reference->eventual_client_id,
@@ -696,6 +701,20 @@ class BillingDocumentService
         $this->syncSourceBillingStatus($fresh);
 
         return $fresh->fresh(['business', 'branch', 'warehouse', 'client', 'eventualClient', 'commercialOrder', 'serviceOrder', 'referenceDocument', 'items', 'events', 'creator', 'updater']);
+    }
+
+    private function resolveSourceBranchId($business, $branchId, $warehouse = null): int
+    {
+        if (!$business) {
+            throw new \Exception('Falta la empresa del origen de facturacion');
+        }
+
+        if ($warehouse) {
+            return BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
+        }
+
+        $branch = BusinessScope::requireBranchForBusiness($business, $branchId);
+        return (int) $branch->id;
     }
 
     private function joinProviderUrl(string $endpoint): string

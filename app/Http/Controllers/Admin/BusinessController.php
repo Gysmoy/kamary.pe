@@ -6,6 +6,7 @@ use App\Http\Controllers\BasicController;
 use App\Models\Business;
 use App\Models\BusinessBranch;
 use App\Services\BusinessFacturadorSyncService;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -23,32 +24,45 @@ class BusinessController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('businesses.*')
+        $query = $model::select('businesses.*')
             ->with([
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ])
-            ->join('users as creator', 'creator.id', '=', 'businesses.created_by')
-            ->join('users as updater', 'updater.id', '=', 'businesses.updated_by');
+            ->whereIn('businesses.business_key', BusinessScope::fixedKeys())
+            ->leftJoin('users as creator', 'creator.id', '=', 'businesses.created_by')
+            ->leftJoin('users as updater', 'updater.id', '=', 'businesses.updated_by');
+
+        $scopeKey = $this->resolveScopeKeyForPagination(request());
+        if ($scopeKey) {
+            $query->where('businesses.business_key', $scopeKey);
+        }
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
     {
         $body = $request->all();
         $userId = Auth::id();
-        $existing = !empty($body['id']) ? Business::find($body['id']) : null;
+        $existing = !empty($body['id']) ? BusinessScope::findFixedBusiness($body['id']) : null;
+        $businessKey = $existing?->business_key ?: BusinessScope::normalize($body['business_key'] ?? null);
+
+        if (!$existing) {
+            throw new \Exception('Solo se permiten las dos empresas fijas: Kamary Peru y Kamary Medicals');
+        }
+
+        if (!BusinessScope::normalize($businessKey)) {
+            throw new \Exception('La empresa no tiene una clave fija valida');
+        }
 
         $name = trim((string)($body['name'] ?? $existing?->name ?? ''));
         if ($name === '') {
             throw new \Exception('El nombre de la empresa es obligatorio');
         }
 
-        if (!isset($body['id']) || !$body['id']) {
-            $body['created_by'] = $userId;
-            $body['status'] = true;
-        }
-
         $body['updated_by'] = $userId;
+        $body['business_key'] = $businessKey;
         $body['name'] = $name;
         $body['description'] = array_key_exists('description', $body) ? trim((string)$body['description']) : $existing?->description;
         $body['tax_number'] = array_key_exists('tax_number', $body) ? $this->normalizeTaxNumber($body['tax_number']) : $existing?->tax_number;
@@ -74,6 +88,13 @@ class BusinessController extends BasicController
             $body['fiscal_certificate_password'] = Crypt::encryptString($plainCertificatePassword);
         }
 
+        if ($existing && $this->hasBusinessFiscalChanges($existing, $body, $plainCertificatePassword !== '')) {
+            $body['facturador_sync_status'] = 'pending';
+            $body['facturador_sync_message'] = 'Configuracion fiscal modificada localmente. Requiere nueva sincronizacion.';
+        }
+
+        $body['status'] = true;
+
         return $body;
     }
 
@@ -89,6 +110,10 @@ class BusinessController extends BasicController
     {
         $response = new Response();
         try {
+            if (in_array($request->field, ['status', 'business_key'], true)) {
+                throw new \Exception('No puedes modificar el estado o clave de una empresa fija');
+            }
+
             $data = [];
             $data[$request->field] = $request->value;
             $data['updated_by'] = Auth::id();
@@ -109,13 +134,7 @@ class BusinessController extends BasicController
     {
         $response = new Response();
         try {
-            $this->model::where($this->identifier, $request->id)->update([
-                'status' => $request->status ? 0 : 1,
-                'updated_by' => Auth::id(),
-            ]);
-
-            $response->status = 200;
-            $response->message = 'Operacion correcta';
+            throw new \Exception('No puedes desactivar las empresas fijas');
         } catch (\Throwable $th) {
             $response->status = 400;
             $response->message = $th->getMessage();
@@ -124,11 +143,19 @@ class BusinessController extends BasicController
         }
     }
 
+    public function delete(Request $request, string $id)
+    {
+        $response = new Response();
+        $response->status = 400;
+        $response->message = 'No puedes eliminar las empresas fijas';
+        return response($response->toArray(), $response->status);
+    }
+
     public function branches(Request $request, string $id): HttpResponse|ResponseFactory
     {
         $response = new Response();
         try {
-            $business = Business::findOrFail($id);
+            $business = BusinessScope::findFixedBusiness($id);
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = $business->branches()->orderBy('name')->get([
@@ -161,7 +188,7 @@ class BusinessController extends BasicController
     {
         $response = new Response();
         try {
-            $business = Business::findOrFail($id);
+            $business = BusinessScope::findFixedBusiness($id);
             $userId = Auth::id();
             $input = $request->all();
             $name = trim((string)$request->name);
@@ -225,6 +252,10 @@ class BusinessController extends BasicController
                 || $branch->address !== $address
                 || $branch->email !== $email
                 || $branch->telephone !== $telephone;
+            $requiresSeriesResync = !$branch
+                || $branch->series_factura !== $seriesFactura
+                || $branch->series_boleta !== $seriesBoleta
+                || $branch->series_nota_credito !== $seriesNotaCredito;
 
             if ($isUpdate && $branch) {
                 $payload = [
@@ -241,9 +272,9 @@ class BusinessController extends BasicController
                     'updated_by' => $userId,
                 ];
 
-                if ($requiresFiscalResync) {
+                if ($requiresFiscalResync || $requiresSeriesResync) {
                     $payload['facturador_sync_status'] = 'pending';
-                    $payload['facturador_sync_message'] = 'Sucursal modificada localmente. Requiere nueva sincronizacion.';
+                    $payload['facturador_sync_message'] = 'Sucursal o series modificadas localmente. Requiere nueva sincronizacion.';
                 }
 
                 $branch->update($payload);
@@ -284,13 +315,15 @@ class BusinessController extends BasicController
     {
         $response = new Response();
         try {
-            Business::findOrFail($id);
+            BusinessScope::findFixedBusiness($id);
             $data = [];
             $data[$request->field] = $request->value;
 
             BusinessBranch::where('business_id', $id)
                 ->where('id', $branchId)
                 ->update(array_merge($data, [
+                    'facturador_sync_status' => 'pending',
+                    'facturador_sync_message' => 'Estado de sucursal modificado localmente. Requiere nueva sincronizacion.',
                     'updated_by' => Auth::id(),
                 ]));
 
@@ -308,10 +341,16 @@ class BusinessController extends BasicController
     {
         $response = new Response();
         try {
-            Business::findOrFail($id);
-            $deleted = BusinessBranch::where('business_id', $id)
+            BusinessScope::findFixedBusiness($id);
+            $branch = BusinessBranch::where('business_id', $id)
                 ->where('id', $branchId)
-                ->delete();
+                ->firstOrFail();
+
+            if ($branch->facturador_establishment_id || $branch->facturador_sync_status === 'success') {
+                throw new \Exception('No puedes eliminar una sucursal ya sincronizada. Desactiva la sede y vuelve a sincronizar.');
+            }
+
+            $deleted = $branch->delete();
 
             if (!$deleted) throw new \Exception('No se ha eliminado ningun registro');
 
@@ -330,7 +369,7 @@ class BusinessController extends BasicController
         $response = new Response();
 
         try {
-            $business = Business::findOrFail($id);
+            $business = BusinessScope::findFixedBusiness($id);
 
             if ($request->hasFile('logo')) {
                 $logo = $request->file('logo');
@@ -343,6 +382,7 @@ class BusinessController extends BasicController
                 $logoPath = 'business-fiscal/logos/' . $logoName;
                 Storage::disk('public')->putFileAs('business-fiscal/logos', $logo, $logoName);
                 $business->fiscal_logo_path = $logoPath;
+                $business->facturador_logo_synced_at = null;
             }
 
             $certificatePassword = trim((string) $request->input('certificate_password', ''));
@@ -362,10 +402,14 @@ class BusinessController extends BasicController
                 Storage::disk('local')->putFileAs('business-fiscal/certificates', $certificate, $certificateName);
                 $business->fiscal_certificate_path = $certificatePath;
                 $business->fiscal_certificate_password = Crypt::encryptString($certificatePassword);
+                $business->facturador_certificate_synced_at = null;
             } elseif ($certificatePassword !== '') {
                 $business->fiscal_certificate_password = Crypt::encryptString($certificatePassword);
+                $business->facturador_certificate_synced_at = null;
             }
 
+            $business->facturador_sync_status = 'pending';
+            $business->facturador_sync_message = 'Archivos fiscales modificados localmente. Requiere nueva sincronizacion.';
             $business->updated_by = Auth::id();
             $business->save();
 
@@ -385,22 +429,26 @@ class BusinessController extends BasicController
         $response = new Response();
 
         try {
-            $business = Business::findOrFail($id);
+            $business = BusinessScope::findFixedBusiness($id);
             if ($type === 'logo') {
                 if ($business->fiscal_logo_path) {
                     Storage::disk('public')->delete($business->fiscal_logo_path);
                 }
                 $business->fiscal_logo_path = null;
+                $business->facturador_logo_synced_at = null;
             } elseif ($type === 'certificate') {
                 if ($business->fiscal_certificate_path) {
                     Storage::disk('local')->delete($business->fiscal_certificate_path);
                 }
                 $business->fiscal_certificate_path = null;
                 $business->fiscal_certificate_password = null;
+                $business->facturador_certificate_synced_at = null;
             } else {
                 throw new \Exception('Tipo de archivo fiscal no soportado');
             }
 
+            $business->facturador_sync_status = 'pending';
+            $business->facturador_sync_message = 'Archivos fiscales modificados localmente. Requiere nueva sincronizacion.';
             $business->updated_by = Auth::id();
             $business->save();
 
@@ -421,7 +469,7 @@ class BusinessController extends BasicController
         DB::beginTransaction();
 
         try {
-            $business = Business::findOrFail($id);
+            $business = BusinessScope::findFixedBusiness($id);
             $sync = app(BusinessFacturadorSyncService::class)->sync($business);
             $record = $sync['record']['data'] ?? [];
             $syncedEstablishments = collect($sync['establishments']['data'] ?? [])->keyBy(function ($item) {
@@ -474,7 +522,7 @@ class BusinessController extends BasicController
             DB::rollBack();
 
             if (!empty($id) && ctype_digit((string) $id)) {
-                Business::where('id', $id)->update([
+                Business::where('id', $id)->whereIn('business_key', BusinessScope::fixedKeys())->update([
                     'facturador_sync_status' => 'error',
                     'facturador_sync_message' => $th->getMessage(),
                     'updated_by' => Auth::id(),
@@ -496,6 +544,41 @@ class BusinessController extends BasicController
 
         $text = trim((string) $value);
         return $text === '' ? null : $text;
+    }
+
+    private function hasBusinessFiscalChanges(Business $existing, array $payload, bool $certificatePasswordChanged): bool
+    {
+        if ($certificatePasswordChanged) {
+            return true;
+        }
+
+        $currentCertificateDue = optional($existing->certificate_due)->format('Y-m-d');
+
+        return $existing->name !== ($payload['name'] ?? $existing->name)
+            || $existing->tax_number !== ($payload['tax_number'] ?? $existing->tax_number)
+            || $existing->trade_name !== ($payload['trade_name'] ?? $existing->trade_name)
+            || $existing->soap_send_id !== ($payload['soap_send_id'] ?? $existing->soap_send_id)
+            || $existing->soap_type_id !== ($payload['soap_type_id'] ?? $existing->soap_type_id)
+            || $existing->soap_username !== ($payload['soap_username'] ?? $existing->soap_username)
+            || $existing->soap_password !== ($payload['soap_password'] ?? $existing->soap_password)
+            || $existing->soap_url !== ($payload['soap_url'] ?? $existing->soap_url)
+            || $existing->detraction_account !== ($payload['detraction_account'] ?? $existing->detraction_account)
+            || $currentCertificateDue !== ($payload['certificate_due'] ?? $currentCertificateDue)
+            || (bool) $existing->operation_amazonia !== (bool) ($payload['operation_amazonia'] ?? $existing->operation_amazonia)
+            || (bool) $existing->send_document_to_pse !== (bool) ($payload['send_document_to_pse'] ?? $existing->send_document_to_pse)
+            || $existing->url_signature_pse !== ($payload['url_signature_pse'] ?? $existing->url_signature_pse)
+            || $existing->url_send_cdr_pse !== ($payload['url_send_cdr_pse'] ?? $existing->url_send_cdr_pse)
+            || $existing->client_id_pse !== ($payload['client_id_pse'] ?? $existing->client_id_pse)
+            || $existing->integrated_query_client_id !== ($payload['integrated_query_client_id'] ?? $existing->integrated_query_client_id)
+            || $existing->integrated_query_client_secret !== ($payload['integrated_query_client_secret'] ?? $existing->integrated_query_client_secret);
+    }
+
+    private function resolveScopeKeyForPagination(Request $request): ?string
+    {
+        return BusinessScope::scopedKeyForRequest($request, [
+            '/admin/businesses',
+            '/admin/billing-settings',
+        ]);
     }
 
     private function normalizeTaxNumber($value): ?string

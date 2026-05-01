@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
 use App\Models\Article;
-use App\Models\Business;
 use App\Models\ExitNote;
 use App\Models\ExitNoteItem;
 use App\Models\Warehouse;
 use App\Services\StockService;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -26,7 +26,7 @@ class ExitNoteController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('exit_notes.*')
+        $query = $model::select('exit_notes.*')
             ->with([
                 'business:id,name',
                 'branch:id,business_id,name',
@@ -42,6 +42,14 @@ class ExitNoteController extends BasicController
             ])
             ->join('users as creator', 'creator.id', '=', 'exit_notes.created_by')
             ->join('users as updater', 'updater.id', '=', 'exit_notes.updated_by');
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->whereHas('business', function ($business) use ($scopeKey) {
+            $business->whereIn('business_key', BusinessScope::fixedKeys());
+            if ($scopeKey) $business->where('business_key', $scopeKey);
+        });
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -56,24 +64,10 @@ class ExitNoteController extends BasicController
         if (!$businessId) throw new \Exception('La empresa es obligatoria');
         if (!$warehouseId) throw new \Exception('El almacen es obligatorio');
 
-        Business::findOrFail($businessId);
+        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
         $warehouse = Warehouse::findOrFail($warehouseId);
 
-        $body['business_branch_id'] = ($branchId === '' || is_null($branchId)) ? null : (int)$branchId;
-        if (!is_null($warehouse->business_branch_id)) {
-            if (is_null($body['business_branch_id'])) {
-                $body['business_branch_id'] = (int)$warehouse->business_branch_id;
-            } else if ((int)$body['business_branch_id'] !== (int)$warehouse->business_branch_id) {
-                throw new \Exception('El almacen seleccionado no pertenece a la sede elegida');
-            }
-        }
-        if ($body['business_branch_id']) {
-            $branch = Business::findOrFail($businessId)
-                ->branches()
-                ->where('id', $body['business_branch_id'])
-                ->first();
-            if (!$branch) throw new \Exception('La sede no pertenece a la empresa seleccionada');
-        }
+        $body['business_branch_id'] = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
 
         $rawItems = $body['items'] ?? [];
         if (is_string($rawItems)) {
@@ -117,6 +111,7 @@ class ExitNoteController extends BasicController
             ExitNoteItem::where('exit_note_id', $jpa->id)->delete();
 
             $inserted = 0;
+            $business = BusinessScope::findFixedBusiness($jpa->business_id);
             foreach ($this->itemsPayload as $item) {
                 if (!is_array($item)) continue;
 
@@ -126,7 +121,8 @@ class ExitNoteController extends BasicController
 
                 $warehouseId = $item['warehouse_id'] ?? $jpa->warehouse_id;
                 if (!$warehouseId) throw new \Exception('Cada linea debe tener almacen');
-                Warehouse::findOrFail($warehouseId);
+                $itemWarehouse = Warehouse::findOrFail($warehouseId);
+                BusinessScope::branchIdFromWarehouse($business, $itemWarehouse, $jpa->business_branch_id);
 
                 $stock = $this->toNullableDecimal($item['stock'] ?? null) ?? 0;
                 $quantity = $this->toNullableDecimal($item['quantity'] ?? null) ?? 0;
@@ -182,7 +178,7 @@ class ExitNoteController extends BasicController
     {
         $response = new Response();
         try {
-            $business = Business::findOrFail($businessId);
+            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = $business->branches()->whereNotNull('status')->orderBy('name')->get(['id', 'business_id', 'name', 'status']);

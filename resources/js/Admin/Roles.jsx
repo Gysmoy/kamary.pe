@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+﻿import React, { useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
@@ -13,7 +13,7 @@ import RolesRest from '../Actions/Admin/roles-rest';
 const rolesRest = new RolesRest()
 
 const QUICK_FLAGS = {
-  kamaryFarma: [
+  kamaryMedicals: [
     'articles',
     'batches',
     'laboratories',
@@ -107,8 +107,8 @@ const PERMISSION_GROUPS = [
   },
   {
     key: 'magistrales',
-    title: 'Kamary Farma / Magistrales',
-    permissions: QUICK_FLAGS.kamaryFarma.filter(permission => permission.startsWith('magistrales-'))
+    title: 'Kamary Medicals / Magistrales',
+    permissions: QUICK_FLAGS.kamaryMedicals.filter(permission => permission.startsWith('magistrales-'))
   },
   {
     key: 'almacenamiento',
@@ -132,11 +132,11 @@ const hasAll = (selectedPermissions, permissionsToCheck) => {
 }
 
 const resolveProfileLabel = (permissionNames = []) => {
-  const farmaEnabled = hasAll(permissionNames, QUICK_FLAGS.kamaryFarma)
+  const medicalsEnabled = hasAll(permissionNames, QUICK_FLAGS.kamaryMedicals)
   const peruEnabled = hasAll(permissionNames, QUICK_FLAGS.kamaryPeru)
 
-  if (farmaEnabled && peruEnabled) return 'Mixto'
-  if (farmaEnabled) return 'Kamary Farma'
+  if (medicalsEnabled && peruEnabled) return 'Mixto'
+  if (medicalsEnabled) return 'Kamary Medicals'
   if (peruEnabled) return 'Kamary Peru'
   if (!permissionNames.length) return 'Sin permisos'
   return 'Personalizado'
@@ -165,7 +165,7 @@ const Roles = ({ permissions }) => {
 
   const availableFlags = useMemo(() => {
     return {
-      kamaryFarma: QUICK_FLAGS.kamaryFarma.filter(permission => permissionMap.has(permission)),
+      kamaryMedicals: QUICK_FLAGS.kamaryMedicals.filter(permission => permissionMap.has(permission)),
       kamaryPeru: QUICK_FLAGS.kamaryPeru.filter(permission => permissionMap.has(permission))
     }
   }, [permissionMap])
@@ -444,24 +444,24 @@ const Roles = ({ permissions }) => {
                   <div className='border rounded-3 bg-white px-3 py-2 h-100'>
                     <div className='d-flex flex-wrap align-items-center justify-content-between gap-2'>
                       <div>
-                        <strong className='text-primary d-block'>Kamary Farma</strong>
+                        <strong className='text-primary d-block'>Kamary Medicals</strong>
                         <small className='text-muted'>Preset orientado a magistrales</small>
                       </div>
                       <div className='d-flex flex-wrap gap-2'>
-                        <span className={`badge align-self-center ${hasAll(selectedPermissions, availableFlags.kamaryFarma) ? 'bg-primary' : 'badge-soft-primary'}`}>
-                          {availableFlags.kamaryFarma.length}
+                        <span className={`badge align-self-center ${hasAll(selectedPermissions, availableFlags.kamaryMedicals) ? 'bg-primary' : 'badge-soft-primary'}`}>
+                          {availableFlags.kamaryMedicals.length}
                         </span>
                         <button
                           type='button'
-                          className={`btn btn-sm ${hasAll(selectedPermissions, availableFlags.kamaryFarma) ? 'btn-primary' : 'btn-outline-primary'}`}
-                          onClick={() => handleToggleFlag('kamaryFarma')}
+                          className={`btn btn-sm ${hasAll(selectedPermissions, availableFlags.kamaryMedicals) ? 'btn-primary' : 'btn-outline-primary'}`}
+                          onClick={() => handleToggleFlag('kamaryMedicals')}
                         >
                           Activar
                         </button>
                         <button
                           type='button'
                           className='btn btn-sm btn-outline-primary'
-                          onClick={() => handleReplaceWithFlag('kamaryFarma')}
+                          onClick={() => handleReplaceWithFlag('kamaryMedicals')}
                         >
                           Solo este
                         </button>
@@ -582,3 +582,4 @@ CreateReactScript((el, properties) => {
     <Roles {...properties} />
   </BaseAdminto>)
 })
+
