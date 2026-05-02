@@ -10,3 +10,26 @@
 .banner-swiper .swiper-pagination-bullet-active {
   opacity: 1;
 }
+
+.sidenav-menu .side-nav .side-nav-link {
+  align-items: flex-start;
+}
+
+.sidenav-menu .side-nav .side-nav-link .menu-icon,
+.sidenav-menu .side-nav .side-nav-link .menu-arrow,
+.sidenav-menu .side-nav .side-nav-link .badge {
+  flex: 0 0 auto;
+  margin-top: 0.1rem;
+}
+
+.sidenav-menu .side-nav .side-nav-link .menu-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: clip;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
