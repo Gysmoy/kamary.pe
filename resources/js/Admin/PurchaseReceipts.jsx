@@ -337,11 +337,11 @@ const PurchaseReceipts = () => {
 
   const onDeleteClicked = async (id) => {
     const { isConfirmed } = await Swal.fire({
-      title: 'Eliminar recepcion de compra',
-      text: 'Estas seguro de eliminar esta recepcion de compra? Esta accion no se puede revertir',
+      title: 'Eliminar recepción de compra',
+      text: '¿Estás seguro de eliminar esta recepción de compra? Esta acción no se puede revertir',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Si, eliminar',
+      confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
     })
     if (!isConfirmed) return
@@ -441,7 +441,7 @@ const PurchaseReceipts = () => {
           options: {
             icon: 'add',
             title: 'Agregar',
-            hint: 'Agregar recepcion de compra',
+            hint: 'Agregar recepción de compra',
             onClick: () => onModalOpen(null)
           }
         });
@@ -449,10 +449,10 @@ const PurchaseReceipts = () => {
       pageSize={25}
       columns={[
         { dataField: 'id', caption: 'ID', width: 80 },
-        { dataField: 'code', caption: 'Codigo', width: 130 },
+        { dataField: 'code', caption: 'Código', width: 130 },
         { dataField: 'purchaseOrder.code', caption: 'OC', width: 130 },
-        { dataField: 'issue_date', caption: 'F. emision', width: 110, dataType: 'date' },
-        { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 130 },
+        { dataField: 'issue_date', caption: 'F. emisión', width: 110, dataType: 'date' },
+        { dataField: 'warehouse.name', caption: 'Almacén', minWidth: 130 },
         { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 220 },
         { dataField: 'document_type', caption: 'Tipo doc', width: 110 },
         { dataField: 'document_series', caption: 'Serie', width: 90 },
@@ -467,7 +467,7 @@ const PurchaseReceipts = () => {
           minWidth: 320,
           allowFiltering: false,
           cellTemplate: (container, { data }) => {
-            const lines = (data?.items ?? []).map(item => `${item?.article?.name || 'Articulo'} | Lote ${item?.lot || '-'} | Cant. ${Number(item?.quantity || 0).toFixed(2)} | ${data.currency} ${Number(item?.total || 0).toFixed(2)}`)
+            const lines = (data?.items ?? []).map(item => `${item?.article?.name || 'Artículo'} | Lote ${item?.lot || '-'} | Cant. ${Number(item?.quantity || 0).toFixed(2)} | ${data.currency} ${Number(item?.total || 0).toFixed(2)}`)
             ReactAppend(container, <div>
               {lines.length === 0 && <small className='text-muted'>Sin detalle</small>}
               {lines.map((line, idx) => <div key={`purchase-receipt-${data.id}-${idx}`}><small>{line}</small></div>)}
@@ -514,7 +514,7 @@ const PurchaseReceipts = () => {
             }))
             container.append(DxButton({
               className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar recepcion de compra',
+              title: 'Eliminar recepción de compra',
               icon: 'mdi mdi-delete',
               onClick: () => onDeleteClicked(data.id)
             }))
@@ -525,7 +525,7 @@ const PurchaseReceipts = () => {
       ]}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar recepcion de compra' : 'Agregar recepcion de compra'} onSubmit={onModalSubmit} size='full-width'>
+    <Modal modalRef={modalRef} title={isEditing ? 'Editar recepción de compra' : 'Agregar recepción de compra'} onSubmit={onModalSubmit} size='full-width'>
       <div className='row' id='purchase-receipt-form-container'>
         <input ref={idRef} type='hidden' />
 
@@ -562,7 +562,7 @@ const PurchaseReceipts = () => {
         </SelectFormGroup>
         <SelectAPIFormGroup
           eRef={warehouseRef}
-          label='Almacen'
+          label='Almacén'
           col='col-md-3'
           required
           searchAPI='/api/admin/warehouses/paginate'
@@ -581,12 +581,12 @@ const PurchaseReceipts = () => {
           onChange={(e) => setSelectedSupplierId(e.target.value || '')}
         />
         <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Codigo</label>
+          <label className='form-label'>Código</label>
           <input ref={codeRef} className='form-control' disabled />
         </div>
-        <InputFormGroup eRef={issueDateRef} label='Fecha emision' col='col-md-2' type='date' required />
+        <InputFormGroup eRef={issueDateRef} label='Fecha emisión' col='col-md-2' type='date' required />
         <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Estado recepcion</label>
+          <label className='form-label'>Estado recepción</label>
           <select ref={receiptStatusRef} className='form-control'>
             {purchaseReceiptStatusOptions.map((option) => (
               <option key={`purchase-receipt-status-${option.value}`} value={option.value}>{option.label}</option>
@@ -617,10 +617,10 @@ const PurchaseReceipts = () => {
           </select>
         </div>
         <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Condicion pago</label>
+          <label className='form-label'>Condición de pago</label>
           <select ref={paymentConditionRef} className='form-control'>
             <option value='Contado'>Contado</option>
-            <option value='Credito'>Credito</option>
+            <option value='Credito'>Crédito</option>
           </select>
         </div>
         <InputFormGroup eRef={firstDueDateRef} label='Primera cuota' col='col-md-2' type='date' />
@@ -642,27 +642,27 @@ const PurchaseReceipts = () => {
 
         <TextareaFormGroup eRef={observationsRef} label='Observaciones' col='col-12' rows={2} />
 
-        <h6 className='mt-3 mb-2'>Guia de remision</h6>
+        <h6 className='mt-3 mb-2'>Guía de remisión</h6>
         <InputFormGroup eRef={guideSeriesRef} label='Serie' col='col-md-2' />
         <InputFormGroup eRef={guideSequenceRef} label='Secuencia' col='col-md-2' />
         <InputFormGroup eRef={guideRucRef} label='RUC' col='col-md-2' />
         <div className='form-group col-md-6 mb-2'>
-          <label className='form-label'>Archivo guia</label>
+          <label className='form-label'>Archivo guía</label>
           <input ref={guideFileRef} type='file' className='form-control' />
         </div>
 
         <div className='col-12 mt-3'>
           <div className='d-flex justify-content-between align-items-center mb-2'>
-            <h6 className='mb-0'>Detalle recepcion</h6>
+            <h6 className='mb-0'>Detalle recepción</h6>
             <button type='button' className='btn btn-sm btn-soft-primary' onClick={onItemAdded}>
-              <i className='mdi mdi-plus me-1'></i> Agregar linea
+              <i className='mdi mdi-plus me-1'></i> Agregar línea
             </button>
           </div>
           <div className='table-responsive border rounded'>
             <table className='table table-sm table-striped mb-0'>
               <thead>
                 <tr>
-                  <th>Articulo</th>
+                  <th>Artículo</th>
                   <th>Lab. | Principio</th>
                   <th>Unidad</th>
                   <th>Solic.</th>
@@ -675,7 +675,7 @@ const PurchaseReceipts = () => {
                   <th>Und/caja</th>
                   <th>Cajas</th>
                   <th>P. costo</th>
-                  <th>Ubicacion</th>
+                  <th>Ubicación</th>
                   <th>Cantidad</th>
                   <th>Total</th>
                   <th>Acciones</th>

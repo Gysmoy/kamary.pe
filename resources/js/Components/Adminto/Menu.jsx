@@ -161,7 +161,13 @@ const Menu = ({ can, hasRole, panel = null }) => {
             {canAccess('batches') && <MenuItem href='/admin/magistrales/batches' icon='ti ti-box-multiple'>Lotes</MenuItem>}
             {canAccess('laboratories') && <MenuItem href='/admin/magistrales/laboratories' icon='ti ti-flask'>Laboratorios</MenuItem>}
             {canAccess('units-of-measure') && <MenuItem href='/admin/magistrales/units' icon='ti ti-ruler-measure'>Und. de medida</MenuItem>}
+          </MenuItemContainer>
+
+          <MenuItemContainer title='Proveedores y Compras' icon='ti ti-shopping-cart'>
             {canAccess('suppliers') && <MenuItem href='/admin/magistrales/suppliers' icon='ti ti-truck-delivery'>Proveedores</MenuItem>}
+            {canAccess('purchase-orders') && <MenuItem href='/admin/magistrales/purchase-orders' icon='ti ti-shopping-cart'>Órdenes de compra</MenuItem>}
+            {canAccess('purchase-receipts') && <MenuItem href='/admin/magistrales/purchase-receipts' icon='ti ti-file-import'>Recepciones de compra</MenuItem>}
+            {canAccess('accounts-payable') && <MenuItem href='/admin/magistrales/accounts-payable' icon='ti ti-credit-card'>Cuentas por pagar</MenuItem>}
           </MenuItemContainer>
 
           <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
@@ -187,7 +193,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {(canAccess('businesses') || canAccess('services-billing') || canAccess('exit-note')) && (
             <MenuItemContainer title='Estructura operativa' icon='ti ti-building'>
               {canAccess('businesses') && <MenuItem href='/admin/businesses' icon='ti ti-building-store'>Empresas</MenuItem>}
-              {(canAccess('businesses') || canAccess('services-billing')) && <MenuItem href='/admin/billing-settings' icon='ti ti-building-community'>Sucursales y facturacion</MenuItem>}
+              {(canAccess('businesses') || canAccess('services-billing')) && <MenuItem href='/admin/billing-settings' icon='ti ti-building-community'>Sucursales y facturación</MenuItem>}
               {(canAccess('businesses') || canAccess('exit-note')) && <MenuItem href='/admin/warehouses' icon='ti ti-building-warehouse'>Almacenes</MenuItem>}
             </MenuItemContainer>
           )}

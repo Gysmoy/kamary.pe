@@ -268,8 +268,8 @@ const BillingSettings = ({ can }) => {
   return <>
     <div className='alert alert-info border mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2'>
       <div>
-        Aqui solo se configura la facturacion de empresas ya registradas.
-        {can('businesses') ? <> El alta y edicion general de empresas se hace en <b>Empresas</b>.</> : null}
+        Aquí solo se configura la facturación de empresas ya registradas.
+        {can('businesses') ? <> El alta y edición general de empresas se hace en <b>Empresas</b>.</> : null}
       </div>
       {can('businesses') && (
         <a href='/admin/businesses' className='btn btn-sm btn-outline-primary'>
@@ -280,7 +280,7 @@ const BillingSettings = ({ can }) => {
 
     <Table
       gridRef={gridRef}
-      title='Configuracion facturacion'
+      title='Configuración de facturación'
       rest={businessesRest}
       toolBar={(container) => {
         container.unshift({
@@ -325,7 +325,7 @@ const BillingSettings = ({ can }) => {
         },
         {
           dataField: 'facturador_last_sync_at',
-          caption: 'Ultimo sync',
+          caption: 'Último sync',
           width: 170
         },
         {
@@ -385,7 +385,7 @@ const BillingSettings = ({ can }) => {
 
             container.append(DxButton({
               className: 'btn btn-xs btn-soft-success',
-              title: 'Configuracion fiscal',
+              title: 'Configuración fiscal',
               icon: 'mdi mdi-file-cog',
               onClick: () => onFiscalOpen(data)
             }))
@@ -403,13 +403,13 @@ const BillingSettings = ({ can }) => {
       ]}
     />
 
-    <Modal modalRef={fiscalModalRef} title={`Configuracion fiscal${selectedFiscalBusiness ? ` - ${selectedFiscalBusiness.name}` : ''}`} onSubmit={onSaveFiscal} size='xl'>
+    <Modal modalRef={fiscalModalRef} title={`Configuración fiscal${selectedFiscalBusiness ? ` - ${selectedFiscalBusiness.name}` : ''}`} onSubmit={onSaveFiscal} size='xl'>
       <input ref={fiscalBusinessIdRef} type='hidden' />
       <div className='row'>
         <div className='col-12 mb-2 d-flex justify-content-between align-items-center gap-2 flex-wrap'>
           <div className='small text-muted'>
             Sync actual: <b>{getFacturadorSyncMeta(selectedFiscalBusiness?.facturador_sync_status).label}</b>
-            {selectedFiscalBusiness?.facturador_last_sync_at && <> | Ultimo sync: <b>{selectedFiscalBusiness.facturador_last_sync_at.toString()}</b></>}
+            {selectedFiscalBusiness?.facturador_last_sync_at && <> | Último sync: <b>{selectedFiscalBusiness.facturador_last_sync_at.toString()}</b></>}
           </div>
           <button type='button' className='btn btn-sm btn-outline-primary' onClick={onSyncFacturador}>
             <i className='mdi mdi-sync me-1'></i> Sincronizar con facturador
@@ -423,13 +423,13 @@ const BillingSettings = ({ can }) => {
         <div className='col-md-3 mb-3'><label className='form-label'>RUC</label><input ref={taxNumberRef} className='form-control' maxLength={11} /></div>
         <div className='col-md-5 mb-3'><label className='form-label'>Nombre comercial</label><input ref={tradeNameRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>SOAP send</label><select ref={soapSendIdRef} className='form-control'><option value='01'>Sunat</option><option value='02'>OSE</option></select></div>
-        <div className='col-md-2 mb-3'><label className='form-label'>SOAP type</label><select ref={soapTypeIdRef} className='form-control'><option value='01'>Beta</option><option value='02'>Produccion</option></select></div>
+        <div className='col-md-2 mb-3'><label className='form-label'>SOAP type</label><select ref={soapTypeIdRef} className='form-control'><option value='01'>Beta</option><option value='02'>Producción</option></select></div>
         <div className='col-md-4 mb-3'><label className='form-label'>SOAP usuario</label><input ref={soapUsernameRef} className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>SOAP clave</label><input ref={soapPasswordRef} className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>SOAP URL</label><input ref={soapUrlRef} className='form-control' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Cuenta detraccion</label><input ref={detractionAccountRef} className='form-control' /></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Cuenta detracción</label><input ref={detractionAccountRef} className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Vence certificado</label><input ref={certificateDueRef} type='date' className='form-control' /></div>
-        <div className='col-md-4 mb-3 d-flex align-items-end'><div className='form-check mb-2'><input ref={operationAmazoniaRef} type='checkbox' className='form-check-input' id='operation-amazonia-settings' /><label className='form-check-label' htmlFor='operation-amazonia-settings'>Operacion amazonia</label></div></div>
+        <div className='col-md-4 mb-3 d-flex align-items-end'><div className='form-check mb-2'><input ref={operationAmazoniaRef} type='checkbox' className='form-check-input' id='operation-amazonia-settings' /><label className='form-check-label' htmlFor='operation-amazonia-settings'>Operación amazonia</label></div></div>
         <div className='col-md-4 mb-3 d-flex align-items-end'><div className='form-check mb-2'><input ref={sendDocumentToPseRef} type='checkbox' className='form-check-input' id='send-document-to-pse-settings' /><label className='form-check-label' htmlFor='send-document-to-pse-settings'>Enviar a PSE</label></div></div>
         <div className='col-md-4 mb-3'><label className='form-label'>PSE firma URL</label><input ref={urlSignaturePseRef} className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>PSE CDR URL</label><input ref={urlSendCdrPseRef} className='form-control' /></div>
@@ -470,7 +470,7 @@ const BillingSettings = ({ can }) => {
           <thead>
             <tr>
               <th>Nombre</th>
-              <th>Codigo</th>
+              <th>Código</th>
               <th>ID remoto</th>
               <th>Sync</th>
               <th>Ubigeo</th>
@@ -541,7 +541,7 @@ const BillingSettings = ({ can }) => {
       <input ref={branchIdRef} type='hidden' />
       <div className='row'>
         <InputFormGroup eRef={branchNameRef} label='Nombre de la sucursal' col='col-md-6' required />
-        <InputFormGroup eRef={branchCodeRef} label='Codigo fiscal de sede' col='col-md-3' />
+        <InputFormGroup eRef={branchCodeRef} label='Código fiscal de sede' col='col-md-3' />
         <div className='col-12'>
           <UbigeoCascade
             value={branchUbigeoSelection}
@@ -554,12 +554,12 @@ const BillingSettings = ({ can }) => {
             rowClassName='row'
           />
         </div>
-        <InputFormGroup eRef={branchAddressRef} label='Direccion fiscal' col='col-md-12' />
+        <InputFormGroup eRef={branchAddressRef} label='Dirección fiscal' col='col-md-12' />
         <InputFormGroup eRef={branchEmailRef} label='Correo sede' col='col-md-6' type='email' />
-        <InputFormGroup eRef={branchTelephoneRef} label='Telefono sede' col='col-md-6' />
+        <InputFormGroup eRef={branchTelephoneRef} label='Teléfono sede' col='col-md-6' />
         <InputFormGroup eRef={branchSeriesFacturaRef} label='Serie factura' col='col-md-4' />
         <InputFormGroup eRef={branchSeriesBoletaRef} label='Serie boleta' col='col-md-4' />
-        <InputFormGroup eRef={branchSeriesNotaCreditoRef} label='Serie nota credito' col='col-md-4' />
+        <InputFormGroup eRef={branchSeriesNotaCreditoRef} label='Serie nota crédito' col='col-md-4' />
       </div>
     </Modal>
   </>
@@ -567,7 +567,7 @@ const BillingSettings = ({ can }) => {
 
 CreateReactScript((el, properties) => {
   if (!properties.can('businesses') && !properties.can('services-billing') && !properties.hasRole('Admin')) location.href = '/admin/'
-  createRoot(el).render(<BaseAdminto {...properties} title='Configuracion facturacion'>
+  createRoot(el).render(<BaseAdminto {...properties} title='Configuración de facturación'>
     <BillingSettings {...properties} />
   </BaseAdminto>)
 })

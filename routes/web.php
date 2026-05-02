@@ -150,6 +150,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales/batches', [AdminBatchController::class, 'reactView']);
         Route::get('/magistrales/entry-note', [AdminEntryNoteController::class, 'reactView']);
         Route::get('/magistrales/exit-note', [AdminExitNoteController::class, 'reactView']);
+        Route::get('/magistrales/purchase-orders', [AdminPurchaseOrderController::class, 'reactView']);
+        Route::get('/magistrales/purchase-receipts', [AdminPurchaseReceiptController::class, 'reactView']);
+        Route::get('/magistrales/accounts-payable', [AdminAccountsPayableController::class, 'reactView']);
         Route::get('/magistrales/billing-settings', [AdminBillingSettingsController::class, 'reactView']);
         Route::get('/magistrales/billing-documents', [AdminBillingDocumentController::class, 'reactView']);
         Route::get('/magistrales-category', [AdminComingSoonController::class, 'reactView']);
@@ -161,7 +164,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales/kardex', [AdminKardexController::class, 'reactView']);
         Route::get('/magistrales-kardex', [AdminKardexController::class, 'reactView']);
         Route::get('/magistrales-laboratory', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/magistrales-purchase-order', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/magistrales-purchase-order', fn() => redirect('/admin/magistrales/purchase-orders'));
         Route::get('/magistrales-production-order', [AdminComingSoonController::class, 'reactView']);
         Route::get('/magistrales/suppliers', [AdminSupplierController::class, 'reactView']);
         Route::get('/magistrales/warehouses', [AdminWarehouseController::class, 'reactView']);

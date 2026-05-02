@@ -739,18 +739,6 @@ class FacturadorPro5Service
             return (int) $branch->facturador_establishment_id;
         }
 
-        $code = strtoupper(trim((string) ($branch->establishment_code ?? '')));
-        if ($code === '' || $this->usesDemoMode()) {
-            return null;
-        }
-
-        $records = Arr::get($this->establishments(), 'data', []);
-        foreach ($records as $record) {
-            if (strtoupper(trim((string) Arr::get($record, 'code'))) === $code) {
-                return (int) Arr::get($record, 'id');
-            }
-        }
-
         return null;
     }
 

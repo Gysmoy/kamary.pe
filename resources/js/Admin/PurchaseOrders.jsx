@@ -218,10 +218,10 @@ const PurchaseOrders = () => {
   const onDeleteClicked = async (id) => {
     const { isConfirmed } = await Swal.fire({
       title: 'Eliminar orden de compra',
-      text: 'Estas seguro de eliminar esta orden de compra? Esta accion no se puede revertir',
+      text: '¿Estás seguro de eliminar esta orden de compra? Esta acción no se puede revertir',
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Si, eliminar',
+      confirmButtonText: 'Sí, eliminar',
       cancelButtonText: 'Cancelar'
     })
     if (!isConfirmed) return
@@ -286,7 +286,7 @@ const PurchaseOrders = () => {
   return (<>
     <Table
       gridRef={gridRef}
-      title='Ordenes de compra'
+      title='Órdenes de compra'
       rest={purchaseOrdersRest}
       toolBar={(container) => {
         container.unshift({
@@ -310,15 +310,15 @@ const PurchaseOrders = () => {
       pageSize={25}
       columns={[
         { dataField: 'id', caption: 'ID', width: 80 },
-        { dataField: 'code', caption: 'Codigo', width: 130 },
-        { dataField: 'issue_date', caption: 'F. emision', width: 110, dataType: 'date' },
+        { dataField: 'code', caption: 'Código', width: 130 },
+        { dataField: 'issue_date', caption: 'F. emisión', width: 110, dataType: 'date' },
         { dataField: 'expected_date', caption: 'F. esperada', width: 115, dataType: 'date' },
         { dataField: 'business.name', caption: 'Empresa', minWidth: 140 },
         { dataField: 'branch.name', caption: 'Sede', minWidth: 130 },
-        { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 130 },
+        { dataField: 'warehouse.name', caption: 'Almacén', minWidth: 130 },
         { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 220 },
         { dataField: 'payment_condition', caption: 'Pago', width: 100 },
-        { dataField: 'approval_status', caption: 'Aprobacion', width: 110, lookup: toLookup(approvalStatusOptions) },
+        { dataField: 'approval_status', caption: 'Aprobación', width: 110, lookup: toLookup(approvalStatusOptions) },
         { dataField: 'order_status', caption: 'Estado OC', width: 110, lookup: toLookup(purchaseOrderStatusOptions) },
         { dataField: 'currency', caption: 'Moneda', width: 90 },
         { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
@@ -328,7 +328,7 @@ const PurchaseOrders = () => {
           minWidth: 280,
           allowFiltering: false,
           cellTemplate: (container, { data }) => {
-            const lines = (data?.items ?? []).map(item => `${item?.article?.name || 'Articulo'} | Cant. ${Number(item?.requested_quantity || 0).toFixed(2)} | ${data.currency} ${Number(item?.total || 0).toFixed(2)}`)
+            const lines = (data?.items ?? []).map(item => `${item?.article?.name || 'Artículo'} | Cant. ${Number(item?.requested_quantity || 0).toFixed(2)} | ${data.currency} ${Number(item?.total || 0).toFixed(2)}`)
             ReactAppend(container, <div>
               {lines.length === 0 && <small className='text-muted'>Sin detalle</small>}
               {lines.map((line, idx) => <div key={`purchase-order-${data.id}-${idx}`}><small>{line}</small></div>)}
@@ -414,7 +414,7 @@ const PurchaseOrders = () => {
         </SelectFormGroup>
         <SelectAPIFormGroup
           eRef={warehouseRef}
-          label='Almacen'
+          label='Almacén'
           col='col-md-3'
           required
           searchAPI='/api/admin/warehouses/paginate'
@@ -434,10 +434,10 @@ const PurchaseOrders = () => {
         />
 
         <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Codigo</label>
+          <label className='form-label'>Código</label>
           <input ref={codeRef} className='form-control' disabled />
         </div>
-        <InputFormGroup eRef={issueDateRef} label='Fecha emision' col='col-md-2' type='date' required />
+        <InputFormGroup eRef={issueDateRef} label='Fecha emisión' col='col-md-2' type='date' required />
         <InputFormGroup eRef={expectedDateRef} label='Fecha esperada' col='col-md-2' type='date' />
         <div className='form-group col-md-2 mb-2'>
           <label className='form-label'>Moneda</label>
@@ -448,10 +448,10 @@ const PurchaseOrders = () => {
           </select>
         </div>
         <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Condicion pago</label>
+          <label className='form-label'>Condición de pago</label>
           <select ref={paymentConditionRef} className='form-control'>
             <option value='Contado'>Contado</option>
-            <option value='Credito'>Credito</option>
+            <option value='Credito'>Crédito</option>
           </select>
         </div>
         <div className='form-group col-md-2 mb-2'>
@@ -463,7 +463,7 @@ const PurchaseOrders = () => {
           </select>
         </div>
         <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Aprobacion</label>
+          <label className='form-label'>Aprobación</label>
           <select ref={approvalStatusRef} className='form-control'>
             {approvalStatusOptions.map((option) => (
               <option key={`purchase-order-approval-status-${option.value}`} value={option.value}>{option.label}</option>
@@ -491,14 +491,14 @@ const PurchaseOrders = () => {
           <div className='d-flex justify-content-between align-items-center mb-2'>
             <h6 className='mb-0'>Items</h6>
             <button type='button' className='btn btn-sm btn-soft-primary' onClick={onItemAdded}>
-              <i className='mdi mdi-plus me-1'></i> Agregar linea
+              <i className='mdi mdi-plus me-1'></i> Agregar línea
             </button>
           </div>
           <div className='table-responsive border rounded'>
             <table className='table table-sm table-striped mb-0'>
               <thead>
                 <tr>
-                  <th>Articulo</th>
+                  <th>Artículo</th>
                   <th>Lab. | Principio</th>
                   <th>Unidad</th>
                   <th>Cant. solicitada</th>
@@ -570,7 +570,7 @@ const PurchaseOrders = () => {
 
 CreateReactScript((el, properties) => {
   if (!properties.can('purchase-orders') && !properties.hasRole('Admin')) location.href = '/admin/';
-  createRoot(el).render(<BaseAdminto {...properties} title='Ordenes de compra'>
+  createRoot(el).render(<BaseAdminto {...properties} title='Órdenes de compra'>
     <PurchaseOrders {...properties} />
   </BaseAdminto>);
 })

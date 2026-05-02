@@ -127,7 +127,7 @@ const ServiceOrders = () => {
   }
 
   const onDelete = async (id) => {
-    const { isConfirmed } = await Swal.fire({ title: 'Eliminar orden de servicio', text: 'Se dara de baja la orden.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
+    const { isConfirmed } = await Swal.fire({ title: 'Eliminar orden de servicio', text: 'Se dará de baja la orden.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar' })
     if (!isConfirmed) return
     const result = await serviceOrdersRest.delete(id)
     if (!result) return
@@ -137,7 +137,7 @@ const ServiceOrders = () => {
   return <>
     <Table
       gridRef={gridRef}
-      title='Ordenes de servicio'
+      title='Órdenes de servicio'
       rest={serviceOrdersRest}
       pageSize={25}
       toolBar={(itemsBar) => {
@@ -146,7 +146,7 @@ const ServiceOrders = () => {
       }}
       columns={[
         { dataField: 'id', caption: 'ID', width: 70 },
-        { dataField: 'code', caption: 'Codigo', width: 120 },
+        { dataField: 'code', caption: 'Código', width: 120 },
         { dataField: 'issue_date', caption: 'Fecha', dataType: 'date', width: 110 },
         { dataField: 'client.full_name', caption: 'Cliente', minWidth: 200 },
         { dataField: 'expected_document_type', caption: 'Comp.', width: 100 },
@@ -165,7 +165,7 @@ const ServiceOrders = () => {
           calculateCellValue: (data) => getPaymentStatusLabel(data.accounts_receivable?.payment_status ?? data.accountsReceivable?.payment_status ?? data.payment_status ?? '-')
         },
         { dataField: 'order_status', caption: 'Estado', width: 110, lookup: toLookup(serviceOrderStatusOptions) },
-        { dataField: 'billing_status', caption: 'Facturacion', width: 110, lookup: toLookup(billingStatusOptions) },
+        { dataField: 'billing_status', caption: 'Facturación', width: 110, lookup: toLookup(billingStatusOptions) },
         { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           container.css('text-overflow', 'unset')
           container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
@@ -177,7 +177,7 @@ const ServiceOrders = () => {
     <Modal modalRef={modalRef} title={isEditing ? 'Editar orden de servicio' : 'Agregar orden de servicio'} size='xl' onSubmit={onSave}>
       <div className='row'>
         <input ref={idRef} hidden />
-        <div className='col-md-3 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' disabled /></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Código</label><input ref={codeRef} className='form-control' disabled /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Empresa</label><select className='form-control' value={selectedBusinessId} onChange={async (e) => { setSelectedBusinessId(e.target.value); await loadBranches(e.target.value, ''); }} required><option value=''>Seleccione</option>{businesses.map(row => <option key={`service-order-business-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Sede</label><select className='form-control' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)}><option value=''>Seleccione</option>{branches.map(row => <option key={`service-order-branch-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Cliente</label><select className='form-control' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required><option value=''>Seleccione</option>{clients.map(row => <option key={`service-order-client-${row.id}`} value={row.id}>{row.full_name}</option>)}</select></div>
@@ -187,17 +187,17 @@ const ServiceOrders = () => {
         <div className='col-md-3 mb-3'><label className='form-label'>Ciclo</label><input ref={billingCycleRef} className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Comprobante</label><select ref={expectedDocumentTypeRef} className='form-control'><option value='Factura'>Factura</option><option value='Boleta'>Boleta</option></select></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Moneda</label><select ref={currencyRef} className='form-control'><option value='PEN'>PEN</option><option value='USD'>USD</option></select></div>
-        <div className='col-md-2 mb-3'><label className='form-label'>Pago</label><select ref={paymentConditionRef} className='form-control'><option value='Contado'>Contado</option><option value='Credito'>Credito</option></select></div>
+        <div className='col-md-2 mb-3'><label className='form-label'>Pago</label><select ref={paymentConditionRef} className='form-control'><option value='Contado'>Contado</option><option value='Credito'>Crédito</option></select></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Cuotas</label><input ref={installmentsRef} type='number' min='1' className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Estado</label><select ref={orderStatusRef} className='form-control'>{serviceOrderStatusOptions.map((option) => <option key={`service-order-status-${option.value}`} value={option.value}>{option.label}</option>)}</select></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Facturacion</label><select ref={billingStatusRef} className='form-control'>{billingStatusOptions.map((option) => <option key={`service-order-billing-status-${option.value}`} value={option.value}>{option.label}</option>)}</select></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Facturación</label><select ref={billingStatusRef} className='form-control'>{billingStatusOptions.map((option) => <option key={`service-order-billing-status-${option.value}`} value={option.value}>{option.label}</option>)}</select></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Impuesto</label><input ref={taxAmountRef} type='number' step='0.01' className='form-control' /></div>
         <div className='col-12 mb-3'>
           <label className='form-label'>Servicios</label>
           <div className='border rounded p-2'>
             {items.map(row => <div key={row.uid} className='row align-items-end mb-2'>
               <div className='col-md-4'><label className='form-label'>Servicio</label><select className='form-control' value={row.service_id} onChange={(e) => onItemChange(row.uid, 'service_id', e.target.value)}><option value=''>Seleccione</option>{services.map(service => <option key={`service-order-item-${service.id}`} value={service.id}>{service.code} - {service.name}</option>)}</select></div>
-              <div className='col-md-3'><label className='form-label'>Descripcion</label><input className='form-control' value={row.description} onChange={(e) => onItemChange(row.uid, 'description', e.target.value)} /></div>
+              <div className='col-md-3'><label className='form-label'>Descripción</label><input className='form-control' value={row.description} onChange={(e) => onItemChange(row.uid, 'description', e.target.value)} /></div>
               <div className='col-md-1'><label className='form-label'>Cant.</label><input type='number' step='0.001' className='form-control' value={row.quantity} onChange={(e) => onItemChange(row.uid, 'quantity', e.target.value)} /></div>
               <div className='col-md-1'><label className='form-label'>PU</label><input type='number' step='0.01' className='form-control' value={row.unit_price} onChange={(e) => onItemChange(row.uid, 'unit_price', e.target.value)} /></div>
               <div className='col-md-1'><label className='form-label'>Det.</label><input type='number' step='0.01' className='form-control' value={row.detraction_percent} onChange={(e) => onItemChange(row.uid, 'detraction_percent', e.target.value)} /></div>
@@ -216,5 +216,5 @@ const ServiceOrders = () => {
 
 CreateReactScript((el, properties) => {
   if (!properties.can('services-service-order') && !properties.hasRole('Admin')) location.href = '/admin/'
-  createRoot(el).render(<BaseAdminto {...properties} title='Ordenes de servicio'><ServiceOrders {...properties} /></BaseAdminto>)
+  createRoot(el).render(<BaseAdminto {...properties} title='Órdenes de servicio'><ServiceOrders {...properties} /></BaseAdminto>)
 })

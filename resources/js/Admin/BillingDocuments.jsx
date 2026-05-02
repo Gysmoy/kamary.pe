@@ -102,7 +102,7 @@ const BillingDocuments = () => {
     })
   }
 
-  const openReadinessModal = async (row, title = 'Validacion fiscal') => {
+  const openReadinessModal = async (row, title = 'Validación fiscal') => {
     const readiness = row?.fiscal_readiness ?? {}
     const errors = readiness.errors ?? []
     const warnings = readiness.warnings ?? []
@@ -207,7 +207,7 @@ const BillingDocuments = () => {
 
   const onIssue = async (row) => {
     if (row?.fiscal_readiness?.can_issue === false) {
-      await openReadinessModal(row, 'El comprobante no esta listo para emitir')
+      await openReadinessModal(row, 'El comprobante no está listo para emitir')
       return
     }
 
@@ -231,7 +231,7 @@ const BillingDocuments = () => {
 
   const onOpenCancel = (row) => {
     if (!canCancelDocument(row)) {
-      showBlockedAction('Anulacion no disponible', 'Solo puedes anular comprobantes aceptados que no sean notas de credito.')
+      showBlockedAction('Anulación no disponible', 'Solo puedes anular comprobantes aceptados que no sean notas de crédito.')
       return
     }
 
@@ -251,14 +251,14 @@ const BillingDocuments = () => {
 
   const onOpenCreditNote = (row) => {
     if (!canCreditNoteDocument(row)) {
-      showBlockedAction('Nota de credito no disponible', 'Solo puedes generar nota de credito desde comprobantes aceptados que no sean notas de credito.')
+      showBlockedAction('Nota de crédito no disponible', 'Solo puedes generar nota de crédito desde comprobantes aceptados que no sean notas de crédito.')
       return
     }
 
     setSelectedRow(row)
     creditNoteSeriesRef.current.value = row?.branch?.series_nota_credito ?? 'FC01'
     creditNoteIssueDateRef.current.value = new Date().toISOString().slice(0, 10)
-    creditNoteReasonRef.current.value = 'Anulacion de la operacion'
+    creditNoteReasonRef.current.value = 'Anulación de la operación'
     creditNoteNoteRef.current.value = ''
     $(creditNoteModalRef.current).modal('show')
   }
@@ -279,7 +279,7 @@ const BillingDocuments = () => {
 
   const onDownload = (row, type) => {
     if (!canDownloadDocument(row)) {
-      showBlockedAction('Descarga no disponible', 'El comprobante todavia no tiene archivos fiscales disponibles.')
+      showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.')
       return
     }
 
@@ -289,7 +289,7 @@ const BillingDocuments = () => {
   return <>
     <Table
       gridRef={gridRef}
-      title='Facturacion'
+      title='Facturación'
       rest={billingDocumentsRest}
       pageSize={25}
       toolBar={(items) => {
@@ -298,13 +298,13 @@ const BillingDocuments = () => {
       }}
       columns={[
         { dataField: 'id', caption: 'ID', width: 70 },
-        { dataField: 'code', caption: 'Codigo', width: 120 },
+        { dataField: 'code', caption: 'Código', width: 120 },
         { dataField: 'source_type', caption: 'Origen', width: 120, calculateCellValue: (data) => getSourceTypeLabel(data.source_type) },
         { caption: 'Documento origen', minWidth: 150, calculateCellValue: (data) => data.commercial_order?.code ?? data.commercialOrder?.code ?? data.service_order?.code ?? data.serviceOrder?.code ?? '-' },
         { dataField: 'document_type', caption: 'Comprobante', width: 120 },
         { caption: 'Referencia', minWidth: 140, calculateCellValue: (data) => data.reference_document?.code ?? data.referenceDocument?.code ?? '-' },
         { dataField: 'series', caption: 'Serie', width: 80 },
-        { dataField: 'sequence', caption: 'Numero', width: 100 },
+        { dataField: 'sequence', caption: 'Número', width: 100 },
         { dataField: 'issue_date', caption: 'Fecha', dataType: 'date', width: 110 },
         { dataField: 'total', caption: 'Total', width: 100, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
         {
@@ -319,7 +319,7 @@ const BillingDocuments = () => {
               .addClass(meta.className)
               .text(meta.label)
               .attr('title', readiness.summary ?? meta.label)
-              .on('click', () => openReadinessModal(data, `Validacion fiscal - ${data.code}`))
+              .on('click', () => openReadinessModal(data, `Validación fiscal - ${data.code}`))
             container.append(button)
           }
         },
@@ -334,21 +334,21 @@ const BillingDocuments = () => {
           const canCreditNote = canCreditNoteDocument(data)
           const canDownload = canDownloadDocument(data)
           container.css('text-overflow', 'unset')
-          container.append(DxButton({ className: `btn btn-xs ${canEdit ? 'btn-soft-primary' : 'btn-soft-secondary'} `, title: canEdit ? 'Editar' : 'Solo lectura', icon: canEdit ? 'mdi mdi-pencil' : 'mdi mdi-lock-outline', onClick: () => canEdit ? onModalOpen(data) : showBlockedAction('Comprobante bloqueado', 'Solo puedes editar comprobantes pendientes.') }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-info ms-1', title: 'Payload', icon: 'mdi mdi-code-json', onClick: () => onOpenPayload(data) }))
-          container.append(DxButton({ className: `btn btn-xs ${canIssue ? 'btn-soft-success' : 'btn-soft-secondary'} ms-1`, title: canIssue ? 'Emitir' : 'Revisar requisitos fiscales', icon: canIssue ? 'mdi mdi-send' : 'mdi mdi-alert-circle-outline', onClick: () => canIssue ? onIssue(data) : openReadinessModal(data, `Validacion fiscal - ${data.code}`) }))
-          container.append(DxButton({ className: `btn btn-xs ${canSync ? 'btn-soft-info' : 'btn-soft-secondary'} ms-1`, title: canSync ? 'Sync' : 'Sync no disponible', icon: canSync ? 'mdi mdi-sync' : 'mdi mdi-sync-off', onClick: () => canSync ? onSyncStatus(data) : showBlockedAction('Sync no disponible', 'El comprobante aun no tiene datos remotos para sincronizar.') }))
-          container.append(DxButton({ className: `btn btn-xs ${canCancel ? 'btn-soft-warning' : 'btn-soft-secondary'} ms-1`, title: canCancel ? 'Anular' : 'Anulacion no disponible', icon: canCancel ? 'mdi mdi-close-circle' : 'mdi mdi-lock-outline', onClick: () => canCancel ? onOpenCancel(data) : showBlockedAction('Anulacion no disponible', 'Solo puedes anular comprobantes aceptados que no sean notas de credito.') }))
-          container.append(DxButton({ className: `btn btn-xs ${canCreditNote ? 'btn-soft-secondary' : 'btn-soft-secondary'} ms-1`, title: canCreditNote ? 'N/C' : 'N/C no disponible', icon: canCreditNote ? 'mdi mdi-file-replace' : 'mdi mdi-file-lock-outline', onClick: () => canCreditNote ? onOpenCreditNote(data) : showBlockedAction('Nota de credito no disponible', 'Solo puedes generar nota de credito desde comprobantes aceptados que no sean notas de credito.') }))
-          container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-soft-danger' : 'btn-soft-secondary'} ms-1`, title: canDownload ? 'PDF' : 'PDF no disponible', icon: canDownload ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-cancel-outline', onClick: () => canDownload ? onDownload(data, 'pdf') : showBlockedAction('Descarga no disponible', 'El comprobante todavia no tiene archivos fiscales disponibles.') }))
-          container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-soft-primary' : 'btn-soft-secondary'} ms-1`, title: canDownload ? 'XML' : 'XML no disponible', icon: canDownload ? 'mdi mdi-code-tags' : 'mdi mdi-file-cancel-outline', onClick: () => canDownload ? onDownload(data, 'xml') : showBlockedAction('Descarga no disponible', 'El comprobante todavia no tiene archivos fiscales disponibles.') }))
-          container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-soft-success' : 'btn-soft-secondary'} ms-1`, title: canDownload ? 'CDR' : 'CDR no disponible', icon: canDownload ? 'mdi mdi-shield-check' : 'mdi mdi-file-cancel-outline', onClick: () => canDownload ? onDownload(data, 'cdr') : showBlockedAction('Descarga no disponible', 'El comprobante todavia no tiene archivos fiscales disponibles.') }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-dark ms-1', title: 'Proveedor', icon: 'mdi mdi-cloud-check', onClick: () => onOpenProviderModal(data) }))
+          container.append(DxButton({ className: `btn btn-xs ${canEdit ? 'btn-soft-primary' : 'btn-soft-secondary'} `, title: canEdit ? 'Editar comprobante' : 'Solo lectura', icon: canEdit ? 'mdi mdi-pencil' : 'mdi mdi-lock-outline', onClick: () => canEdit ? onModalOpen(data) : showBlockedAction('Comprobante bloqueado', 'Solo puedes editar comprobantes pendientes.') }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-info ms-1', title: 'Ver payload del conector', icon: 'mdi mdi-code-json', onClick: () => onOpenPayload(data) }))
+          container.append(DxButton({ className: `btn btn-xs ${canIssue ? 'btn-soft-success' : 'btn-soft-secondary'} ms-1`, title: canIssue ? 'Emitir comprobante' : 'Revisar requisitos fiscales', icon: canIssue ? 'mdi mdi-send' : 'mdi mdi-alert-circle-outline', onClick: () => canIssue ? onIssue(data) : openReadinessModal(data, `Validación fiscal - ${data.code}`) }))
+          container.append(DxButton({ className: `btn btn-xs ${canSync ? 'btn-soft-info' : 'btn-soft-secondary'} ms-1`, title: canSync ? 'Sincronizar estado' : 'Sincronización no disponible', icon: canSync ? 'mdi mdi-sync' : 'mdi mdi-sync-off', onClick: () => canSync ? onSyncStatus(data) : showBlockedAction('Sync no disponible', 'El comprobante aún no tiene datos remotos para sincronizar.') }))
+          container.append(DxButton({ className: `btn btn-xs ${canCancel ? 'btn-soft-warning' : 'btn-soft-secondary'} ms-1`, title: canCancel ? 'Anular comprobante' : 'Anulación no disponible', icon: canCancel ? 'mdi mdi-close-circle' : 'mdi mdi-lock-outline', onClick: () => canCancel ? onOpenCancel(data) : showBlockedAction('Anulación no disponible', 'Solo puedes anular comprobantes aceptados que no sean notas de crédito.') }))
+          container.append(DxButton({ className: `btn btn-xs ${canCreditNote ? 'btn-soft-secondary' : 'btn-soft-secondary'} ms-1`, title: canCreditNote ? 'Generar nota de crédito' : 'Nota de crédito no disponible', icon: canCreditNote ? 'mdi mdi-file-replace' : 'mdi mdi-file-lock-outline', onClick: () => canCreditNote ? onOpenCreditNote(data) : showBlockedAction('Nota de crédito no disponible', 'Solo puedes generar nota de crédito desde comprobantes aceptados que no sean notas de crédito.') }))
+          container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-soft-danger' : 'btn-soft-secondary'} ms-1`, title: canDownload ? 'Descargar PDF' : 'PDF no disponible', icon: canDownload ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-cancel-outline', onClick: () => canDownload ? onDownload(data, 'pdf') : showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.') }))
+          container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-soft-primary' : 'btn-soft-secondary'} ms-1`, title: canDownload ? 'Descargar XML' : 'XML no disponible', icon: canDownload ? 'mdi mdi-code-tags' : 'mdi mdi-file-cancel-outline', onClick: () => canDownload ? onDownload(data, 'xml') : showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.') }))
+          container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-soft-success' : 'btn-soft-secondary'} ms-1`, title: canDownload ? 'Descargar CDR' : 'CDR no disponible', icon: canDownload ? 'mdi mdi-shield-check' : 'mdi mdi-file-cancel-outline', onClick: () => canDownload ? onDownload(data, 'cdr') : showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.') }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-dark ms-1', title: 'Registrar respuesta del proveedor', icon: 'mdi mdi-cloud-check', onClick: () => onOpenProviderModal(data) }))
         } }
       ]}
     />
 
-    <Modal modalRef={modalRef} title='Documento de facturacion' size='xl' onSubmit={onSave}>
+    <Modal modalRef={modalRef} title='Documento de facturación' size='xl' onSubmit={onSave}>
       <div className='row'>
         <input ref={idRef} hidden />
         <div className='col-md-4 mb-3'>
@@ -375,13 +375,13 @@ const BillingDocuments = () => {
         <div className='col-md-3 mb-3'><label className='form-label'>Serie</label><input ref={seriesRef} className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Correlativo</label><input ref={sequenceRef} className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Correo cliente</label><input ref={customerEmailRef} type='email' className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Fecha emision</label><input ref={issueDateRef} type='date' className='form-control' required /></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Fecha emisión</label><input ref={issueDateRef} type='date' className='form-control' required /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha vencimiento</label><input ref={dueDateRef} type='date' className='form-control' /></div>
         <div className='col-md-3 mb-3'>
-          <label className='form-label'>Condicion pago</label>
+          <label className='form-label'>Condición de pago</label>
           <select ref={paymentConditionRef} className='form-control'>
             <option value='Contado'>Contado</option>
-            <option value='Credito'>Credito</option>
+            <option value='Credito'>Crédito</option>
           </select>
         </div>
         <div className='col-md-3 mb-3'>
@@ -389,14 +389,14 @@ const BillingDocuments = () => {
           <select ref={paymentMethodRef} className='form-control'>
             <option value='Transferencia'>Transferencia</option>
             <option value='Efectivo'>Efectivo</option>
-            <option value='Deposito'>Deposito</option>
+            <option value='Deposito'>Depósito</option>
           </select>
         </div>
         <div className='col-12 mb-1'><label className='form-label'>Observaciones</label><textarea ref={observationsRef} className='form-control' rows='3' /></div>
       </div>
     </Modal>
 
-    <Modal modalRef={payloadModalRef} title={`Payload REST${selectedRow ? ` - ${selectedRow.code}` : ''}`} size='xl' hideFooter>
+    <Modal modalRef={payloadModalRef} title={`Payload del conector${selectedRow ? ` - ${selectedRow.code}` : ''}`} size='xl' hideFooter>
       <textarea className='form-control' rows='24' value={payloadText} readOnly />
     </Modal>
 
@@ -415,7 +415,7 @@ const BillingDocuments = () => {
         <div className='col-md-6 mb-3'><label className='form-label'>Estado externo</label><input ref={externalStatusRef} className='form-control' /></div>
         <div className='col-md-6 mb-3'><label className='form-label'>ID externo</label><input ref={externalIdRef} className='form-control' /></div>
         <div className='col-md-6 mb-3'><label className='form-label'>Referencia externa</label><input ref={externalReferenceRef} className='form-control' /></div>
-        <div className='col-12 mb-3'><label className='form-label'>Error / observacion</label><input ref={errorMessageRef} className='form-control' /></div>
+        <div className='col-12 mb-3'><label className='form-label'>Error / observación</label><input ref={errorMessageRef} className='form-control' /></div>
         <div className='col-12 mb-1'><label className='form-label'>Payload de respuesta</label><textarea ref={responsePayloadRef} className='form-control' rows='8' /></div>
       </div>
     </Modal>
@@ -427,12 +427,12 @@ const BillingDocuments = () => {
       </div>
     </Modal>
 
-    <Modal modalRef={creditNoteModalRef} title={`Nota de credito${selectedRow ? ` - ${selectedRow.code}` : ''}`} size='lg' onSubmit={onSaveCreditNote}>
+    <Modal modalRef={creditNoteModalRef} title={`Nota de crédito${selectedRow ? ` - ${selectedRow.code}` : ''}`} size='lg' onSubmit={onSaveCreditNote}>
       <div className='row'>
         <div className='col-md-4 mb-3'><label className='form-label'>Serie</label><input ref={creditNoteSeriesRef} className='form-control' required /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Fecha emision</label><input ref={creditNoteIssueDateRef} type='date' className='form-control' required /></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Fecha emisión</label><input ref={creditNoteIssueDateRef} type='date' className='form-control' required /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Motivo SUNAT</label><input ref={creditNoteReasonRef} className='form-control' required /></div>
-        <div className='col-12 mb-1'><label className='form-label'>Observacion interna</label><textarea ref={creditNoteNoteRef} className='form-control' rows='4' /></div>
+        <div className='col-12 mb-1'><label className='form-label'>Observación interna</label><textarea ref={creditNoteNoteRef} className='form-control' rows='4' /></div>
       </div>
     </Modal>
   </>
@@ -440,5 +440,5 @@ const BillingDocuments = () => {
 
 CreateReactScript((el, properties) => {
   if (!properties.can('services-billing') && !properties.hasRole('Admin')) location.href = '/admin/'
-  createRoot(el).render(<BaseAdminto {...properties} title='Facturacion'><BillingDocuments {...properties} /></BaseAdminto>)
+  createRoot(el).render(<BaseAdminto {...properties} title='Facturación'><BillingDocuments {...properties} /></BaseAdminto>)
 })
