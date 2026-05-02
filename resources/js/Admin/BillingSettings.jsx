@@ -12,6 +12,7 @@ import UbigeoCascade from '../Components/Adminto/Form/UbigeoCascade'
 import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei'
 import BusinessesRest from '../Actions/Admin/BusinessesRest'
 import { getFacturadorSyncMeta } from '../Utils/statusLabels'
+import { isMagistralesPath } from '../Utils/permissionScope'
 
 const businessesRest = new BusinessesRest()
 
@@ -566,7 +567,9 @@ const BillingSettings = ({ can }) => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('businesses') && !properties.can('services-billing') && !properties.hasRole('Admin')) location.href = '/admin/'
+  const hasAccess = properties.hasRole('Admin')
+    || (isMagistralesPath() ? properties.can('magistrales-billing') : (properties.can('businesses') || properties.can('services-billing')))
+  if (!hasAccess) location.href = '/admin/'
   createRoot(el).render(<BaseAdminto {...properties} title='Configuración de facturación'>
     <BillingSettings {...properties} />
   </BaseAdminto>)

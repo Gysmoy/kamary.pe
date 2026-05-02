@@ -11,18 +11,18 @@
   opacity: 1;
 }
 
-.sidenav-menu .side-nav .side-nav-link {
+.sidenav-menu .side-nav .side-nav-link.allow-wrap {
   align-items: flex-start;
 }
 
-.sidenav-menu .side-nav .side-nav-link .menu-icon,
-.sidenav-menu .side-nav .side-nav-link .menu-arrow,
-.sidenav-menu .side-nav .side-nav-link .badge {
+.sidenav-menu .side-nav .side-nav-link.allow-wrap .menu-icon,
+.sidenav-menu .side-nav .side-nav-link.allow-wrap .menu-arrow,
+.sidenav-menu .side-nav .side-nav-link.allow-wrap .badge {
   flex: 0 0 auto;
   margin-top: 0.1rem;
 }
 
-.sidenav-menu .side-nav .side-nav-link .menu-text {
+.sidenav-menu .side-nav .side-nav-link .menu-text-wrap {
   flex: 1 1 auto;
   min-width: 0;
   white-space: normal;

@@ -12,6 +12,7 @@ import {
   getBillingDocumentStatusLabel,
   getSourceTypeLabel,
 } from '../Utils/statusLabels';
+import { scopedPermission } from '../Utils/permissionScope';
 
 const billingDocumentsRest = new BillingDocumentsRest()
 
@@ -439,6 +440,6 @@ const BillingDocuments = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('services-billing') && !properties.hasRole('Admin')) location.href = '/admin/'
+  if (!properties.can(scopedPermission('services-billing')) && !properties.hasRole('Admin')) location.href = '/admin/'
   createRoot(el).render(<BaseAdminto {...properties} title='Facturación'><BillingDocuments {...properties} /></BaseAdminto>)
 })

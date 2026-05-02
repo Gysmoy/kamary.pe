@@ -4,6 +4,7 @@ import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
 import KardexRest from '../Actions/Admin/KardexRest';
+import { scopedPermission } from '../Utils/permissionScope';
 
 const kardexRest = new KardexRest()
 
@@ -170,7 +171,7 @@ const Kardex = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('kardex') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can(scopedPermission('kardex')) && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Kardex'>
     <Kardex {...properties} />
   </BaseAdminto>);

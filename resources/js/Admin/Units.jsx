@@ -11,6 +11,7 @@ import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import UnitsRest from '../Actions/Admin/UnitsRest';
+import { scopedPermission } from '../Utils/permissionScope';
 
 const unitsRest = new UnitsRest()
 
@@ -427,7 +428,7 @@ const Units = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('units-of-measure') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can(scopedPermission('units-of-measure')) && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Unidades de medida'>
     <Units {...properties} />
   </BaseAdminto>);

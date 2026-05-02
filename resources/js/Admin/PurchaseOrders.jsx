@@ -14,6 +14,7 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import PurchaseOrdersRest from '../Actions/Admin/PurchaseOrdersRest';
+import { scopedPermission } from '../Utils/permissionScope';
 import {
   approvalStatusOptions,
   purchaseOrderStatusOptions,
@@ -569,7 +570,7 @@ const PurchaseOrders = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('purchase-orders') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can(scopedPermission('purchase-orders')) && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Órdenes de compra'>
     <PurchaseOrders {...properties} />
   </BaseAdminto>);

@@ -13,6 +13,7 @@ import InputFormGroup from '@Adminto/form/InputFormGroup';
 import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import BatchesRest from '../Actions/Admin/BatchesRest';
+import { scopedPermission } from '../Utils/permissionScope';
 
 const batchesRest = new BatchesRest()
 
@@ -493,7 +494,7 @@ const Batches = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('batches') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can(scopedPermission('batches')) && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Lotes'>
     <Batches {...properties} />
   </BaseAdminto>);

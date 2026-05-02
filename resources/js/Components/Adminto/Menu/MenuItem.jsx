@@ -1,8 +1,9 @@
 import React from 'react'
-import { Link } from '@inertiajs/react'
 
-const MenuItem = ({ href, icon, badge = null, badgeColor = 'success', children, onClick }) => {
+const MenuItem = ({ href, icon, badge = null, badgeColor = 'success', children, onClick, wrapText }) => {
   const isActive = location.pathname.startsWith(href)
+  const autoWrapText = typeof children === 'string' && children.trim().length >= 20
+  const allowWrap = wrapText ?? autoWrapText
 
   const Container = ({ className, children: content }) => {
     if (onClick) return <div onClick={onClick} className={className} style={{ cursor: 'pointer' }}>{content}</div>
@@ -10,9 +11,9 @@ const MenuItem = ({ href, icon, badge = null, badgeColor = 'success', children, 
   }
 
   return <li className={`side-nav-item ${isActive ? 'active' : ''}`}>
-    <Container className={`side-nav-link ${isActive ? 'active' : ''}`}>
+    <Container className={`side-nav-link ${isActive ? 'active' : ''} ${allowWrap ? 'allow-wrap' : ''}`.trim()}>
       <span className="menu-icon"><i className={icon}></i></span>
-      <span className="menu-text">{children}</span>
+      <span className={`menu-text ${allowWrap ? 'menu-text-wrap' : ''}`.trim()}>{children}</span>
       {
         badge && <span className={`badge bg-${badgeColor} rounded-pill`}>{badge}</span>
       }

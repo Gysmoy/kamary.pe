@@ -4,6 +4,7 @@ import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
 import InventoryRest from '../Actions/Admin/InventoryRest';
+import { scopedPermission } from '../Utils/permissionScope';
 
 const inventoryRest = new InventoryRest()
 
@@ -129,7 +130,7 @@ const Inventory = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('inventory') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can(scopedPermission('inventory')) && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Inventario'>
     <Inventory {...properties} />
   </BaseAdminto>);

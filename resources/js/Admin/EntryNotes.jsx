@@ -14,6 +14,7 @@ import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import EntryNotesRest from '../Actions/Admin/EntryNotesRest';
+import { scopedPermission } from '../Utils/permissionScope';
 
 const entryNotesRest = new EntryNotesRest()
 
@@ -714,7 +715,7 @@ const EntryNotes = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('entry-note') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can(scopedPermission('entry-note')) && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Notas de entrada'>
     <EntryNotes {...properties} />
   </BaseAdminto>);

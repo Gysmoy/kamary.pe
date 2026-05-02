@@ -11,6 +11,10 @@ const Menu = ({ can, hasRole, panel = null }) => {
     return can(permission) || hasRole('Admin')
   }
 
+  const canAccessAny = (...permissions) => {
+    return permissions.some(permission => canAccess(permission))
+  }
+
   return (
     <div className='sidenav-menu'>
       <a href='/' className='logo'>
@@ -154,34 +158,46 @@ const Menu = ({ can, hasRole, panel = null }) => {
             {canAccess('exit-note') && <MenuItem href='/admin/warehouses' icon='ti ti-building-warehouse'>Almacenes</MenuItem>}
           </MenuItemContainer>
 
-          <li className='side-nav-title mt-2'>Magistrales</li>
+          {canAccessAny('magistrales-products', 'magistrales-procurement', 'magistrales-warehouse', 'magistrales-billing') && (
+            <>
+              <li className='side-nav-title mt-2'>Magistrales</li>
 
-          <MenuItemContainer title='Productos' icon='ti ti-package'>
-            {canAccess('articles') && <MenuItem href='/admin/magistrales/articles' icon='ti ti-box'>Artículos</MenuItem>}
-            {canAccess('batches') && <MenuItem href='/admin/magistrales/batches' icon='ti ti-box-multiple'>Lotes</MenuItem>}
-            {canAccess('laboratories') && <MenuItem href='/admin/magistrales/laboratories' icon='ti ti-flask'>Laboratorios</MenuItem>}
-            {canAccess('units-of-measure') && <MenuItem href='/admin/magistrales/units' icon='ti ti-ruler-measure'>Und. de medida</MenuItem>}
-          </MenuItemContainer>
+              {canAccess('magistrales-products') && (
+                <MenuItemContainer title='Productos' icon='ti ti-package'>
+                  <MenuItem href='/admin/magistrales/articles' icon='ti ti-box'>Artículos</MenuItem>
+                  <MenuItem href='/admin/magistrales/batches' icon='ti ti-box-multiple'>Lotes</MenuItem>
+                  <MenuItem href='/admin/magistrales/laboratories' icon='ti ti-flask'>Laboratorios</MenuItem>
+                  <MenuItem href='/admin/magistrales/units' icon='ti ti-ruler-measure'>Und. de medida</MenuItem>
+                </MenuItemContainer>
+              )}
 
-          <MenuItemContainer title='Proveedores y Compras' icon='ti ti-shopping-cart'>
-            {canAccess('suppliers') && <MenuItem href='/admin/magistrales/suppliers' icon='ti ti-truck-delivery'>Proveedores</MenuItem>}
-            {canAccess('purchase-orders') && <MenuItem href='/admin/magistrales/purchase-orders' icon='ti ti-shopping-cart'>Órdenes de compra</MenuItem>}
-            {canAccess('purchase-receipts') && <MenuItem href='/admin/magistrales/purchase-receipts' icon='ti ti-file-import'>Recepciones de compra</MenuItem>}
-            {canAccess('accounts-payable') && <MenuItem href='/admin/magistrales/accounts-payable' icon='ti ti-credit-card'>Cuentas por pagar</MenuItem>}
-          </MenuItemContainer>
+              {canAccess('magistrales-procurement') && (
+                <MenuItemContainer title='Proveedores y Compras' icon='ti ti-shopping-cart'>
+                  <MenuItem href='/admin/magistrales/suppliers' icon='ti ti-truck-delivery'>Proveedores</MenuItem>
+                  <MenuItem href='/admin/magistrales/purchase-orders' icon='ti ti-shopping-cart'>Órdenes de compra</MenuItem>
+                  <MenuItem href='/admin/magistrales/purchase-receipts' icon='ti ti-file-import'>Recepciones de compra</MenuItem>
+                  <MenuItem href='/admin/magistrales/accounts-payable' icon='ti ti-credit-card'>Cuentas por pagar</MenuItem>
+                </MenuItemContainer>
+              )}
 
-          <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
-            {canAccess('inventory') && <MenuItem href='/admin/magistrales/inventory' icon='ti ti-stack-2'>Inventario</MenuItem>}
-            {canAccess('kardex') && <MenuItem href='/admin/magistrales/kardex' icon='ti ti-notebook'>Kardex</MenuItem>}
-            {canAccess('entry-note') && <MenuItem href='/admin/magistrales/entry-note' icon='ti ti-file-import'>Notas de Entrada</MenuItem>}
-            {canAccess('exit-note') && <MenuItem href='/admin/magistrales/exit-note' icon='ti ti-file-export'>Notas de Salida</MenuItem>}
-            {canAccess('exit-note') && <MenuItem href='/admin/magistrales/warehouses' icon='ti ti-building-warehouse'>Almacenes</MenuItem>}
-          </MenuItemContainer>
+              {canAccess('magistrales-warehouse') && (
+                <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
+                  <MenuItem href='/admin/magistrales/inventory' icon='ti ti-stack-2'>Inventario</MenuItem>
+                  <MenuItem href='/admin/magistrales/kardex' icon='ti ti-notebook'>Kardex</MenuItem>
+                  <MenuItem href='/admin/magistrales/entry-note' icon='ti ti-file-import'>Notas de Entrada</MenuItem>
+                  <MenuItem href='/admin/magistrales/exit-note' icon='ti ti-file-export'>Notas de Salida</MenuItem>
+                  <MenuItem href='/admin/magistrales/warehouses' icon='ti ti-building-warehouse'>Almacenes</MenuItem>
+                </MenuItemContainer>
+              )}
 
-          <MenuItemContainer title='Facturación' icon='ti ti-file-invoice'>
-            {(canAccess('businesses') || canAccess('services-billing')) && <MenuItem href='/admin/magistrales/billing-settings' icon='ti ti-settings-cog'>Configuración de facturación</MenuItem>}
-            {canAccess('services-billing') && <MenuItem href='/admin/magistrales/billing-documents' icon='ti ti-receipt-2'>Comprobantes</MenuItem>}
-          </MenuItemContainer>
+              {canAccess('magistrales-billing') && (
+                <MenuItemContainer title='Facturación' icon='ti ti-file-invoice'>
+                  <MenuItem href='/admin/magistrales/billing-settings' icon='ti ti-settings-cog'>Configuración de facturación</MenuItem>
+                  <MenuItem href='/admin/magistrales/billing-documents' icon='ti ti-receipt-2'>Comprobantes</MenuItem>
+                </MenuItemContainer>
+              )}
+            </>
+          )}
 
           <li className='side-nav-title mt-2'>Serv. Almacenamiento</li>
           {canAccess('service-orders') && <MenuItem href='/admin/service-orders' icon='ti ti-file-dollar'>O. Servicio</MenuItem>}

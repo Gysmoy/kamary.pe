@@ -12,6 +12,7 @@ import InputFormGroup from '@Adminto/form/InputFormGroup';
 import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import WarehousesRest from '../Actions/Admin/WarehousesRest';
+import { isMagistralesPath } from '../Utils/permissionScope';
 
 const warehousesRest = new WarehousesRest()
 
@@ -263,7 +264,9 @@ const Warehouses = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('exit-note') && !properties.can('businesses') && !properties.hasRole('Admin')) location.href = '/admin/';
+  const hasAccess = properties.hasRole('Admin')
+    || (isMagistralesPath() ? properties.can('magistrales-warehouse') : (properties.can('exit-note') || properties.can('businesses')))
+  if (!hasAccess) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Almacenes'>
     <Warehouses {...properties} />
   </BaseAdminto>);

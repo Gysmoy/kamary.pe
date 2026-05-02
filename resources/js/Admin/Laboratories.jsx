@@ -11,6 +11,7 @@ import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import LaboratoriesRest from '../Actions/Admin/LaboratoriesRest';
+import { scopedPermission } from '../Utils/permissionScope';
 
 const laboratoriesRest = new LaboratoriesRest()
 
@@ -719,7 +720,7 @@ const Laboratories = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('laboratories') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can(scopedPermission('laboratories')) && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Laboratorios'>
     <Laboratories {...properties} />
   </BaseAdminto>);

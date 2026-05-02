@@ -11,6 +11,7 @@ import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import SuppliersRest from '../Actions/Admin/SuppliersRest';
+import { scopedPermission } from '../Utils/permissionScope';
 
 const suppliersRest = new SuppliersRest()
 
@@ -644,7 +645,7 @@ const Suppliers = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('suppliers') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can(scopedPermission('suppliers')) && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Proveedores'>
     <Suppliers {...properties} />
   </BaseAdminto>);

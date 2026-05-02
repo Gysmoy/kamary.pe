@@ -14,6 +14,7 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import PurchaseReceiptsRest from '../Actions/Admin/PurchaseReceiptsRest';
+import { scopedPermission } from '../Utils/permissionScope';
 import {
   purchaseReceiptStatusOptions,
   toLookup,
@@ -737,7 +738,7 @@ const PurchaseReceipts = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('purchase-receipts') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can(scopedPermission('purchase-receipts')) && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Recepciones de compra'>
     <PurchaseReceipts {...properties} />
   </BaseAdminto>);

@@ -14,6 +14,7 @@ import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
+import { scopedPermission } from '../Utils/permissionScope';
 import ArticlesRest from '../Actions/Admin/ArticlesRest';
 
 const articlesRest = new ArticlesRest()
@@ -951,7 +952,7 @@ const Articles = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('articles') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can(scopedPermission('articles')) && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Articulos'>
     <Articles {...properties} />
   </BaseAdminto>);

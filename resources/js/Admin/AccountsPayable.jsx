@@ -6,6 +6,7 @@ import Table from '../Components/Adminto/Table';
 import Modal from '../Components/Adminto/Modal';
 import DxButton from '../Components/dx/DxButton';
 import AccountsPayableRest from '../Actions/Admin/AccountsPayableRest';
+import { scopedPermission } from '../Utils/permissionScope';
 import {
   getPaymentStatusLabel,
   paymentStatusOptions,
@@ -338,7 +339,7 @@ const AccountsPayable = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('accounts-payable') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can(scopedPermission('accounts-payable')) && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Cuentas por pagar'>
     <AccountsPayable {...properties} />
   </BaseAdminto>);

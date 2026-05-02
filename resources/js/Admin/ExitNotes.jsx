@@ -14,6 +14,7 @@ import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import ExitNotesRest from '../Actions/Admin/ExitNotesRest';
+import { scopedPermission } from '../Utils/permissionScope';
 
 const exitNotesRest = new ExitNotesRest()
 
@@ -575,7 +576,7 @@ const ExitNotes = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('exit-note') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can(scopedPermission('exit-note')) && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title='Notas de salida'>
     <ExitNotes {...properties} />
   </BaseAdminto>);

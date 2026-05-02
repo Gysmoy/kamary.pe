@@ -12,33 +12,15 @@ import RolesRest from '../Actions/Admin/roles-rest';
 
 const rolesRest = new RolesRest()
 
+const MAGISTRALES_MENU_PERMISSIONS = [
+  'magistrales-products',
+  'magistrales-procurement',
+  'magistrales-warehouse',
+  'magistrales-billing'
+]
+
 const QUICK_FLAGS = {
-  kamaryMedicals: [
-    'articles',
-    'batches',
-    'laboratories',
-    'units-of-measure',
-    'suppliers',
-    'inventory',
-    'kardex',
-    'entry-note',
-    'exit-note',
-    'magistrales-articles',
-    'magistrales-category',
-    'magistrales-formats',
-    'magistrales-formulas',
-    'magistrales-incomes',
-    'magistrales-inventory',
-    'magistrales-kardex',
-    'magistrales-laboratory',
-    'magistrales-outputs',
-    'magistrales-production-order',
-    'magistrales-purchase-order',
-    'magistrales-responsible',
-    'magistrales-sales',
-    'magistrales-supplier',
-    'magistrales-unit'
-  ],
+  kamaryMedicals: MAGISTRALES_MENU_PERMISSIONS,
   kamaryPeru: [
     'expenses',
     'suppliers',
@@ -107,8 +89,8 @@ const PERMISSION_GROUPS = [
   },
   {
     key: 'magistrales',
-    title: 'Kamary Medicals / Magistrales',
-    permissions: QUICK_FLAGS.kamaryMedicals.filter(permission => permission.startsWith('magistrales-'))
+    title: 'Magistrales',
+    permissions: MAGISTRALES_MENU_PERMISSIONS
   },
   {
     key: 'almacenamiento',
