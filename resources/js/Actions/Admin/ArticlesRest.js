@@ -1,9 +1,20 @@
 import BasicRest from "../BasicRest";
 import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import { isMagistralesPath, isStoragePath } from "../../Utils/permissionScope";
 
 class ArticlesRest extends BasicRest {
-  path = 'admin/articles'
+  path = isMagistralesPath()
+    ? 'admin/magistrales/articles'
+    : (isStoragePath() ? 'admin/storage/articles' : 'admin/articles')
+
+  laboratoriesPath = () => isMagistralesPath() ? 'admin/magistrales/laboratories' : 'admin/laboratories'
+
+  laboratoriesPaginateApi = () => `/api/${this.laboratoriesPath()}/paginate`
+
+  unitsPath = () => isMagistralesPath()
+    ? 'admin/magistrales/units'
+    : (isStoragePath() ? 'admin/storage/units' : 'admin/units')
 
   importRows = async (request) => {
     try {
@@ -32,7 +43,7 @@ class ArticlesRest extends BasicRest {
 
   getUnits = async () => {
     try {
-      const { status, result } = await Fetch('/api/admin/units/paginate', {
+      const { status, result } = await Fetch(`/api/${this.unitsPath()}/paginate`, {
         method: 'POST',
         body: JSON.stringify({
           isLoadingAll: true,
@@ -60,7 +71,7 @@ class ArticlesRest extends BasicRest {
 
   createPrinciple = async (laboratoryId, request) => {
     try {
-      const { status, result } = await Fetch(`/api/admin/laboratories/${laboratoryId}/principles`, {
+      const { status, result } = await Fetch(`/api/${this.laboratoriesPath()}/${laboratoryId}/principles`, {
         method: 'POST',
         body: JSON.stringify(request)
       })
@@ -83,7 +94,7 @@ class ArticlesRest extends BasicRest {
 
   createUnit = async (request) => {
     try {
-      const { status, result } = await Fetch('/api/admin/units', {
+      const { status, result } = await Fetch(`/api/${this.unitsPath()}`, {
         method: 'POST',
         body: JSON.stringify(request)
       })
@@ -122,4 +133,3 @@ class ArticlesRest extends BasicRest {
 }
 
 export default ArticlesRest
-

@@ -63,12 +63,20 @@ const getCreateKindFromFilter = (quickFilter, fallback = 'regular') => {
   return fallback
 }
 
+const combineFilters = (...filters) => {
+  const validFilters = filters.filter(Boolean)
+  if (!validFilters.length) return null
+  return validFilters.reduce((carry, filter) => carry ? [carry, 'and', filter] : filter, null)
+}
+
 const Clients = ({
   prefixes = [],
   sectionTitle = 'Clientes',
   defaultClientKind = 'regular',
   requiredPermission = 'clients',
-  initialQuickFilter = 'all'
+  initialQuickFilter = 'all',
+  storageContext = false,
+  serviceContext = false
 }) => {
   const gridRef = useRef()
   const modalRef = useRef()
@@ -113,7 +121,10 @@ const Clients = ({
   const isRuc = documentType === 'ruc'
   const docMaxLength = documentType === 'dni' ? 8 : (documentType === 'ruc' ? 11 : 20)
   const kindLabel = isEventual ? 'eventual' : 'regular'
-  const filterValue = useMemo(() => resolveQuickFilterValue(quickFilter), [quickFilter])
+  const filterValue = useMemo(() => combineFilters(
+    storageContext ? ['has_storage_service', '=', 1] : null,
+    resolveQuickFilterValue(quickFilter)
+  ), [quickFilter, storageContext])
 
   const displayNameLabel = isEventual
     ? (isRuc ? 'Razon social' : 'Nombre o razon social')
@@ -127,9 +138,9 @@ const Clients = ({
     setRefValue(documentNumberRef, '')
     setRefValue(fullNameRef, '')
     setPlatformValue('0')
-    setStorageServiceValue('0')
+    setStorageServiceValue(storageContext ? '1' : '0')
     setRefValue(isPlatformRef, '0')
-    setRefValue(hasStorageServiceRef, '0')
+    setRefValue(hasStorageServiceRef, storageContext ? '1' : '0')
     setRefValue(contractDueDaysRef, '')
     setRefValue(commercialChannelRef, '')
     setRefValue(segmentRef, '')
@@ -223,7 +234,7 @@ const Clients = ({
     setRefValue(documentNumberRef, data.document_number ?? '')
     setRefValue(fullNameRef, data.full_name ?? data.business_name ?? data.display_name ?? '')
     const nextPlatformValue = data.is_platform ? '1' : '0'
-    const nextStorageValue = data.has_storage_service ? '1' : '0'
+    const nextStorageValue = storageContext ? '1' : (data.has_storage_service ? '1' : '0')
     setPlatformValue(nextPlatformValue)
     setStorageServiceValue(nextStorageValue)
     setRefValue(isPlatformRef, nextPlatformValue)
@@ -296,7 +307,7 @@ const Clients = ({
       document_number: normalizeDigits(getRefValue(documentNumberRef)),
       full_name: getRefValue(fullNameRef).trim(),
       is_platform: getRefValue(isPlatformRef),
-      has_storage_service: getRefValue(hasStorageServiceRef),
+      has_storage_service: storageContext ? true : getRefValue(hasStorageServiceRef),
       contract_due_days: getRefValue(contractDueDaysRef).trim(),
       commercial_channel: getRefValue(commercialChannelRef).trim(),
       segment: getRefValue(segmentRef).trim(),
@@ -355,7 +366,7 @@ const Clients = ({
       title={<div className='d-flex flex-wrap align-items-center justify-content-between gap-3'>
         <div>
           <h4 className='mb-1'>Lista de {sectionTitle}</h4>
-          <small className='text-muted'>Modulo unificado para clientes regulares y eventuales.</small>
+          <small className='text-muted'>{storageContext ? 'Clientes con servicio de almacenamiento.' : (serviceContext ? 'Clientes asociados a servicios y contratos.' : 'Modulo unificado para clientes regulares y eventuales.')}</small>
         </div>
         <div className='d-flex flex-wrap align-items-center gap-2'>
           {QUICK_FILTERS.map(filter => (
@@ -562,7 +573,7 @@ const Clients = ({
               <option value='1'>Si</option>
             </SelectFormGroup>
 
-            <SelectFormGroup eRef={hasStorageServiceRef} label='Cuenta con servicio de almacenamiento' col='col-md-4' value={storageServiceValue} onChange={(e) => setStorageServiceValue(e.target.value)} effectWith={[storageServiceValue]}>
+            <SelectFormGroup eRef={hasStorageServiceRef} label='Cuenta con servicio de almacenamiento' col='col-md-4' value={storageServiceValue} onChange={(e) => setStorageServiceValue(e.target.value)} effectWith={[storageServiceValue]} disabled={storageContext}>
               <option value='0'>No</option>
               <option value='1'>Si</option>
             </SelectFormGroup>

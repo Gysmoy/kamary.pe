@@ -17,7 +17,7 @@ import {
 const serviceOrdersRest = new ServiceOrdersRest()
 const emptyItem = () => ({ uid: crypto.randomUUID(), service_id: '', description: '', quantity: 1, unit_price: 0, detraction_percent: 0, commission_percent: 0, total: 0 })
 
-const ServiceOrders = () => {
+const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
@@ -137,7 +137,7 @@ const ServiceOrders = () => {
   return <>
     <Table
       gridRef={gridRef}
-      title='Órdenes de servicio'
+      title={moduleTitle}
       rest={serviceOrdersRest}
       pageSize={25}
       toolBar={(itemsBar) => {
@@ -215,6 +215,7 @@ const ServiceOrders = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('services-service-order') && !properties.hasRole('Admin')) location.href = '/admin/'
-  createRoot(el).render(<BaseAdminto {...properties} title='Órdenes de servicio'><ServiceOrders {...properties} /></BaseAdminto>)
+  const requiredPermission = properties.requiredPermission ?? 'services-service-order'
+  if (!properties.can(requiredPermission) && !properties.hasRole('Admin')) location.href = '/admin/'
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Ordenes de servicio'}><ServiceOrders {...properties} /></BaseAdminto>)
 })

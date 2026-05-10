@@ -6,6 +6,7 @@ use App\Http\Controllers\BasicController;
 use App\Models\Article;
 use App\Services\StockService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class InventoryController extends BasicController
 {
@@ -13,6 +14,7 @@ class InventoryController extends BasicController
     public $reactView = 'Admin/Inventory';
     public $prefix4filter = 'articles';
     public $ignorePrefix = ['qty_in', 'qty_out', 'stock'];
+    protected string $moduleScope = 'standard';
 
     public function setPaginationInstance(string $model)
     {
@@ -46,7 +48,7 @@ class InventoryController extends BasicController
             ->selectRaw('COALESCE(exit_qty.qty_out, 0) as qty_out')
             ->selectRaw('(COALESCE(entry_qty.qty_in, 0) - COALESCE(exit_qty.qty_out, 0)) as stock');
 
-        return $model::select('articles.*')
+        $query = $model::select('articles.*')
             ->with([
                 'laboratory:id,name',
                 'activePrinciple:id,name',
@@ -59,5 +61,16 @@ class InventoryController extends BasicController
             ->join('laboratories as laboratory', 'laboratory.id', '=', 'articles.laboratory_id')
             ->join('active_principles as active_principle', 'active_principle.id', '=', 'articles.active_principle_id')
             ->join('units as unit', 'unit.id', '=', 'articles.unit_id');
+
+        if (Schema::hasColumn('articles', 'module_scope')) {
+            $query->where(function ($scope) {
+                $scope->where('articles.module_scope', $this->moduleScope);
+                if ($this->moduleScope === 'standard') {
+                    $scope->orWhereNull('articles.module_scope');
+                }
+            });
+        }
+
+        return $query;
     }
 }

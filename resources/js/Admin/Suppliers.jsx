@@ -67,7 +67,7 @@ const parseFileRows = async (file) => {
   return rows
 }
 
-const Suppliers = () => {
+const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const importModalRef = useRef()
@@ -90,6 +90,7 @@ const Suppliers = () => {
   const businessLineRef = useRef()
   const billingTypeRef = useRef()
   const creditTypeRef = useRef()
+  const paymentConditionRef = useRef()
   const bankRef = useRef()
   const bankAccountCciRef = useRef()
   const paymentSystemRef = useRef()
@@ -110,6 +111,7 @@ const Suppliers = () => {
     phone: '',
     email_1: '',
     bank_account_cci: '',
+    payment_condition: '',
     status: '',
   })
 
@@ -130,6 +132,7 @@ const Suppliers = () => {
     businessLineRef.current.value = ''
     billingTypeRef.current.value = ''
     creditTypeRef.current.value = ''
+    if (paymentConditionRef.current) paymentConditionRef.current.value = ''
     bankRef.current.value = ''
     bankAccountCciRef.current.value = ''
     paymentSystemRef.current.value = ''
@@ -204,6 +207,7 @@ const Suppliers = () => {
       businessLineRef.current.value = data.business_line ?? ''
       billingTypeRef.current.value = data.billing_type ?? ''
       creditTypeRef.current.value = data.credit_type ?? ''
+      if (paymentConditionRef.current) paymentConditionRef.current.value = data.payment_condition ?? ''
       bankRef.current.value = data.bank ?? ''
       bankAccountCciRef.current.value = data.bank_account_cci ?? ''
       paymentSystemRef.current.value = data.payment_system ?? ''
@@ -234,6 +238,7 @@ const Suppliers = () => {
       business_line: businessLineRef.current.value.trim(),
       billing_type: billingTypeRef.current.value.trim(),
       credit_type: creditTypeRef.current.value.trim(),
+      payment_condition: paymentConditionRef.current?.value || '',
       bank: bankRef.current.value.trim(),
       bank_account_cci: bankAccountCciRef.current.value.trim(),
       payment_system: paymentSystemRef.current.value.trim(),
@@ -280,6 +285,7 @@ const Suppliers = () => {
       phone: '',
       email_1: '',
       bank_account_cci: '',
+      payment_condition: '',
       status: '',
     })
     if (importFileRef.current) importFileRef.current.value = ''
@@ -301,6 +307,7 @@ const Suppliers = () => {
       phone: findByNames(['telefono', 'phone', 'celular', 'movil']),
       email_1: findByNames(['email', 'correo', 'correoelectronico', 'mail']),
       bank_account_cci: findByNames(['cuentabancariacci', 'cuentabancaria', 'cci', 'banco']),
+      payment_condition: findByNames(['condicionpago', 'condiciondepago', 'paymentcondition', 'pago']),
       status: findByNames(['estado', 'status', 'activo', 'active', 'habilitado']),
     }
   }
@@ -383,13 +390,14 @@ const Suppliers = () => {
     phone: mapping.phone ? (row[mapping.phone] ?? '') : '',
     email_1: mapping.email_1 ? (row[mapping.email_1] ?? '') : '',
     bank_account_cci: mapping.bank_account_cci ? (row[mapping.bank_account_cci] ?? '') : '',
+    payment_condition: mapping.payment_condition ? (row[mapping.payment_condition] ?? '') : '',
     status: mapping.status ? (row[mapping.status] ?? '') : '',
   }))
 
   return (<>
     <Table
       gridRef={gridRef}
-      title='Proveedores'
+      title={moduleTitle}
       rest={suppliersRest}
       toolBar={(container) => {
         container.unshift({
@@ -446,6 +454,7 @@ const Suppliers = () => {
         { dataField: 'business_line', caption: 'Giro del negocio', visible: false },
         { dataField: 'billing_type', caption: 'Tipo de facturacion', visible: false },
         { dataField: 'credit_type', caption: 'Tipo de credito', visible: false },
+        { dataField: 'payment_condition', caption: 'Condicion pago', width: 130 },
         { dataField: 'bank', caption: 'Banco', visible: false },
         { dataField: 'payment_system', caption: 'Sistema de pago', visible: false },
         { dataField: 'payment_term_days', caption: 'Dias de pago', width: 110, visible: false },
@@ -536,6 +545,14 @@ const Suppliers = () => {
         <InputFormGroup eRef={billingTypeRef} label='Tipo de Facturacion' col='col-md-4' disabled={isSearchingRuc} />
         <InputFormGroup eRef={creditTypeRef} label='Tipo de Credito' col='col-md-4' disabled={isSearchingRuc} />
 
+        <div className='form-group col-md-4 mb-2'>
+          <label className='form-label'>Condicion de pago</label>
+          <select ref={paymentConditionRef} className='form-control' disabled={isSearchingRuc}>
+            <option value=''>No definido</option>
+            <option value='Contado'>Contado</option>
+            <option value='Credito'>Credito</option>
+          </select>
+        </div>
         <InputFormGroup eRef={paymentSystemRef} label='Sistema de Pago' col='col-md-4' disabled={isSearchingRuc} />
         <InputFormGroup eRef={paymentTermDaysRef} label='Dias de pago' col='col-md-4' type='number' min='0' />
         <InputFormGroup eRef={bankRef} label='Banco' col='col-md-4' disabled={isSearchingRuc} />
@@ -581,6 +598,7 @@ const Suppliers = () => {
                 ['phone', 'Telefono/Celular'],
                 ['email_1', 'Correo'],
                 ['bank_account_cci', 'Cuenta / CCI'],
+                ['payment_condition', 'Condicion pago'],
                 ['status', 'Estado'],
               ].map(([key, label]) => (
                 <div className='form-group mb-2' key={key}>
@@ -616,6 +634,7 @@ const Suppliers = () => {
                         <th>Telefono</th>
                         <th>Correo</th>
                         <th>Cuenta / CCI</th>
+                        <th>Condicion</th>
                         <th>Estado</th>
                       </tr>
                     </thead>
@@ -629,6 +648,7 @@ const Suppliers = () => {
                           <td>{item.phone}</td>
                           <td>{item.email_1}</td>
                           <td>{item.bank_account_cci}</td>
+                          <td>{item.payment_condition}</td>
                           <td>{item.status}</td>
                         </tr>
                       ))}
@@ -646,7 +666,7 @@ const Suppliers = () => {
 
 CreateReactScript((el, properties) => {
   if (!properties.can(scopedPermission('suppliers')) && !properties.hasRole('Admin')) location.href = '/admin/';
-  createRoot(el).render(<BaseAdminto {...properties} title='Proveedores'>
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Proveedores'}>
     <Suppliers {...properties} />
   </BaseAdminto>);
 })

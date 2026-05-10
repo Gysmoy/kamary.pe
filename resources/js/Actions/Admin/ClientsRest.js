@@ -1,11 +1,17 @@
 import BasicRest from "../BasicRest";
 import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import { isStoragePath } from "../../Utils/permissionScope";
+
+const isServicesClientPath = () => location.pathname.toLowerCase().includes('/admin/services-client')
 
 class ClientsRest extends BasicRest {
-  path = 'admin/clients'
+  path = isStoragePath() ? 'admin/storage/clients' : (isServicesClientPath() ? 'admin/services-client' : 'admin/clients')
 
   resolvePath = (target = {}) => {
+    if (isStoragePath()) return this.path
+    if (isServicesClientPath()) return this.path
+
     const source = target?.data_source ?? ''
     if (source === 'eventual_client') return 'admin/eventual-clients'
     if (source === 'client') return this.path
@@ -40,7 +46,7 @@ class ClientsRest extends BasicRest {
       document_number: request.document_number,
       full_name: request.full_name,
       is_platform: request.is_platform,
-      has_storage_service: request.has_storage_service,
+      has_storage_service: isStoragePath() ? true : request.has_storage_service,
       contract_due_days: request.contract_due_days,
       commercial_channel: request.commercial_channel,
       segment: request.segment,

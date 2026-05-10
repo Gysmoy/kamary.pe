@@ -1,6 +1,7 @@
 import BasicRest from "../BasicRest";
 import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import { isStoragePath } from "../../Utils/permissionScope";
 
 const loadAll = async (path) => {
   try {
@@ -17,10 +18,10 @@ const loadAll = async (path) => {
 }
 
 class BillingDocumentsRest extends BasicRest {
-  path = 'admin/billing-documents'
+  path = isStoragePath() ? 'admin/storage/billing-control' : 'admin/billing-documents'
 
   getCommercialOrders = async () => await loadAll('/api/admin/commercial-orders/paginate')
-  getServiceOrders = async () => await loadAll('/api/admin/service-orders/paginate')
+  getServiceOrders = async () => await loadAll(isStoragePath() ? '/api/admin/storage/service-orders/paginate' : '/api/admin/service-orders/paginate')
 
   getConnectorPayload = async (id) => {
     try {

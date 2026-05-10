@@ -21,6 +21,10 @@ chmod -R 777 storage bootstrap/cache
 echo "Running migrations..."
 php artisan migrate --force || echo "WARNING: Migrations failed, continuing anyway..."
 
+# 1.1 Sync module permissions
+echo "Syncing module permissions..."
+php artisan db:seed --class=ModulePermissionsSeeder --force || echo "WARNING: Module permissions seeder failed, continuing anyway..."
+
 # 2. Clear Caches
 echo "Clearing caches..."
 php artisan optimize:clear || true

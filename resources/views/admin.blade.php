@@ -522,6 +522,10 @@
     <script src="/lte/assets/js/app.js"></script>
 
     <!-- Data Grid js -->
+    <script src="/lte/assets/libs/dxdatagrid/js/exceljs.min.js"></script>
+    <script src="/lte/assets/libs/dxdatagrid/js/FileSaver.min.js"></script>
+    <script src="/lte/assets/libs/dxdatagrid/js/jspdf.umd.min.js"></script>
+    <script src="/lte/assets/libs/dxdatagrid/js/jspdf.plugin.autotable.min.js"></script>
     <script src="/lte/assets/libs/dxdatagrid/js/dx.all.js"></script>
     <script src="/lte/assets/libs/dxdatagrid/js/localization/dx.messages.es.js"></script>
     <script src="/lte/assets/libs/dxdatagrid/js/localization/dx.messages.en.js"></script>

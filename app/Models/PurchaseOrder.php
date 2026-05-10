@@ -11,9 +11,11 @@ class PurchaseOrder extends Model
 
     protected $fillable = [
         'business_id',
+        'module_scope',
         'business_branch_id',
         'warehouse_id',
         'supplier_id',
+        'buyer_name',
         'code',
         'issue_date',
         'expected_date',

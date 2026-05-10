@@ -15,6 +15,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\Response;
 
 class PurchaseOrderController extends BasicController
@@ -22,6 +23,7 @@ class PurchaseOrderController extends BasicController
     public $model = PurchaseOrder::class;
     public $reactView = 'Admin/PurchaseOrders';
     public $prefix4filter = 'purchase_orders';
+    protected string $moduleScope = 'standard';
 
     private array $itemsPayload = [];
 
@@ -50,6 +52,15 @@ class PurchaseOrderController extends BasicController
             if ($scopeKey) $business->where('business_key', $scopeKey);
         });
 
+        if (Schema::hasColumn('purchase_orders', 'module_scope')) {
+            $query->where(function ($scope) {
+                $scope->where('purchase_orders.module_scope', $this->moduleScope);
+                if ($this->moduleScope === 'standard') {
+                    $scope->orWhereNull('purchase_orders.module_scope');
+                }
+            });
+        }
+
         return $query;
     }
 
@@ -69,6 +80,7 @@ class PurchaseOrderController extends BasicController
         $paymentCondition = $this->normalizePaymentCondition($body['payment_condition'] ?? 'Contado');
         $orderStatus = $this->normalizeOrderStatus($body['order_status'] ?? 'draft');
         $approvalStatus = $this->normalizeApprovalStatus($body['approval_status'] ?? 'pending');
+        $buyerName = trim((string)($body['buyer_name'] ?? ''));
 
         if (!$businessId) throw new \Exception('La empresa es obligatoria');
         if (!$warehouseId) throw new \Exception('El almacen es obligatorio');
@@ -97,6 +109,8 @@ class PurchaseOrderController extends BasicController
         }
 
         $body['updated_by'] = $userId;
+        $body['module_scope'] = $this->moduleScope;
+        $body['buyer_name'] = $buyerName ?: null;
         $body['issue_date'] = $issueDate;
         $body['expected_date'] = $expectedDate;
         $body['currency'] = in_array($currency, ['PEN', 'USD', 'EUR']) ? $currency : 'PEN';
@@ -107,6 +121,10 @@ class PurchaseOrderController extends BasicController
         $body['subtotal'] = $this->toNullableDecimal($body['subtotal'] ?? null) ?? 0;
         $body['tax_amount'] = $this->toNullableDecimal($body['tax_amount'] ?? null) ?? 0;
         $body['total'] = $this->toNullableDecimal($body['total'] ?? null) ?? 0;
+
+        foreach (['module_scope', 'buyer_name'] as $column) {
+            if (!Schema::hasColumn('purchase_orders', $column)) unset($body[$column]);
+        }
 
         return $body;
     }

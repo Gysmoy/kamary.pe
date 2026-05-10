@@ -10,6 +10,7 @@ use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\Response;
 
 class SupplierController extends BasicController
@@ -17,16 +18,28 @@ class SupplierController extends BasicController
     public $model = Supplier::class;
     public $reactView = 'Admin/Suppliers';
     public $prefix4filter = 'suppliers';
+    protected string $moduleScope = 'standard';
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('suppliers.*')
+        $query = $model::select('suppliers.*')
             ->with([
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ])
             ->join('users as creator', 'creator.id', '=', 'suppliers.created_by')
             ->join('users as updater', 'updater.id', '=', 'suppliers.updated_by');
+
+        if (Schema::hasColumn('suppliers', 'module_scope')) {
+            $query->where(function ($scope) {
+                $scope->where('suppliers.module_scope', $this->moduleScope);
+                if ($this->moduleScope === 'standard') {
+                    $scope->orWhereNull('suppliers.module_scope');
+                }
+            });
+        }
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -46,6 +59,7 @@ class SupplierController extends BasicController
         }
 
         $existsRuc = Supplier::where('ruc', $ruc)
+            ->when(Schema::hasColumn('suppliers', 'module_scope'), fn($query) => $query->where('module_scope', $this->moduleScope))
             ->when($id, fn($query) => $query->where('id', '!=', $id))
             ->exists();
         if ($existsRuc) {
@@ -57,6 +71,7 @@ class SupplierController extends BasicController
             $body['status'] = true;
         }
         $body['updated_by'] = $userId;
+        $body['module_scope'] = $this->moduleScope;
         $body['ruc'] = $ruc;
         $body['business_name'] = $businessName;
         $body['trade_name'] = trim((string)($body['trade_name'] ?? '')) ?: null;
@@ -72,11 +87,16 @@ class SupplierController extends BasicController
         $body['business_line'] = trim((string)($body['business_line'] ?? '')) ?: null;
         $body['billing_type'] = trim((string)($body['billing_type'] ?? '')) ?: null;
         $body['credit_type'] = trim((string)($body['credit_type'] ?? '')) ?: null;
+        $body['payment_condition'] = $this->normalizePaymentCondition($body['payment_condition'] ?? null);
         $body['bank'] = trim((string)($body['bank'] ?? '')) ?: null;
         $body['bank_account_cci'] = trim((string)($body['bank_account_cci'] ?? '')) ?: null;
         $body['payment_system'] = trim((string)($body['payment_system'] ?? '')) ?: null;
         $body['payment_term_days'] = $this->toNullableInt($body['payment_term_days'] ?? null);
         $body['evaluation'] = trim((string)($body['evaluation'] ?? '')) ?: null;
+
+        foreach (['module_scope', 'payment_condition'] as $column) {
+            if (!Schema::hasColumn('suppliers', $column)) unset($body[$column]);
+        }
 
         return $body;
     }
@@ -88,6 +108,8 @@ class SupplierController extends BasicController
             $rows = $request->rows;
             $mapping = $request->mapping ?? [];
             $userId = Auth::id();
+            $hasSupplierModuleScope = Schema::hasColumn('suppliers', 'module_scope');
+            $hasPaymentCondition = Schema::hasColumn('suppliers', 'payment_condition');
 
             if (!is_array($rows) || count($rows) === 0) {
                 throw new \Exception('No hay registros para importar');
@@ -107,6 +129,7 @@ class SupplierController extends BasicController
             $phoneKey = $mapping['phone'] ?? null;
             $emailKey = $mapping['email_1'] ?? null;
             $bankAccountKey = $mapping['bank_account_cci'] ?? null;
+            $paymentConditionKey = $mapping['payment_condition'] ?? null;
             $statusKey = $mapping['status'] ?? null;
 
             $created = 0;
@@ -116,7 +139,9 @@ class SupplierController extends BasicController
 
             DB::beginTransaction();
 
-            $existingSuppliers = Supplier::whereNotNull('ruc')->get(['id', 'ruc']);
+            $existingSuppliers = Supplier::whereNotNull('ruc')
+                ->when($hasSupplierModuleScope, fn($query) => $query->where('module_scope', $this->moduleScope))
+                ->get(['id', 'ruc']);
             $existingByRuc = [];
             foreach ($existingSuppliers as $supplier) {
                 $normalized = preg_replace('/\D+/', '', (string)$supplier->ruc);
@@ -156,6 +181,12 @@ class SupplierController extends BasicController
                     'status' => $statusKey && array_key_exists($statusKey, $row) ? $this->toBoolean($row[$statusKey]) : true,
                     'updated_by' => $userId,
                 ];
+                if ($hasSupplierModuleScope) $data['module_scope'] = $this->moduleScope;
+                if ($hasPaymentCondition) {
+                    $data['payment_condition'] = $paymentConditionKey
+                        ? $this->normalizePaymentCondition($row[$paymentConditionKey] ?? null)
+                        : null;
+                }
 
                 $supplierId = $existingByRuc[$ruc] ?? null;
                 if ($supplierId) {
@@ -241,7 +272,10 @@ class SupplierController extends BasicController
                 throw new \Exception('El RUC debe tener 11 digitos');
             }
 
-            $existing = Supplier::where('ruc', $normalizedRuc)->whereNotNull('status')->first();
+            $existing = Supplier::where('ruc', $normalizedRuc)
+                ->when(Schema::hasColumn('suppliers', 'module_scope'), fn($query) => $query->where('module_scope', $this->moduleScope))
+                ->whereNotNull('status')
+                ->first();
             if ($existing) {
                 throw new \Exception('El proveedor ya existe. Seleccionalo de la lista o usa otro RUC');
             }
@@ -306,6 +340,13 @@ class SupplierController extends BasicController
 
         $normalized = mb_strtolower(trim((string)$value));
         return in_array($normalized, ['1', 'true', 'si', 'sí', 'yes', 'y', 'activo', 'activa', 'on'], true);
+    }
+
+    private function normalizePaymentCondition($value): ?string
+    {
+        $normalized = mb_strtolower(trim((string)$value));
+        if ($normalized === '') return null;
+        return str_contains($normalized, 'cred') ? 'Credito' : 'Contado';
     }
 
     private function toNullableInt($value): ?int

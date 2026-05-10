@@ -1,9 +1,12 @@
 import BasicRest from "../BasicRest";
 import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import { isMagistralesPath, isStoragePath } from "../../Utils/permissionScope";
 
 class UnitsRest extends BasicRest {
-  path = 'admin/units'
+  path = isMagistralesPath()
+    ? 'admin/magistrales/units'
+    : (isStoragePath() ? 'admin/storage/units' : 'admin/units')
 
   importRows = async (request) => {
     try {

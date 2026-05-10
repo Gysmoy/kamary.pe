@@ -66,7 +66,7 @@ const parseFileRows = async (file) => {
   return rows
 }
 
-const Units = () => {
+const Units = ({ moduleTitle = 'Unidades de medida' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const importModalRef = useRef()
@@ -241,7 +241,7 @@ const Units = () => {
   return (<>
     <Table
       gridRef={gridRef}
-      title='Unidades de medida'
+      title={moduleTitle}
       rest={unitsRest}
       toolBar={(container) => {
         container.unshift({
@@ -428,8 +428,9 @@ const Units = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can(scopedPermission('units-of-measure')) && !properties.hasRole('Admin')) location.href = '/admin/';
-  createRoot(el).render(<BaseAdminto {...properties} title='Unidades de medida'>
+  const requiredPermission = properties.requiredPermission ?? scopedPermission('units-of-measure')
+  if (!properties.can(requiredPermission) && !properties.hasRole('Admin')) location.href = '/admin/';
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Unidades de medida'}>
     <Units {...properties} />
   </BaseAdminto>);
 })

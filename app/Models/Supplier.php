@@ -11,6 +11,7 @@ class Supplier extends Model
 
     protected $fillable = [
         'ruc',
+        'module_scope',
         'business_name',
         'trade_name',
         'address',
@@ -25,6 +26,7 @@ class Supplier extends Model
         'business_line',
         'billing_type',
         'credit_type',
+        'payment_condition',
         'bank',
         'bank_account_cci',
         'payment_system',

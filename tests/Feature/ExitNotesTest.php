@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\ActivePrinciple;
 use App\Models\Article;
 use App\Models\Business;
+use App\Models\EntryNote;
+use App\Models\EntryNoteItem;
 use App\Models\Laboratory;
 use App\Models\Unit;
 use App\Models\User;
@@ -34,13 +36,7 @@ class ExitNotesTest extends TestCase
     {
         $user = $this->makeUser();
 
-        $business = Business::create([
-            'name' => 'Empresa Exit QA',
-            'description' => null,
-            'status' => true,
-            'created_by' => $user->id,
-            'updated_by' => $user->id,
-        ]);
+        $business = Business::where('business_key', 'kamary_peru')->firstOrFail();
         $branch = $business->branches()->create([
             'name' => 'Sede Central',
             'status' => true,
@@ -50,6 +46,7 @@ class ExitNotesTest extends TestCase
         $warehouse = Warehouse::create([
             'name' => 'Almacen Exit',
             'description' => null,
+            'business_branch_id' => $branch->id,
             'status' => true,
             'created_by' => $user->id,
             'updated_by' => $user->id,
@@ -100,6 +97,39 @@ class ExitNotesTest extends TestCase
             'units_per_article' => 1,
             'created_by' => $user->id,
             'updated_by' => $user->id,
+        ]);
+
+        $entry = EntryNote::create([
+            'business_id' => $business->id,
+            'business_branch_id' => $branch->id,
+            'warehouse_id' => $warehouse->id,
+            'document_type' => 'Boleta',
+            'currency' => 'PEN',
+            'status' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+        EntryNoteItem::create([
+            'entry_note_id' => $entry->id,
+            'batch_code' => 'LX-001',
+            'article_id' => $articleA->id,
+            'warehouse_id' => $warehouse->id,
+            'stock' => 10,
+            'cost_unit' => 5,
+            'quantity' => 10,
+            'total' => 50,
+            'status' => true,
+        ]);
+        EntryNoteItem::create([
+            'entry_note_id' => $entry->id,
+            'batch_code' => 'LX-002',
+            'article_id' => $articleB->id,
+            'warehouse_id' => $warehouse->id,
+            'stock' => 5,
+            'cost_unit' => 5,
+            'quantity' => 5,
+            'total' => 25,
+            'status' => true,
         ]);
 
         $this->actingAs($user);
@@ -153,4 +183,3 @@ class ExitNotesTest extends TestCase
         ]);
     }
 }
-

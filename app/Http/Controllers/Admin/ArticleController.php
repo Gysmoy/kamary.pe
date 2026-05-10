@@ -7,6 +7,8 @@ use App\Models\ActivePrinciple;
 use App\Models\Article;
 use App\Models\ArticlePresentation;
 use App\Models\Laboratory;
+use App\Models\MagistralCategory;
+use App\Models\MagistralFormat;
 use App\Models\Unit;
 use App\Models\Warehouse;
 use App\Services\StockService;
@@ -15,6 +17,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\Response;
 
 class ArticleController extends BasicController
@@ -22,17 +25,21 @@ class ArticleController extends BasicController
     public $model = Article::class;
     public $reactView = 'Admin/Articles';
     public $prefix4filter = 'articles';
+    protected string $moduleScope = 'standard';
 
     private array $presentationsPayload = [];
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('articles.*')
+        $query = $model::select('articles.*')
             ->distinct()
             ->with([
                 'laboratory:id,name,code',
                 'activePrinciple:id,laboratory_id,name',
                 'unit:id,name,symbol',
+                'equivalenceUnit:id,name,symbol',
+                'magistralCategory:id,code,description',
+                'magistralFormat:id,description,quantity',
                 'presentations:id,article_id,name,units,price,sort_order,status',
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
@@ -42,6 +49,17 @@ class ArticleController extends BasicController
             ->join('laboratories as laboratory', 'laboratory.id', '=', 'articles.laboratory_id')
             ->join('users as creator', 'creator.id', '=', 'articles.created_by')
             ->join('users as updater', 'updater.id', '=', 'articles.updated_by');
+
+        if (Schema::hasColumn('articles', 'module_scope')) {
+            $query->where(function ($scope) {
+                $scope->where('articles.module_scope', $this->moduleScope);
+                if ($this->moduleScope === 'standard') {
+                    $scope->orWhereNull('articles.module_scope');
+                }
+            });
+        }
+
+        return $query;
     }
 
     public function import(Request $request): HttpResponse|ResponseFactory
@@ -51,6 +69,7 @@ class ArticleController extends BasicController
             $rows = $request->rows;
             $mapping = $request->mapping ?? [];
             $userId = Auth::id();
+            $hasArticleModuleScope = Schema::hasColumn('articles', 'module_scope');
 
             if (!is_array($rows) || count($rows) === 0) {
                 throw new \Exception('No hay registros para importar');
@@ -74,7 +93,9 @@ class ArticleController extends BasicController
 
             DB::beginTransaction();
 
-            $existingArticles = Article::whereNotNull('code')->get(['id', 'code']);
+            $existingArticles = Article::whereNotNull('code')
+                ->when($hasArticleModuleScope, fn($query) => $query->where('module_scope', $this->moduleScope))
+                ->get(['id', 'code']);
             $articleByCode = [];
             foreach ($existingArticles as $item) {
                 $normalizedCode = $this->normalizeText($item->code);
@@ -196,7 +217,7 @@ class ArticleController extends BasicController
                 $articleId = $articleByCode[$normalizedCode] ?? null;
 
                 if ($articleId) {
-                    Article::where('id', $articleId)->update([
+                    $updateData = [
                         'code' => $code,
                         'name' => $name,
                         'laboratory_id' => $laboratoryId,
@@ -204,11 +225,14 @@ class ArticleController extends BasicController
                         'unit_id' => $unitId,
                         'status' => $status,
                         'updated_by' => $userId,
-                    ]);
+                    ];
+                    if ($hasArticleModuleScope) $updateData['module_scope'] = $this->moduleScope;
+
+                    Article::where('id', $articleId)->update($updateData);
                     $this->ensureDefaultPresentation($articleId);
                     $updated++;
                 } else {
-                    $newArticle = Article::create([
+                    $createData = [
                         'code' => $code,
                         'name' => $name,
                         'laboratory_id' => $laboratoryId,
@@ -223,7 +247,10 @@ class ArticleController extends BasicController
                         'notes' => null,
                         'created_by' => $userId,
                         'updated_by' => $userId,
-                    ]);
+                    ];
+                    if ($hasArticleModuleScope) $createData['module_scope'] = $this->moduleScope;
+
+                    $newArticle = Article::create($createData);
                     $articleByCode[$normalizedCode] = $newArticle->id;
                     $this->ensureDefaultPresentation($newArticle->id);
                     $created++;
@@ -260,6 +287,9 @@ class ArticleController extends BasicController
         $laboratoryId = $body['laboratory_id'] ?? null;
         $activePrincipleId = $body['active_principle_id'] ?? null;
         $unitId = $body['unit_id'] ?? null;
+        $magistralCategoryId = $this->toNullableInt($body['magistral_category_id'] ?? null);
+        $magistralFormatId = $this->toNullableInt($body['magistral_format_id'] ?? null);
+        $equivalenceUnitId = $this->toNullableInt($body['equivalence_unit_id'] ?? null);
 
         if ($code === '') throw new \Exception('El codigo de articulo es obligatorio');
         if ($name === '') throw new \Exception('El nombre del articulo es obligatorio');
@@ -268,12 +298,23 @@ class ArticleController extends BasicController
         if (!$unitId) throw new \Exception('La unidad de medida es obligatoria');
 
         $existsCode = Article::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
+            ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('module_scope', $this->moduleScope);
+                    if ($this->moduleScope === 'standard') {
+                        $scope->orWhereNull('module_scope');
+                    }
+                });
+            })
             ->when($id, fn($query) => $query->where('id', '!=', $id))
             ->exists();
         if ($existsCode) throw new \Exception('El codigo de articulo ya existe');
 
         Laboratory::findOrFail($laboratoryId);
         Unit::findOrFail($unitId);
+        if ($equivalenceUnitId) Unit::findOrFail($equivalenceUnitId);
+        if ($magistralCategoryId) MagistralCategory::findOrFail($magistralCategoryId);
+        if ($magistralFormatId) MagistralFormat::findOrFail($magistralFormatId);
 
         $principle = ActivePrinciple::findOrFail($activePrincipleId);
         if ((int)$principle->laboratory_id !== (int)$laboratoryId) {
@@ -282,15 +323,31 @@ class ArticleController extends BasicController
 
         if (!isset($body['id']) || !$body['id']) {
             $body['created_by'] = $userId;
-            $body['status'] = true;
+            $body['status'] = array_key_exists('status', $body)
+                ? $this->toBoolean($body['status'])
+                : true;
+        } elseif (array_key_exists('status', $body)) {
+            $body['status'] = $this->toBoolean($body['status']);
         }
         $body['updated_by'] = $userId;
 
         $body['code'] = $code;
+        $body['module_scope'] = $this->moduleScope;
         $body['name'] = $name;
+        $body['composition'] = trim((string)($body['composition'] ?? '')) ?: null;
+        $body['article_type'] = trim((string)($body['article_type'] ?? '')) ?: null;
+        $body['administration_route'] = trim((string)($body['administration_route'] ?? '')) ?: null;
+        $body['magistral_category_id'] = $magistralCategoryId;
+        $body['sub_category'] = trim((string)($body['sub_category'] ?? '')) ?: null;
+        $body['magistral_format_id'] = $magistralFormatId;
+        $body['health_registration'] = trim((string)($body['health_registration'] ?? '')) ?: null;
+        $body['default_lot'] = trim((string)($body['default_lot'] ?? '')) ?: null;
+        $body['default_expiration_date'] = $this->normalizeDate($body['default_expiration_date'] ?? null);
         $body['notes'] = isset($body['notes']) ? trim((string)$body['notes']) : null;
         $body['margin_rule'] = $this->toBoolean($body['margin_rule'] ?? false);
         $body['igv_rule'] = $this->toBoolean($body['igv_rule'] ?? false);
+        $body['stock_has_expiration'] = $this->toBoolean($body['stock_has_expiration'] ?? false);
+        $body['stock_has_lot'] = $this->toBoolean($body['stock_has_lot'] ?? false);
         $body['units_per_article'] = (int)($body['units_per_article'] ?? 1);
         if ($body['units_per_article'] <= 0) {
             throw new \Exception('Unidades por articulo debe ser mayor a 0');
@@ -298,15 +355,76 @@ class ArticleController extends BasicController
 
         $body['volume'] = $this->toNullableDecimal($body['volume'] ?? null);
         $body['unit_weight'] = $this->toNullableDecimal($body['unit_weight'] ?? null);
+        $body['stock_min'] = $this->toNullableDecimal($body['stock_min'] ?? null);
+        $body['stock_max'] = $this->toNullableDecimal($body['stock_max'] ?? null);
+        $body['currency'] = trim((string)($body['currency'] ?? '')) ?: null;
+        $body['cost_price'] = $this->toNullableDecimal($body['cost_price'] ?? null);
+        $body['sale_price'] = $this->toNullableDecimal($body['sale_price'] ?? null);
+        $body['equivalence_exchange_rate'] = $this->toNullableDecimal($body['equivalence_exchange_rate'] ?? null);
+        $body['equivalence_quantity'] = $this->toNullableDecimal($body['equivalence_quantity'] ?? null);
+        $body['equivalence_unit_id'] = $equivalenceUnitId;
+        $body['sale_price_national'] = $this->toNullableDecimal($body['sale_price_national'] ?? null);
+        $body['purchase_price_national'] = $this->toNullableDecimal($body['purchase_price_national'] ?? null);
+        $body['purchase_price_foreign'] = $this->toNullableDecimal($body['purchase_price_foreign'] ?? null);
         if (!is_null($body['volume']) && $body['volume'] <= 0) {
             throw new \Exception('El volumen debe ser mayor a 0');
         }
         if (!is_null($body['unit_weight']) && $body['unit_weight'] <= 0) {
             throw new \Exception('El peso unitario debe ser mayor a 0');
         }
+        if (!is_null($body['stock_min']) && $body['stock_min'] < 0) {
+            throw new \Exception('El stock minimo no puede ser negativo');
+        }
+        if (!is_null($body['stock_max']) && $body['stock_max'] < 0) {
+            throw new \Exception('El stock maximo no puede ser negativo');
+        }
+        if (!is_null($body['stock_min']) && !is_null($body['stock_max']) && $body['stock_min'] > $body['stock_max']) {
+            throw new \Exception('El stock minimo no puede ser mayor al stock maximo');
+        }
+        foreach ([
+            'cost_price' => 'El precio costo no puede ser negativo',
+            'sale_price' => 'El precio venta no puede ser negativo',
+            'equivalence_exchange_rate' => 'El tipo de cambio no puede ser negativo',
+            'equivalence_quantity' => 'La cantidad equivalente no puede ser negativa',
+            'sale_price_national' => 'El precio venta nacional no puede ser negativo',
+            'purchase_price_national' => 'El precio compra nacional no puede ser negativo',
+            'purchase_price_foreign' => 'El precio compra extranjero no puede ser negativo',
+        ] as $field => $message) {
+            if (!is_null($body[$field]) && $body[$field] < 0) {
+                throw new \Exception($message);
+            }
+        }
 
         $this->presentationsPayload = is_array($request->presentations) ? $request->presentations : [];
         unset($body['presentations']);
+
+        foreach ([
+            'module_scope',
+            'composition',
+            'article_type',
+            'administration_route',
+            'magistral_category_id',
+            'sub_category',
+            'magistral_format_id',
+            'health_registration',
+            'default_lot',
+            'default_expiration_date',
+            'stock_min',
+            'stock_max',
+            'currency',
+            'stock_has_expiration',
+            'stock_has_lot',
+            'cost_price',
+            'sale_price',
+            'equivalence_exchange_rate',
+            'equivalence_quantity',
+            'equivalence_unit_id',
+            'sale_price_national',
+            'purchase_price_national',
+            'purchase_price_foreign',
+        ] as $column) {
+            if (!Schema::hasColumn('articles', $column)) unset($body[$column]);
+        }
 
         return $body;
     }
@@ -521,6 +639,25 @@ class ArticleController extends BasicController
             throw new \Exception("Valor numerico invalido: {$value}");
         }
         return (float)$text;
+    }
+
+    private function toNullableInt($value): ?int
+    {
+        if ($value === null) return null;
+        $text = trim((string)$value);
+        if ($text === '') return null;
+        if (!ctype_digit(ltrim($text, '+'))) throw new \Exception("Valor entero invalido: {$value}");
+        return (int)$text;
+    }
+
+    private function normalizeDate($value): ?string
+    {
+        if ($value === null) return null;
+        $text = trim((string)$value);
+        if ($text === '') return null;
+        $timestamp = strtotime($text);
+        if ($timestamp === false) throw new \Exception("Fecha invalida: {$value}");
+        return date('Y-m-d', $timestamp);
     }
 
     private function ensureDefaultPresentation(int $articleId): void

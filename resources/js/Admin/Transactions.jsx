@@ -10,7 +10,7 @@ import DxButton from '../Components/dx/DxButton';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
-import TransactionsRest from '../actions/Admin/TransactionsRest';
+import TransactionsRest from '../Actions/Admin/TransactionsRest';
 import Number2Currency from '../Utils/Number2Currency';
 import SelectFormGroup from '../Components/Adminto/form/SelectFormGroup';
 import SelectAPIFormGroup from '../Components/Adminto/form/SelectAPIFormGroup';
@@ -267,6 +267,7 @@ const Transactions = ({ }) => {
 }
 
 CreateReactScript((el, properties) => {
+  if (!properties.can('expenses') && !properties.hasRole('Admin')) location.href = '/admin/';
 
   createRoot(el).render(<BaseAdminto {...properties} title='Gastos'>
     <Transactions {...properties} />

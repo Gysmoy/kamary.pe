@@ -16,7 +16,22 @@ const MAGISTRALES_MENU_PERMISSIONS = [
   'magistrales-products',
   'magistrales-procurement',
   'magistrales-warehouse',
-  'magistrales-billing'
+  'magistrales-billing',
+  'magistrales-articles',
+  'magistrales-category',
+  'magistrales-formats',
+  'magistrales-formulas',
+  'magistrales-incomes',
+  'magistrales-inventory',
+  'magistrales-kardex',
+  'magistrales-laboratory',
+  'magistrales-purchase-order',
+  'magistrales-production-order',
+  'magistrales-supplier',
+  'magistrales-responsible',
+  'magistrales-outputs',
+  'magistrales-unit',
+  'magistrales-sales'
 ]
 
 const QUICK_FLAGS = {
@@ -42,65 +57,74 @@ const QUICK_FLAGS = {
     'activity',
     'daily-summary',
     'articles',
-    'batches',
-    'laboratories',
-    'units-of-measure',
     'inventory',
     'kardex',
+    'laboratories',
+    'batches',
     'entry-note',
     'exit-note',
+    'units-of-measure',
+    'storage-inventory',
+    'storage-clients',
     'service-orders',
+    'storage-units',
+    'storage-products',
+    'storage-entry-note',
+    'storage-exit-note',
+    'storage-kardex',
     'storage-general-service',
     'storage-billing-control',
-    'storage-general-service-orders'
+    'storage-general-service-orders',
+    'services-client',
+    'sample-orders'
   ]
 }
 
 const PERMISSION_GROUPS = [
   {
-    key: 'compras',
-    title: 'Proveedores y compras',
-    permissions: ['suppliers', 'purchase-orders', 'purchase-receipts', 'accounts-payable', 'expenses']
+    key: 'sistemas',
+    title: 'Sistemas',
+    permissions: ['users', 'roles']
   },
   {
-    key: 'clientes',
-    title: 'Clientes y comercial',
-    permissions: ['clients', 'eventual-clients', 'client-distribution', 'pricing', 'orders', 'accounts-receivable']
+    key: 'almacen',
+    title: 'Almacen',
+    permissions: ['articles', 'inventory', 'kardex', 'laboratories', 'batches', 'entry-note', 'exit-note', 'suppliers', 'units-of-measure']
   },
   {
-    key: 'facturacion',
-    title: 'Facturacion',
-    permissions: ['services-billing']
+    key: 'administracion',
+    title: 'Administracion',
+    permissions: ['accounts-payable', 'expenses', 'daily-summary']
+  },
+  {
+    key: 'comercial',
+    title: 'Comercial',
+    permissions: ['clients', 'eventual-clients', 'accounts-receivable', 'orders', 'pricing', 'client-distribution']
+  },
+  {
+    key: 'almacenamiento',
+    title: 'Serv. Almacenamiento',
+    permissions: ['storage-inventory', 'storage-clients', 'service-orders', 'storage-units', 'storage-products', 'storage-entry-note', 'storage-exit-note', 'storage-kardex', 'storage-general-service', 'storage-billing-control', 'storage-general-service-orders']
+  },
+  {
+    key: 'despacho',
+    title: 'Despacho',
+    permissions: ['activity', 'driver', 'dispatch', 'vehicle-zone']
   },
   {
     key: 'servicios',
-    title: 'Servicios y operaciones',
-    permissions: ['services-service-order', 'services-services', 'activity', 'dispatch', 'driver', 'vehicle-zone']
+    title: 'Servicios',
+    permissions: ['services-client', 'services-billing', 'services-service-order', 'services-services']
   },
   {
-    key: 'reportes',
-    title: 'Reportes',
-    permissions: ['daily-summary']
-  },
-  {
-    key: 'productos',
-    title: 'Productos y almacen',
-    permissions: ['articles', 'batches', 'laboratories', 'units-of-measure', 'inventory', 'kardex', 'entry-note', 'exit-note']
+    key: 'muestras',
+    title: 'Muestras',
+    permissions: ['sample-orders']
   },
   {
     key: 'magistrales',
     title: 'Magistrales',
     permissions: MAGISTRALES_MENU_PERMISSIONS
-  },
-  {
-    key: 'almacenamiento',
-    title: 'Servicios de almacenamiento',
-    permissions: ['service-orders', 'storage-general-service', 'storage-billing-control', 'storage-general-service-orders', 'storage-clients', 'storage-inventory', 'storage-units', 'storage-products', 'storage-entry-note', 'storage-exit-note', 'storage-kardex']
-  },
-  {
-    key: 'configuracion',
-    title: 'Configuracion',
-    permissions: ['users', 'roles']
   }
 ]
 

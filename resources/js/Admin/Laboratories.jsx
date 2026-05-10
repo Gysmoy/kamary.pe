@@ -64,7 +64,7 @@ const parseFileRows = async (file) => {
   return rows
 }
 
-const Laboratories = () => {
+const Laboratories = ({ moduleTitle = 'Laboratorios' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const importModalRef = useRef()
@@ -396,7 +396,7 @@ const Laboratories = () => {
   return (<>
     <Table
       gridRef={gridRef}
-      title='Laboratorios'
+      title={moduleTitle}
       rest={laboratoriesRest}
       toolBar={(container) => {
         container.unshift({
@@ -720,8 +720,10 @@ const Laboratories = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can(scopedPermission('laboratories')) && !properties.hasRole('Admin')) location.href = '/admin/';
-  createRoot(el).render(<BaseAdminto {...properties} title='Laboratorios'>
+  const requiredPermission = properties.requiredPermission ?? scopedPermission('laboratories')
+  const moduleTitle = properties.moduleTitle ?? 'Laboratorios'
+  if (!properties.can(requiredPermission) && !properties.hasRole('Admin')) location.href = '/admin/';
+  createRoot(el).render(<BaseAdminto {...properties} title={moduleTitle}>
     <Laboratories {...properties} />
   </BaseAdminto>);
 })

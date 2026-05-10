@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
+import { handleDataGridExport } from '../../Utils/dataGridExport'
 
-const DataGrid = ({ gridRef: dataGridRef, rest, columns, toolBar, masterDetail, filterValue, exportable, exportableName, customizeCell = () => { }, selectable = false}) => {
+const DataGrid = ({ gridRef: dataGridRef, rest, columns, toolBar, masterDetail, filterValue, exportable, exportableName, customizeCell = () => { }, selectable = false }) => {
   useEffect(() => {
     DevExpress.localization.locale(navigator.language);
     $(dataGridRef.current).dxDataGrid({
@@ -27,31 +28,15 @@ const DataGrid = ({ gridRef: dataGridRef, rest, columns, toolBar, masterDetail, 
       height: 'calc(100vh - 250px)',
       filterValue: filterValue ? filterValue : null,
       export: {
-        enabled: exportable
+        enabled: exportable,
+        formats: ['xlsx', 'pdf']
       },
       selection: selectable ? {
         mode: 'multiple',
         selectAllMode: 'page'
-      }: undefined,
+      } : undefined,
       onExporting: function (e) {
-        var workbook = new ExcelJS.Workbook();
-        var worksheet = workbook.addWorksheet('Main sheet');
-        DevExpress.excelExporter.exportDataGrid({
-          worksheet: worksheet,
-          component: e.component,
-          customizeCell: function (options) {
-            customizeCell(options)
-            options.excelCell.alignment = {
-              horizontal: 'left',
-              vertical: 'top',
-              ...options.excelCell.alignment
-            };
-          }
-        }).then(function () {
-          workbook.xlsx.writeBuffer().then(function (buffer) {
-            saveAs(new Blob([buffer], { type: 'application/octet-stream' }), `${exportableName}.xlsx`);
-          });
-        });
+        handleDataGridExport(e, { exportableName, customizeCell })
       },
       rowAlternationEnabled: true,
       showBorders: true,

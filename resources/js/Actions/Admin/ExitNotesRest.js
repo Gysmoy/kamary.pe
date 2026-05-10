@@ -1,9 +1,10 @@
 import BasicRest from "../BasicRest";
 import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import { isStoragePath } from "../../Utils/permissionScope";
 
 class ExitNotesRest extends BasicRest {
-  path = 'admin/exit-notes'
+  path = isStoragePath() ? 'admin/storage/exit-notes' : 'admin/exit-notes'
 
   getBranchesByBusiness = async (businessId) => {
     if (!businessId) return []
@@ -13,7 +14,7 @@ class ExitNotesRest extends BasicRest {
 
   getArticles = async () => {
     try {
-      const { status, result } = await Fetch('/api/admin/articles/paginate', {
+      const { status, result } = await Fetch(`/api/${isStoragePath() ? 'admin/storage/articles' : 'admin/articles'}/paginate`, {
         method: 'POST',
         body: JSON.stringify({
           isLoadingAll: true,

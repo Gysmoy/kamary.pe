@@ -48,7 +48,8 @@ const emptyItem = () => ({
   total: 0,
 })
 
-const PurchaseOrders = () => {
+const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
+  const isMagistrales = moduleScope === 'magistrales'
   const gridRef = useRef()
   const modalRef = useRef()
 
@@ -58,6 +59,7 @@ const PurchaseOrders = () => {
   const branchRef = useRef()
   const warehouseRef = useRef()
   const supplierRef = useRef()
+  const buyerNameRef = useRef()
   const issueDateRef = useRef()
   const expectedDateRef = useRef()
   const currencyRef = useRef()
@@ -126,6 +128,7 @@ const PurchaseOrders = () => {
     setRefValue(expectedDateRef, data?.expected_date ? data.expected_date.toString().slice(0, 10) : '')
     setRefValue(currencyRef, data?.currency ?? 'PEN')
     setRefValue(paymentConditionRef, data?.payment_condition ?? 'Contado')
+    setRefValue(buyerNameRef, data?.buyer_name ?? '')
     setRefValue(orderStatusRef, data?.order_status ?? 'draft')
     setRefValue(approvalStatusRef, data?.approval_status ?? 'pending')
     setTaxAmount(Number(data?.tax_amount ?? 0))
@@ -185,6 +188,7 @@ const PurchaseOrders = () => {
       business_branch_id: selectedBranchId || null,
       warehouse_id: selectedWarehouseId || null,
       supplier_id: selectedSupplierId || null,
+      buyer_name: getRefValue(buyerNameRef).trim(),
       issue_date: getRefValue(issueDateRef),
       expected_date: getRefValue(expectedDateRef) || null,
       currency: getRefValue(currencyRef) || 'PEN',
@@ -287,7 +291,7 @@ const PurchaseOrders = () => {
   return (<>
     <Table
       gridRef={gridRef}
-      title='Órdenes de compra'
+      title={moduleTitle}
       rest={purchaseOrdersRest}
       toolBar={(container) => {
         container.unshift({
@@ -318,6 +322,7 @@ const PurchaseOrders = () => {
         { dataField: 'branch.name', caption: 'Sede', minWidth: 130 },
         { dataField: 'warehouse.name', caption: 'Almacén', minWidth: 130 },
         { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 220 },
+        ...(isMagistrales ? [{ dataField: 'buyer_name', caption: 'Comprador', minWidth: 150 }] : []),
         { dataField: 'payment_condition', caption: 'Pago', width: 100 },
         { dataField: 'approval_status', caption: 'Aprobación', width: 110, lookup: toLookup(approvalStatusOptions) },
         { dataField: 'order_status', caption: 'Estado OC', width: 110, lookup: toLookup(purchaseOrderStatusOptions) },
@@ -428,11 +433,12 @@ const PurchaseOrders = () => {
           label='Proveedor'
           col='col-md-3'
           required
-          searchAPI='/api/admin/suppliers/paginate'
+          searchAPI={purchaseOrdersRest.suppliersPaginateApi()}
           searchBy='business_name'
           dropdownParent='#purchase-order-form-container'
           onChange={(e) => setSelectedSupplierId(e.target.value || '')}
         />
+        {isMagistrales && <InputFormGroup eRef={buyerNameRef} label='Comprador' col='col-md-3' />}
 
         <div className='form-group col-md-2 mb-2'>
           <label className='form-label'>Código</label>
@@ -515,7 +521,7 @@ const PurchaseOrders = () => {
                       <SelectAPIFormGroup
                         eRef={getArticleRef(item.uid)}
                         col='col-12'
-                        searchAPI='/api/admin/articles/paginate'
+                        searchAPI={purchaseOrdersRest.articlesPaginateApi()}
                         searchBy='name'
                         dropdownParent='#purchase-order-form-container'
                         onChange={(e) => onItemArticleChanged(item.uid, e)}
@@ -571,7 +577,7 @@ const PurchaseOrders = () => {
 
 CreateReactScript((el, properties) => {
   if (!properties.can(scopedPermission('purchase-orders')) && !properties.hasRole('Admin')) location.href = '/admin/';
-  createRoot(el).render(<BaseAdminto {...properties} title='Órdenes de compra'>
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Órdenes de compra'}>
     <PurchaseOrders {...properties} />
   </BaseAdminto>);
 })

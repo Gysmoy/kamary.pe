@@ -1,9 +1,10 @@
 import BasicRest from "../BasicRest";
 import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import { isMagistralesPath } from "../../Utils/permissionScope";
 
 class LaboratoriesRest extends BasicRest {
-  path = 'admin/laboratories'
+  path = isMagistralesPath() ? 'admin/magistrales/laboratories' : 'admin/laboratories'
 
   importRows = async (request) => {
     try {

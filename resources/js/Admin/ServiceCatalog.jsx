@@ -10,7 +10,7 @@ import ServiceCatalogRest from '../Actions/Admin/ServiceCatalogRest';
 
 const serviceCatalogRest = new ServiceCatalogRest()
 
-const ServiceCatalog = () => {
+const ServiceCatalog = ({ moduleTitle = 'Servicios' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
@@ -79,7 +79,7 @@ const ServiceCatalog = () => {
   return <>
     <Table
       gridRef={gridRef}
-      title='Servicios'
+      title={moduleTitle}
       rest={serviceCatalogRest}
       pageSize={25}
       toolBar={(items) => {
@@ -124,6 +124,7 @@ const ServiceCatalog = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('services-services') && !properties.hasRole('Admin')) location.href = '/admin/'
-  createRoot(el).render(<BaseAdminto {...properties} title='Servicios'><ServiceCatalog {...properties} /></BaseAdminto>)
+  const requiredPermission = properties.requiredPermission ?? 'services-services'
+  if (!properties.can(requiredPermission) && !properties.hasRole('Admin')) location.href = '/admin/'
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Servicios'}><ServiceCatalog {...properties} /></BaseAdminto>)
 })

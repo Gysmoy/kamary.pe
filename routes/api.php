@@ -30,10 +30,40 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PriceListController as AdminPriceListController;
 use App\Http\Controllers\Admin\PurchaseOrderController as AdminPurchaseOrderController;
 use App\Http\Controllers\Admin\PurchaseReceiptController as AdminPurchaseReceiptController;
+use App\Http\Controllers\Admin\Magistrales\ArticleController as AdminMagistralesArticleController;
+use App\Http\Controllers\Admin\Magistrales\CategoryController as AdminMagistralesCategoryController;
+use App\Http\Controllers\Admin\Magistrales\FormatController as AdminMagistralesFormatController;
+use App\Http\Controllers\Admin\Magistrales\FormulaController as AdminMagistralesFormulaController;
+use App\Http\Controllers\Admin\Magistrales\IncomeController as AdminMagistralesIncomeController;
+use App\Http\Controllers\Admin\Magistrales\InventoryController as AdminMagistralesInventoryController;
+use App\Http\Controllers\Admin\Magistrales\KardexController as AdminMagistralesKardexController;
+use App\Http\Controllers\Admin\Magistrales\LaboratoryController as AdminMagistralesLaboratoryController;
+use App\Http\Controllers\Admin\Magistrales\OutputController as AdminMagistralesOutputController;
+use App\Http\Controllers\Admin\Magistrales\ProductionOrderController as AdminMagistralesProductionOrderController;
+use App\Http\Controllers\Admin\Magistrales\PurchaseOrderController as AdminMagistralesPurchaseOrderController;
+use App\Http\Controllers\Admin\Magistrales\ResponsibleController as AdminMagistralesResponsibleController;
+use App\Http\Controllers\Admin\Magistrales\SaleController as AdminMagistralesSaleController;
+use App\Http\Controllers\Admin\Magistrales\SupplierController as AdminMagistralesSupplierController;
+use App\Http\Controllers\Admin\Magistrales\UnitController as AdminMagistralesUnitController;
+use App\Http\Controllers\Admin\Storage\BillingControlController as AdminStorageBillingControlController;
+use App\Http\Controllers\Admin\Storage\ClientController as AdminStorageClientController;
+use App\Http\Controllers\Admin\Storage\EntryNoteController as AdminStorageEntryNoteController;
+use App\Http\Controllers\Admin\Storage\ExitNoteController as AdminStorageExitNoteController;
+use App\Http\Controllers\Admin\Storage\GeneralServiceController as AdminStorageGeneralServiceController;
+use App\Http\Controllers\Admin\Storage\GeneralServiceOrderController as AdminStorageGeneralServiceOrderController;
+use App\Http\Controllers\Admin\Storage\InventoryController as AdminStorageInventoryController;
+use App\Http\Controllers\Admin\Storage\KardexController as AdminStorageKardexController;
+use App\Http\Controllers\Admin\Storage\ProductController as AdminStorageProductController;
+use App\Http\Controllers\Admin\Storage\ServiceOrderController as AdminStorageServiceOrderController;
+use App\Http\Controllers\Admin\Storage\UnitController as AdminStorageUnitController;
 use App\Http\Controllers\Admin\ServiceCatalogController as AdminServiceCatalogController;
+use App\Http\Controllers\Admin\ServiceClientController as AdminServiceClientController;
 use App\Http\Controllers\Admin\ServiceOrderController as AdminServiceOrderController;
 use App\Http\Controllers\Admin\SalesReportController as AdminSalesReportController;
+use App\Http\Controllers\Admin\SampleOrderController as AdminSampleOrderController;
 use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
+use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
+use App\Http\Controllers\Admin\TransactionCategoryController as AdminTransactionCategoryController;
 use App\Http\Controllers\Admin\VehicleController as AdminVehicleController;
 use App\Http\Controllers\Admin\ZoneController as AdminZoneController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
@@ -190,6 +220,187 @@ Route::middleware('auth')->group(function () {
         Route::delete('/suppliers/{id}', [AdminSupplierController::class, 'delete']);
         Route::get('/suppliers/ruc/{ruc}', [AdminSupplierController::class, 'lookupByRuc']);
 
+        Route::prefix('magistrales')->group(function () {
+            Route::post('/articles', [AdminMagistralesArticleController::class, 'save']);
+            Route::post('/articles/import', [AdminMagistralesArticleController::class, 'import']);
+            Route::post('/articles/paginate', [AdminMagistralesArticleController::class, 'paginate']);
+            Route::patch('/articles/status', [AdminMagistralesArticleController::class, 'status']);
+            Route::patch('/articles/{field}', [AdminMagistralesArticleController::class, 'boolean']);
+            Route::delete('/articles/{id}', [AdminMagistralesArticleController::class, 'delete']);
+            Route::get('/articles/laboratories/{id}/principles', [AdminMagistralesArticleController::class, 'principles']);
+            Route::get('/articles/{id}/stock-by-warehouse', [AdminMagistralesArticleController::class, 'stockByWarehouse']);
+
+            Route::post('/categories', [AdminMagistralesCategoryController::class, 'save']);
+            Route::post('/categories/paginate', [AdminMagistralesCategoryController::class, 'paginate']);
+            Route::patch('/categories/status', [AdminMagistralesCategoryController::class, 'status']);
+            Route::patch('/categories/{field}', [AdminMagistralesCategoryController::class, 'boolean']);
+            Route::delete('/categories/{id}', [AdminMagistralesCategoryController::class, 'delete']);
+            Route::get('/categories/{categoryId}/subcategories', [AdminMagistralesCategoryController::class, 'subcategories']);
+            Route::post('/categories/{categoryId}/subcategories', [AdminMagistralesCategoryController::class, 'saveSubcategory']);
+            Route::patch('/categories/{categoryId}/subcategories/status', [AdminMagistralesCategoryController::class, 'statusSubcategory']);
+            Route::delete('/categories/{categoryId}/subcategories/{id}', [AdminMagistralesCategoryController::class, 'deleteSubcategory']);
+
+            Route::post('/formats', [AdminMagistralesFormatController::class, 'save']);
+            Route::post('/formats/paginate', [AdminMagistralesFormatController::class, 'paginate']);
+            Route::patch('/formats/status', [AdminMagistralesFormatController::class, 'status']);
+            Route::patch('/formats/{field}', [AdminMagistralesFormatController::class, 'boolean']);
+            Route::delete('/formats/{id}', [AdminMagistralesFormatController::class, 'delete']);
+
+            Route::post('/formulas', [AdminMagistralesFormulaController::class, 'save']);
+            Route::post('/formulas/paginate', [AdminMagistralesFormulaController::class, 'paginate']);
+            Route::patch('/formulas/status', [AdminMagistralesFormulaController::class, 'status']);
+            Route::patch('/formulas/{field}', [AdminMagistralesFormulaController::class, 'boolean']);
+            Route::delete('/formulas/{id}', [AdminMagistralesFormulaController::class, 'delete']);
+
+            Route::post('/incomes', [AdminMagistralesIncomeController::class, 'save']);
+            Route::post('/incomes/paginate', [AdminMagistralesIncomeController::class, 'paginate']);
+            Route::patch('/incomes/status', [AdminMagistralesIncomeController::class, 'status']);
+            Route::delete('/incomes/{id}', [AdminMagistralesIncomeController::class, 'delete']);
+
+            Route::post('/laboratories', [AdminMagistralesLaboratoryController::class, 'save']);
+            Route::post('/laboratories/import', [AdminMagistralesLaboratoryController::class, 'import']);
+            Route::post('/laboratories/paginate', [AdminMagistralesLaboratoryController::class, 'paginate']);
+            Route::patch('/laboratories/status', [AdminMagistralesLaboratoryController::class, 'status']);
+            Route::patch('/laboratories/{field}', [AdminMagistralesLaboratoryController::class, 'boolean']);
+            Route::delete('/laboratories/{id}', [AdminMagistralesLaboratoryController::class, 'delete']);
+            Route::get('/laboratories/{id}/principles', [AdminMagistralesLaboratoryController::class, 'principles']);
+            Route::post('/laboratories/{id}/principles', [AdminMagistralesLaboratoryController::class, 'savePrinciple']);
+            Route::post('/laboratories/{id}/principles/import', [AdminMagistralesLaboratoryController::class, 'importPrinciples']);
+            Route::patch('/laboratories/{id}/principles/{principleId}/{field}', [AdminMagistralesLaboratoryController::class, 'principleBoolean']);
+            Route::delete('/laboratories/{id}/principles/{principleId}', [AdminMagistralesLaboratoryController::class, 'deletePrinciple']);
+
+            Route::post('/units', [AdminMagistralesUnitController::class, 'save']);
+            Route::post('/units/import', [AdminMagistralesUnitController::class, 'import']);
+            Route::post('/units/paginate', [AdminMagistralesUnitController::class, 'paginate']);
+            Route::patch('/units/status', [AdminMagistralesUnitController::class, 'status']);
+            Route::patch('/units/{field}', [AdminMagistralesUnitController::class, 'boolean']);
+            Route::delete('/units/{id}', [AdminMagistralesUnitController::class, 'delete']);
+
+            Route::post('/responsibles', [AdminMagistralesResponsibleController::class, 'save']);
+            Route::post('/responsibles/paginate', [AdminMagistralesResponsibleController::class, 'paginate']);
+            Route::patch('/responsibles/status', [AdminMagistralesResponsibleController::class, 'status']);
+            Route::patch('/responsibles/{field}', [AdminMagistralesResponsibleController::class, 'boolean']);
+            Route::delete('/responsibles/{id}', [AdminMagistralesResponsibleController::class, 'delete']);
+
+            Route::post('/production-orders', [AdminMagistralesProductionOrderController::class, 'save']);
+            Route::post('/production-orders/paginate', [AdminMagistralesProductionOrderController::class, 'paginate']);
+            Route::patch('/production-orders/status', [AdminMagistralesProductionOrderController::class, 'status']);
+            Route::patch('/production-orders/{field}', [AdminMagistralesProductionOrderController::class, 'boolean']);
+            Route::delete('/production-orders/{id}', [AdminMagistralesProductionOrderController::class, 'delete']);
+
+            Route::post('/outputs', [AdminMagistralesOutputController::class, 'save']);
+            Route::post('/outputs/paginate', [AdminMagistralesOutputController::class, 'paginate']);
+            Route::patch('/outputs/status', [AdminMagistralesOutputController::class, 'status']);
+            Route::patch('/outputs/{field}', [AdminMagistralesOutputController::class, 'boolean']);
+            Route::delete('/outputs/{id}', [AdminMagistralesOutputController::class, 'delete']);
+
+            Route::post('/sales', [AdminMagistralesSaleController::class, 'save']);
+            Route::post('/sales/paginate', [AdminMagistralesSaleController::class, 'paginate']);
+            Route::patch('/sales/status', [AdminMagistralesSaleController::class, 'status']);
+            Route::patch('/sales/{field}', [AdminMagistralesSaleController::class, 'boolean']);
+            Route::delete('/sales/{id}', [AdminMagistralesSaleController::class, 'delete']);
+
+            Route::post('/inventory', [AdminMagistralesInventoryController::class, 'save']);
+            Route::post('/inventory/stock', [AdminMagistralesInventoryController::class, 'stock']);
+            Route::post('/inventory/paginate', [AdminMagistralesInventoryController::class, 'paginate']);
+            Route::patch('/inventory/status', [AdminMagistralesInventoryController::class, 'status']);
+            Route::delete('/inventory/{id}', [AdminMagistralesInventoryController::class, 'delete']);
+            Route::post('/kardex/paginate', [AdminMagistralesKardexController::class, 'paginate']);
+            Route::post('/kardex/movements', [AdminMagistralesKardexController::class, 'movements']);
+
+            Route::post('/purchase-orders', [AdminMagistralesPurchaseOrderController::class, 'save']);
+            Route::post('/purchase-orders/paginate', [AdminMagistralesPurchaseOrderController::class, 'paginate']);
+            Route::patch('/purchase-orders/status', [AdminMagistralesPurchaseOrderController::class, 'status']);
+            Route::patch('/purchase-orders/{field}', [AdminMagistralesPurchaseOrderController::class, 'boolean']);
+            Route::delete('/purchase-orders/{id}', [AdminMagistralesPurchaseOrderController::class, 'delete']);
+            Route::get('/purchase-orders/businesses/{id}/branches', [AdminMagistralesPurchaseOrderController::class, 'branches']);
+
+            Route::post('/suppliers', [AdminMagistralesSupplierController::class, 'save']);
+            Route::post('/suppliers/import', [AdminMagistralesSupplierController::class, 'import']);
+            Route::post('/suppliers/paginate', [AdminMagistralesSupplierController::class, 'paginate']);
+            Route::patch('/suppliers/status', [AdminMagistralesSupplierController::class, 'status']);
+            Route::patch('/suppliers/{field}', [AdminMagistralesSupplierController::class, 'boolean']);
+            Route::delete('/suppliers/{id}', [AdminMagistralesSupplierController::class, 'delete']);
+            Route::get('/suppliers/ruc/{ruc}', [AdminMagistralesSupplierController::class, 'lookupByRuc']);
+        });
+
+        Route::prefix('storage')->group(function () {
+            Route::post('/inventory/paginate', [AdminStorageInventoryController::class, 'paginate']);
+
+            Route::post('/clients', [AdminStorageClientController::class, 'save']);
+            Route::post('/clients/paginate', [AdminStorageClientController::class, 'paginate']);
+            Route::patch('/clients/status', [AdminStorageClientController::class, 'status']);
+            Route::patch('/clients/{field}', [AdminStorageClientController::class, 'boolean']);
+            Route::delete('/clients/{id}', [AdminStorageClientController::class, 'delete']);
+            Route::get('/clients/document/{type}/{number}', [AdminStorageClientController::class, 'lookupByDocument']);
+
+            Route::post('/units', [AdminStorageUnitController::class, 'save']);
+            Route::post('/units/import', [AdminStorageUnitController::class, 'import']);
+            Route::post('/units/paginate', [AdminStorageUnitController::class, 'paginate']);
+            Route::patch('/units/status', [AdminStorageUnitController::class, 'status']);
+            Route::patch('/units/{field}', [AdminStorageUnitController::class, 'boolean']);
+            Route::delete('/units/{id}', [AdminStorageUnitController::class, 'delete']);
+
+            Route::post('/articles', [AdminStorageProductController::class, 'save']);
+            Route::post('/articles/import', [AdminStorageProductController::class, 'import']);
+            Route::post('/articles/paginate', [AdminStorageProductController::class, 'paginate']);
+            Route::patch('/articles/status', [AdminStorageProductController::class, 'status']);
+            Route::patch('/articles/{field}', [AdminStorageProductController::class, 'boolean']);
+            Route::delete('/articles/{id}', [AdminStorageProductController::class, 'delete']);
+            Route::get('/articles/laboratories/{id}/principles', [AdminStorageProductController::class, 'principles']);
+            Route::get('/articles/{id}/stock-by-warehouse', [AdminStorageProductController::class, 'stockByWarehouse']);
+
+            Route::post('/entry-notes', [AdminStorageEntryNoteController::class, 'save']);
+            Route::post('/entry-notes/paginate', [AdminStorageEntryNoteController::class, 'paginate']);
+            Route::patch('/entry-notes/status', [AdminStorageEntryNoteController::class, 'status']);
+            Route::patch('/entry-notes/{field}', [AdminStorageEntryNoteController::class, 'boolean']);
+            Route::delete('/entry-notes/{id}', [AdminStorageEntryNoteController::class, 'delete']);
+            Route::get('/entry-notes/businesses/{id}/branches', [AdminStorageEntryNoteController::class, 'branches']);
+            Route::get('/entry-notes/current-stock', [AdminStorageEntryNoteController::class, 'currentStock']);
+
+            Route::post('/exit-notes', [AdminStorageExitNoteController::class, 'save']);
+            Route::post('/exit-notes/paginate', [AdminStorageExitNoteController::class, 'paginate']);
+            Route::patch('/exit-notes/status', [AdminStorageExitNoteController::class, 'status']);
+            Route::patch('/exit-notes/{field}', [AdminStorageExitNoteController::class, 'boolean']);
+            Route::delete('/exit-notes/{id}', [AdminStorageExitNoteController::class, 'delete']);
+            Route::get('/exit-notes/businesses/{id}/branches', [AdminStorageExitNoteController::class, 'branches']);
+
+            Route::post('/kardex/paginate', [AdminStorageKardexController::class, 'paginate']);
+
+            Route::post('/general-service', [AdminStorageGeneralServiceController::class, 'save']);
+            Route::post('/general-service/paginate', [AdminStorageGeneralServiceController::class, 'paginate']);
+            Route::patch('/general-service/status', [AdminStorageGeneralServiceController::class, 'status']);
+            Route::patch('/general-service/{field}', [AdminStorageGeneralServiceController::class, 'boolean']);
+            Route::delete('/general-service/{id}', [AdminStorageGeneralServiceController::class, 'delete']);
+
+            Route::post('/billing-control', [AdminStorageBillingControlController::class, 'save']);
+            Route::post('/billing-control/paginate', [AdminStorageBillingControlController::class, 'paginate']);
+            Route::patch('/billing-control/status', [AdminStorageBillingControlController::class, 'status']);
+            Route::patch('/billing-control/{field}', [AdminStorageBillingControlController::class, 'boolean']);
+            Route::delete('/billing-control/{id}', [AdminStorageBillingControlController::class, 'delete']);
+            Route::get('/billing-control/{id}/connector-payload', [AdminStorageBillingControlController::class, 'connectorPayload']);
+            Route::post('/billing-control/{id}/issue', [AdminStorageBillingControlController::class, 'issue']);
+            Route::post('/billing-control/{id}/cancel', [AdminStorageBillingControlController::class, 'cancel']);
+            Route::post('/billing-control/{id}/credit-note', [AdminStorageBillingControlController::class, 'creditNote']);
+            Route::post('/billing-control/{id}/provider-response', [AdminStorageBillingControlController::class, 'registerProviderResponse']);
+            Route::post('/billing-control/{id}/provider-status', [AdminStorageBillingControlController::class, 'providerStatus']);
+            Route::get('/billing-control/{id}/download/{type}', [AdminStorageBillingControlController::class, 'download'])->where('type', 'pdf|xml|cdr');
+
+            Route::post('/service-orders', [AdminStorageServiceOrderController::class, 'save']);
+            Route::post('/service-orders/paginate', [AdminStorageServiceOrderController::class, 'paginate']);
+            Route::patch('/service-orders/status', [AdminStorageServiceOrderController::class, 'status']);
+            Route::patch('/service-orders/{field}', [AdminStorageServiceOrderController::class, 'boolean']);
+            Route::delete('/service-orders/{id}', [AdminStorageServiceOrderController::class, 'delete']);
+            Route::get('/service-orders/businesses/{id}/branches', [AdminStorageServiceOrderController::class, 'branches']);
+
+            Route::post('/general-service-orders', [AdminStorageGeneralServiceOrderController::class, 'save']);
+            Route::post('/general-service-orders/paginate', [AdminStorageGeneralServiceOrderController::class, 'paginate']);
+            Route::patch('/general-service-orders/status', [AdminStorageGeneralServiceOrderController::class, 'status']);
+            Route::patch('/general-service-orders/{field}', [AdminStorageGeneralServiceOrderController::class, 'boolean']);
+            Route::delete('/general-service-orders/{id}', [AdminStorageGeneralServiceOrderController::class, 'delete']);
+            Route::get('/general-service-orders/businesses/{id}/branches', [AdminStorageGeneralServiceOrderController::class, 'branches']);
+        });
+
         Route::post('/clients', [AdminClientController::class, 'save']);
         Route::post('/clients/paginate', [AdminClientController::class, 'paginate']);
         Route::patch('/clients/status', [AdminClientController::class, 'status']);
@@ -232,6 +443,29 @@ Route::middleware('auth')->group(function () {
         Route::get('/accounts-receivable/payments/media/{filename}', [AdminAccountsReceivableController::class, 'paymentFile'])->where('filename', '.*');
         Route::post('/sales-report/paginate', [AdminSalesReportController::class, 'paginate']);
         Route::post('/daily-summary/paginate', [AdminDailySummaryController::class, 'paginate']);
+
+        Route::post('/transactions', [AdminTransactionController::class, 'save']);
+        Route::post('/transactions/paginate', [AdminTransactionController::class, 'paginate']);
+        Route::delete('/transactions/{id}', [AdminTransactionController::class, 'delete']);
+        Route::get('/transactions/report/{date}', [AdminTransactionController::class, 'report']);
+        Route::post('/transactions/categories', [AdminTransactionCategoryController::class, 'save']);
+        Route::post('/transactions/categories/paginate', [AdminTransactionCategoryController::class, 'paginate']);
+        Route::patch('/transactions/categories/status', [AdminTransactionCategoryController::class, 'status']);
+        Route::patch('/transactions/categories/{field}', [AdminTransactionCategoryController::class, 'boolean']);
+        Route::delete('/transactions/categories/{id}', [AdminTransactionCategoryController::class, 'delete']);
+
+        Route::post('/services-client', [AdminServiceClientController::class, 'save']);
+        Route::post('/services-client/paginate', [AdminServiceClientController::class, 'paginate']);
+        Route::patch('/services-client/status', [AdminServiceClientController::class, 'status']);
+        Route::patch('/services-client/{field}', [AdminServiceClientController::class, 'boolean']);
+        Route::delete('/services-client/{id}', [AdminServiceClientController::class, 'delete']);
+        Route::get('/services-client/document/{type}/{number}', [AdminServiceClientController::class, 'lookupByDocument']);
+
+        Route::post('/sample-orders', [AdminSampleOrderController::class, 'save']);
+        Route::post('/sample-orders/paginate', [AdminSampleOrderController::class, 'paginate']);
+        Route::patch('/sample-orders/status', [AdminSampleOrderController::class, 'status']);
+        Route::patch('/sample-orders/{field}', [AdminSampleOrderController::class, 'boolean']);
+        Route::delete('/sample-orders/{id}', [AdminSampleOrderController::class, 'delete']);
 
         Route::post('/dispatches', [AdminDispatchController::class, 'save']);
         Route::post('/dispatches/paginate', [AdminDispatchController::class, 'paginate']);

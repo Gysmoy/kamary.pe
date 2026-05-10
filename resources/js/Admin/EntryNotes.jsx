@@ -715,8 +715,9 @@ const EntryNotes = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can(scopedPermission('entry-note')) && !properties.hasRole('Admin')) location.href = '/admin/';
-  createRoot(el).render(<BaseAdminto {...properties} title='Notas de entrada'>
+  const requiredPermission = properties.requiredPermission ?? scopedPermission('entry-note')
+  if (!properties.can(requiredPermission) && !properties.hasRole('Admin')) location.href = '/admin/';
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Notas de entrada'}>
     <EntryNotes {...properties} />
   </BaseAdminto>);
 })

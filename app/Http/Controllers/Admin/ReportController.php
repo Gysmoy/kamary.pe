@@ -6,9 +6,11 @@ use App\Http\Classes\dxResponse;
 use App\Http\Controllers\BasicController;
 use App\Models\dxDataGrid;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
+use Illuminate\Support\Facades\DB;
 use SoDe\Extend\Response;
 
 class ReportController extends BasicController
@@ -38,12 +40,8 @@ class ReportController extends BasicController
             $totalCount = 0;
             if ($request->requireTotalCount) {
                 $instance4count = clone $instance;
-                if ($instance4count instanceof EloquentBuilder) {
-                    $instance4count->getQuery()->orders = null;
-                } else {
-                    $instance4count->orders = null;
-                }
-                $totalCount = (clone $instance4count)->count();
+                $this->clearReportPagination($instance4count);
+                $totalCount = DB::query()->fromSub($instance4count, 'report_count')->count();
             }
 
             $jpas = $request->isLoadingAll
@@ -60,5 +58,15 @@ class ReportController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    private function clearReportPagination(EloquentBuilder|QueryBuilder $query): void
+    {
+        $baseQuery = $query instanceof EloquentBuilder ? $query->getQuery() : $query;
+
+        $baseQuery->orders = null;
+        $baseQuery->unionOrders = null;
+        $baseQuery->limit = null;
+        $baseQuery->offset = null;
     }
 }

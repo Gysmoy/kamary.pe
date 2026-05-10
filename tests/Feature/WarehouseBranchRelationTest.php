@@ -28,13 +28,7 @@ class WarehouseBranchRelationTest extends TestCase
     public function test_warehouse_requires_branch_and_can_be_created_with_valid_branch(): void
     {
         $user = $this->makeUser();
-        $business = Business::create([
-            'name' => 'Empresa Warehouse',
-            'description' => null,
-            'status' => true,
-            'created_by' => $user->id,
-            'updated_by' => $user->id,
-        ]);
+        $business = Business::where('business_key', 'kamary_peru')->firstOrFail();
         $branch = $business->branches()->create([
             'name' => 'Sede Warehouse',
             'status' => true,
@@ -63,4 +57,3 @@ class WarehouseBranchRelationTest extends TestCase
         ]);
     }
 }
-

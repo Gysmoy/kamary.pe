@@ -10,6 +10,7 @@ class Unit extends Model
     use HasFactory;
 
     protected $fillable = [
+        'module_scope',
         'name',
         'symbol',
         'status',

@@ -1,9 +1,18 @@
 import BasicRest from "../BasicRest";
 import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import { isMagistralesPath } from "../../Utils/permissionScope";
 
 class PurchaseOrdersRest extends BasicRest {
-  path = 'admin/purchase-orders'
+  path = isMagistralesPath() ? 'admin/magistrales/purchase-orders' : 'admin/purchase-orders'
+
+  articlesPath = () => isMagistralesPath() ? 'admin/magistrales/articles' : 'admin/articles'
+
+  suppliersPath = () => isMagistralesPath() ? 'admin/magistrales/suppliers' : 'admin/suppliers'
+
+  articlesPaginateApi = () => `/api/${this.articlesPath()}/paginate`
+
+  suppliersPaginateApi = () => `/api/${this.suppliersPath()}/paginate`
 
   getBranchesByBusiness = async (businessId) => {
     if (!businessId) return []
@@ -14,7 +23,7 @@ class PurchaseOrdersRest extends BasicRest {
   getArticleById = async (articleId) => {
     if (!articleId) return null
     try {
-      const { status, result } = await Fetch('/api/admin/articles/paginate', {
+      const { status, result } = await Fetch(this.articlesPaginateApi(), {
         method: 'POST',
         body: JSON.stringify({
           take: 1,

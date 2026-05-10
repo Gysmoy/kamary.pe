@@ -8,6 +8,32 @@ use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\AccountsPayableController as AdminAccountsPayableController;
 use App\Http\Controllers\Admin\PurchaseOrderController as AdminPurchaseOrderController;
 use App\Http\Controllers\Admin\PurchaseReceiptController as AdminPurchaseReceiptController;
+use App\Http\Controllers\Admin\Magistrales\ArticleController as AdminMagistralesArticleController;
+use App\Http\Controllers\Admin\Magistrales\CategoryController as AdminMagistralesCategoryController;
+use App\Http\Controllers\Admin\Magistrales\FormatController as AdminMagistralesFormatController;
+use App\Http\Controllers\Admin\Magistrales\FormulaController as AdminMagistralesFormulaController;
+use App\Http\Controllers\Admin\Magistrales\IncomeController as AdminMagistralesIncomeController;
+use App\Http\Controllers\Admin\Magistrales\InventoryController as AdminMagistralesInventoryController;
+use App\Http\Controllers\Admin\Magistrales\KardexController as AdminMagistralesKardexController;
+use App\Http\Controllers\Admin\Magistrales\LaboratoryController as AdminMagistralesLaboratoryController;
+use App\Http\Controllers\Admin\Magistrales\OutputController as AdminMagistralesOutputController;
+use App\Http\Controllers\Admin\Magistrales\ProductionOrderController as AdminMagistralesProductionOrderController;
+use App\Http\Controllers\Admin\Magistrales\PurchaseOrderController as AdminMagistralesPurchaseOrderController;
+use App\Http\Controllers\Admin\Magistrales\ResponsibleController as AdminMagistralesResponsibleController;
+use App\Http\Controllers\Admin\Magistrales\SaleController as AdminMagistralesSaleController;
+use App\Http\Controllers\Admin\Magistrales\SupplierController as AdminMagistralesSupplierController;
+use App\Http\Controllers\Admin\Magistrales\UnitController as AdminMagistralesUnitController;
+use App\Http\Controllers\Admin\Storage\BillingControlController as AdminStorageBillingControlController;
+use App\Http\Controllers\Admin\Storage\ClientController as AdminStorageClientController;
+use App\Http\Controllers\Admin\Storage\EntryNoteController as AdminStorageEntryNoteController;
+use App\Http\Controllers\Admin\Storage\ExitNoteController as AdminStorageExitNoteController;
+use App\Http\Controllers\Admin\Storage\GeneralServiceController as AdminStorageGeneralServiceController;
+use App\Http\Controllers\Admin\Storage\GeneralServiceOrderController as AdminStorageGeneralServiceOrderController;
+use App\Http\Controllers\Admin\Storage\InventoryController as AdminStorageInventoryController;
+use App\Http\Controllers\Admin\Storage\KardexController as AdminStorageKardexController;
+use App\Http\Controllers\Admin\Storage\ProductController as AdminStorageProductController;
+use App\Http\Controllers\Admin\Storage\ServiceOrderController as AdminStorageServiceOrderController;
+use App\Http\Controllers\Admin\Storage\UnitController as AdminStorageUnitController;
 use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\ActivityController as AdminActivityController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
@@ -36,11 +62,13 @@ use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\RepositoryController as AdminRepositoryController;
 use App\Http\Controllers\Admin\CardController as AdminCardController;
-use App\Http\Controllers\Admin\ComingSoonController as AdminComingSoonController;
 use App\Http\Controllers\Admin\LaboratoryController as AdminLaboratoryController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\ServiceCatalogController as AdminServiceCatalogController;
+use App\Http\Controllers\Admin\ServiceClientController as AdminServiceClientController;
 use App\Http\Controllers\Admin\ServiceOrderController as AdminServiceOrderController;
+use App\Http\Controllers\Admin\SampleOrderController as AdminSampleOrderController;
+use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Admin\UnitController as AdminUnitController;
 use App\Http\Controllers\Admin\VehicleZoneController as AdminVehicleZoneController;
 use App\Http\Controllers\Admin\WarehouseController as AdminWarehouseController;
@@ -91,16 +119,16 @@ Route::middleware('auth')->group(function () {
         Route::get('/categories', fn() => redirect('/admin/laboratories'));
         Route::get('/units', [AdminUnitController::class, 'reactView']);
         Route::get('/units-of-measure', fn() => redirect('/admin/units'));
-        Route::get('/magistrales/units', [AdminUnitController::class, 'reactView']);
+        Route::get('/magistrales/units', [AdminMagistralesUnitController::class, 'reactView']);
         Route::get('/magistrales/units-of-measure', fn() => redirect('/admin/magistrales/units'));
-        Route::get('/magistrales/laboratories', [AdminLaboratoryController::class, 'reactView']);
-        Route::get('/magistrales/categories', fn() => redirect('/admin/magistrales/laboratories'));
+        Route::get('/magistrales/laboratories', [AdminMagistralesLaboratoryController::class, 'reactView']);
+        Route::get('/magistrales/categories', [AdminMagistralesCategoryController::class, 'reactView']);
 
         // Administración
         Route::get('/purchase-orders', [AdminPurchaseOrderController::class, 'reactView']);
         Route::get('/purchase-receipts', [AdminPurchaseReceiptController::class, 'reactView']);
         Route::get('/accounts-payable', [AdminAccountsPayableController::class, 'reactView']);
-        Route::get('/expenses', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/expenses', [AdminTransactionController::class, 'reactView']);
         Route::get('/daily-summary', [AdminDailySummaryController::class, 'reactView']);
 
         // Comercial
@@ -115,17 +143,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/inventory', [AdminInventoryReportController::class, 'reactView']);
 
         // Serv. Almacen...
-        Route::get('/storage-inventory', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/storage-clients', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/service-orders', [AdminServiceOrderController::class, 'reactView']);
-        Route::get('/storage-units', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/storage-products', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/storage-entry-note', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/storage-exit-note', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/storage-kardex', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/storage-general-service', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/storage-billing-control', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/storage-general-service-orders', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/storage-inventory', [AdminStorageInventoryController::class, 'reactView']);
+        Route::get('/storage-clients', [AdminStorageClientController::class, 'reactView']);
+        Route::get('/service-orders', [AdminStorageServiceOrderController::class, 'reactView']);
+        Route::get('/storage-units', [AdminStorageUnitController::class, 'reactView']);
+        Route::get('/storage-products', [AdminStorageProductController::class, 'reactView']);
+        Route::get('/storage-entry-note', [AdminStorageEntryNoteController::class, 'reactView']);
+        Route::get('/storage-exit-note', [AdminStorageExitNoteController::class, 'reactView']);
+        Route::get('/storage-kardex', [AdminStorageKardexController::class, 'reactView']);
+        Route::get('/storage-general-service', [AdminStorageGeneralServiceController::class, 'reactView']);
+        Route::get('/storage-billing-control', [AdminStorageBillingControlController::class, 'reactView']);
+        Route::get('/storage-general-service-orders', [AdminStorageGeneralServiceOrderController::class, 'reactView']);
 
         // Despacho
         Route::get('/activity', [AdminActivityController::class, 'reactView']);
@@ -134,7 +162,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/vehicle-zone', [AdminVehicleZoneController::class, 'reactView']);
 
         // Servicios
-        Route::get('/services-client', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/services-client', [AdminServiceClientController::class, 'reactView']);
         Route::get('/services-billing', [AdminBillingDocumentController::class, 'reactView']);
         Route::get('/services-service-order', [AdminServiceOrderController::class, 'reactView']);
         Route::get('/services-services', [AdminServiceCatalogController::class, 'reactView']);
@@ -142,37 +170,44 @@ Route::middleware('auth')->group(function () {
         Route::get('/billing-documents', [AdminBillingDocumentController::class, 'reactView']);
 
         // Muestras
-        Route::get('/sample-orders', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/sample-orders', [AdminSampleOrderController::class, 'reactView']);
 
         // Magistrales
-        Route::get('/magistrales/articles', [AdminArticleController::class, 'reactView']);
-        Route::get('/magistrales-articles', [AdminArticleController::class, 'reactView']);
+        Route::get('/magistrales/articles', [AdminMagistralesArticleController::class, 'reactView']);
+        Route::get('/magistrales-articles', [AdminMagistralesArticleController::class, 'reactView']);
         Route::get('/magistrales/batches', [AdminBatchController::class, 'reactView']);
         Route::get('/magistrales/entry-note', [AdminEntryNoteController::class, 'reactView']);
         Route::get('/magistrales/exit-note', [AdminExitNoteController::class, 'reactView']);
-        Route::get('/magistrales/purchase-orders', [AdminPurchaseOrderController::class, 'reactView']);
+        Route::get('/magistrales/purchase-orders', [AdminMagistralesPurchaseOrderController::class, 'reactView']);
         Route::get('/magistrales/purchase-receipts', [AdminPurchaseReceiptController::class, 'reactView']);
         Route::get('/magistrales/accounts-payable', [AdminAccountsPayableController::class, 'reactView']);
         Route::get('/magistrales/billing-settings', [AdminBillingSettingsController::class, 'reactView']);
         Route::get('/magistrales/billing-documents', [AdminBillingDocumentController::class, 'reactView']);
-        Route::get('/magistrales-category', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/magistrales-formats', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/magistrales-formulas', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/magistrales-incomes', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/magistrales/inventory', [AdminInventoryController::class, 'reactView']);
-        Route::get('/magistrales-inventory', [AdminInventoryController::class, 'reactView']);
-        Route::get('/magistrales/kardex', [AdminKardexController::class, 'reactView']);
-        Route::get('/magistrales-kardex', [AdminKardexController::class, 'reactView']);
-        Route::get('/magistrales-laboratory', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/magistrales-category', [AdminMagistralesCategoryController::class, 'reactView']);
+        Route::get('/magistrales/formats', [AdminMagistralesFormatController::class, 'reactView']);
+        Route::get('/magistrales-formats', [AdminMagistralesFormatController::class, 'reactView']);
+        Route::get('/magistrales/formulas', [AdminMagistralesFormulaController::class, 'reactView']);
+        Route::get('/magistrales-formulas', [AdminMagistralesFormulaController::class, 'reactView']);
+        Route::get('/magistrales/incomes', [AdminMagistralesIncomeController::class, 'reactView']);
+        Route::get('/magistrales-incomes', [AdminMagistralesIncomeController::class, 'reactView']);
+        Route::get('/magistrales/inventory', [AdminMagistralesInventoryController::class, 'reactView']);
+        Route::get('/magistrales-inventory', [AdminMagistralesInventoryController::class, 'reactView']);
+        Route::get('/magistrales/kardex', [AdminMagistralesKardexController::class, 'reactView']);
+        Route::get('/magistrales-kardex', [AdminMagistralesKardexController::class, 'reactView']);
+        Route::get('/magistrales-laboratory', [AdminMagistralesLaboratoryController::class, 'reactView']);
         Route::get('/magistrales-purchase-order', fn() => redirect('/admin/magistrales/purchase-orders'));
-        Route::get('/magistrales-production-order', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/magistrales/suppliers', [AdminSupplierController::class, 'reactView']);
+        Route::get('/magistrales/production-orders', [AdminMagistralesProductionOrderController::class, 'reactView']);
+        Route::get('/magistrales-production-order', [AdminMagistralesProductionOrderController::class, 'reactView']);
+        Route::get('/magistrales/suppliers', [AdminMagistralesSupplierController::class, 'reactView']);
         Route::get('/magistrales/warehouses', [AdminWarehouseController::class, 'reactView']);
-        Route::get('/magistrales-supplier', [AdminSupplierController::class, 'reactView']);
-        Route::get('/magistrales-responsible', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/magistrales-outputs', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/magistrales-unit', [AdminComingSoonController::class, 'reactView']);
-        Route::get('/magistrales-sales', [AdminComingSoonController::class, 'reactView']);
+        Route::get('/magistrales-supplier', [AdminMagistralesSupplierController::class, 'reactView']);
+        Route::get('/magistrales/responsibles', [AdminMagistralesResponsibleController::class, 'reactView']);
+        Route::get('/magistrales-responsible', [AdminMagistralesResponsibleController::class, 'reactView']);
+        Route::get('/magistrales/outputs', [AdminMagistralesOutputController::class, 'reactView']);
+        Route::get('/magistrales-outputs', [AdminMagistralesOutputController::class, 'reactView']);
+        Route::get('/magistrales-unit', [AdminMagistralesUnitController::class, 'reactView']);
+        Route::get('/magistrales/sales', [AdminMagistralesSaleController::class, 'reactView']);
+        Route::get('/magistrales-sales', [AdminMagistralesSaleController::class, 'reactView']);
 
         Route::get('/users', [AdminUserController::class, 'reactView']);
         Route::get('/roles', [AdminRoleController::class, 'reactView']);

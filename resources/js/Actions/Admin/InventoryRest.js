@@ -1,9 +1,12 @@
 import BasicRest from "../BasicRest";
 import { Cookies, Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import { isMagistralesPath, isStoragePath } from "../../Utils/permissionScope";
 
 class InventoryRest extends BasicRest {
-  path = 'admin/inventory'
+  path = isMagistralesPath()
+    ? 'admin/magistrales/inventory'
+    : (isStoragePath() ? 'admin/storage/inventory' : 'admin/inventory')
   filters = {
     business_id: '',
     business_branch_id: '',

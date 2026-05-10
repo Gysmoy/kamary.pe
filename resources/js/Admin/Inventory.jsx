@@ -8,7 +8,7 @@ import { scopedPermission } from '../Utils/permissionScope';
 
 const inventoryRest = new InventoryRest()
 
-const Inventory = () => {
+const Inventory = ({ moduleTitle = 'Inventario' }) => {
   const gridRef = useRef()
   const [businesses, setBusinesses] = useState([])
   const [branches, setBranches] = useState([])
@@ -74,7 +74,7 @@ const Inventory = () => {
       <div className='col-12'>
         <Table
           gridRef={gridRef}
-          title='Inventario'
+          title={moduleTitle}
           rest={inventoryRest}
           pageSize={25}
           toolBar={(container) => {
@@ -130,8 +130,9 @@ const Inventory = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can(scopedPermission('inventory')) && !properties.hasRole('Admin')) location.href = '/admin/';
-  createRoot(el).render(<BaseAdminto {...properties} title='Inventario'>
+  const requiredPermission = properties.requiredPermission ?? scopedPermission('inventory')
+  if (!properties.can(requiredPermission) && !properties.hasRole('Admin')) location.href = '/admin/';
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Inventario'}>
     <Inventory {...properties} />
   </BaseAdminto>);
 })

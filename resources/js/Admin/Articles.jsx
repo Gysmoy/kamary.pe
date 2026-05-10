@@ -103,7 +103,8 @@ const getStockByPresentation = (stockUnits, presentations) => {
     })
 }
 
-const Articles = () => {
+const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
+  const isMagistrales = moduleScope === 'magistrales'
   const gridRef = useRef()
   const modalRef = useRef()
   const stockModalRef = useRef()
@@ -115,6 +116,13 @@ const Articles = () => {
   const idRef = useRef()
   const codeRef = useRef()
   const nameRef = useRef()
+  const compositionRef = useRef()
+  const articleTypeRef = useRef()
+  const administrationRouteRef = useRef()
+  const magistralCategoryRef = useRef()
+  const subCategoryRef = useRef()
+  const magistralFormatRef = useRef()
+  const healthRegistrationRef = useRef()
   const laboratoryRef = useRef()
   const principleRef = useRef()
   const unitRef = useRef()
@@ -123,18 +131,36 @@ const Articles = () => {
   const igvRuleRef = useRef()
   const unitsPerArticleRef = useRef()
   const unitWeightRef = useRef()
+  const defaultLotRef = useRef()
+  const defaultExpirationDateRef = useRef()
+  const stockMinRef = useRef()
+  const stockMaxRef = useRef()
+  const currencyRef = useRef()
+  const stockHasExpirationRef = useRef()
+  const stockHasLotRef = useRef()
+  const statusRef = useRef()
+  const costPriceRef = useRef()
+  const salePriceRef = useRef()
+  const equivalenceExchangeRateRef = useRef()
+  const equivalenceQuantityRef = useRef()
+  const equivalenceUnitRef = useRef()
+  const salePriceNationalRef = useRef()
+  const purchasePriceNationalRef = useRef()
+  const purchasePriceForeignRef = useRef()
   const notesRef = useRef()
   const newPrincipleNameRef = useRef()
   const newUnitNameRef = useRef()
   const newUnitSymbolRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
+  const [isViewing, setIsViewing] = useState(false)
   const [principles, setPrinciples] = useState([])
   const [units, setUnits] = useState([])
   const [presentations, setPresentations] = useState([emptyPresentation()])
   const [selectedLaboratoryId, setSelectedLaboratoryId] = useState('')
   const [selectedPrincipleId, setSelectedPrincipleId] = useState('')
   const [selectedUnitId, setSelectedUnitId] = useState('')
+  const [selectedEquivalenceUnitId, setSelectedEquivalenceUnitId] = useState('')
   const [isImporting, setIsImporting] = useState(false)
   const [isLoadingStock, setIsLoadingStock] = useState(false)
   const [stockArticle, setStockArticle] = useState(null)
@@ -151,16 +177,22 @@ const Articles = () => {
     status: '',
   })
 
-  const loadUnits = async (preferredUnitId = null) => {
+  const loadUnits = async (preferredUnitId = null, preferredEquivalenceUnitId = null) => {
     const list = await articlesRest.getUnits()
     const active = list.filter(item => item.status !== null)
     setUnits(active)
 
     if (preferredUnitId && active.some(item => `${item.id}` === `${preferredUnitId}`)) {
       setSelectedUnitId(`${preferredUnitId}`)
-      return
+    } else {
+      setSelectedUnitId('')
     }
-    setSelectedUnitId('')
+
+    if (preferredEquivalenceUnitId && active.some(item => `${item.id}` === `${preferredEquivalenceUnitId}`)) {
+      setSelectedEquivalenceUnitId(`${preferredEquivalenceUnitId}`)
+    } else {
+      setSelectedEquivalenceUnitId('')
+    }
   }
 
   const loadPrinciples = async (laboratoryId, preferredPrincipleId = null) => {
@@ -181,18 +213,55 @@ const Articles = () => {
     setSelectedPrincipleId('')
   }
 
-  const onModalOpen = async (data = null) => {
+  const onModalOpen = async (data = null, mode = 'edit') => {
     setIsEditing(!!data?.id)
+    setIsViewing(mode === 'view')
 
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? ''
     nameRef.current.value = data?.name ?? ''
-    volumeRef.current.value = data?.volume ?? ''
+    if (compositionRef.current) compositionRef.current.value = data?.composition ?? ''
+    if (articleTypeRef.current) articleTypeRef.current.value = data?.article_type ?? ''
+    if (administrationRouteRef.current) administrationRouteRef.current.value = data?.administration_route ?? ''
+    if (subCategoryRef.current) subCategoryRef.current.value = data?.sub_category ?? ''
+    if (healthRegistrationRef.current) healthRegistrationRef.current.value = data?.health_registration ?? ''
+    if (volumeRef.current) volumeRef.current.value = data?.volume ?? ''
     if (marginRuleRef.current) marginRuleRef.current.checked = !!data?.margin_rule
     if (igvRuleRef.current) igvRuleRef.current.checked = !!data?.igv_rule
-    unitsPerArticleRef.current.value = data?.units_per_article ?? 1
-    unitWeightRef.current.value = data?.unit_weight ?? ''
-    notesRef.current.value = data?.notes ?? ''
+    if (unitsPerArticleRef.current) unitsPerArticleRef.current.value = data?.units_per_article ?? 1
+    if (unitWeightRef.current) unitWeightRef.current.value = data?.unit_weight ?? ''
+    if (defaultLotRef.current) defaultLotRef.current.value = data?.default_lot ?? ''
+    if (defaultExpirationDateRef.current) defaultExpirationDateRef.current.value = data?.default_expiration_date ? data.default_expiration_date.toString().slice(0, 10) : ''
+    if (stockMinRef.current) stockMinRef.current.value = data?.stock_min ?? ''
+    if (stockMaxRef.current) stockMaxRef.current.value = data?.stock_max ?? ''
+    if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
+    if (stockHasExpirationRef.current) stockHasExpirationRef.current.checked = !!data?.stock_has_expiration
+    if (stockHasLotRef.current) stockHasLotRef.current.checked = !!data?.stock_has_lot
+    if (statusRef.current) statusRef.current.checked = data?.status !== false && data?.status !== 0
+    if (costPriceRef.current) costPriceRef.current.value = data?.cost_price ?? ''
+    if (salePriceRef.current) salePriceRef.current.value = data?.sale_price ?? ''
+    if (equivalenceExchangeRateRef.current) equivalenceExchangeRateRef.current.value = data?.equivalence_exchange_rate ?? ''
+    if (equivalenceQuantityRef.current) equivalenceQuantityRef.current.value = data?.equivalence_quantity ?? ''
+    if (salePriceNationalRef.current) salePriceNationalRef.current.value = data?.sale_price_national ?? ''
+    if (purchasePriceNationalRef.current) purchasePriceNationalRef.current.value = data?.purchase_price_national ?? ''
+    if (purchasePriceForeignRef.current) purchasePriceForeignRef.current.value = data?.purchase_price_foreign ?? ''
+    if (notesRef.current) notesRef.current.value = data?.notes ?? ''
+
+    if (magistralCategoryRef.current) {
+      if (data?.magistral_category_id && data?.magistralCategory?.description) {
+        SetSelectValue(magistralCategoryRef.current, data.magistral_category_id, data.magistralCategory.description)
+      } else {
+        $(magistralCategoryRef.current).empty().trigger('change')
+      }
+    }
+
+    if (magistralFormatRef.current) {
+      if (data?.magistral_format_id && data?.magistralFormat?.description) {
+        SetSelectValue(magistralFormatRef.current, data.magistral_format_id, data.magistralFormat.description)
+      } else {
+        $(magistralFormatRef.current).empty().trigger('change')
+      }
+    }
 
     const laboratoryId = data?.laboratory_id ? `${data.laboratory_id}` : ''
     setSelectedLaboratoryId(laboratoryId)
@@ -211,7 +280,7 @@ const Articles = () => {
     setPresentations(presentationRows.length ? presentationRows : [emptyPresentation()])
 
     $(modalRef.current).modal('show')
-    await loadUnits(data?.unit_id ?? null)
+    await loadUnits(data?.unit_id ?? null, data?.equivalence_unit_id ?? null)
     await loadPrinciples(data?.laboratory_id ?? null, data?.active_principle_id ?? null)
   }
 
@@ -222,15 +291,38 @@ const Articles = () => {
       id: idRef.current.value || undefined,
       code: codeRef.current.value.trim(),
       name: nameRef.current.value.trim(),
+      composition: compositionRef.current?.value?.trim() ?? '',
+      article_type: articleTypeRef.current?.value?.trim() ?? '',
+      administration_route: administrationRouteRef.current?.value?.trim() ?? '',
+      magistral_category_id: magistralCategoryRef.current?.value || null,
+      sub_category: subCategoryRef.current?.value?.trim() ?? '',
+      magistral_format_id: magistralFormatRef.current?.value || null,
+      health_registration: healthRegistrationRef.current?.value?.trim() ?? '',
       laboratory_id: selectedLaboratoryId || null,
       active_principle_id: selectedPrincipleId || null,
       unit_id: selectedUnitId || null,
-      volume: volumeRef.current.value,
-      margin_rule: marginRuleRef.current.checked,
-      igv_rule: igvRuleRef.current.checked,
-      units_per_article: unitsPerArticleRef.current.value,
-      unit_weight: unitWeightRef.current.value,
-      notes: notesRef.current.value.trim(),
+      volume: volumeRef.current?.value ?? '',
+      margin_rule: marginRuleRef.current?.checked ?? false,
+      igv_rule: igvRuleRef.current?.checked ?? false,
+      units_per_article: unitsPerArticleRef.current?.value || 1,
+      ...(isMagistrales ? { status: statusRef.current?.checked ?? true } : {}),
+      unit_weight: unitWeightRef.current?.value ?? '',
+      default_lot: defaultLotRef.current?.value?.trim() ?? '',
+      default_expiration_date: defaultExpirationDateRef.current?.value || null,
+      stock_min: stockMinRef.current?.value ?? '',
+      stock_max: stockMaxRef.current?.value ?? '',
+      currency: currencyRef.current?.value ?? '',
+      stock_has_expiration: stockHasExpirationRef.current?.checked ?? false,
+      stock_has_lot: stockHasLotRef.current?.checked ?? false,
+      cost_price: costPriceRef.current?.value ?? '',
+      sale_price: salePriceRef.current?.value ?? '',
+      equivalence_exchange_rate: equivalenceExchangeRateRef.current?.value ?? '',
+      equivalence_quantity: equivalenceQuantityRef.current?.value ?? '',
+      equivalence_unit_id: selectedEquivalenceUnitId || null,
+      sale_price_national: salePriceNationalRef.current?.value ?? '',
+      purchase_price_national: purchasePriceNationalRef.current?.value ?? '',
+      purchase_price_foreign: purchasePriceForeignRef.current?.value ?? '',
+      notes: notesRef.current?.value?.trim() ?? '',
       presentations: presentations.map(item => ({
         name: (item.name ?? '').toString().trim(),
         units: item.units,
@@ -473,10 +565,185 @@ const Articles = () => {
     status: mapping.status ? (row[mapping.status] ?? '') : '',
   }))
 
+  const igvColumn = {
+    dataField: 'igv_rule',
+    caption: isMagistrales ? 'Afecto IGV' : 'Regla IGV',
+    dataType: 'boolean',
+    width: isMagistrales ? '105px' : '95px',
+    cellTemplate: (container, { data }) => {
+      $(container).empty()
+      if (data.status === null) return
+      ReactAppend(container, <SwitchFormGroup checked={data.igv_rule == 1} onChange={() => onBooleanChange({
+        id: data.id,
+        field: 'igv_rule',
+        value: !data.igv_rule
+      })} />)
+    }
+  }
+
+  const statusColumn = {
+    dataField: 'status',
+    caption: 'Estado',
+    dataType: 'boolean',
+    width: '95px',
+    cellTemplate: (container, { data }) => {
+      $(container).empty()
+      if (data.status === null) return
+      ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
+        id: data.id,
+        field: 'status',
+        value: !data.status
+      })} />)
+    }
+  }
+
+  const actionsColumn = {
+    caption: 'Acciones',
+    width: '120px',
+    cellTemplate: (container, { data }) => {
+      container.css('text-overflow', 'unset')
+      if (isMagistrales) {
+        container.append(DxButton({
+          className: 'btn btn-xs btn-soft-success',
+          title: 'Mostrar',
+          icon: 'mdi mdi-eye',
+          onClick: () => onModalOpen(data, 'view')
+        }))
+        container.append(DxButton({
+          className: 'btn btn-xs btn-soft-info',
+          title: 'Editar',
+          icon: 'mdi mdi-pencil',
+          onClick: () => onModalOpen(data)
+        }))
+        return
+      }
+
+      container.append(DxButton({
+        className: 'btn btn-xs btn-soft-primary',
+        title: 'Editar',
+        icon: 'mdi mdi-pencil',
+        onClick: () => onModalOpen(data)
+      }))
+      container.append(DxButton({
+        className: 'btn btn-xs btn-soft-info',
+        title: 'Stock por almacen',
+        icon: 'mdi mdi-package-variant-closed',
+        onClick: () => onOpenStockModal(data)
+      }))
+      container.append(DxButton({
+        className: 'btn btn-xs btn-soft-danger',
+        title: 'Eliminar articulo',
+        icon: 'mdi mdi-delete',
+        onClick: () => onDeleteClicked(data.id)
+      }))
+    },
+    allowFiltering: false,
+    allowExporting: false
+  }
+
+  const unitColumn = {
+    dataField: 'unit.symbol',
+    caption: 'Unidad',
+    width: '110px',
+    cellTemplate: (container, { data }) => container.text(data?.unit?.symbol || data?.unit?.name || '')
+  }
+
+  const presentationsColumn = {
+    dataField: 'presentations.name',
+    caption: isMagistrales ? 'Equivalencias' : 'Presentaciones',
+    allowFiltering: false,
+    minWidth: 220,
+    cellTemplate: (container, { data }) => {
+      const lines = (data?.presentations ?? []).map(item => `${item.name} (${Number(item.units).toFixed(2)}) - S/. ${Number(item.price).toFixed(2)}`)
+      ReactAppend(container, <div>
+        {lines.length === 0 && <small className='text-muted'>Sin presentaciones</small>}
+        {lines.map((line, idx) => <div key={`p-${data.id}-${idx}`}><small>{line}</small></div>)}
+      </div>)
+    }
+  }
+
+  const auditColumns = [
+    { dataField: 'notes', caption: 'Notas', visible: false },
+    { dataField: 'composition', caption: 'Composicion', visible: false },
+    {
+      dataField: 'creator.fullname',
+      caption: 'Creado por',
+      visible: false,
+      cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
+    },
+    {
+      dataField: 'updater.fullname',
+      caption: 'Actualizado por',
+      visible: false,
+      cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
+    },
+  ]
+
+  const magistralesColumns = [
+    actionsColumn,
+    { dataField: 'id', caption: 'ID', visible: false },
+    { dataField: 'code', caption: 'Codigo', width: '130px' },
+    { dataField: 'article_type', caption: 'Tipo', width: '120px' },
+    { dataField: 'magistralFormat.description', caption: 'Presentacion', width: '150px' },
+    { dataField: 'administration_route', caption: 'Via adm.', width: '120px' },
+    { dataField: 'name', caption: 'Articulo', minWidth: 200 },
+    { dataField: 'laboratory.name', caption: 'Laboratorio', width: '150px' },
+    igvColumn,
+    { dataField: 'default_expiration_date', caption: 'F. venc.', width: '110px', dataType: 'date' },
+    { dataField: 'default_lot', caption: 'Lote', width: '110px' },
+    statusColumn,
+    { dataField: 'magistralCategory.description', caption: 'Categoria', visible: false },
+    { dataField: 'sub_category', caption: 'Sub categoria', visible: false },
+    { dataField: 'health_registration', caption: 'R. sanitario', visible: false },
+    { dataField: 'activePrinciple.name', caption: 'Principio activo', visible: false },
+    { ...unitColumn, visible: false },
+    { dataField: 'stock_min', caption: 'Min.', visible: false },
+    { dataField: 'stock_max', caption: 'Max.', visible: false },
+    { dataField: 'currency', caption: 'Moneda', visible: false },
+    { dataField: 'cost_price', caption: 'Costo', visible: false },
+    { dataField: 'sale_price', caption: 'P. venta', visible: false },
+    { ...presentationsColumn, visible: false },
+    ...auditColumns,
+  ]
+
+  const standardColumns = [
+    { dataField: 'id', caption: 'ID', visible: false },
+    { dataField: 'code', caption: 'Codigo', width: '130px' },
+    { dataField: 'name', caption: 'Articulo', minWidth: 180 },
+    { dataField: 'laboratory.name', caption: 'Laboratorio', width: '150px' },
+    { dataField: 'activePrinciple.name', caption: 'Principio activo', width: '180px' },
+    unitColumn,
+    { dataField: 'volume', caption: 'Volumen', width: '100px' },
+    { dataField: 'units_per_article', caption: 'Und x articulo', width: '110px' },
+    { dataField: 'unit_weight', caption: 'Peso unit.', width: '100px' },
+    {
+      dataField: 'margin_rule',
+      caption: 'Regla margen',
+      dataType: 'boolean',
+      width: '105px',
+      cellTemplate: (container, { data }) => {
+        $(container).empty()
+        if (data.status === null) return
+        ReactAppend(container, <SwitchFormGroup checked={data.margin_rule == 1} onChange={() => onBooleanChange({
+          id: data.id,
+          field: 'margin_rule',
+          value: !data.margin_rule
+        })} />)
+      }
+    },
+    igvColumn,
+    presentationsColumn,
+    ...auditColumns,
+    statusColumn,
+    actionsColumn,
+  ]
+
+  const articleColumns = isMagistrales ? magistralesColumns : standardColumns
+
   return (<>
     <Table
       gridRef={gridRef}
-      title='Articulos'
+      title={moduleTitle}
       rest={articlesRest}
       toolBar={(container) => {
         container.unshift({
@@ -507,120 +774,7 @@ const Articles = () => {
         });
       }}
       pageSize={25}
-      columns={[
-        { dataField: 'id', caption: 'ID', visible: false },
-        { dataField: 'code', caption: 'Codigo', width: '130px' },
-        { dataField: 'name', caption: 'Articulo', minWidth: 180 },
-        { dataField: 'laboratory.name', caption: 'Laboratorio', width: '150px' },
-        { dataField: 'activePrinciple.name', caption: 'Principio activo', width: '180px' },
-        {
-          dataField: 'unit.symbol',
-          caption: 'Unidad',
-          width: '110px',
-          cellTemplate: (container, { data }) => container.text(data?.unit?.symbol || data?.unit?.name || '')
-        },
-        { dataField: 'volume', caption: 'Volumen', width: '100px' },
-        { dataField: 'units_per_article', caption: 'Und x articulo', width: '110px' },
-        { dataField: 'unit_weight', caption: 'Peso unit.', width: '100px' },
-        {
-          dataField: 'margin_rule',
-          caption: 'Regla margen',
-          dataType: 'boolean',
-          width: '105px',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.margin_rule == 1} onChange={() => onBooleanChange({
-              id: data.id,
-              field: 'margin_rule',
-              value: !data.margin_rule
-            })} />)
-          }
-        },
-        {
-          dataField: 'igv_rule',
-          caption: 'Regla IGV',
-          dataType: 'boolean',
-          width: '95px',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.igv_rule == 1} onChange={() => onBooleanChange({
-              id: data.id,
-              field: 'igv_rule',
-              value: !data.igv_rule
-            })} />)
-          }
-        },
-        {
-          dataField: 'presentations.name',
-          caption: 'Presentaciones',
-          allowFiltering: false,
-          minWidth: 220,
-          cellTemplate: (container, { data }) => {
-            const lines = (data?.presentations ?? []).map(item => `${item.name} (${Number(item.units).toFixed(2)}) - S/. ${Number(item.price).toFixed(2)}`)
-            ReactAppend(container, <div>
-              {lines.length === 0 && <small className='text-muted'>Sin presentaciones</small>}
-              {lines.map((line, idx) => <div key={`p-${data.id}-${idx}`}><small>{line}</small></div>)}
-            </div>)
-          }
-        },
-        { dataField: 'notes', caption: 'Notas', visible: false },
-        {
-          dataField: 'creator.fullname',
-          caption: 'Creado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
-        },
-        {
-          dataField: 'updater.fullname',
-          caption: 'Actualizado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
-        },
-        {
-          dataField: 'status',
-          caption: 'Estado',
-          dataType: 'boolean',
-          width: '95px',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-              id: data.id,
-              field: 'status',
-              value: !data.status
-            })} />)
-          }
-        },
-        {
-          caption: 'Acciones',
-          width: '120px',
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-info',
-              title: 'Stock por almacen',
-              icon: 'mdi mdi-package-variant-closed',
-              onClick: () => onOpenStockModal(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar articulo',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.id)
-            }))
-          },
-          allowFiltering: false,
-          allowExporting: false
-        }
-      ]}
+      columns={articleColumns}
     />
 
     <Modal
@@ -690,22 +844,62 @@ const Articles = () => {
       </div>
     </Modal>
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar articulo' : 'Agregar articulo'} onSubmit={onModalSubmit} size='xl'>
+    <Modal
+      modalRef={modalRef}
+      title={isViewing ? 'Mostrar articulo' : (isEditing ? 'Editar articulo' : 'Agregar articulo')}
+      onSubmit={onModalSubmit}
+      size='xl'
+      hideButtonSubmit={isViewing}
+      btnSubmitText='Registrar'
+    >
       <div className='row' id='article-form-container'>
         <input ref={idRef} type='hidden' />
-        <InputFormGroup eRef={codeRef} label='Codigo de articulo' col='col-md-4' required />
-        <InputFormGroup eRef={nameRef} label='Nombre del articulo' col='col-md-8' required />
+        <fieldset className='row p-0 m-0' disabled={isViewing}>
+        <InputFormGroup eRef={codeRef} label={isMagistrales ? 'Codigo' : 'Codigo de articulo'} col='col-md-4' required />
+        <InputFormGroup eRef={nameRef} label={isMagistrales ? 'Descripcion' : 'Nombre del articulo'} col='col-md-8' required />
+
+        {isMagistrales && <>
+          <TextareaFormGroup eRef={compositionRef} label='Composicion' col='col-md-8' rows={2} />
+          <div className='form-group col-md-4 mb-2'>
+            <label className='form-label d-block'>Estado</label>
+            <div className='form-check form-switch'>
+              <input ref={statusRef} className='form-check-input' type='checkbox' />
+            </div>
+          </div>
+          <SelectAPIFormGroup
+            eRef={magistralCategoryRef}
+            label='Categoria'
+            col='col-md-3'
+            searchAPI='/api/admin/magistrales/categories/paginate'
+            searchBy='description'
+            dropdownParent='#article-form-container'
+          />
+          <InputFormGroup eRef={subCategoryRef} label='Sub categoria' col='col-md-3' />
+          <SelectAPIFormGroup
+            eRef={magistralFormatRef}
+            label='Presentacion'
+            col='col-md-3'
+            searchAPI='/api/admin/magistrales/formats/paginate'
+            searchBy='description'
+            dropdownParent='#article-form-container'
+          />
+          <InputFormGroup eRef={unitsPerArticleRef} label='Unidades por caja' col='col-md-3' type='number' min='1' required />
+          <InputFormGroup eRef={articleTypeRef} label='Tipo de articulo' col='col-md-3' />
+          <InputFormGroup eRef={administrationRouteRef} label='Via administracion' col='col-md-3' />
+        </>}
 
         <SelectAPIFormGroup
           eRef={laboratoryRef}
           label='Laboratorio'
           col='col-md-4'
           required
-          searchAPI='/api/admin/laboratories/paginate'
+          searchAPI={articlesRest.laboratoriesPaginateApi()}
           searchBy='name'
           dropdownParent='#article-form-container'
           onChange={onLaboratoryChanged}
         />
+
+        {isMagistrales && <InputFormGroup eRef={healthRegistrationRef} label='R. sanitario' col='col-md-4' />}
 
         <SelectFormGroup
           eRef={principleRef}
@@ -741,30 +935,81 @@ const Articles = () => {
           ))}
         </SelectFormGroup>
 
-        <InputFormGroup eRef={volumeRef} label='Volumen' col='col-md-3' type='number' step='0.001' />
-        <InputFormGroup eRef={unitsPerArticleRef} label='Unidad por articulo' col='col-md-3' type='number' min='1' required />
-        <InputFormGroup eRef={unitWeightRef} label='Peso unitario' col='col-md-3' type='number' step='0.0001' />
+        {!isMagistrales && <>
+          <InputFormGroup eRef={volumeRef} label='Volumen' col='col-md-3' type='number' step='0.001' />
+          <InputFormGroup eRef={unitsPerArticleRef} label='Unidad por articulo' col='col-md-3' type='number' min='1' required />
+          <InputFormGroup eRef={unitWeightRef} label='Peso unitario' col='col-md-3' type='number' step='0.0001' />
+          <div className='form-group col-md-3 mb-2'>
+            <label className='form-label d-block'>Regla de margen</label>
+            <div className='form-check form-switch'>
+              <input ref={marginRuleRef} className='form-check-input' type='checkbox' />
+            </div>
+          </div>
+        </>}
+
+        {isMagistrales && <>
+          <InputFormGroup eRef={stockMinRef} label='Stock minimo' col='col-md-3' type='number' min='0' step='0.001' />
+          <InputFormGroup eRef={stockMaxRef} label='Stock maximo' col='col-md-3' type='number' min='0' step='0.001' />
+          <SelectFormGroup eRef={currencyRef} label='Moneda' col='col-md-3' dropdownParent='#article-form-container'>
+            <option value='PEN'>S/ - PEN</option>
+            <option value='USD'>US$ - USD</option>
+          </SelectFormGroup>
+          <InputFormGroup eRef={costPriceRef} label='Precio costo' col='col-md-3' type='number' min='0' step='0.01' />
+          <InputFormGroup eRef={salePriceRef} label='Precio venta' col='col-md-3' type='number' min='0' step='0.01' />
+          <InputFormGroup eRef={defaultExpirationDateRef} label='F. vencimiento' col='col-md-3' type='date' />
+          <InputFormGroup eRef={defaultLotRef} label='Lote' col='col-md-3' />
+        </>}
 
         <div className='form-group col-md-3 mb-2'>
-          <label className='form-label d-block'>Regla de margen</label>
-          <div className='form-check form-switch'>
-            <input ref={marginRuleRef} className='form-check-input' type='checkbox' />
-          </div>
-        </div>
-        <div className='form-group col-md-3 mb-2'>
-          <label className='form-label d-block'>Regla de IGV</label>
+          <label className='form-label d-block'>{isMagistrales ? 'Afecto a IGV' : 'Regla de IGV'}</label>
           <div className='form-check form-switch'>
             <input ref={igvRuleRef} className='form-check-input' type='checkbox' />
           </div>
         </div>
 
-        <TextareaFormGroup eRef={notesRef} label='Notas' col='col-12' rows={3} />
+        {isMagistrales && <>
+          <div className='form-group col-md-3 mb-2'>
+            <label className='form-label d-block'>Stock con vencim.</label>
+            <div className='form-check form-switch'>
+              <input ref={stockHasExpirationRef} className='form-check-input' type='checkbox' />
+            </div>
+          </div>
+          <div className='form-group col-md-3 mb-2'>
+            <label className='form-label d-block'>Stock con lote</label>
+            <div className='form-check form-switch'>
+              <input ref={stockHasLotRef} className='form-check-input' type='checkbox' />
+            </div>
+          </div>
+          <InputFormGroup eRef={equivalenceExchangeRateRef} label='Tipo de cambio' col='col-md-3' type='number' min='0' step='0.0001' />
+          <InputFormGroup eRef={equivalenceQuantityRef} label='Cantidad equivalente' col='col-md-3' type='number' min='0' step='0.001' />
+          <SelectFormGroup
+            eRef={equivalenceUnitRef}
+            label='Unidad equivalente'
+            col='col-md-3'
+            dropdownParent='#article-form-container'
+            value={selectedEquivalenceUnitId}
+            onChange={(e) => setSelectedEquivalenceUnitId(e.target.value)}
+            effectWith={[selectedEquivalenceUnitId, units.length]}
+          >
+            <option value=''>Seleccionar...</option>
+            {units.map(unit => (
+              <option key={`equivalence-unit-${unit.id}`} value={unit.id}>
+                {unit.name}{unit.symbol ? ` (${unit.symbol})` : ''}
+              </option>
+            ))}
+          </SelectFormGroup>
+          <InputFormGroup eRef={salePriceNationalRef} label='P. venta (M.N)' col='col-md-3' type='number' min='0' step='0.01' />
+          <InputFormGroup eRef={purchasePriceNationalRef} label='P. compra (M.N)' col='col-md-3' type='number' min='0' step='0.01' />
+          <InputFormGroup eRef={purchasePriceForeignRef} label='P. compra (M.E)' col='col-md-3' type='number' min='0' step='0.01' />
+        </>}
+
+        {!isMagistrales && <TextareaFormGroup eRef={notesRef} label='Notas' col='col-12' rows={3} />}
 
         <div className='col-12 mt-2'>
           <div className='d-flex justify-content-between align-items-center mb-2'>
-            <h6 className='mb-0'>Presentaciones</h6>
+            <h6 className='mb-0'>{isMagistrales ? 'Equivalencias' : 'Presentaciones'}</h6>
             <button type='button' className='btn btn-sm btn-soft-primary' onClick={onPresentationAdded}>
-              <i className='mdi mdi-plus me-1'></i> Agregar presentacion
+              <i className='mdi mdi-plus me-1'></i> {isMagistrales ? 'Agregar equivalencia' : 'Agregar presentacion'}
             </button>
           </div>
 
@@ -772,9 +1017,9 @@ const Articles = () => {
             <table className='table table-sm table-striped mb-0'>
               <thead>
                 <tr>
-                  <th style={{ width: '46%' }}>Nombre</th>
-                  <th style={{ width: '20%' }}>Unidades</th>
-                  <th style={{ width: '20%' }}>Precio</th>
+                  <th style={{ width: '46%' }}>{isMagistrales ? 'Unidad equivalente' : 'Nombre'}</th>
+                  <th style={{ width: '20%' }}>{isMagistrales ? 'Cantidad equivalente' : 'Unidades'}</th>
+                  <th style={{ width: '20%' }}>{isMagistrales ? 'P. venta (M.N)' : 'Precio'}</th>
                   <th style={{ width: '14%' }}>Acciones</th>
                 </tr>
               </thead>
@@ -786,7 +1031,7 @@ const Articles = () => {
                         className='form-control form-control-sm'
                         value={presentation.name}
                         onChange={(e) => onPresentationUpdated(presentation.uid, 'name', e.target.value)}
-                        placeholder='Ej. Six'
+                        placeholder={isMagistrales ? 'Ej. Caja' : 'Ej. Six'}
                       />
                     </td>
                     <td>
@@ -797,7 +1042,7 @@ const Articles = () => {
                         step='0.001'
                         value={presentation.units}
                         onChange={(e) => onPresentationUpdated(presentation.uid, 'units', e.target.value)}
-                        placeholder='Ej. 6'
+                        placeholder={isMagistrales ? 'Ej. 1' : 'Ej. 6'}
                       />
                     </td>
                     <td>
@@ -822,6 +1067,7 @@ const Articles = () => {
             </table>
           </div>
         </div>
+        </fieldset>
       </div>
     </Modal>
 
@@ -953,7 +1199,7 @@ const Articles = () => {
 
 CreateReactScript((el, properties) => {
   if (!properties.can(scopedPermission('articles')) && !properties.hasRole('Admin')) location.href = '/admin/';
-  createRoot(el).render(<BaseAdminto {...properties} title='Articulos'>
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Articulos'}>
     <Articles {...properties} />
   </BaseAdminto>);
 })

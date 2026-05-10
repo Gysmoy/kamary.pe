@@ -576,8 +576,9 @@ const ExitNotes = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can(scopedPermission('exit-note')) && !properties.hasRole('Admin')) location.href = '/admin/';
-  createRoot(el).render(<BaseAdminto {...properties} title='Notas de salida'>
+  const requiredPermission = properties.requiredPermission ?? scopedPermission('exit-note')
+  if (!properties.can(requiredPermission) && !properties.hasRole('Admin')) location.href = '/admin/';
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Notas de salida'}>
     <ExitNotes {...properties} />
   </BaseAdminto>);
 })

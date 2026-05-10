@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { Local } from 'sode-extend-react'
+import { handleDataGridExport } from '../../Utils/dataGridExport'
 
 const DataGrid = ({ gridRef: dataGridRef, allowQueryBuilder = true, rest, columns, toolBar, masterDetail, filterValue = null, pageSize = 10, exportable, exportableName, customizeCell = () => { }, onRefresh = () => { } }) => {
   useEffect(() => {
@@ -54,27 +55,11 @@ const DataGrid = ({ gridRef: dataGridRef, allowQueryBuilder = true, rest, column
       height: 'calc(100dvh - 235px)',
       filterValue,
       export: {
-        enabled: exportable
+        enabled: exportable,
+        formats: ['xlsx', 'pdf']
       },
       onExporting: function (e) {
-        var workbook = new ExcelJS.Workbook();
-        var worksheet = workbook.addWorksheet('Main sheet');
-        DevExpress.excelExporter.exportDataGrid({
-          worksheet: worksheet,
-          component: e.component,
-          customizeCell: function (options) {
-            customizeCell(options)
-            options.excelCell.alignment = {
-              horizontal: 'left',
-              vertical: 'top',
-              ...options.excelCell.alignment
-            };
-          }
-        }).then(function () {
-          workbook.xlsx.writeBuffer().then(function (buffer) {
-            saveAs(new Blob([buffer], { type: 'application/octet-stream' }), `${exportableName}.xlsx`);
-          });
-        });
+        handleDataGridExport(e, { exportableName, customizeCell })
       },
       rowAlternationEnabled: true,
       showBorders: true,

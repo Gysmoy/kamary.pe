@@ -10,11 +10,13 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class KardexController extends BasicController
 {
     public $reactView = 'Admin/Kardex';
     public $reactRootView = 'admin';
+    protected string $moduleScope = 'standard';
 
     public function paginate(Request $request): HttpResponse|ResponseFactory
     {
@@ -63,6 +65,11 @@ class KardexController extends BasicController
             $branchId = trim((string)($request->business_branch_id ?? ''));
             $laboratoryId = trim((string)($request->laboratory_id ?? ''));
             $articleId = trim((string)($request->article_id ?? ''));
+
+            if (Schema::hasColumn('articles', 'module_scope')) {
+                $entryMovements->where('article.module_scope', $this->moduleScope);
+                $exitMovements->where('article.module_scope', $this->moduleScope);
+            }
 
             if ($businessId !== '') {
                 $entryMovements->where('movement_note.business_id', $businessId);

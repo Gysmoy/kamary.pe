@@ -1,9 +1,10 @@
 import BasicRest from "../BasicRest";
 import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import { isStoragePath } from "../../Utils/permissionScope";
 
 class EntryNotesRest extends BasicRest {
-  path = 'admin/entry-notes'
+  path = isStoragePath() ? 'admin/storage/entry-notes' : 'admin/entry-notes'
   hasFiles = true
 
   getBranchesByBusiness = async (businessId) => {
@@ -80,7 +81,7 @@ class EntryNotesRest extends BasicRest {
 
   getArticles = async () => {
     try {
-      const { status, result } = await Fetch('/api/admin/articles/paginate', {
+      const { status, result } = await Fetch(`/api/${isStoragePath() ? 'admin/storage/articles' : 'admin/articles'}/paginate`, {
         method: 'POST',
         body: JSON.stringify({
           isLoadingAll: true,
@@ -172,7 +173,7 @@ class EntryNotesRest extends BasicRest {
   getCurrentStock = async (articleId, warehouseId) => {
     if (!articleId || !warehouseId) return { qty_in: 0, qty_out: 0, stock: 0 }
     try {
-      const response = await fetch(`/api/admin/entry-notes/current-stock?article_id=${articleId}&warehouse_id=${warehouseId}`, {
+      const response = await fetch(`/api/${this.path}/current-stock?article_id=${articleId}&warehouse_id=${warehouseId}`, {
         method: 'GET',
         headers: { Accept: 'application/json' }
       })

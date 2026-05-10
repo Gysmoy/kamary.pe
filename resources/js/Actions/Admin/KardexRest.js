@@ -1,14 +1,18 @@
 import BasicRest from "../BasicRest";
 import { Cookies, Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import { isMagistralesPath, isStoragePath } from "../../Utils/permissionScope";
 
 class KardexRest extends BasicRest {
-  path = 'admin/kardex'
+  path = isMagistralesPath()
+    ? 'admin/magistrales/kardex'
+    : (isStoragePath() ? 'admin/storage/kardex' : 'admin/kardex')
   filters = {
     business_id: '',
     business_branch_id: '',
     laboratory_id: '',
     article_id: '',
+    warehouse_id: '',
   }
 
   setFilters = (filters = {}) => {
@@ -62,7 +66,8 @@ class KardexRest extends BasicRest {
 
   getLaboratories = async () => {
     try {
-      const { status, result } = await Fetch('/api/admin/laboratories/paginate', {
+      const laboratoriesPath = isMagistralesPath() ? 'admin/magistrales/laboratories' : 'admin/laboratories'
+      const { status, result } = await Fetch(`/api/${laboratoriesPath}/paginate`, {
         method: 'POST',
         body: JSON.stringify({
           isLoadingAll: true,
@@ -90,7 +95,10 @@ class KardexRest extends BasicRest {
 
   getArticles = async () => {
     try {
-      const { status, result } = await Fetch('/api/admin/articles/paginate', {
+      const articlesPath = isMagistralesPath()
+        ? 'admin/magistrales/articles'
+        : (isStoragePath() ? 'admin/storage/articles' : 'admin/articles')
+      const { status, result } = await Fetch(`/api/${articlesPath}/paginate`, {
         method: 'POST',
         body: JSON.stringify({
           isLoadingAll: true,
@@ -99,6 +107,46 @@ class KardexRest extends BasicRest {
         })
       })
       if (!status) throw new Error(result?.message || 'No se pudieron cargar articulos')
+      return result.data ?? []
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return []
+    }
+  }
+
+  getWarehouses = async () => {
+    try {
+      const { status, result } = await Fetch('/api/admin/warehouses/paginate', {
+        method: 'POST',
+        body: JSON.stringify({
+          isLoadingAll: true,
+          take: 500,
+          sort: [{ selector: 'name', desc: false }]
+        })
+      })
+      if (!status) throw new Error(result?.message || 'No se pudieron cargar almacenes')
+      return result.data ?? []
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return []
+    }
+  }
+
+  getMovements = async ({ article_id, warehouse_id }) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/movements`, {
+        method: 'POST',
+        body: JSON.stringify({ article_id, warehouse_id })
+      })
+      if (!status) throw new Error(result?.message || 'No se pudieron cargar movimientos')
       return result.data ?? []
     } catch (error) {
       toast.error("Error", {

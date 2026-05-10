@@ -29,13 +29,7 @@ class BusinessBranchesTest extends TestCase
     public function test_can_create_multiple_branches_for_same_business(): void
     {
         $user = $this->makeUser();
-        $business = Business::create([
-            'name' => 'Empresa Uno',
-            'description' => null,
-            'status' => true,
-            'created_by' => $user->id,
-            'updated_by' => $user->id,
-        ]);
+        $business = Business::where('business_key', 'kamary_peru')->firstOrFail();
 
         $this->actingAs($user);
 
@@ -65,13 +59,7 @@ class BusinessBranchesTest extends TestCase
     public function test_update_mode_updates_only_selected_branch(): void
     {
         $user = $this->makeUser();
-        $business = Business::create([
-            'name' => 'Empresa Dos',
-            'description' => null,
-            'status' => true,
-            'created_by' => $user->id,
-            'updated_by' => $user->id,
-        ]);
+        $business = Business::where('business_key', 'kamary_peru')->firstOrFail();
 
         $branchA = BusinessBranch::create([
             'business_id' => $business->id,
@@ -108,4 +96,3 @@ class BusinessBranchesTest extends TestCase
         $this->assertDatabaseCount('business_branches', 2);
     }
 }
-

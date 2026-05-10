@@ -16,7 +16,7 @@ import { scopedPermission } from '../Utils/permissionScope';
 
 const billingDocumentsRest = new BillingDocumentsRest()
 
-const BillingDocuments = () => {
+const BillingDocuments = ({ moduleTitle = 'Facturacion' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const payloadModalRef = useRef()
@@ -290,7 +290,7 @@ const BillingDocuments = () => {
   return <>
     <Table
       gridRef={gridRef}
-      title='Facturación'
+      title={moduleTitle}
       rest={billingDocumentsRest}
       pageSize={25}
       toolBar={(items) => {
@@ -440,6 +440,7 @@ const BillingDocuments = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can(scopedPermission('services-billing')) && !properties.hasRole('Admin')) location.href = '/admin/'
-  createRoot(el).render(<BaseAdminto {...properties} title='Facturación'><BillingDocuments {...properties} /></BaseAdminto>)
+  const requiredPermission = properties.requiredPermission ?? scopedPermission('services-billing')
+  if (!properties.can(requiredPermission) && !properties.hasRole('Admin')) location.href = '/admin/'
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Facturacion'}><BillingDocuments {...properties} /></BaseAdminto>)
 })

@@ -34,9 +34,9 @@ class EntryNotesTest extends TestCase
     {
         $user = $this->makeUser();
 
-        $business = Business::create([
-            'name' => 'Empresa QA',
-            'description' => null,
+        $business = Business::where('business_key', 'kamary_peru')->firstOrFail();
+        $branch = $business->branches()->create([
+            'name' => 'Sede Entry QA',
             'status' => true,
             'created_by' => $user->id,
             'updated_by' => $user->id,
@@ -44,6 +44,7 @@ class EntryNotesTest extends TestCase
         $warehouse = Warehouse::create([
             'name' => 'Principal',
             'description' => null,
+            'business_branch_id' => $branch->id,
             'status' => true,
             'created_by' => $user->id,
             'updated_by' => $user->id,
@@ -100,6 +101,7 @@ class EntryNotesTest extends TestCase
 
         $response = $this->post("/api/admin/entry-notes", [
             'business_id' => $business->id,
+            'business_branch_id' => $branch->id,
             'warehouse_id' => $warehouse->id,
             'document_type' => 'Boleta',
             'currency' => 'PEN',
@@ -138,4 +140,3 @@ class EntryNotesTest extends TestCase
         ]);
     }
 }
-

@@ -9,6 +9,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use SoDe\Extend\Response;
 
@@ -17,16 +18,28 @@ class UnitController extends BasicController
     public $model = Unit::class;
     public $reactView = 'Admin/Units';
     public $prefix4filter = 'units';
+    protected string $moduleScope = 'standard';
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('units.*')
+        $query = $model::select('units.*')
         ->with([
             'creator:id,name,lastname,username,fullname',
             'updater:id,name,lastname,username,fullname',
         ])
             ->join('users as creator', 'creator.id', '=', 'units.created_by')
             ->join('users as updater', 'updater.id', '=', 'units.updated_by');
+
+        if (Schema::hasColumn('units', 'module_scope')) {
+            $query->where(function ($scope) {
+                $scope->where('units.module_scope', $this->moduleScope);
+                if ($this->moduleScope === 'standard') {
+                    $scope->orWhereNull('units.module_scope');
+                }
+            });
+        }
+
+        return $query;
     }
 
     public function import(Request $request): HttpResponse|ResponseFactory
@@ -36,6 +49,7 @@ class UnitController extends BasicController
             $rows = $request->rows;
             $mapping = $request->mapping ?? [];
             $userId = Auth::id();
+            $hasUnitModuleScope = Schema::hasColumn('units', 'module_scope');
 
             if (!is_array($rows) || count($rows) === 0) {
                 throw new \Exception('No hay registros para importar');
@@ -56,7 +70,9 @@ class UnitController extends BasicController
 
             DB::beginTransaction();
 
-            $existingUnits = Unit::whereNotNull('symbol')->get(['id', 'symbol']);
+            $existingUnits = Unit::whereNotNull('symbol')
+                ->when($hasUnitModuleScope, fn($query) => $query->where('module_scope', $this->moduleScope))
+                ->get(['id', 'symbol']);
             $existingBySymbol = [];
             foreach ($existingUnits as $unit) {
                 $normalized = mb_strtolower(trim((string)$unit->symbol));
@@ -94,21 +110,25 @@ class UnitController extends BasicController
                 $unitId = $existingBySymbol[$normalizedSymbol] ?? null;
 
                 if ($unitId) {
-                    Unit::where('id', $unitId)->update([
+                    $updateData = [
                         'name' => $name,
                         'symbol' => $symbol,
                         'status' => $status,
                         'updated_by' => $userId,
-                    ]);
+                    ];
+                    if ($hasUnitModuleScope) $updateData['module_scope'] = $this->moduleScope;
+                    Unit::where('id', $unitId)->update($updateData);
                     $updated++;
                 } else {
-                    $unit = Unit::create([
+                    $createData = [
                         'name' => $name,
                         'symbol' => $symbol,
                         'status' => $status,
                         'created_by' => $userId,
                         'updated_by' => $userId,
-                    ]);
+                    ];
+                    if ($hasUnitModuleScope) $createData['module_scope'] = $this->moduleScope;
+                    $unit = Unit::create($createData);
                     $existingBySymbol[$normalizedSymbol] = $unit->id;
                     $created++;
                 }
@@ -150,6 +170,7 @@ class UnitController extends BasicController
         }
 
         $existsSymbol = Unit::whereRaw('LOWER(symbol) = ?', [mb_strtolower($symbol)])
+            ->when(Schema::hasColumn('units', 'module_scope'), fn($query) => $query->where('module_scope', $this->moduleScope))
             ->when($id, fn($query) => $query->where('id', '!=', $id))
             ->exists();
         if ($existsSymbol) {
@@ -160,8 +181,10 @@ class UnitController extends BasicController
             $body['created_by'] = $userId;
         }
         $body['updated_by'] = $userId;
+        $body['module_scope'] = $this->moduleScope;
         $body['name'] = $name;
         $body['symbol'] = Str::upper($symbol);
+        if (!Schema::hasColumn('units', 'module_scope')) unset($body['module_scope']);
 
         return $body;
     }

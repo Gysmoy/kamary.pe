@@ -1,6 +1,7 @@
 import BasicRest from "../BasicRest";
 import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import { isStoragePath } from "../../Utils/permissionScope";
 
 const loadAll = async (path) => {
   try {
@@ -17,12 +18,14 @@ const loadAll = async (path) => {
 }
 
 class ServiceOrdersRest extends BasicRest {
-  path = 'admin/service-orders'
+  path = location.pathname.toLowerCase().includes('/admin/storage-general-service-orders')
+    ? 'admin/storage/general-service-orders'
+    : (isStoragePath() ? 'admin/storage/service-orders' : 'admin/service-orders')
 
   getBranchesByBusiness = async (businessId) => businessId ? (await this.simpleGet(`/api/${this.path}/businesses/${businessId}/branches`)) ?? [] : []
   getBusinesses = async () => await loadAll('/api/admin/businesses/paginate')
-  getClients = async () => await loadAll('/api/admin/clients/paginate')
-  getServices = async () => await loadAll('/api/admin/services/paginate')
+  getClients = async () => await loadAll(isStoragePath() ? '/api/admin/storage/clients/paginate' : '/api/admin/clients/paginate')
+  getServices = async () => await loadAll(isStoragePath() ? '/api/admin/storage/general-service/paginate' : '/api/admin/services/paginate')
 }
 
 export default ServiceOrdersRest
