@@ -50,9 +50,10 @@ const stockChartColor = {
 const sectionLinks = [
   { href: '#dashboard-summary', label: 'Resumen' },
   { href: '#dashboard-sales', label: 'Ventas' },
+  { href: '#dashboard-profitability', label: 'Rentabilidad' },
   { href: '#dashboard-rotation', label: 'Rotacion' },
   { href: '#dashboard-stock', label: 'Stock' },
-  { href: '#dashboard-dispatch', label: 'Despacho' },
+  { href: '#dashboard-delays', label: 'Retrasos' },
   { href: '#dashboard-base', label: 'Base' },
 ];
 
@@ -63,6 +64,66 @@ const EmptyState = ({ text = 'Sin datos para el periodo.' }) => (
 const ProgressBar = ({ value, color = 'primary' }) => (
   <div className='progress' style={{ height: 6 }}>
     <div className={`progress-bar bg-${color}`} style={{ width: `${clampPct(value)}%` }}></div>
+  </div>
+);
+
+const chartBackground = (rows = [], field = 'pct') => {
+  let cursor = 0;
+  const segments = rows
+    .filter(row => Number(row[field] || 0) > 0)
+    .map(row => {
+      const value = Number(row[field] || 0);
+      const start = cursor;
+      const end = cursor + value;
+      cursor = end;
+      return `${row.color || '#0d6efd'} ${start}% ${end}%`;
+    });
+
+  return segments.length ? `conic-gradient(${segments.join(', ')})` : '#eef2f7';
+};
+
+const PercentDonut = ({ title, rows = [], centerValue = null, centerLabel = null }) => (
+  <div className='border rounded p-3 h-100'>
+    <h6 className='text-center mb-3'>{title}</h6>
+    <div className='d-flex flex-wrap justify-content-center align-items-center gap-4'>
+      <div
+        className='rounded-circle position-relative flex-shrink-0'
+        style={{ width: 190, height: 190, background: chartBackground(rows) }}
+      >
+        <div
+          className='rounded-circle position-absolute bg-white d-flex flex-column justify-content-center align-items-center text-center'
+          style={{ inset: 36 }}
+        >
+          <strong>{centerValue}</strong>
+          <small className='text-muted'>{centerLabel}</small>
+        </div>
+      </div>
+      <div>
+        {rows.map(row => (
+          <div key={`${title}-${row.status || row.label}`} className='d-flex align-items-center gap-2 mb-2'>
+            <span className='rounded-circle d-inline-block' style={{ width: 10, height: 10, background: row.color || '#0d6efd' }}></span>
+            <span>{row.label}</span>
+            <strong>{pct(row.pct)}</strong>
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const PercentBarList = ({ title, rows = [], emptyText = 'Sin datos para graficar.' }) => (
+  <div className='border rounded p-3 h-100'>
+    <h6 className='text-center mb-3'>{title}</h6>
+    {rows.length === 0 ? <EmptyState text={emptyText} /> : rows.map((row, index) => (
+      <div key={`${title}-${row.reason || row.label}-${index}`} className='mb-3'>
+        <div className='d-flex justify-content-between gap-3 mb-1'>
+          <span>{row.reason || row.label}</span>
+          <strong>{pct(row.pct)}</strong>
+        </div>
+        <ProgressBar value={row.pct} color='primary' />
+        <small className='text-muted'>{number(row.count)} registros</small>
+      </div>
+    ))}
   </div>
 );
 
@@ -183,35 +244,56 @@ const Profitability = ({ data = {} }) => {
   const totals = data.totals || {};
   const productRows = data.productRows || [];
   const warehouseRows = data.warehouseRows || [];
+  const productWarehouseRows = data.productWarehouseRows || [];
 
   return (
-    <div className='card h-100'>
+    <div id='dashboard-profitability' className='card h-100'>
       <div className='card-body'>
-        <SectionHeader title='Rentabilidad por producto' action={<span className='badge badge-soft-primary'>Total almacenes</span>} />
+        <SectionHeader
+          title='KPI de rentabilidad por producto'
+          meta='Precio venta, precio costo, diferencia y porcentaje de rentabilidad.'
+          action={<span className='badge badge-soft-primary'>Total almacenes</span>}
+        />
         <div className='row mb-3'>
-          <div className='col-md-4 mb-2'>
-            <small className='text-muted d-block'>Venta</small>
-            <strong>{money(totals.salesValue)}</strong>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Venta total</small>
+              <strong>{money(totals.salesValue)}</strong>
+            </div>
           </div>
-          <div className='col-md-4 mb-2'>
-            <small className='text-muted d-block'>Costo</small>
-            <strong>{money(totals.costValue)}</strong>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Costo total</small>
+              <strong>{money(totals.costValue)}</strong>
+            </div>
           </div>
-          <div className='col-md-4 mb-2'>
-            <small className='text-muted d-block'>Rentabilidad</small>
-            <strong>{pct(totals.profitPct)}</strong>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Diferencia total</small>
+              <strong>{money(totals.profitValue)}</strong>
+            </div>
+          </div>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Rentabilidad</small>
+              <strong>{pct(totals.profitPct)}</strong>
+            </div>
           </div>
         </div>
+        <h6 className='mb-2'>Listado por producto - todos los almacenes</h6>
         {productRows.length === 0 ? <EmptyState /> : (
           <div className='table-responsive mb-4' style={{ maxHeight: 360, overflowY: 'auto' }}>
             <table className='table table-sm align-middle mb-0'>
               <thead className='table-light' style={{ position: 'sticky', top: 0, zIndex: 1 }}>
                 <tr>
                   <th>Producto</th>
+                  <th className='text-end'>Und.</th>
                   <th className='text-end'>Precio venta</th>
                   <th className='text-end'>Precio costo</th>
                   <th className='text-end'>Diferencia</th>
-                  <th className='text-end'>%</th>
+                  <th className='text-end'>Rentab.</th>
+                  <th className='text-end'>Venta total</th>
+                  <th className='text-end'>Dif. total</th>
                 </tr>
               </thead>
               <tbody>
@@ -221,10 +303,13 @@ const Profitability = ({ data = {} }) => {
                       <strong>{row.articleCode}</strong>
                       <div className='text-muted small'>{row.articleName}</div>
                     </td>
+                    <td className='text-end'>{number(row.units, 3)}</td>
                     <td className='text-end'>{money(row.avgSalePrice)}</td>
                     <td className='text-end'>{money(row.avgCostPrice)}</td>
-                    <td className='text-end'>{money(row.profitValue)}</td>
+                    <td className='text-end'>{money(row.unitProfitValue)}</td>
                     <td className='text-end'>{pct(row.profitPct)}</td>
+                    <td className='text-end'>{money(row.salesValue)}</td>
+                    <td className='text-end'>{money(row.profitValue)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -238,8 +323,10 @@ const Profitability = ({ data = {} }) => {
               <thead>
                 <tr>
                   <th>Almacen</th>
+                  <th className='text-end'>Und.</th>
                   <th className='text-end'>Venta</th>
                   <th className='text-end'>Costo</th>
+                  <th className='text-end'>Diferencia</th>
                   <th className='text-end'>Rentabilidad</th>
                 </tr>
               </thead>
@@ -247,8 +334,44 @@ const Profitability = ({ data = {} }) => {
                 {warehouseRows.map(row => (
                   <tr key={`profit-warehouse-${row.warehouseId || row.warehouseName}`}>
                     <td>{row.warehouseName}</td>
+                    <td className='text-end'>{number(row.units, 3)}</td>
                     <td className='text-end'>{money(row.salesValue)}</td>
                     <td className='text-end'>{money(row.costValue)}</td>
+                    <td className='text-end'>{money(row.profitValue)}</td>
+                    <td className='text-end'>{pct(row.profitPct)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <h6 className='mt-4 mb-2'>Detalle producto por almacen</h6>
+        {productWarehouseRows.length === 0 ? <EmptyState text='Sin detalle por almacen.' /> : (
+          <div className='table-responsive' style={{ maxHeight: 360, overflowY: 'auto' }}>
+            <table className='table table-sm align-middle mb-0'>
+              <thead className='table-light' style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                <tr>
+                  <th>Almacen</th>
+                  <th>Producto</th>
+                  <th className='text-end'>Und.</th>
+                  <th className='text-end'>Precio venta</th>
+                  <th className='text-end'>Precio costo</th>
+                  <th className='text-end'>Diferencia</th>
+                  <th className='text-end'>Rentab.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productWarehouseRows.map(row => (
+                  <tr key={`profit-warehouse-product-${row.warehouseId || row.warehouseName}-${row.articleId}`}>
+                    <td>{row.warehouseName}</td>
+                    <td>
+                      <strong>{row.articleCode}</strong>
+                      <div className='text-muted small'>{row.articleName}</div>
+                    </td>
+                    <td className='text-end'>{number(row.units, 3)}</td>
+                    <td className='text-end'>{money(row.avgSalePrice)}</td>
+                    <td className='text-end'>{money(row.avgCostPrice)}</td>
+                    <td className='text-end'>{money(row.unitProfitValue)}</td>
                     <td className='text-end'>{pct(row.profitPct)}</td>
                   </tr>
                 ))}
@@ -457,44 +580,138 @@ const StockByWarehouse = ({ rows = [] }) => (
   </div>
 );
 
-const DispatchDetail = ({ data = {} }) => {
+const DeliveryDelayAnalysis = ({ data = {} }) => {
   const recentRows = data.recentRows || [];
+  const delayReasons = data.delayReasons || [];
+  const efficiencyRows = data.efficiencyRows || [];
+  const delayedTotal = Number(data.delayedDelivered || 0);
 
   return (
-    <div id='dashboard-dispatch' className='card'>
+    <div id='dashboard-delays' className='card'>
       <div className='card-body'>
-        <SectionHeader title='Detalle de despacho' action={<a href='/admin/dispatch' className='btn btn-sm btn-outline-primary'>Ver despachos</a>} />
-        <div className='table-responsive'>
-          <table className='table table-sm align-middle mb-0'>
-            <thead>
-              <tr>
-                <th>Despacho</th>
-                <th>Registro</th>
-                <th>Solicitada</th>
-                <th>Entrega</th>
-                <th className='text-end'>Dif.</th>
-                <th>Motivo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentRows.length === 0 && (
-                <tr><td colSpan='6' className='text-center text-muted py-3'>Sin entregas en el periodo.</td></tr>
-              )}
-              {recentRows.map(row => (
-                <tr key={`dispatch-row-${row.id}-${row.orderCode}`}>
-                  <td>
-                    <strong>{row.code}</strong>
-                    <div className='text-muted small'>{row.orderCode}</div>
-                  </td>
-                  <td>{date(row.registeredDate)}</td>
-                  <td>{date(row.requestedDate)}</td>
-                  <td>{date(row.deliveredDate)}</td>
-                  <td className='text-end'>{row.delayDays}</td>
-                  <td>{row.delayReason || '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <SectionHeader
+          title='Motivos de demora en la entrega'
+          meta='Porcentaje de eficiencia y porcentaje por cada motivo de retraso.'
+          action={<a href='/admin/dispatch' className='btn btn-sm btn-outline-primary'>Ver despachos</a>}
+        />
+        <div className='row mb-3'>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Entregas</small>
+              <strong>{number(data.totalDelivered)}</strong>
+            </div>
+          </div>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>A tiempo</small>
+              <strong>{number(data.onTimeDelivered)}</strong>
+            </div>
+          </div>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Con demora</small>
+              <strong>{number(data.delayedDelivered)} / {pct(data.delayPct)}</strong>
+            </div>
+          </div>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Eficiencia</small>
+              <strong>{pct(data.efficiencyPct)}</strong>
+            </div>
+          </div>
+        </div>
+        <div className='row mb-3'>
+          <div className='col-xl-5 mb-3'>
+            <PercentDonut
+              title='Distribucion de eficiencia'
+              rows={efficiencyRows}
+              centerValue={pct(data.efficiencyPct)}
+              centerLabel='eficiencia'
+            />
+          </div>
+          <div className='col-xl-7 mb-3'>
+            <PercentBarList
+              title='Distribucion % por motivo de retraso'
+              rows={delayReasons}
+              emptyText='Sin motivos de retraso registrados.'
+            />
+          </div>
+        </div>
+        <div className='row'>
+          <div className='col-xl-4 mb-3'>
+            <div className='border rounded p-3 h-100'>
+              <h6 className='text-center mb-3'>Resumen por motivo</h6>
+              <div className='table-responsive'>
+                <table className='table table-sm align-middle mb-0'>
+                  <thead className='table-light'>
+                    <tr>
+                      <th>Motivo retraso</th>
+                      <th className='text-end'>Total</th>
+                      <th className='text-end'>%</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {delayReasons.length === 0 && (
+                      <tr><td colSpan='3' className='text-center text-muted py-3'>Sin retrasos.</td></tr>
+                    )}
+                    {delayReasons.map(row => (
+                      <tr key={`delay-reason-table-${row.reason}`}>
+                        <td>{row.reason}</td>
+                        <td className='text-end'>{number(row.count)}</td>
+                        <td className='text-end'>{pct(row.pct)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  {delayReasons.length > 0 && (
+                    <tfoot>
+                      <tr>
+                        <th>Total</th>
+                        <th className='text-end'>{number(delayedTotal)}</th>
+                        <th className='text-end'>100%</th>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
+            </div>
+          </div>
+          <div className='col-xl-8 mb-3'>
+            <div className='border rounded p-3 h-100'>
+              <h6 className='text-center mb-3'>Detalle de entregas</h6>
+              <div className='table-responsive' style={{ maxHeight: 420, overflowY: 'auto' }}>
+                <table className='table table-sm align-middle mb-0'>
+                  <thead className='table-light' style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                    <tr>
+                      <th>Despacho</th>
+                      <th>Registro</th>
+                      <th>Solicitada</th>
+                      <th>Entrega</th>
+                      <th className='text-end'>Dif. dias</th>
+                      <th>Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentRows.length === 0 && (
+                      <tr><td colSpan='6' className='text-center text-muted py-3'>Sin entregas en el periodo.</td></tr>
+                    )}
+                    {recentRows.map(row => (
+                      <tr key={`dispatch-row-${row.id}-${row.orderCode}`}>
+                        <td>
+                          <strong>{row.code}</strong>
+                          <div className='text-muted small'>{row.orderCode}</div>
+                        </td>
+                        <td>{date(row.registeredDate)}</td>
+                        <td>{date(row.requestedDate)}</td>
+                        <td>{date(row.deliveredDate)}</td>
+                        <td className='text-end'>{row.delayDays}</td>
+                        <td>{row.delayReason || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -579,7 +796,7 @@ const DashboardHome = ({ catalogMetrics = [], salesDashboard = {} }) => {
         <StockByWarehouse rows={salesDashboard.stockByWarehouse || []} />
       </div>
       <div className='col-12 mb-3'>
-        <DispatchDetail data={dispatch} />
+        <DeliveryDelayAnalysis data={dispatch} />
       </div>
       <div className='col-12'>
         <CatalogMetrics rows={catalogMetrics} />

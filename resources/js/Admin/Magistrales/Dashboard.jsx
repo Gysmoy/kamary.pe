@@ -167,6 +167,144 @@ const SalesByType = ({ rows = [] }) => {
   );
 };
 
+const ProfitabilityPanel = ({ data = {} }) => {
+  const totals = data.totals || {};
+  const productRows = data.productRows || [];
+  const warehouseRows = data.warehouseRows || [];
+  const productWarehouseRows = data.productWarehouseRows || [];
+
+  return (
+    <div id='magistrales-profitability' className='card'>
+      <div className='card-body'>
+        <SectionHeader
+          title='KPI de rentabilidad por producto'
+          meta='Precio venta, precio costo, diferencia y porcentaje de rentabilidad.'
+          action={<span className='badge badge-soft-primary'>Total almacenes</span>}
+        />
+        <div className='row mb-3'>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Venta total</small>
+              <strong>{money(totals.salesValue)}</strong>
+            </div>
+          </div>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Costo total</small>
+              <strong>{money(totals.costValue)}</strong>
+            </div>
+          </div>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Diferencia total</small>
+              <strong>{money(totals.profitValue)}</strong>
+            </div>
+          </div>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Rentabilidad</small>
+              <strong>{pct(totals.profitPct)}</strong>
+            </div>
+          </div>
+        </div>
+        <h6 className='mb-2'>Listado por producto - todos los almacenes</h6>
+        {productRows.length === 0 ? <EmptyState /> : (
+          <div className='table-responsive mb-4' style={{ maxHeight: 340, overflowY: 'auto' }}>
+            <table className='table table-sm align-middle mb-0'>
+              <thead className='table-light' style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                <tr>
+                  <th>Producto</th>
+                  <th className='text-end'>Und.</th>
+                  <th className='text-end'>Precio venta</th>
+                  <th className='text-end'>Precio costo</th>
+                  <th className='text-end'>Diferencia</th>
+                  <th className='text-end'>Rentab.</th>
+                  <th className='text-end'>Venta total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productRows.map(row => (
+                  <tr key={`mag-profit-product-${row.articleId}`}>
+                    <td>
+                      <strong>{row.articleCode}</strong>
+                      <div className='text-muted small'>{row.articleName}</div>
+                    </td>
+                    <td className='text-end'>{number(row.units, 3)}</td>
+                    <td className='text-end'>{money(row.avgSalePrice)}</td>
+                    <td className='text-end'>{money(row.avgCostPrice)}</td>
+                    <td className='text-end'>{money(row.unitProfitValue)}</td>
+                    <td className='text-end'>{pct(row.profitPct)}</td>
+                    <td className='text-end'>{money(row.salesValue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className='row'>
+          <div className='col-xl-5 mb-3'>
+            <h6 className='mb-2'>Resumen por almacen</h6>
+            {warehouseRows.length === 0 ? <EmptyState text='Sin ventas por almacen.' /> : (
+              <div className='table-responsive'>
+                <table className='table table-sm align-middle mb-0'>
+                  <thead>
+                    <tr>
+                      <th>Almacen</th>
+                      <th className='text-end'>Venta</th>
+                      <th className='text-end'>Costo</th>
+                      <th className='text-end'>Rentab.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {warehouseRows.map(row => (
+                      <tr key={`mag-profit-warehouse-${row.warehouseId || row.warehouseName}`}>
+                        <td>{row.warehouseName}</td>
+                        <td className='text-end'>{money(row.salesValue)}</td>
+                        <td className='text-end'>{money(row.costValue)}</td>
+                        <td className='text-end'>{pct(row.profitPct)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          <div className='col-xl-7 mb-3'>
+            <h6 className='mb-2'>Detalle producto por almacen</h6>
+            {productWarehouseRows.length === 0 ? <EmptyState text='Sin detalle por almacen.' /> : (
+              <div className='table-responsive' style={{ maxHeight: 280, overflowY: 'auto' }}>
+                <table className='table table-sm align-middle mb-0'>
+                  <thead className='table-light' style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+                    <tr>
+                      <th>Almacen</th>
+                      <th>Producto</th>
+                      <th className='text-end'>Diferencia</th>
+                      <th className='text-end'>Rentab.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productWarehouseRows.map(row => (
+                      <tr key={`mag-profit-warehouse-product-${row.warehouseId || row.warehouseName}-${row.articleId}`}>
+                        <td>{row.warehouseName}</td>
+                        <td>
+                          <strong>{row.articleCode}</strong>
+                          <div className='text-muted small'>{row.articleName}</div>
+                        </td>
+                        <td className='text-end'>{money(row.unitProfitValue)}</td>
+                        <td className='text-end'>{pct(row.profitPct)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const InventoryPanel = ({ data = {} }) => {
   const rows = data.warehouseRows || [];
   const max = Math.max(1, ...rows.map(row => Number(row.stockValue || 0)));
@@ -430,6 +568,7 @@ const MagistralesDashboard = ({ magistralesDashboard = {} }) => {
               </div>
               <div className='d-flex flex-wrap gap-2'>
                 <a href='/admin/magistrales-sales' className='btn btn-sm btn-light'>Ventas</a>
+                <a href='#magistrales-profitability' className='btn btn-sm btn-light'>Rentabilidad</a>
                 <a href='/admin/magistrales-production-order' className='btn btn-sm btn-light'>Produccion</a>
                 <a href='/admin/magistrales/inventory' className='btn btn-sm btn-light'>Inventario</a>
                 <a href='#magistrales-rotation' className='btn btn-sm btn-light'>Rotacion</a>
@@ -450,6 +589,9 @@ const MagistralesDashboard = ({ magistralesDashboard = {} }) => {
       </div>
       <div className='col-xl-7 mb-3'>
         <InventoryPanel data={magistralesDashboard.inventory || {}} />
+      </div>
+      <div className='col-12 mb-3'>
+        <ProfitabilityPanel data={magistralesDashboard.profitability || {}} />
       </div>
       <div id='magistrales-rotation' className='col-12 mb-3'>
         <InventoryRotationSummary data={magistralesDashboard.inventoryRotation || {}} />

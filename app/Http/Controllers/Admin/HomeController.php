@@ -322,6 +322,7 @@ class HomeController extends BasicController
             return [
                 'totals' => $this->profitabilityTotals(),
                 'productRows' => [],
+                'productWarehouseRows' => [],
                 'warehouseRows' => [],
             ];
         }
@@ -332,11 +333,36 @@ class HomeController extends BasicController
             ->selectRaw('article.id as article_id')
             ->selectRaw("COALESCE(article.code, '') as article_code")
             ->selectRaw("COALESCE(article.name, '') as article_name")
+            ->selectRaw('COUNT(DISTINCT item.warehouse_id) as warehouse_count')
             ->selectRaw('COALESCE(SUM(item.quantity), 0) as units')
             ->selectRaw('COALESCE(SUM(item.total), 0) as sales_value')
             ->selectRaw('COALESCE(SUM(item.quantity * ' . $this->costUnitExpression() . '), 0) as cost_value')
             ->get()
             ->map(fn($row) => $this->profitabilityRow($row, [
+                'articleId' => (int) $row->article_id,
+                'articleCode' => $row->article_code,
+                'articleName' => $row->article_name,
+                'warehouseCount' => (int) $row->warehouse_count,
+            ]))
+            ->values();
+
+        $productWarehouseRows = $this->commercialItems($startDate, $endDate)
+            ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'item.warehouse_id')
+            ->groupBy('item.warehouse_id', 'warehouse.name', 'article.id', 'article.code', 'article.name')
+            ->orderByRaw("COALESCE(warehouse.name, 'Sin almacen')")
+            ->orderByDesc('sales_value')
+            ->selectRaw('item.warehouse_id as warehouse_id')
+            ->selectRaw("COALESCE(warehouse.name, 'Sin almacen') as warehouse_name")
+            ->selectRaw('article.id as article_id')
+            ->selectRaw("COALESCE(article.code, '') as article_code")
+            ->selectRaw("COALESCE(article.name, '') as article_name")
+            ->selectRaw('COALESCE(SUM(item.quantity), 0) as units')
+            ->selectRaw('COALESCE(SUM(item.total), 0) as sales_value')
+            ->selectRaw('COALESCE(SUM(item.quantity * ' . $this->costUnitExpression() . '), 0) as cost_value')
+            ->get()
+            ->map(fn($row) => $this->profitabilityRow($row, [
+                'warehouseId' => $row->warehouse_id,
+                'warehouseName' => $row->warehouse_name,
                 'articleId' => (int) $row->article_id,
                 'articleCode' => $row->article_code,
                 'articleName' => $row->article_name,
@@ -362,6 +388,7 @@ class HomeController extends BasicController
         return [
             'totals' => $this->profitabilityTotals($warehouseRows->all()),
             'productRows' => $baseProductRows->all(),
+            'productWarehouseRows' => $productWarehouseRows->all(),
             'warehouseRows' => $warehouseRows->all(),
         ];
     }
@@ -374,6 +401,8 @@ class HomeController extends BasicController
                 'onTimeDelivered' => 0,
                 'delayedDelivered' => 0,
                 'efficiencyPct' => 0,
+                'delayPct' => 0,
+                'efficiencyRows' => [],
                 'delayReasons' => [],
                 'recentRows' => [],
             ];
@@ -422,6 +451,8 @@ class HomeController extends BasicController
         $total = $rows->count();
         $delayed = $rows->where('delayDays', '>', 0)->count();
         $onTime = $total - $delayed;
+        $efficiencyPct = $total > 0 ? round(($onTime / $total) * 100, 2) : 0;
+        $delayPct = $total > 0 ? round(($delayed / $total) * 100, 2) : 0;
         $delayReasons = $rows
             ->where('delayDays', '>', 0)
             ->groupBy('delayReason')
@@ -441,9 +472,26 @@ class HomeController extends BasicController
             'totalDelivered' => $total,
             'onTimeDelivered' => $onTime,
             'delayedDelivered' => $delayed,
-            'efficiencyPct' => $total > 0 ? round(($onTime / $total) * 100, 2) : 0,
+            'efficiencyPct' => $efficiencyPct,
+            'delayPct' => $delayPct,
+            'efficiencyRows' => [
+                [
+                    'status' => 'ON_TIME',
+                    'label' => 'A tiempo',
+                    'count' => $onTime,
+                    'pct' => $efficiencyPct,
+                    'color' => '#198754',
+                ],
+                [
+                    'status' => 'DELAYED',
+                    'label' => 'Con demora',
+                    'count' => $delayed,
+                    'pct' => $delayPct,
+                    'color' => '#dc3545',
+                ],
+            ],
             'delayReasons' => $delayReasons,
-            'recentRows' => $rows->take(8)->values()->all(),
+            'recentRows' => $rows->take(30)->values()->all(),
         ];
     }
 
@@ -595,6 +643,7 @@ class HomeController extends BasicController
             'profitValue' => round($profit, 2),
             'avgSalePrice' => $units > 0 ? round($sales / $units, 4) : 0,
             'avgCostPrice' => $units > 0 ? round($cost / $units, 4) : 0,
+            'unitProfitValue' => $units > 0 ? round(($sales / $units) - ($cost / $units), 4) : 0,
             'profitPct' => $sales > 0 ? round(($profit / $sales) * 100, 2) : 0,
         ]);
     }
@@ -613,6 +662,7 @@ class HomeController extends BasicController
             'profitValue' => round($profit, 2),
             'avgSalePrice' => $units > 0 ? round($sales / $units, 4) : 0,
             'avgCostPrice' => $units > 0 ? round($cost / $units, 4) : 0,
+            'unitProfitValue' => $units > 0 ? round(($sales / $units) - ($cost / $units), 4) : 0,
             'profitPct' => $sales > 0 ? round(($profit / $sales) * 100, 2) : 0,
         ];
     }

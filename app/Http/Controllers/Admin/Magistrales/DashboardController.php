@@ -31,6 +31,7 @@ class DashboardController extends BasicController
                 ],
                 'summary' => $this->summary($periodStart, $periodEnd),
                 'salesByType' => $this->salesByType($periodStart, $periodEnd),
+                'profitability' => $this->profitability($periodStart, $periodEnd),
                 'productionStatus' => $this->productionStatus($periodStart, $periodEnd),
                 'inventory' => $this->inventory(),
                 'inventoryRotation' => $this->inventoryRotationSummary($rotationStart, $periodEnd),
@@ -271,6 +272,86 @@ class DashboardController extends BasicController
             ->all();
     }
 
+    private function profitability(string $startDate, string $endDate): array
+    {
+        if (!$this->hasTables(['magistral_sales', 'magistral_sale_items', 'articles'])) {
+            return [
+                'totals' => $this->profitabilityTotals(),
+                'productRows' => [],
+                'productWarehouseRows' => [],
+                'warehouseRows' => [],
+            ];
+        }
+
+        $costExpression = $this->articleCostExpression();
+        $saleValueExpression = $this->saleValueExpression();
+
+        $productRows = $this->saleItems($startDate, $endDate)
+            ->groupBy('article.id', 'article.code', 'article.name')
+            ->orderByDesc('sales_value')
+            ->selectRaw('article.id as article_id')
+            ->selectRaw("COALESCE(article.code, '') as article_code")
+            ->selectRaw("COALESCE(article.name, '') as article_name")
+            ->selectRaw('COUNT(DISTINCT item.warehouse_id) as warehouse_count')
+            ->selectRaw('COALESCE(SUM(item.quantity), 0) as units')
+            ->selectRaw("COALESCE(SUM({$saleValueExpression}), 0) as sales_value")
+            ->selectRaw("COALESCE(SUM(item.quantity * {$costExpression}), 0) as cost_value")
+            ->get()
+            ->map(fn($row) => $this->profitabilityRow($row, [
+                'articleId' => (int) $row->article_id,
+                'articleCode' => $row->article_code,
+                'articleName' => $row->article_name,
+                'warehouseCount' => (int) $row->warehouse_count,
+            ]))
+            ->values();
+
+        $productWarehouseRows = $this->saleItems($startDate, $endDate)
+            ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'item.warehouse_id')
+            ->groupBy('item.warehouse_id', 'warehouse.name', 'article.id', 'article.code', 'article.name')
+            ->orderByRaw("COALESCE(warehouse.name, 'Sin almacen')")
+            ->orderByDesc('sales_value')
+            ->selectRaw('item.warehouse_id as warehouse_id')
+            ->selectRaw("COALESCE(warehouse.name, 'Sin almacen') as warehouse_name")
+            ->selectRaw('article.id as article_id')
+            ->selectRaw("COALESCE(article.code, '') as article_code")
+            ->selectRaw("COALESCE(article.name, '') as article_name")
+            ->selectRaw('COALESCE(SUM(item.quantity), 0) as units')
+            ->selectRaw("COALESCE(SUM({$saleValueExpression}), 0) as sales_value")
+            ->selectRaw("COALESCE(SUM(item.quantity * {$costExpression}), 0) as cost_value")
+            ->get()
+            ->map(fn($row) => $this->profitabilityRow($row, [
+                'warehouseId' => $row->warehouse_id,
+                'warehouseName' => $row->warehouse_name,
+                'articleId' => (int) $row->article_id,
+                'articleCode' => $row->article_code,
+                'articleName' => $row->article_name,
+            ]))
+            ->values();
+
+        $warehouseRows = $this->saleItems($startDate, $endDate)
+            ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'item.warehouse_id')
+            ->groupBy('item.warehouse_id', 'warehouse.name')
+            ->orderByDesc('sales_value')
+            ->selectRaw('item.warehouse_id as warehouse_id')
+            ->selectRaw("COALESCE(warehouse.name, 'Sin almacen') as warehouse_name")
+            ->selectRaw('COALESCE(SUM(item.quantity), 0) as units')
+            ->selectRaw("COALESCE(SUM({$saleValueExpression}), 0) as sales_value")
+            ->selectRaw("COALESCE(SUM(item.quantity * {$costExpression}), 0) as cost_value")
+            ->get()
+            ->map(fn($row) => $this->profitabilityRow($row, [
+                'warehouseId' => $row->warehouse_id,
+                'warehouseName' => $row->warehouse_name,
+            ]))
+            ->values();
+
+        return [
+            'totals' => $this->profitabilityTotals($warehouseRows->all()),
+            'productRows' => $productRows->all(),
+            'productWarehouseRows' => $productWarehouseRows->all(),
+            'warehouseRows' => $warehouseRows->all(),
+        ];
+    }
+
     private function recentActivity(string $startDate, string $endDate): array
     {
         $activities = collect();
@@ -432,6 +513,77 @@ class DashboardController extends BasicController
             ->get()
             ->mapWithKeys(fn($row) => [($row->warehouse_id ?? 0) . ':' . $row->article_id => (float) $row->units])
             ->all();
+    }
+
+    private function saleItems(string $startDate, string $endDate)
+    {
+        return DB::table('magistral_sale_items as item')
+            ->join('magistral_sales as sale', 'sale.id', '=', 'item.magistral_sale_id')
+            ->leftJoin('articles as article', 'article.id', '=', 'item.article_id')
+            ->whereNotNull('sale.status')
+            ->whereNotNull('item.status')
+            ->when(Schema::hasColumn('magistral_sales', 'is_quote'), fn($query) => $query->where('sale.is_quote', false))
+            ->whereDate('sale.sale_date', '>=', $startDate)
+            ->whereDate('sale.sale_date', '<=', $endDate);
+    }
+
+    private function articleCostExpression(string $articleAlias = 'article'): string
+    {
+        $columns = [];
+        foreach (['cost_price', 'purchase_price_national', 'purchase_price_foreign'] as $column) {
+            if (Schema::hasColumn('articles', $column)) {
+                $columns[] = "NULLIF({$articleAlias}.{$column}, 0)";
+            }
+        }
+
+        return count($columns) ? 'COALESCE(' . implode(', ', $columns) . ', 0)' : '0';
+    }
+
+    private function saleValueExpression(string $itemAlias = 'item'): string
+    {
+        if (Schema::hasColumn('magistral_sale_items', 'subtotal')) {
+            return "{$itemAlias}.subtotal";
+        }
+
+        return "{$itemAlias}.quantity * {$itemAlias}.unit_price";
+    }
+
+    private function profitabilityRow(object $row, array $extra = []): array
+    {
+        $units = (float) ($row->units ?? 0);
+        $sales = (float) ($row->sales_value ?? 0);
+        $cost = (float) ($row->cost_value ?? 0);
+        $profit = $sales - $cost;
+
+        return array_merge($extra, [
+            'units' => round($units, 3),
+            'salesValue' => round($sales, 2),
+            'costValue' => round($cost, 2),
+            'profitValue' => round($profit, 2),
+            'avgSalePrice' => $units > 0 ? round($sales / $units, 4) : 0,
+            'avgCostPrice' => $units > 0 ? round($cost / $units, 4) : 0,
+            'unitProfitValue' => $units > 0 ? round(($sales / $units) - ($cost / $units), 4) : 0,
+            'profitPct' => $sales > 0 ? round(($profit / $sales) * 100, 2) : 0,
+        ]);
+    }
+
+    private function profitabilityTotals(array $rows = []): array
+    {
+        $units = array_sum(array_column($rows, 'units'));
+        $sales = array_sum(array_column($rows, 'salesValue'));
+        $cost = array_sum(array_column($rows, 'costValue'));
+        $profit = $sales - $cost;
+
+        return [
+            'units' => round($units, 3),
+            'salesValue' => round($sales, 2),
+            'costValue' => round($cost, 2),
+            'profitValue' => round($profit, 2),
+            'avgSalePrice' => $units > 0 ? round($sales / $units, 4) : 0,
+            'avgCostPrice' => $units > 0 ? round($cost / $units, 4) : 0,
+            'unitProfitValue' => $units > 0 ? round(($sales / $units) - ($cost / $units), 4) : 0,
+            'profitPct' => $sales > 0 ? round(($profit / $sales) * 100, 2) : 0,
+        ];
     }
 
     private function stockStatus(float|int|null $coverageDays, float $stock, float $avgMonthlyUnits): string
