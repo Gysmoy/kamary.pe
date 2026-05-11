@@ -18,6 +18,7 @@ class HomeController extends BasicController
         $periodStart = now()->startOfMonth()->toDateString();
         $periodEnd = now()->toDateString();
         $rotationStart = now()->subDays(89)->toDateString();
+        $stockByWarehouse = $this->stockByWarehouse($rotationStart, $periodEnd);
 
         return [
             'catalogMetrics' => [
@@ -79,7 +80,8 @@ class HomeController extends BasicController
                 ],
                 'summary' => $this->salesSummary($periodStart, $periodEnd),
                 'warehouseSales' => $this->warehouseSales($periodStart, $periodEnd),
-                'stockByWarehouse' => $this->stockByWarehouse($rotationStart, $periodEnd),
+                'stockByWarehouse' => $stockByWarehouse,
+                'inventoryRotation' => $this->inventoryRotationSummary($stockByWarehouse, $rotationStart, $periodEnd),
                 'profitability' => $this->profitability($periodStart, $periodEnd),
                 'dispatch' => $this->dispatchKpis($periodStart, $periodEnd),
             ],
@@ -252,6 +254,7 @@ class HomeController extends BasicController
                     'totalStockValue' => round($products->sum('stockValue'), 2),
                     'productCount' => $products->count(),
                     'statusSummary' => [
+                        'DEVOLUCION' => $products->where('stockStatus', 'DEVOLUCION')->count(),
                         'INFRASTOCK' => $products->where('stockStatus', 'INFRASTOCK')->count(),
                         'NORMOSTOCK' => $products->where('stockStatus', 'NORMOSTOCK')->count(),
                         'SOBRESTOCK' => $products->where('stockStatus', 'SOBRESTOCK')->count(),
@@ -262,6 +265,55 @@ class HomeController extends BasicController
             ->sortByDesc('totalStockValue')
             ->values()
             ->all();
+    }
+
+    private function inventoryRotationSummary(array $stockByWarehouse, string $rotationStart, string $endDate): array
+    {
+        $products = collect($stockByWarehouse)
+            ->flatMap(fn($warehouse) => $warehouse['products'] ?? [])
+            ->values();
+
+        $totalItems = $products->count();
+        $totalValue = round($products->sum('stockValue'), 2);
+        $totalUnits = round($products->sum('stock'), 3);
+        $statusOrder = [
+            'DEVOLUCION' => 'Devolucion',
+            'SOBRESTOCK' => 'Sobre stock',
+            'INFRASTOCK' => 'Infra stock',
+            'NORMOSTOCK' => 'Normal',
+        ];
+
+        $statusRows = collect($statusOrder)
+            ->map(function ($label, $status) use ($products, $totalItems, $totalValue) {
+                $rows = $products->where('stockStatus', $status);
+                $items = $rows->count();
+                $value = round($rows->sum('stockValue'), 2);
+
+                return [
+                    'status' => $status,
+                    'label' => $label,
+                    'items' => $items,
+                    'stockUnits' => round($rows->sum('stock'), 3),
+                    'stockValue' => $value,
+                    'pctItems' => $totalItems > 0 ? round(($items / $totalItems) * 100, 2) : 0,
+                    'pctValue' => $totalValue > 0 ? round(($value / $totalValue) * 100, 2) : 0,
+                ];
+            })
+            ->values()
+            ->all();
+
+        return [
+            'period' => [
+                'label' => 'Ultimos 90 dias',
+                'start' => $rotationStart,
+                'end' => $endDate,
+                'days' => max(1, Carbon::parse($rotationStart)->diffInDays(Carbon::parse($endDate)) + 1),
+            ],
+            'totalItems' => $totalItems,
+            'totalUnits' => $totalUnits,
+            'totalValue' => $totalValue,
+            'statusRows' => $statusRows,
+        ];
     }
 
     private function profitability(string $startDate, string $endDate): array
@@ -523,7 +575,7 @@ class HomeController extends BasicController
     private function stockStatus(float|int|null $coverageDays, float $stock, float $avgMonthlyUnits): string
     {
         if ($stock <= 0) return 'INFRASTOCK';
-        if ($avgMonthlyUnits <= 0) return 'SOBRESTOCK';
+        if ($avgMonthlyUnits <= 0) return 'DEVOLUCION';
         if ($coverageDays < 15) return 'INFRASTOCK';
         if ($coverageDays <= 30) return 'NORMOSTOCK';
         return 'SOBRESTOCK';

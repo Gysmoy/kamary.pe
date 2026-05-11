@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Magistrales;
 
 use App\Http\Controllers\BasicController;
 use App\Support\MagistralesStock;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -17,6 +18,7 @@ class DashboardController extends BasicController
     {
         $periodStart = now()->startOfMonth()->toDateString();
         $periodEnd = now()->toDateString();
+        $rotationStart = now()->subDays(89)->toDateString();
 
         return [
             'moduleTitle' => 'Dashboard Magistrales',
@@ -25,11 +27,13 @@ class DashboardController extends BasicController
                     'label' => 'Mes actual',
                     'start' => $periodStart,
                     'end' => $periodEnd,
+                    'rotationStart' => $rotationStart,
                 ],
                 'summary' => $this->summary($periodStart, $periodEnd),
                 'salesByType' => $this->salesByType($periodStart, $periodEnd),
                 'productionStatus' => $this->productionStatus($periodStart, $periodEnd),
                 'inventory' => $this->inventory(),
+                'inventoryRotation' => $this->inventoryRotationSummary($rotationStart, $periodEnd),
                 'lowStock' => $this->lowStock(),
                 'recentActivity' => $this->recentActivity($periodStart, $periodEnd),
             ],
@@ -166,6 +170,80 @@ class DashboardController extends BasicController
             'stockUnits' => round($rows->sum('stock'), 3),
             'articleCount' => $rows->pluck('article_id')->unique()->count(),
             'warehouseRows' => $warehouseRows,
+        ];
+    }
+
+    private function inventoryRotationSummary(string $rotationStart, string $endDate): array
+    {
+        if (!$this->hasTable('articles')) {
+            return $this->emptyInventoryRotation($rotationStart, $endDate);
+        }
+
+        $rows = MagistralesStock::valuationRows();
+        $monthlySales = $this->averageMonthlySalesMap($rotationStart, $endDate);
+        $rotationDays = max(1, Carbon::parse($rotationStart)->diffInDays(Carbon::parse($endDate)) + 1);
+        $rotationMonths = max(1, $rotationDays / 30);
+
+        $products = $rows
+            ->filter(fn($row) => (float) ($row['stock'] ?? 0) !== 0.0)
+            ->map(function ($row) use ($monthlySales, $rotationMonths) {
+                $key = ($row['warehouse_id'] ?? 0) . ':' . $row['article_id'];
+                $avgMonthlyUnits = round((float) ($monthlySales[$key] ?? 0) / $rotationMonths, 3);
+                $stock = (float) ($row['stock'] ?? 0);
+                $dailySales = $avgMonthlyUnits > 0 ? $avgMonthlyUnits / 30 : 0;
+                $coverageDays = $dailySales > 0 ? round($stock / $dailySales, 1) : ($stock > 0 ? 999 : 0);
+
+                return [
+                    'articleId' => (int) $row['article_id'],
+                    'warehouseId' => $row['warehouse_id'] ?? null,
+                    'stock' => round($stock, 3),
+                    'stockValue' => round((float) ($row['total_cost'] ?? 0), 2),
+                    'avgMonthlyUnits' => $avgMonthlyUnits,
+                    'coverageDays' => $coverageDays >= 999 ? null : $coverageDays,
+                    'stockStatus' => $this->stockStatus($coverageDays, $stock, $avgMonthlyUnits),
+                ];
+            })
+            ->values();
+
+        $totalItems = $products->count();
+        $totalValue = round($products->sum('stockValue'), 2);
+        $statusOrder = [
+            'DEVOLUCION' => 'Devolucion',
+            'SOBRESTOCK' => 'Sobre stock',
+            'INFRASTOCK' => 'Infra stock',
+            'NORMOSTOCK' => 'Normal',
+        ];
+
+        $statusRows = collect($statusOrder)
+            ->map(function ($label, $status) use ($products, $totalItems, $totalValue) {
+                $rows = $products->where('stockStatus', $status);
+                $items = $rows->count();
+                $value = round($rows->sum('stockValue'), 2);
+
+                return [
+                    'status' => $status,
+                    'label' => $label,
+                    'items' => $items,
+                    'stockUnits' => round($rows->sum('stock'), 3),
+                    'stockValue' => $value,
+                    'pctItems' => $totalItems > 0 ? round(($items / $totalItems) * 100, 2) : 0,
+                    'pctValue' => $totalValue > 0 ? round(($value / $totalValue) * 100, 2) : 0,
+                ];
+            })
+            ->values()
+            ->all();
+
+        return [
+            'period' => [
+                'label' => 'Ultimos 90 dias',
+                'start' => $rotationStart,
+                'end' => $endDate,
+                'days' => $rotationDays,
+            ],
+            'totalItems' => $totalItems,
+            'totalUnits' => round($products->sum('stock'), 3),
+            'totalValue' => $totalValue,
+            'statusRows' => $statusRows,
         ];
     }
 
@@ -333,6 +411,51 @@ class DashboardController extends BasicController
             'units' => (float) (clone $base)->where('order_status', 'finished')->sum('quantity'),
             'finishedCount' => (int) (clone $base)->where('order_status', 'finished')->count(),
             'pendingCount' => (int) (clone $base)->whereIn('order_status', ['pending', 'in_process'])->count(),
+        ];
+    }
+
+    private function averageMonthlySalesMap(string $startDate, string $endDate): array
+    {
+        if (!$this->hasTables(['magistral_sales', 'magistral_sale_items'])) return [];
+
+        return DB::table('magistral_sale_items as item')
+            ->join('magistral_sales as sale', 'sale.id', '=', 'item.magistral_sale_id')
+            ->whereNotNull('sale.status')
+            ->whereNotNull('item.status')
+            ->when(Schema::hasColumn('magistral_sales', 'is_quote'), fn($query) => $query->where('sale.is_quote', false))
+            ->whereDate('sale.sale_date', '>=', $startDate)
+            ->whereDate('sale.sale_date', '<=', $endDate)
+            ->groupBy('item.warehouse_id', 'item.article_id')
+            ->selectRaw('item.warehouse_id')
+            ->selectRaw('item.article_id')
+            ->selectRaw('COALESCE(SUM(item.quantity), 0) as units')
+            ->get()
+            ->mapWithKeys(fn($row) => [($row->warehouse_id ?? 0) . ':' . $row->article_id => (float) $row->units])
+            ->all();
+    }
+
+    private function stockStatus(float|int|null $coverageDays, float $stock, float $avgMonthlyUnits): string
+    {
+        if ($stock <= 0) return 'INFRASTOCK';
+        if ($avgMonthlyUnits <= 0) return 'DEVOLUCION';
+        if ($coverageDays < 15) return 'INFRASTOCK';
+        if ($coverageDays <= 30) return 'NORMOSTOCK';
+        return 'SOBRESTOCK';
+    }
+
+    private function emptyInventoryRotation(string $rotationStart, string $endDate): array
+    {
+        return [
+            'period' => [
+                'label' => 'Ultimos 90 dias',
+                'start' => $rotationStart,
+                'end' => $endDate,
+                'days' => max(1, Carbon::parse($rotationStart)->diffInDays(Carbon::parse($endDate)) + 1),
+            ],
+            'totalItems' => 0,
+            'totalUnits' => 0,
+            'totalValue' => 0,
+            'statusRows' => [],
         ];
     }
 

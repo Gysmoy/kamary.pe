@@ -40,6 +40,20 @@ const statusColor = {
   cancelled: 'danger',
 };
 
+const stockStatusLabel = {
+  DEVOLUCION: 'Devolucion',
+  INFRASTOCK: 'Infra stock',
+  NORMOSTOCK: 'Normal',
+  SOBRESTOCK: 'Sobre stock',
+};
+
+const stockChartColor = {
+  DEVOLUCION: '#0d6efd',
+  INFRASTOCK: '#16b5c2',
+  NORMOSTOCK: '#f10aa7',
+  SOBRESTOCK: '#f59f00',
+};
+
 const EmptyState = ({ text = 'Sin datos para el periodo.' }) => (
   <div className='text-center text-muted py-4'>{text}</div>
 );
@@ -261,6 +275,161 @@ const ActivityPanel = ({ rows = [] }) => (
   </div>
 );
 
+const pieBackground = (rows = [], field = 'pctItems') => {
+  let cursor = 0;
+  const segments = rows
+    .filter(row => Number(row[field] || 0) > 0)
+    .map(row => {
+      const value = Number(row[field] || 0);
+      const start = cursor;
+      const end = cursor + value;
+      cursor = end;
+      return `${stockChartColor[row.status] || '#6c757d'} ${start}% ${end}%`;
+    });
+
+  return segments.length ? `conic-gradient(${segments.join(', ')})` : '#eef2f7';
+};
+
+const RotationMetric = ({ label, count, value, color = '#0d6efd' }) => (
+  <div className='col-6 col-xl mb-3'>
+    <div className='border rounded h-100 overflow-hidden' style={{ borderColor: `${color}66` }}>
+      <div className='text-center px-2 py-2' style={{ background: `${color}22` }}>
+        <div className='text-muted text-uppercase small'>{label}</div>
+        <h4 className='mb-0'>{number(count)}</h4>
+      </div>
+      <div className='text-center px-2 py-2' style={{ background: `${color}44` }}>
+        <div className='text-muted text-uppercase small'>Valor</div>
+        <h5 className='mb-0'>{money(value)}</h5>
+      </div>
+    </div>
+  </div>
+);
+
+const RotationPie = ({ title, rows = [], field = 'pctItems' }) => (
+  <div className='card h-100'>
+    <div className='card-body'>
+      <h6 className='text-center mb-3'>{title}</h6>
+      <div className='d-flex flex-wrap justify-content-center align-items-center gap-4'>
+        <div
+          className='rounded-circle flex-shrink-0'
+          style={{
+            width: 210,
+            height: 210,
+            background: pieBackground(rows, field),
+          }}
+        ></div>
+        <div>
+          {rows.map(row => (
+            <div key={`${title}-${row.status}`} className='d-flex align-items-center gap-2 mb-2'>
+              <span className='rounded-circle d-inline-block' style={{ width: 10, height: 10, background: stockChartColor[row.status] || '#6c757d' }}></span>
+              <span>{stockStatusLabel[row.status] || row.label}</span>
+              <strong>{pct(row[field])}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const RotationValueBars = ({ title, rows = [], field = 'stockValue', formatter = money }) => {
+  const max = Math.max(1, ...rows.map(row => Number(row[field] || 0)));
+
+  return (
+    <div className='card h-100'>
+      <div className='card-body'>
+        <h6 className='text-center mb-3'>{title}</h6>
+        <div className='d-flex align-items-end justify-content-around gap-3' style={{ height: 230 }}>
+          {rows.map(row => {
+            const height = Math.max(4, (Number(row[field] || 0) / max) * 100);
+            return (
+              <div key={`${title}-${row.status}`} className='d-flex flex-column align-items-center flex-fill h-100'>
+                <small className='fw-semibold mb-1'>{formatter(row[field])}</small>
+                <div className='d-flex align-items-end flex-grow-1 w-100'>
+                  <div
+                    className='w-100 rounded-top'
+                    style={{ height: `${height}%`, background: stockChartColor[row.status] || '#6c757d', minHeight: 8 }}
+                  ></div>
+                </div>
+                <small className='text-muted text-center mt-2'>{stockStatusLabel[row.status] || row.label}</small>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RotationHorizontalBars = ({ title, rows = [], field = 'items', pctField = 'pctItems', formatter = number }) => (
+  <div className='card h-100'>
+    <div className='card-body'>
+      <h6 className='text-center mb-3'>{title}</h6>
+      {rows.map(row => (
+        <div key={`${title}-${row.status}`} className='mb-3'>
+          <div className='d-flex justify-content-between gap-3 mb-1'>
+            <span>{stockStatusLabel[row.status] || row.label}</span>
+            <strong>{formatter(row[field])}</strong>
+          </div>
+          <div className='progress' style={{ height: 12 }}>
+            <div
+              className='progress-bar'
+              style={{ width: `${clampPct(row[pctField])}%`, background: stockChartColor[row.status] || '#6c757d' }}
+            ></div>
+          </div>
+          <small className='text-muted'>{pct(row[pctField])}</small>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const InventoryRotationSummary = ({ data = {} }) => {
+  const rows = data.statusRows || [];
+
+  return (
+    <div className='card'>
+      <div className='card-body'>
+        <SectionHeader
+          title='Promedio de venta de los ultimos 90 dias'
+          meta={`${date(data.period?.start)} - ${date(data.period?.end)}`}
+          action={<span className='badge badge-soft-primary'>{number(data.totalItems)} items</span>}
+        />
+        {rows.length === 0 || Number(data.totalItems || 0) === 0 ? <EmptyState text='Sin stock valorizado para clasificar.' /> : (
+          <>
+            <div className='row'>
+              <RotationMetric label='Total items' count={data.totalItems} value={data.totalValue} color='#5dade2' />
+              {rows.map(row => (
+                <RotationMetric
+                  key={`rotation-metric-${row.status}`}
+                  label={stockStatusLabel[row.status] || row.label}
+                  count={row.items}
+                  value={row.stockValue}
+                  color={stockChartColor[row.status] || '#6c757d'}
+                />
+              ))}
+            </div>
+            <div className='row'>
+              <div className='col-xl-6 mb-3'>
+                <RotationPie title='Distribucion % por Status' rows={rows} field='pctItems' />
+              </div>
+              <div className='col-xl-6 mb-3'>
+                <RotationValueBars title='Inventario valorizado' rows={rows} field='stockValue' formatter={money} />
+              </div>
+              <div className='col-xl-6 mb-3'>
+                <RotationHorizontalBars title='Total items por Status' rows={rows} field='items' pctField='pctItems' formatter={number} />
+              </div>
+              <div className='col-xl-6 mb-3'>
+                <RotationHorizontalBars title='Distribucion % por valorizacion' rows={rows} field='stockValue' pctField='pctValue' formatter={money} />
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const MagistralesDashboard = ({ magistralesDashboard = {} }) => {
   const period = magistralesDashboard.period || {};
   const summary = magistralesDashboard.summary || {};
@@ -279,6 +448,7 @@ const MagistralesDashboard = ({ magistralesDashboard = {} }) => {
                 <a href='/admin/magistrales-sales' className='btn btn-sm btn-light'>Ventas</a>
                 <a href='/admin/magistrales-production-order' className='btn btn-sm btn-light'>Produccion</a>
                 <a href='/admin/magistrales/inventory' className='btn btn-sm btn-light'>Inventario</a>
+                <a href='#magistrales-rotation' className='btn btn-sm btn-light'>Rotacion</a>
               </div>
             </div>
           </div>
@@ -296,6 +466,9 @@ const MagistralesDashboard = ({ magistralesDashboard = {} }) => {
       </div>
       <div className='col-xl-7 mb-3'>
         <InventoryPanel data={magistralesDashboard.inventory || {}} />
+      </div>
+      <div id='magistrales-rotation' className='col-12 mb-3'>
+        <InventoryRotationSummary data={magistralesDashboard.inventoryRotation || {}} />
       </div>
       <div className='col-xl-6 mb-3'>
         <LowStockPanel rows={magistralesDashboard.lowStock || []} />
