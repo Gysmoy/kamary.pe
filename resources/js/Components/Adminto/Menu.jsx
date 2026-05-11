@@ -197,6 +197,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
           )}
 
           {canAccessAny(
+            'magistrales-dashboard',
             'magistrales-products',
             'magistrales-procurement',
             'magistrales-warehouse',

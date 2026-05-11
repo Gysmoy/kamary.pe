@@ -14,6 +14,7 @@ import renderGridEditLink from '../Utils/renderGridEditLink';
 const rolesRest = new RolesRest()
 
 const MAGISTRALES_MENU_PERMISSIONS = [
+  'magistrales-dashboard',
   'magistrales-products',
   'magistrales-procurement',
   'magistrales-warehouse',

@@ -63,6 +63,7 @@ class ModulePermissions
 
             'sample-orders' => 'Muestras - Pedido',
 
+            'magistrales-dashboard' => 'Magistrales - Dashboard',
             'magistrales-products' => 'Magistrales - Productos',
             'magistrales-procurement' => 'Magistrales - Proveedores y Compras',
             'magistrales-warehouse' => 'Magistrales - Almacen',
@@ -88,6 +89,7 @@ class ModulePermissions
     public static function magistralesModules(): array
     {
         return [
+            ['permission' => 'magistrales-dashboard', 'web' => '/admin/magistrales/dashboard', 'api' => null, 'label' => 'Dashboard'],
             ['permission' => 'magistrales-articles', 'web' => '/admin/magistrales/articles', 'api' => '/api/admin/magistrales/articles/paginate', 'label' => 'Articulos'],
             ['permission' => 'magistrales-category', 'web' => '/admin/magistrales-category', 'api' => '/api/admin/magistrales/categories/paginate', 'label' => 'Categoria'],
             ['permission' => 'magistrales-formats', 'web' => '/admin/magistrales-formats', 'api' => '/api/admin/magistrales/formats/paginate', 'label' => 'Formatos'],
