@@ -12,6 +12,70 @@ const fallbackLabel = (value) => {
     .join(' ')
 }
 
+const spanishStatusLabels = new Map([
+  ['active', 'Activo'],
+  ['inactive', 'Inactivo'],
+  ['enabled', 'Habilitado'],
+  ['disabled', 'Deshabilitado'],
+  ['success', 'Sincronizado'],
+  ['error', 'Error'],
+  ['failed', 'Fallido'],
+  ['pending', 'Pendiente'],
+  ['draft', 'Borrador'],
+  ['sent', 'Enviado'],
+  ['accepted', 'Aceptado'],
+  ['observed', 'Observado'],
+  ['rejected', 'Rechazado'],
+  ['cancelled', 'Anulado'],
+  ['approved', 'Aprobado'],
+  ['confirmed', 'Confirmado'],
+  ['partial', 'Parcial'],
+  ['completed', 'Completado'],
+  ['preparing', 'Preparando'],
+  ['dispatched', 'Despachado'],
+  ['delivered', 'Entregado'],
+  ['billed', 'Facturado'],
+  ['closed', 'Cerrado'],
+  ['waiting', 'En espera'],
+  ['assigned', 'Asignado'],
+  ['in_route', 'En ruta'],
+  ['incident', 'Incidencia'],
+  ['scheduled', 'Programado'],
+  ['executing', 'En ejecucion'],
+  ['prefactured', 'Prefacturado'],
+  ['invoiced', 'Facturado'],
+  ['paid', 'Pagado'],
+  ['in_process', 'En proceso'],
+  ['in_progress', 'En progreso'],
+  ['finished', 'Finalizado'],
+  ['registered', 'Registrado'],
+  ['processing', 'En proceso'],
+  ['delivery', 'Entrega'],
+  ['pickup', 'Recojo'],
+  ['transfer', 'Traslado'],
+  ['return', 'Devolucion'],
+  ['visit', 'Visita'],
+  ['commercial_order', 'Pedido comercial'],
+  ['service_order', 'Orden de servicio'],
+])
+
+const spanishStatusPattern = /\b(active|inactive|enabled|disabled|success|error|failed|pending|draft|sent|accepted|observed|rejected|cancelled|approved|confirmed|partial|completed|preparing|dispatched|delivered|billed|closed|waiting|assigned|in_route|incident|scheduled|executing|prefactured|invoiced|paid|in_process|in_progress|finished|registered|processing|delivery|pickup|transfer|return|visit|commercial_order|service_order)\b/gi
+
+export const getSpanishStatusLabel = (value, emptyLabel = '-') => {
+  const normalized = `${value ?? ''}`.trim()
+  if (!normalized) return emptyLabel
+  return spanishStatusLabels.get(normalized.toLowerCase()) ?? fallbackLabel(normalized)
+}
+
+export const translateStatusText = (value, emptyLabel = '-') => {
+  const text = `${value ?? ''}`.trim()
+  if (!text) return emptyLabel
+
+  return text.replace(spanishStatusPattern, (match) => (
+    spanishStatusLabels.get(match.toLowerCase()) ?? match
+  ))
+}
+
 const buildLabelResolver = (options) => {
   const labels = Object.fromEntries(options.map(({ value, label }) => [`${value}`.toLowerCase(), label]))
 

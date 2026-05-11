@@ -1,4 +1,18 @@
 import { toast } from 'sonner'
+import {
+  getActivityStatusLabel,
+  getActivityTypeLabel,
+  getApprovalStatusLabel,
+  getBillingStatusLabel,
+  getDispatchStatusLabel,
+  getOperationalOrderStatusLabel,
+  getPaymentStatusLabel,
+  getPurchaseOrderStatusLabel,
+  getPurchaseReceiptStatusLabel,
+  getServiceOrderStatusLabel,
+  getSourceTypeLabel,
+  translateStatusText,
+} from './statusLabels'
 
 const asText = (value, fallback = '-') => {
   if (value === null || value === undefined || value === '') return fallback
@@ -19,6 +33,8 @@ const asDate = (value) => {
 }
 
 const joinText = (...values) => values.flat().filter(value => value !== null && value !== undefined && value !== '').join(' ')
+
+const asClientText = (value, fallback = '-') => translateStatusText(value, fallback)
 
 const customerName = (data) => (
   nested(data, 'client.full_name')
@@ -121,8 +137,8 @@ export const buildMagistralesRows = {
       ['Emision', asDate(data?.issue_date)],
       ['Fecha esperada', asDate(data?.expected_date)],
       ['Pago', data?.payment_condition],
-      ['Aprobacion', data?.approval_status],
-      ['Estado OC', data?.order_status],
+      ['Aprobacion', getApprovalStatusLabel(data?.approval_status)],
+      ['Estado OC', getPurchaseOrderStatusLabel(data?.order_status)],
       ['Moneda', data?.currency],
     ],
     columns: ['Codigo', 'Articulo', 'Solicitada', 'Recibida', 'P. unit.', 'Total'],
@@ -155,7 +171,7 @@ export const buildMagistralesRows = {
       ['Guia', [data?.guide_series, data?.guide_sequence].filter(Boolean).join('-')],
       ['RUC guia', data?.guide_ruc],
       ['Emision', asDate(data?.issue_date)],
-      ['Estado', data?.receipt_status],
+      ['Estado', getPurchaseReceiptStatusLabel(data?.receipt_status)],
       ['Pago', data?.payment_condition],
       ['Primera cuota', asDate(data?.first_due_date)],
       ['Cuotas', data?.installments],
@@ -267,7 +283,7 @@ export const buildMagistralesRows = {
     code: data?.code,
     filename: `orden-produccion-${data?.code || data?.id}`,
     meta: [
-      ['Estado', data?.order_status],
+      ['Estado', asClientText(data?.order_status)],
       ['Responsable', nested(data, 'responsible.name')],
       ['Destino', nested(data, 'destinationWarehouse.name') || data?.destination],
       ['Producto', nested(data, 'article.name')],
@@ -295,7 +311,7 @@ export const buildMagistralesRows = {
     meta: [
       ['Empresa', nested(data, 'business.name')],
       ['Farmacia', data?.pharmacy],
-      ['Estado pago', data?.payment_status],
+      ['Estado pago', getPaymentStatusLabel(data?.payment_status)],
       ['Documento', [data?.document_type, data?.document_number].filter(Boolean).join(' ')],
       ['Paciente', data?.patient],
       ['Doctor', data?.doctor],
@@ -335,7 +351,7 @@ export const buildMagistralesRows = {
       ['Emision', asDate(data?.issue_date)],
       ['Vencimiento', asDate(data?.due_date)],
       ['Condicion', data?.payment_condition],
-      ['Estado pago', data?.payment_status],
+      ['Estado pago', getPaymentStatusLabel(data?.payment_status)],
       ['Moneda', data?.currency],
     ],
     columns: ['Cuota', 'Vencimiento', 'Importe', 'Pagado', 'Saldo', 'Estado', 'Fecha pago'],
@@ -345,7 +361,7 @@ export const buildMagistralesRows = {
       asMoney(item?.amount, data?.currency || 'PEN'),
       asMoney(item?.paid_amount, data?.currency || 'PEN'),
       asMoney(item?.balance_amount, data?.currency || 'PEN'),
-      item?.payment_status,
+      getPaymentStatusLabel(item?.payment_status),
       asDate(item?.paid_at),
     ]),
     totals: [
@@ -362,7 +378,7 @@ export const buildMagistralesRows = {
     code: data?.code,
     filename: `cuenta-por-cobrar-${data?.code || data?.id}`,
     meta: [
-      ['Origen', data?.source_type],
+      ['Origen', getSourceTypeLabel(data?.source_type)],
       ['Documento origen', nested(data, 'commercial_order.code') || nested(data, 'commercialOrder.code') || nested(data, 'service_order.code') || nested(data, 'serviceOrder.code')],
       ['Empresa', nested(data, 'business.name')],
       ['Sede', nested(data, 'branch.name')],
@@ -372,7 +388,7 @@ export const buildMagistralesRows = {
       ['Emision', asDate(data?.issue_date)],
       ['Vencimiento', asDate(data?.due_date)],
       ['Condicion', data?.payment_condition],
-      ['Estado pago', data?.payment_status],
+      ['Estado pago', getPaymentStatusLabel(data?.payment_status)],
       ['Moneda', data?.currency],
     ],
     columns: ['Cuota', 'Vencimiento', 'Importe', 'Pagado', 'Saldo', 'Estado', 'Fecha pago'],
@@ -382,7 +398,7 @@ export const buildMagistralesRows = {
       asMoney(item?.amount, data?.currency || 'PEN'),
       asMoney(item?.paid_amount, data?.currency || 'PEN'),
       asMoney(item?.balance_amount, data?.currency || 'PEN'),
-      item?.payment_status,
+      getPaymentStatusLabel(item?.payment_status),
       asDate(item?.paid_at),
     ]),
     totals: [
@@ -409,10 +425,10 @@ export const buildMagistralesRows = {
       ['Documento', data?.document_type],
       ['Pago', data?.payment_condition],
       ['Metodo pago', data?.payment_method],
-      ['Estado pedido', data?.order_status],
-      ['Despacho', data?.dispatch_status],
-      ['Facturacion', data?.billing_status],
-      ['Cobranza', data?.payment_status],
+      ['Estado pedido', getOperationalOrderStatusLabel(data?.order_status)],
+      ['Despacho', getDispatchStatusLabel(data?.dispatch_status)],
+      ['Facturacion', getBillingStatusLabel(data?.billing_status)],
+      ['Cobranza', getPaymentStatusLabel(data?.payment_status)],
       ['Moneda', data?.currency],
     ],
     columns: ['Articulo', 'Presentacion', 'Stock', 'Cantidad', 'P. unit.', 'Total', 'Tarifario'],
@@ -476,8 +492,8 @@ export const buildMagistralesRows = {
       ['Ciclo', data?.billing_cycle],
       ['Pago', data?.payment_condition],
       ['Cuotas', data?.installments],
-      ['Estado', data?.order_status],
-      ['Facturacion', data?.billing_status],
+      ['Estado', getServiceOrderStatusLabel(data?.order_status)],
+      ['Facturacion', getBillingStatusLabel(data?.billing_status)],
       ['Moneda', data?.currency],
     ],
     columns: ['Servicio', 'Descripcion', 'Cantidad', 'P. unit.', 'Detraccion %', 'Comision %', 'Total'],
@@ -512,7 +528,7 @@ export const buildMagistralesRows = {
       ['Zona', nested(data, 'zone_master.name') || nested(data, 'zoneMaster.name') || data?.zone],
       ['Copiloto', data?.copilot_name],
       ['Manifiesto', data?.manifest_code],
-      ['Estado', data?.dispatch_status],
+      ['Estado', getDispatchStatusLabel(data?.dispatch_status)],
     ],
     columns: ['Pedido', 'Cliente', 'Total'],
     rows: (data?.assignments ?? []).map(item => [
@@ -532,8 +548,8 @@ export const buildMagistralesRows = {
       ['Almacen', nested(data, 'warehouse.name')],
       ['Pedido', nested(data, 'commercial_order.code') || nested(data, 'commercialOrder.code')],
       ['Despacho', nested(data, 'dispatch.code')],
-      ['Tipo', data?.activity_type],
-      ['Estado', data?.activity_status],
+      ['Tipo', getActivityTypeLabel(data?.activity_type)],
+      ['Estado', getActivityStatusLabel(data?.activity_status)],
       ['Fecha', asDate(data?.transfer_date)],
       ['Cliente', data?.customer_name],
       ['Documento', data?.document_number],
@@ -650,8 +666,8 @@ export const buildMagistralesRows = {
     code: data?.order_number || data?.id,
     filename: `pedido-muestra-${data?.order_number || data?.id}`,
     meta: [
-      ['Estado pedido', data?.order_status],
-      ['Estado email', data?.email_status],
+      ['Estado pedido', asClientText(data?.order_status)],
+      ['Estado email', asClientText(data?.email_status)],
       ['Guia remision', data?.referral_guide],
       ['Peso bruto total', data?.total_gross_weight ? asNumber(data.total_gross_weight) : ''],
       ['Canal', data?.channel],
@@ -690,7 +706,7 @@ export const openMagistralesRecordPdf = (document) => {
     y += 42
     const metaRows = (document.meta ?? [])
       .filter(([, value]) => value !== null && value !== undefined && value !== '')
-      .map(([label, value]) => [label, asText(value)])
+      .map(([label, value]) => [label, asClientText(value)])
 
     if (metaRows.length) {
       doc.autoTable({
@@ -706,10 +722,14 @@ export const openMagistralesRecordPdf = (document) => {
       y = doc.lastAutoTable.finalY + 18
     }
 
+    const detailRows = document.rows?.length
+      ? document.rows.map(row => row.map(cell => asClientText(cell)))
+      : [['Sin detalle']]
+
     doc.autoTable({
       startY: y,
       head: [document.columns ?? []],
-      body: document.rows?.length ? document.rows : [['Sin detalle']],
+      body: detailRows,
       theme: 'striped',
       styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
       headStyles: { fillColor: [55, 65, 81] },
@@ -718,9 +738,10 @@ export const openMagistralesRecordPdf = (document) => {
     y = doc.lastAutoTable.finalY + 16
 
     if (document.totals?.length) {
+      const totalRows = document.totals.map(row => row.map(cell => asClientText(cell)))
       doc.autoTable({
         startY: y,
-        body: document.totals,
+        body: totalRows,
         theme: 'plain',
         styles: { fontSize: 9, cellPadding: 3 },
         columnStyles: {
@@ -736,7 +757,7 @@ export const openMagistralesRecordPdf = (document) => {
       doc.setFontSize(9)
       doc.text('Observaciones', 40, y)
       doc.setFontSize(8)
-      doc.text(doc.splitTextToSize(asText(document.observations), pageWidth - 80), 40, y + 14)
+      doc.text(doc.splitTextToSize(asClientText(document.observations), pageWidth - 80), 40, y + 14)
     }
 
     showPdfInModal(doc, document)

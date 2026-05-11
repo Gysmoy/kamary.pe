@@ -1,3 +1,5 @@
+import { translateStatusText } from './statusLabels'
+
 const toPromise = (deferred) => new Promise((resolve, reject) => {
   if (!deferred) {
     resolve()
@@ -29,8 +31,8 @@ const textValue = (value) => {
   if (value === null || value === undefined) return ''
   if (Array.isArray(value)) return value.map(textValue).join('\n')
   if (value instanceof Date) return value.toLocaleDateString('es-PE')
-  if (typeof value === 'object') return JSON.stringify(value)
-  return String(value)
+  if (typeof value === 'object') return translateStatusText(JSON.stringify(value), '')
+  return translateStatusText(String(value), '')
 }
 
 const notifyExportError = (error, type) => {
