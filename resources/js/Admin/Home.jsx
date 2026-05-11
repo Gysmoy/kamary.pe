@@ -318,26 +318,33 @@ const RotationPie = ({ title, rows = [], field = 'pctItems' }) => (
   </div>
 );
 
-const RotationValueBars = ({ title, rows = [], field = 'stockValue', formatter = money }) => {
+const RotationBarChart = ({ title, rows = [], field = 'stockValue', formatter = money, legend = null }) => {
   const max = Math.max(1, ...rows.map(row => Number(row[field] || 0)));
 
   return (
     <div className='card h-100'>
       <div className='card-body'>
-        <h6 className='text-center mb-3'>{title}</h6>
+        <h6 className='text-center mb-2'>{title}</h6>
+        {legend && (
+          <div className='d-flex align-items-center gap-2 small mb-2'>
+            <span className='d-inline-block' style={{ width: 18, height: 10, background: '#0d6efd' }}></span>
+            <span className='text-muted text-uppercase'>{legend}</span>
+          </div>
+        )}
         <div className='d-flex align-items-end justify-content-around gap-3' style={{ height: 230 }}>
           {rows.map(row => {
-            const height = Math.max(4, (Number(row[field] || 0) / max) * 100);
+            const value = Number(row[field] || 0);
+            const height = value > 0 ? Math.max(4, (value / max) * 100) : 0;
             return (
               <div key={`${title}-${row.status}`} className='d-flex flex-column align-items-center flex-fill h-100'>
-                <small className='fw-semibold mb-1'>{formatter(row[field])}</small>
-                <div className='d-flex align-items-end flex-grow-1 w-100'>
+                <small className='fw-semibold mb-1 text-primary text-center'>{formatter(row[field])}</small>
+                <div className='d-flex align-items-end flex-grow-1 w-100 border-bottom'>
                   <div
                     className='w-100 rounded-top'
-                    style={{ height: `${height}%`, background: stockChartColor[row.status] || '#6c757d', minHeight: 8 }}
+                    style={{ height: `${height}%`, background: '#0d6efd', minHeight: value > 0 ? 8 : 0 }}
                   ></div>
                 </div>
-                <small className='text-muted text-center mt-2'>{stockStatusLabel[row.status] || row.label}</small>
+                <small className='text-muted text-uppercase text-center mt-2' style={{ fontSize: 11 }}>{stockStatusLabel[row.status] || row.label}</small>
               </div>
             );
           })}
@@ -346,29 +353,6 @@ const RotationValueBars = ({ title, rows = [], field = 'stockValue', formatter =
     </div>
   );
 };
-
-const RotationHorizontalBars = ({ title, rows = [], field = 'items', pctField = 'pctItems', formatter = number }) => (
-  <div className='card h-100'>
-    <div className='card-body'>
-      <h6 className='text-center mb-3'>{title}</h6>
-      {rows.map(row => (
-        <div key={`${title}-${row.status}`} className='mb-3'>
-          <div className='d-flex justify-content-between gap-3 mb-1'>
-            <span>{stockStatusLabel[row.status] || row.label}</span>
-            <strong>{formatter(row[field])}</strong>
-          </div>
-          <div className='progress' style={{ height: 12 }}>
-            <div
-              className='progress-bar'
-              style={{ width: `${clampPct(row[pctField])}%`, background: stockChartColor[row.status] || '#6c757d' }}
-            ></div>
-          </div>
-          <small className='text-muted'>{pct(row[pctField])}</small>
-        </div>
-      ))}
-    </div>
-  </div>
-);
 
 const InventoryRotationSummary = ({ data = {} }) => {
   const rows = data.statusRows || [];
@@ -400,13 +384,13 @@ const InventoryRotationSummary = ({ data = {} }) => {
                 <RotationPie title='Distribucion % por Status' rows={rows} field='pctItems' />
               </div>
               <div className='col-xl-6 mb-3'>
-                <RotationValueBars title='Inventario valorizado' rows={rows} field='stockValue' formatter={money} />
+                <RotationBarChart title='Inventario valorizado' rows={rows} field='stockValue' formatter={money} legend='Valorizacion' />
               </div>
               <div className='col-xl-6 mb-3'>
-                <RotationHorizontalBars title='Total items por Status' rows={rows} field='items' pctField='pctItems' formatter={number} />
+                <RotationBarChart title='Total items por Status' rows={rows} field='items' formatter={number} legend='Items' />
               </div>
               <div className='col-xl-6 mb-3'>
-                <RotationHorizontalBars title='Distribucion % por valorizacion' rows={rows} field='stockValue' pctField='pctValue' formatter={money} />
+                <RotationBarChart title='Distribucion % por valorizacion' rows={rows} field='pctValue' formatter={pct} legend='Valorizacion' />
               </div>
             </div>
           </>
