@@ -5,6 +5,7 @@ import NavBar from './NavBar'
 import RigthBar from './RightBar'
 import WhatsAppModal from '../modals/WhatsAppModal'
 import { Toaster } from 'sonner'
+import { observeSelect2 } from '@Utils/select2AutoInit'
 
 // moment.tz.setDefault('UTC');
 
@@ -16,6 +17,8 @@ const Base = ({ children, title, can, hasRole }) => {
     app.init()
     theme.init()
     customJS()
+
+    return observeSelect2(document)
   }, [])
 
   const [panel, setPanel] = useState('kamary-peru')

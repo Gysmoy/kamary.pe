@@ -72,6 +72,58 @@
         .dx-datagrid-content .dx-datagrid-table .dx-row>td {
             vertical-align: middle;
         }
+
+        .select2-container {
+            width: 100% !important;
+        }
+
+        .select2-container .select2-selection--single {
+            min-height: calc(1.5em + .9rem + 2px);
+            border-color: var(--ct-border-color);
+            border-radius: var(--ct-border-radius);
+            display: flex;
+            align-items: center;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            color: var(--ct-body-color);
+            line-height: 1.5;
+            padding-left: .9rem;
+            padding-right: 2rem;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 100%;
+            right: .45rem;
+        }
+
+        .select2-container--default .select2-selection--multiple {
+            min-height: calc(1.5em + .9rem + 2px);
+            border-color: var(--ct-border-color);
+            border-radius: var(--ct-border-radius);
+        }
+
+        .select2-container--default.select2-container--focus .select2-selection--multiple,
+        .select2-container--default.select2-container--open .select2-selection--single,
+        .select2-container--default.select2-container--open .select2-selection--multiple {
+            border-color: var(--ct-primary);
+        }
+
+        .form-control-sm+.select2-container .select2-selection--single,
+        .form-select-sm+.select2-container .select2-selection--single {
+            min-height: calc(1.5em + .5rem + 2px);
+            font-size: .875rem;
+        }
+
+        .form-control-sm+.select2-container .select2-selection__rendered,
+        .form-select-sm+.select2-container .select2-selection__rendered {
+            padding-left: .5rem;
+        }
+
+        .select2-dropdown {
+            border-color: var(--ct-border-color);
+            z-index: 1065;
+        }
     </style>
 </head>
 

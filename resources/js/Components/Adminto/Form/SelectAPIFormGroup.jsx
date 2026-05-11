@@ -8,13 +8,23 @@ const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = fa
   tags
 }) => {
   if (!eRef) eRef = useRef();
-  if (!id) id = `select-${crypto.randomUUID()}`;
-  const containerId = `container-${id}`
+  const generatedIdRef = useRef(id || `select-${crypto.randomUUID()}`);
+  const selectId = id || generatedIdRef.current;
+  const containerId = `container-${selectId}`
+  const onChangeRef = useRef(onChange);
 
   useEffect(() => {
-    $(eRef.current).select2({
-      dropdownParent: `#${containerId}`,
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  useEffect(() => {
+    const $select = $(eRef.current)
+    if ($select.data('select2')) $select.select2('destroy')
+
+    $select.select2({
+      dropdownParent: dropdownParent ? $(dropdownParent) : $(`#${containerId}`),
       minimumInputLength: 0,
+      minimumResultsForSearch: 0,
       tags,
       ajax: {
         url: searchAPI,
@@ -67,14 +77,17 @@ const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = fa
       templateResult,
       templateSelection
     })
-  }, [dropdownParent, filter])
 
-  useEffect(() => {
-    $(eRef.current).on('change', onChange)
-  }, [filter])
+    $select.off('change.selectAPIFormGroup').on('change.selectAPIFormGroup', (e) => onChangeRef.current(e))
+
+    return () => {
+      $select.off('change.selectAPIFormGroup')
+      if ($select.data('select2')) $select.select2('destroy')
+    }
+  }, [dropdownParent, filter, searchAPI, searchBy, selectBy, multiple, tags])
 
   return <div id={containerId} className={`form-group ${col} mb-2`}>
-    <label htmlFor={id} className="form-label">
+    <label htmlFor={selectId} className="form-label">
       {
         label &&
         <>
@@ -86,7 +99,7 @@ const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = fa
         </>
       }
     </label>
-    <select ref={eRef} id={id} required={required} className='form-control' style={{ width: '100%' }} multiple={multiple}></select>
+    <select ref={eRef} id={selectId} data-select2-managed="component" required={required} className='form-control' style={{ width: '100%' }} multiple={multiple}></select>
   </div>
 }
 

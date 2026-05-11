@@ -1,3 +1,4 @@
+import Tippy from "@tippyjs/react"
 import React, { useEffect, useRef, useState } from "react"
 
 const SelectFormGroup = ({ id, col, className, label, specification, eRef, value, required = false, children, dropdownParent, noMargin = false, multiple = false, disabled = false, onChange = () => { }, style,
@@ -10,32 +11,50 @@ const SelectFormGroup = ({ id, col, className, label, specification, eRef, value
 }) => {
 
   if (!eRef) eRef = useRef()
-  if (!id) id = `select-${crypto.randomUUID()}`
-  const containerId = `container-${id}`
+  const generatedIdRef = useRef(id || `select-${crypto.randomUUID()}`)
+  const selectId = id || generatedIdRef.current
+  const containerId = `container-${selectId}`
+  const onChangeRef = useRef(onChange)
 
   const [localValue, setLocalValue] = useState(value ?? null)
 
   useEffect(() => {
-    $(eRef.current).select2({
-      dropdownParent: `#${containerId}`,
+    onChangeRef.current = onChange
+  }, [onChange])
+
+  useEffect(() => {
+    const $select = $(eRef.current)
+    if ($select.data('select2')) $select.select2('destroy')
+
+    $select.select2({
+      dropdownParent: dropdownParent ? $(dropdownParent) : $(`#${containerId}`),
       templateResult,
       templateSelection,
       minimumInputLength,
-      minimumResultsForSearch,
+      minimumResultsForSearch: minimumResultsForSearch ?? 0,
       tags
     })
-    $(eRef.current).off('change').on('change', (e) => {
-      setLocalValue(e.target.value)
-      onChange(e)
+
+    $select.off('change.selectFormGroup').on('change.selectFormGroup', (e) => {
+      setLocalValue(multiple ? $select.val() : e.target.value)
+      onChangeRef.current(e)
     })
-  }, [dropdownParent, value, localValue, ...effectWith])
+
+    return () => {
+      $select.off('change.selectFormGroup')
+      if ($select.data('select2')) $select.select2('destroy')
+    }
+  }, [dropdownParent, minimumInputLength, minimumResultsForSearch, tags, multiple, disabled, ...effectWith])
 
   useEffect(() => {
     setLocalValue(value)
+    if (eRef.current && $(eRef.current).data('select2')) {
+      $(eRef.current).val(value ?? (multiple ? [] : '')).trigger('change.select2')
+    }
   }, [value])
 
   return <div id={containerId} className={`form-group ${col} ${!noMargin && 'mb-2'}`} style={style}>
-    <label htmlFor={id} className="form-label mb-1">
+    <label htmlFor={selectId} className="form-label mb-1">
       {
         label &&
         <>
@@ -47,8 +66,8 @@ const SelectFormGroup = ({ id, col, className, label, specification, eRef, value
         </>
       }
     </label>
-    <select ref={eRef} id={id} required={required} className={`form-control ${className}`} style={{ width: '100%' }} disabled={disabled} multiple={multiple} value={localValue}
-      onChange={(e) => setLocalValue(e.target.value)}>
+    <select ref={eRef} id={selectId} data-select2-managed="component" required={required} className={`form-control ${className}`} style={{ width: '100%' }} disabled={disabled} multiple={multiple} value={localValue ?? (multiple ? [] : '')}
+      onChange={(e) => setLocalValue(multiple ? Array.from(e.target.selectedOptions).map(option => option.value) : e.target.value)}>
       {children}
     </select>
   </div>
