@@ -2,51 +2,384 @@ import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 
-const formatValue = (value) => {
-  if (value === null || value === undefined) return 'Pendiente'
-  return Number(value).toLocaleString('es-PE')
-}
+const number = (value, digits = 0) => Number(value || 0).toLocaleString('es-PE', {
+  minimumFractionDigits: digits,
+  maximumFractionDigits: digits,
+});
 
-const DashboardHome = ({ metrics = [] }) => {
-  const readyMetrics = metrics.filter(metric => metric.value !== null).length
+const money = (value) => Number(value || 0).toLocaleString('es-PE', {
+  style: 'currency',
+  currency: 'PEN',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+const pct = (value) => `${number(value, 2)}%`;
+
+const date = (value) => {
+  if (!value) return '-';
+  const normalized = value.length === 10 ? `${value}T00:00:00` : value;
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return '-';
+  return parsed.toLocaleDateString('es-PE');
+};
+
+const clampPct = (value) => Math.max(0, Math.min(100, Number(value || 0)));
+
+const stockStatusColor = {
+  INFRASTOCK: 'danger',
+  NORMOSTOCK: 'success',
+  SOBRESTOCK: 'warning',
+};
+
+const StatCard = ({ label, value, hint, icon, color = 'primary' }) => (
+  <div className='col-xl-2 col-md-4 col-sm-6 mb-3'>
+    <div className='card h-100'>
+      <div className='card-body'>
+        <div className='d-flex justify-content-between align-items-start gap-2'>
+          <div>
+            <p className='text-muted mb-1'>{label}</p>
+            <h4 className='mb-1'>{value}</h4>
+            <small className='text-muted'>{hint}</small>
+          </div>
+          <div className={`avatar-sm bg-${color}-subtle rounded d-flex align-items-center justify-content-center flex-shrink-0`}>
+            <i className={`${icon} fs-24 text-${color}`}></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const EmptyState = ({ text = 'Sin datos para el periodo.' }) => (
+  <div className='text-center text-muted py-4'>{text}</div>
+);
+
+const StockBadge = ({ status }) => {
+  const color = stockStatusColor[status] || 'secondary';
+  return <span className={`badge badge-soft-${color}`}>{status || '-'}</span>;
+};
+
+const ProgressBar = ({ value, color = 'primary' }) => (
+  <div className='progress' style={{ height: 6 }}>
+    <div className={`progress-bar bg-${color}`} style={{ width: `${clampPct(value)}%` }}></div>
+  </div>
+);
+
+const WarehouseSales = ({ rows = [] }) => {
+  const max = Math.max(1, ...rows.map(row => Number(row.salesValue || 0)));
+
+  return (
+    <div className='card h-100'>
+      <div className='card-body'>
+        <div className='d-flex justify-content-between align-items-center mb-3'>
+          <h5 className='mb-0'>Ventas por almacen</h5>
+          <a href='/admin/reports/sales' className='btn btn-sm btn-outline-primary'>Ver reporte</a>
+        </div>
+        {rows.length === 0 ? <EmptyState /> : rows.map(row => (
+          <div key={`warehouse-sales-${row.warehouseId || row.warehouseName}`} className='mb-3 pb-2 border-bottom'>
+            <div className='d-flex justify-content-between gap-3 mb-1'>
+              <div>
+                <strong>{row.warehouseName}</strong>
+                <div className='text-muted small'>{number(row.units, 3)} unidades | {row.ordersCount} pedidos</div>
+              </div>
+              <div className='text-end'>
+                <strong>{money(row.salesValue)}</strong>
+                <div className='text-muted small'>Margen {pct(row.profitPct)}</div>
+              </div>
+            </div>
+            <ProgressBar value={(Number(row.salesValue || 0) / max) * 100} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const StockByWarehouse = ({ rows = [] }) => (
+  <div className='card'>
+    <div className='card-body'>
+      <div className='d-flex justify-content-between align-items-center mb-3'>
+        <div>
+          <h5 className='mb-1'>Stock por almacen</h5>
+          <small className='text-muted'>Estado por dias de cobertura: &lt;15 infra, 15-30 normo, &gt;30 sobre.</small>
+        </div>
+        <a href='/admin/reports/inventory' className='btn btn-sm btn-outline-primary'>Ver inventario</a>
+      </div>
+      {rows.length === 0 ? <EmptyState /> : rows.map(warehouse => (
+        <div key={`stock-warehouse-${warehouse.warehouseId || warehouse.warehouseName}`} className='mb-4'>
+          <div className='d-flex flex-wrap justify-content-between gap-2 mb-2'>
+            <div>
+              <h6 className='mb-1'>{warehouse.warehouseName}</h6>
+              <small className='text-muted'>{warehouse.productCount} productos | Stock valorizado {money(warehouse.totalStockValue)}</small>
+            </div>
+            <div className='d-flex flex-wrap gap-2'>
+              <span className='badge badge-soft-danger'>Infra {warehouse.statusSummary?.INFRASTOCK || 0}</span>
+              <span className='badge badge-soft-success'>Normo {warehouse.statusSummary?.NORMOSTOCK || 0}</span>
+              <span className='badge badge-soft-warning'>Sobre {warehouse.statusSummary?.SOBRESTOCK || 0}</span>
+            </div>
+          </div>
+          <div className='table-responsive'>
+            <table className='table table-sm align-middle mb-0'>
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th className='text-end'>Prom. mensual</th>
+                  <th className='text-end'>Stock</th>
+                  <th className='text-end'>Valorizado</th>
+                  <th className='text-end'>Dias</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(warehouse.products || []).map(product => (
+                  <tr key={`stock-product-${warehouse.warehouseId}-${product.articleId}`}>
+                    <td>
+                      <strong>{product.articleCode}</strong>
+                      <div className='text-muted small'>{product.articleName}</div>
+                    </td>
+                    <td className='text-end'>{number(product.avgMonthlyUnits, 3)}</td>
+                    <td className='text-end'>{number(product.stock, 3)}</td>
+                    <td className='text-end'>{money(product.stockValue)}</td>
+                    <td className='text-end'>{product.coverageDays === null ? 'Sin rotacion' : number(product.coverageDays, 1)}</td>
+                    <td><StockBadge status={product.stockStatus} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const Profitability = ({ data = {} }) => {
+  const totals = data.totals || {};
+  const productRows = data.productRows || [];
+  const warehouseRows = data.warehouseRows || [];
+
+  return (
+    <div className='card h-100'>
+      <div className='card-body'>
+        <div className='d-flex justify-content-between align-items-center mb-3'>
+          <h5 className='mb-0'>Rentabilidad por producto</h5>
+          <span className='badge badge-soft-primary'>Total almacenes</span>
+        </div>
+        <div className='row mb-3'>
+          <div className='col-md-4 mb-2'>
+            <small className='text-muted d-block'>Venta</small>
+            <strong>{money(totals.salesValue)}</strong>
+          </div>
+          <div className='col-md-4 mb-2'>
+            <small className='text-muted d-block'>Costo</small>
+            <strong>{money(totals.costValue)}</strong>
+          </div>
+          <div className='col-md-4 mb-2'>
+            <small className='text-muted d-block'>Rentabilidad</small>
+            <strong>{pct(totals.profitPct)}</strong>
+          </div>
+        </div>
+        {productRows.length === 0 ? <EmptyState /> : (
+          <div className='table-responsive mb-4'>
+            <table className='table table-sm align-middle mb-0'>
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th className='text-end'>Precio venta</th>
+                  <th className='text-end'>Precio costo</th>
+                  <th className='text-end'>Diferencia</th>
+                  <th className='text-end'>%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {productRows.map(row => (
+                  <tr key={`profit-product-${row.articleId}`}>
+                    <td>
+                      <strong>{row.articleCode}</strong>
+                      <div className='text-muted small'>{row.articleName}</div>
+                    </td>
+                    <td className='text-end'>{money(row.avgSalePrice)}</td>
+                    <td className='text-end'>{money(row.avgCostPrice)}</td>
+                    <td className='text-end'>{money(row.profitValue)}</td>
+                    <td className='text-end'>{pct(row.profitPct)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <h6 className='mb-2'>Resumen por almacen</h6>
+        {warehouseRows.length === 0 ? <EmptyState text='Sin ventas por almacen.' /> : (
+          <div className='table-responsive'>
+            <table className='table table-sm align-middle mb-0'>
+              <thead>
+                <tr>
+                  <th>Almacen</th>
+                  <th className='text-end'>Venta</th>
+                  <th className='text-end'>Costo</th>
+                  <th className='text-end'>Rentabilidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {warehouseRows.map(row => (
+                  <tr key={`profit-warehouse-${row.warehouseId || row.warehouseName}`}>
+                    <td>{row.warehouseName}</td>
+                    <td className='text-end'>{money(row.salesValue)}</td>
+                    <td className='text-end'>{money(row.costValue)}</td>
+                    <td className='text-end'>{pct(row.profitPct)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const DispatchKpis = ({ data = {} }) => {
+  const delayReasons = data.delayReasons || [];
+  const recentRows = data.recentRows || [];
+
+  return (
+    <div className='card h-100'>
+      <div className='card-body'>
+        <div className='d-flex justify-content-between align-items-center mb-3'>
+          <h5 className='mb-0'>KPI de despacho</h5>
+          <a href='/admin/dispatch' className='btn btn-sm btn-outline-primary'>Ver despachos</a>
+        </div>
+        <div className='mb-3'>
+          <div className='d-flex justify-content-between mb-1'>
+            <span className='text-muted'>Eficiencia</span>
+            <strong>{pct(data.efficiencyPct)}</strong>
+          </div>
+          <ProgressBar value={data.efficiencyPct} color='success' />
+          <small className='text-muted'>{data.onTimeDelivered || 0} a tiempo de {data.totalDelivered || 0} entregas</small>
+        </div>
+        <h6 className='mb-2'>Motivos de retraso</h6>
+        {delayReasons.length === 0 ? <EmptyState text='Sin retrasos registrados.' /> : delayReasons.map(row => (
+          <div key={`delay-reason-${row.reason}`} className='mb-3'>
+            <div className='d-flex justify-content-between mb-1'>
+              <span>{row.reason}</span>
+              <span>{pct(row.pct)}</span>
+            </div>
+            <ProgressBar value={row.pct} color='warning' />
+          </div>
+        ))}
+        <div className='table-responsive mt-3'>
+          <table className='table table-sm align-middle mb-0'>
+            <thead>
+              <tr>
+                <th>Despacho</th>
+                <th>Registro</th>
+                <th>Solicitada</th>
+                <th>Entrega</th>
+                <th className='text-end'>Dif.</th>
+                <th>Motivo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentRows.length === 0 && (
+                <tr><td colSpan='6' className='text-center text-muted py-3'>Sin entregas en el periodo.</td></tr>
+              )}
+              {recentRows.map(row => (
+                <tr key={`dispatch-row-${row.id}-${row.orderCode}`}>
+                  <td>
+                    <strong>{row.code}</strong>
+                    <div className='text-muted small'>{row.orderCode}</div>
+                  </td>
+                  <td>{date(row.registeredDate)}</td>
+                  <td>{date(row.requestedDate)}</td>
+                  <td>{date(row.deliveredDate)}</td>
+                  <td className='text-end'>{row.delayDays}</td>
+                  <td>{row.delayReason || '-'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CatalogMetrics = ({ rows = [] }) => {
+  const readyMetrics = rows.filter(metric => metric.value !== null).length;
+
+  return (
+    <div className='card'>
+      <div className='card-body'>
+        <div className='d-flex justify-content-between align-items-center mb-3'>
+          <h5 className='mb-0'>Base operativa</h5>
+          <span className='badge badge-soft-secondary'>{readyMetrics}/{rows.length} metricas activas</span>
+        </div>
+        <div className='row'>
+          {rows.map(metric => (
+            <div key={metric.key} className='col-xl-2 col-md-4 col-sm-6 mb-3'>
+              <a href={metric.route} className='text-reset text-decoration-none'>
+                <div className='border rounded p-3 h-100'>
+                  <div className='d-flex justify-content-between align-items-start gap-2'>
+                    <div>
+                      <p className='text-muted mb-1'>{metric.label}</p>
+                      <h5 className='mb-0'>{metric.value === null ? 'Pendiente' : number(metric.value)}</h5>
+                    </div>
+                    <i className={`${metric.icon} fs-22 text-${metric.color}`}></i>
+                  </div>
+                </div>
+              </a>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DashboardHome = ({ catalogMetrics = [], salesDashboard = {} }) => {
+  const period = salesDashboard.period || {};
+  const summary = salesDashboard.summary || {};
+  const dispatch = salesDashboard.dispatch || {};
 
   return (
     <div className='row'>
       <div className='col-12 mb-3'>
         <div className='card border-0 shadow-sm'>
           <div className='card-body'>
-            <h4 className='mb-1'>Dashboard</h4>
-            <p className='text-muted mb-2'>Resumen rapido para que el panel vaya agarrando forma.</p>
-            <div className='d-flex flex-wrap gap-2'>
-              <span className='badge badge-soft-primary'>Metricas activas: {readyMetrics}/{metrics.length}</span>
-              <span className='badge badge-soft-secondary'>Fecha: {new Date().toLocaleDateString('es-PE')}</span>
+            <div className='d-flex flex-wrap justify-content-between align-items-center gap-2'>
+              <div>
+                <h4 className='mb-1'>Dashboard comercial</h4>
+                <p className='text-muted mb-0'>{period.label || 'Periodo'}: {date(period.start)} - {date(period.end)}</p>
+              </div>
+              <span className='badge badge-soft-secondary'>Rotacion desde {date(period.rotationStart)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {metrics.map((metric) => (
-        <div key={metric.key} className='col-xl-4 col-md-6'>
-          <a href={metric.route} className='text-reset text-decoration-none'>
-            <div className='card'>
-              <div className='card-body'>
-                <div className='d-flex justify-content-between align-items-start'>
-                  <div>
-                    <p className='text-muted mb-1'>{metric.label}</p>
-                    <h3 className='mb-1'>{formatValue(metric.value)}</h3>
-                    <small className='text-muted'>
-                      {metric.value === null ? 'Modulo en implementacion' : 'Ver detalle'}
-                    </small>
-                  </div>
-                  <div className={`avatar-sm bg-${metric.color}-subtle rounded d-flex align-items-center justify-content-center`}>
-                    <i className={`${metric.icon} fs-24 text-${metric.color}`}></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </a>
-        </div>
-      ))}
+      <StatCard label='Ventas valor' value={money(summary.salesValue)} hint={`${summary.ordersCount || 0} operaciones`} icon='ti ti-cash' color='primary' />
+      <StatCard label='Ventas unidades' value={number(summary.salesUnits, 3)} hint='Productos comerciales' icon='ti ti-package' color='info' />
+      <StatCard label='Costo ventas' value={money(summary.salesCost)} hint='Costo comercial' icon='ti ti-receipt-2' color='warning' />
+      <StatCard label='Margen bruto' value={pct(summary.grossMarginPct)} hint={money(summary.grossProfit)} icon='ti ti-chart-line' color='success' />
+      <StatCard label='Eficiencia despacho' value={pct(dispatch.efficiencyPct)} hint={`${dispatch.onTimeDelivered || 0}/${dispatch.totalDelivered || 0} a tiempo`} icon='ti ti-truck-delivery' color='success' />
+      <StatCard label='Retrasos' value={number(dispatch.delayedDelivered)} hint='Entregas fuera de fecha' icon='ti ti-alert-triangle' color='danger' />
+
+      <div className='col-xl-5 mb-3'>
+        <WarehouseSales rows={salesDashboard.warehouseSales || []} />
+      </div>
+      <div className='col-xl-7 mb-3'>
+        <Profitability data={salesDashboard.profitability || {}} />
+      </div>
+      <div className='col-12 mb-3'>
+        <StockByWarehouse rows={salesDashboard.stockByWarehouse || []} />
+      </div>
+      <div className='col-12 mb-3'>
+        <DispatchKpis data={dispatch} />
+      </div>
+      <div className='col-12'>
+        <CatalogMetrics rows={catalogMetrics} />
+      </div>
     </div>
   );
 };
@@ -55,4 +388,4 @@ CreateReactScript((el, properties) => {
   createRoot(el).render(<BaseAdminto {...properties} title='Dashboard'>
     <DashboardHome {...properties} />
   </BaseAdminto>);
-})
+});
