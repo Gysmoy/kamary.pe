@@ -90,7 +90,7 @@ use App\Http\Controllers\MailingController;
 */
 
 // Public routes
-Route::get('/', fn() => redirect('/login'));
+Route::get('/', fn() => auth()->check() ? redirect()->to('/admin/home') : redirect()->to('/login'));
 
 // Authentication Routes
 Route::get('/login', [LoginController::class, 'reactView'])->name('Login.jsx');

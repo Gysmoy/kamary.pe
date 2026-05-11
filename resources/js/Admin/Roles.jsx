@@ -37,6 +37,7 @@ const MAGISTRALES_MENU_PERMISSIONS = [
 const QUICK_FLAGS = {
   kamaryMedicals: MAGISTRALES_MENU_PERMISSIONS,
   kamaryPeru: [
+    'businesses',
     'expenses',
     'suppliers',
     'purchase-orders',
@@ -84,7 +85,7 @@ const PERMISSION_GROUPS = [
   {
     key: 'sistemas',
     title: 'Sistemas',
-    permissions: ['users', 'roles']
+    permissions: ['businesses', 'users', 'roles']
   },
   {
     key: 'almacen',
@@ -94,7 +95,7 @@ const PERMISSION_GROUPS = [
   {
     key: 'administracion',
     title: 'Administracion',
-    permissions: ['accounts-payable', 'expenses', 'daily-summary']
+    permissions: ['purchase-orders', 'purchase-receipts', 'accounts-payable', 'expenses', 'daily-summary']
   },
   {
     key: 'comercial',

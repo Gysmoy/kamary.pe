@@ -18,7 +18,7 @@ class LoginController extends BasicController
     public function setReactViewProperties(Request $request)
     {
         if (Auth::check()) {
-            return redirect('/');
+            return redirect('/admin/home');
         }
         return [];
     }

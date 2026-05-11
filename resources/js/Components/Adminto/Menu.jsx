@@ -104,16 +104,18 @@ const Menu = ({ can, hasRole, panel = null }) => {
         <ul className='side-nav'>
           <MenuItem href='/admin/home' icon='ti ti-home'>Inicio</MenuItem>
 
-          {canAccessAny('users', 'roles') && (
+          {canAccessAny('businesses', 'users', 'roles') && (
             <MenuItemContainer title='Sistemas' icon='ti ti-settings-cog'>
+              {canAccess('businesses') && <MenuItem href='/admin/businesses' icon='ti ti-building'>Empresas</MenuItem>}
               {canAccess('users') && <MenuItem href='/admin/users' icon='ti ti-users'>Usuarios</MenuItem>}
               {canAccess('roles') && <MenuItem href='/admin/roles' icon='ti ti-shield-lock'>Roles y permisos</MenuItem>}
             </MenuItemContainer>
           )}
 
-          {canAccessAny('articles', 'inventory', 'kardex', 'laboratories', 'batches', 'entry-note', 'exit-note', 'suppliers', 'units-of-measure') && (
+          {canAccessAny('businesses', 'articles', 'inventory', 'kardex', 'laboratories', 'batches', 'entry-note', 'exit-note', 'suppliers', 'units-of-measure') && (
             <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
               {canAccess('articles') && <MenuItem href='/admin/articles' icon='ti ti-box'>Artículos</MenuItem>}
+              {canAccessAny('businesses', 'exit-note') && <MenuItem href='/admin/warehouses' icon='ti ti-building-store'>Almacenes</MenuItem>}
               {canAccess('inventory') && <MenuItem href='/admin/inventory' icon='ti ti-stack-2'>Inventario</MenuItem>}
               {canAccess('kardex') && <MenuItem href='/admin/kardex' icon='ti ti-notebook'>Kardex</MenuItem>}
               {canAccess('laboratories') && <MenuItem href='/admin/laboratories' icon='ti ti-flask'>Laboratorios</MenuItem>}
@@ -125,18 +127,21 @@ const Menu = ({ can, hasRole, panel = null }) => {
             </MenuItemContainer>
           )}
 
-          {canAccessAny('accounts-payable', 'expenses', 'daily-summary') && (
+          {canAccessAny('purchase-orders', 'purchase-receipts', 'accounts-payable', 'expenses', 'daily-summary') && (
             <MenuItemContainer title='Administración' icon='ti ti-briefcase'>
+              {canAccess('purchase-orders') && <MenuItem href='/admin/purchase-orders' icon='ti ti-shopping-cart'>O. Compra</MenuItem>}
+              {canAccess('purchase-receipts') && <MenuItem href='/admin/purchase-receipts' icon='ti ti-receipt'>Recepción de compra</MenuItem>}
               {canAccess('accounts-payable') && <MenuItem href='/admin/accounts-payable' icon='ti ti-credit-card'>Cuentas por pagar</MenuItem>}
               {canAccess('expenses') && <MenuItem href='/admin/expenses' icon='ti ti-receipt'>Gasto</MenuItem>}
               {canAccess('daily-summary') && <MenuItem href='/admin/daily-summary' icon='ti ti-calendar-stats'>Resumen diario</MenuItem>}
             </MenuItemContainer>
           )}
 
-          {canAccessAny('clients', 'eventual-clients', 'accounts-receivable', 'orders', 'pricing') && (
+          {canAccessAny('clients', 'eventual-clients', 'accounts-receivable', 'orders', 'pricing', 'client-distribution') && (
             <MenuItemContainer title='Comercial' icon='ti ti-shopping-bag'>
               {canAccess('clients') && <MenuItem href='/admin/clients' icon='ti ti-user-square'>Cliente</MenuItem>}
               {canAccess('eventual-clients') && <MenuItem href='/admin/eventual-clients' icon='ti ti-users'>Clientes Eventual</MenuItem>}
+              {canAccess('client-distribution') && <MenuItem href='/admin/client-distribution' icon='ti ti-route'>Red de distribución</MenuItem>}
               {canAccess('accounts-receivable') && <MenuItem href='/admin/accounts-receivable' icon='ti ti-cash-banknote'>Cuenta por Cobrar</MenuItem>}
               {canAccess('orders') && <MenuItem href='/admin/commercial-orders' icon='ti ti-basket'>Pedido</MenuItem>}
               {canAccess('pricing') && <MenuItem href='/admin/pricing' icon='ti ti-tags'>Tarifario</MenuItem>}
@@ -181,6 +186,13 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {canAccess('sample-orders') && (
             <MenuItemContainer title='Muestras' icon='ti ti-vial'>
               <MenuItem href='/admin/sample-orders' icon='ti ti-basket'>Pedido</MenuItem>
+            </MenuItemContainer>
+          )}
+
+          {canAccessAny('orders', 'inventory') && (
+            <MenuItemContainer title='Reportes' icon='ti ti-chart-bar'>
+              {canAccess('orders') && <MenuItem href='/admin/reports/sales' icon='ti ti-chart-line'>Ventas</MenuItem>}
+              {canAccess('inventory') && <MenuItem href='/admin/reports/inventory' icon='ti ti-report-analytics'>Inventario</MenuItem>}
             </MenuItemContainer>
           )}
 
