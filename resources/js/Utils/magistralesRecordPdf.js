@@ -41,7 +41,7 @@ const withPdfViewerOptions = (blobUrl) => [
   '&navpanes=0',
   '&pagemode=none',
   '&scrollbar=1',
-  '&view=FitH',
+  '&zoom=75',
 ].join('')
 
 const ensurePdfModal = () => {
