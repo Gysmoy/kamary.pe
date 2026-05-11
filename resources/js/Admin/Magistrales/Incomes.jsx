@@ -9,6 +9,7 @@ import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import IncomesRest from '../../Actions/Admin/Magistrales/IncomesRest';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 
 const incomesRest = new IncomesRest()
 
@@ -229,12 +230,13 @@ const Incomes = ({ moduleTitle = 'Magistrales - Ingresos' }) => {
         },
         {
           caption: 'Acciones',
-          width: 120,
+          width: 160,
           allowFiltering: false,
           allowExporting: false,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.income(data)) }))
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary ms-1', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
             container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
           }
         },

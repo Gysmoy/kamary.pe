@@ -12,6 +12,7 @@ import {
   paymentStatusOptions,
   toLookup,
 } from '../Utils/statusLabels';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 
 const accountsPayableRest = new AccountsPayableRest()
 
@@ -146,7 +147,7 @@ const AccountsPayable = () => {
         },
         {
           caption: 'Acciones',
-          width: 140,
+          width: 180,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
             container.append(DxButton({
@@ -154,6 +155,12 @@ const AccountsPayable = () => {
               title: 'Ver detalle',
               icon: 'mdi mdi-eye',
               onClick: () => onViewDetail(data)
+            }))
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-danger ms-1',
+              title: 'Imprimir PDF',
+              icon: 'mdi mdi-file-pdf-box',
+              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.accountsPayable(data))
             }))
 
             if (data?.status && Number(data?.balance_amount || 0) > 0) {

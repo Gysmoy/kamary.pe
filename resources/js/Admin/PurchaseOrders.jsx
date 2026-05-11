@@ -15,6 +15,7 @@ import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import PurchaseOrdersRest from '../Actions/Admin/PurchaseOrdersRest';
 import { scopedPermission } from '../Utils/permissionScope';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
   approvalStatusOptions,
   purchaseOrderStatusOptions,
@@ -370,11 +371,19 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
         },
         {
           caption: 'Acciones',
-          width: 120,
+          width: isMagistrales ? 160 : 120,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
+            if (isMagistrales) {
+              container.append(DxButton({
+                className: 'btn btn-xs btn-soft-danger',
+                title: 'Imprimir PDF',
+                icon: 'mdi mdi-file-pdf-box',
+                onClick: () => openMagistralesRecordPdf(buildMagistralesRows.purchaseOrder(data))
+              }))
+            }
             container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
+              className: `btn btn-xs btn-soft-primary${isMagistrales ? ' ms-1' : ''}`,
               title: 'Editar',
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)

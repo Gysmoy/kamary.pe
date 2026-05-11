@@ -14,7 +14,8 @@ import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import EntryNotesRest from '../Actions/Admin/EntryNotesRest';
-import { scopedPermission } from '../Utils/permissionScope';
+import { isStoragePath, scopedPermission } from '../Utils/permissionScope';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 
 const entryNotesRest = new EntryNotesRest()
 
@@ -50,6 +51,7 @@ const emptyItem = () => ({
 })
 
 const EntryNotes = () => {
+  const storageContext = isStoragePath()
   const gridRef = useRef()
   const modalRef = useRef()
   const createBatchModalRef = useRef()
@@ -515,11 +517,19 @@ const EntryNotes = () => {
         },
         {
           caption: 'Acciones',
-          width: '120px',
+          width: storageContext ? '160px' : '120px',
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
+            if (storageContext) {
+              container.append(DxButton({
+                className: 'btn btn-xs btn-soft-danger',
+                title: 'Imprimir PDF',
+                icon: 'mdi mdi-file-pdf-box',
+                onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageEntryNote(data))
+              }))
+            }
             container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
+              className: `btn btn-xs btn-soft-primary${storageContext ? ' ms-1' : ''}`,
               title: 'Editar',
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)

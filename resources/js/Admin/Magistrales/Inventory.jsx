@@ -9,6 +9,7 @@ import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InventoryRest from '../../Actions/Admin/Magistrales/InventoryRest';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 
 const rest = new InventoryRest()
 
@@ -173,12 +174,13 @@ const Inventory = ({ moduleTitle = 'Magistrales - Inventario' }) => {
         },
         {
           caption: 'Acciones',
-          width: 120,
+          width: 160,
           allowFiltering: false,
           allowExporting: false,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openModal(data) }))
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.inventory(data)) }))
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary ms-1', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openModal(data) }))
             container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => remove(data.id) }))
           }
         },

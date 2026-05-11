@@ -335,6 +335,7 @@ Checklist por modulo:
   - [x] Prueba de guardado por controlador OK: cabecera + 1 item + calculo subtotal/IGV/total + limpieza de datos QA.
   - [x] Conectar afectacion real de stock base al confirmar ingreso.
   - [x] Stock base ya permite consulta por lote/vencimiento para consumo estrictamente loteado en salidas e inventario.
+  - [x] PDF por registro agregado como en referencia: `Imprimir Entrada`.
 - [x] Inventario magistral.
   - Referencia: codigo, almacen, usuario, fecha y estado.
   - Local: `/admin/magistrales/inventory` usa `Admin\Magistrales\InventoryController`, `/api/admin/magistrales/inventory` y filtra articulos con `module_scope = magistrales`.
@@ -342,6 +343,7 @@ Checklist por modulo:
   - [x] Modal local registra almacen, fecha, observacion, articulo, lote, vencimiento, stock sistema, stock real y diferencia.
   - [x] Stock sistema se recalcula en servidor por articulo/almacen/lote/vencimiento al guardar, evitando diferencias basadas en datos editados manualmente en el navegador.
   - [x] UI consulta `/api/admin/magistrales/inventory/stock` al cambiar articulo, almacen, lote o vencimiento y deja `Stock sistema` como valor calculado.
+  - [x] PDF por registro agregado como en referencia: `Imprimir Ajuste de Inventario`.
   - [ ] Validar auditoria avanzada de ajustes de stock fisico contra reglas finales de produccion.
 - [x] Kardex magistral.
   - Referencia: codigo, nombre, stock, unidad, min/max, moneda, costo unitario, total costo y almacen.
@@ -357,6 +359,7 @@ Checklist por modulo:
 - [x] O. Compra magistral.
   - Referencia: estado, codigo, comprador, proveedor, moneda, total, usuario y fecha.
   - Local: `/admin/magistrales/purchase-orders` usa controlador y API propios bajo `Admin\Magistrales`, `module_scope = magistrales` y campo `buyer_name`.
+  - [x] PDF por registro agregado como en referencia: `Imprimir Orden de Compra`.
   - Falta: validar aprobaciones, recepcion, pagos y flujo de compra de produccion.
 - [x] O. Produccion.
   - Referencia: codigo, estado, responsable, destino, producto y fecha registro.
@@ -365,6 +368,7 @@ Checklist por modulo:
   - [x] Detalle propio `magistral_production_order_items` con articulo, vencimiento, cantidad, formula y total.
   - [x] Produccion finalizada suma producto terminado y descuenta insumos del detalle en el stock base/Kardex.
   - [x] Bloquea finalizacion cuando los insumos superan el stock disponible, permitiendo reeditar el documento actual sin falso negativo.
+  - [x] PDF por registro agregado como en referencia: `Imprimir Orden de Produccion`.
   - [ ] Validar merma, aprobaciones y cierre de produccion si negocio lo exige.
 - [x] Proveedor magistral.
   - Referencia: RUC, razon social, direccion, condicion de pago, telefono, email y estado.
@@ -381,6 +385,7 @@ Checklist por modulo:
   - [x] Descuenta del stock base usado por Kardex.
   - [x] Bloquea guardados que exceden el stock disponible, permitiendo reeditar el documento actual sin falso negativo.
   - [x] Bloquea guardados que exceden el stock disponible del lote/vencimiento indicado, ademas del total global del articulo.
+  - [x] PDF por registro agregado como en referencia: `Imprimir Salida`.
   - [ ] Validar motivos y aprobaciones si negocio lo exige.
 - [x] Unidad.
   - Referencia: abreviatura y descripcion.
@@ -393,7 +398,27 @@ Checklist por modulo:
   - [x] Detalle propio `magistral_sale_items` con almacen, articulo, stock, cantidad, precio, descuento y subtotal.
   - [x] Ventas no cotizadas descuentan del stock base usado por Kardex.
   - [x] Cotizaciones no descuentan stock y ventas reales bloquean stock insuficiente.
+  - [x] PDF por registro agregado en local para venta/cotizacion. En referencia no se confirmo porque la grilla visible no tenia filas.
   - [ ] Validar comprobante fiscal y cobranza si negocio lo exige.
+
+## PDF por registro fuera de Magistrales
+
+- [x] Administracion / Cuentas por pagar.
+  - Referencia: `/almacen/notaentradapagar` muestra accion PDF por fila junto a registrar pago.
+  - Local: `/admin/accounts-payable` ahora agrega `Imprimir PDF` por fila.
+- [x] Muestras / Pedido.
+  - Referencia: `/PedidoMuestra` muestra accion PDF de guia por fila.
+  - Local: `/admin/sample-orders` ahora agrega `Imprimir PDF` por fila.
+- [x] Serv. Almacenamiento / Nota de entrada.
+  - Referencia: `/almacenamiento/notaentrada` muestra PDF de documento y acta por fila.
+  - Local: `/admin/storage-entry-note` ahora agrega `Imprimir PDF` por fila en contexto almacenamiento.
+- [x] Serv. Almacenamiento / Nota de salida.
+  - Referencia: `/almacenamiento/notasalida` muestra PDF de documento por fila.
+  - Local: `/admin/storage-exit-note` ahora agrega `Imprimir PDF` por fila en contexto almacenamiento.
+- [x] Serv. Almacenamiento / Facturacion.
+  - Referencia: `/almacenamiento/facturacion` muestra accion de comprobante/pre-factura por fila.
+  - Local: `/admin/storage-billing-control` ya tenia boton PDF por registro en `BillingDocuments`.
+- [x] Revalidado sin PDF por fila visible en filas actuales: Almacen Nota de entrada, Almacen Nota de salida, Gasto, Cuenta por cobrar, Pedido comercial, Orden de servicio, O. Servicio almacenamiento y O. Servicio General.
 
 ## Correcciones tecnicas necesarias
 

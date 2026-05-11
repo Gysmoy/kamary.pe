@@ -14,7 +14,8 @@ import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import ExitNotesRest from '../Actions/Admin/ExitNotesRest';
-import { scopedPermission } from '../Utils/permissionScope';
+import { isStoragePath, scopedPermission } from '../Utils/permissionScope';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 
 const exitNotesRest = new ExitNotesRest()
 
@@ -50,6 +51,7 @@ const emptyItem = () => ({
 })
 
 const ExitNotes = () => {
+  const storageContext = isStoragePath()
   const gridRef = useRef()
   const modalRef = useRef()
 
@@ -436,10 +438,13 @@ const ExitNotes = () => {
           }
         },
         {
-          caption: 'Acciones', width: '120px',
+          caption: 'Acciones', width: storageContext ? '160px' : '120px',
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+            if (storageContext) {
+              container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
+            }
+            container.append(DxButton({ className: `btn btn-xs btn-soft-primary${storageContext ? ' ms-1' : ''}`, title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
             container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar nota de salida', icon: 'mdi mdi-delete', onClick: () => onDeleteClicked(data.id) }))
           },
           allowFiltering: false, allowExporting: false

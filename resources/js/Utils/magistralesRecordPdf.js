@@ -1,0 +1,412 @@
+import { toast } from 'sonner'
+
+const asText = (value, fallback = '-') => {
+  if (value === null || value === undefined || value === '') return fallback
+  return `${value}`
+}
+
+const asMoney = (value, currency = 'PEN') => {
+  const amount = Number(value || 0).toFixed(2)
+  return `${currency} ${amount}`
+}
+
+const asNumber = (value, decimals = 3) => Number(value || 0).toFixed(decimals)
+
+const asDate = (value) => {
+  if (!value) return '-'
+  const text = `${value}`
+  return text.includes('T') ? text.slice(0, 10) : text.slice(0, 10)
+}
+
+const nested = (source, path, fallback = '') => {
+  const value = path.split('.').reduce((current, key) => current?.[key], source)
+  return value ?? fallback
+}
+
+const sanitizeFilename = (value) => asText(value, 'documento')
+  .toLowerCase()
+  .replace(/[^a-z0-9-_]+/g, '-')
+  .replace(/^-+|-+$/g, '')
+
+const ensurePdf = () => {
+  const JsPDF = window.jspdf?.jsPDF || window.jsPDF
+  if (!JsPDF) throw new Error('jsPDF no esta disponible')
+  const doc = new JsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
+  if (!doc.autoTable) throw new Error('AutoTable no esta disponible')
+  return doc
+}
+
+export const buildMagistralesRows = {
+  purchaseOrder: (data) => ({
+    title: 'Orden de compra magistral',
+    code: data?.code,
+    filename: `orden-compra-${data?.code || data?.id}`,
+    meta: [
+      ['Empresa', nested(data, 'business.name')],
+      ['Sede', nested(data, 'branch.name')],
+      ['Almacen', nested(data, 'warehouse.name')],
+      ['Proveedor', nested(data, 'supplier.business_name')],
+      ['Comprador', data?.buyer_name],
+      ['Emision', asDate(data?.issue_date)],
+      ['Fecha esperada', asDate(data?.expected_date)],
+      ['Pago', data?.payment_condition],
+      ['Aprobacion', data?.approval_status],
+      ['Estado OC', data?.order_status],
+      ['Moneda', data?.currency],
+    ],
+    columns: ['Codigo', 'Articulo', 'Solicitada', 'Recibida', 'P. unit.', 'Total'],
+    rows: (data?.items ?? []).map(item => [
+      nested(item, 'article.code'),
+      nested(item, 'article.name', 'Articulo'),
+      asNumber(item?.requested_quantity),
+      asNumber(item?.received_quantity),
+      asMoney(item?.price_unit, data?.currency || 'PEN'),
+      asMoney(item?.total, data?.currency || 'PEN'),
+    ]),
+    totals: [
+      ['Subtotal', asMoney(data?.subtotal, data?.currency || 'PEN')],
+      ['Impuesto', asMoney(data?.tax_amount, data?.currency || 'PEN')],
+      ['Total', asMoney(data?.total, data?.currency || 'PEN')],
+    ],
+    observations: data?.observations,
+  }),
+  income: (data) => ({
+    title: 'Ingreso magistral',
+    code: data?.code,
+    filename: `ingreso-${data?.code || data?.id}`,
+    meta: [
+      ['Orden compra', data?.purchase_order_code],
+      ['Documento', [data?.document_type, data?.document_series, data?.document_sequence].filter(Boolean).join(' ')],
+      ['Guia', data?.guide_number || [data?.guide_series, data?.guide_sequence].filter(Boolean).join('-')],
+      ['Empresa', nested(data, 'business.name')],
+      ['Almacen', nested(data, 'warehouse.name')],
+      ['Proveedor', nested(data, 'supplier.business_name')],
+      ['Forma pago', data?.payment_method],
+      ['Procedencia', data?.origin],
+      ['Fecha', asDate(data?.issue_date || data?.created_at)],
+      ['Moneda', data?.currency],
+    ],
+    columns: ['Articulo', 'Descripcion', 'Cantidad', 'Presentacion', 'Vencimiento', 'Lote', 'P. sin IGV', 'P. con IGV', 'Subtotal'],
+    rows: (data?.items ?? []).map(item => [
+      nested(item, 'article.code'),
+      item?.description || nested(item, 'article.name'),
+      asNumber(item?.quantity),
+      item?.presentation,
+      asDate(item?.expiration_date),
+      item?.lot,
+      asMoney(item?.price_without_igv, data?.currency || 'PEN'),
+      asMoney(item?.price_with_igv, data?.currency || 'PEN'),
+      asMoney(item?.subtotal, data?.currency || 'PEN'),
+    ]),
+    totals: [
+      ['Subtotal', asMoney(data?.subtotal, data?.currency || 'PEN')],
+      ['IGV', asMoney(data?.igv, data?.currency || 'PEN')],
+      ['Total', asMoney(data?.total, data?.currency || 'PEN')],
+    ],
+    observations: data?.observations,
+  }),
+  inventory: (data) => ({
+    title: 'Ajuste de inventario magistral',
+    code: data?.code,
+    filename: `inventario-${data?.code || data?.id}`,
+    meta: [
+      ['Sede', nested(data, 'branch.name')],
+      ['Almacen', nested(data, 'warehouse.name')],
+      ['Fecha conteo', asDate(data?.count_date || data?.created_at)],
+      ['Usuario', nested(data, 'creator.fullname') || nested(data, 'creator.username')],
+    ],
+    columns: ['Codigo', 'Articulo', 'Lote', 'Vencimiento', 'Stock sistema', 'Stock real', 'Diferencia'],
+    rows: (data?.items ?? []).map(item => [
+      nested(item, 'article.code'),
+      nested(item, 'article.name'),
+      item?.lot,
+      asDate(item?.expiration_date),
+      asNumber(item?.system_stock),
+      asNumber(item?.real_stock),
+      asNumber(item?.difference),
+    ]),
+    observations: data?.observations,
+  }),
+  output: (data) => ({
+    title: 'Salida magistral',
+    code: data?.code,
+    filename: `salida-${data?.code || data?.id}`,
+    meta: [
+      ['Almacen origen', nested(data, 'originWarehouse.name')],
+      ['Destino', data?.destination],
+      ['Motivo', data?.reason],
+      ['Fecha salida', asDate(data?.output_date || data?.created_at)],
+      ['Usuario', nested(data, 'creator.fullname') || nested(data, 'creator.username')],
+    ],
+    columns: ['Codigo', 'Articulo', 'Lote', 'Vencimiento', 'Stock', 'Unidad', 'Cantidad', 'Total'],
+    rows: (data?.items ?? []).map(item => [
+      item?.code || nested(item, 'article.code'),
+      item?.name || nested(item, 'article.name'),
+      item?.lot,
+      asDate(item?.expiration_date),
+      asNumber(item?.stock),
+      item?.unit_label,
+      asNumber(item?.quantity),
+      asNumber(item?.total),
+    ]),
+    observations: data?.observations,
+  }),
+  productionOrder: (data) => ({
+    title: 'Orden de produccion magistral',
+    code: data?.code,
+    filename: `orden-produccion-${data?.code || data?.id}`,
+    meta: [
+      ['Estado', data?.order_status],
+      ['Responsable', nested(data, 'responsible.name')],
+      ['Destino', nested(data, 'destinationWarehouse.name') || data?.destination],
+      ['Producto', nested(data, 'article.name')],
+      ['Formato', nested(data, 'format.description')],
+      ['Cantidad tanda', asNumber(data?.batch_quantity)],
+      ['Cantidad producto', asNumber(data?.quantity)],
+      ['Fecha entrega', asDate(data?.delivery_date)],
+      ['Fecha registro', asDate(data?.registration_date || data?.created_at)],
+    ],
+    columns: ['Codigo', 'Articulo', 'Vencimiento', 'Cantidad', 'Formula', 'Total'],
+    rows: (data?.items ?? []).map(item => [
+      nested(item, 'article.code'),
+      item?.description || nested(item, 'article.name'),
+      asDate(item?.expiration_date),
+      asNumber(item?.quantity),
+      nested(item, 'formula.article_id') ? `Formula ${nested(item, 'formula.id')}` : asText(item?.magistral_formula_id),
+      asNumber(item?.total),
+    ]),
+    observations: data?.observations,
+  }),
+  sale: (data) => ({
+    title: data?.is_quote ? 'Cotizacion magistral' : 'Venta magistral',
+    code: data?.code,
+    filename: `${data?.is_quote ? 'cotizacion' : 'venta'}-${data?.code || data?.id}`,
+    meta: [
+      ['Empresa', nested(data, 'business.name')],
+      ['Farmacia', data?.pharmacy],
+      ['Estado pago', data?.payment_status],
+      ['Documento', [data?.document_type, data?.document_number].filter(Boolean).join(' ')],
+      ['Paciente', data?.patient],
+      ['Doctor', data?.doctor],
+      ['Tipo venta', data?.sale_type],
+      ['Fecha', asDate(data?.sale_date || data?.created_at)],
+    ],
+    columns: ['Articulo', 'Almacen', 'Stock', 'Cantidad', 'Precio', 'Dscto.', 'Subtotal'],
+    rows: (data?.items ?? []).map(item => [
+      item?.description || nested(item, 'article.name'),
+      nested(item, 'warehouse.name'),
+      asNumber(item?.stock),
+      asNumber(item?.quantity),
+      asMoney(item?.unit_price),
+      asMoney(item?.discount),
+      asMoney(item?.subtotal),
+    ]),
+    totals: [
+      ['Gravada', asMoney(data?.taxable_amount)],
+      ['Descuento', asMoney(data?.discount_total)],
+      ['IGV', asMoney(data?.igv)],
+      ['Total', asMoney(data?.total)],
+    ],
+    observations: data?.discount_policy,
+  }),
+  accountsPayable: (data) => ({
+    title: 'Cuenta por pagar',
+    code: data?.code,
+    filename: `cuenta-por-pagar-${data?.code || data?.id}`,
+    meta: [
+      ['Recepcion', data?.purchase_receipt_code],
+      ['Orden compra', data?.purchase_order_code],
+      ['Empresa', nested(data, 'business.name')],
+      ['Sede', nested(data, 'branch.name')],
+      ['Almacen', nested(data, 'warehouse.name')],
+      ['Proveedor', nested(data, 'supplier.business_name')],
+      ['Documento', [data?.document_type, data?.series, data?.sequence].filter(Boolean).join(' ')],
+      ['Emision', asDate(data?.issue_date)],
+      ['Vencimiento', asDate(data?.due_date)],
+      ['Condicion', data?.payment_condition],
+      ['Estado pago', data?.payment_status],
+      ['Moneda', data?.currency],
+    ],
+    columns: ['Cuota', 'Vencimiento', 'Importe', 'Pagado', 'Saldo', 'Estado', 'Fecha pago'],
+    rows: (data?.installments ?? []).map(item => [
+      asText(item?.installment_number),
+      asDate(item?.due_date),
+      asMoney(item?.amount, data?.currency || 'PEN'),
+      asMoney(item?.paid_amount, data?.currency || 'PEN'),
+      asMoney(item?.balance_amount, data?.currency || 'PEN'),
+      item?.payment_status,
+      asDate(item?.paid_at),
+    ]),
+    totals: [
+      ['Subtotal', asMoney(data?.subtotal, data?.currency || 'PEN')],
+      ['Impuesto', asMoney(data?.tax_amount, data?.currency || 'PEN')],
+      ['Total', asMoney(data?.total, data?.currency || 'PEN')],
+      ['Pagado', asMoney(data?.paid_amount, data?.currency || 'PEN')],
+      ['Saldo', asMoney(data?.balance_amount, data?.currency || 'PEN')],
+    ],
+    observations: data?.observations,
+  }),
+  storageEntryNote: (data) => ({
+    title: 'Nota de entrada de almacenamiento',
+    code: data?.code || data?.id,
+    filename: `nota-entrada-almacenamiento-${data?.code || data?.id}`,
+    meta: [
+      ['Empresa', nested(data, 'business.name')],
+      ['Sede', nested(data, 'branch.name')],
+      ['Almacen', nested(data, 'warehouse.name')],
+      ['Proveedor', nested(data, 'supplier.business_name')],
+      ['Documento', [data?.document_type, data?.document_series, data?.document_sequence].filter(Boolean).join(' ')],
+      ['Guia', [data?.guide_series, data?.guide_sequence].filter(Boolean).join('-')],
+      ['RUC guia', data?.guide_ruc],
+      ['Moneda', data?.currency],
+      ['Usuario', nested(data, 'creator.fullname') || nested(data, 'creator.username')],
+    ],
+    columns: ['Lote', 'Articulo', 'Laboratorio', 'Unidad', 'Stock ant.', 'Cantidad', 'Costo', 'Total', 'Ubicacion'],
+    rows: (data?.items ?? []).map(item => [
+      item?.lot || item?.batch_code,
+      nested(item, 'article.name'),
+      nested(item, 'article.laboratory.name'),
+      nested(item, 'article.unit.symbol') || nested(item, 'article.unit.name'),
+      asNumber(item?.stock),
+      asNumber(item?.quantity),
+      asMoney(item?.cost_unit, data?.currency || 'PEN'),
+      asMoney(item?.total, data?.currency || 'PEN'),
+      item?.location,
+    ]),
+    totals: [
+      ['Total', asMoney((data?.items ?? []).reduce((sum, item) => sum + Number(item?.total || 0), 0), data?.currency || 'PEN')],
+    ],
+    observations: data?.observations,
+  }),
+  storageExitNote: (data) => ({
+    title: 'Nota de salida de almacenamiento',
+    code: data?.code || data?.id,
+    filename: `nota-salida-almacenamiento-${data?.code || data?.id}`,
+    meta: [
+      ['Empresa', nested(data, 'business.name')],
+      ['Sede', nested(data, 'branch.name')],
+      ['Almacen', nested(data, 'warehouse.name')],
+      ['Cliente', data?.client_name],
+      ['Motivos', (data?.motives ?? []).join(', ')],
+      ['Usuario', nested(data, 'creator.fullname') || nested(data, 'creator.username')],
+    ],
+    columns: ['Lote', 'Articulo', 'Laboratorio', 'Unidad', 'Stock', 'Cantidad', 'Total', 'Ubicacion', 'Destino'],
+    rows: (data?.items ?? []).map(item => [
+      item?.batch_code,
+      nested(item, 'article.name'),
+      nested(item, 'article.laboratory.name'),
+      nested(item, 'article.unit.symbol') || nested(item, 'article.unit.name'),
+      asNumber(item?.stock),
+      asNumber(item?.quantity),
+      asNumber(item?.total),
+      item?.location,
+      item?.destination_location,
+    ]),
+    observations: data?.observations,
+  }),
+  sampleOrder: (data) => ({
+    title: 'Pedido de muestra',
+    code: data?.order_number || data?.id,
+    filename: `pedido-muestra-${data?.order_number || data?.id}`,
+    meta: [
+      ['Estado pedido', data?.order_status],
+      ['Estado email', data?.email_status],
+      ['Guia remision', data?.referral_guide],
+      ['Peso bruto total', data?.total_gross_weight ? asNumber(data.total_gross_weight) : ''],
+      ['Canal', data?.channel],
+      ['Documento', [data?.document_type, data?.document_number].filter(Boolean).join(' ')],
+      ['Cliente', data?.client_name],
+      ['Pedido completo', data?.order_complete ? 'Si' : 'No'],
+      ['Fecha solicitada', asDate(data?.requested_at)],
+      ['Fecha entrega', asDate(data?.delivered_at)],
+      ['Supervisor', data?.supervisor_name],
+    ],
+    columns: ['Campo', 'Valor'],
+    rows: [
+      ['Nro pedido', asText(data?.order_number)],
+      ['Guia remision', asText(data?.referral_guide)],
+      ['Cliente', asText(data?.client_name)],
+      ['Canal', asText(data?.channel)],
+      ['Documento', asText([data?.document_type, data?.document_number].filter(Boolean).join(' '))],
+    ],
+    observations: data?.cancellation_reason || data?.observations,
+  }),
+}
+
+export const openMagistralesRecordPdf = (document) => {
+  try {
+    const doc = ensurePdf()
+    const now = new Date().toLocaleString('es-PE')
+    const pageWidth = doc.internal.pageSize.getWidth()
+    let y = 42
+
+    doc.setFontSize(16)
+    doc.text(document.title, 40, y)
+    doc.setFontSize(10)
+    doc.text(`Codigo: ${asText(document.code)}`, 40, y + 18)
+    doc.text(`Generado: ${now}`, pageWidth - 40, y + 18, { align: 'right' })
+
+    y += 42
+    const metaRows = (document.meta ?? [])
+      .filter(([, value]) => value !== null && value !== undefined && value !== '')
+      .map(([label, value]) => [label, asText(value)])
+
+    if (metaRows.length) {
+      doc.autoTable({
+        startY: y,
+        theme: 'grid',
+        body: metaRows,
+        styles: { fontSize: 8, cellPadding: 4 },
+        columnStyles: {
+          0: { fontStyle: 'bold', fillColor: [245, 247, 250], cellWidth: 95 },
+        },
+        margin: { left: 40, right: 40 },
+      })
+      y = doc.lastAutoTable.finalY + 18
+    }
+
+    doc.autoTable({
+      startY: y,
+      head: [document.columns ?? []],
+      body: document.rows?.length ? document.rows : [['Sin detalle']],
+      theme: 'striped',
+      styles: { fontSize: 7, cellPadding: 3, overflow: 'linebreak' },
+      headStyles: { fillColor: [55, 65, 81] },
+      margin: { left: 40, right: 40 },
+    })
+    y = doc.lastAutoTable.finalY + 16
+
+    if (document.totals?.length) {
+      doc.autoTable({
+        startY: y,
+        body: document.totals,
+        theme: 'plain',
+        styles: { fontSize: 9, cellPadding: 3 },
+        columnStyles: {
+          0: { halign: 'right', fontStyle: 'bold' },
+          1: { halign: 'right' },
+        },
+        margin: { left: pageWidth - 230, right: 40 },
+      })
+      y = doc.lastAutoTable.finalY + 16
+    }
+
+    if (document.observations) {
+      doc.setFontSize(9)
+      doc.text('Observaciones', 40, y)
+      doc.setFontSize(8)
+      doc.text(doc.splitTextToSize(asText(document.observations), pageWidth - 80), 40, y + 14)
+    }
+
+    const blobUrl = URL.createObjectURL(doc.output('blob'))
+    const opened = window.open(blobUrl, '_blank', 'noopener')
+    if (!opened) doc.save(`${sanitizeFilename(document.filename)}.pdf`)
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
+  } catch (error) {
+    toast.error('No se pudo generar el PDF', {
+      description: error.message,
+      duration: 3500,
+      richColors: true,
+    })
+  }
+}
