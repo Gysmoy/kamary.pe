@@ -23,10 +23,9 @@ const nested = (source, path, fallback = '') => {
   return value ?? fallback
 }
 
-const sanitizeFilename = (value) => asText(value, 'documento')
-  .toLowerCase()
-  .replace(/[^a-z0-9-_]+/g, '-')
-  .replace(/^-+|-+$/g, '')
+const PDF_MODAL_ID = 'magistrales-record-pdf-modal'
+const PDF_IFRAME_ID = 'magistrales-record-pdf-frame'
+let currentPdfBlobUrl = null
 
 const ensurePdf = () => {
   const JsPDF = window.jspdf?.jsPDF || window.jsPDF
@@ -34,6 +33,69 @@ const ensurePdf = () => {
   const doc = new JsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
   if (!doc.autoTable) throw new Error('AutoTable no esta disponible')
   return doc
+}
+
+const withPdfViewerOptions = (blobUrl) => [
+  blobUrl,
+  '#toolbar=1',
+  '&navpanes=0',
+  '&pagemode=none',
+  '&scrollbar=1',
+  '&view=FitH',
+].join('')
+
+const ensurePdfModal = () => {
+  let modal = document.getElementById(PDF_MODAL_ID)
+  if (modal) return modal
+
+  modal = document.createElement('div')
+  modal.id = PDF_MODAL_ID
+  modal.className = 'modal fade'
+  modal.tabIndex = -1
+  modal.setAttribute('aria-hidden', 'true')
+  modal.innerHTML = `
+    <div class="modal-dialog modal-dialog-centered modal-full-width" style="max-width: calc(100vw - 24px);">
+      <div class="modal-content" style="height: calc(100vh - 24px);">
+        <div class="modal-header py-2">
+          <h4 class="modal-title mb-0" data-pdf-title>PDF</h4>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body p-0" style="height: calc(100% - 53px); overflow: hidden; background: #525659;">
+          <iframe
+            id="${PDF_IFRAME_ID}"
+            title="Vista previa PDF"
+            style="width: 100%; height: 100%; border: 0; display: block;"
+            allow="fullscreen"
+          ></iframe>
+        </div>
+      </div>
+    </div>
+  `
+  document.body.appendChild(modal)
+
+  $(modal).on('hidden.bs.modal', () => {
+    const iframe = document.getElementById(PDF_IFRAME_ID)
+    if (iframe) iframe.removeAttribute('src')
+    if (!currentPdfBlobUrl) return
+    URL.revokeObjectURL(currentPdfBlobUrl)
+    currentPdfBlobUrl = null
+  })
+
+  return modal
+}
+
+const showPdfInModal = (doc, document) => {
+  const modal = ensurePdfModal()
+  const iframe = modal.querySelector(`#${PDF_IFRAME_ID}`)
+  const title = modal.querySelector('[data-pdf-title]')
+
+  if (!iframe) throw new Error('No se encontro el visor PDF')
+  if (currentPdfBlobUrl) URL.revokeObjectURL(currentPdfBlobUrl)
+
+  currentPdfBlobUrl = URL.createObjectURL(doc.output('blob'))
+  title.textContent = `${document.title}${document.code ? ` - ${document.code}` : ''}`
+  iframe.src = withPdfViewerOptions(currentPdfBlobUrl)
+  $(modal).modal('show')
 }
 
 export const buildMagistralesRows = {
@@ -398,10 +460,7 @@ export const openMagistralesRecordPdf = (document) => {
       doc.text(doc.splitTextToSize(asText(document.observations), pageWidth - 80), 40, y + 14)
     }
 
-    const blobUrl = URL.createObjectURL(doc.output('blob'))
-    const opened = window.open(blobUrl, '_blank', 'noopener')
-    if (!opened) doc.save(`${sanitizeFilename(document.filename)}.pdf`)
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 30000)
+    showPdfInModal(doc, document)
   } catch (error) {
     toast.error('No se pudo generar el PDF', {
       description: error.message,
