@@ -6,6 +6,8 @@ import Table from '../Components/Adminto/Table';
 import Modal from '../Components/Adminto/Modal';
 import DxButton from '../Components/dx/DxButton';
 import AccountsReceivableRest from '../Actions/Admin/AccountsReceivableRest';
+import renderGridEditLink from '../Utils/renderGridEditLink';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
   getOperationalOrderStatusLabel,
   getPaymentStatusLabel,
@@ -112,7 +114,12 @@ const AccountsReceivable = () => {
       pageSize={25}
       columns={[
         { dataField: 'id', caption: 'ID', width: 80 },
-        { dataField: 'code', caption: 'Codigo', width: 130 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 130,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onViewDetail(data), 'Ver detalle')
+        },
         {
           dataField: 'source_type',
           caption: 'Origen',
@@ -160,7 +167,7 @@ const AccountsReceivable = () => {
         },
         {
           caption: 'Acciones',
-          width: 140,
+          width: 180,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
             container.append(DxButton({
@@ -168,6 +175,12 @@ const AccountsReceivable = () => {
               title: 'Ver detalle',
               icon: 'mdi mdi-eye',
               onClick: () => onViewDetail(data)
+            }))
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-danger ms-1',
+              title: 'Imprimir PDF',
+              icon: 'mdi mdi-file-pdf-box',
+              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.accountsReceivable(data))
             }))
 
             if (data?.status && Number(data?.balance_amount || 0) > 0) {

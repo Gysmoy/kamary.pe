@@ -15,6 +15,8 @@ import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import PurchaseReceiptsRest from '../Actions/Admin/PurchaseReceiptsRest';
 import { scopedPermission } from '../Utils/permissionScope';
+import renderGridEditLink from '../Utils/renderGridEditLink';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
   purchaseReceiptStatusOptions,
   toLookup,
@@ -450,7 +452,12 @@ const PurchaseReceipts = () => {
       pageSize={25}
       columns={[
         { dataField: 'id', caption: 'ID', width: 80 },
-        { dataField: 'code', caption: 'Código', width: 130 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 130,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar recepcion de compra')
+        },
         { dataField: 'purchaseOrder.code', caption: 'OC', width: 130 },
         { dataField: 'issue_date', caption: 'F. emisión', width: 110, dataType: 'date' },
         { dataField: 'warehouse.name', caption: 'Almacén', minWidth: 130 },
@@ -504,11 +511,17 @@ const PurchaseReceipts = () => {
         },
         {
           caption: 'Acciones',
-          width: 120,
+          width: 160,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
             container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
+              className: 'btn btn-xs btn-soft-danger',
+              title: 'Imprimir PDF',
+              icon: 'mdi mdi-file-pdf-box',
+              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.purchaseReceipt(data))
+            }))
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-primary ms-1',
               title: 'Editar',
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)

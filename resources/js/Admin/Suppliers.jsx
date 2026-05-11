@@ -12,6 +12,7 @@ import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import SuppliersRest from '../Actions/Admin/SuppliersRest';
 import { scopedPermission } from '../Utils/permissionScope';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const suppliersRest = new SuppliersRest()
 
@@ -430,7 +431,12 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
       pageSize={25}
       columns={[
         { dataField: 'id', caption: 'ID', visible: false },
-        { dataField: 'ruc', caption: 'RUC', width: '130px' },
+        {
+          dataField: 'ruc',
+          caption: 'RUC',
+          width: '130px',
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.ruc, () => onModalOpen(data), 'Editar proveedor')
+        },
         { dataField: 'business_name', caption: 'Razon Social', minWidth: 220 },
         { dataField: 'trade_name', caption: 'Nombre comercial', minWidth: 180, visible: false },
         { dataField: 'address', caption: 'Direccion', minWidth: 220 },

@@ -9,6 +9,7 @@ import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import ResponsiblesRest from '../../Actions/Admin/Magistrales/ResponsiblesRest';
+import renderGridEditLink from '../../Utils/renderGridEditLink';
 
 const rest = new ResponsiblesRest()
 
@@ -58,7 +59,12 @@ const Responsibles = ({ moduleTitle = 'Magistrales - Responsable' }) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openModal() } })
       }}
       columns={[
-        { dataField: 'document_number', caption: 'Documento', width: 140 },
+        {
+          dataField: 'document_number',
+          caption: 'Documento',
+          width: 140,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.document_number, () => openModal(data), 'Editar responsable')
+        },
         { dataField: 'name', caption: 'Nombre', minWidth: 220 },
         {
           dataField: 'status',

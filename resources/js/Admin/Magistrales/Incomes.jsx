@@ -9,6 +9,7 @@ import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import IncomesRest from '../../Actions/Admin/Magistrales/IncomesRest';
+import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 
 const incomesRest = new IncomesRest()
@@ -210,7 +211,12 @@ const Incomes = ({ moduleTitle = 'Magistrales - Ingresos' }) => {
         toolbarItems.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
       }}
       columns={[
-        { dataField: 'code', caption: 'Codigo', width: 150 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 150,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar ingreso magistral')
+        },
         { dataField: 'document_guide', caption: 'Nro comp. / Guia R.', minWidth: 170, calculateCellValue: formatDocumentGuide },
         { dataField: 'business.name', caption: 'Empresa', minWidth: 180 },
         { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 160 },

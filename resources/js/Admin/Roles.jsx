@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import { renderToString } from 'react-dom/server';
 import RolesRest from '../Actions/Admin/roles-rest';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const rolesRest = new RolesRest()
 
@@ -347,6 +348,7 @@ const Roles = ({ permissions }) => {
           dataField: 'name',
           caption: 'Nombre del rol',
           minWidth: 180,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.name, () => onModalOpen(data), 'Editar rol')
         },
         {
           caption: 'Perfil sugerido',

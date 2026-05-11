@@ -11,6 +11,7 @@ import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import EventualClientsRest from '../Actions/Admin/EventualClientsRest';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const eventualClientsRest = new EventualClientsRest()
 
@@ -235,7 +236,12 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
         { dataField: 'id', caption: 'ID', width: 70 },
         { dataField: 'document_type', caption: 'Tipo Doc.', width: 95 },
         { dataField: 'document_number', caption: 'Numero', width: 130 },
-        { dataField: 'business_name', caption: 'Cliente eventual', minWidth: 220 },
+        {
+          dataField: 'business_name',
+          caption: 'Cliente eventual',
+          minWidth: 220,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business_name, () => onModalOpen(data), 'Editar cliente eventual')
+        },
         { dataField: 'contact_name', caption: 'Contacto', minWidth: 160 },
         { dataField: 'email', caption: 'Correo', minWidth: 180 },
         {

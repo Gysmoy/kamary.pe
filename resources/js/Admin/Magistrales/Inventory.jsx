@@ -9,6 +9,7 @@ import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InventoryRest from '../../Actions/Admin/Magistrales/InventoryRest';
+import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 
 const rest = new InventoryRest()
@@ -156,7 +157,12 @@ const Inventory = ({ moduleTitle = 'Magistrales - Inventario' }) => {
         toolbarItems.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openModal() } })
       }}
       columns={[
-        { dataField: 'code', caption: 'Codigo', width: 150 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 150,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => openModal(data), 'Editar inventario')
+        },
         { dataField: 'branch.name', caption: 'Sede', minWidth: 150 },
         { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 170 },
         { dataField: 'creator_label', caption: 'Usuario registro', minWidth: 160, calculateCellValue: row => formatUser(row.creator) },

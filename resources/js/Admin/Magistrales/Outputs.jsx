@@ -9,6 +9,7 @@ import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import OutputsRest from '../../Actions/Admin/Magistrales/OutputsRest';
+import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 
 const rest = new OutputsRest()
@@ -142,7 +143,12 @@ const Outputs = ({ moduleTitle = 'Magistrales - Salidas' }) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openModal() } })
       }}
       columns={[
-        { dataField: 'code', caption: 'Codigo', width: 145 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 145,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => openModal(data), 'Editar salida magistral')
+        },
         { dataField: 'originWarehouse.name', caption: 'Almacen Origen', minWidth: 170 },
         { dataField: 'destination', caption: 'Destino', minWidth: 160 },
         { dataField: 'reason', caption: 'Motivo', minWidth: 160 },

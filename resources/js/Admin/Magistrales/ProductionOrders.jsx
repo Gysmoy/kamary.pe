@@ -9,6 +9,7 @@ import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import ProductionOrdersRest from '../../Actions/Admin/Magistrales/ProductionOrdersRest';
+import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 
 const rest = new ProductionOrdersRest()
@@ -159,7 +160,12 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion' }) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openModal() } })
       }}
       columns={[
-        { dataField: 'code', caption: 'Codigo', width: 145 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 145,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => openModal(data), 'Editar orden de produccion')
+        },
         { dataField: 'order_status', caption: 'Estado', width: 120, calculateCellValue: row => statusLabels[row.order_status] ?? row.order_status },
         { dataField: 'responsible.name', caption: 'Responsable', minWidth: 170 },
         { dataField: 'destinationWarehouse.name', caption: 'Destino', minWidth: 160 },

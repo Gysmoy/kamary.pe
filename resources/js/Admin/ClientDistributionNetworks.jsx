@@ -14,6 +14,7 @@ import Swal from 'sweetalert2';
 import ClientDistributionNetworksRest from '../Actions/Admin/ClientDistributionNetworksRest';
 import UbigeoCascade from '@Adminto/form/UbigeoCascade';
 import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const clientDistributionNetworksRest = new ClientDistributionNetworksRest()
 
@@ -255,7 +256,12 @@ const ClientDistributionNetworks = ({ requiredPermission = 'client-distribution'
       }}
       columns={[
         { dataField: 'id', caption: 'ID', width: 70 },
-        { dataField: 'code', caption: 'Codigo', width: 120 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 120,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar red de distribucion')
+        },
         {
           dataField: 'client.full_name',
           caption: 'Cliente',

@@ -13,6 +13,7 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import WarehousesRest from '../Actions/Admin/WarehousesRest';
 import { isMagistralesPath } from '../Utils/permissionScope';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const warehousesRest = new WarehousesRest()
 
@@ -164,7 +165,12 @@ const Warehouses = () => {
           caption: 'Sede',
           minWidth: 160
         },
-        { dataField: 'name', caption: 'Nombre', minWidth: 220 },
+        {
+          dataField: 'name',
+          caption: 'Nombre',
+          minWidth: 220,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.name, () => onModalOpen(data), 'Editar almacen')
+        },
         { dataField: 'description', caption: 'Descripcion', minWidth: 260 },
         {
           dataField: 'creator.fullname',

@@ -15,6 +15,7 @@ import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import PurchaseOrdersRest from '../Actions/Admin/PurchaseOrdersRest';
 import { scopedPermission } from '../Utils/permissionScope';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
   approvalStatusOptions,
@@ -316,7 +317,12 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
       pageSize={25}
       columns={[
         { dataField: 'id', caption: 'ID', width: 80 },
-        { dataField: 'code', caption: 'Código', width: 130 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 130,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar orden de compra')
+        },
         { dataField: 'issue_date', caption: 'F. emisión', width: 110, dataType: 'date' },
         { dataField: 'expected_date', caption: 'F. esperada', width: 115, dataType: 'date' },
         { dataField: 'business.name', caption: 'Empresa', minWidth: 140 },
@@ -371,19 +377,17 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
         },
         {
           caption: 'Acciones',
-          width: isMagistrales ? 160 : 120,
+          width: 160,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
-            if (isMagistrales) {
-              container.append(DxButton({
-                className: 'btn btn-xs btn-soft-danger',
-                title: 'Imprimir PDF',
-                icon: 'mdi mdi-file-pdf-box',
-                onClick: () => openMagistralesRecordPdf(buildMagistralesRows.purchaseOrder(data))
-              }))
-            }
             container.append(DxButton({
-              className: `btn btn-xs btn-soft-primary${isMagistrales ? ' ms-1' : ''}`,
+              className: 'btn btn-xs btn-soft-danger',
+              title: 'Imprimir PDF',
+              icon: 'mdi mdi-file-pdf-box',
+              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.purchaseOrder(data))
+            }))
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-primary ms-1',
               title: 'Editar',
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)

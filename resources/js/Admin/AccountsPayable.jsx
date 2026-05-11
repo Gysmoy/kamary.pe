@@ -7,6 +7,7 @@ import Modal from '../Components/Adminto/Modal';
 import DxButton from '../Components/dx/DxButton';
 import AccountsPayableRest from '../Actions/Admin/AccountsPayableRest';
 import { scopedPermission } from '../Utils/permissionScope';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 import {
   getPaymentStatusLabel,
   paymentStatusOptions,
@@ -112,7 +113,12 @@ const AccountsPayable = () => {
       pageSize={25}
       columns={[
         { dataField: 'id', caption: 'ID', width: 80 },
-        { dataField: 'code', caption: 'Codigo', width: 130 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 130,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onViewDetail(data), 'Ver detalle')
+        },
         { dataField: 'purchase_receipt_code', caption: 'Recepcion', width: 130 },
         { dataField: 'purchase_order_code', caption: 'OC', width: 130 },
         { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 220 },

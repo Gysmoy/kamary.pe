@@ -12,6 +12,7 @@ import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import UnitsRest from '../Actions/Admin/UnitsRest';
 import { scopedPermission } from '../Utils/permissionScope';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const unitsRest = new UnitsRest()
 
@@ -281,6 +282,7 @@ const Units = ({ moduleTitle = 'Unidades de medida' }) => {
         {
           dataField: 'name',
           caption: 'Unidad de medida',
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.name, () => onModalOpen(data), 'Editar unidad')
         },
         {
           dataField: 'symbol',

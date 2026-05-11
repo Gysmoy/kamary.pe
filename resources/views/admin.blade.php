@@ -73,6 +73,24 @@
             vertical-align: middle;
         }
 
+        .admin-grid-edit-link {
+            color: var(--ct-primary);
+            font: inherit;
+            line-height: inherit;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-decoration: none;
+            vertical-align: baseline;
+            white-space: nowrap;
+        }
+
+        .admin-grid-edit-link:hover,
+        .admin-grid-edit-link:focus {
+            color: var(--ct-primary-text-emphasis);
+            text-decoration: underline;
+        }
+
         .select2-container {
             width: 100% !important;
         }

@@ -12,6 +12,7 @@ import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import LaboratoriesRest from '../Actions/Admin/LaboratoriesRest';
 import { scopedPermission } from '../Utils/permissionScope';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const laboratoriesRest = new LaboratoriesRest()
 
@@ -436,6 +437,7 @@ const Laboratories = ({ moduleTitle = 'Laboratorios' }) => {
         {
           dataField: 'name',
           caption: 'Nombre',
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.name, () => onModalOpen(data), 'Editar laboratorio')
         },
         {
           dataField: 'code',

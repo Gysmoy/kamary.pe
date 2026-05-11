@@ -14,6 +14,7 @@ import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import BatchesRest from '../Actions/Admin/BatchesRest';
 import { scopedPermission } from '../Utils/permissionScope';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const batchesRest = new BatchesRest()
 
@@ -311,7 +312,12 @@ const Batches = () => {
       pageSize={25}
       columns={[
         { dataField: 'id', caption: 'ID', visible: false },
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 180 },
+        {
+          dataField: 'business.name',
+          caption: 'Empresa',
+          minWidth: 180,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business?.name, () => onModalOpen(data), 'Editar lote')
+        },
         { dataField: 'article.code', caption: 'Cod. articulo', width: '130px' },
         { dataField: 'article.name', caption: 'Articulo', minWidth: 220 },
         { dataField: 'lot', caption: 'Lote', width: '140px' },

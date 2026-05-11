@@ -7,6 +7,8 @@ import Modal from '../Components/Adminto/Modal';
 import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import ServiceOrdersRest from '../Actions/Admin/ServiceOrdersRest';
+import renderGridEditLink from '../Utils/renderGridEditLink';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
   billingStatusOptions,
   getPaymentStatusLabel,
@@ -127,7 +129,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio' }) => {
   }
 
   const onDelete = async (id) => {
-    const { isConfirmed } = await Swal.fire({ title: 'Eliminar orden de servicio', text: 'Se dará de baja la orden.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar' })
+    const { isConfirmed } = await Swal.fire({ title: 'Eliminar orden de servicio', text: 'Se dara de baja la orden.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
     if (!isConfirmed) return
     const result = await serviceOrdersRest.delete(id)
     if (!result) return
@@ -146,7 +148,12 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio' }) => {
       }}
       columns={[
         { dataField: 'id', caption: 'ID', width: 70 },
-        { dataField: 'code', caption: 'Código', width: 120 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 120,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar orden de servicio')
+        },
         { dataField: 'issue_date', caption: 'Fecha', dataType: 'date', width: 110 },
         { dataField: 'client.full_name', caption: 'Cliente', minWidth: 200 },
         { dataField: 'expected_document_type', caption: 'Comp.', width: 100 },
@@ -165,10 +172,11 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio' }) => {
           calculateCellValue: (data) => getPaymentStatusLabel(data.accounts_receivable?.payment_status ?? data.accountsReceivable?.payment_status ?? data.payment_status ?? '-')
         },
         { dataField: 'order_status', caption: 'Estado', width: 110, lookup: toLookup(serviceOrderStatusOptions) },
-        { dataField: 'billing_status', caption: 'Facturación', width: 110, lookup: toLookup(billingStatusOptions) },
-        { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
+        { dataField: 'billing_status', caption: 'Facturacion', width: 110, lookup: toLookup(billingStatusOptions) },
+        { caption: 'Acciones', width: 170, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           container.css('text-overflow', 'unset')
           container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.serviceOrder(data)) }))
           container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
         } }
       ]}

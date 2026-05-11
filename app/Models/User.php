@@ -27,6 +27,7 @@ class User extends Authenticatable
         'email',
         'email_verified_at',
         'password',
+        'scope',
         'document_type',
         'document_number',
         'phone_prefix',
@@ -52,6 +53,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'scope' => 'array',
         'password' => 'hashed',
         'status' => 'boolean',
         'verified' => 'boolean'

@@ -13,6 +13,8 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import CommercialOrdersRest from '../Actions/Admin/CommercialOrdersRest';
+import renderGridEditLink from '../Utils/renderGridEditLink';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
   billingStatusOptions,
   commercialOrderStatusOptions,
@@ -579,7 +581,12 @@ const CommercialOrders = ({ requiredPermission = 'orders' }) => {
       pageSize={25}
       columns={[
         { dataField: 'id', caption: 'ID', width: 80 },
-        { dataField: 'code', caption: 'Codigo', width: 130 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 130,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar pedido')
+        },
         { dataField: 'issue_date', caption: 'F. emision', width: 110, dataType: 'date' },
         { dataField: 'promised_delivery_at', caption: 'F. entrega', width: 110, dataType: 'date' },
         { dataField: 'business.name', caption: 'Empresa', minWidth: 140 },
@@ -650,7 +657,7 @@ const CommercialOrders = ({ requiredPermission = 'orders' }) => {
         },
         {
           caption: 'Acciones',
-          width: 150,
+          width: 190,
           fixed: true,
           fixedPosition: 'right',
           allowFiltering: false,
@@ -662,6 +669,12 @@ const CommercialOrders = ({ requiredPermission = 'orders' }) => {
               title: 'Editar pedido',
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)
+            }))
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-danger ms-1',
+              title: 'Imprimir PDF',
+              icon: 'mdi mdi-file-pdf-box',
+              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.commercialOrder(data))
             }))
             container.append(DxButton({
               className: 'btn btn-xs btn-soft-danger ms-1',

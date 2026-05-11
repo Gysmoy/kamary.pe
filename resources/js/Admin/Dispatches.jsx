@@ -7,6 +7,8 @@ import Modal from '../Components/Adminto/Modal';
 import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import DispatchesRest from '../Actions/Admin/DispatchesRest';
+import renderGridEditLink from '../Utils/renderGridEditLink';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
   dispatchStatusOptions,
   getShiftLabel,
@@ -159,7 +161,12 @@ const Dispatches = () => {
       }}
       columns={[
         { dataField: 'id', caption: 'ID', width: 70 },
-        { dataField: 'code', caption: 'Codigo', width: 120 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 120,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar despacho')
+        },
         { dataField: 'scheduled_date', caption: 'Fecha', dataType: 'date', width: 110 },
         { dataField: 'shift', caption: 'Turno', width: 90, calculateCellValue: (data) => getShiftLabel(data.shift) },
         { caption: 'Placa', width: 110, calculateCellValue: (data) => data.vehicle?.plate ?? data.vehicle_plate ?? '-' },
@@ -167,9 +174,10 @@ const Dispatches = () => {
         { caption: 'Zona', minWidth: 140, calculateCellValue: (data) => data.zone_master?.name ?? data.zoneMaster?.name ?? data.zone ?? '-' },
         { dataField: 'dispatch_status', caption: 'Estado', width: 110, lookup: toLookup(dispatchStatusOptions) },
         { caption: 'Pedidos', width: 90, cellTemplate: (container, { data }) => container.text((data.assignments ?? []).length) },
-        { caption: 'Acciones', width: 130, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
+        { caption: 'Acciones', width: 170, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           container.css('text-overflow', 'unset')
           container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.dispatch(data)) }))
           container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
         } }
       ]}

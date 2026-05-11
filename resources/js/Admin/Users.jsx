@@ -54,7 +54,12 @@ const Users = ({ prefixes, roles }) => {
     nameRef.current.value = data?.name ?? ''
     lastnameRef.current.value = data?.lastname ?? ''
     emailRef.current.value = data?.email ?? ''
+    usernameRef.current.value = data?.username ?? ''
+    passwordRef.current.value = ''
     phoneRef.current.value = data?.phone ?? ''
+    setPhonePrefix(data?.phone_prefix ?? '51')
+    setScope(Array.isArray(data?.scope) ? data.scope : [])
+
     const roleNames = data?.roles?.map(({ name }) => name) ?? []
     setSelectedRoles(roleNames)
 
@@ -82,6 +87,7 @@ const Users = ({ prefixes, roles }) => {
       email: emailRef.current.value,
       phone_prefix: phonePrefix,
       phone: phoneRef.current.value,
+      scope,
       roles: selectedRoles
     }
 
@@ -168,6 +174,21 @@ const Users = ({ prefixes, roles }) => {
         {
           dataField: 'fullname',
           caption: 'Nombre completo',
+          cellTemplate: (container, { data }) => {
+            const label = data.fullname || [data.name, data.lastname].filter(Boolean).join(' ') || data.username || ''
+            if (!label) return
+
+            container.empty()
+            $('<button type="button" class="btn btn-link admin-grid-edit-link p-0 text-start fw-semibold"></button>')
+              .text(label)
+              .attr('title', 'Editar usuario')
+              .on('click', (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onModalOpen(data)
+              })
+              .appendTo(container)
+          }
         },
         {
           dataField: 'username',

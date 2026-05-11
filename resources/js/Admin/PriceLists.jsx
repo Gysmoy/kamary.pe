@@ -13,6 +13,8 @@ import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import PriceListsRest from '../Actions/Admin/PriceListsRest';
+import renderGridEditLink from '../Utils/renderGridEditLink';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 
 const priceListsRest = new PriceListsRest()
 
@@ -273,7 +275,12 @@ const PriceLists = ({ requiredPermission = 'pricing' }) => {
       }}
       columns={[
         { dataField: 'id', caption: 'ID', width: 70 },
-        { dataField: 'code', caption: 'Codigo', width: 120 },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          width: 120,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar tarifario')
+        },
         { dataField: 'business.name', caption: 'Empresa', minWidth: 180 },
         { dataField: 'branch.name', caption: 'Sede', minWidth: 140, visible: false },
         { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 140, visible: false },
@@ -325,7 +332,7 @@ const PriceLists = ({ requiredPermission = 'pricing' }) => {
         },
         {
           caption: 'Acciones',
-          width: 120,
+          width: 160,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
             container.append(DxButton({
@@ -335,7 +342,13 @@ const PriceLists = ({ requiredPermission = 'pricing' }) => {
               onClick: () => onModalOpen(data)
             }))
             container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
+              className: 'btn btn-xs btn-soft-danger ms-1',
+              title: 'Imprimir PDF',
+              icon: 'mdi mdi-file-pdf-box',
+              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.priceList(data))
+            }))
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-danger ms-1',
               title: 'Eliminar',
               icon: 'mdi mdi-delete',
               onClick: () => onDeleteClicked(data.id)

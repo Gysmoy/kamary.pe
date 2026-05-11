@@ -9,6 +9,7 @@ import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import SalesRest from '../../Actions/Admin/Magistrales/SalesRest';
+import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 
 const rest = new SalesRest()
@@ -169,7 +170,12 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas' }) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openModal() } })
       }}
       columns={[
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 170 },
+        {
+          dataField: 'business.name',
+          caption: 'Empresa',
+          minWidth: 170,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business?.name, () => openModal(data), 'Editar venta magistral')
+        },
         { dataField: 'code', caption: 'Codigo', width: 145 },
         { dataField: 'payment_status', caption: 'Estado Pago', width: 120, calculateCellValue: row => paymentLabels[row.payment_status] ?? row.payment_status },
         { dataField: 'document_label', caption: 'Documento', width: 160, calculateCellValue: formatDocument },

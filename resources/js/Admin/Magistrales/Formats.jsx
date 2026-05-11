@@ -9,6 +9,7 @@ import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import FormatsRest from '../../Actions/Admin/Magistrales/FormatsRest';
+import renderGridEditLink from '../../Utils/renderGridEditLink';
 
 const formatsRest = new FormatsRest()
 
@@ -79,7 +80,12 @@ const Formats = ({ moduleTitle = 'Magistrales - Formatos' }) => {
             container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
           }
         },
-        { dataField: 'description', caption: 'Descripcion', minWidth: 240 },
+        {
+          dataField: 'description',
+          caption: 'Descripcion',
+          minWidth: 240,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.description, () => onModalOpen(data), 'Editar formato')
+        },
         { dataField: 'quantity', caption: 'Cantidad', dataType: 'number', width: 120, format: { type: 'fixedPoint', precision: 3 } },
         {
           dataField: 'status',

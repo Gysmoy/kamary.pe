@@ -9,6 +9,7 @@ import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import CategoriesRest from '../../Actions/Admin/Magistrales/CategoriesRest';
+import renderGridEditLink from '../../Utils/renderGridEditLink';
 
 const categoriesRest = new CategoriesRest()
 
@@ -142,7 +143,12 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
           }
         },
         { dataField: 'id', caption: 'ID', width: 90 },
-        { dataField: 'description', caption: 'Descripcion', minWidth: 220 },
+        {
+          dataField: 'description',
+          caption: 'Descripcion',
+          minWidth: 220,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.description, () => onModalOpen(data), 'Editar categoria')
+        },
         { dataField: 'code', caption: 'Codigo', width: 130 },
         { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 160 },
         { dataField: 'sale_material', caption: 'Material para venta', dataType: 'boolean', width: 150 },

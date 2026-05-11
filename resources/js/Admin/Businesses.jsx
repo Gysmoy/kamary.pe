@@ -8,6 +8,7 @@ import DxButton from '../Components/dx/DxButton'
 import InputFormGroup from '@Adminto/form/InputFormGroup'
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup'
 import BusinessesRest from '../Actions/Admin/BusinessesRest'
+import renderGridEditLink from '../Utils/renderGridEditLink'
 
 const businessesRest = new BusinessesRest()
 
@@ -106,7 +107,8 @@ const Businesses = ({ can }) => {
         {
           dataField: 'name',
           caption: 'Nombre',
-          minWidth: 220
+          minWidth: 220,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.name, () => onModalOpen(data), 'Editar empresa')
         },
         {
           dataField: 'description',

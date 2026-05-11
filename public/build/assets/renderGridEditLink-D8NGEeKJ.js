@@ -1,0 +1,1 @@
+const d="-",i=(s,t,e,o="Editar")=>{const p=t==null||t===""?d:`${t}`,n=$(s);n.empty(),n.css("text-overflow","unset"),$('<button type="button" class="btn btn-link admin-grid-edit-link p-0 text-start fw-semibold"></button>').text(p).attr("title",o).on("click",r=>{r.preventDefault(),r.stopPropagation(),e==null||e()}).appendTo(n)};export{i as r};

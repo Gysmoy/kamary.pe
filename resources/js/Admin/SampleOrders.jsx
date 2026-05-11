@@ -9,6 +9,7 @@ import DxButton from '../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import SampleOrdersRest from '../Actions/Admin/SampleOrdersRest';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 
 const sampleOrdersRest = new SampleOrdersRest()
@@ -137,7 +138,12 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         { dataField: 'email_status', caption: 'Estado email', minWidth: 120, lookup: toLookup(emailStatusOptions), calculateCellValue: (data) => optionLabel(emailStatusOptions, data.email_status) },
         { dataField: 'referral_guide', caption: 'Guia remision', minWidth: 140 },
         { dataField: 'total_gross_weight', caption: 'Peso bruto total', dataType: 'number', width: 130, format: { type: 'fixedPoint', precision: 3 } },
-        { dataField: 'order_number', caption: 'Nro pedido', width: 130 },
+        {
+          dataField: 'order_number',
+          caption: 'Nro pedido',
+          width: 130,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.order_number, () => onModalOpen(data), 'Editar pedido de muestra')
+        },
         { dataField: 'channel', caption: 'Canal', minWidth: 120 },
         { dataField: 'document_type', caption: 'Tipo doc.', width: 95 },
         { dataField: 'document_number', caption: 'Documento', width: 130 },

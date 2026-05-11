@@ -15,6 +15,7 @@ import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import { scopedPermission } from '../Utils/permissionScope';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 import ArticlesRest from '../Actions/Admin/ArticlesRest';
 
 const articlesRest = new ArticlesRest()
@@ -682,7 +683,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const magistralesColumns = [
     actionsColumn,
     { dataField: 'id', caption: 'ID', visible: false },
-    { dataField: 'code', caption: 'Codigo', width: '130px' },
+    {
+      dataField: 'code',
+      caption: 'Codigo',
+      width: '130px',
+      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar articulo')
+    },
     { dataField: 'article_type', caption: 'Tipo', width: '120px' },
     { dataField: 'magistralFormat.description', caption: 'Presentacion', width: '150px' },
     { dataField: 'administration_route', caption: 'Via adm.', width: '120px' },
@@ -708,7 +714,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
 
   const standardColumns = [
     { dataField: 'id', caption: 'ID', visible: false },
-    { dataField: 'code', caption: 'Codigo', width: '130px' },
+    {
+      dataField: 'code',
+      caption: 'Codigo',
+      width: '130px',
+      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar articulo')
+    },
     { dataField: 'name', caption: 'Articulo', minWidth: 180 },
     { dataField: 'laboratory.name', caption: 'Laboratorio', width: '150px' },
     { dataField: 'activePrinciple.name', caption: 'Principio activo', width: '180px' },

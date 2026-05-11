@@ -14,6 +14,7 @@ import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import UbigeoCascade from '@Adminto/form/UbigeoCascade';
 import ClientsRest from '../Actions/Admin/ClientsRest';
 import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const clientsRest = new ClientsRest()
 
@@ -415,7 +416,12 @@ const Clients = ({
         },
         { dataField: 'document_type', caption: 'Tipo Doc.', width: 95 },
         { dataField: 'document_number', caption: 'Numero', width: 125 },
-        { dataField: 'display_name', caption: 'Cliente', minWidth: 220 },
+        {
+          dataField: 'display_name',
+          caption: 'Cliente',
+          minWidth: 220,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.display_name ?? data?.full_name, () => onModalOpen(data), 'Editar cliente')
+        },
         {
           dataField: 'purchase_count',
           caption: 'Compras',

@@ -8,6 +8,8 @@ import ReactAppend from '../../Utils/ReactAppend';
 import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import FormulasRest from '../../Actions/Admin/Magistrales/FormulasRest';
+import renderGridEditLink from '../../Utils/renderGridEditLink';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 
 const formulasRest = new FormulasRest()
 
@@ -199,21 +201,27 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
       }}
       columns={[
         {
+          dataField: 'article.code',
+          caption: 'Codigo',
+          width: 140,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.article?.code, () => onModalOpen(data), 'Editar formula')
+        },
+        { dataField: 'article.name', caption: 'Articulo', minWidth: 220 },
+        { dataField: 'last_edited_at', caption: 'F. ultima edicion', width: 155, calculateCellValue: (data) => formatDateTime(data.last_edited_at) },
+        { dataField: 'last_editor_label', caption: 'Usuario ult. edicion', minWidth: 180, calculateCellValue: (data) => formatUser(data.last_editor ?? data.lastEditor) },
+        { dataField: 'detail', caption: 'Detalle formula', visible: false },
+        {
           caption: 'Acciones',
-          width: 150,
+          width: 190,
           allowFiltering: false,
           allowExporting: false,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
             container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Detalle formula', icon: 'mdi mdi-file-document-edit', onClick: () => onModalOpen(data) }))
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.magistralFormula(data)) }))
             container.append(DxButton({ className: 'btn btn-xs btn-soft-info ms-1', title: 'Historial de actualizaciones', icon: 'mdi mdi-history', onClick: () => onHistoryOpen(data) }))
           }
         },
-        { dataField: 'article.code', caption: 'Codigo', width: 140 },
-        { dataField: 'article.name', caption: 'Articulo', minWidth: 220 },
-        { dataField: 'last_edited_at', caption: 'F. ultima edicion', width: 155, calculateCellValue: (data) => formatDateTime(data.last_edited_at) },
-        { dataField: 'last_editor_label', caption: 'Usuario ult. edicion', minWidth: 180, calculateCellValue: (data) => formatUser(data.last_editor ?? data.lastEditor) },
-        { dataField: 'detail', caption: 'Detalle formula', visible: false },
         {
           dataField: 'status',
           caption: 'Estado',

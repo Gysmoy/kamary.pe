@@ -15,6 +15,7 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import EntryNotesRest from '../Actions/Admin/EntryNotesRest';
 import { isStoragePath, scopedPermission } from '../Utils/permissionScope';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 
 const entryNotesRest = new EntryNotesRest()
@@ -463,7 +464,12 @@ const EntryNotes = () => {
       pageSize={25}
       columns={[
         { dataField: 'id', caption: 'ID', visible: false },
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 150 },
+        {
+          dataField: 'business.name',
+          caption: 'Empresa',
+          minWidth: 150,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business?.name, () => onModalOpen(data), 'Editar nota de entrada')
+        },
         { dataField: 'branch.name', caption: 'Sede', minWidth: 140 },
         { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 140 },
         { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 200 },

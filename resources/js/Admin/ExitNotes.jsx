@@ -15,6 +15,7 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import ExitNotesRest from '../Actions/Admin/ExitNotesRest';
 import { isStoragePath, scopedPermission } from '../Utils/permissionScope';
+import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 
 const exitNotesRest = new ExitNotesRest()
@@ -412,7 +413,12 @@ const ExitNotes = () => {
       pageSize={25}
       columns={[
         { dataField: 'id', caption: 'ID', visible: false },
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 150 },
+        {
+          dataField: 'business.name',
+          caption: 'Empresa',
+          minWidth: 150,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business?.name, () => onModalOpen(data), 'Editar nota de salida')
+        },
         { dataField: 'branch.name', caption: 'Sede', minWidth: 140 },
         { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 140 },
         { dataField: 'client_name', caption: 'Cliente', minWidth: 180 },
