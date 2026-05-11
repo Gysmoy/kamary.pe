@@ -54,8 +54,8 @@ const ensurePdfModal = () => {
   modal.tabIndex = -1
   modal.setAttribute('aria-hidden', 'true')
   modal.innerHTML = `
-    <div class="modal-dialog modal-dialog-centered" style="width: min(1180px, calc(100vw - 48px)); max-width: calc(100vw - 48px);">
-      <div class="modal-content" style="height: min(780px, calc(100vh - 64px));">
+    <div class="modal-dialog modal-dialog-centered" style="width: 1040px; max-width: calc(100vw - 64px);">
+      <div class="modal-content" style="height: min(760px, calc(100vh - 80px));">
         <div class="modal-header py-2">
           <h4 class="modal-title mb-0" data-pdf-title>PDF</h4>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
