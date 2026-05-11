@@ -106,7 +106,8 @@ const Menu = ({ can, hasRole, panel = null }) => {
 
           {canAccessAny('users', 'roles') && (
             <MenuItemContainer title='Sistemas' icon='ti ti-settings-cog'>
-              <MenuItem href={canAccess('users') ? '/admin/users' : '/admin/roles'} icon='ti ti-users'>Gestión de Usuarios</MenuItem>
+              {canAccess('users') && <MenuItem href='/admin/users' icon='ti ti-users'>Usuarios</MenuItem>}
+              {canAccess('roles') && <MenuItem href='/admin/roles' icon='ti ti-shield-lock'>Roles y permisos</MenuItem>}
             </MenuItemContainer>
           )}
 
@@ -171,6 +172,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
             <MenuItemContainer title='Servicios' icon='ti ti-settings'>
               {canAccess('services-client') && <MenuItem href='/admin/services-client' icon='ti ti-users'>Cliente</MenuItem>}
               {canAccess('services-billing') && <MenuItem href='/admin/services-billing' icon='ti ti-file-invoice'>Facturacion</MenuItem>}
+              {canAccess('services-billing') && <MenuItem href='/admin/billing-settings' icon='ti ti-file-settings'>Config. facturaciÃ³n</MenuItem>}
               {canAccess('services-service-order') && <MenuItem href='/admin/services-service-order' icon='ti ti-file-dollar'>Orden de servicio</MenuItem>}
               {canAccess('services-services') && <MenuItem href='/admin/services-services' icon='ti ti-settings'>Servicios</MenuItem>}
             </MenuItemContainer>
@@ -219,6 +221,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
               {canAccessAny('magistrales-outputs', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales-outputs' icon='ti ti-file-export'>Salidas</MenuItem>}
               {canAccessAny('magistrales-unit', 'magistrales-products') && <MenuItem href='/admin/magistrales-unit' icon='ti ti-ruler-measure'>Unidad</MenuItem>}
               {canAccessAny('magistrales-sales', 'magistrales-billing') && <MenuItem href='/admin/magistrales-sales' icon='ti ti-cash'>Ventas</MenuItem>}
+              {canAccess('magistrales-billing') && <MenuItem href='/admin/magistrales/billing-settings' icon='ti ti-file-settings'>Config. facturaciÃ³n</MenuItem>}
             </MenuItemContainer>
           )}
         </ul>
