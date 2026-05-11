@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\PurchaseOrderController as AdminPurchaseOrderCont
 use App\Http\Controllers\Admin\PurchaseReceiptController as AdminPurchaseReceiptController;
 use App\Http\Controllers\Admin\Magistrales\ArticleController as AdminMagistralesArticleController;
 use App\Http\Controllers\Admin\Magistrales\CategoryController as AdminMagistralesCategoryController;
+use App\Http\Controllers\Admin\Magistrales\DashboardController as AdminMagistralesDashboardController;
 use App\Http\Controllers\Admin\Magistrales\FormatController as AdminMagistralesFormatController;
 use App\Http\Controllers\Admin\Magistrales\FormulaController as AdminMagistralesFormulaController;
 use App\Http\Controllers\Admin\Magistrales\IncomeController as AdminMagistralesIncomeController;
@@ -173,6 +174,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/sample-orders', [AdminSampleOrderController::class, 'reactView']);
 
         // Magistrales
+        Route::get('/magistrales/dashboard', [AdminMagistralesDashboardController::class, 'reactView']);
+        Route::get('/magistrales-dashboard', [AdminMagistralesDashboardController::class, 'reactView']);
         Route::get('/magistrales/articles', [AdminMagistralesArticleController::class, 'reactView']);
         Route::get('/magistrales-articles', [AdminMagistralesArticleController::class, 'reactView']);
         Route::get('/magistrales/batches', [AdminBatchController::class, 'reactView']);

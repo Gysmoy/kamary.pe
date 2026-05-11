@@ -218,6 +218,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
             'magistrales-sales',
           ) && (
             <MenuItemContainer title='Magistrales' icon='ti ti-flask-2'>
+              <MenuItem href='/admin/magistrales/dashboard' icon='ti ti-dashboard'>Dashboard</MenuItem>
               {canAccessAny('magistrales-articles', 'magistrales-products') && <MenuItem href='/admin/magistrales/articles' icon='ti ti-box'>Artículos</MenuItem>}
               {canAccessAny('magistrales-category', 'magistrales-products') && <MenuItem href='/admin/magistrales-category' icon='ti ti-category'>Categoría</MenuItem>}
               {canAccessAny('magistrales-formats', 'magistrales-products') && <MenuItem href='/admin/magistrales-formats' icon='ti ti-forms'>Formatos</MenuItem>}
