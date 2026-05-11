@@ -7,6 +7,25 @@ echo "========================================="
 
 cd /var/www/html
 
+run_artisan_with_retries() {
+    label="$1"
+    shift
+    max_attempts="${ARTISAN_MAX_TRIES:-30}"
+    retry_seconds="${ARTISAN_RETRY_SECONDS:-2}"
+
+    for attempt in $(seq 1 "$max_attempts"); do
+        echo "$label (attempt $attempt/$max_attempts)..."
+        if php artisan "$@"; then
+            return 0
+        fi
+
+        sleep "$retry_seconds"
+    done
+
+    echo "WARNING: $label failed after $max_attempts attempts, continuing anyway..."
+    return 1
+}
+
 # 0. Ensure storage folders exist (por si volúmenes)
 mkdir -p storage/logs
 mkdir -p storage/framework/{sessions,views,cache,testing}
@@ -18,12 +37,13 @@ chown -R www-data:www-data storage bootstrap/cache
 chmod -R 777 storage bootstrap/cache
 
 # 1. Run Migrations
-echo "Running migrations..."
-php artisan migrate --force || echo "WARNING: Migrations failed, continuing anyway..."
+run_artisan_with_retries "Running migrations" migrate --force || true
 
 # 1.1 Sync module permissions
-echo "Syncing module permissions..."
-php artisan db:seed --class=ModulePermissionsSeeder --force || echo "WARNING: Module permissions seeder failed, continuing anyway..."
+run_artisan_with_retries "Syncing module permissions" db:seed --class=ModulePermissionsSeeder --force || true
+
+# 1.2 Seed Magistrales operational data
+run_artisan_with_retries "Seeding Magistrales initial data" db:seed --class=MagistralesProductionSeeder --force || true
 
 # 2. Clear Caches
 echo "Clearing caches..."

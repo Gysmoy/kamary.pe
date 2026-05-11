@@ -266,6 +266,8 @@ Magistrales debe desarrollarse como sistema aparte. En referencia no es una copi
 - [x] Crear CRUD inicial separado para Categoria, Formatos, Formulas, Ingresos y Laboratorio magistrales.
 - [x] Agregar `module_scope` y campos propios iniciales para Articulos, Proveedor y O. Compra magistrales.
 - [x] Evitar reutilizar modelos/tablas de Almacen normal cuando el flujo magistral tenga campos o reglas diferentes.
+- [x] Agregar datos iniciales idempotentes para produccion sin informacion sensible.
+  - `MagistralesProductionSeeder` crea 10 registros por modulo operativo y se ejecuta automaticamente desde Docker despues de migrar.
 
 ### QA funcional Magistrales 2026-05-09
 
@@ -383,7 +385,7 @@ Checklist por modulo:
 - [x] Unidad.
   - Referencia: abreviatura y descripcion.
   - Local: `/admin/magistrales-unit` y `/admin/magistrales/units` usan `Admin\Magistrales\UnitController`, `/api/admin/magistrales/units` y `units.module_scope = magistrales`.
-  - Falta: migrar/crear unidades magistrales iniciales y confirmar si pueden compartir abreviaturas con Almacen.
+  - [x] Unidades iniciales agregadas por `MagistralesProductionSeeder` con abreviaturas propias `MAG*` para evitar choque con Almacen.
 - [x] Ventas.
   - Referencia: farmacia, empresa, codigo, estado pago, documento, paciente, total, usuario y fecha.
   - Local: `/admin/magistrales-sales` y `/admin/magistrales/sales` usan `Admin\Magistrales\SaleController`, `/api/admin/magistrales/sales` y tabla `magistral_sales`.
@@ -411,3 +413,7 @@ Checklist por modulo:
   - `MagistralesModuleReadinessTest` valida permisos, presencia en `Menu.jsx`/`Roles.jsx`, orden visible y rutas.
 - [x] Agregar pruebas/QA visual para confirmar que el orden del menu no cambie.
   - Cubierto como prueba estatica de orden de rutas visibles en `Menu.jsx`; queda pendiente solo QA visual manual post-deploy si se requiere.
+- [x] Agregar seeders de datos iniciales Magistrales para ambientes vacios.
+  - `MagistralesProductionSeeder` cubre catalogos y flujos con 10 registros por modulo.
+- [x] Agregar pruebas de seeders Magistrales.
+  - `MagistralesProductionSeederTest` valida poblado, stock/kardex basico e idempotencia.
