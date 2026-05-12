@@ -69,8 +69,9 @@ const ItemDetail = ({ item, condition = {} }) => {
                   key={idx}
                   src={img}
                   alt={`thumbnail-${idx}`}
-                  className={`w-14 aspect-[3/4] object-contain rounded-md cursor-pointer transition-all duration-300 
-                    ${selectedImage === idx ? 'opacity-100 ring-2 ring-blue-400' : 'opacity-20 hover:opacity-60'}`}
+                  className={`w-14 aspect-[3/4] object-contain rounded-md cursor-pointer transition-all duration-300 ${
+                    selectedImage === idx ? 'opacity-100 ring-2 ring-blue-400' : 'opacity-20 hover:opacity-60'
+                  }`}
                   onClick={() => setSelectedImage(idx)}
                   onError={(e) => {
                     e.target.src = '/images/default/card.png';

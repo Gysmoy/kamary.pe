@@ -204,7 +204,6 @@ const Clients = ({
   initialQuickFilter = 'all',
   storageContext = false,
   serviceContext = false,
-  roles = []
 }) => {
   const gridRef = useRef()
   const modalRef = useRef()
@@ -238,7 +237,8 @@ const Clients = ({
   const statusRef = useRef()
   const userIdRef = useRef()
   const userNameRef = useRef()
-  const userLastnameRef = useRef()
+  const userLastNameFatherRef = useRef()
+  const userLastNameMotherRef = useRef()
   const userEmailRef = useRef()
   const userUsernameRef = useRef()
   const userPasswordRef = useRef()
@@ -260,8 +260,7 @@ const Clients = ({
   const [totalRows, setTotalRows] = useState(0)
   const [ubigeoLocation, setUbigeoLocation] = useState(EMPTY_UBIGEO_SELECTION)
   const [selectedClientForUsers, setSelectedClientForUsers] = useState(null)
-  const [userPhonePrefix, setUserPhonePrefix] = useState('51')
-  const [selectedUserRoles, setSelectedUserRoles] = useState([])
+  const [userStatus, setUserStatus] = useState('1')
 
   const isEventual = clientKind === 'eventual'
   const isRuc = documentType === 'ruc'
@@ -545,15 +544,15 @@ const Clients = ({
   const clearUserForm = () => {
     setRefValue(userIdRef, '')
     setRefValue(userNameRef, '')
-    setRefValue(userLastnameRef, '')
+    setRefValue(userLastNameFatherRef, '')
+    setRefValue(userLastNameMotherRef, '')
     setRefValue(userEmailRef, '')
     setRefValue(userUsernameRef, '')
     setRefValue(userPasswordRef, '')
     setRefValue(userPhoneRef, '')
     setRefValue(userPhonePrefixRef, '51')
     setRefValue(userStatusRef, '1')
-    setUserPhonePrefix('51')
-    setSelectedUserRoles([])
+    setUserStatus('1')
   }
 
   const onUserModalOpen = (data = null) => {
@@ -563,15 +562,17 @@ const Clients = ({
     if (data?.uuid) {
       setRefValue(userIdRef, data.uuid)
       setRefValue(userNameRef, data.name ?? '')
-      setRefValue(userLastnameRef, data.lastname ?? '')
+      const [lastNameFather = '', ...lastNameMotherParts] = (data.lastname ?? '').trim().split(/\s+/).filter(Boolean)
+      setRefValue(userLastNameFatherRef, lastNameFather)
+      setRefValue(userLastNameMotherRef, lastNameMotherParts.join(' '))
       setRefValue(userEmailRef, data.email ?? '')
       setRefValue(userUsernameRef, data.username ?? '')
       setRefValue(userPhoneRef, data.phone ?? '')
       const normalizedPrefix = normalizePrefix(data.phone_prefix) || '51'
       setRefValue(userPhonePrefixRef, normalizedPrefix)
-      setUserPhonePrefix(normalizedPrefix)
-      setRefValue(userStatusRef, data.status === false || data.status === 0 ? '0' : '1')
-      setSelectedUserRoles(data.roles?.map(({ name }) => name).filter(Boolean) ?? [])
+      const nextStatus = data.status === false || data.status === 0 ? '0' : '1'
+      setRefValue(userStatusRef, nextStatus)
+      setUserStatus(nextStatus)
     }
 
     $(userFormModalRef.current).modal('show')
@@ -586,15 +587,14 @@ const Clients = ({
       id: getRefValue(userIdRef) || undefined,
       storage_client_id: selectedClientId,
       name: getRefValue(userNameRef).trim(),
-      lastname: getRefValue(userLastnameRef).trim(),
+      lastname: [getRefValue(userLastNameFatherRef), getRefValue(userLastNameMotherRef)].map(value => value.trim()).filter(Boolean).join(' '),
       email: getRefValue(userEmailRef).trim(),
       username: isUserEditing ? undefined : getRefValue(userUsernameRef).trim(),
       password: isUserEditing ? undefined : getRefValue(userPasswordRef),
       phone_prefix: normalizePrefix(getRefValue(userPhonePrefixRef)) || '51',
       phone: getRefValue(userPhoneRef).trim(),
-      status: getRefValue(userStatusRef) || '1',
+      status: userStatus || getRefValue(userStatusRef) || '1',
       scope: DEFAULT_STORAGE_USER_SCOPES,
-      roles: selectedUserRoles,
     }
 
     const result = await usersRest.save(request)
@@ -624,14 +624,6 @@ const Clients = ({
     const result = await usersRest.delete(id)
     if (!result) return
     refreshUsersGrid()
-  }
-
-  const handleUserRoleSelect = (roleName) => {
-    setSelectedUserRoles(current => current.includes(roleName) ? current : [...current, roleName])
-  }
-
-  const handleUserRoleRemove = (roleName) => {
-    setSelectedUserRoles(current => current.filter(currentRole => currentRole !== roleName))
   }
 
   const isIdentityBlocked = isEditing || (isDocumentDataLocked && ['dni', 'ruc'].includes(documentType))
@@ -1001,23 +993,6 @@ const Clients = ({
             },
             { dataField: 'entity_id', caption: 'ID', width: 80, allowFiltering: false, allowSorting: false },
             { dataField: 'storage_client_id', visible: false },
-            {
-              dataField: 'roles',
-              caption: 'Perfil',
-              minWidth: 130,
-              allowSorting: false,
-              allowFiltering: false,
-              cellTemplate: (container, { data }) => {
-                container.empty()
-                const wrapper = $('<div class="d-flex flex-wrap gap-1"></div>')
-                if (data.roles?.length) {
-                  data.roles.forEach(role => $('<span class="badge badge-soft-primary"></span>').text(role.name).appendTo(wrapper))
-                } else {
-                  $('<span class="text-muted fst-italic"></span>').text('Sin perfil').appendTo(wrapper)
-                }
-                container.append(wrapper)
-              }
-            },
             { dataField: 'username', caption: 'Usuario', minWidth: 120 },
             { dataField: 'name', caption: 'Nombres', minWidth: 150 },
             { dataField: 'lastname', caption: 'Apellidos', minWidth: 150 },
@@ -1059,69 +1034,28 @@ const Clients = ({
         zIndex={1065}
       >
         <input ref={userIdRef} type='hidden' />
+        <input ref={userPhonePrefixRef} type='hidden' />
         <div className='row'>
-          <InputFormGroup eRef={userNameRef} label='Nombres' col='col-md-6' required />
-          <InputFormGroup eRef={userLastnameRef} label='Apellidos' col='col-md-6' required />
-          {!isUserEditing && <>
-            <InputFormGroup eRef={userUsernameRef} label='Usuario' col='col-md-6' required />
-            <InputFormGroup eRef={userPasswordRef} label='Contrasena' col='col-md-6' type='password' required />
-          </>}
-          <InputFormGroup eRef={userEmailRef} label='Email' col='col-md-6' type='email' required />
+          <InputFormGroup eRef={userUsernameRef} label='Usuario' col='col-md-6' required disabled={isUserEditing} />
+          {!isUserEditing && <InputFormGroup eRef={userPasswordRef} label='Clave' col='col-md-6' type='password' required />}
+          <InputFormGroup eRef={userNameRef} label='Nombres' col='col-md-4' required />
+          <InputFormGroup eRef={userLastNameFatherRef} label='Apellido Paterno' col='col-md-4' required />
+          <InputFormGroup eRef={userLastNameMotherRef} label='Apellido Materno' col='col-md-4' required />
+          <InputFormGroup eRef={userEmailRef} label='Email' col='col-md-4' type='email' required />
+          <InputFormGroup eRef={userPhoneRef} label='Telefono' col='col-md-4' required />
           <SelectFormGroup
-            eRef={userPhonePrefixRef}
-            label='Prefijo'
-            col='col-md-3'
-            value={userPhonePrefix}
-            onChange={(e) => setUserPhonePrefix(normalizePrefix(e.target.value))}
-            effectWith={[userPhonePrefix]}
+            eRef={userStatusRef}
+            label='Estado'
+            col='col-md-4'
+            required
+            value={userStatus}
+            onChange={(e) => setUserStatus(e.target.value || '1')}
+            effectWith={[userStatus]}
+            minimumResultsForSearch={Infinity}
           >
-            {!prefixes.length && <option value='51'>+51 - Peru</option>}
-            {prefixes.map((prefix, idx) => (
-              <option key={`user-prefix-${idx}`} value={prefix.realCode}>
-                {prefix.beautyCode} - {prefix.country}
-              </option>
-            ))}
+            <option value='1'>Activo</option>
+            <option value='0'>Inactivo</option>
           </SelectFormGroup>
-          <InputFormGroup eRef={userPhoneRef} label='Telefono' col='col-md-3' />
-          <SelectFormGroup eRef={userStatusRef} label='Estado' col='col-md-6' required>
-            <option value='1'>ACTIVO</option>
-            <option value='0'>INACTIVO</option>
-          </SelectFormGroup>
-          <div className='col-md-6 mb-2'>
-            <label className='form-label mb-1'>Perfil</label>
-            <div className='dropdown'>
-              <button
-                className='btn btn-light dropdown-toggle'
-                type='button'
-                data-bs-toggle='dropdown'
-                aria-expanded='false'
-              >
-                Seleccionar perfil
-              </button>
-              <div className='dropdown-menu'>
-                {roles.map((role, idx) => (
-                  <button key={`storage-role-${idx}`} className='dropdown-item' type='button' onClick={() => handleUserRoleSelect(role.name)}>
-                    {role.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-            {selectedUserRoles.length > 0 && <div className='d-flex flex-wrap gap-1 mt-2'>
-              {selectedUserRoles.map((role) => (
-                <span key={role} className='badge bg-primary d-inline-flex align-items-center gap-1'>
-                  {role}
-                  <button
-                    type='button'
-                    className='btn btn-link btn-sm p-0 lh-1 text-white text-decoration-none'
-                    onClick={() => handleUserRoleRemove(role)}
-                    aria-label={`Quitar ${role}`}
-                  >
-                    x
-                  </button>
-                </span>
-              ))}
-            </div>}
-          </div>
         </div>
       </Modal>
     </>}
