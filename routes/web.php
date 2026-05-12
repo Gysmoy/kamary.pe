@@ -33,7 +33,6 @@ use App\Http\Controllers\Admin\Storage\GeneralServiceOrderController as AdminSto
 use App\Http\Controllers\Admin\Storage\InventoryController as AdminStorageInventoryController;
 use App\Http\Controllers\Admin\Storage\KardexController as AdminStorageKardexController;
 use App\Http\Controllers\Admin\Storage\ProductController as AdminStorageProductController;
-use App\Http\Controllers\Admin\Storage\ServiceOrderController as AdminStorageServiceOrderController;
 use App\Http\Controllers\Admin\Storage\UnitController as AdminStorageUnitController;
 use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\ActivityController as AdminActivityController;
@@ -146,7 +145,6 @@ Route::middleware('auth')->group(function () {
         // Serv. Almacen...
         Route::get('/storage-inventory', [AdminStorageInventoryController::class, 'reactView']);
         Route::get('/storage-clients', [AdminStorageClientController::class, 'reactView']);
-        Route::get('/service-orders', [AdminStorageServiceOrderController::class, 'reactView']);
         Route::get('/storage-units', [AdminStorageUnitController::class, 'reactView']);
         Route::get('/storage-products', [AdminStorageProductController::class, 'reactView']);
         Route::get('/storage-entry-note', [AdminStorageEntryNoteController::class, 'reactView']);

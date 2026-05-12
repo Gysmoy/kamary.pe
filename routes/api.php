@@ -54,7 +54,6 @@ use App\Http\Controllers\Admin\Storage\GeneralServiceOrderController as AdminSto
 use App\Http\Controllers\Admin\Storage\InventoryController as AdminStorageInventoryController;
 use App\Http\Controllers\Admin\Storage\KardexController as AdminStorageKardexController;
 use App\Http\Controllers\Admin\Storage\ProductController as AdminStorageProductController;
-use App\Http\Controllers\Admin\Storage\ServiceOrderController as AdminStorageServiceOrderController;
 use App\Http\Controllers\Admin\Storage\UnitController as AdminStorageUnitController;
 use App\Http\Controllers\Admin\ServiceCatalogController as AdminServiceCatalogController;
 use App\Http\Controllers\Admin\ServiceClientController as AdminServiceClientController;
@@ -385,13 +384,6 @@ Route::middleware('auth')->group(function () {
             Route::post('/billing-control/{id}/provider-response', [AdminStorageBillingControlController::class, 'registerProviderResponse']);
             Route::post('/billing-control/{id}/provider-status', [AdminStorageBillingControlController::class, 'providerStatus']);
             Route::get('/billing-control/{id}/download/{type}', [AdminStorageBillingControlController::class, 'download'])->where('type', 'pdf|xml|cdr');
-
-            Route::post('/service-orders', [AdminStorageServiceOrderController::class, 'save']);
-            Route::post('/service-orders/paginate', [AdminStorageServiceOrderController::class, 'paginate']);
-            Route::patch('/service-orders/status', [AdminStorageServiceOrderController::class, 'status']);
-            Route::patch('/service-orders/{field}', [AdminStorageServiceOrderController::class, 'boolean']);
-            Route::delete('/service-orders/{id}', [AdminStorageServiceOrderController::class, 'delete']);
-            Route::get('/service-orders/businesses/{id}/branches', [AdminStorageServiceOrderController::class, 'branches']);
 
             Route::post('/general-service-orders', [AdminStorageGeneralServiceOrderController::class, 'save']);
             Route::post('/general-service-orders/paginate', [AdminStorageGeneralServiceOrderController::class, 'paginate']);

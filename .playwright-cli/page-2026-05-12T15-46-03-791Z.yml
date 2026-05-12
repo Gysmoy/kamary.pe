@@ -1,0 +1,27 @@
+- generic [ref=e2]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - list
+      - heading "Ingreso al Sistema" [level=3] [ref=e7]
+    - generic [ref=e8]:
+      - img [ref=e10]
+      - generic [ref=e11]:
+        - generic [ref=e15]:
+          - generic [ref=e16]: Usuario
+          - generic [ref=e17]:
+            - textbox [ref=e18]
+            - generic [ref=e20]: 
+        - generic [ref=e24]:
+          - generic [ref=e25]: Contraseña
+          - generic [ref=e26]:
+            - textbox [ref=e27]
+            - generic [ref=e29]: 
+        - button " Ingresar" [ref=e32] [cursor=pointer]:
+          - generic [ref=e33]: 
+          - text: Ingresar
+  - generic [ref=e36]:
+    - generic [ref=e37]:
+      - link "Copyright 2026 L105." [ref=e38] [cursor=pointer]:
+        - /url: http://l105.com/
+      - text: "| Todos los derechos reservados | ver"
+    - text: 1.1 | 2026

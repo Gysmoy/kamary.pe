@@ -1,0 +1,984 @@
+language=es probability=1.0000 duration=3633.88
+[00000.91 -> 00012.83] A ver, también traficando en esa cosa, traficando a Nuel, que es el perfecto primero tuyo,
+[00012.83 -> 00026.67] ya lo que estaba revisando acá, era la parte que vitemos en Nuel y entre recuerdos.
+[00026.67 -> 00031.70] Sí, en este caso, para que se te haga un poco más familiar, o sea,
+[00031.70 -> 00037.70] para tener un entregar elito tres y me organizado como lo tienen anteriormente su sistema.
+[00037.70 -> 00041.70] Entonces, los menos que tú tienes en tu sistema anterior, ahora los tienes,
+[00041.70 -> 00043.70] en los mismos lugares del actual.
+[00043.70 -> 00046.70] Ya en elito cuatro, nos vamos a encargar de recomodar esos menus,
+[00046.70 -> 00049.70] a cómo a ti se te haga un poco más fácil de manejarlo.
+[00049.70 -> 00052.38] Sí, claro, pero...
+[00052.38 -> 00059.82] O sea, lo que hay adentro no tiene que ver con eso sistema.
+[00059.82 -> 00062.82] O sea, no está nada desarrollado por eso es lo que iba.
+[00063.82 -> 00067.82] Por eso quería contigo verlo para ver, para que tienes un poco cómo funciona
+[00067.82 -> 00071.82] de esta parte de servicios de encendimiento y da idea.
+[00071.82 -> 00078.17] Por ejemplo, empezamos con clientes, ya que en servicios de encendimiento
+[00078.17 -> 00081.20] es un módulo aparte y es otra empresa.
+[00081.20 -> 00087.10] Entonces, los clientes acá tienen que ser creados, ¿no?
+[00087.10 -> 00092.10] Nosotros ya tenemos una lista ya, sería cuestión de pasarlo acá, ¿no?
+[00092.10 -> 00097.10] Claro, pero todo esto de todos regulares, eventuales, en compra,
+[00097.10 -> 00101.10] esto no tiene nada que ver, voy a hacer un work para que lo quites
+[00101.10 -> 00104.32] porque son clientes que le brindamos servicios.
+[00104.32 -> 00109.06] Entonces, esto no tiene nada que ver.
+[00109.06 -> 00111.06] O sea, quitarlo, ¿no?
+[00111.06 -> 00120.98] Sí, cuando crea ese cliente, todo lo de acá, plataforma,
+[00120.98 -> 00125.98] cuenta con servicios de encendimiento y de encendimiento, tampoco.
+[00125.98 -> 00127.98] Tampoco iría, te voy a pasar un volvio.
+[00127.98 -> 00128.98] Ok.
+[00128.98 -> 00129.98] Ya.
+[00129.98 -> 00134.98] Y todo lo que es canal comercial, segmento, todo esto tampoco, ¿no?
+[00134.98 -> 00139.04] Bueno, ahí es lo primero.
+[00139.04 -> 00142.04] Y ahí, ¿qué vamos a decirnos?
+[00142.04 -> 00144.04] Sí.
+[00144.04 -> 00146.14] Ah, la orden de servicio, ¿no?
+[00146.14 -> 00150.09] De ahí pasamos la orden de servicio.
+[00150.09 -> 00152.09] La orden de servicio.
+[00153.09 -> 00156.09] Pero la orden de servicio no está nada desarrollada, o sea,
+[00156.09 -> 00162.82] no es una orden como nosotros las tenemos en este ruido.
+[00162.82 -> 00165.82] O sea, aquí no tiene que ver.
+[00165.82 -> 00168.82] Te voy a proyectar como es en nuestro sistema para que la veas.
+[00168.82 -> 00170.11] Bueno, bueno.
+[00170.11 -> 00171.11] No se ve bien.
+[00171.11 -> 00173.11] ¿Qué es lo de un servicio de encendimiento?
+[00173.11 -> 00177.11] Esto es una empresa y ahí damos servicios de encendimiento.
+[00177.11 -> 00179.11] No es un sistema de venta.
+[00179.11 -> 00181.37] Estoy viendo la pantalla anterior.
+[00181.37 -> 00182.37] Ah, sí.
+[00182.37 -> 00183.37] Ahí está el trozo.
+[00183.37 -> 00184.37] Ya.
+[00184.37 -> 00188.37] Entonces, mira, este es la otra.
+[00188.37 -> 00192.37] Entre el encendimiento, te voy a sacar, ¿no?
+[00192.37 -> 00194.53] Y pongo orden de servicio.
+[00194.53 -> 00198.64] Sí, sí, sí.
+[00198.64 -> 00199.90] Sí.
+[00199.90 -> 00201.90] Mira lo que me sale.
+[00201.90 -> 00203.90] O sea, me sale crear orden de servicio.
+[00203.90 -> 00204.90] Creo orden de servicio.
+[00204.90 -> 00211.52] Y me sale en todos los almacenes que tengo, mira.
+[00211.52 -> 00212.52] Ok.
+[00212.52 -> 00216.06] No, estos son los almacenes que tenemos.
+[00216.06 -> 00220.38] Entonces, al yo crear clientes, clientes de lo creen clientes.
+[00220.38 -> 00224.38] Siempre es camarimédical, creo que es cliente tal.
+[00224.38 -> 00227.38] Jalo del cliente tal.
+[00227.38 -> 00231.38] El tipo de documentos que voy a hacerles, es guardiura, boleta, no de pedillo,
+[00231.38 -> 00234.42] y agrenición, y ímbus, porque sea.
+[00234.42 -> 00238.42] Como factura, la moneda que lo voy a guardar, soles y el tipo de servicio
+[00238.42 -> 00241.42] que lo voy a dar, servicios de encendimiento o servicios de encendimiento
+[00241.42 -> 00242.42] adicional.
+[00242.42 -> 00246.42] Entonces, yo, depende con qué contrato hay afirmado.
+[00246.42 -> 00249.42] O sea, yo, por ejemplo, hay afirmado contacto en el almacén uno.
+[00249.42 -> 00251.42] De marco aquí en el almacén uno,
+[00251.42 -> 00254.42] y de marco la subicación que va a tener en el almacén.
+[00254.42 -> 00257.42] Aquí está cargada la subicación en el almacén.
+[00257.42 -> 00258.42] Ponte el almacén total.
+[00258.42 -> 00260.70] Pongo la fecha inicio.
+[00260.70 -> 00263.70] Que va a iniciar el primer de junio.
+[00263.70 -> 00266.70] La número de meses, 12 meses.
+[00266.70 -> 00269.98] Y me va a caber a la fecha de fin.
+[00269.98 -> 00273.98] Y me cae la cantidad de metros públicos, que es uno ponte,
+[00273.98 -> 00277.40] la tarifa que le cobra 500, mensual.
+[00277.40 -> 00282.40] Entonces, me va a salir toda la fecha de vacunación, todos los primeros,
+[00282.40 -> 00283.40] por un año.
+[00283.40 -> 00289.88] Y así, y esa fecha de vacunación me gusta aún una factura automática, ¿no, Cari?
+[00289.88 -> 00291.39] Claro.
+[00291.39 -> 00293.39] Eso ya se encontró el de vacunación.
+[00293.39 -> 00294.39] Claro.
+[00294.39 -> 00297.39] Pero hay intentos que votan las prefecturas.
+[00297.39 -> 00299.39] Ah, acá me votan las prefecturas.
+[00300.39 -> 00303.39] Ya se quedan ya automáticamente en esas fechas,
+[00303.39 -> 00305.97] y me va a generar la prefectura.
+[00305.97 -> 00306.97] Claro.
+[00306.97 -> 00312.26] Entonces, y así, ¿qué pasa si se cliente tienen varios almacénes ubicaciones?
+[00312.26 -> 00315.26] ¿Tienen el musimú, el musimú, el musimú, el tufiro ni genero acá?
+[00315.26 -> 00318.29] Las ubicaciones que va a tener en el dos.
+[00318.29 -> 00325.50] Y también le pongo la fecha inicio primero, ¿no?
+[00325.50 -> 00327.50] Las ubicaciones no se pueden repetir.
+[00327.50 -> 00331.50] Una vez que el cliente se les seleccione, se coja su ubicación,
+[00331.50 -> 00334.50] y ya no va a estar disponible para otro cliente, ¿no?
+[00334.50 -> 00337.50] Entonces, también es muy bien que hay ubicación.
+[00337.50 -> 00338.50] Claro.
+[00338.50 -> 00341.50] Eso, o sea, este módulo es un módulo totalmente distinto,
+[00341.50 -> 00343.50] lo módulo que hemos estado haciendo.
+[00343.50 -> 00347.50] Es un módulo de almacénes publicaciones, es como un rompe cabeza,
+[00347.50 -> 00348.50] ¿no?
+[00348.50 -> 00349.50] Que la voy haciendo una medicación cliente,
+[00349.50 -> 00351.50] y ya quedan libres y quedan ocupadas.
+[00351.50 -> 00353.50] Empacarles para tener las ubicaciones.
+[00353.50 -> 00354.50] Empacar?
+[00354.50 -> 00357.50] Entonces, este prefectura funciona para que lo entiendas,
+[00358.50 -> 00360.50] y lo puede saber por si tiene acceso a esto también.
+[00360.50 -> 00361.50] Sí, sí, sí.
+[00361.50 -> 00364.50] Eso lo ves en CARRIX.
+[00364.50 -> 00366.50] Acá se creen las urnes de servicios,
+[00366.50 -> 00368.50] o sea, que no hay prefecturas,
+[00368.50 -> 00370.50] porque el cliente firmó contrato por un año,
+[00370.50 -> 00375.50] entonces sus prefecturas, las dos de prefecturas, ¿no?
+[00375.50 -> 00376.50] Cuando llegan las fechas,
+[00376.50 -> 00378.50] automáticamente, ni aparece a mí,
+[00378.50 -> 00380.66] pero yo fue actuarlo.
+[00380.66 -> 00381.66] Claro.
+[00381.66 -> 00383.66] Entonces, aquí, por ejemplo,
+[00383.66 -> 00386.85] el CARRIX, entre el CARRIX,
+[00386.85 -> 00389.85] y el CARRIX que tiene, el CARRIX tiene...
+[00389.85 -> 00391.85] Es un CARRIX de ubicación.
+[00391.85 -> 00393.85] Claro, de ubicaciones, ¿no?
+[00393.85 -> 00396.85] Aquí tiene un cliente, pretende que pongo global green,
+[00396.85 -> 00399.85] cliente, almacentos, estortos...
+[00399.85 -> 00401.85] Aquí, lo primero que me salve,
+[00401.85 -> 00404.07] es el stop que tiene,
+[00404.07 -> 00408.07] lo site que tiene el cliente en sus ubicaciones.
+[00408.07 -> 00410.17] Mira, la indieto también.
+[00410.17 -> 00412.23] Claro, con su efectivo stop.
+[00412.23 -> 00415.87] Está en la ubicación tal, almacental.
+[00415.87 -> 00419.35] Y así, como CARRIX,
+[00419.35 -> 00422.35] cliente tiene su relación de artículos.
+[00422.35 -> 00424.83] Es su ubicación.
+[00424.83 -> 00427.99] Entonces, aquí, por registrar ubicaciones,
+[00427.99 -> 00430.99] o sea, creo ubicaciones, genero almacen uno,
+[00430.99 -> 00432.99] lecla temperatura,
+[00432.99 -> 00434.99] y le clico de ubicación,
+[00434.99 -> 00437.22] y le pongo el stop.
+[00437.22 -> 00438.22] Aquí, registro el almacen.
+[00438.22 -> 00441.22] Por ejemplo, si yo hago otro almacen,
+[00441.22 -> 00443.28] en donde va a estar,
+[00443.28 -> 00445.28] creo otro almacen.
+[00445.28 -> 00446.28] Por ejemplo, en Santa Anita,
+[00446.28 -> 00449.28] yo quiero crear un almacen y le pongo el almacen.
+[00449.28 -> 00452.79] Sí, sí.
+[00452.79 -> 00454.79] Que me doy almacen.
+[00454.79 -> 00458.86] Ahora, en reporte de ubicaciones, ¿qué es esto?
+[00458.86 -> 00461.86] Ahí me mando un ex, ¿qué?
+[00461.86 -> 00463.86] En un reporte de los enseños.
+[00463.86 -> 00464.86] Ahí sí.
+[00464.86 -> 00465.86] Ya.
+[00465.86 -> 00466.86] Ahí está.
+[00466.86 -> 00467.86] Sí, pero no vamos a ver.
+[00467.86 -> 00468.86] Estoy...
+[00468.86 -> 00469.86] Estoy...
+[00469.86 -> 00472.86] Aquí están los almacenes que tenemos.
+[00472.86 -> 00475.86] O sea, si tú ves, tenemos a no sé,
+[00475.86 -> 00477.86] uno, dos, tres, cuatro, cinco,
+[00477.86 -> 00479.86] y oficinas administrativas.
+[00479.86 -> 00484.62] Y tenemos las ubicaciones también.
+[00484.62 -> 00487.62] O sea, cada cliente me sale con su ubicación
+[00487.62 -> 00488.62] y su temperatura.
+[00488.62 -> 00491.62] Cada ubicación también tiene una temperatura.
+[00491.62 -> 00495.17] Y cada cliente tiene un orgullo de servicio.
+[00495.17 -> 00497.17] Entonces, un poco para que entiendan,
+[00497.17 -> 00499.17] o sea, cómo se trabaja este módulo,
+[00499.17 -> 00502.17] este módulo dar servicio a clientes.
+[00502.17 -> 00508.17] O sea, el cliente me pide un espacio en un almacen
+[00508.17 -> 00511.33] a una temperatura que tiene su ubicación
+[00511.33 -> 00514.46] y él guarda sus productos ahí.
+[00514.46 -> 00517.46] Entonces, nosotros podíamos sus productos.
+[00517.46 -> 00520.46] Para eso tenemos que tener un cardex por cada cliente,
+[00520.46 -> 00521.46] que es lo que te he mostrado.
+[00521.46 -> 00523.46] O sea, cada cliente dice, voy a guardar 10 productos.
+[00523.46 -> 00525.46] Me manda su lista de 10,
+[00525.46 -> 00527.46] se empieza a hacer los ingresos y salía, ¿no?
+[00527.46 -> 00528.46] O sea, tiene un cardex.
+[00528.46 -> 00531.81] Y esos cards se le envía de clientes.
+[00531.81 -> 00534.81] O sea, el señor Acá usted tiene su lista de cuantos productos
+[00534.81 -> 00536.81] tiene y cuantos productos tiene nuestro corito.
+[00536.81 -> 00541.48] Y eso es un servicio que damos a los clientes, ¿no?
+[00541.48 -> 00543.48] Hay otros servicios que damos,
+[00543.48 -> 00548.70] que se ven en servicios generales.
+[00548.70 -> 00554.70] Aquí sí se damos a los servicios puntuales, como son transportes,
+[00554.70 -> 00557.98] estiva, etc.
+[00557.98 -> 00560.98] Acesoría, que damos, ¿no?
+[00560.98 -> 00562.98] O sea, que no están dentro,
+[00562.98 -> 00565.34] lo generan un ahorro también
+[00565.34 -> 00569.34] y la generamos para poder farturar, ¿no?
+[00569.34 -> 00573.40] Y aquí, ya todo esto es aparto, ¿no?
+[00573.40 -> 00575.40] O sea, el ahorro en el servicio, lo mieden medía,
+[00575.40 -> 00578.40] la creación del producto, como esto no tiene nada que ver
+[00578.40 -> 00580.40] como el otro módulo con camarí perú,
+[00580.40 -> 00583.56] acá creamos los productos para los clientes.
+[00583.56 -> 00585.82] Entonces, ¿qué hacemos?
+[00585.82 -> 00588.82] Para registrar un artículo, yo busco que cliente,
+[00588.82 -> 00592.85] busco cliente meyerco y le creo su artículo, ¿no?
+[00592.85 -> 00595.85] Y le añade el lote y la serie, ¿no?
+[00595.85 -> 00599.20] A fecha de encimiento, todo lo que hay que añadirle
+[00599.20 -> 00604.49] y se genera un producto para este cliente,
+[00604.49 -> 00607.80] un item, ¿no?
+[00607.80 -> 00608.80] Así funciona.
+[00608.80 -> 00611.80] Entonces, cada producto que se crea para cada cliente
+[00611.80 -> 00613.80] está marrado a su cliente, ¿no?
+[00613.80 -> 00617.80] Y este cliente está marrado a una ubicación y aún es más simple.
+[00617.80 -> 00620.80] Entonces, así hacemos el control acá.
+[00620.80 -> 00623.80] Entonces, aquí las notas de entrada son para que...
+[00623.80 -> 00625.86] Para...
+[00625.86 -> 00627.86] Ni las notas de entrada son distintas a los otros,
+[00627.86 -> 00631.86] porque aquí tenemos el cliente también meyerco.
+[00631.86 -> 00636.96] ¿Qué proveedor está abasteciendo, el proveedor tal?
+[00636.96 -> 00642.44] En el admacental, la fecha de ingreso, le ponemos nosotros.
+[00642.44 -> 00645.44] El tipo de documento con que esté ingresando el producto
+[00645.44 -> 00648.44] y la reacción, la serita, la secuencia,
+[00648.44 -> 00651.44] o con un ínbuche con desimportación,
+[00651.44 -> 00655.08] que la duda se pone, la ciencia transporte,
+[00655.08 -> 00656.08] todos los datos van, ¿no?
+[00656.08 -> 00658.08] Y se insertan los productos del cliente,
+[00658.08 -> 00660.08] o sea, el meyerco,
+[00660.08 -> 00662.08] veate, veate, veate, veate,
+[00662.08 -> 00689.46] veate, veate, veate, veate, veate, veate, veate, veate, veate, veate, veate, veate, veate, veate, veate, veate, veate.
+[00689.46 -> 00699.67] Entonces, acá se ha creando y ojalo los artículos de este cliente.
+[00699.67 -> 00704.90] Entonces, por ejemplo, ¿no semanúen los artículos, meyerco?
+[00704.90 -> 00711.66] Meyerco, mi cocierz, no, que cocierz, quedan los sí, así.
+[00711.66 -> 00712.66] Meyerco?
+[00712.66 -> 00714.66] Ah, de meyer, playal.
+[00714.66 -> 00715.66] Playal.
+[00715.66 -> 00717.07] Playal.
+[00717.07 -> 00723.15] Entonces, ganas de ver todos los artículos con los lojes.
+[00723.15 -> 00725.15] No acá están de puedes playar, playar, playar.
+[00725.15 -> 00726.15] Afic de los lotes.
+[00726.15 -> 00728.15] Porque esto esta ingresada o ya.
+[00728.15 -> 00730.15] P short tome sal o arroz,
+[00730.15 -> 00734.24] el parlándico le das viendo a otra Python.
+[00734.24 -> 00737.24] Básicamente, toda esta parte...
+[00737.24 -> 00739.24] es distinta de la otra parte, ¿no?
+[00739.24 -> 00740.24] Es un olor aparte.
+[00740.24 -> 00743.24] Estas para otras empresas.
+[00743.24 -> 00745.24] Estas para otras empresas.
+[00745.24 -> 00747.24] Es una empresa que abrindo servicio de conseян.
+[00747.24 -> 00749.24] En este santo no es...
+[00749.24 -> 00750.24] Éan post ambiente al principio,
+[00750.24 -> 00751.24] para que dan el cliente
+[00751.24 -> 00753.24] Porque ese santo del cliente
+[00753.24 -> 00757.80] Nosotros hablamos en espacios, pero custodíamos su esto, ¿no?
+[00757.80 -> 00759.50] Claro.
+[00759.50 -> 00766.19] ¿Cómo hacen el tema de la reducción o agredado de esto?
+[00766.19 -> 00768.39] Agredado y he visto que esa tercera semana no está de entrada.
+[00768.39 -> 00772.43] Pero en el caso de salida, es con una vez salida.
+[00772.43 -> 00774.75] Ustedes lo venden.
+[00774.75 -> 00776.23] No, nosotros no lo venemos.
+[00776.23 -> 00780.35] ¿Qué pasa si cliente viene y quiere llevarse una guía?
+[00780.35 -> 00781.75] Una parte del producto.
+[00781.75 -> 00783.91] Ellos nos vienen con una guía de salida.
+[00783.91 -> 00787.47] Pues esa guía de salida, nosotros generamos una nota de salida, que es esta, ¿no?
+[00787.47 -> 00791.59] Ahí están los años en el excede cliente, me iré después al mostrental.
+[00791.59 -> 00795.55] La fecha de salida o guía, los motivos.
+[00795.55 -> 00800.19] ¿Por qué motivos están sacando el cliente de la guía, por la venta, etcétera?
+[00800.19 -> 00803.83] Porque por venta, el tipo de documento que nos da el cliente,
+[00803.83 -> 00808.75] entonces la guía renunció, la serietal, el número tal, la fecha del documento,
+[00808.75 -> 00812.39] la fecha de la guía, puede haber sido ayer, ¿no?
+[00812.39 -> 00815.95] Puede haber sido un chado, entonces lo ponemos la fecha.
+[00815.95 -> 00819.51] Y ponemos los productos que le estás sacando de la guía.
+[00819.51 -> 00826.22] Y, ¿cucamos la guía de la guía?
+[00826.22 -> 00829.09] Bien, ¿qué es esto?
+[00829.09 -> 00832.66] Bien, ¿qué es esto?
+[00832.66 -> 00833.66] Ya, ya entendía.
+[00833.66 -> 00836.66] Agregas esto, porque el cliente agrega a través de una nota de entrada,
+[00836.66 -> 00839.06] igual se selecciona a guía de remisión.
+[00839.06 -> 00841.58] Y cuando el cliente solicita el retiro del producto,
+[00841.58 -> 00843.90] lo hacen a través de una nota de salida.
+[00843.90 -> 00845.02] Sí, es.
+[00845.02 -> 00848.66] Ahora hay que tener en cuenta varias cosas.
+[00848.66 -> 00850.06] Todo esto está normal.
+[00850.06 -> 00853.26] Ahí lees en el perú que lo tiene normal, o sea,
+[00853.26 -> 00855.98] pues nosotros para dar que el servicio esté un poco de contexto
+[00855.98 -> 00859.14] para que entiendas que todo tiene que cuadrar.
+[00859.14 -> 00862.65] Tenemos permisos del Ministerio de Salud.
+[00862.65 -> 00864.89] Pero el Ministerio de Salud audita todo esto.
+[00864.89 -> 00867.93] Entonces nuestros sistemas tienen que estar alineados
+[00867.93 -> 00871.14] a lo que ellos solicitan en las obitorías.
+[00871.14 -> 00872.94] Entonces, por eso nuestras notas de salida
+[00872.94 -> 00878.10] tienen ciertos parámetros que deben cumplirse, ¿no?
+[00878.10 -> 00882.65] Entonces, por ejemplo, en la nota de entrada,
+[00882.65 -> 00886.82] siempre tiene que estar que proveedor o instruidores,
+[00886.82 -> 00890.06] siempre tiene que estar el ímbo y si es información,
+[00890.06 -> 00891.90] el número de dudas, si es información,
+[00891.90 -> 00895.22] la fecha de transporte, el número de chofer, el número de placa.
+[00895.22 -> 00898.45] Eso siempre tiene que estar.
+[00898.45 -> 00903.25] La fecha de documento siempre tiene que estar todos estos datos.
+[00903.25 -> 00908.57] Y esto me manda a un PDF que yo tengo que imprimir y firmar.
+[00908.57 -> 00914.10] Ese PDF lo ves acá, acá lo ves.
+[00914.10 -> 00915.82] Detalles.
+[00915.82 -> 00921.02] Cuando tú nosotros lo mandamos esto a un PDF
+[00921.02 -> 00923.38] porque para el Estado, para dije,
+[00923.38 -> 00926.18] mi que Gino Saludita no, el sistema no sirve.
+[00926.18 -> 00928.46] Ellos deciden ese papel.
+[00928.46 -> 00930.46] Entonces, estoy quedando en este sistema no sirve.
+[00930.46 -> 00933.38] Ellos quieren ver documentos firmados sellados.
+[00933.38 -> 00937.98] Entonces, esto mandamos a un PDF y se genera un número,
+[00937.98 -> 00950.94] una nota de entrada, pero está terminado.
+[00950.94 -> 00954.70] Ahora, esto me voy a mostrar que miedo el PDF.
+[00954.70 -> 00957.38] Una pregunta, antes de aprender en el aportado
+[00957.38 -> 00959.46] del Provedor Distribuidor, ¿qué va, va?
+[00959.46 -> 00962.54] En la razón social del Provedor Distribuidor o el Ruco,
+[00963.26 -> 00967.23] eso nosotros no llenamos porque eso viene en la guía.
+[00967.23 -> 00971.37] No, que es texto, no es número, es texto.
+[00971.37 -> 00973.85] Es texto, eso no jala en ningún lado.
+[00973.85 -> 00975.84] OK, OK.
+[00975.84 -> 00980.90] Todo lo que se viene acá, es texto salvo el artículo, ¿no?
+[00980.90 -> 00983.58] Todo el artículo y leí todo este texto.
+[00983.58 -> 00986.21] Bueno, el cliente y el artículo.
+[00986.21 -> 00989.41] Leí todo puedo de que llenarlo.
+[00989.41 -> 00992.65] Porque cada guía es independiente.
+[00992.65 -> 00998.34] Entonces, pede, déjame ver,
+[00998.34 -> 01013.08] donde esté el primero de ahí, porque no te arriesga.
+[01013.08 -> 01013.92] ¿Cómo estás?
+[01013.92 -> 01016.59] Tiene una guía.
+[01016.59 -> 01018.31] Llea.
+[01018.31 -> 01028.54] Entonces, este comparto, ¿cómo queda una nota de entrada?
+[01028.54 -> 01030.58] Entonces, así que ahora no te entra, ¿no?
+[01030.58 -> 01033.15] Entonces, ¿quién hay que tener todos estos datos?
+[01033.15 -> 01036.51] El cliente y la reenición con la que viene cliente
+[01036.51 -> 01038.59] en el caso de enestar, en la especie de documento,
+[01038.59 -> 01041.39] en la especie de despacho, el producto,
+[01041.39 -> 01043.19] el otro, sería el ejercicio de medicación.
+[01043.19 -> 01047.27] Todo esto de información está metida en el sistema.
+[01047.27 -> 01053.47] La cantidad entra, esto es enfermosen y responsable de cliente.
+[01053.47 -> 01055.21] La firma, ¿no?
+[01055.21 -> 01058.42] Esto voto un PDF, no te entra.
+[01058.42 -> 01062.62] Acodificado todo esto, no todo lo que nos hemos imprimido.
+[01062.62 -> 01065.94] Y cuando hay auditorías mostrarlo.
+[01066.54 -> 01067.54] ¿No?
+[01067.54 -> 01069.91] ¿No?
+[01069.91 -> 01073.39] Sí, el auditoría es suficiente, ¿no?
+[01073.39 -> 01078.19] Consulta este documento, después de que lo firmas,
+[01078.19 -> 01081.03] que logras en físico, o quisieras guardarlo escaneado
+[01081.03 -> 01082.23] también al sistema.
+[01084.23 -> 01086.51] Ah, y acá te voto esto, mira.
+[01086.51 -> 01087.51] Sí, sí, sí, sí.
+[01087.51 -> 01088.63] Te voy a mostrar a ver.
+[01088.63 -> 01091.19] No te salides para la otra.
+[01091.19 -> 01095.51] El auditoría es lo que vota, incluso en el que me diga.
+[01095.51 -> 01100.27] Esto es una nota entra, aquí sale, y así tiene que salir, ¿no?
+[01100.27 -> 01102.47] Sí, eso es lo que nos tiene que votar.
+[01102.47 -> 01104.74] Claro, ¿no?
+[01104.74 -> 01109.42] Y todo esto no se ve, esto ya es un recrito, ¿no?
+[01109.42 -> 01110.42] Recicado.
+[01110.42 -> 01111.94] Recicado.
+[01111.94 -> 01113.86] Pero así no tengo una nota, ¿no?
+[01113.86 -> 01114.86] Recic...
+[01114.86 -> 01115.86] Entra.
+[01115.86 -> 01117.10] Su acá.
+[01117.10 -> 01118.42] Su acá.
+[01118.42 -> 01120.18] O sea, no, el chuto no llamo unito detrás,
+[01120.18 -> 01123.54] sino alta de recepción.
+[01123.66 -> 01125.94] Entonces, este, este, este es el sistema de abría
+[01125.94 -> 01128.70] generar de dos tipos de documento, uno que es el otro,
+[01128.70 -> 01131.34] el simplecito, el que me mostrase anterior,
+[01131.34 -> 01134.94] y otro que es esto con un nombre de acta de recepción de productos.
+[01134.94 -> 01135.94] Correcto.
+[01135.94 -> 01137.06] Todo más, todo más.
+[01137.06 -> 01140.38] Tú lo ves, lo ves acá, lo ves acá.
+[01140.38 -> 01144.39] Aquí en estas cositas, en estas, en estas,
+[01144.39 -> 01147.91] en estas acá, aquí ves la, la, la probar, la notentra,
+[01147.91 -> 01152.11] la edición, la negación, el detalle de la notentra,
+[01152.11 -> 01155.60] y el acta de la excepción.
+[01155.60 -> 01157.16] Aquí sí que me dan todo.
+[01157.16 -> 01158.64] Normal puedo picar, ¿de verdad?
+[01158.64 -> 01160.48] Tú tienes alguna acción.
+[01160.48 -> 01161.56] No, no.
+[01161.56 -> 01163.88] No, mi torno pretende los checks.
+[01163.88 -> 01165.16] Perfecto.
+[01165.16 -> 01168.20] Bueno, pues más que nada para guiarme en formato, ¿no?
+[01168.20 -> 01169.44] No, no.
+[01169.44 -> 01170.96] ¿Todo cheque de aprobación?
+[01170.96 -> 01172.64] ¿Por qué eso sí lo hacen acá?
+[01172.64 -> 01173.16] Vale.
+[01173.16 -> 01181.49] Este, pues, este, apretado de escargar todo lo que deje.
+[01181.49 -> 01183.53] Pásicamente, sí funciona.
+[01183.53 -> 01192.20] Ya, ya ya lo tengo más más claro.
+[01192.20 -> 01197.06] Entonces, eso sí como trabaja este.
+[01197.06 -> 01202.28] Y aquí es una otra parte, más una observación.
+[01202.28 -> 01205.12] Ah, bueno, la otra parte sí hay que realizarlo también,
+[01205.12 -> 01209.56] pero quería que se se esto.
+[01209.56 -> 01214.36] Y en la otra parte, que te tuve con parte, lo de aquí.
+[01214.36 -> 01216.92] En la otra parte sí hay todo el tema de ventas,
+[01216.92 -> 01221.24] todavía no está desarrollado, pero vamos a verlo.
+[01221.24 -> 01228.42] Y, a ver, a ver, acá.
+[01228.42 -> 01229.86] El precio solo, ¿no?
+[01229.86 -> 01233.62] Al más sin, al más sin ya lo vi, ¿no?
+[01233.62 -> 01236.57] Claro, ¿no?
+[01236.57 -> 01238.49] ¿Tabuera que yo se quitarlo que no te entra, ¿no?
+[01238.49 -> 01240.65] ¿Por qué estoy de ese correo de compra o yo se deja?
+[01240.65 -> 01244.97] Sí, como orden de compra y orden de...
+[01244.97 -> 01247.13] No, la nota salía si va a ser.
+[01247.13 -> 01249.06] Sí.
+[01249.06 -> 01256.91] Ya, entonces, al más sin, porque recuerdo que toda la parte de...
+[01256.91 -> 01259.19] Claro, aquí va a ir a orden de compra.
+[01259.19 -> 01263.17] Recuerdas que nosotros giramos en orden de compra, ¿no?
+[01263.17 -> 01268.82] Se crea a orden de compra, acá.
+[01268.82 -> 01270.53] No, estas almacenes.
+[01270.53 -> 01271.77] Ve más abado.
+[01271.77 -> 01275.43] Ah, sí, sí, sí.
+[01275.43 -> 01277.75] En la administración.
+[01277.75 -> 01281.11] En la administración, la administración.
+[01281.11 -> 01281.71] Acá.
+[01281.71 -> 01286.09] Un de compras.
+[01286.09 -> 01293.60] A ver, aquí está orden de compra...
+[01293.60 -> 01297.82] Está perfecto, aquí está y se viene acá.
+[01297.82 -> 01301.22] A ver, acá.
+[01301.22 -> 01304.97] Ya, aquí...
+[01304.97 -> 01308.85] Arvía que jalar los artículos, ¿no?
+[01308.85 -> 01310.65] Te jalar los artículos.
+[01310.65 -> 01315.18] Ya le he quitado las columnas que no debían también lo de y cantar recibida.
+[01315.18 -> 01317.62] Oye, apretes acá.
+[01317.62 -> 01319.92] Acá todavía no hay nada, ¿no?
+[01319.92 -> 01321.40] Es depender al producto.
+[01321.40 -> 01323.60] Por ejemplo, es como un producto.
+[01323.60 -> 01328.18] Ya.
+[01328.18 -> 01330.06] Hay una forma...
+[01330.06 -> 01333.25] Yo voy a tener una lista de artículos, ¿no?
+[01333.25 -> 01334.86] Sí.
+[01334.86 -> 01338.90] Es una forma de hacer cargas masivas.
+[01338.90 -> 01340.86] Con Excel, ¿no?
+[01340.86 -> 01342.42] Sí, con Excel.
+[01342.42 -> 01345.09] Sí, sí, no puedo agregar.
+[01345.09 -> 01350.95] Pero se puede codificar, o sea, esa carga masiva codificaría a los productos, ¿no?
+[01350.95 -> 01354.19] Tienerba distancia, pues, ¿no?
+[01354.19 -> 01355.59] Está lo de todo.
+[01355.59 -> 01357.35] Claro, habría que ir a varios campos.
+[01357.35 -> 01358.63] Porque eso sería...
+[01358.63 -> 01371.17] Porque pasa es que estamos viendo que nuestro listado está un poco mal hecho, ¿no?
+[01371.17 -> 01372.17] Entonces...
+[01372.17 -> 01373.77] Ah, acá todavía no hemos puesto nada, ¿no?
+[01373.77 -> 01375.97] Aquí no hay nada información de lo que nos creaba, ¿no?
+[01375.97 -> 01376.97] Sí.
+[01376.97 -> 01377.97] Oye, escala.
+[01377.97 -> 01381.06] ¿Pero son de prueba?
+[01381.06 -> 01383.06] No, no, son...
+[01383.06 -> 01384.06] Son...
+[01384.06 -> 01385.44] Lo que ha pasado?
+[01385.44 -> 01386.44] Ya.
+[01386.44 -> 01389.18] Las presentaciones y son de prueba.
+[01389.18 -> 01390.18] Ah, ya.
+[01390.70 -> 01398.67] Entonces, avicoy o artículo, lo que pasa es que nosotros en las órdenes de compra,
+[01398.67 -> 01402.75] aquí es lo que está pasando, que en las órdenes de compra son grandes.
+[01402.75 -> 01406.02] Entonces, son 20, 30 itens.
+[01406.02 -> 01414.59] Y no sé si habría alguna forma de simplificar eso en el sentido de ser lo mas rápido.
+[01414.59 -> 01418.67] La verdad es que es una tabla de suponiendo el producto,
+[01418.67 -> 01421.87] la prestización se puede fijicar en el momento.
+[01421.87 -> 01423.87] Pero ¿qué eso va a ser lo mismo?
+[01423.87 -> 01425.90] Va a ser lo mismo.
+[01425.90 -> 01427.40] No sé lo mismo de fuerza.
+[01427.40 -> 01429.79] No va a estar absolutamente nada.
+[01429.79 -> 01432.29] Hay que acabarlo suavito en tu aspecto.
+[01432.29 -> 01433.59] ¿Tan, entonces tú crees de comprar?
+[01433.59 -> 01435.29] ¿Qué es lo que quieres dentro del de compra?
+[01435.29 -> 01436.70] No, no.
+[01436.70 -> 01437.70] No, no.
+[01437.70 -> 01439.70] Dice que sí se puede ser una tabla masiva.
+[01439.70 -> 01440.70] De artículos.
+[01440.70 -> 01441.70] De artículos.
+[01441.70 -> 01443.70] Estamos hablando de artículos.
+[01444.20 -> 01447.70] Claro, pero para hacer una tabla masiva de artículos,
+[01447.70 -> 01448.70] tienes que ser con todo.
+[01448.70 -> 01451.70] Comparo la creación y tener el laboratorio.
+[01451.70 -> 01453.20] Oh, está.
+[01453.20 -> 01455.50] Es como en general automático.
+[01455.50 -> 01459.28] Claro, es como yo sé que no tomate.
+[01459.28 -> 01463.53] Que no haces en su vídeo aquí, ¿no?
+[01463.53 -> 01467.73] No, pero una tabla masiva de artículos es para artículos.
+[01467.73 -> 01470.42] De cuando?
+[01470.42 -> 01471.42] De cuando?
+[01471.42 -> 01471.92] De cuando?
+[01471.92 -> 01473.42] De cuando artículos más o menos estén.
+[01473.42 -> 01474.22] De cuando?
+[01474.42 -> 01475.82] De cuando no de cuando?
+[01475.82 -> 01479.28] De cuando estar Code 2.
+[01479.28 -> 01480.28] De cuando?
+[01480.28 -> 01482.44] De cuando estás tarde.
+[01482.44 -> 01483.64] Alguno.
+[01483.64 -> 01485.64] �as artículos vaporos a todos sentido.
+[01485.64 -> 01486.64] Esto como se está haciendo.
+[01486.64 -> 01491.30] ¿Cuántos artículos matan en una orden de compra?
+[01491.30 -> 01494.26] Es valgado.
+[01494.26 -> 01496.02] Es una calidad.
+[01496.02 -> 01499.53] El man es grande.
+[01499.53 -> 01500.39] 3.
+[01500.39 -> 01502.37] Ok, o menos.
+[01502.37 -> 01505.41] ¿Por qué le agregamos relativamente fácil tú...
+[01505.41 -> 01508.97] Agarras el desplegable, buscas por nombre por codego.
+[01508.97 -> 01517.64] Mira, chéquate, dale en más, ahora ve artículo en la parte de abajo, seleccione artículo,
+[01517.64 -> 01524.52] ahí por ejemplo pongo wikap, escríbe wikap, pica le pica le pica, y escribe wikap, wikup,
+[01524.52 -> 01532.84] y ahí deshale, no le picas y ya está, se carga el laboratorio, en principio activo y unidad.
+[01534.75 -> 01535.73] se pone a todo.
+[01537.28 -> 01541.72] Lisa ilegas, le picas en ariral deame igual, beça y la llegas,
+[01542.80 -> 01552.30] que se es decir lo que affectaba con el completador, con el del lado, no?
+[01553.66 -> 01554.64] Pero,
+[01555.34 -> 01559.08] a ver también se Sung Sewa coach,
+[01559.08 -> 01561.08] Y agrega.
+[01561.08 -> 01563.08] Para agregar.
+[01563.08 -> 01566.43] Para ser tan molestia.
+[01566.43 -> 01568.43] Para ser tan molestia.
+[01568.43 -> 01570.43] Ahora lo que quieres que veis.
+[01570.43 -> 01573.43] No, no.
+[01573.43 -> 01575.98] No, solo.
+[01575.98 -> 01580.84] Pero no se ve, pero ¿puedo mostrarte?
+[01580.84 -> 01582.84] ¿Puedo mostrarte?
+[01582.84 -> 01584.84] ¿Puedo mostrarlo?
+[01584.84 -> 01587.84] Por ejemplo, ¿puedo ser tan molestia?
+[01589.00 -> 01591.00] Para ser tan molestia.
+[01591.00 -> 01593.00] Por ejemplo, ¿puedo mostrarlo?
+[01593.00 -> 01595.00] Es un penédico, ¿y algún molestia en la revelación?
+[01595.00 -> 01597.00] Ya entonces tuve esa camina.
+[01597.00 -> 01599.00] Hay uno, dos, tres.
+[01599.00 -> 01600.00] Seguramente más.
+[01600.00 -> 01601.00] Sí.
+[01601.00 -> 01602.00] Hay cuatro.
+[01602.00 -> 01604.00] Hay uno, dos, tres, cuatro, cinco.
+[01604.00 -> 01607.54] Pero ¿qué hay que joder de un laboratorio?
+[01607.54 -> 01610.54] Ok, entonces el uso de bajito, como algo pequeño,
+[01610.54 -> 01614.25] algo sucio nada más, el nombre de laboratoria.
+[01614.25 -> 01618.25] Claro, el comprador tendría que al divinar que laboratorio es.
+[01618.25 -> 01623.65] ahora sí, pero se puede agregar.
+[01623.65 -> 01624.65] Claro.
+[01624.65 -> 01629.38] Una pregunta, ¿qué ha encargado con este encargado masiva, ¿no?
+[01629.38 -> 01630.38] O como lo he dicho?
+[01630.38 -> 01632.38] Sí, lo hice encargado masiva, si te das cuenta,
+[01632.38 -> 01634.38] ahorita en artículos tienes un botoncito para poder realizar
+[01634.38 -> 01636.38] una carga masiva de item.
+[01636.38 -> 01637.38] Oh, sí.
+[01637.38 -> 01638.38] Ah, sí.
+[01638.38 -> 01639.38] Claro.
+[01639.38 -> 01640.38] Entonces, me voy a descansar por ahí.
+[01640.38 -> 01641.38] Está ahí.
+[01641.38 -> 01643.38] Y yo tu prejero puede descargar eso.
+[01643.38 -> 01644.38] ¿Y eso?
+[01644.38 -> 01645.38] Y depurarlo?
+[01645.38 -> 01646.38] Sí.
+[01646.38 -> 01649.38] A ver, veamos, vea artículos.
+[01650.38 -> 01651.38] Hay una casa.
+[01651.38 -> 01653.50] No digo.
+[01653.50 -> 01659.66] ¿Y qué parte hay acá?
+[01659.70 -> 01662.70] Nos fue importar, ¿no?
+[01662.70 -> 01666.69] Sí, es para hacer una carga masiva.
+[01666.69 -> 01669.78] A ver, ¿no?
+[01669.78 -> 01670.78] Bien, bien.
+[01670.78 -> 01674.37] Bien.
+[01674.37 -> 01678.36] Pero lo que no tengo es el formato.
+[01678.36 -> 01684.08] El formato tiene todo esto.
+[01684.08 -> 01686.08] El formato es que es muy importante,
+[01686.08 -> 01689.08] pero lo necesario es que tenga, al menos esos campos
+[01689.08 -> 01691.08] que son obligatorios.
+[01691.08 -> 01694.08] Bueno, código de descripción y principios laboratorios,
+[01694.08 -> 01696.08] principios activos y unidad.
+[01696.08 -> 01698.08] Si tú excel tienes esos datos,
+[01698.08 -> 01700.08] tú aquí vas a hacer el paso de hacer el macho.
+[01700.08 -> 01702.08] Por ejemplo, mi código está en tal columna,
+[01702.08 -> 01705.08] tu selección es ahí que columna es para código.
+[01705.08 -> 01706.11] Claro.
+[01706.11 -> 01707.11] Sí, sí.
+[01707.11 -> 01710.11] O sea, tenemos que tener unas trájanas de esta columna.
+[01710.11 -> 01711.11] No, no, no, no.
+[01711.11 -> 01713.11] No, no, no, no, no, no, no.
+[01713.11 -> 01715.11] Sí, sí, sí, sí, sí, sí, sí, sí.
+[01715.11 -> 01716.11] Yo puedo ir.
+[01716.11 -> 01717.11] No.
+[01717.11 -> 01720.11] No, no, no, no, no, no, no.
+[01720.11 -> 01722.11] Peri bonito, pero no me gusta,
+[01722.11 -> 01724.11] se podría ser para el valor de compra, pues,
+[01724.11 -> 01725.11] están a importar ahí.
+[01725.11 -> 01727.11] ¿Parezco importar el valor de compra?
+[01727.11 -> 01729.11] O sea, lo que vamos a ver de compra.
+[01729.11 -> 01731.11] Vamos a ver de compra.
+[01731.11 -> 01732.11] Es de mi demanda.
+[01732.11 -> 01733.11] ¿Parezco importar?
+[01733.11 -> 01734.11] Para poder importar.
+[01734.11 -> 01735.11] No, no, aquí, tu.
+[01735.11 -> 01736.11] Administración.
+[01736.11 -> 01741.79] Por lo que te dé compran.
+[01741.79 -> 01743.79] Y entonces, aquí.
+[01743.79 -> 01744.79] ¿Qué hay acá?
+[01744.79 -> 01745.79] ¿Qué hay?
+[01745.79 -> 01746.79] ¿Qué hay?
+[01746.79 -> 01747.79] ¿Qué hay acá?
+[01747.79 -> 01749.79] Sí, de almacén proveedor.
+[01749.79 -> 01752.40] Consulta en el orden de compra.
+[01752.40 -> 01756.90] Si te la dan en el Excel, te la dan en PDF.
+[01756.90 -> 01757.90] Y...
+[01757.90 -> 01760.90] Y nosotros, vamos a generar para comprar.
+[01760.90 -> 01762.90] Vamos a generar para comprar.
+[01762.90 -> 01764.35] ¿Qué hay?
+[01764.35 -> 01766.28] Yo.
+[01766.28 -> 01767.28] Pero ustedes...
+[01767.28 -> 01768.28] No sé.
+[01768.28 -> 01772.28] ¿En algún dato, en algún lugar, en algún formato o...?
+[01772.28 -> 01774.28] Sí, claro, le he pasado a Estefan.
+[01774.28 -> 01775.44] Pero...
+[01775.44 -> 01776.44] Claro.
+[01776.44 -> 01777.44] ¿Qué hay?
+[01777.44 -> 01778.44] En el formato.
+[01778.44 -> 01780.73] O sea, esto va con PDF, ¿no?
+[01780.73 -> 01782.73] No, pero también es un día que podría haberla,
+[01782.73 -> 01784.73] pero sí, es el Excel.
+[01784.73 -> 01788.73] Por ejemplo, cuando le mandas muchos deductos a comenzar,
+[01788.73 -> 01791.73] para que perdiste en el formato.
+[01791.73 -> 01797.68] Por ejemplo, ¿en base a qué es que tus solicitas un orden de compra?
+[01797.68 -> 01800.68] El orden de compra viene con tu...
+[01800.68 -> 01801.68] con un...
+[01801.68 -> 01803.68] con tu lo...
+[01803.68 -> 01805.68] que es el orden de un documento.
+[01805.68 -> 01809.54] Y eso también es depuculado por si nada.
+[01809.54 -> 01810.54] Si tiene...
+[01810.54 -> 01812.54] En cualquier momento te puede pedir.
+[01812.54 -> 01813.54] Te puede pedir.
+[01813.54 -> 01814.54] Va a justificar.
+[01814.54 -> 01816.54] Yo no sé, saludca.
+[01816.54 -> 01818.54] No, a ver, también...
+[01818.54 -> 01821.54] Pero cómo van los unics y con todos sus dibujos?
+[01821.54 -> 01822.54] No, pero...
+[01822.54 -> 01824.54] O sea, les mangan las dos, que también le puedes mandar el archivo,
+[01824.54 -> 01826.54] como para que yo poniera poder trabajar.
+[01826.54 -> 01828.54] Porque le han llamado un montón, o sea,
+[01828.54 -> 01829.54] no sé, no sé, no sé.
+[01829.54 -> 01831.54] Si necesitan dar el morado, o sea...
+[01831.54 -> 01832.54] El archivo, una cabrera macida.
+[01832.54 -> 01836.14] Es un orden...
+[01836.14 -> 01837.18] Claro.
+[01837.18 -> 01838.18] Ahora...
+[01838.18 -> 01840.43] O sea,
+[01840.43 -> 01843.43] la orden de compra la generamos nosotros para comprar...
+[01843.43 -> 01846.10] Es un masa que tiene.
+[01846.10 -> 01848.10] O sea, te falta producto...
+[01848.10 -> 01850.10] Solo producto, obviamente.
+[01850.10 -> 01851.10] ¿Y eso?
+[01851.10 -> 01854.10] ¿Dónde lo ves tu inhibitario?
+[01854.10 -> 01856.00] Correcto.
+[01856.00 -> 01858.00] No, pero no necesariamente eso.
+[01858.00 -> 01859.00] Si no que...
+[01859.00 -> 01861.00] Cotís, tú, cotizas.
+[01861.00 -> 01863.00] O sea, no es por tu producto que te falta.
+[01863.00 -> 01864.00] Tuve que ir coges.
+[01864.00 -> 01866.00] Porque tú fallas con el orden de compra la verdad.
+[01866.00 -> 01867.00] Crear.
+[01867.00 -> 01868.00] O sea, o sea...
+[01868.00 -> 01869.00] No, pero...
+[01869.00 -> 01871.00] O sea, que obviamente eso no me corre lo que falta.
+[01871.00 -> 01873.00] Pero ya sé, que el diste puede...
+[01873.00 -> 01876.00] Puede pensar que tú no tienes stop y te va a generar...
+[01876.00 -> 01877.00] O sea, lo que no tienes.
+[01877.00 -> 01878.00] O sea, lo que no tienes.
+[01878.00 -> 01879.00] No, no, no, no.
+[01879.00 -> 01880.00] Es manual.
+[01880.00 -> 01881.00] Es manual.
+[01881.00 -> 01883.00] O sea, yo no trabajo bajo un paquete.
+[01883.00 -> 01885.00] Ustedes son sus tiendes.
+[01885.00 -> 01886.00] Claro.
+[01886.00 -> 01887.00] ¿Cómo trabajas y vendo?
+[01887.00 -> 01888.00] Concribendo.
+[01888.00 -> 01889.00] La alcohol de alegría.
+[01889.00 -> 01891.00] Entonces, de acuerdo a la demanda a él,
+[01891.00 -> 01893.00] solicitan a los clientes que les pasa,
+[01893.00 -> 01894.00] muérrenes de compra.
+[01894.00 -> 01897.00] Y nosotros cotizamos a diferentes probedores
+[01897.00 -> 01900.00] y comprábanos a poder apender.
+[01900.00 -> 01902.00] Así es, esa entraba.
+[01902.00 -> 01904.00] O sea, es que es una parte.
+[01904.00 -> 01905.00] Hay otra parte que sí.
+[01905.00 -> 01908.00] La parte es suficientemente importante eso,
+[01908.00 -> 01911.00] que a ver es faltante esto y ver este.
+[01911.00 -> 01913.00] Pero eso era pasado también.
+[01913.00 -> 01917.35] Sígueste lo muestro un rotito para ver este...
+[01917.35 -> 01921.38] Lo que pasa es que este negocio tiene varias partes.
+[01921.38 -> 01924.38] Una de esas partes es comprar a la demanda.
+[01924.38 -> 01925.38] Piden comprar.
+[01925.38 -> 01928.38] Y otra parte es la que manejamos con clientes
+[01928.38 -> 01933.38] que sí me piden reportes de esto,
+[01933.38 -> 01935.38] de valorizados, etcétera.
+[01935.38 -> 01939.02] Generaron de compra cuando ya no hay esto, etcétera.
+[01939.02 -> 01940.02] Eso es otra parte.
+[01940.02 -> 01942.02] Pero como todo está lineado,
+[01942.02 -> 01944.02] o sea, lo más sencillamente los vivido,
+[01944.02 -> 01947.02] porque vivimos almas en para este y vivimos almas en para el otro.
+[01947.02 -> 01949.02] Y el cliente no te lo citan.
+[01949.02 -> 01951.02] Cuando te lo citan,
+[01951.02 -> 01954.02] cliente una orden de compra.
+[01954.02 -> 01959.02] ¿Este te da un bexel o te manda de mensajes?
+[01959.02 -> 01961.86] ¿Cómo me habliste?
+[01963.53 -> 01965.53] Todo empieza con una cotización.
+[01965.53 -> 01966.53] ¿No?
+[01966.53 -> 01967.53] Ok.
+[01967.53 -> 01972.66] Es que hay un poco difícil de...
+[01972.66 -> 01974.66] Es que hay dos tipos de negocio acá.
+[01974.66 -> 01977.36] Uno que...
+[01977.36 -> 01980.62] Nunca tengo nada para que todo se incesa.
+[01980.62 -> 01982.62] Entonces es un cliente que quiero esto,
+[01982.62 -> 01983.62] esto me ha mandado una lista, ¿no?
+[01983.62 -> 01985.62] Me mando una...
+[01985.62 -> 01987.62] Una excelponte para cotizar.
+[01987.62 -> 01992.44] Entonces yo para cotizar...
+[01992.44 -> 01994.44] cotizo para musco precios,
+[01994.44 -> 01996.44] le mando los precios.
+[01996.44 -> 01998.44] Y el cliente ahora ni se ya.
+[01998.44 -> 02001.95] Y el cliente me gira una orden de compra a mí para yo venderle.
+[02001.95 -> 02004.30] Pero entonces yo con esa orden de compra,
+[02004.30 -> 02005.30] que el cliente me gira...
+[02005.30 -> 02008.30] Yo gira otra vez de compra para comprar todo eso.
+[02008.30 -> 02010.82] Ahí es donde yo...
+[02010.82 -> 02012.82] Yo empiezo a cotizar,
+[02012.82 -> 02015.82] y no es un solo proveedor.
+[02015.82 -> 02016.82] De esa lista,
+[02016.82 -> 02017.82] que me mando a mi cliente,
+[02017.82 -> 02018.82] yo puedo tener cinco proveedores.
+[02018.82 -> 02019.82] Entonces, hago cinco orden de compra,
+[02019.82 -> 02021.88] distintas ahí, cinco clientes.
+[02021.88 -> 02022.88] Ok.
+[02023.88 -> 02026.94] Claro que este escenario no funcionaría una carga vacía
+[02026.94 -> 02029.94] porque no tiene un formato fijo de parte del cliente.
+[02029.94 -> 02033.84] No, no hay un formato fijo.
+[02033.84 -> 02035.19] Pero igual,
+[02035.19 -> 02037.19] en la forma de cómo agregas productos,
+[02037.19 -> 02039.19] es relativamente simple.
+[02039.19 -> 02040.19] Busco hacer producto.
+[02040.19 -> 02041.19] No sé si.
+[02041.19 -> 02042.19] De milado,
+[02042.19 -> 02044.19] mostrarte laboratorio debajo del nombre del producto
+[02044.19 -> 02047.19] para que se te da más fácil que me empuere con las cosas.
+[02047.19 -> 02049.19] Formar también para lo más grande,
+[02049.19 -> 02050.19] siempre triunfa.
+[02051.61 -> 02053.61] Por ejemplo,
+[02053.61 -> 02054.61] si está para mi cliente,
+[02054.61 -> 02056.61] si está la puedes salir y我不 puedo usar.
+[02056.61 -> 02058.61] Y si está en un formato,
+[02058.61 -> 02060.61] si está en tu mayor informar,
+[02060.61 -> 02062.61] si por ejemplo lo tienes al final,
+[02062.61 -> 02065.67] si tú quieres tomar o kunaan…
+[02065.67 -> 02066.67] Lo shocka.
+[02066.67 -> 02067.67] Si está en un formato fijo,
+[02067.67 -> 02068.67] si está en un formato fijo.
+[02068.67 -> 02069.67] Por ejemplo,
+[02069.67 -> 02071.67] si está en un formato fijo y que tu es,
+[02071.67 -> 02072.67] ¿no?
+[02072.67 -> 02073.67] Por ejemplo,
+[02073.67 -> 02074.67] si está en un formato fijo entonces,
+[02074.67 -> 02076.67] ¿cuánto formato de casa?
+[02076.67 -> 02078.34] No, no,
+[02078.34 -> 02083.34] No, lo que pasa es que lo que pasa es que vamos a hacer un solo formato.
+[02083.34 -> 02085.34] No, un solo formato.
+[02085.34 -> 02089.34] Porque cliente, o sea, nosotros que debemos adaptar, adaptar.
+[02089.34 -> 02092.34] O sea, si viene 7 iguales, ahora nos recontra.
+[02092.34 -> 02097.14] Pero una orden de cómo puede tener 30 items y la otra puede tener 5.
+[02097.14 -> 02103.39] Entonces, la de 30 sería...
+[02104.39 -> 02108.39] La de la otra, la más chiquita, es la de 30.
+[02108.39 -> 02110.39] Pero la de 30 es gran de la de 30.
+[02110.39 -> 02115.26] Pero es que tú se dice que no me convence, ¿sabes?
+[02115.26 -> 02119.94] No es por eso.
+[02119.94 -> 02122.94] Es que la de 30 tiene el mismo para la de 30.
+[02122.94 -> 02126.94] Es que es por qué, porque es que va a hacer lo mismo.
+[02126.94 -> 02129.07] No, no es lo mismo.
+[02129.07 -> 02132.07] Para mí, no es para él, es para él, es para él, es para él.
+[02133.07 -> 02134.07] Claro, eso sí, es que...
+[02134.07 -> 02136.07] Y luego filtes y que sale así.
+[02136.07 -> 02138.07] Es que esto venga producto.
+[02138.07 -> 02142.07] Claro, lo que pasa es que no van a coincidir los formatos que te harían.
+[02142.07 -> 02144.07] No, no, pero puede ir.
+[02144.07 -> 02145.07] ¿De qué es más lo base?
+[02145.07 -> 02147.07] No es de todo lo que la vaya a todos y no es de nada.
+[02147.07 -> 02149.07] Pero el poder farm no dice eso.
+[02149.07 -> 02151.07] Pero dije que no va de cual.
+[02151.07 -> 02153.07] No sale la corregüena, es la corregüena.
+[02153.07 -> 02156.07] O sea, lo que pasa es que con una caída, o sea, es mucho más fácil.
+[02156.07 -> 02157.07] No creo, porque por qué...
+[02157.07 -> 02158.07] No.
+[02158.07 -> 02159.07] A ver, el poder farm no te pone laboratoria.
+[02159.07 -> 02160.07] Si, ¿por qué?
+[02161.07 -> 02163.07] Te pone un código.
+[02163.07 -> 02164.07] Un código.
+[02164.07 -> 02166.07] Apesa no está laboratoria, es un código.
+[02166.07 -> 02169.07] Pero ya podría tener codificado sus códigos para que le jale para uno.
+[02169.07 -> 02172.07] Claro, pero hay que hacer varias cosas a lo mismo.
+[02172.07 -> 02174.07] No, pero podrías hacerlo.
+[02174.07 -> 02176.07] O sea, para que te cuadre todo, tú tendrías que...
+[02176.07 -> 02177.07] Una patrisa.
+[02177.07 -> 02178.07] Una patrisa.
+[02178.07 -> 02180.07] Una patrisa.
+[02180.07 -> 02181.07] Tendría que estar jalando.
+[02181.07 -> 02182.07] Una patrisa.
+[02182.07 -> 02185.07] Entonces, la patrisa sí, que clasca, dejaré el nombre.
+[02185.07 -> 02186.07] ¿Este código?
+[02186.07 -> 02187.07] O tú me dirías que no está jalando.
+[02187.07 -> 02189.07] No es automátil, pero estaría que formula todo.
+[02190.07 -> 02192.07] Entonces, si tú ya tienes una matrimon.
+[02192.07 -> 02194.07] Sobre si pegas.
+[02194.07 -> 02196.07] Hasta hace una sola matrimon.
+[02196.07 -> 02198.07] Y yo estoy entiendo también.
+[02198.07 -> 02199.07] No me cuadro.
+[02199.07 -> 02204.07] ¿Por qué es que vas a trabajar un nesse y vas a trabajar el nombre?
+[02204.07 -> 02206.07] Porque ahí lo sube.
+[02206.07 -> 02208.07] Ya no vas a trabajar en el sistema.
+[02208.07 -> 02210.17] No, está en la chego de puta.
+[02210.17 -> 02212.17] No, no, no, no, no, no.
+[02212.17 -> 02214.17] No, no, no, no, no, no.
+[02214.17 -> 02215.17] No, no, no, no, no.
+[02215.17 -> 02217.17] La mayoría en el mundo.
+[02218.84 -> 02219.84] Hay algunos.
+[02219.84 -> 02220.84] Nada más.
+[02220.84 -> 02221.84] Hay una única forma rara.
+[02221.84 -> 02224.84] Pero después de hacer una única vez que te coge.
+[02224.84 -> 02225.84] Bueno, él.
+[02225.84 -> 02227.84] Nosotros solamente quisieramos un solo formato.
+[02227.84 -> 02229.06] No más.
+[02229.06 -> 02232.06] O sea, un formato de acuerdo, de acuerdo a la otra vez.
+[02232.06 -> 02234.06] ¿La comprado lo dice que sí es posible?
+[02234.06 -> 02235.06] ¿Qué es ella?
+[02235.06 -> 02236.06] Si lo va a hacer.
+[02236.06 -> 02237.06] Sí, él dice que sí.
+[02237.06 -> 02239.06] Bueno, ella tiene que ver cómo lo hace.
+[02239.06 -> 02241.06] Pero queremos un solo formato.
+[02241.06 -> 02246.93] O sea, un solo formato que tenga lo que hay acá, pues, ¿no?
+[02246.93 -> 02247.93] O sea, lo que hay acá.
+[02247.93 -> 02252.22] Fíjulo, laboratoria, aquí es el estado presinital.
+[02252.22 -> 02253.22] Ya.
+[02253.22 -> 02255.89] O sea, exactamente lo que hay acá.
+[02255.89 -> 02258.89] Ya, pero ese formato, que sería un excel en este caso.
+[02258.89 -> 02263.89] Y ya lo sí tembese que hargan en automático con el lado de la forma.
+[02263.89 -> 02267.89] O sea, cuando se seleccionan las fíjulos, ¿ten�en que ver a la importatoria?
+[02267.89 -> 02270.53] Así que te he dicho.
+[02270.53 -> 02272.53] Claro, eso sí lo va a ser.
+[02272.53 -> 02281.66] Claro, así que tiene que ver que el sistema no podría ser.
+[02281.66 -> 02290.37] que por el laboratorio, ¿no? Sí, ese poquito del nombre te va a poner el nombre del laboratorio
+[02290.37 -> 02303.28] para que se te sea fácil buscar. Ya, ok. Y esto va a mandar a una recepción de orden de compra
+[02303.28 -> 02309.93] que yo voy a jalar cuando llegue la factura y ojalo de la orden de compra creada, ¿no?
+[02310.93 -> 02321.26] La cajujalo, la jaloí, la cajujaloí. Ahora, ¿a qué dios de ventiendo? Esto de acá
+[02321.26 -> 02328.86] y jebe, ¿qué cosas? No me queda claro. Aquí sí, no significa nada, no me dicen nada,
+[02328.86 -> 02334.50] ¿vale? Sí, es el campo así o no, nada más, o sea, si aplica o no, o no.
+[02334.50 -> 02345.30] Ya, entonces, bueno, aquí están los laboratorios, los artículos, principios activos, solicitados,
+[02345.30 -> 02353.66] ¿no? Esto de acá está pendiente de que se retide, ¿no? Ya. Y lo té ese crecimiento, ubicación,
+[02353.66 -> 02359.50] cajas, postos, esto está el crecimiento. Así, aquí no hay ninguno que es un tema para llegar.
+[02360.02 -> 02367.90] A agregar línea por ese caso, sí, nada más, sí, sí, vaya, caro. De ahí falta la venta, la venta
+[02367.90 -> 02373.10] todavía no, no le hemos revisado, o sea, no le hemos entrado a venta, pero no estaba así o
+[02373.10 -> 02385.41] todo. A ver, mira, que intentamos, a ver, almacen, ¿no? Por si mentales, ya no me
+[02385.73 -> 02396.81] revisaba esta parte, ¿no, monel? Sí. Lentario, sí, sí, carrix. Sí, carrix. Sí, sí, laboratorio.
+[02396.81 -> 02408.72] En el caso, no se fue, sí, cargo. Si, no, de verdad, todo, yo. Y ya, por ejemplo, esto, esto, esto,
+[02408.72 -> 02417.35] esto si no me cuadra, ¿por qué produjo? ¿Sí? Pasa que carrix es un historial de movimientos,
+[02417.35 -> 02421.59] bueno, a lo que entiendo, ¿no? Es un historial de movimientos de un determinado producto.
+[02421.59 -> 02427.05] Correcto. Quienes son, sí. Ya, tú lo cuesta para ir costado. O sea, por un producto y me
+[02427.05 -> 02431.19] ajar a dar un carrix, ¿no? O sea, de ese producto. Ah, los movimientos que hubieron
+[02431.19 -> 02438.91] entradas al líquido. Correcto. Allá, pero ¿dónde lo voy a ver eso? ¿No bajó? En la tablita de abajo,
+[02438.91 -> 02442.51] pero igual te voy a agregar también un botoncito para que puedas cargarme en excel.
+[02447.48 -> 02463.34] ¿Pero si esto está perfecto? Claro. ¿Qué se entendería que es un producto, ¿no?
+[02463.34 -> 02469.90] Claro, ¿qué se entendería que es un producto, ¿no? ¿No? Ya, muy bien, esto. Pero ¿dónde
+[02469.90 -> 02479.53] está? Pero lo que quisiera ver es como boton pdf, o sea, como botaría un pdf, esto al final,
+[02479.53 -> 02481.87] ¿no?
+[02481.87 -> 02488.23] Una tablita, la descripción de qué producto es y luego debajo la tablita con los movimientos.
+[02488.23 -> 02490.61] Sí.
+[02490.61 -> 02498.42] Básicamente la misma data que tuve ahí en esta tabla. Pero no me parece que sí.
+[02498.42 -> 02503.38] En un pedido. Pero ¿por qué sí, sí, sí, sí, sí, sí, sí, sí, sí, sí, sí, sí, sí, sí, sí.
+[02503.38 -> 02508.94] No, solo hay 12. De hecho hay 12 ítems, nada más, o sea, 12 registros, pero en el caso
+[02508.94 -> 02515.79] 10 más tú puedes ver más de 5 en 5, de 10 en 10, de 25, 25, de 100 en 100.
+[02515.79 -> 02526.33] Ah, ya, perfecto. Ya, entonces el carro se está bien, no quiero entrar, no quiero que no
+[02526.33 -> 02537.82] tengo clara a través de esto. Esto creo que no se lo realizamos al pedido. Esto está bien,
+[02537.82 -> 02545.26] esto es una parte, pero faltan todas las otras partes de lo que es este, de muestra,
+[02545.26 -> 02576.71] esto es una parte del pedido, pero falta otra parte que es, o sea, la parte de esa roya
+[02576.71 -> 02584.71] es, al que te digo, está acá, la uno. Bueno, esto es un reporte,
+[02584.71 -> 02591.81] no es un reporte, no, no es un reporte, o sea, esta parte de la que está desarrollado,
+[02591.81 -> 02601.91] ahí está. Sí, aha, ya, esto, el reporte de esa roya está acá, tampoco lo ha desarrollado,
+[02601.91 -> 02613.94] que esto, como es, esto de acá, tiene lo que pasa es que esto tengo que entrar, ni esto,
+[02613.94 -> 02620.40] ni esto, ni esto es hacer desarrollado, porque son módulos a parte, se todos los cuatro
+[02620.40 -> 02629.11] últimos, y a ver, a ver, a ver, a ver, a ver, porque este tipo de juego como es,
+[02629.11 -> 02640.69] va a hacer la sesión acá, te voy a dar acceso a esto también, porque lo que no tiene
+[02640.69 -> 02686.17] es el acceso, o a las claves de esto también, pero creo que nos da, ventas a esto, es una
+[02686.17 -> 02703.85] la clave, ¿no? Entonces, dentro de raro algo, dentro de mi nuevo clave, ventas,
+[02703.85 -> 02712.02] las claves de mi serometiana, es un módulo a parte, dentro de mi módulo, que ellos solamente
+[02712.02 -> 02720.09] tienen acceso, y lo que pasa es que este es para un cliente, solo tienen acceso a estos
+[02720.09 -> 02734.11] facilidades, entonces, ellos crean pedidos para dos cajas, para dos, para dos empresas, ¿no?
+[02734.11 -> 02743.57] ¿No? Sí, es un trabajo. Pues repudja el cliente, es un cliente creado de mi ser, este
+[02743.57 -> 02748.58] cliente nos trabaje de atero, nuestro cliente la va a ser de atero, que tenemos, aquí
+[02748.58 -> 02758.56] estamos para la izquierda, hiros, fresquidos. Y la fecha entre a ponerlo, está en la dirección
+[02758.56 -> 02768.17] es para cargar nombre de contactos, celular, oren de compra, que nos esquira
+[02768.17 -> 02774.34] vez diente, la guía de revisión, bueno, el tarifario, aquí es momento a toda la
+[02774.34 -> 02779.70] parte del tarifario, y insertamos los artículos de acuerdo al tarifario de ese
+[02779.70 -> 02792.12] cliente, pues aquí aquí hemos en la stock, y pues también la cantidad aquí
+[02792.12 -> 02797.05] es el precio ya no, el precio registrado en tarifario, para eso estamos en
+[02797.05 -> 02804.93] tarifario, por acá registramos y aquí no lo genera, entonces esto genera una
+[02804.93 -> 02809.23] factura, esto manda una factura.
+[02809.23 -> 02811.86] ¿Te genera una factura en automático?
+[02811.86 -> 02817.91] Sí, en automático, cuando el cliente quide la factura, el vendedor resulta que
+[02817.91 -> 02824.26] quide la factura, lo genera en automático, y esto es una parte, voy a salir
+[02824.26 -> 02832.05] acá, te voy a las claves para que la vea, y ahí hay otro que es, esos dos que
+[02832.05 -> 02846.57] he demostrado, son estos dos acá, acá se pueden traer, los dos pueden traer, aquí
+[02846.57 -> 02856.27] son los 20 reportes, son reportes, hay nada más que reportes, son reportes de
+[02856.27 -> 02866.01] factura, acá igual reportes, pero lo medio venden es consuclar, la plataforma, esto ya
+[02866.01 -> 02872.56] no sirve, esto ya está más, y acá es el tema de la integración,
+[02872.56 -> 02878.40] que es todo un rollo, ahora que te conté que hay una integración acá, esto es todo
+[02878.40 -> 02884.76] reportes, básicamente aquí nuestros parte de acá es reportes, o sea, a ver,
+[02884.76 -> 02897.22] por ejemplo, te pongo, entrar, y aquí están todos los reportes, ¿qué no te pasa
+[02897.22 -> 02898.22] aquí?
+[02898.22 -> 02904.26] Aquí si tú ves, si está en route, si está entregar, etcétera, aquí por aquí en primimos
+[02904.26 -> 02910.71] mías, imprimidos, los partidos rellenos automáticos, pero lo podemos imprimir,
+[02910.71 -> 02915.75] acá se marca, luego las evidencias, cuando se entrega, el tracking, el tracking
+[02915.75 -> 02923.73] es por acá, acá está el tracking, pues no es todo eso se ve acá,
+[02923.73 -> 02931.43] que significa rojito, y lo que pasa es que eso está marrado al módulo de
+[02933.96 -> 02943.86] acá, entonces qué es lo que pasa, el tracking es nuestro cliente que nos
+[02943.86 -> 02950.15] pide que todo este tiene una secuencia, o sea, el cliente tiene otras
+[02950.15 -> 02953.47] habilidades, de que nosotros decimos el periodo hasta que le entregamos, entonces el
+[02953.47 -> 02958.27] sistema automáticamente cuando llegue a la factura sale una fecha que ingresó,
+[02958.27 -> 02967.22] de ahí sale cuando pasa picking, si se está preparando, de ahí cuando el periodo
+[02967.22 -> 02973.32] sale en el carro, hay otra fecha con el periodo sale en el carro, y cuando el
+[02973.32 -> 02977.84] orden se entrega, o también hay otra fecha, esto no tiene que ir, pero entre aquí en
+[02977.84 -> 02987.74] el estado, o sea, esto sí es más complejo, no sé cómo lo vamos a hacer esto, o sea,
+[02987.74 -> 02999.25] de que se puede, pero son el estado, pero no se se pone, hay que crear los
+[02999.85 -> 03009.16] práctulos, por ejemplo, ¿cómo yo te lo hizo acá?, acá te lo hizo, acabo yo te lo
+[03009.16 -> 03016.64] lo hizo, entonces me lo hizo, cuando está entregado como a botanía, acá no,
+[03016.64 -> 03028.08] aquí es la verdad, acá, claro, acá el check, yo confirmo si está entregado, no, si está
+[03028.08 -> 03034.15] entregado, me va a cambiar el estado entregado, no, y por ejemplo, acá que está en
+[03034.15 -> 03042.30] ruta, acá que está en preparación, el check sale, confirmar si está en ruta, se yo
+[03042.30 -> 03049.23] confirmo y cambia el estado en ruta, de preparación también ruta, de ahí cuando
+[03049.23 -> 03054.23] llegues en ruta, yo vuelvo a confirmar si está entregado, rechezado, entonces rechezad que sí
+[03054.23 -> 03062.01] que te yo no siento entregado, pues aquí como la evidencia, al archivo y confirmó la
+[03062.01 -> 03078.86] entregada, y así me va cambiando en tracking, así es funcional, ¿qué ven tan estamos
+[03078.86 -> 03105.23] haciendo? Ah, te paso el nuevo pedidor, acá el último, recuerda Platón, la plataforma
+[03105.23 -> 03116.39] ya no existe, eso está de más, ¿qué significa motivende? Otivende es el sistema,
+[03116.39 -> 03123.47] softies en nuestro cliente que usted es, multivende es su sistema, por eso su sistema
+[03123.47 -> 03134.09] se llama multivende, hay otro sistema aparte de este, donde realizan las ventas, sí,
+[03134.09 -> 03141.63] o sea, esto es una integración como multivende, que es un sistema, con Vitex también, no, en
+[03141.63 -> 03147.91] realidad yo el sistema no entiendo mucho, pero es una integración Vitex multivende, no entiendo
+[03147.91 -> 03158.91] mucho como cosas integradas, pero esto existe integrado multivende, ¿no? O sea, nosotros aquí
+[03158.91 -> 03165.90] no generamos nada, simplemente marcamos por eso, si, si, si, o sea, esto lo genera el cliente
+[03165.90 -> 03171.46] entra al licombre de softies que se llama multivende, y hay genera su pedido, una que generó
+[03171.46 -> 03178.12] da click y automáticamente usted conocía la boleta, el documento, y bueno, y empezamos
+[03178.12 -> 03190.89] todo el proceso, ¿no? Cambiamos los estados, etcétera, sí funciona. Lo que sí le preguntaría
+[03190.89 -> 03197.97] es cómo se conecta ese sistema con multivende, o sea, si multivende envía algo, o sea,
+[03197.97 -> 03205.97] es que tú consultas, lo que yo sé es que nosotros estamos conectados a su sistema y
+[03206.97 -> 03214.48] multivende por cada que cliente es la compra, envío unas líneas, ¿no? Esa línea
+[03214.48 -> 03221.56] nale el sistema de que tenemos y con ver que esa línea es en una boleta. Entonces, esta boleta,
+[03221.56 -> 03237.32] la muestra, esta boleta que se ha generado, cada uno tiene una línea, ¿no? Bueno, el número
+[03237.32 -> 03243.32] boleta es nuestro, ¿no? Pero a partir abajo de documento, este es el dinero de cliente,
+[03243.32 -> 03249.16] el número de cliente, todo esto, todo esto, lo pedir, todos son líneas genéricas que envía
+[03249.16 -> 03256.99] multivende, ¿no? Y esto se crea una foto, acá dentro es generado por multivende, lo que
+[03256.99 -> 03265.80] haces es el sistema de leer esto y todo eso lo convierte en una boleta, pero todo lo
+[03265.80 -> 03271.80] de arriba, obviamente, todo esto va a un factorador y lo de arriba es que parte no es la
+[03272.28 -> 03286.42] boleta y todo esto está pretendo una auto, pero los datos entre ya también la ley y este y es lo que
+[03286.42 -> 03297.64] hacemos secamente y también también lee el stock, nosotros tenemos que enviar el stock en
+[03297.64 -> 03310.51] automáticos, o sea, todo esto es boleta que enera un carregs, ¿no? Voy a echar rics y nosotros
+[03310.51 -> 03316.88] ¿por qué tenemos que enviar el stock? Porque el cliente compra en base en este stock,
+[03316.88 -> 03334.80] por ejemplo, acá, nosotros tenemos los artículos de club software que es uno de los que hace
+[03334.80 -> 03346.37] este multivende y está en la habitación tal, el metropú, colote, nombre, unidad, stock, acá es
+[03346.37 -> 03353.04] con stock, esto de acá también y pique leerlo multivende, no sé cómo enviamos la cosa de
+[03353.04 -> 03364.38] información, pero sí enviamos, ¿no? Y todo como se mueve todo esto, se mueve por el loting,
+[03364.74 -> 03372.02] softing, ¿no? Mandas estos llaves? ¿esto de acá? Esto que tuve acá, el cliente,
+[03372.42 -> 03388.76] esto, porque pueden leer un poquito que lo vemos, esto es un pacupax, pero el loting,
+[03388.76 -> 03410.04] el loting, los llaves, entonces tuve acá, antes el lote de este producto, ¿no?
+[03410.04 -> 03419.24] este lote ella no lo da. Entonces toda comunicación es con este
+[03419.24 -> 03430.07] lugar, este lo que le le el este le esto que ha suave en cada
+[03430.07 -> 03437.72] forma. No se ve con la función si no por es parte, ha sido una comparación
+[03437.72 -> 03440.91] Entonces, base a eso es que compara esto.
+[03440.91 -> 03443.19] OK.
+[03443.19 -> 03444.07] Es lo que vale.
+[03444.07 -> 03452.25] Entonces, eso tiene un taso de sonisco.
+[03452.25 -> 03453.41] Esirucionado.
+[03453.41 -> 03470.35] Y, además, es muy buscar cómo se entera para pasárselo.
+[03470.35 -> 03476.64] Pero tienes algún usuario que usted de un divende?
+[03476.64 -> 03477.84] Yo voy a pedir.
+[03477.84 -> 03478.48] Tu tengo.
+[03478.48 -> 03481.39] Yo voy a pedir.
+[03481.39 -> 03482.39] Y de aquí.
+[03482.39 -> 03577.13] Y está.
+[03577.13 -> 03583.14] Me va a disculparse en allá para hablar la computadora.
+[03583.14 -> 03589.32] ¿Qué informaciones necesitan para ello prepararla y convivista?
+[03589.32 -> 03596.52] ¿Cómo es la conexión entre la aplicación que tienen a Vita del L105 con un divende?
+[03596.52 -> 03603.09] Y si es que tienes un acceso de un divende para yo ver si es que hay algo que se configura ahí?
+[03603.09 -> 03604.09] Ya, OK.
+[03604.09 -> 03609.68] Entonces, esto se va a ir.
+[03609.68 -> 03611.72] Ya.
+[03611.72 -> 03619.33] Ya, pues, esto, todo lo que hay.
+[03619.33 -> 03620.01] Ya.
+[03620.01 -> 03624.95] Entonces, abajo a esos sesoraciones y te doy una nueva fecha.
+[03624.95 -> 03625.83] Ya lo sé.
+[03625.83 -> 03626.83] Dijo uno.
+[03626.83 -> 03628.51] Dale cosa más.
+[03628.51 -> 03629.51] Gracias.

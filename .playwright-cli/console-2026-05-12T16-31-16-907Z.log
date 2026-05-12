@@ -1,0 +1,11 @@
+[    3536ms] [LOG] Google Maps cargado @ https://kamary.l105.com/public/js/cliente.js?v1751507569:1935
+[    3667ms] [WARNING] Google Maps JavaScript API has been loaded directly without loading=async. This can result in suboptimal performance. For best-practice loading patterns please see https://goo.gle/js-api-loading @ https://maps.googleapis.com/maps/api/js?key=AIzaSyBBPL41mFwmWqbqcMyUL3A6Y0BcDSs-7d4&language=ES&libraries=places:1519
+[    3699ms] [LOG] Google Maps cargado @ https://kamary.l105.com/public/js/pedidoMuestra.js?v1752338097:3154
+[    3700ms] [LOG] initEval, pedidoMuestra.js @ https://kamary.l105.com/public/js/pedidoMuestra.js?v1752338097:3157
+[    3700ms] Uncaught InvalidValueError: Map: Expected mapDiv of type HTMLElement but was passed null.
+    at _.Vm (https://maps.googleapis.com/maps/api/js?key=AIzaSyBBPL41mFwmWqbqcMyUL3A6Y0BcDSs-7d4&language=ES&libraries=places:1389:396)
+    at _.fr (https://maps.googleapis.com/maps/api/js?key=AIzaSyBBPL41mFwmWqbqcMyUL3A6Y0BcDSs-7d4&language=ES&libraries=places:1464:273)
+    at initEval (https://kamary.l105.com/public/js/pedidoMuestra.js?v1752338097:3159:8)
+    at <anonymous> (https://kamary.l105.com/public/js/pedidoMuestra.js?v1752338097:3224:1)
+    at dispatch (https://kamary.l105.com/public/js/core/jquery.min.js:2:7518)
+    at r.handle (https://kamary.l105.com/public/js/core/jquery.min.js:2:5599)

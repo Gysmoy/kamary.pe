@@ -479,9 +479,9 @@ export const buildMagistralesRows = {
     observations: data?.observations,
   }),
   serviceOrder: (data) => ({
-    title: 'Orden de servicio',
+    title: data?.order_type === 'storage_general' ? 'Orden de servicio general' : 'Orden de servicio',
     code: data?.code,
-    filename: `orden-servicio-${data?.code || data?.id}`,
+    filename: `${data?.order_type === 'storage_general' ? 'orden-servicio-general' : 'orden-servicio'}-${data?.code || data?.id}`,
     meta: [
       ['Empresa', nested(data, 'business.name')],
       ['Sede', nested(data, 'branch.name')],

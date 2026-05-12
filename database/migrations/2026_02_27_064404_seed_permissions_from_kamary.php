@@ -44,7 +44,6 @@ return new class extends Migration
             // Serv. Almacen...
             ['name' => 'storage-inventory', 'beauty_name' => 'Almacenamiento - Inventario'],
             ['name' => 'storage-clients', 'beauty_name' => 'Almacenamiento - Clientes'],
-            ['name' => 'service-orders', 'beauty_name' => 'Almacenamiento - O. Servicio'],
             ['name' => 'storage-units', 'beauty_name' => 'Almacenamiento - Und. de medida'],
             ['name' => 'storage-products', 'beauty_name' => 'Almacenamiento - Creación del produ...'],
             ['name' => 'storage-entry-note', 'beauty_name' => 'Almacenamiento - Nota de entrada'],

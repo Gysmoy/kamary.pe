@@ -19,7 +19,7 @@ import {
 const serviceOrdersRest = new ServiceOrdersRest()
 const emptyItem = () => ({ uid: crypto.randomUUID(), service_id: '', description: '', quantity: 1, unit_price: 0, detraction_percent: 0, commission_percent: 0, total: 0 })
 
-const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio' }) => {
+const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType = 'service' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
@@ -47,6 +47,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio' }) => {
   const [items, setItems] = useState([emptyItem()])
   const [isEditing, setIsEditing] = useState(false)
 
+  const isStorageGeneral = serviceOrderType === 'storage_general'
   const serviceMap = Object.fromEntries(services.map(row => [`${row.id}`, row]))
 
   useEffect(() => {
@@ -84,7 +85,8 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio' }) => {
     setSelectedBusinessId(data?.business_id ? `${data.business_id}` : '')
     setSelectedClientId(data?.client_id ? `${data.client_id}` : '')
     await loadBranches(data?.business_id ?? '', data?.business_branch_id ?? '')
-    setItems((data?.items ?? []).map(row => ({ uid: crypto.randomUUID(), service_id: `${row.service_id}`, description: row.description ?? '', quantity: Number(row.quantity || 0), unit_price: Number(row.unit_price || 0), detraction_percent: Number(row.detraction_percent || 0), commission_percent: Number(row.commission_percent || 0), total: Number(row.total || 0) })) || [emptyItem()])
+    const itemRows = (data?.items ?? []).map(row => ({ uid: crypto.randomUUID(), service_id: `${row.service_id}`, description: row.description ?? '', quantity: Number(row.quantity || 0), unit_price: Number(row.unit_price || 0), detraction_percent: Number(row.detraction_percent || 0), commission_percent: Number(row.commission_percent || 0), total: Number(row.total || 0) }))
+    setItems(itemRows.length ? itemRows : [emptyItem()])
     $(modalRef.current).modal('show')
   }
 
@@ -155,10 +157,24 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio' }) => {
           cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar orden de servicio')
         },
         { dataField: 'issue_date', caption: 'Fecha', dataType: 'date', width: 110 },
+        { dataField: 'scheduled_at', caption: 'Programada', dataType: 'date', width: 115 },
+        { dataField: 'business.name', caption: 'Empresa', minWidth: 140 },
+        { dataField: 'branch.name', caption: 'Sede', minWidth: 130 },
         { dataField: 'client.full_name', caption: 'Cliente', minWidth: 200 },
+        { dataField: 'billing_cycle', caption: 'Ciclo', minWidth: 130 },
         { dataField: 'expected_document_type', caption: 'Comp.', width: 100 },
         { dataField: 'currency', caption: 'Moneda', width: 90 },
+        { dataField: 'subtotal', caption: 'Subtotal', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+        { dataField: 'tax_amount', caption: 'Impuesto', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
         { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+        {
+          caption: 'Detalle',
+          minWidth: 260,
+          allowFiltering: false,
+          calculateCellValue: (data) => (data.items ?? [])
+            .map(row => `${Number(row.quantity || 0).toFixed(3)} ${row.service?.billing_unit ?? ''} ${row.description ?? row.service?.name ?? ''}`.trim())
+            .join(' | ')
+        },
         {
           dataField: 'accounts_receivable_code',
           caption: 'CXC',
@@ -173,6 +189,8 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio' }) => {
         },
         { dataField: 'order_status', caption: 'Estado', width: 110, lookup: toLookup(serviceOrderStatusOptions) },
         { dataField: 'billing_status', caption: 'Facturacion', width: 110, lookup: toLookup(billingStatusOptions) },
+        { dataField: 'creator.fullname', caption: 'Creado por', minWidth: 140, visible: false },
+        { dataField: 'updater.fullname', caption: 'Actualizado por', minWidth: 140, visible: false },
         { caption: 'Acciones', width: 170, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           container.css('text-overflow', 'unset')
           container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
@@ -182,7 +200,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio' }) => {
       ]}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar orden de servicio' : 'Agregar orden de servicio'} size='xl' onSubmit={onSave}>
+    <Modal modalRef={modalRef} title={isEditing ? `Editar ${isStorageGeneral ? 'orden de servicio general' : 'orden de servicio'}` : `Agregar ${isStorageGeneral ? 'orden de servicio general' : 'orden de servicio'}`} size='xl' onSubmit={onSave}>
       <div className='row'>
         <input ref={idRef} hidden />
         <div className='col-md-3 mb-3'><label className='form-label'>Código</label><input ref={codeRef} className='form-control' disabled /></div>

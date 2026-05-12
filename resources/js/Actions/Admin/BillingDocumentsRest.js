@@ -21,7 +21,7 @@ class BillingDocumentsRest extends BasicRest {
   path = isStoragePath() ? 'admin/storage/billing-control' : 'admin/billing-documents'
 
   getCommercialOrders = async () => await loadAll('/api/admin/commercial-orders/paginate')
-  getServiceOrders = async () => await loadAll(isStoragePath() ? '/api/admin/storage/service-orders/paginate' : '/api/admin/service-orders/paginate')
+  getServiceOrders = async () => await loadAll(isStoragePath() ? '/api/admin/storage/general-service-orders/paginate' : '/api/admin/service-orders/paginate')
 
   getConnectorPayload = async (id) => {
     try {

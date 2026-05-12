@@ -11,6 +11,7 @@ use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ServiceOrderController extends BasicController
 {
@@ -22,7 +23,20 @@ class ServiceOrderController extends BasicController
 
     public function setReactViewProperties(Request $request)
     {
-        return ['requiredPermission' => 'services-service-order'];
+        return [
+            'requiredPermission' => 'services-service-order',
+            'serviceOrderType' => $this->orderType(),
+        ];
+    }
+
+    protected function orderType(): string
+    {
+        return 'service';
+    }
+
+    protected function codePrefix(): string
+    {
+        return 'OS';
     }
 
     public function setPaginationInstance(string $model)
@@ -37,6 +51,10 @@ class ServiceOrderController extends BasicController
             ])
             ->join('users as creator', 'creator.id', '=', 'service_orders.created_by')
             ->join('users as updater', 'updater.id', '=', 'service_orders.updated_by');
+
+        if (Schema::hasColumn('service_orders', 'order_type')) {
+            $query->where('service_orders.order_type', $this->orderType());
+        }
 
         $scopeKey = BusinessScope::scopedKeyForRequest(request());
         $query->whereHas('business', function ($business) use ($scopeKey) {
@@ -95,6 +113,11 @@ class ServiceOrderController extends BasicController
         }
 
         $body['updated_by'] = $userId;
+        if (Schema::hasColumn('service_orders', 'order_type')) {
+            $body['order_type'] = $this->orderType();
+        } else {
+            unset($body['order_type']);
+        }
         $body['business_id'] = $businessId;
         $body['business_branch_id'] = $branchId;
         $body['client_id'] = $clientId;
@@ -325,11 +348,14 @@ class ServiceOrderController extends BasicController
         return in_array($normalized, $allowed, true) ? $normalized : 'pending';
     }
 
-    private function nextCode(): string
+    protected function nextCode(): string
     {
         $next = 1;
-        $latest = ServiceOrder::query()->latest('id')->value('code');
+        $latest = ServiceOrder::query()
+            ->when(Schema::hasColumn('service_orders', 'order_type'), fn($query) => $query->where('order_type', $this->orderType()))
+            ->latest('id')
+            ->value('code');
         if ($latest && preg_match('/(\d+)$/', $latest, $matches)) $next = ((int) $matches[1]) + 1;
-        return 'OS-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+        return $this->codePrefix() . '-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
     }
 }

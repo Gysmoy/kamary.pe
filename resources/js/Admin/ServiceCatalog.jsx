@@ -10,7 +10,7 @@ import ServiceCatalogRest from '../Actions/Admin/ServiceCatalogRest';
 
 const serviceCatalogRest = new ServiceCatalogRest()
 
-const ServiceCatalog = ({ moduleTitle = 'Servicios' }) => {
+const ServiceCatalog = ({ moduleTitle = 'Servicios', serviceScope = 'services' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
@@ -35,7 +35,7 @@ const ServiceCatalog = ({ moduleTitle = 'Servicios' }) => {
     nameRef.current.value = data?.name ?? ''
     categoryRef.current.value = data?.category ?? ''
     subcategoryRef.current.value = data?.subcategory ?? ''
-    serviceTypeRef.current.value = data?.service_type ?? ''
+    serviceTypeRef.current.value = data?.service_type ?? (serviceScope === 'storage_general' ? 'General' : '')
     billingUnitRef.current.value = data?.billing_unit ?? ''
     unitPricePenRef.current.value = Number(data?.unit_price_pen ?? 0)
     unitPriceUsdRef.current.value = Number(data?.unit_price_usd ?? 0)
@@ -92,6 +92,7 @@ const ServiceCatalog = ({ moduleTitle = 'Servicios' }) => {
         { dataField: 'name', caption: 'Servicio', minWidth: 180 },
         { dataField: 'category', caption: 'Categoria', minWidth: 130 },
         { dataField: 'subcategory', caption: 'Subcategoria', minWidth: 130 },
+        { dataField: 'service_type', caption: 'Tipo', width: 110 },
         { dataField: 'billing_unit', caption: 'Unidad', width: 110 },
         { dataField: 'unit_price_pen', caption: 'PEN', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
         { dataField: 'unit_price_usd', caption: 'USD', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },

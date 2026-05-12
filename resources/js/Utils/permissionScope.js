@@ -34,7 +34,7 @@ export const isMagistralesPath = (path = location.pathname) => {
 
 export const isStoragePath = (path = location.pathname) => {
   const normalizedPath = `${path ?? ''}`.toLowerCase()
-  return normalizedPath.includes('/admin/storage-') || normalizedPath === '/admin/service-orders'
+  return normalizedPath.includes('/admin/storage-')
 }
 
 export const scopedPermission = (permission, path = location.pathname) => {

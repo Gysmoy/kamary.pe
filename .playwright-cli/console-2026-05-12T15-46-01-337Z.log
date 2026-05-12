@@ -1,0 +1,11 @@
+[    1894ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://kamary.l105.com/inicio/ingresar:0
+[   30083ms] [LOG] form.action https://kamary.l105.com/inicio/comprobar @ https://kamary.l105.com/public/js/customlogin.js:38
+[   30083ms] [LOG] form.method post @ https://kamary.l105.com/public/js/customlogin.js:39
+[   30767ms] [LOG] response de login  {estado: 200, url: https://kamary.l105.com/principal, tiempoInicioSession: 1778600791, tiempoLimite: 7140, tiempoExistenciaSession: 7200} @ https://kamary.l105.com/public/js/customlogin.js:49
+[   32699ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://kamary.l105.com/principal:0
+[   32699ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ https://kamary.l105.com/principal:0
+[   32699ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "new-password"): (More info: https://goo.gl/9p2vKq) %o @ https://kamary.l105.com/principal:0
+[   34159ms] [LOG] %c%s color: red; background: yellow; font-size: 24px; ADVERTENCIA @ https://www.gstatic.com/_/datastudio/_/js/k=datastudio.datastudio.es.PSnce7Om4Yo.2018.O/am=AAAQ/d=1/rs=AHAPuoNXeSC89ZbS3OsDxTugmS_2AtcxdA/m=pm_base:9301
+[   34159ms] [LOG] %c%s font-size: 18px; Si usas esta consola, otras personas podrían suplantar tu identidad y robarte datos mediante un ataque Self-XSS.
+No escribas ni pegues ningún código que no entiendas. @ https://www.gstatic.com/_/datastudio/_/js/k=datastudio.datastudio.es.PSnce7Om4Yo.2018.O/am=AAAQ/d=1/rs=AHAPuoNXeSC89ZbS3OsDxTugmS_2AtcxdA/m=pm_base:9301
+[   36364ms] [WARNING] Google Maps JavaScript API has been loaded directly without loading=async. This can result in suboptimal performance. For best-practice loading patterns please see https://goo.gle/js-api-loading @ https://maps.googleapis.com/maps/api/js?key=AIzaSyAng4TaCSbwmEwKIdn9M0m9ZHpzjAkbMw8&v=3&callback=loadMapsApiCallback&language=es&region=US&libraries=visualization:336

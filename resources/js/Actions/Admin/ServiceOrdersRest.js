@@ -18,9 +18,9 @@ const loadAll = async (path) => {
 }
 
 class ServiceOrdersRest extends BasicRest {
-  path = location.pathname.toLowerCase().includes('/admin/storage-general-service-orders')
+  path = isStoragePath()
     ? 'admin/storage/general-service-orders'
-    : (isStoragePath() ? 'admin/storage/service-orders' : 'admin/service-orders')
+    : 'admin/service-orders'
 
   getBranchesByBusiness = async (businessId) => businessId ? (await this.simpleGet(`/api/${this.path}/businesses/${businessId}/branches`)) ?? [] : []
   getBusinesses = async () => await loadAll('/api/admin/businesses/paginate')

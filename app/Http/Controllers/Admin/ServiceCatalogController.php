@@ -6,6 +6,7 @@ use App\Http\Controllers\BasicController;
 use App\Models\ServiceCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class ServiceCatalogController extends BasicController
 {
@@ -15,7 +16,25 @@ class ServiceCatalogController extends BasicController
 
     public function setReactViewProperties(Request $request)
     {
-        return ['requiredPermission' => 'services-services'];
+        return [
+            'requiredPermission' => 'services-services',
+            'serviceScope' => $this->serviceScope(),
+        ];
+    }
+
+    protected function serviceScope(): string
+    {
+        return 'services';
+    }
+
+    public function setPaginationInstance(string $model)
+    {
+        $query = $model::select('services.*');
+        if (Schema::hasColumn('services', 'service_scope')) {
+            $query->where('services.service_scope', $this->serviceScope());
+        }
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -41,6 +60,11 @@ class ServiceCatalogController extends BasicController
 
         $body['updated_by'] = $userId;
         $body['code'] = $code;
+        if (Schema::hasColumn('services', 'service_scope')) {
+            $body['service_scope'] = $this->serviceScope();
+        } else {
+            unset($body['service_scope']);
+        }
         $body['name'] = $name;
         $body['category'] = trim((string) ($body['category'] ?? '')) ?: null;
         $body['subcategory'] = trim((string) ($body['subcategory'] ?? '')) ?: null;

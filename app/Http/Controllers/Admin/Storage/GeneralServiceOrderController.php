@@ -12,6 +12,17 @@ class GeneralServiceOrderController extends BaseServiceOrderController
         return [
             'moduleTitle' => 'Serv. Almacenamiento - O. Servicio General',
             'requiredPermission' => 'storage-general-service-orders',
+            'serviceOrderType' => $this->orderType(),
         ];
+    }
+
+    protected function orderType(): string
+    {
+        return 'storage_general';
+    }
+
+    protected function codePrefix(): string
+    {
+        return 'OSG';
     }
 }

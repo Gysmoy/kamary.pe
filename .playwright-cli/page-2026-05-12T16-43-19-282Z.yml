@@ -1,0 +1,502 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - complementary [ref=e4]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - button "" [ref=e8] [cursor=pointer]:
+            - generic [ref=e9]: 
+          - generic [ref=e10]: Nombre del Admin
+        - generic [ref=e12]:
+          - list [ref=e13]:
+            - listitem [ref=e14]:
+              - link " Resumen" [ref=e15]:
+                - /url: "#tabs-side-overlay-overview"
+                - generic [ref=e16]: 
+                - text: Resumen
+            - listitem [ref=e17]:
+              - link " Ventas" [ref=e18] [cursor=pointer]:
+                - /url: "#tabs-side-overlay-sales"
+                - generic [ref=e19]: 
+                - text: Ventas
+          - generic [ref=e21]:
+            - generic [ref=e22]:
+              - generic [ref=e23]:
+                - list [ref=e24]:
+                  - listitem [ref=e25]:
+                    - button "" [ref=e26] [cursor=pointer]:
+                      - generic [ref=e27]: 
+                - heading "Actividad Reciente" [level=3] [ref=e28]
+              - list [ref=e30]:
+                - listitem [ref=e31]:
+                  - generic [ref=e32]: 
+                  - generic [ref=e33]: Respondió un mensaje
+                  - generic [ref=e34]:
+                    - text: para
+                    - link "correo@gmail.com" [ref=e35] [cursor=pointer]:
+                      - /url: "#"
+                  - generic [ref=e36]: Hace 10 minutos
+            - generic [ref=e37]:
+              - generic [ref=e38]:
+                - list [ref=e39]:
+                  - listitem [ref=e40]:
+                    - button "" [ref=e41] [cursor=pointer]:
+                      - generic [ref=e42]: 
+                - heading "Últimos Mensajes" [level=3] [ref=e43]
+              - list [ref=e45]:
+                - listitem [ref=e46]:
+                  - generic [ref=e47]: 
+                  - generic [ref=e48]: Titulo de mensaje
+                  - generic [ref=e49]:
+                    - text: de
+                    - link "correo@gmail.com" [ref=e50] [cursor=pointer]:
+                      - /url: "#"
+                  - generic [ref=e51]: Hace 10 minutos
+                - listitem [ref=e52]:
+                  - generic [ref=e53]: 
+                  - generic [ref=e54]: Titulo de mensaje
+                  - generic [ref=e55]:
+                    - text: de
+                    - link "correo@gmail.com" [ref=e56] [cursor=pointer]:
+                      - /url: "#"
+                  - generic [ref=e57]: Hace 10 minutos
+    - navigation [ref=e58]:
+      - generic [ref=e61]:
+        - generic [ref=e62]:
+          - text: 
+          - link [ref=e63] [cursor=pointer]:
+            - /url: "#"
+            - img [ref=e64]
+        - list [ref=e67]:
+          - listitem [ref=e68]: Navegación
+          - listitem [ref=e69]:
+            - link " Inicio" [ref=e70] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e71]: 
+              - text: Inicio
+            - list:
+              - listitem [ref=e72]:
+                - link " Home" [ref=e73] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/principal
+                  - generic [ref=e74]: 
+                  - text: Home
+          - listitem [ref=e75]:
+            - link "  Sistemas" [ref=e76] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e77]: 
+              - text: Sistemas
+            - list:
+              - listitem [ref=e78]:
+                - link "Gestión de Usuarios" [ref=e79] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/gestiondeperfil/usuario
+                  - generic [ref=e80]: 
+                  - text: Gestión de Usuarios
+          - listitem [ref=e81]:
+            - link "  Almacén" [ref=e82] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e83]: 
+              - text: Almacén
+            - list:
+              - listitem [ref=e84]:
+                - link " Artículos" [ref=e85] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/articulo
+                  - generic [ref=e86]: 
+                  - text: Artículos
+              - listitem [ref=e87]:
+                - link " Inventario" [ref=e88] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/inventario
+                  - generic [ref=e89]: 
+                  - text: Inventario
+              - listitem [ref=e90]:
+                - link " Kardex" [ref=e91] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/kardexarticulo
+                  - generic [ref=e92]: 
+                  - text: Kardex
+              - listitem [ref=e93]:
+                - link " Laboratorios" [ref=e94] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/categoria
+                  - generic [ref=e95]: 
+                  - text: Laboratorios
+              - listitem [ref=e96]:
+                - link " Lotes" [ref=e97] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/lote
+                  - generic [ref=e98]: 
+                  - text: Lotes
+              - listitem [ref=e99]:
+                - link " Nota de Entrada" [ref=e100] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/notaentrada
+                  - generic [ref=e101]: 
+                  - text: Nota de Entrada
+              - listitem [ref=e102]:
+                - link " Nota de Salida" [ref=e103] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/notasalida
+                  - generic [ref=e104]: 
+                  - text: Nota de Salida
+              - listitem [ref=e105]:
+                - link " Proveedores" [ref=e106] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/proveedor
+                  - generic [ref=e107]: 
+                  - text: Proveedores
+              - listitem [ref=e108]:
+                - link " Und. de medida" [ref=e109] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/unidad
+                  - generic [ref=e110]: 
+                  - text: Und. de medida
+          - listitem [ref=e111]:
+            - link "  Administración" [ref=e112] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e113]: 
+              - text: Administración
+            - list:
+              - listitem [ref=e114]:
+                - link " Cuentas por pagar" [ref=e115] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/notaentradapagar
+                  - generic [ref=e116]: 
+                  - text: Cuentas por pagar
+              - listitem [ref=e117]:
+                - link " Gasto" [ref=e118] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/gasto
+                  - generic [ref=e119]: 
+                  - text: Gasto
+              - listitem [ref=e120]:
+                - link " Resumen diario" [ref=e121] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/resumendiario
+                  - generic [ref=e122]: 
+                  - text: Resumen diario
+          - listitem [ref=e123]:
+            - link "  Comercial" [ref=e124] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e125]: 
+              - text: Comercial
+            - list:
+              - listitem [ref=e126]:
+                - link " Cliente" [ref=e127] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/cliente
+                  - generic [ref=e128]: 
+                  - text: Cliente
+              - listitem [ref=e129]:
+                - link "Clientes Eventual" [ref=e130] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/Clientes/clientesEventual
+                  - generic [ref=e131]: 
+                  - text: Clientes Eventual
+              - listitem [ref=e132]:
+                - link " Cuenta por Cobrar" [ref=e133] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/cuentaporpagar
+                  - generic [ref=e134]: 
+                  - text: Cuenta por Cobrar
+              - listitem [ref=e135]:
+                - link " Pedido" [ref=e136] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/caja
+                  - generic [ref=e137]: 
+                  - text: Pedido
+              - listitem [ref=e138]:
+                - link " Tarifario" [ref=e139] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/tarifario
+                  - generic [ref=e140]: 
+                  - text: Tarifario
+          - listitem [ref=e141]:
+            - link "  Serv. Almacenamiento" [ref=e142] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e143]: 
+              - text: Serv. Almacenamiento
+            - list [ref=e144]:
+              - listitem [ref=e145]:
+                - link " Inventario" [ref=e146] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/inventario
+                  - generic [ref=e147]: 
+                  - text: Inventario
+              - listitem [ref=e148]:
+                - link " Clientes" [ref=e149] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/clientealmacenamiento
+                  - generic [ref=e150]: 
+                  - text: Clientes
+              - listitem [ref=e151]:
+                - link " O. Servicio" [ref=e152] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/ordenservicio
+                  - generic [ref=e153]: 
+                  - text: O. Servicio
+              - listitem [ref=e154]:
+                - link " Und. de medida" [ref=e155] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/unidad
+                  - generic [ref=e156]: 
+                  - text: Und. de medida
+              - listitem [ref=e157]:
+                - link " Creación del producto" [ref=e158] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/articulo
+                  - generic [ref=e159]: 
+                  - text: Creación del producto
+              - listitem [ref=e160]:
+                - link " Nota de entrada" [ref=e161] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/notaentrada
+                  - generic [ref=e162]: 
+                  - text: Nota de entrada
+              - listitem [ref=e163]:
+                - link " Nota de salida" [ref=e164] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/notasalida
+                  - generic [ref=e165]: 
+                  - text: Nota de salida
+              - listitem [ref=e166]:
+                - link " Kardex" [ref=e167] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/kardex
+                  - generic [ref=e168]: 
+                  - text: Kardex
+              - listitem [ref=e169]:
+                - link " Servicio General" [ref=e170] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/serviciogeneral
+                  - generic [ref=e171]: 
+                  - text: Servicio General
+              - listitem [ref=e172]:
+                - link " Control de Facturación" [ref=e173] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/facturacion
+                  - generic [ref=e174]: 
+                  - text: Control de Facturación
+              - listitem [ref=e175]:
+                - link "O. Servicio General" [ref=e176] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/ordenserviciogeneral
+                  - generic [ref=e177]: 
+                  - text: O. Servicio General
+          - listitem [ref=e178]:
+            - link "  Despacho" [ref=e179] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e180]: 
+              - text: Despacho
+            - list:
+              - listitem [ref=e181]:
+                - link " Actividad" [ref=e182] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/pedido_requerimiento/pedido
+                  - generic [ref=e183]: 
+                  - text: Actividad
+              - listitem [ref=e184]:
+                - link "Conductor" [ref=e185] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/despacho/conductorasignado
+                  - generic [ref=e186]: 
+                  - text: Conductor
+              - listitem [ref=e187]:
+                - link " Despacho" [ref=e188] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/despacho
+                  - generic [ref=e189]: 
+                  - text: Despacho
+              - listitem [ref=e190]:
+                - link " Vehículo / Zona" [ref=e191] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/despacho/vehiculo
+                  - generic [ref=e192]: 
+                  - text: Vehículo / Zona
+          - listitem [ref=e193]:
+            - link "  Servicios" [ref=e194] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e195]: 
+              - text: Servicios
+            - list:
+              - listitem [ref=e196]:
+                - link "Cliente" [ref=e197] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/Clientes/clientes
+                  - generic [ref=e198]: 
+                  - text: Cliente
+              - listitem [ref=e199]:
+                - link " Facturacion" [ref=e200] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/Facturacion
+                  - generic [ref=e201]: 
+                  - text: Facturacion
+              - listitem [ref=e202]:
+                - link " Orden de servicio" [ref=e203] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/OrdenServicio
+                  - generic [ref=e204]: 
+                  - text: Orden de servicio
+              - listitem [ref=e205]:
+                - link " Servicios" [ref=e206] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/Servicios
+                  - generic [ref=e207]: 
+                  - text: Servicios
+          - listitem [ref=e208]:
+            - link "  Muestras" [ref=e209] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e210]: 
+              - text: Muestras
+            - list:
+              - listitem [ref=e211]:
+                - link " Pedido" [ref=e212] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/PedidoMuestra
+                  - generic [ref=e213]: 
+                  - text: Pedido
+          - listitem [ref=e214]:
+            - link "  Magistrales" [ref=e215] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e216]: 
+              - text: Magistrales
+            - list:
+              - listitem [ref=e217]:
+                - link " Artículos" [ref=e218] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/articulo
+                  - generic [ref=e219]: 
+                  - text: Artículos
+              - listitem [ref=e220]:
+                - link " Categoría" [ref=e221] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/categoria
+                  - generic [ref=e222]: 
+                  - text: Categoría
+              - listitem [ref=e223]:
+                - link " Formatos" [ref=e224] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/formatos
+                  - generic [ref=e225]: 
+                  - text: Formatos
+              - listitem [ref=e226]:
+                - link " Fórmulas" [ref=e227] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/recetaproduccion
+                  - generic [ref=e228]: 
+                  - text: Fórmulas
+              - listitem [ref=e229]:
+                - link " Ingresos" [ref=e230] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/notaentrada
+                  - generic [ref=e231]: 
+                  - text: Ingresos
+              - listitem [ref=e232]:
+                - link " Inventario" [ref=e233] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/inventario
+                  - generic [ref=e234]: 
+                  - text: Inventario
+              - listitem [ref=e235]:
+                - link " Kardex" [ref=e236] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/kardex
+                  - generic [ref=e237]: 
+                  - text: Kardex
+              - listitem [ref=e238]:
+                - link " Laboratorio" [ref=e239] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/laboratorio
+                  - generic [ref=e240]: 
+                  - text: Laboratorio
+              - listitem [ref=e241]:
+                - link " O. Compra" [ref=e242] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/requerimientocompra
+                  - generic [ref=e243]: 
+                  - text: O. Compra
+              - listitem [ref=e244]:
+                - link " O. Producción" [ref=e245] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/ordenproduccion
+                  - generic [ref=e246]: 
+                  - text: O. Producción
+              - listitem [ref=e247]:
+                - link " Proveedor" [ref=e248] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/proveedor
+                  - generic [ref=e249]: 
+                  - text: Proveedor
+              - listitem [ref=e250]:
+                - link " Responsable" [ref=e251] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/responsable
+                  - generic [ref=e252]: 
+                  - text: Responsable
+              - listitem [ref=e253]:
+                - link " Salidas" [ref=e254] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/notasalida
+                  - generic [ref=e255]: 
+                  - text: Salidas
+              - listitem [ref=e256]:
+                - link " Unidad" [ref=e257] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/unidad
+                  - generic [ref=e258]: 
+                  - text: Unidad
+              - listitem [ref=e259]:
+                - link " Ventas" [ref=e260] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/ventaminorista
+                  - generic [ref=e261]: 
+                  - text: Ventas
+    - banner [ref=e263]:
+      - list [ref=e264]:
+        - listitem [ref=e265]:
+          - generic [ref=e266]:
+            - button "Avatar José Carrillo" [ref=e267] [cursor=pointer]:
+              - img "Avatar" [ref=e268]
+              - text: José Carrillo
+            - text:  
+        - listitem [ref=e270]:
+          - img [ref=e271]
+      - list [ref=e272]:
+        - text: 
+        - listitem [ref=e273]:
+          - button "" [ref=e274] [cursor=pointer]:
+            - generic [ref=e275]: 
+    - main [ref=e276]:
+      - generic [ref=e278]:
+        - heading "Catálogo de Artículos" [level=1] [ref=e280]
+        - list [ref=e282]:
+          - listitem [ref=e283]: Inicio
+          - listitem [ref=e284]:
+            - text: 
+            - link "Catálogo de Artículos" [ref=e285] [cursor=pointer]:
+              - /url: ""
+      - link "  Registrar Artículo" [ref=e289] [cursor=pointer]:
+        - /url: "#"
+        - generic [ref=e290]:
+          - generic [ref=e291]: 
+          - generic [ref=e292]: 
+          - text: Registrar Artículo
+      - generic [ref=e294]:
+        - list [ref=e295]:
+          - listitem [ref=e296]:
+            - link "Consulta artículos" [ref=e297]:
+              - /url: "#consulta1"
+        - generic [ref=e299]:
+          - generic [ref=e300]:
+            - generic [ref=e304]:
+              - generic [ref=e305]: Seleccionar Cliente
+              - generic [ref=e306]:
+                - combobox [ref=e307]
+                - combobox "TODOS" [ref=e310] [cursor=pointer]:
+                  - generic "TODOS" [ref=e311]
+                - generic [ref=e313]: 
+            - button " BUSCAR ARTÍCULOS" [ref=e316] [cursor=pointer]:
+              - generic [ref=e317]: 
+              - text: BUSCAR ARTÍCULOS
+          - separator [ref=e318]
+          - generic [ref=e321]:
+            - generic [ref=e322] [cursor=pointer]: Copiar
+            - generic [ref=e323] [cursor=pointer]: CSV
+            - generic [ref=e324] [cursor=pointer]: Excel
+            - generic [ref=e325] [cursor=pointer]: PDF
+            - generic [ref=e326] [cursor=pointer]: Imprimir
+          - generic [ref=e327]:
+            - generic [ref=e328]:
+              - generic [ref=e331]:
+                - text: "Elementos :"
+                - combobox "Elementos :" [ref=e332]:
+                  - option "20" [selected]
+                  - option "30"
+                  - option "40"
+                  - option "50"
+              - generic [ref=e335]:
+                - text: "Filtrar :"
+                - searchbox "Filtrar :" [ref=e336]
+            - grid [ref=e340]:
+              - rowgroup [ref=e341]:
+                - 'row "Acciones: Ordernar la columna de forma ascendente Código: Ordernar la columna de forma ascendente Cliente: Ordernar la columna de forma ascendente Nombre artículo: Ordernar la columna de forma ascendente Unidad: Ordernar la columna de forma ascendente Estado" [ref=e342]':
+                  - 'columnheader "Acciones: Ordernar la columna de forma ascendente" [ref=e343] [cursor=pointer]': Acciones 
+                  - 'columnheader "Código: Ordernar la columna de forma ascendente" [ref=e344] [cursor=pointer]': Código 
+                  - 'columnheader "Cliente: Ordernar la columna de forma ascendente" [ref=e345] [cursor=pointer]': Cliente 
+                  - 'columnheader "Nombre artículo: Ordernar la columna de forma ascendente" [ref=e346] [cursor=pointer]': Nombre artículo 
+                  - 'columnheader "Unidad: Ordernar la columna de forma ascendente" [ref=e347] [cursor=pointer]': Unidad 
+                  - columnheader "Estado" [ref=e348]
+              - rowgroup [ref=e349]:
+                - row "No existen elementos" [ref=e350]:
+                  - gridcell "No existen elementos" [ref=e351]
+            - generic [ref=e352]:
+              - status [ref=e354]: No hay elementos a mostrar
+              - list [ref=e357]:
+                - listitem [ref=e358]:
+                  - link "Anterior" [ref=e359]:
+                    - /url: "#"
+                - listitem [ref=e360]:
+                  - link "Siguiente" [ref=e361]:
+                    - /url: "#"
+    - text:                            
+    - contentinfo [ref=e362]:
+      - generic [ref=e363]: L105 EIRL | Todos los derechos reservados | ver 1.1
+      - generic [ref=e364]: "2026"
+  - text:          

@@ -12,7 +12,7 @@ class ServiceOrder extends Model
     protected $table = 'service_orders';
 
     protected $fillable = [
-        'code', 'business_id', 'business_branch_id', 'client_id', 'seller_id',
+        'code', 'order_type', 'business_id', 'business_branch_id', 'client_id', 'seller_id',
         'expected_document_type', 'currency', 'billing_cycle', 'payment_condition', 'installments',
         'issue_date', 'scheduled_at', 'first_due_date', 'order_status', 'billing_status',
         'subtotal', 'tax_amount', 'total', 'paid_amount', 'balance_amount', 'payment_status', 'billed_at',

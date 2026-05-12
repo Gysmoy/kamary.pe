@@ -12,7 +12,7 @@ class ServiceCatalog extends Model
     protected $table = 'services';
 
     protected $fillable = [
-        'code', 'name', 'category', 'subcategory', 'service_type', 'billing_unit',
+        'code', 'service_scope', 'name', 'category', 'subcategory', 'service_type', 'billing_unit',
         'unit_price_pen', 'unit_price_usd', 'applicable_zone', 'linked_vehicle_type',
         'commissions_enabled', 'observations', 'status', 'created_by', 'updated_by',
     ];

@@ -12,6 +12,12 @@ class GeneralServiceController extends BaseServiceCatalogController
         return [
             'moduleTitle' => 'Serv. Almacenamiento - Servicio General',
             'requiredPermission' => 'storage-general-service',
+            'serviceScope' => $this->serviceScope(),
         ];
+    }
+
+    protected function serviceScope(): string
+    {
+        return 'storage_general';
     }
 }

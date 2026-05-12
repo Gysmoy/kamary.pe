@@ -1,0 +1,768 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - button "" [ref=e7] [cursor=pointer]:
+            - generic [ref=e8]: 
+          - generic [ref=e9]: Nombre del Admin
+        - generic [ref=e11]:
+          - list [ref=e12]:
+            - listitem [ref=e13]:
+              - link " Resumen" [ref=e14]:
+                - /url: "#tabs-side-overlay-overview"
+                - generic [ref=e15]: 
+                - text: Resumen
+            - listitem [ref=e16]:
+              - link " Ventas" [ref=e17] [cursor=pointer]:
+                - /url: "#tabs-side-overlay-sales"
+                - generic [ref=e18]: 
+                - text: Ventas
+          - generic [ref=e20]:
+            - generic [ref=e21]:
+              - generic [ref=e22]:
+                - list [ref=e23]:
+                  - listitem [ref=e24]:
+                    - button "" [ref=e25] [cursor=pointer]:
+                      - generic [ref=e26]: 
+                - heading "Actividad Reciente" [level=3] [ref=e27]
+              - list [ref=e29]:
+                - listitem [ref=e30]:
+                  - generic [ref=e31]: 
+                  - generic [ref=e32]: Respondió un mensaje
+                  - generic [ref=e33]:
+                    - text: para
+                    - link "correo@gmail.com" [ref=e34] [cursor=pointer]:
+                      - /url: "#"
+                  - generic [ref=e35]: Hace 10 minutos
+            - generic [ref=e36]:
+              - generic [ref=e37]:
+                - list [ref=e38]:
+                  - listitem [ref=e39]:
+                    - button "" [ref=e40] [cursor=pointer]:
+                      - generic [ref=e41]: 
+                - heading "Últimos Mensajes" [level=3] [ref=e42]
+              - list [ref=e44]:
+                - listitem [ref=e45]:
+                  - generic [ref=e46]: 
+                  - generic [ref=e47]: Titulo de mensaje
+                  - generic [ref=e48]:
+                    - text: de
+                    - link "correo@gmail.com" [ref=e49] [cursor=pointer]:
+                      - /url: "#"
+                  - generic [ref=e50]: Hace 10 minutos
+                - listitem [ref=e51]:
+                  - generic [ref=e52]: 
+                  - generic [ref=e53]: Titulo de mensaje
+                  - generic [ref=e54]:
+                    - text: de
+                    - link "correo@gmail.com" [ref=e55] [cursor=pointer]:
+                      - /url: "#"
+                  - generic [ref=e56]: Hace 10 minutos
+    - navigation [ref=e57]:
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - text: 
+          - link [ref=e62] [cursor=pointer]:
+            - /url: "#"
+            - img [ref=e63]
+        - list [ref=e66]:
+          - listitem [ref=e67]: Navegación
+          - listitem [ref=e68]:
+            - link " Inicio" [ref=e69] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e70]: 
+              - text: Inicio
+            - list:
+              - listitem [ref=e71]:
+                - link " Home" [ref=e72] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/principal
+                  - generic [ref=e73]: 
+                  - text: Home
+          - listitem [ref=e74]:
+            - link "  Sistemas" [ref=e75] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e76]: 
+              - text: Sistemas
+            - list:
+              - listitem [ref=e77]:
+                - link "Gestión de Usuarios" [ref=e78] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/gestiondeperfil/usuario
+                  - generic [ref=e79]: 
+                  - text: Gestión de Usuarios
+          - listitem [ref=e80]:
+            - link "  Almacén" [ref=e81] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e82]: 
+              - text: Almacén
+            - list:
+              - listitem [ref=e83]:
+                - link " Artículos" [ref=e84] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/articulo
+                  - generic [ref=e85]: 
+                  - text: Artículos
+              - listitem [ref=e86]:
+                - link " Inventario" [ref=e87] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/inventario
+                  - generic [ref=e88]: 
+                  - text: Inventario
+              - listitem [ref=e89]:
+                - link " Kardex" [ref=e90] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/kardexarticulo
+                  - generic [ref=e91]: 
+                  - text: Kardex
+              - listitem [ref=e92]:
+                - link " Laboratorios" [ref=e93] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/categoria
+                  - generic [ref=e94]: 
+                  - text: Laboratorios
+              - listitem [ref=e95]:
+                - link " Lotes" [ref=e96] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/lote
+                  - generic [ref=e97]: 
+                  - text: Lotes
+              - listitem [ref=e98]:
+                - link " Nota de Entrada" [ref=e99] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/notaentrada
+                  - generic [ref=e100]: 
+                  - text: Nota de Entrada
+              - listitem [ref=e101]:
+                - link " Nota de Salida" [ref=e102] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/notasalida
+                  - generic [ref=e103]: 
+                  - text: Nota de Salida
+              - listitem [ref=e104]:
+                - link " Proveedores" [ref=e105] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/proveedor
+                  - generic [ref=e106]: 
+                  - text: Proveedores
+              - listitem [ref=e107]:
+                - link " Und. de medida" [ref=e108] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/unidad
+                  - generic [ref=e109]: 
+                  - text: Und. de medida
+          - listitem [ref=e110]:
+            - link "  Administración" [ref=e111] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e112]: 
+              - text: Administración
+            - list:
+              - listitem [ref=e113]:
+                - link " Cuentas por pagar" [ref=e114] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/notaentradapagar
+                  - generic [ref=e115]: 
+                  - text: Cuentas por pagar
+              - listitem [ref=e116]:
+                - link " Gasto" [ref=e117] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/gasto
+                  - generic [ref=e118]: 
+                  - text: Gasto
+              - listitem [ref=e119]:
+                - link " Resumen diario" [ref=e120] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/resumendiario
+                  - generic [ref=e121]: 
+                  - text: Resumen diario
+          - listitem [ref=e122]:
+            - link "  Comercial" [ref=e123] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e124]: 
+              - text: Comercial
+            - list:
+              - listitem [ref=e125]:
+                - link " Cliente" [ref=e126] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/cliente
+                  - generic [ref=e127]: 
+                  - text: Cliente
+              - listitem [ref=e128]:
+                - link "Clientes Eventual" [ref=e129] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/Clientes/clientesEventual
+                  - generic [ref=e130]: 
+                  - text: Clientes Eventual
+              - listitem [ref=e131]:
+                - link " Cuenta por Cobrar" [ref=e132] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/cuentaporpagar
+                  - generic [ref=e133]: 
+                  - text: Cuenta por Cobrar
+              - listitem [ref=e134]:
+                - link " Pedido" [ref=e135] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/caja
+                  - generic [ref=e136]: 
+                  - text: Pedido
+              - listitem [ref=e137]:
+                - link " Tarifario" [ref=e138] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/tarifario
+                  - generic [ref=e139]: 
+                  - text: Tarifario
+          - listitem [ref=e140]:
+            - link "  Serv. Almacenamiento" [ref=e141] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e142]: 
+              - text: Serv. Almacenamiento
+            - list [ref=e143]:
+              - listitem [ref=e144]:
+                - link " Inventario" [ref=e145] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/inventario
+                  - generic [ref=e146]: 
+                  - text: Inventario
+              - listitem [ref=e147]:
+                - link " Clientes" [ref=e148] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacen/clientealmacenamiento
+                  - generic [ref=e149]: 
+                  - text: Clientes
+              - listitem [ref=e150]:
+                - link " O. Servicio" [ref=e151] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/ordenservicio
+                  - generic [ref=e152]: 
+                  - text: O. Servicio
+              - listitem [ref=e153]:
+                - link " Und. de medida" [ref=e154] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/unidad
+                  - generic [ref=e155]: 
+                  - text: Und. de medida
+              - listitem [ref=e156]:
+                - link " Creación del producto" [ref=e157] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/articulo
+                  - generic [ref=e158]: 
+                  - text: Creación del producto
+              - listitem [ref=e159]:
+                - link " Nota de entrada" [ref=e160] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/notaentrada
+                  - generic [ref=e161]: 
+                  - text: Nota de entrada
+              - listitem [ref=e162]:
+                - link " Nota de salida" [ref=e163] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/notasalida
+                  - generic [ref=e164]: 
+                  - text: Nota de salida
+              - listitem [ref=e165]:
+                - link " Kardex" [ref=e166] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/kardex
+                  - generic [ref=e167]: 
+                  - text: Kardex
+              - listitem [ref=e168]:
+                - link " Servicio General" [ref=e169] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/serviciogeneral
+                  - generic [ref=e170]: 
+                  - text: Servicio General
+              - listitem [ref=e171]:
+                - link " Control de Facturación" [ref=e172] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/facturacion
+                  - generic [ref=e173]: 
+                  - text: Control de Facturación
+              - listitem [ref=e174]:
+                - link "O. Servicio General" [ref=e175] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/almacenamiento/ordenserviciogeneral
+                  - generic [ref=e176]: 
+                  - text: O. Servicio General
+          - listitem [ref=e177]:
+            - link "  Despacho" [ref=e178] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e179]: 
+              - text: Despacho
+            - list:
+              - listitem [ref=e180]:
+                - link " Actividad" [ref=e181] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/pedido_requerimiento/pedido
+                  - generic [ref=e182]: 
+                  - text: Actividad
+              - listitem [ref=e183]:
+                - link "Conductor" [ref=e184] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/despacho/conductorasignado
+                  - generic [ref=e185]: 
+                  - text: Conductor
+              - listitem [ref=e186]:
+                - link " Despacho" [ref=e187] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/despacho
+                  - generic [ref=e188]: 
+                  - text: Despacho
+              - listitem [ref=e189]:
+                - link " Vehículo / Zona" [ref=e190] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/despacho/vehiculo
+                  - generic [ref=e191]: 
+                  - text: Vehículo / Zona
+          - listitem [ref=e192]:
+            - link "  Servicios" [ref=e193] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e194]: 
+              - text: Servicios
+            - list:
+              - listitem [ref=e195]:
+                - link "Cliente" [ref=e196] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/Clientes/clientes
+                  - generic [ref=e197]: 
+                  - text: Cliente
+              - listitem [ref=e198]:
+                - link " Facturacion" [ref=e199] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/Facturacion
+                  - generic [ref=e200]: 
+                  - text: Facturacion
+              - listitem [ref=e201]:
+                - link " Orden de servicio" [ref=e202] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/OrdenServicio
+                  - generic [ref=e203]: 
+                  - text: Orden de servicio
+              - listitem [ref=e204]:
+                - link " Servicios" [ref=e205] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/Servicios
+                  - generic [ref=e206]: 
+                  - text: Servicios
+          - listitem [ref=e207]:
+            - link "  Muestras" [ref=e208] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e209]: 
+              - text: Muestras
+            - list:
+              - listitem [ref=e210]:
+                - link " Pedido" [ref=e211] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/PedidoMuestra
+                  - generic [ref=e212]: 
+                  - text: Pedido
+          - listitem [ref=e213]:
+            - link "  Magistrales" [ref=e214] [cursor=pointer]:
+              - /url: "#"
+              - text: 
+              - generic [ref=e215]: 
+              - text: Magistrales
+            - list:
+              - listitem [ref=e216]:
+                - link " Artículos" [ref=e217] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/articulo
+                  - generic [ref=e218]: 
+                  - text: Artículos
+              - listitem [ref=e219]:
+                - link " Categoría" [ref=e220] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/categoria
+                  - generic [ref=e221]: 
+                  - text: Categoría
+              - listitem [ref=e222]:
+                - link " Formatos" [ref=e223] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/formatos
+                  - generic [ref=e224]: 
+                  - text: Formatos
+              - listitem [ref=e225]:
+                - link " Fórmulas" [ref=e226] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/recetaproduccion
+                  - generic [ref=e227]: 
+                  - text: Fórmulas
+              - listitem [ref=e228]:
+                - link " Ingresos" [ref=e229] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/notaentrada
+                  - generic [ref=e230]: 
+                  - text: Ingresos
+              - listitem [ref=e231]:
+                - link " Inventario" [ref=e232] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/inventario
+                  - generic [ref=e233]: 
+                  - text: Inventario
+              - listitem [ref=e234]:
+                - link " Kardex" [ref=e235] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/kardex
+                  - generic [ref=e236]: 
+                  - text: Kardex
+              - listitem [ref=e237]:
+                - link " Laboratorio" [ref=e238] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/laboratorio
+                  - generic [ref=e239]: 
+                  - text: Laboratorio
+              - listitem [ref=e240]:
+                - link " O. Compra" [ref=e241] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/requerimientocompra
+                  - generic [ref=e242]: 
+                  - text: O. Compra
+              - listitem [ref=e243]:
+                - link " O. Producción" [ref=e244] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/ordenproduccion
+                  - generic [ref=e245]: 
+                  - text: O. Producción
+              - listitem [ref=e246]:
+                - link " Proveedor" [ref=e247] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/proveedor
+                  - generic [ref=e248]: 
+                  - text: Proveedor
+              - listitem [ref=e249]:
+                - link " Responsable" [ref=e250] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/responsable
+                  - generic [ref=e251]: 
+                  - text: Responsable
+              - listitem [ref=e252]:
+                - link " Salidas" [ref=e253] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/notasalida
+                  - generic [ref=e254]: 
+                  - text: Salidas
+              - listitem [ref=e255]:
+                - link " Unidad" [ref=e256] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/unidad
+                  - generic [ref=e257]: 
+                  - text: Unidad
+              - listitem [ref=e258]:
+                - link " Ventas" [ref=e259] [cursor=pointer]:
+                  - /url: https://kamary.l105.com/produccion/almacen/ventaminorista
+                  - generic [ref=e260]: 
+                  - text: Ventas
+    - banner [ref=e262]:
+      - list [ref=e263]:
+        - listitem [ref=e264]:
+          - generic [ref=e265]:
+            - button "Avatar José Carrillo" [ref=e266] [cursor=pointer]:
+              - img "Avatar" [ref=e267]
+              - text: José Carrillo
+            - text:  
+        - listitem [ref=e269]:
+          - img [ref=e270]
+      - list [ref=e271]:
+        - text: 
+        - listitem [ref=e272]:
+          - button "" [ref=e273] [cursor=pointer]:
+            - generic [ref=e274]: 
+    - main [ref=e275]:
+      - generic [ref=e277]:
+        - heading "Orden de servicio" [level=1] [ref=e279]
+        - list [ref=e281]:
+          - listitem [ref=e282]: Inicio
+          - listitem [ref=e283]:
+            - text: 
+            - link "caja" [ref=e284] [cursor=pointer]:
+              - /url: ""
+      - generic [ref=e289]:
+        - generic [ref=e290]: 
+        - generic [ref=e291]: 
+        - text: Crear Orden de servicio
+      - generic [ref=e293]:
+        - generic [ref=e294]:
+          - list [ref=e295]:
+            - listitem [ref=e296]:
+              - button "" [ref=e297] [cursor=pointer]:
+                - generic [ref=e298]: 
+          - heading "Listado" [level=3] [ref=e299]
+        - list [ref=e300]:
+          - listitem [ref=e301]:
+            - link "Ordenes de servicio" [ref=e302]:
+              - /url: "#ultimasmenus"
+        - generic [ref=e304]:
+          - generic [ref=e305]:
+            - generic [ref=e306]:
+              - generic [ref=e309]:
+                - generic [ref=e310]: Empresa
+                - combobox [ref=e311]:
+                  - option "KAMARY MEDICAL S.A.C." [selected]
+              - generic [ref=e314]:
+                - generic [ref=e315]: Cliente
+                - combobox [ref=e316]
+                - combobox "Todos" [ref=e319] [cursor=pointer]:
+                  - generic "Todos" [ref=e320]
+              - generic [ref=e323]:
+                - generic [ref=e324]: Fecha Inicio
+                - generic [ref=e325]:
+                  - textbox "Fecha de inicio" [ref=e326]: 2026-05-01
+                  - generic [ref=e328]: 
+              - generic [ref=e331]:
+                - generic [ref=e332]: Fecha Fin
+                - generic [ref=e333]:
+                  - textbox "Fecha de fin" [ref=e334]: 2026-05-12
+                  - generic [ref=e336]: 
+            - button " Filtrar" [ref=e341] [cursor=pointer]:
+              - generic [ref=e342]: 
+              - text: Filtrar
+          - generic [ref=e345]:
+            - generic [ref=e346]:
+              - generic [ref=e349]:
+                - text: "Elementos :"
+                - combobox "Elementos :" [ref=e350]:
+                  - option "20" [selected]
+                  - option "30"
+                  - option "40"
+                  - option "50"
+              - generic [ref=e353]:
+                - text: "Filtrar :"
+                - searchbox "Filtrar :" [ref=e354]
+            - grid [ref=e358]:
+              - rowgroup [ref=e359]:
+                - 'row "ACCIONES: Ordernar la columna de forma ascendente ESTADO: Ordernar la columna de forma ascendente Código: Ordernar la columna de forma ascendente empresa: Ordernar la columna de forma ascendente Cliente: Ordernar la columna de forma ascendente tipo comprobante: Ordernar la columna de forma ascendente Moneda: Ordernar la columna de forma ascendente fecha registro: Ordernar la columna de forma ascendente usuario registro" [ref=e360]':
+                  - 'columnheader "ACCIONES: Ordernar la columna de forma ascendente" [ref=e361] [cursor=pointer]': ACCIONES 
+                  - 'columnheader "ESTADO: Ordernar la columna de forma ascendente" [ref=e362] [cursor=pointer]': ESTADO 
+                  - 'columnheader "Código: Ordernar la columna de forma ascendente" [ref=e363] [cursor=pointer]': Código 
+                  - 'columnheader "empresa: Ordernar la columna de forma ascendente" [ref=e364] [cursor=pointer]': empresa 
+                  - 'columnheader "Cliente: Ordernar la columna de forma ascendente" [ref=e365] [cursor=pointer]': Cliente 
+                  - 'columnheader "tipo comprobante: Ordernar la columna de forma ascendente" [ref=e366] [cursor=pointer]': tipo comprobante 
+                  - 'columnheader "Moneda: Ordernar la columna de forma ascendente" [ref=e367] [cursor=pointer]': Moneda 
+                  - 'columnheader "fecha registro: Ordernar la columna de forma ascendente" [ref=e368] [cursor=pointer]': fecha registro 
+                  - columnheader "usuario registro" [ref=e369]
+              - rowgroup [ref=e370]:
+                - row "  Aprobado OS-00539 KAMARY MEDICAL S.A.C. CONSORCIO INIBO PERU Factura Soles 2026-04-27 10:37:23 GCARRION" [ref=e371]:
+                  - gridcell " " [ref=e372]:
+                    - generic [ref=e374] [cursor=pointer]: 
+                    - generic [ref=e376] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e377]
+                  - gridcell "OS-00539" [ref=e378]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e379]
+                  - gridcell "CONSORCIO INIBO PERU" [ref=e380]
+                  - gridcell "Factura" [ref=e381]
+                  - gridcell "Soles" [ref=e382]
+                  - gridcell "2026-04-27 10:37:23" [ref=e383]
+                  - gridcell "GCARRION" [ref=e384]
+                - row "  Aprobado OS-00538 KAMARY MEDICAL S.A.C. AURA WELLNESS S.A.C. Nota de pedido Soles 2026-04-27 10:20:27 GCARRION" [ref=e385]:
+                  - gridcell " " [ref=e386]:
+                    - generic [ref=e388] [cursor=pointer]: 
+                    - generic [ref=e390] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e391]
+                  - gridcell "OS-00538" [ref=e392]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e393]
+                  - gridcell "AURA WELLNESS S.A.C." [ref=e394]
+                  - gridcell "Nota de pedido" [ref=e395]
+                  - gridcell "Soles" [ref=e396]
+                  - gridcell "2026-04-27 10:20:27" [ref=e397]
+                  - gridcell "GCARRION" [ref=e398]
+                - row "  Aprobado OS-00536 KAMARY MEDICAL S.A.C. NATGEN S.A.C. Factura Soles 2026-04-17 13:32:10 GCARRION" [ref=e399]:
+                  - gridcell " " [ref=e400]:
+                    - generic [ref=e402] [cursor=pointer]: 
+                    - generic [ref=e404] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e405]
+                  - gridcell "OS-00536" [ref=e406]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e407]
+                  - gridcell "NATGEN S.A.C." [ref=e408]
+                  - gridcell "Factura" [ref=e409]
+                  - gridcell "Soles" [ref=e410]
+                  - gridcell "2026-04-17 13:32:10" [ref=e411]
+                  - gridcell "GCARRION" [ref=e412]
+                - row "  Aprobado OS-00535 KAMARY MEDICAL S.A.C. DISTRIBUIDORA DROGUERIA MYM PERU MEDIC E.I.R.L. Factura Soles 2026-04-14 17:57:27 GCARRION" [ref=e413]:
+                  - gridcell " " [ref=e414]:
+                    - generic [ref=e416] [cursor=pointer]: 
+                    - generic [ref=e418] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e419]
+                  - gridcell "OS-00535" [ref=e420]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e421]
+                  - gridcell "DISTRIBUIDORA DROGUERIA MYM PERU MEDIC E.I.R.L." [ref=e422]
+                  - gridcell "Factura" [ref=e423]
+                  - gridcell "Soles" [ref=e424]
+                  - gridcell "2026-04-14 17:57:27" [ref=e425]
+                  - gridcell "GCARRION" [ref=e426]
+                - row "  Aprobado OS-00534 KAMARY MEDICAL S.A.C. ADVANCED EQUIPMENTS & SUPPLIES S.A.C. Factura Soles 2026-04-08 18:01:38 GCARRION" [ref=e427]:
+                  - gridcell " " [ref=e428]:
+                    - generic [ref=e430] [cursor=pointer]: 
+                    - generic [ref=e432] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e433]
+                  - gridcell "OS-00534" [ref=e434]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e435]
+                  - gridcell "ADVANCED EQUIPMENTS & SUPPLIES S.A.C." [ref=e436]
+                  - gridcell "Factura" [ref=e437]
+                  - gridcell "Soles" [ref=e438]
+                  - gridcell "2026-04-08 18:01:38" [ref=e439]
+                  - gridcell "GCARRION" [ref=e440]
+                - row "  Aprobado OS-00533 KAMARY MEDICAL S.A.C. CORPORACION LUXOR S.R.L. Factura Soles 2026-04-07 17:07:58 GCARRION" [ref=e441]:
+                  - gridcell " " [ref=e442]:
+                    - generic [ref=e444] [cursor=pointer]: 
+                    - generic [ref=e446] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e447]
+                  - gridcell "OS-00533" [ref=e448]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e449]
+                  - gridcell "CORPORACION LUXOR S.R.L." [ref=e450]
+                  - gridcell "Factura" [ref=e451]
+                  - gridcell "Soles" [ref=e452]
+                  - gridcell "2026-04-07 17:07:58" [ref=e453]
+                  - gridcell "GCARRION" [ref=e454]
+                - row "  Aprobado OS-00532 KAMARY MEDICAL S.A.C. BIOTECNOMICA S.A.C. Factura Soles 2026-04-06 16:39:31 GCARRION" [ref=e455]:
+                  - gridcell " " [ref=e456]:
+                    - generic [ref=e458] [cursor=pointer]: 
+                    - generic [ref=e460] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e461]
+                  - gridcell "OS-00532" [ref=e462]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e463]
+                  - gridcell "BIOTECNOMICA S.A.C." [ref=e464]
+                  - gridcell "Factura" [ref=e465]
+                  - gridcell "Soles" [ref=e466]
+                  - gridcell "2026-04-06 16:39:31" [ref=e467]
+                  - gridcell "GCARRION" [ref=e468]
+                - row "  Aprobado OS-00531 KAMARY MEDICAL S.A.C. BIOTECNOMICA S.A.C. Factura Soles 2026-04-06 16:27:15 GCARRION" [ref=e469]:
+                  - gridcell " " [ref=e470]:
+                    - generic [ref=e472] [cursor=pointer]: 
+                    - generic [ref=e474] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e475]
+                  - gridcell "OS-00531" [ref=e476]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e477]
+                  - gridcell "BIOTECNOMICA S.A.C." [ref=e478]
+                  - gridcell "Factura" [ref=e479]
+                  - gridcell "Soles" [ref=e480]
+                  - gridcell "2026-04-06 16:27:15" [ref=e481]
+                  - gridcell "GCARRION" [ref=e482]
+                - row "  Aprobado OS-00530 KAMARY MEDICAL S.A.C. BIOTECNOMICA S.A.C. Factura Soles 2026-04-06 16:24:52 GCARRION" [ref=e483]:
+                  - gridcell " " [ref=e484]:
+                    - generic [ref=e486] [cursor=pointer]: 
+                    - generic [ref=e488] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e489]
+                  - gridcell "OS-00530" [ref=e490]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e491]
+                  - gridcell "BIOTECNOMICA S.A.C." [ref=e492]
+                  - gridcell "Factura" [ref=e493]
+                  - gridcell "Soles" [ref=e494]
+                  - gridcell "2026-04-06 16:24:52" [ref=e495]
+                  - gridcell "GCARRION" [ref=e496]
+                - row "  Aprobado OS-00529 KAMARY MEDICAL S.A.C. DLN CAPITAL S.A.C. Factura Soles 2026-04-06 12:58:09 GCARRION" [ref=e497]:
+                  - gridcell " " [ref=e498]:
+                    - generic [ref=e500] [cursor=pointer]: 
+                    - generic [ref=e502] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e503]
+                  - gridcell "OS-00529" [ref=e504]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e505]
+                  - gridcell "DLN CAPITAL S.A.C." [ref=e506]
+                  - gridcell "Factura" [ref=e507]
+                  - gridcell "Soles" [ref=e508]
+                  - gridcell "2026-04-06 12:58:09" [ref=e509]
+                  - gridcell "GCARRION" [ref=e510]
+                - row "  Aprobado OS-00528 KAMARY MEDICAL S.A.C. VITAL-PHARMA CORPORATION S.A.C. Factura Soles 2026-03-27 11:15:51 GCARRION" [ref=e511]:
+                  - gridcell " " [ref=e512]:
+                    - generic [ref=e514] [cursor=pointer]: 
+                    - generic [ref=e516] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e517]
+                  - gridcell "OS-00528" [ref=e518]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e519]
+                  - gridcell "VITAL-PHARMA CORPORATION S.A.C." [ref=e520]
+                  - gridcell "Factura" [ref=e521]
+                  - gridcell "Soles" [ref=e522]
+                  - gridcell "2026-03-27 11:15:51" [ref=e523]
+                  - gridcell "GCARRION" [ref=e524]
+                - row "  Aprobado OS-00527 KAMARY MEDICAL S.A.C. LOGISTICA BIOMEDICA DEL PERU S.A.C. Factura Soles 2026-03-26 09:41:41 GCARRION" [ref=e525]:
+                  - gridcell " " [ref=e526]:
+                    - generic [ref=e528] [cursor=pointer]: 
+                    - generic [ref=e530] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e531]
+                  - gridcell "OS-00527" [ref=e532]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e533]
+                  - gridcell "LOGISTICA BIOMEDICA DEL PERU S.A.C." [ref=e534]
+                  - gridcell "Factura" [ref=e535]
+                  - gridcell "Soles" [ref=e536]
+                  - gridcell "2026-03-26 09:41:41" [ref=e537]
+                  - gridcell "GCARRION" [ref=e538]
+                - row "  Aprobado OS-00526 KAMARY MEDICAL S.A.C. LOGISTICA BIOMEDICA DEL PERU S.A.C. Factura Soles 2026-03-26 09:40:14 GCARRION" [ref=e539]:
+                  - gridcell " " [ref=e540]:
+                    - generic [ref=e542] [cursor=pointer]: 
+                    - generic [ref=e544] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e545]
+                  - gridcell "OS-00526" [ref=e546]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e547]
+                  - gridcell "LOGISTICA BIOMEDICA DEL PERU S.A.C." [ref=e548]
+                  - gridcell "Factura" [ref=e549]
+                  - gridcell "Soles" [ref=e550]
+                  - gridcell "2026-03-26 09:40:14" [ref=e551]
+                  - gridcell "GCARRION" [ref=e552]
+                - row "  Aprobado OS-00525 KAMARY MEDICAL S.A.C. LABORATORIO Y REACTIVOS S.A.C. Factura Soles 2026-03-24 16:36:15 GCARRION" [ref=e553]:
+                  - gridcell " " [ref=e554]:
+                    - generic [ref=e556] [cursor=pointer]: 
+                    - generic [ref=e558] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e559]
+                  - gridcell "OS-00525" [ref=e560]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e561]
+                  - gridcell "LABORATORIO Y REACTIVOS S.A.C." [ref=e562]
+                  - gridcell "Factura" [ref=e563]
+                  - gridcell "Soles" [ref=e564]
+                  - gridcell "2026-03-24 16:36:15" [ref=e565]
+                  - gridcell "GCARRION" [ref=e566]
+                - row "  Aprobado OS-00524 KAMARY MEDICAL S.A.C. NATGEN S.A.C. Factura Soles 2026-03-24 14:09:25 GCARRION" [ref=e567]:
+                  - gridcell " " [ref=e568]:
+                    - generic [ref=e570] [cursor=pointer]: 
+                    - generic [ref=e572] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e573]
+                  - gridcell "OS-00524" [ref=e574]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e575]
+                  - gridcell "NATGEN S.A.C." [ref=e576]
+                  - gridcell "Factura" [ref=e577]
+                  - gridcell "Soles" [ref=e578]
+                  - gridcell "2026-03-24 14:09:25" [ref=e579]
+                  - gridcell "GCARRION" [ref=e580]
+                - row "  Aprobado OS-00523 KAMARY MEDICAL S.A.C. BOTANIX PHARMACEUTICALS S.A.C. Factura Soles 2026-03-24 11:51:26 GCARRION" [ref=e581]:
+                  - gridcell " " [ref=e582]:
+                    - generic [ref=e584] [cursor=pointer]: 
+                    - generic [ref=e586] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e587]
+                  - gridcell "OS-00523" [ref=e588]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e589]
+                  - gridcell "BOTANIX PHARMACEUTICALS S.A.C." [ref=e590]
+                  - gridcell "Factura" [ref=e591]
+                  - gridcell "Soles" [ref=e592]
+                  - gridcell "2026-03-24 11:51:26" [ref=e593]
+                  - gridcell "GCARRION" [ref=e594]
+                - row "  Aprobado OS-00522 KAMARY MEDICAL S.A.C. BOTANIX PHARMACEUTICALS S.A.C. Factura Soles 2026-03-24 11:45:02 GCARRION" [ref=e595]:
+                  - gridcell " " [ref=e596]:
+                    - generic [ref=e598] [cursor=pointer]: 
+                    - generic [ref=e600] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e601]
+                  - gridcell "OS-00522" [ref=e602]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e603]
+                  - gridcell "BOTANIX PHARMACEUTICALS S.A.C." [ref=e604]
+                  - gridcell "Factura" [ref=e605]
+                  - gridcell "Soles" [ref=e606]
+                  - gridcell "2026-03-24 11:45:02" [ref=e607]
+                  - gridcell "GCARRION" [ref=e608]
+                - row "  Aprobado OS-00521 KAMARY MEDICAL S.A.C. TRAUMA CORPORATION S.A.C. Factura Soles 2026-03-23 11:37:39 GCARRION" [ref=e609]:
+                  - gridcell " " [ref=e610]:
+                    - generic [ref=e612] [cursor=pointer]: 
+                    - generic [ref=e614] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e615]
+                  - gridcell "OS-00521" [ref=e616]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e617]
+                  - gridcell "TRAUMA CORPORATION S.A.C." [ref=e618]
+                  - gridcell "Factura" [ref=e619]
+                  - gridcell "Soles" [ref=e620]
+                  - gridcell "2026-03-23 11:37:39" [ref=e621]
+                  - gridcell "GCARRION" [ref=e622]
+                - row "  Aprobado OS-00519 KAMARY MEDICAL S.A.C. SKINSCIENCE S.A.C. Factura Soles 2026-03-20 11:42:30 GCARRION" [ref=e623]:
+                  - gridcell " " [ref=e624]:
+                    - generic [ref=e626] [cursor=pointer]: 
+                    - generic [ref=e628] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e629]
+                  - gridcell "OS-00519" [ref=e630]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e631]
+                  - gridcell "SKINSCIENCE S.A.C." [ref=e632]
+                  - gridcell "Factura" [ref=e633]
+                  - gridcell "Soles" [ref=e634]
+                  - gridcell "2026-03-20 11:42:30" [ref=e635]
+                  - gridcell "GCARRION" [ref=e636]
+                - row "  Aprobado OS-00518 KAMARY MEDICAL S.A.C. INVERSIONES SAVA'S & K S.A.C. Factura Soles 2026-03-11 15:19:17 GCARRION" [ref=e637]:
+                  - gridcell " " [ref=e638]:
+                    - generic [ref=e640] [cursor=pointer]: 
+                    - generic [ref=e642] [cursor=pointer]: 
+                  - gridcell "Aprobado" [ref=e643]
+                  - gridcell "OS-00518" [ref=e644]
+                  - gridcell "KAMARY MEDICAL S.A.C." [ref=e645]
+                  - gridcell "INVERSIONES SAVA'S & K S.A.C." [ref=e646]
+                  - gridcell "Factura" [ref=e647]
+                  - gridcell "Soles" [ref=e648]
+                  - gridcell "2026-03-11 15:19:17" [ref=e649]
+                  - gridcell "GCARRION" [ref=e650]
+            - generic [ref=e651]:
+              - status [ref=e653]: 100 elementos (Página 1 de 5)
+              - list [ref=e656]:
+                - listitem [ref=e657]:
+                  - link "Anterior" [ref=e658]:
+                    - /url: "#"
+                - listitem [ref=e659]:
+                  - link "1" [ref=e660]:
+                    - /url: "#"
+                - listitem [ref=e661]:
+                  - link "2" [ref=e662] [cursor=pointer]:
+                    - /url: "#"
+                - listitem [ref=e663]:
+                  - link "3" [ref=e664] [cursor=pointer]:
+                    - /url: "#"
+                - listitem [ref=e665]:
+                  - link "4" [ref=e666] [cursor=pointer]:
+                    - /url: "#"
+                - listitem [ref=e667]:
+                  - link "5" [ref=e668] [cursor=pointer]:
+                    - /url: "#"
+                - listitem [ref=e669]:
+                  - link "Siguiente" [ref=e670] [cursor=pointer]:
+                    - /url: "#"
+    - text:    
+    - contentinfo [ref=e671]:
+      - generic [ref=e672]: L105 EIRL | Todos los derechos reservados | ver 1.1
+      - generic [ref=e673]: "2026"
+  - text:          
