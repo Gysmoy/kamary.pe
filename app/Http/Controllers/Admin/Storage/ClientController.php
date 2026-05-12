@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Storage;
 
 use App\Http\Controllers\Admin\ClientController as BaseClientController;
 use Illuminate\Http\Request;
+use Spatie\Permission\Models\Role;
 
 class ClientController extends BaseClientController
 {
@@ -15,6 +16,7 @@ class ClientController extends BaseClientController
             'defaultClientKind' => 'regular',
             'initialQuickFilter' => 'all',
             'storageContext' => true,
+            'roles' => Role::all(['name']),
         ]);
     }
 

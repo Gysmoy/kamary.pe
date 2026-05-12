@@ -28,6 +28,7 @@ class User extends Authenticatable
         'email_verified_at',
         'password',
         'scope',
+        'storage_client_id',
         'document_type',
         'document_number',
         'phone_prefix',
@@ -91,5 +92,10 @@ class User extends Authenticatable
             'seller_id',
             'delivery_point_id'
         );
+    }
+
+    public function storageClient()
+    {
+        return $this->belongsTo(Client::class, 'storage_client_id');
     }
 }

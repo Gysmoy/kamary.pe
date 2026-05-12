@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\BasicController;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\File;
 use SoDe\Extend\JSON;
 use Spatie\Permission\Models\Role;
@@ -29,11 +30,32 @@ class UserController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::with(['roles']);
+        return $model::with(['roles'])
+            ->select('users.*')
+            ->selectRaw('users.id AS entity_id');
+    }
+
+    public function beforeSave(Request $request)
+    {
+        $body = $request->all();
+
+        if (array_key_exists('storage_client_id', $body)) {
+            if (Schema::hasColumn('users', 'storage_client_id')) {
+                $body['storage_client_id'] = $body['storage_client_id'] === '' || $body['storage_client_id'] === null
+                    ? null
+                    : (int) $body['storage_client_id'];
+            } else {
+                unset($body['storage_client_id']);
+            }
+        }
+
+        return $body;
     }
 
     public function afterSave(Request $request, object $jpa, bool $isNew)
     {
+        if (!$request->has('roles')) return;
+
         $userJpa = User::find($jpa->id);
         $userJpa->syncRoles($request->roles);
     }
