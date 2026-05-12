@@ -277,8 +277,8 @@ class ClientController extends BasicController
         $body['contract_due_days'] = $this->toNullableInt($body['contract_due_days'] ?? null);
         $body['commercial_channel'] = trim((string)($body['commercial_channel'] ?? '')) ?: null;
         $body['segment'] = trim((string)($body['segment'] ?? '')) ?: null;
-        $body['email'] = trim((string)($body['email'] ?? '')) ?: null;
-        $body['billing_email'] = trim((string)($body['billing_email'] ?? '')) ?: null;
+        $body['email'] = $this->normalizeEmailList($body['email'] ?? null, 'Correo principal');
+        $body['billing_email'] = $this->normalizeEmailList($body['billing_email'] ?? null, 'Correo facturacion');
         $body['primary_contact'] = trim((string)($body['primary_contact'] ?? '')) ?: null;
         $body['primary_contact_phone'] = trim((string)($body['primary_contact_phone'] ?? '')) ?: null;
         $body['phone'] = trim((string)($body['phone'] ?? '')) ?: null;
@@ -288,6 +288,33 @@ class ClientController extends BasicController
         $body['full_address'] = trim((string)($body['full_address'] ?? '')) ?: null;
 
         return $body;
+    }
+
+    private function normalizeEmailList(mixed $value, string $label): ?string
+    {
+        $parts = is_array($value)
+            ? $value
+            : preg_split('/[,\n;]+/', (string)($value ?? ''));
+
+        $emails = [];
+        $seen = [];
+        foreach ($parts ?: [] as $part) {
+            $email = trim((string)$part);
+            if ($email === '') {
+                continue;
+            }
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new \Exception("{$label} contiene un correo invalido: {$email}");
+            }
+            $key = strtolower($email);
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $emails[] = $email;
+        }
+
+        return count($emails) ? implode(', ', $emails) : null;
     }
 
     public function afterSave(Request $request, object $jpa, bool $isNew)

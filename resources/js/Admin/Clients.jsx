@@ -35,6 +35,18 @@ const getRefValue = (ref) => ref?.current?.value ?? ''
 const normalizePrefix = (value) => (value ?? '').toString().replace(/\D+/g, '')
 const normalizeDigits = (value) => (value ?? '').toString().replace(/\D+/g, '')
 const booleanLabel = (value) => value ? 'Si' : 'No'
+const splitEmailList = (value) => (value ?? '').toString().split(/[,\n;]+/).map(email => email.trim()).filter(Boolean)
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+const normalizeEmailList = (value) => {
+  const seen = new Set()
+  return splitEmailList(value).filter(email => {
+    const key = email.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).join(', ')
+}
+const invalidEmailList = (value) => splitEmailList(value).filter(email => !isValidEmail(email))
 
 const formatDate = (value) => {
   if (!value) return '-'
@@ -306,7 +318,19 @@ const Clients = ({
   const onModalSubmit = async (e) => {
     e.preventDefault()
 
-    const emailValue = getRefValue(emailRef).trim()
+    const rawEmailValue = getRefValue(emailRef).trim()
+    const invalidEmails = storageContext ? invalidEmailList(rawEmailValue) : []
+    if (invalidEmails.length) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Correo invalido',
+        text: `Revisa: ${invalidEmails.join(', ')}`
+      })
+      return
+    }
+
+    const emailValue = storageContext ? normalizeEmailList(rawEmailValue) : rawEmailValue
+    if (storageContext) setRefValue(emailRef, emailValue)
 
     const request = {
       id: getRefValue(idRef) || undefined,
@@ -577,7 +601,13 @@ const Clients = ({
         {storageContext && <>
           <InputFormGroup eRef={shortCodeRef} label='Código corto' col='col-md-6' />
           <InputFormGroup eRef={addressRef} label='Dirección' col='col-md-6' />
-          <InputFormGroup eRef={emailRef} label='Emails para Envío de Comprobantes' placeholder='Para:' col='col-md-6' />
+          <InputFormGroup
+            eRef={emailRef}
+            label='Emails para Envío de Comprobantes'
+            placeholder='Para: correo1@dominio.com, correo2@dominio.com'
+            specification='Puedes separar varios correos con coma o punto y coma.'
+            col='col-md-6'
+          />
           <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-6' />
           <SelectFormGroup eRef={statusRef} label='Estado' col='col-md-6' required>
             <option value='1'>ACTIVO</option>
