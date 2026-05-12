@@ -46,6 +46,7 @@ use App\Http\Controllers\Admin\Magistrales\SaleController as AdminMagistralesSal
 use App\Http\Controllers\Admin\Magistrales\SupplierController as AdminMagistralesSupplierController;
 use App\Http\Controllers\Admin\Magistrales\UnitController as AdminMagistralesUnitController;
 use App\Http\Controllers\Admin\Storage\BillingControlController as AdminStorageBillingControlController;
+use App\Http\Controllers\Admin\Storage\ClientContractController as AdminStorageClientContractController;
 use App\Http\Controllers\Admin\Storage\ClientController as AdminStorageClientController;
 use App\Http\Controllers\Admin\Storage\ClientNotificationController as AdminStorageClientNotificationController;
 use App\Http\Controllers\Admin\Storage\ClientTariffController as AdminStorageClientTariffController;
@@ -344,6 +345,11 @@ Route::middleware('auth')->group(function () {
             Route::get('/client-tariffs/client/{clientId}', [AdminStorageClientTariffController::class, 'byClient']);
             Route::post('/client-tariffs', [AdminStorageClientTariffController::class, 'save']);
             Route::delete('/client-tariffs/{id}', [AdminStorageClientTariffController::class, 'delete']);
+
+            Route::post('/client-contracts', [AdminStorageClientContractController::class, 'save']);
+            Route::post('/client-contracts/paginate', [AdminStorageClientContractController::class, 'paginate']);
+            Route::get('/client-contracts/{id}/file', [AdminStorageClientContractController::class, 'file']);
+            Route::delete('/client-contracts/{id}', [AdminStorageClientContractController::class, 'delete']);
 
             Route::post('/units', [AdminStorageUnitController::class, 'save']);
             Route::post('/units/import', [AdminStorageUnitController::class, 'import']);

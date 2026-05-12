@@ -16,6 +16,7 @@ import ClientsRest from '../Actions/Admin/ClientsRest';
 import UsersRest from '../Actions/Admin/UsersRest';
 import StorageClientNotificationsRest from '../Actions/Admin/StorageClientNotificationsRest';
 import StorageClientTariffsRest from '../Actions/Admin/StorageClientTariffsRest';
+import StorageClientContractsRest from '../Actions/Admin/StorageClientContractsRest';
 import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
 import renderGridEditLink from '../Utils/renderGridEditLink';
 
@@ -23,6 +24,7 @@ const clientsRest = new ClientsRest()
 const usersRest = new UsersRest()
 const storageClientNotificationsRest = new StorageClientNotificationsRest()
 const storageClientTariffsRest = new StorageClientTariffsRest()
+const storageClientContractsRest = new StorageClientContractsRest()
 
 const QUICK_FILTERS = [
   { key: 'all', label: 'Todos' },
@@ -246,6 +248,8 @@ const Clients = ({
   const notificationsModalRef = useRef()
   const notificationsGridRef = useRef()
   const tariffModalRef = useRef()
+  const contractsModalRef = useRef()
+  const contractsGridRef = useRef()
   const lookupTimeoutRef = useRef()
   const pendingModalDataRef = useRef(null)
 
@@ -288,6 +292,11 @@ const Clients = ({
   const tariffIdRef = useRef()
   const tariffTemperatureRef = useRef()
   const tariffCurrencyRef = useRef()
+  const contractIdRef = useRef()
+  const contractCodeRef = useRef()
+  const contractStartRef = useRef()
+  const contractEndRef = useRef()
+  const contractFileRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
   const [isUserEditing, setIsUserEditing] = useState(false)
@@ -306,6 +315,7 @@ const Clients = ({
   const [selectedClientForUsers, setSelectedClientForUsers] = useState(null)
   const [selectedClientForNotifications, setSelectedClientForNotifications] = useState(null)
   const [selectedClientForTariff, setSelectedClientForTariff] = useState(null)
+  const [selectedClientForContracts, setSelectedClientForContracts] = useState(null)
   const [userStatus, setUserStatus] = useState('1')
   const [notificationValue, setNotificationValue] = useState('')
   const [tariffTemperature, setTariffTemperature] = useState('')
@@ -585,6 +595,12 @@ const Clients = ({
     instance?.refresh()
   }
 
+  const refreshContractsGrid = () => {
+    if (!contractsGridRef.current) return
+    const instance = $(contractsGridRef.current).dxDataGrid('instance')
+    instance?.refresh()
+  }
+
   const selectedClientId = selectedClientForUsers?.entity_id ?? selectedClientForUsers?.id ?? null
   const selectedClientName = selectedClientForUsers?.display_name ?? selectedClientForUsers?.full_name ?? selectedClientForUsers?.business_name ?? ''
   const usersFilterValue = selectedClientId ? ['storage_client_id', '=', selectedClientId] : ['storage_client_id', '=', null]
@@ -593,6 +609,10 @@ const Clients = ({
   const notificationsFilterValue = selectedNotificationClientId ? ['client_id', '=', selectedNotificationClientId] : ['client_id', '=', null]
   const selectedTariffClientId = selectedClientForTariff?.entity_id ?? selectedClientForTariff?.id ?? null
   const selectedTariffClientName = selectedClientForTariff?.display_name ?? selectedClientForTariff?.full_name ?? selectedClientForTariff?.business_name ?? ''
+  const selectedContractClientId = selectedClientForContracts?.entity_id ?? selectedClientForContracts?.id ?? null
+  const selectedContractClientName = selectedClientForContracts?.display_name ?? selectedClientForContracts?.full_name ?? selectedClientForContracts?.business_name ?? ''
+  const selectedContractClientDocument = selectedClientForContracts?.document_number ?? ''
+  const contractsFilterValue = selectedContractClientId ? ['client_id', '=', selectedContractClientId] : ['client_id', '=', null]
 
   const getNotificationLabel = (value) => {
     const option = notificationOptions.find(current => getNotificationOptionValue(current) === `${value ?? ''}`)
@@ -756,6 +776,84 @@ const Clients = ({
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
+  const clearContractForm = () => {
+    setRefValue(contractIdRef, '')
+    setRefValue(contractCodeRef, '')
+    setRefValue(contractStartRef, '')
+    setRefValue(contractEndRef, '')
+    setRefValue(contractFileRef, '')
+  }
+
+  const onContractsModalOpen = (data) => {
+    setSelectedClientForContracts(data)
+    clearContractForm()
+    setTimeout(() => {
+      $(contractsModalRef.current).modal('show')
+      setTimeout(refreshContractsGrid, 150)
+    }, 0)
+  }
+
+  const onContractEditClicked = (data = null) => {
+    clearContractForm()
+    if (!data?.id) return
+
+    setRefValue(contractIdRef, data.id)
+    setRefValue(contractCodeRef, data.contract_code ?? '')
+    setRefValue(contractStartRef, data.starts_at ? data.starts_at.toString().slice(0, 10) : '')
+    setRefValue(contractEndRef, data.ends_at ? data.ends_at.toString().slice(0, 10) : '')
+  }
+
+  const onContractSubmit = async (e) => {
+    e.preventDefault()
+    if (!selectedContractClientId) return
+
+    const code = getRefValue(contractCodeRef).trim()
+    const startsAt = getRefValue(contractStartRef)
+    const endsAt = getRefValue(contractEndRef)
+    const id = getRefValue(contractIdRef)
+    const file = contractFileRef.current?.files?.[0] ?? null
+
+    if (!code || !startsAt || !endsAt || (!id && !file)) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Completa el contrato',
+        text: 'Debes ingresar codigo, fechas y archivo.'
+      })
+      return
+    }
+
+    const request = new FormData()
+    if (id) request.append('id', id)
+    request.append('client_id', selectedContractClientId)
+    request.append('contract_code', code)
+    request.append('starts_at', startsAt)
+    request.append('ends_at', endsAt)
+    if (file) request.append('file', file)
+
+    const result = await storageClientContractsRest.save(request)
+    if (!result) return
+
+    clearContractForm()
+    refreshContractsGrid()
+  }
+
+  const onContractDeleteClicked = async (id) => {
+    const { isConfirmed } = await Swal.fire({
+      title: 'Eliminar contrato',
+      text: 'Estas seguro de eliminar este contrato? Esta accion no se puede revertir',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar'
+    })
+    if (!isConfirmed) return
+
+    const result = await storageClientContractsRest.delete(id)
+    if (!result) return
+    if (getRefValue(contractIdRef) === `${id}`) clearContractForm()
+    refreshContractsGrid()
+  }
+
   const clearUserForm = () => {
     setRefValue(userIdRef, '')
     setRefValue(userNameRef, '')
@@ -906,6 +1004,12 @@ const Clients = ({
                 title: 'Tarifario',
                 icon: 'mdi mdi-currency-usd',
                 onClick: () => onTariffModalOpen(data)
+              }))
+              container.append(DxButton({
+                className: 'btn btn-xs btn-soft-secondary',
+                title: 'Contrato cliente',
+                icon: 'mdi mdi-file-document',
+                onClick: () => onContractsModalOpen(data)
               }))
               container.append(DxButton({
                 className: 'btn btn-xs btn-soft-warning',
@@ -1159,6 +1263,153 @@ const Clients = ({
     </Modal>
 
     {storageContext && <>
+      <Modal
+        id='modal-storage-contracts'
+        modalRef={contractsModalRef}
+        title='Contrato cliente'
+        size='xl'
+        hideFooter
+        onSubmit={onContractSubmit}
+        onClose={() => {
+          setSelectedClientForContracts(null)
+          clearContractForm()
+        }}
+      >
+        <input ref={contractIdRef} type='hidden' />
+        <div className='row'>
+          <div className='form-group col-md-4 mb-2'>
+            <label className='form-label mb-1'>RUC Cliente</label>
+            <input className='form-control' value={selectedContractClientDocument} readOnly />
+          </div>
+          <div className='form-group col-md-8 mb-2'>
+            <label className='form-label mb-1'>Razon social</label>
+            <input className='form-control' value={selectedContractClientName} readOnly />
+          </div>
+          <InputFormGroup eRef={contractCodeRef} label='Codigo Contrato' col='col-md-3' required />
+          <div className='form-group col-md-3 mb-2'>
+            <label htmlFor='storage-contract-start' className='form-label mb-1'>Fecha Inicio Contrato <b className='text-danger'>*</b></label>
+            <input id='storage-contract-start' ref={contractStartRef} type='date' className='form-control' required />
+          </div>
+          <div className='form-group col-md-3 mb-2'>
+            <label htmlFor='storage-contract-end' className='form-label mb-1'>Fecha Fin Contrato <b className='text-danger'>*</b></label>
+            <input id='storage-contract-end' ref={contractEndRef} type='date' className='form-control' required />
+          </div>
+          <div className='form-group col-md-3 mb-2'>
+            <label htmlFor='storage-contract-file' className='form-label mb-1'>File</label>
+            <input
+              id='storage-contract-file'
+              ref={contractFileRef}
+              type='file'
+              className='form-control'
+              accept='.pdf,.doc,.docx,.jpg,.jpeg,.png'
+            />
+          </div>
+        </div>
+        <div className='d-flex flex-wrap justify-content-center gap-4 my-3'>
+          <button type='button' className='btn btn-light' data-bs-dismiss='modal'>
+            <i className='mdi mdi-close me-1'></i>
+            Cerrar
+          </button>
+          <button type='submit' className='btn btn-primary' disabled={!selectedContractClientId}>
+            <i className='mdi mdi-plus me-1'></i>
+            Registrar
+          </button>
+        </div>
+        <hr />
+        <Table
+          gridRef={contractsGridRef}
+          title='Contratos registrados'
+          rest={storageClientContractsRest}
+          filterValue={contractsFilterValue}
+          allowQueryBuilder={false}
+          pageSize={10}
+          toolBar={(container) => {
+            container.unshift({
+              widget: 'dxButton', location: 'after',
+              options: {
+                icon: 'refresh',
+                hint: 'Refrescar tabla',
+                onClick: refreshContractsGrid
+              }
+            })
+          }}
+          columns={[
+            { dataField: 'id', caption: '#', width: 70 },
+            {
+              caption: 'Acciones',
+              width: 110,
+              allowFiltering: false,
+              allowExporting: false,
+              cellTemplate: (container, { data }) => {
+                container.css('text-overflow', 'unset')
+                container.append(DxButton({
+                  className: 'btn btn-xs btn-soft-info',
+                  title: 'Editar contrato',
+                  icon: 'mdi mdi-pencil',
+                  onClick: () => onContractEditClicked(data)
+                }))
+                container.append(DxButton({
+                  className: 'btn btn-xs btn-soft-danger',
+                  title: 'Eliminar contrato',
+                  icon: 'mdi mdi-delete',
+                  onClick: () => onContractDeleteClicked(data.id)
+                }))
+              }
+            },
+            { dataField: 'client_id', visible: false },
+            {
+              dataField: 'status',
+              caption: 'Estado',
+              width: 95,
+              dataType: 'boolean',
+              cellTemplate: (container, { data }) => {
+                const isActive = data.status === true || data.status === 1
+                container.html(`<span class="badge ${isActive ? 'bg-success' : 'badge-soft-secondary'}">${isActive ? 'Activo' : 'Inactivo'}</span>`)
+              }
+            },
+            { dataField: 'contract_code', caption: 'Codigo', minWidth: 140 },
+            {
+              dataField: 'starts_at',
+              caption: 'Fecha inicio',
+              width: 130,
+              cellTemplate: (container, { data }) => container.text(formatDate(data.starts_at?.toString().slice(0, 10)))
+            },
+            {
+              dataField: 'ends_at',
+              caption: 'Fecha fin',
+              width: 130,
+              cellTemplate: (container, { data }) => container.text(formatDate(data.ends_at?.toString().slice(0, 10)))
+            },
+            {
+              dataField: 'file_name',
+              caption: 'File',
+              minWidth: 220,
+              allowFiltering: false,
+              allowSorting: false,
+              cellTemplate: (container, { data }) => {
+                container.empty()
+                if (!data.file_path) return container.text('-')
+                $('<a></a>')
+                  .attr({
+                    href: `/api/admin/storage/client-contracts/${data.id}/file`,
+                    target: '_blank',
+                    rel: 'noopener noreferrer'
+                  })
+                  .text(data.file_name || 'Ver archivo')
+                  .appendTo(container)
+              }
+            },
+            {
+              dataField: 'created_at',
+              caption: 'Fecha registro',
+              width: 165,
+              cellTemplate: (container, { data }) => container.text(formatDateTime(data.created_at))
+            },
+            { dataField: 'creator_label', caption: 'Usuario registro', minWidth: 150, allowFiltering: false, allowSorting: false },
+          ]}
+        />
+      </Modal>
+
       <Modal
         id='modal-storage-tariff'
         modalRef={tariffModalRef}
