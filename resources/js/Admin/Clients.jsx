@@ -369,7 +369,7 @@ const Clients = ({
           <h4 className='mb-1'>Lista de {sectionTitle}</h4>
           <small className='text-muted'>{storageContext ? 'Clientes con servicio de almacenamiento.' : (serviceContext ? 'Clientes asociados a servicios y contratos.' : 'Modulo unificado para clientes regulares y eventuales.')}</small>
         </div>
-        <div className='d-flex flex-wrap align-items-center gap-2'>
+        {!storageContext && <div className='d-flex flex-wrap align-items-center gap-2'>
           {QUICK_FILTERS.map(filter => (
             <button
               key={filter.key}
@@ -381,7 +381,7 @@ const Clients = ({
             </button>
           ))}
           <span className='badge badge-soft-secondary'>{totalRows} registros</span>
-        </div>
+        </div>}
       </div>}
       rest={clientsRest}
       filterValue={filterValue}
