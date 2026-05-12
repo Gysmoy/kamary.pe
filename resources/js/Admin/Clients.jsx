@@ -999,6 +999,7 @@ const Clients = ({
               }
             },
             { dataField: 'entity_id', caption: 'ID', width: 80, allowFiltering: false, allowSorting: false },
+            { dataField: 'storage_client_id', visible: false },
             {
               dataField: 'roles',
               caption: 'Perfil',
