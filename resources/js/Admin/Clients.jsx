@@ -92,6 +92,7 @@ const Clients = ({
   const fullNameRef = useRef()
   const isPlatformRef = useRef()
   const hasStorageServiceRef = useRef()
+  const storageTariffEnabledRef = useRef()
   const contractDueDaysRef = useRef()
   const commercialChannelRef = useRef()
   const segmentRef = useRef()
@@ -104,6 +105,7 @@ const Clients = ({
   const shortCodeRef = useRef()
   const addressRef = useRef()
   const notesRef = useRef()
+  const statusRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
   const [clientKind, setClientKind] = useState(defaultClientKind)
@@ -142,6 +144,7 @@ const Clients = ({
     setStorageServiceValue(storageContext ? '1' : '0')
     setRefValue(isPlatformRef, '0')
     setRefValue(hasStorageServiceRef, storageContext ? '1' : '0')
+    setRefValue(storageTariffEnabledRef, '0')
     setRefValue(contractDueDaysRef, '')
     setRefValue(commercialChannelRef, '')
     setRefValue(segmentRef, '')
@@ -156,6 +159,7 @@ const Clients = ({
     setUbigeoLocation(EMPTY_UBIGEO_SELECTION)
     setRefValue(addressRef, '')
     setRefValue(notesRef, '')
+    setRefValue(statusRef, '1')
   }
 
   const applyApiClientData = (client = {}, kind = clientKind) => {
@@ -240,6 +244,7 @@ const Clients = ({
     setStorageServiceValue(nextStorageValue)
     setRefValue(isPlatformRef, nextPlatformValue)
     setRefValue(hasStorageServiceRef, nextStorageValue)
+    setRefValue(storageTariffEnabledRef, data.storage_tariff_enabled ? '1' : '0')
     setRefValue(contractDueDaysRef, data.contract_due_days ?? '')
     setRefValue(commercialChannelRef, data.commercial_channel ?? '')
     setRefValue(segmentRef, data.segment ?? '')
@@ -258,6 +263,7 @@ const Clients = ({
     })
     setRefValue(addressRef, data.full_address ?? data.address ?? '')
     setRefValue(notesRef, data.notes ?? '')
+    setRefValue(statusRef, data.status === false || data.status === 0 ? '0' : '1')
   }
 
   const onModalOpen = (data = null, forcedKind = null) => {
@@ -300,28 +306,32 @@ const Clients = ({
   const onModalSubmit = async (e) => {
     e.preventDefault()
 
+    const emailValue = getRefValue(emailRef).trim()
+
     const request = {
       id: getRefValue(idRef) || undefined,
-      data_source: getRefValue(dataSourceRef) || (clientKind === 'eventual' ? 'eventual_client' : 'client'),
-      client_kind: getRefValue(clientKindRef),
+      data_source: storageContext ? 'client' : (getRefValue(dataSourceRef) || (clientKind === 'eventual' ? 'eventual_client' : 'client')),
+      client_kind: storageContext ? 'regular' : getRefValue(clientKindRef),
       document_type: getRefValue(documentTypeRef),
       document_number: normalizeDigits(getRefValue(documentNumberRef)),
       full_name: getRefValue(fullNameRef).trim(),
-      is_platform: getRefValue(isPlatformRef),
+      is_platform: storageContext ? false : getRefValue(isPlatformRef),
       has_storage_service: storageContext ? true : getRefValue(hasStorageServiceRef),
-      contract_due_days: getRefValue(contractDueDaysRef).trim(),
-      commercial_channel: getRefValue(commercialChannelRef).trim(),
-      segment: getRefValue(segmentRef).trim(),
-      email: getRefValue(emailRef).trim(),
-      billing_email: getRefValue(billingEmailRef).trim(),
-      primary_contact: getRefValue(primaryContactRef).trim(),
-      primary_contact_phone: getRefValue(primaryContactPhoneRef).trim(),
+      storage_tariff_enabled: storageContext ? getRefValue(storageTariffEnabledRef) : undefined,
+      contract_due_days: storageContext ? '' : getRefValue(contractDueDaysRef).trim(),
+      commercial_channel: storageContext ? '' : getRefValue(commercialChannelRef).trim(),
+      segment: storageContext ? '' : getRefValue(segmentRef).trim(),
+      email: emailValue,
+      billing_email: storageContext ? emailValue : getRefValue(billingEmailRef).trim(),
+      primary_contact: storageContext ? '' : getRefValue(primaryContactRef).trim(),
+      primary_contact_phone: storageContext ? '' : getRefValue(primaryContactPhoneRef).trim(),
       phone: getRefValue(phoneRef).trim(),
-      phone_prefix: normalizePrefix(getRefValue(phonePrefixRef)),
+      phone_prefix: normalizePrefix(getRefValue(phonePrefixRef)) || '51',
       short_code: getRefValue(shortCodeRef).trim(),
-      ubigeo: ubigeoLocation.ubigeo?.trim?.() ?? '',
+      ubigeo: storageContext ? '' : (ubigeoLocation.ubigeo?.trim?.() ?? ''),
       full_address: getRefValue(addressRef).trim(),
       notes: getRefValue(notesRef).trim(),
+      status: getRefValue(statusRef) || undefined,
     }
 
     const result = await clientsRest.save(request)
@@ -511,29 +521,33 @@ const Clients = ({
       ]}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? `Editar cliente ${kindLabel}` : `Agregar cliente ${kindLabel}`} onSubmit={onModalSubmit} size='lg' btnSubmitText='Guardar'>
+    <Modal modalRef={modalRef} title={storageContext ? 'Formulario cliente' : (isEditing ? `Editar cliente ${kindLabel}` : `Agregar cliente ${kindLabel}`)} onSubmit={onModalSubmit} size={storageContext ? 'xl' : 'lg'} btnSubmitText={storageContext ? 'Registrar cliente' : 'Guardar'}>
       <div className='row'>
         <input ref={idRef} type='hidden' />
         <input ref={dataSourceRef} type='hidden' />
+        {storageContext && <>
+          <input ref={clientKindRef} type='hidden' />
+          <input ref={phonePrefixRef} type='hidden' />
+        </>}
 
-        <SelectFormGroup
-          eRef={clientKindRef}
-          label='Tipo de cliente'
-          col='col-md-4'
-          required
-          disabled={isEditing}
-          value={clientKind}
-          onChange={(e) => setClientKind(e.target.value || defaultClientKind)}
-          effectWith={[clientKind]}
-        >
-          <option value='regular'>Regular</option>
-          <option value='eventual'>Eventual</option>
-        </SelectFormGroup>
+        {!storageContext && <SelectFormGroup
+            eRef={clientKindRef}
+            label='Tipo de cliente'
+            col='col-md-4'
+            required
+            disabled={isEditing}
+            value={clientKind}
+            onChange={(e) => setClientKind(e.target.value || defaultClientKind)}
+            effectWith={[clientKind]}
+          >
+            <option value='regular'>Regular</option>
+            <option value='eventual'>Eventual</option>
+          </SelectFormGroup>}
 
         <SelectFormGroup
           eRef={documentTypeRef}
-          label='Tipo Doc.'
-          col='col-md-4'
+          label={storageContext ? 'Tipo de Documento' : 'Tipo Doc.'}
+          col={storageContext ? 'col-md-2' : 'col-md-4'}
           required
           disabled={isEditing}
           value={documentType}
@@ -541,14 +555,14 @@ const Clients = ({
           effectWith={[documentType]}
         >
           <option value='dni'>DNI</option>
-          <option value='ce'>CE</option>
+          <option value='ce'>{storageContext ? 'CARNE DE EXTRANJERIA' : 'CE'}</option>
           <option value='ruc'>RUC</option>
         </SelectFormGroup>
 
         <InputFormGroup
           eRef={documentNumberRef}
-          label={`Documento${isSearchingDocument ? ' (consultando...)' : ''}`}
-          col='col-md-4'
+          label={`${storageContext ? 'N° Documento' : 'Documento'}${isSearchingDocument ? ' (consultando...)' : ''}`}
+          col={storageContext ? 'col-md-4' : 'col-md-4'}
           required
           disabled={isEditing}
           max={docMaxLength}
@@ -559,8 +573,26 @@ const Clients = ({
           }}
         />
 
-        <InputFormGroup eRef={fullNameRef} label={displayNameLabel} col='col-12' required disabled={isIdentityBlocked} />
-        {!isEventual && (
+        <InputFormGroup eRef={fullNameRef} label={storageContext ? 'Razón Social' : displayNameLabel} col={storageContext ? 'col-md-6' : 'col-12'} required disabled={isIdentityBlocked} />
+        {storageContext && <>
+          <InputFormGroup eRef={shortCodeRef} label='Código corto' col='col-md-6' />
+          <InputFormGroup eRef={addressRef} label='Dirección' col='col-md-6' />
+          <InputFormGroup eRef={emailRef} label='Emails para Envío de Comprobantes' placeholder='Para:' col='col-md-6' />
+          <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-6' />
+          <SelectFormGroup eRef={statusRef} label='Estado' col='col-md-6' required>
+            <option value='1'>ACTIVO</option>
+            <option value='0'>INACTIVO</option>
+          </SelectFormGroup>
+          <SelectFormGroup
+            eRef={storageTariffEnabledRef}
+            label={<span>Tarifario por cliente <span className='text-danger'>(Referente al tarifario de servicio de almacen)</span></span>}
+            col='col-md-6'
+          >
+            <option value='0'>Inactivo</option>
+            <option value='1'>Activo</option>
+          </SelectFormGroup>
+        </>}
+        {!storageContext && !isEventual && (
           <UbigeoCascade
             value={ubigeoLocation}
             onChange={setUbigeoLocation}
@@ -570,9 +602,9 @@ const Clients = ({
             districtCol='col-md-4'
           />
         )}
-        <TextareaFormGroup eRef={addressRef} label='Direccion completa' col='col-12' rows={2} />
+        {!storageContext && <TextareaFormGroup eRef={addressRef} label='Direccion completa' col='col-12' rows={2} />}
 
-        {!isEventual && (
+        {!storageContext && !isEventual && (
           <>
             <SelectFormGroup eRef={isPlatformRef} label='Es plataforma' col='col-md-4' value={platformValue} onChange={(e) => setPlatformValue(e.target.value)} effectWith={[platformValue]}>
               <option value='0'>No</option>
@@ -588,13 +620,13 @@ const Clients = ({
           </>
         )}
 
-        <InputFormGroup eRef={emailRef} label='Correo principal' col={isEventual ? 'col-md-6' : 'col-md-6'} type='email' />
-        {!isEventual && <InputFormGroup eRef={billingEmailRef} label='Correo facturacion' col='col-md-6' type='email' />}
+        {!storageContext && <InputFormGroup eRef={emailRef} label='Correo principal' col={isEventual ? 'col-md-6' : 'col-md-6'} type='email' />}
+        {!storageContext && !isEventual && <InputFormGroup eRef={billingEmailRef} label='Correo facturacion' col='col-md-6' type='email' />}
 
-        <InputFormGroup eRef={primaryContactRef} label='Contacto principal' col={isEventual ? 'col-md-6' : 'col-md-6'} />
-        {!isEventual && <InputFormGroup eRef={primaryContactPhoneRef} label='Telefono contacto' col='col-md-6' />}
+        {!storageContext && <InputFormGroup eRef={primaryContactRef} label='Contacto principal' col={isEventual ? 'col-md-6' : 'col-md-6'} />}
+        {!storageContext && !isEventual && <InputFormGroup eRef={primaryContactPhoneRef} label='Telefono contacto' col='col-md-6' />}
 
-        <SelectFormGroup
+        {!storageContext && <SelectFormGroup
           eRef={phonePrefixRef}
           label='Prefijo celular'
           col='col-md-4'
@@ -608,11 +640,11 @@ const Clients = ({
               {prefix.beautyCode} - {prefix.country}
             </option>
           ))}
-        </SelectFormGroup>
-        <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-4' />
-        {!isEventual && <InputFormGroup eRef={shortCodeRef} label='Codigo corto' col='col-md-4' />}
+        </SelectFormGroup>}
+        {!storageContext && <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-4' />}
+        {!storageContext && !isEventual && <InputFormGroup eRef={shortCodeRef} label='Codigo corto' col='col-md-4' />}
 
-        {!isEventual && (
+        {!storageContext && !isEventual && (
           <>
             <InputFormGroup eRef={commercialChannelRef} label='Canal comercial' col='col-md-6' />
             <InputFormGroup eRef={segmentRef} label='Segmento' col='col-md-6' />

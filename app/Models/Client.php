@@ -16,6 +16,7 @@ class Client extends Model
         'full_name',
         'is_platform',
         'has_storage_service',
+        'storage_tariff_enabled',
         'contract_due_days',
         'commercial_channel',
         'segment',
@@ -37,6 +38,7 @@ class Client extends Model
         'status' => 'boolean',
         'is_platform' => 'boolean',
         'has_storage_service' => 'boolean',
+        'storage_tariff_enabled' => 'boolean',
         'contract_due_days' => 'integer',
     ];
 

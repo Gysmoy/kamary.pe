@@ -47,6 +47,7 @@ class ClientsRest extends BasicRest {
       full_name: request.full_name,
       is_platform: request.is_platform,
       has_storage_service: isStoragePath() ? true : request.has_storage_service,
+      storage_tariff_enabled: request.storage_tariff_enabled,
       contract_due_days: request.contract_due_days,
       commercial_channel: request.commercial_channel,
       segment: request.segment,
@@ -59,6 +60,7 @@ class ClientsRest extends BasicRest {
       short_code: request.short_code,
       ubigeo: request.ubigeo,
       full_address: request.full_address,
+      status: request.status,
     }
   }
 

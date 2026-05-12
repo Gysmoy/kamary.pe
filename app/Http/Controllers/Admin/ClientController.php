@@ -14,6 +14,7 @@ use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\File;
 use SoDe\Extend\JSON;
 use SoDe\Extend\Response;
@@ -118,6 +119,10 @@ class ClientController extends BasicController
             ->whereNotNull('eventual_client_id')
             ->groupBy('eventual_client_id');
 
+        $storageTariffSelect = Schema::hasColumn('clients', 'storage_tariff_enabled')
+            ? 'clients.storage_tariff_enabled'
+            : '0';
+
         $regularQuery = DB::table('clients')
             ->leftJoinSub($regularOrders, 'purchase_summary', function ($join) {
                 $join->on('purchase_summary.customer_id', '=', 'clients.id');
@@ -137,6 +142,7 @@ class ClientController extends BasicController
                 COALESCE(clients.full_name, '') AS display_name,
                 clients.is_platform,
                 clients.has_storage_service,
+                {$storageTariffSelect} AS storage_tariff_enabled,
                 clients.contract_due_days,
                 clients.commercial_channel,
                 clients.segment,
@@ -180,6 +186,7 @@ class ClientController extends BasicController
                 COALESCE(eventual_clients.business_name, '') AS display_name,
                 0 AS is_platform,
                 0 AS has_storage_service,
+                0 AS storage_tariff_enabled,
                 NULL AS contract_due_days,
                 NULL AS commercial_channel,
                 NULL AS segment,
@@ -249,7 +256,10 @@ class ClientController extends BasicController
 
         if (!isset($body['id']) || !$body['id']) {
             $body['created_by'] = $userId;
-            $body['status'] = true;
+            $body['status'] = $this->toBoolean($body['status'] ?? true);
+        }
+        if (array_key_exists('status', $body)) {
+            $body['status'] = $this->toBoolean($body['status']);
         }
         $body['updated_by'] = $userId;
 
@@ -259,6 +269,11 @@ class ClientController extends BasicController
         $body['full_name'] = $fullName !== '' ? $fullName : null;
         $body['is_platform'] = $this->toBoolean($body['is_platform'] ?? false);
         $body['has_storage_service'] = $this->toBoolean($body['has_storage_service'] ?? false);
+        if (Schema::hasColumn('clients', 'storage_tariff_enabled')) {
+            $body['storage_tariff_enabled'] = $this->toBoolean($body['storage_tariff_enabled'] ?? false);
+        } else {
+            unset($body['storage_tariff_enabled']);
+        }
         $body['contract_due_days'] = $this->toNullableInt($body['contract_due_days'] ?? null);
         $body['commercial_channel'] = trim((string)($body['commercial_channel'] ?? '')) ?: null;
         $body['segment'] = trim((string)($body['segment'] ?? '')) ?: null;
