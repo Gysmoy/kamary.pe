@@ -14,11 +14,13 @@ import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import UbigeoCascade from '@Adminto/form/UbigeoCascade';
 import ClientsRest from '../Actions/Admin/ClientsRest';
 import UsersRest from '../Actions/Admin/UsersRest';
+import StorageClientNotificationsRest from '../Actions/Admin/StorageClientNotificationsRest';
 import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
 import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const clientsRest = new ClientsRest()
 const usersRest = new UsersRest()
+const storageClientNotificationsRest = new StorageClientNotificationsRest()
 
 const QUICK_FILTERS = [
   { key: 'all', label: 'Todos' },
@@ -53,6 +55,15 @@ const normalizeEmailList = (value) => {
 }
 const invalidEmailList = (value) => splitEmailList(value).filter(email => !isValidEmail(email))
 const DEFAULT_STORAGE_USER_SCOPES = ['kamary-peru']
+const DEFAULT_STORAGE_NOTIFICATION_OPTIONS = [
+  {
+    value: 'storage_invoice_notification',
+    label: 'Notificacion de Envio de Facturas a los Clientes - Kamary medical'
+  }
+]
+
+const getNotificationOptionValue = (option) => (option?.value ?? option?.id ?? '').toString()
+const getNotificationOptionLabel = (option) => option?.label ?? option?.name ?? option?.caption ?? ''
 
 const EmailTagsInput = forwardRef(({
   col = 'col-12',
@@ -169,6 +180,11 @@ const formatDate = (value) => {
   return date.toLocaleDateString('es-PE')
 }
 
+const formatDateTime = (value) => {
+  if (!value) return '-'
+  return value.toString().replace('T', ' ').slice(0, 19)
+}
+
 const resolveQuickFilterValue = (quickFilter) => {
   switch (quickFilter) {
     case 'regular':
@@ -204,12 +220,15 @@ const Clients = ({
   initialQuickFilter = 'all',
   storageContext = false,
   serviceContext = false,
+  storageNotificationOptions = [],
 }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const usersModalRef = useRef()
   const userFormModalRef = useRef()
   const usersGridRef = useRef()
+  const notificationsModalRef = useRef()
+  const notificationsGridRef = useRef()
   const lookupTimeoutRef = useRef()
   const pendingModalDataRef = useRef(null)
 
@@ -245,9 +264,14 @@ const Clients = ({
   const userPhonePrefixRef = useRef()
   const userPhoneRef = useRef()
   const userStatusRef = useRef()
+  const notificationIdRef = useRef()
+  const notificationSelectRef = useRef()
+  const notificationToRef = useRef()
+  const notificationCcRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
   const [isUserEditing, setIsUserEditing] = useState(false)
+  const [isNotificationEditing, setIsNotificationEditing] = useState(false)
   const [clientKind, setClientKind] = useState(defaultClientKind)
   const [documentType, setDocumentType] = useState('dni')
   const [isSearchingDocument, setIsSearchingDocument] = useState(false)
@@ -260,7 +284,9 @@ const Clients = ({
   const [totalRows, setTotalRows] = useState(0)
   const [ubigeoLocation, setUbigeoLocation] = useState(EMPTY_UBIGEO_SELECTION)
   const [selectedClientForUsers, setSelectedClientForUsers] = useState(null)
+  const [selectedClientForNotifications, setSelectedClientForNotifications] = useState(null)
   const [userStatus, setUserStatus] = useState('1')
+  const [notificationValue, setNotificationValue] = useState('')
 
   const isEventual = clientKind === 'eventual'
   const isRuc = documentType === 'ruc'
@@ -274,6 +300,7 @@ const Clients = ({
   const displayNameLabel = isEventual
     ? (isRuc ? 'Razon social' : 'Nombre o razon social')
     : (isRuc ? 'Razon social' : 'Nombre completo')
+  const notificationOptions = storageNotificationOptions.length ? storageNotificationOptions : DEFAULT_STORAGE_NOTIFICATION_OPTIONS
 
   const clearForm = (nextKind = defaultClientKind) => {
     setRefValue(idRef, '')
@@ -529,9 +556,33 @@ const Clients = ({
     instance?.refresh()
   }
 
+  const refreshNotificationsGrid = () => {
+    if (!notificationsGridRef.current) return
+    const instance = $(notificationsGridRef.current).dxDataGrid('instance')
+    instance?.refresh()
+  }
+
   const selectedClientId = selectedClientForUsers?.entity_id ?? selectedClientForUsers?.id ?? null
   const selectedClientName = selectedClientForUsers?.display_name ?? selectedClientForUsers?.full_name ?? selectedClientForUsers?.business_name ?? ''
   const usersFilterValue = selectedClientId ? ['storage_client_id', '=', selectedClientId] : ['storage_client_id', '=', null]
+  const selectedNotificationClientId = selectedClientForNotifications?.entity_id ?? selectedClientForNotifications?.id ?? null
+  const selectedNotificationClientName = selectedClientForNotifications?.display_name ?? selectedClientForNotifications?.full_name ?? selectedClientForNotifications?.business_name ?? ''
+  const notificationsFilterValue = selectedNotificationClientId ? ['client_id', '=', selectedNotificationClientId] : ['client_id', '=', null]
+
+  const getNotificationLabel = (value) => {
+    const option = notificationOptions.find(current => getNotificationOptionValue(current) === `${value ?? ''}`)
+    return getNotificationOptionLabel(option)
+  }
+
+  const renderEmailList = (container, value) => {
+    container.empty()
+    const emails = splitEmailList(value)
+    if (!emails.length) {
+      container.text('-')
+      return
+    }
+    emails.forEach(email => $('<div></div>').text(email).appendTo(container))
+  }
 
   const onUsersModalOpen = (data) => {
     setSelectedClientForUsers(data)
@@ -539,6 +590,95 @@ const Clients = ({
       $(usersModalRef.current).modal('show')
       setTimeout(refreshUsersGrid, 150)
     }, 0)
+  }
+
+  const onNotificationsModalOpen = (data) => {
+    setSelectedClientForNotifications(data)
+    setTimeout(() => {
+      $(notificationsModalRef.current).modal('show')
+      setTimeout(refreshNotificationsGrid, 150)
+    }, 0)
+  }
+
+  const clearNotificationForm = () => {
+    setRefValue(notificationIdRef, '')
+    setRefValue(notificationSelectRef, '')
+    setRefValue(notificationToRef, '')
+    setRefValue(notificationCcRef, '')
+    setNotificationValue('')
+    setIsNotificationEditing(false)
+  }
+
+  const onNotificationEditClicked = (data = null) => {
+    clearNotificationForm()
+    if (!data?.id) return
+
+    const nextValue = data.notification_key ?? data.mailing_template_id ?? ''
+    setRefValue(notificationIdRef, data.id)
+    setRefValue(notificationSelectRef, nextValue)
+    setRefValue(notificationToRef, data.to_emails ?? '')
+    setRefValue(notificationCcRef, data.cc_emails ?? '')
+    setNotificationValue(nextValue)
+    setIsNotificationEditing(true)
+  }
+
+  const onNotificationSubmit = async (e) => {
+    e.preventDefault()
+    if (!selectedNotificationClientId) return
+
+    const currentNotificationValue = notificationValue || getRefValue(notificationSelectRef)
+    const currentNotificationName = getNotificationLabel(currentNotificationValue)
+    if (!currentNotificationValue || !currentNotificationName) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Selecciona una notificacion',
+        text: 'Debes elegir la notificacion antes de registrar.'
+      })
+      return
+    }
+
+    const toEmails = normalizeEmailList(getRefValue(notificationToRef))
+    const ccEmails = normalizeEmailList(getRefValue(notificationCcRef))
+    const invalidEmails = [...invalidEmailList(toEmails), ...invalidEmailList(ccEmails)]
+    if (!toEmails || invalidEmails.length) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Correos invalidos',
+        text: invalidEmails.length ? `Revisa: ${invalidEmails.join(', ')}` : 'Agrega al menos un correo en Para.'
+      })
+      return
+    }
+
+    const result = await storageClientNotificationsRest.save({
+      id: getRefValue(notificationIdRef) || undefined,
+      client_id: selectedNotificationClientId,
+      notification_key: currentNotificationValue,
+      notification_name: currentNotificationName,
+      to_emails: toEmails,
+      cc_emails: ccEmails,
+      status: true
+    })
+    if (!result) return
+
+    clearNotificationForm()
+    refreshNotificationsGrid()
+  }
+
+  const onNotificationDeleteClicked = async (id) => {
+    const { isConfirmed } = await Swal.fire({
+      title: 'Eliminar notificacion',
+      text: 'Estas seguro de eliminar esta notificacion? Esta accion no se puede revertir',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar'
+    })
+    if (!isConfirmed) return
+
+    const result = await storageClientNotificationsRest.delete(id)
+    if (!result) return
+    if (getRefValue(notificationIdRef) === `${id}`) clearNotificationForm()
+    refreshNotificationsGrid()
   }
 
   const clearUserForm = () => {
@@ -676,7 +816,7 @@ const Clients = ({
       columns={[
         {
           caption: 'Acciones',
-          width: storageContext ? 150 : 120,
+          width: storageContext ? 185 : 120,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
             container.append(DxButton({
@@ -691,6 +831,12 @@ const Clients = ({
                 title: 'Mantenimiento usuarios',
                 icon: 'mdi mdi-account-group',
                 onClick: () => onUsersModalOpen(data)
+              }))
+              container.append(DxButton({
+                className: 'btn btn-xs btn-soft-info',
+                title: 'Notificaciones cliente',
+                icon: 'mdi mdi-send',
+                onClick: () => onNotificationsModalOpen(data)
               }))
             }
             container.append(DxButton({
@@ -932,6 +1078,144 @@ const Clients = ({
     </Modal>
 
     {storageContext && <>
+      <Modal
+        id='modal-storage-notifications'
+        modalRef={notificationsModalRef}
+        title='Notificaciones cliente'
+        size='xl'
+        hideFooter
+        onSubmit={onNotificationSubmit}
+        onClose={() => {
+          setSelectedClientForNotifications(null)
+          clearNotificationForm()
+        }}
+      >
+        <div className='d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3'>
+          <h5 className='mb-0'>Notificaciones registradas</h5>
+          {selectedNotificationClientName && <span className='badge badge-soft-secondary fs-14'>{selectedNotificationClientName}</span>}
+        </div>
+        <input ref={notificationIdRef} type='hidden' />
+        <div className='row'>
+          <SelectFormGroup
+            id='storage-client-notification-select'
+            eRef={notificationSelectRef}
+            label='Notificacion:'
+            col='col-md-4'
+            required
+            value={notificationValue}
+            onChange={(e) => setNotificationValue(e.target.value)}
+            effectWith={[notificationOptions.length]}
+            dropdownParent='#modal-storage-notifications'
+          >
+            <option value=''>Seleccione</option>
+            {notificationOptions.map((option, index) => {
+              const value = getNotificationOptionValue(option)
+              return <option key={`notification-option-${value || index}`} value={value}>{getNotificationOptionLabel(option)}</option>
+            })}
+          </SelectFormGroup>
+          <EmailTagsInput
+            ref={notificationToRef}
+            label='Para:'
+            placeholder='Para:'
+            col='col-12'
+          />
+          <EmailTagsInput
+            ref={notificationCcRef}
+            label='Copia:'
+            placeholder='Copia:'
+            col='col-12'
+          />
+        </div>
+        <div className='d-flex flex-wrap justify-content-center gap-2 my-3'>
+          <button
+            type='button'
+            className='btn btn-light'
+            data-bs-dismiss='modal'
+          >
+            <i className='mdi mdi-close me-1'></i>
+            Cerrar
+          </button>
+          <button type='submit' className='btn btn-primary' disabled={!selectedNotificationClientId}>
+            <i className='mdi mdi-plus me-1'></i>
+            {isNotificationEditing ? 'Guardar' : 'Registrar'}
+          </button>
+        </div>
+        <Table
+          gridRef={notificationsGridRef}
+          title='Notificaciones registradas'
+          rest={storageClientNotificationsRest}
+          filterValue={notificationsFilterValue}
+          allowQueryBuilder={false}
+          pageSize={10}
+          toolBar={(container) => {
+            container.unshift({
+              widget: 'dxButton', location: 'after',
+              options: {
+                icon: 'refresh',
+                hint: 'Refrescar tabla',
+                onClick: refreshNotificationsGrid
+              }
+            })
+          }}
+          columns={[
+            { dataField: 'id', caption: '#', width: 70 },
+            {
+              caption: 'Acciones',
+              width: 110,
+              allowFiltering: false,
+              allowExporting: false,
+              cellTemplate: (container, { data }) => {
+                container.css('text-overflow', 'unset')
+                container.append(DxButton({
+                  className: 'btn btn-xs btn-soft-info',
+                  title: 'Editar notificacion',
+                  icon: 'mdi mdi-pencil',
+                  onClick: () => onNotificationEditClicked(data)
+                }))
+                container.append(DxButton({
+                  className: 'btn btn-xs btn-soft-danger',
+                  title: 'Eliminar notificacion',
+                  icon: 'mdi mdi-delete',
+                  onClick: () => onNotificationDeleteClicked(data.id)
+                }))
+              }
+            },
+            { dataField: 'client_id', visible: false },
+            { dataField: 'notification_key', visible: false },
+            {
+              dataField: 'status',
+              caption: 'Estado',
+              width: 95,
+              dataType: 'boolean',
+              cellTemplate: (container, { data }) => {
+                const isActive = data.status === true || data.status === 1
+                container.html(`<span class="badge ${isActive ? 'bg-success' : 'badge-soft-secondary'}">${isActive ? 'Activo' : 'Inactivo'}</span>`)
+              }
+            },
+            { dataField: 'notification_name', caption: 'Notificacion', minWidth: 270 },
+            {
+              dataField: 'to_emails',
+              caption: 'Para',
+              minWidth: 220,
+              cellTemplate: (container, { data }) => renderEmailList(container, data.to_emails)
+            },
+            {
+              dataField: 'cc_emails',
+              caption: 'Copia',
+              minWidth: 180,
+              cellTemplate: (container, { data }) => renderEmailList(container, data.cc_emails)
+            },
+            { dataField: 'creator_label', caption: 'Usuario registro', minWidth: 150, allowFiltering: false, allowSorting: false },
+            {
+              dataField: 'created_at',
+              caption: 'Fecha registro',
+              width: 165,
+              cellTemplate: (container, { data }) => container.text(formatDateTime(data.created_at))
+            },
+          ]}
+        />
+      </Modal>
+
       <Modal
         modalRef={usersModalRef}
         title='Mantenimiento usuarios'

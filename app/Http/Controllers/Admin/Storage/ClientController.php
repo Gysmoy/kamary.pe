@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Admin\Storage;
 
 use App\Http\Controllers\Admin\ClientController as BaseClientController;
+use App\Models\MailingTemplate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class ClientController extends BaseClientController
 {
@@ -15,6 +17,7 @@ class ClientController extends BaseClientController
             'defaultClientKind' => 'regular',
             'initialQuickFilter' => 'all',
             'storageContext' => true,
+            'storageNotificationOptions' => $this->notificationOptions(),
         ]);
     }
 
@@ -26,5 +29,41 @@ class ClientController extends BaseClientController
         ]);
 
         return parent::beforeSave($request);
+    }
+
+    private function notificationOptions(): array
+    {
+        $options = [
+            [
+                'value' => 'storage_invoice_notification',
+                'label' => 'Notificación de Envío de Facturas a los Clientes - Kamary medical',
+            ],
+        ];
+
+        if (!Schema::hasTable('mailing_templates')) {
+            return $options;
+        }
+
+        $templates = MailingTemplate::query()
+            ->where('status', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'caption']);
+
+        $labels = collect($options)->pluck('label')->map(fn($label) => strtolower($label))->all();
+
+        foreach ($templates as $template) {
+            $label = $template->caption ?: $template->name;
+            if (!$label || in_array(strtolower($label), $labels, true)) {
+                continue;
+            }
+
+            $options[] = [
+                'value' => $template->id,
+                'label' => $label,
+            ];
+            $labels[] = strtolower($label);
+        }
+
+        return $options;
     }
 }
