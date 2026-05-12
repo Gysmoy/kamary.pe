@@ -3,12 +3,44 @@ import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
+import Modal from '../Components/Adminto/Modal';
+import DxButton from '../Components/dx/DxButton';
 import InventoryRest from '../Actions/Admin/InventoryRest';
 import { scopedPermission } from '../Utils/permissionScope';
+import Swal from 'sweetalert2';
 
 const inventoryRest = new InventoryRest()
 
-const Inventory = ({ moduleTitle = 'Inventario' }) => {
+const formatUser = (user) => user?.fullname || [user?.name, user?.lastname].filter(Boolean).join(' ') || user?.username || ''
+const formatDateTime = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('es-PE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+const formatDate = (value) => {
+  if (!value) return '-'
+  const text = value.toString().slice(0, 10)
+  const date = new Date(`${text}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return text
+  return date.toLocaleDateString('es-PE', { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+const formatQty = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 3 })
+
+const mapStoredItem = (item) => ({
+  id: item.id,
+  lot: item.lot ?? '',
+  expiration_date: item.expiration_date?.toString?.().slice?.(0, 10) ?? '',
+  article_name: item.article_name ?? item.article?.name ?? '',
+  client_name: item.client_name ?? '',
+  unit_label: item.unit_label ?? '',
+  location: item.location ?? '',
+  temperature_range: item.temperature_range ?? '',
+  system_stock: Number(item.system_stock ?? 0),
+  real_stock: Number(item.real_stock ?? 0),
+})
+
+const StandardInventory = ({ moduleTitle = 'Inventario' }) => {
   const gridRef = useRef()
   const [businesses, setBusinesses] = useState([])
   const [branches, setBranches] = useState([])
@@ -128,6 +160,299 @@ const Inventory = ({ moduleTitle = 'Inventario' }) => {
     </div>
   )
 }
+
+const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' }) => {
+  const gridRef = useRef()
+  const modalRef = useRef()
+  const fileRef = useRef()
+  const [warehouses, setWarehouses] = useState([])
+  const [clients, setClients] = useState([])
+  const [locations, setLocations] = useState([])
+  const [warehouseId, setWarehouseId] = useState('')
+  const [location, setLocation] = useState('')
+  const [clientId, setClientId] = useState('')
+  const [rows, setRows] = useState([])
+  const [selectedCount, setSelectedCount] = useState(null)
+  const [loadingRows, setLoadingRows] = useState(false)
+
+  useEffect(() => {
+    inventoryRest.getStorageOptions().then(data => {
+      setWarehouses(data?.warehouses ?? [])
+      setClients(data?.clients ?? [])
+      setLocations(data?.locations ?? [])
+    })
+  }, [])
+
+  const selectedCountCode = selectedCount?.code ?? ''
+  const selectedClientName = selectedCount?.client?.full_name || clients.find(client => `${client.id}` === `${clientId}`)?.full_name || ''
+
+  const resetModal = () => {
+    setSelectedCount(null)
+    setWarehouseId('')
+    setLocation('')
+    setClientId('')
+    setRows([])
+  }
+
+  const openNewModal = () => {
+    resetModal()
+    $(modalRef.current).modal('show')
+  }
+
+  const openExistingModal = async (data) => {
+    const result = await inventoryRest.getStorageInventory(data.id)
+    if (!result) return
+    setSelectedCount(result)
+    setWarehouseId(result.warehouse_id ? `${result.warehouse_id}` : '')
+    setLocation(result.location ?? '')
+    setClientId(result.client_id ? `${result.client_id}` : '')
+    setRows((result.items ?? []).map(mapStoredItem))
+    $(modalRef.current).modal('show')
+  }
+
+  const refreshPreview = async () => {
+    setLoadingRows(true)
+    const data = await inventoryRest.previewStorageInventory({
+      warehouse_id: warehouseId || null,
+      location: location || null,
+      client_id: clientId || null,
+    })
+    setRows(data ?? [])
+    setLoadingRows(false)
+  }
+
+  const registerInventory = async () => {
+    const result = await inventoryRest.saveStorageInventory({
+      warehouse_id: warehouseId || null,
+      location: location || null,
+      client_id: clientId || null,
+    })
+    if (!result) return
+    setSelectedCount(result)
+    setRows((result.items ?? []).map(mapStoredItem))
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
+  const downloadFormat = () => {
+    if (!selectedCount?.id) return
+    window.open(`/api/admin/storage/inventory/${selectedCount.id}/format`, '_blank', 'noopener,noreferrer')
+  }
+
+  const uploadFormat = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file || !selectedCount?.id) return
+    const formData = new FormData()
+    formData.append('format_file', file)
+    const result = await inventoryRest.importStorageFormat(selectedCount.id, formData)
+    if (!result) return
+    setSelectedCount(result)
+    setRows((result.items ?? []).map(mapStoredItem))
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
+  const remove = async (id) => {
+    const { isConfirmed } = await Swal.fire({
+      title: 'Eliminar inventario',
+      text: 'Se dara de baja este inventario registrado.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar'
+    })
+    if (!isConfirmed) return
+    const result = await inventoryRest.delete(id)
+    if (!result) return
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
+  return <>
+    <div className='card mb-3'>
+      <div className='card-body'>
+        <button type='button' className='btn btn-primary d-inline-flex align-items-center gap-2' onClick={openNewModal}>
+          <i className='mdi mdi-plus-circle-outline'></i>
+          Registrar inventario
+        </button>
+      </div>
+    </div>
+
+    <Table
+      gridRef={gridRef}
+      title='Inventarios registrados'
+      rest={inventoryRest}
+      pageSize={10}
+      toolBar={(container) => {
+        container.unshift({
+          widget: 'dxButton',
+          location: 'after',
+          options: { icon: 'refresh', hint: 'Refrescar tabla', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() }
+        })
+        container.unshift({
+          widget: 'dxButton',
+          location: 'after',
+          options: { icon: 'add', hint: 'Registrar inventario', onClick: openNewModal }
+        })
+      }}
+      columns={[
+        {
+          caption: 'Acciones',
+          width: 110,
+          allowFiltering: false,
+          allowSorting: false,
+          allowExporting: false,
+          cellTemplate: (container, { data }) => {
+            container.css('text-overflow', 'unset')
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Ver inventario', icon: 'mdi mdi-pencil', onClick: () => openExistingModal(data) }))
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar inventario', icon: 'mdi mdi-delete', onClick: () => remove(data.id) }))
+          }
+        },
+        {
+          dataField: 'code',
+          caption: 'Codigo',
+          minWidth: 130,
+          cellTemplate: (container, { data }) => {
+            $('<a></a>').attr('href', '#').text(data.code ?? '').on('click', (e) => {
+              e.preventDefault()
+              openExistingModal(data)
+            }).appendTo(container)
+          }
+        },
+        { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 180 },
+        { dataField: 'client.full_name', caption: 'Cliente', minWidth: 220 },
+        { dataField: 'location', caption: 'Ubicacion', minWidth: 120 },
+        { dataField: 'creator.fullname', caption: 'Usuario registro', minWidth: 170, allowFiltering: false, calculateCellValue: row => formatUser(row.creator) },
+        {
+          dataField: 'created_at',
+          caption: 'Fecha registro',
+          minWidth: 165,
+          allowFiltering: false,
+          cellTemplate: (container, { data }) => container.text(formatDateTime(data.created_at))
+        },
+        {
+          dataField: 'inventory_status',
+          caption: 'Estado',
+          width: 115,
+          cellTemplate: (container, { data }) => container.html(`<span class="badge badge-soft-warning">${data.inventory_status ?? 'En espera'}</span>`)
+        },
+      ]}
+    />
+
+    <Modal
+      modalRef={modalRef}
+      title='Registrar pedidos'
+      size='xl'
+      hideFooter
+      bodyStyle={{ maxHeight: 'calc(100vh - 145px)', overflowY: 'auto', overflowX: 'hidden' }}
+      onSubmit={(e) => e.preventDefault()}
+      onClose={resetModal}
+    >
+      <input ref={fileRef} type='file' accept='.csv' hidden onChange={uploadFormat} />
+      <div className='d-flex justify-content-center gap-3 mb-4'>
+        {!selectedCount && <button type='button' className='btn btn-primary' onClick={registerInventory}>
+          <i className='mdi mdi-plus me-1'></i>
+          Registrar
+        </button>}
+        <button type='button' className='btn btn-light' data-bs-dismiss='modal'>
+          <i className='mdi mdi-close me-1'></i>
+          Cerrar
+        </button>
+      </div>
+      <hr />
+      <div className='row align-items-end'>
+        <div className='col-md-2 mb-3'>
+          <label className='form-label'>Almacen</label>
+          <select className='form-select' value={warehouseId} disabled={!!selectedCount} onChange={(e) => setWarehouseId(e.target.value)}>
+            <option value=''>Seleccione Almacen</option>
+            {warehouses.map(warehouse => (
+              <option key={`storage-inv-wh-${warehouse.id}`} value={warehouse.id}>
+                {warehouse.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className='col-md-3 mb-3'>
+          <label className='form-label'>Ubicacion</label>
+          <input className='form-control' list='storage-inventory-locations' value={location} disabled={!!selectedCount} placeholder='Seleccione ubicacion' onChange={(e) => setLocation(e.target.value)} />
+          <datalist id='storage-inventory-locations'>
+            {locations.map(item => <option key={`storage-inv-location-${item}`} value={item} />)}
+          </datalist>
+        </div>
+        <div className='col-md-5 mb-3'>
+          <label className='form-label'>Cliente</label>
+          <select className='form-select' value={clientId} disabled={!!selectedCount} onChange={(e) => setClientId(e.target.value)}>
+            <option value=''>Seleccione cliente</option>
+            {clients.map(client => (
+              <option key={`storage-inv-client-${client.id}`} value={client.id}>
+                {client.full_name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className='col-md-2 mb-3 d-grid'>
+          <button type='button' className='btn btn-primary' disabled={!!selectedCount || loadingRows} onClick={refreshPreview}>
+            <i className='mdi mdi-magnify me-1'></i>
+            Filtrar
+          </button>
+        </div>
+      </div>
+
+      <div className='row mb-4'>
+        <div className='col-md-2 d-grid mb-2'>
+          <button type='button' className='btn btn-outline-success' disabled={!selectedCount?.id} onClick={downloadFormat}>Descargar Formato</button>
+        </div>
+        <div className='col-md-2 d-grid mb-2'>
+          <button type='button' className='btn btn-outline-success' disabled={!selectedCount?.id} onClick={() => fileRef.current?.click()}>Subir Formato</button>
+        </div>
+      </div>
+
+      <h3 className='text-center mb-3'>INVENTARIO N° {selectedCountCode}</h3>
+      {selectedClientName && <div className='d-flex justify-content-end mb-2'><span className='badge badge-soft-secondary fs-14'>{selectedClientName}</span></div>}
+      <div className='table-responsive border rounded position-relative'>
+        {loadingRows && <div className='position-absolute top-0 start-0 end-0 bottom-0 bg-white bg-opacity-75 d-flex align-items-center justify-content-center' style={{ zIndex: 1 }}>
+          <i className='mdi mdi-spin mdi-loading mdi-36px'></i>
+        </div>}
+        <table className='table table-sm table-striped mb-0'>
+          <thead>
+            <tr>
+              <th style={{ width: 80 }}>ID</th>
+              <th style={{ minWidth: 120 }}>LOTE</th>
+              <th style={{ minWidth: 130 }}>F. VENCIMIENTO</th>
+              <th style={{ minWidth: 260 }}>ARTICULO</th>
+              <th style={{ minWidth: 220 }}>CLIENTE</th>
+              <th style={{ minWidth: 100 }}>U. MEDIDA</th>
+              <th style={{ minWidth: 110 }}>UBICACION</th>
+              <th style={{ minWidth: 130 }}>TEMPERATURA</th>
+              <th style={{ minWidth: 130 }}>STOCK SISTEMA</th>
+              <th style={{ minWidth: 120 }}>STOCK REAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && <tr><td colSpan='10' className='text-center py-4'>No existen elementos</td></tr>}
+            {rows.map((row, index) => (
+              <tr key={`storage-inventory-detail-${row.id ?? index}`}>
+                <td>{row.id ?? index + 1}</td>
+                <td>{row.lot || '-'}</td>
+                <td>{formatDate(row.expiration_date)}</td>
+                <td>{row.article_name || '-'}</td>
+                <td>{row.client_name || selectedClientName || '-'}</td>
+                <td>{row.unit_label || '-'}</td>
+                <td>{row.location || '-'}</td>
+                <td>{row.temperature_range || '-'}</td>
+                <td>{formatQty(row.system_stock)}</td>
+                <td>{formatQty(row.real_stock)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className='mt-2'>{rows.length} elementos</div>
+    </Modal>
+  </>
+}
+
+const Inventory = (props) => props.storageContext
+  ? <StorageInventory {...props} />
+  : <StandardInventory {...props} />
 
 CreateReactScript((el, properties) => {
   const requiredPermission = properties.requiredPermission ?? scopedPermission('inventory')

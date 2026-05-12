@@ -327,7 +327,15 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::prefix('storage')->group(function () {
+            Route::get('/inventory/options', [AdminStorageInventoryController::class, 'options']);
+            Route::post('/inventory/preview', [AdminStorageInventoryController::class, 'preview']);
+            Route::post('/inventory', [AdminStorageInventoryController::class, 'save']);
             Route::post('/inventory/paginate', [AdminStorageInventoryController::class, 'paginate']);
+            Route::get('/inventory/{id}', [AdminStorageInventoryController::class, 'get']);
+            Route::get('/inventory/{id}/format', [AdminStorageInventoryController::class, 'format']);
+            Route::post('/inventory/{id}/import', [AdminStorageInventoryController::class, 'import']);
+            Route::patch('/inventory/status', [AdminStorageInventoryController::class, 'status']);
+            Route::delete('/inventory/{id}', [AdminStorageInventoryController::class, 'delete']);
 
             Route::post('/clients', [AdminStorageClientController::class, 'save']);
             Route::post('/clients/paginate', [AdminStorageClientController::class, 'paginate']);

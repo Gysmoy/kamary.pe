@@ -66,6 +66,84 @@ class InventoryRest extends BasicRest {
     const result = await this.simpleGet(`/api/admin/businesses/${businessId}/branches`)
     return result ?? []
   }
+
+  getStorageOptions = async () => {
+    if (!isStoragePath()) return null
+    return await this.simpleGet('/api/admin/storage/inventory/options')
+  }
+
+  previewStorageInventory = async (request) => {
+    try {
+      const { status, result } = await Fetch('/api/admin/storage/inventory/preview', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo cargar el detalle de inventario')
+      return result.data ?? []
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return []
+    }
+  }
+
+  saveStorageInventory = async (request) => {
+    try {
+      const { status, result } = await Fetch('/api/admin/storage/inventory', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo registrar el inventario')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
+  getStorageInventory = async (id) => {
+    if (!id) return null
+    return await this.simpleGet(`/api/admin/storage/inventory/${id}`)
+  }
+
+  importStorageFormat = async (id, formData) => {
+    try {
+      const res = await fetch(`/api/admin/storage/inventory/${id}/import`, {
+        method: 'POST',
+        headers: {
+          'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+        },
+        body: formData
+      })
+      const result = JSON.parseable(await res.text())
+      if (!res.ok) throw new Error(result?.message || 'No se pudo subir el formato')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
 }
 
 export default InventoryRest
