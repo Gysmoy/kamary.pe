@@ -965,6 +965,7 @@ const Clients = ({
           title='Usuarios registrados'
           rest={usersRest}
           filterValue={usersFilterValue}
+          allowQueryBuilder={false}
           pageSize={10}
           toolBar={(container) => {
             container.unshift({
