@@ -390,6 +390,13 @@ Route::middleware('auth')->group(function () {
             Route::delete('/exit-notes/{id}', [AdminStorageExitNoteController::class, 'delete']);
             Route::get('/exit-notes/businesses/{id}/branches', [AdminStorageExitNoteController::class, 'branches']);
 
+            Route::get('/kardex/options', [AdminStorageKardexController::class, 'options']);
+            Route::get('/kardex/locations-report', [AdminStorageKardexController::class, 'locationsReport']);
+            Route::get('/kardex/inventory-report', [AdminStorageKardexController::class, 'inventoryReport']);
+            Route::post('/kardex/warehouses', [AdminStorageKardexController::class, 'saveWarehouse']);
+            Route::delete('/kardex/warehouses/{id}', [AdminStorageKardexController::class, 'deleteWarehouse']);
+            Route::post('/kardex/locations', [AdminStorageKardexController::class, 'saveLocation']);
+            Route::delete('/kardex/locations/{id}', [AdminStorageKardexController::class, 'deleteLocation']);
             Route::post('/kardex/paginate', [AdminStorageKardexController::class, 'paginate']);
 
             Route::post('/general-service', [AdminStorageGeneralServiceController::class, 'save']);

@@ -13,6 +13,9 @@ class KardexRest extends BasicRest {
     laboratory_id: '',
     article_id: '',
     warehouse_id: '',
+    client_id: '',
+    stock_mode: 'with_stock',
+    section: 'kardex',
   }
 
   setFilters = (filters = {}) => {
@@ -155,6 +158,101 @@ class KardexRest extends BasicRest {
         richColors: true,
       });
       return []
+    }
+  }
+
+  getStorageOptions = async () => {
+    if (!isStoragePath()) return null
+    return await this.simpleGet('/api/admin/storage/kardex/options')
+  }
+
+  saveStorageWarehouse = async (request) => {
+    try {
+      const { status, result } = await Fetch('/api/admin/storage/kardex/warehouses', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo guardar el almacen')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
+  deleteStorageWarehouse = async (id) => {
+    try {
+      const { status, result } = await Fetch(`/api/admin/storage/kardex/warehouses/${id}`, {
+        method: 'DELETE'
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo eliminar el almacen')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return true
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return false
+    }
+  }
+
+  saveStorageLocation = async (request) => {
+    try {
+      const { status, result } = await Fetch('/api/admin/storage/kardex/locations', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo guardar la ubicacion')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
+  deleteStorageLocation = async (id) => {
+    try {
+      const { status, result } = await Fetch(`/api/admin/storage/kardex/locations/${id}`, {
+        method: 'DELETE'
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo eliminar la ubicacion')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return true
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return false
     }
   }
 }
