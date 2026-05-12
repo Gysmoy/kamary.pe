@@ -38,6 +38,10 @@ class ClientController extends BaseClientController
                 'value' => 'storage_invoice_notification',
                 'label' => 'Notificación de Envío de Facturas a los Clientes - Kamary medical',
             ],
+            [
+                'value' => 'storage_sample_order_registration',
+                'label' => 'Notificación de registro de pedidos muestra',
+            ],
         ];
 
         if (!Schema::hasTable('mailing_templates')) {

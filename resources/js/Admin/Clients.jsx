@@ -59,6 +59,10 @@ const DEFAULT_STORAGE_NOTIFICATION_OPTIONS = [
   {
     value: 'storage_invoice_notification',
     label: 'Notificacion de Envio de Facturas a los Clientes - Kamary medical'
+  },
+  {
+    value: 'storage_sample_order_registration',
+    label: 'Notificacion de registro de pedidos muestra'
   }
 ]
 
@@ -1084,6 +1088,7 @@ const Clients = ({
         title='Notificaciones cliente'
         size='xl'
         hideFooter
+        bodyStyle={{ maxHeight: 'calc(100vh - 150px)', overflowY: 'auto', overflowX: 'hidden' }}
         onSubmit={onNotificationSubmit}
         onClose={() => {
           setSelectedClientForNotifications(null)
@@ -1096,23 +1101,25 @@ const Clients = ({
         </div>
         <input ref={notificationIdRef} type='hidden' />
         <div className='row'>
-          <SelectFormGroup
-            id='storage-client-notification-select'
-            eRef={notificationSelectRef}
-            label='Notificacion:'
-            col='col-md-4'
-            required
-            value={notificationValue}
-            onChange={(e) => setNotificationValue(e.target.value)}
-            effectWith={[notificationOptions.length]}
-            dropdownParent='#modal-storage-notifications'
-          >
-            <option value=''>Seleccione</option>
-            {notificationOptions.map((option, index) => {
-              const value = getNotificationOptionValue(option)
-              return <option key={`notification-option-${value || index}`} value={value}>{getNotificationOptionLabel(option)}</option>
-            })}
-          </SelectFormGroup>
+          <div className='form-group col-md-4 mb-2'>
+            <label htmlFor='storage-client-notification-select' className='form-label mb-1'>
+              Notificacion: <b className='text-danger'>*</b>
+            </label>
+            <select
+              id='storage-client-notification-select'
+              ref={notificationSelectRef}
+              className='form-select'
+              required
+              value={notificationValue}
+              onChange={(e) => setNotificationValue(e.target.value)}
+            >
+              <option value=''>Seleccione</option>
+              {notificationOptions.map((option, index) => {
+                const value = getNotificationOptionValue(option)
+                return <option key={`notification-option-${value || index}`} value={value}>{getNotificationOptionLabel(option)}</option>
+              })}
+            </select>
+          </div>
           <EmailTagsInput
             ref={notificationToRef}
             label='Para:'
