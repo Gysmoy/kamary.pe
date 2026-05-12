@@ -357,52 +357,54 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           Cerrar
         </button>
       </div>
-      <hr />
-      <div className='row align-items-end'>
-        <div className='col-md-2 mb-3'>
-          <label className='form-label'>Almacen</label>
-          <select className='form-select' value={warehouseId} disabled={!!selectedCount} onChange={(e) => setWarehouseId(e.target.value)}>
-            <option value=''>Seleccione Almacen</option>
-            {warehouses.map(warehouse => (
-              <option key={`storage-inv-wh-${warehouse.id}`} value={warehouse.id}>
-                {warehouse.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className='col-md-3 mb-3'>
-          <label className='form-label'>Ubicacion</label>
-          <input className='form-control' list='storage-inventory-locations' value={location} disabled={!!selectedCount} placeholder='Seleccione ubicacion' onChange={(e) => setLocation(e.target.value)} />
-          <datalist id='storage-inventory-locations'>
-            {locations.map(item => <option key={`storage-inv-location-${item}`} value={item} />)}
-          </datalist>
-        </div>
-        <div className='col-md-5 mb-3'>
-          <label className='form-label'>Cliente</label>
-          <select className='form-select' value={clientId} disabled={!!selectedCount} onChange={(e) => setClientId(e.target.value)}>
-            <option value=''>Seleccione cliente</option>
-            {clients.map(client => (
-              <option key={`storage-inv-client-${client.id}`} value={client.id}>
-                {client.full_name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className='col-md-2 mb-3 d-grid'>
-          <button type='button' className='btn btn-primary' disabled={!!selectedCount || loadingRows} onClick={refreshPreview}>
-            <i className='mdi mdi-magnify me-1'></i>
-            Filtrar
-          </button>
+      <hr className='mb-3' />
+      <div className='border rounded-2 p-3 mb-3 bg-light-subtle'>
+        <div className='row g-3 align-items-end'>
+          <div className='col-12 col-lg-3'>
+            <label className='form-label'>Almacen</label>
+            <select className='form-select' value={warehouseId} disabled={!!selectedCount} onChange={(e) => setWarehouseId(e.target.value)}>
+              <option value=''>Seleccione Almacen</option>
+              {warehouses.map(warehouse => (
+                <option key={`storage-inv-wh-${warehouse.id}`} value={warehouse.id}>
+                  {warehouse.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className='col-12 col-sm-6 col-lg-3'>
+            <label className='form-label'>Ubicacion</label>
+            <input className='form-control' list='storage-inventory-locations' value={location} disabled={!!selectedCount} placeholder='Seleccione ubicacion' onChange={(e) => setLocation(e.target.value)} />
+            <datalist id='storage-inventory-locations'>
+              {locations.map(item => <option key={`storage-inv-location-${item}`} value={item} />)}
+            </datalist>
+          </div>
+          <div className='col-12 col-lg-4'>
+            <label className='form-label'>Cliente</label>
+            <select className='form-select' value={clientId} disabled={!!selectedCount} onChange={(e) => setClientId(e.target.value)}>
+              <option value=''>Seleccione cliente</option>
+              {clients.map(client => (
+                <option key={`storage-inv-client-${client.id}`} value={client.id}>
+                  {client.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className='col-12 col-sm-6 col-lg-2 d-grid'>
+            <button type='button' className='btn btn-primary py-2' disabled={!!selectedCount || loadingRows} onClick={refreshPreview}>
+              <i className='mdi mdi-magnify me-1'></i>
+              Filtrar
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className='row mb-4'>
-        <div className='col-md-2 d-grid mb-2'>
-          <button type='button' className='btn btn-outline-success' disabled={!selectedCount?.id} onClick={downloadFormat}>Descargar Formato</button>
-        </div>
-        <div className='col-md-2 d-grid mb-2'>
-          <button type='button' className='btn btn-outline-success' disabled={!selectedCount?.id} onClick={() => fileRef.current?.click()}>Subir Formato</button>
-        </div>
+      <div className='d-flex flex-wrap gap-3 mb-4'>
+        <button type='button' className='btn btn-outline-success px-4' disabled={!selectedCount?.id} onClick={downloadFormat}>
+          Descargar Formato
+        </button>
+        <button type='button' className='btn btn-outline-success px-4' disabled={!selectedCount?.id} onClick={() => fileRef.current?.click()}>
+          Subir Formato
+        </button>
       </div>
 
       <h3 className='text-center mb-3'>INVENTARIO N° {selectedCountCode}</h3>
