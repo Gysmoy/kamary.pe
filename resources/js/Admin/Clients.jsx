@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
@@ -37,16 +37,127 @@ const normalizeDigits = (value) => (value ?? '').toString().replace(/\D+/g, '')
 const booleanLabel = (value) => value ? 'Si' : 'No'
 const splitEmailList = (value) => (value ?? '').toString().split(/[,\n;]+/).map(email => email.trim()).filter(Boolean)
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-const normalizeEmailList = (value) => {
+const uniqueEmailList = (emails = []) => {
   const seen = new Set()
-  return splitEmailList(value).filter(email => {
+  return emails.filter(email => {
     const key = email.toLowerCase()
     if (seen.has(key)) return false
     seen.add(key)
     return true
-  }).join(', ')
+  })
+}
+const normalizeEmailList = (value) => {
+  return uniqueEmailList(splitEmailList(value)).join(', ')
 }
 const invalidEmailList = (value) => splitEmailList(value).filter(email => !isValidEmail(email))
+
+const EmailTagsInput = forwardRef(({
+  col = 'col-12',
+  label,
+  placeholder = 'Para:',
+  specification
+}, ref) => {
+  const inputRef = useRef()
+  const [emails, setEmails] = useState([])
+  const [draft, setDraft] = useState('')
+
+  const value = useMemo(() => [...emails, draft.trim()].filter(Boolean).join(', '), [emails, draft])
+
+  useImperativeHandle(ref, () => ({
+    get value() {
+      return value
+    },
+    set value(nextValue) {
+      setEmails(uniqueEmailList(splitEmailList(nextValue)))
+      setDraft('')
+    },
+    focus() {
+      inputRef.current?.focus()
+    }
+  }), [value])
+
+  const appendEmails = (items = []) => {
+    const nextItems = items.map(email => email.trim()).filter(Boolean)
+    if (!nextItems.length) return
+    setEmails(current => uniqueEmailList([...current, ...nextItems]))
+  }
+
+  const commitDraft = () => {
+    const nextEmails = splitEmailList(draft)
+    if (!nextEmails.length) return
+    appendEmails(nextEmails)
+    setDraft('')
+  }
+
+  const removeEmail = (index) => {
+    setEmails(current => current.filter((_, currentIndex) => currentIndex !== index))
+  }
+
+  const onInputChange = (e) => {
+    const nextValue = e.target.value
+    if (/[,\n;]/.test(nextValue)) {
+      appendEmails(splitEmailList(nextValue))
+      setDraft('')
+      return
+    }
+    setDraft(nextValue)
+  }
+
+  const onKeyDown = (e) => {
+    if (['Enter', ',', ';'].includes(e.key)) {
+      e.preventDefault()
+      commitDraft()
+      return
+    }
+    if (e.key === 'Backspace' && !draft && emails.length) {
+      e.preventDefault()
+      setEmails(current => current.slice(0, -1))
+    }
+  }
+
+  return <div className={`form-group ${col} mb-2`}>
+    {label && <label className='form-label mb-1'>
+      {label}
+      {specification && <small className='ms-1 fa fa-question-circle text-muted' title={specification}></small>}
+    </label>}
+    <div
+      className='form-control d-flex flex-wrap align-items-center gap-1 py-1'
+      style={{ minHeight: 39, cursor: 'text' }}
+      onClick={() => inputRef.current?.focus()}
+    >
+      {emails.map((email, index) => (
+        <span
+          key={`${email}-${index}`}
+          className={`badge d-inline-flex align-items-center gap-1 px-2 py-1 ${isValidEmail(email) ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle'}`}
+        >
+          {email}
+          <button
+            type='button'
+            className='btn btn-link btn-sm p-0 lh-1 text-reset text-decoration-none'
+            onClick={(e) => {
+              e.stopPropagation()
+              removeEmail(index)
+            }}
+            aria-label={`Quitar ${email}`}
+          >
+            x
+          </button>
+        </span>
+      ))}
+      <input
+        ref={inputRef}
+        type='text'
+        className='border-0 flex-grow-1 p-0'
+        style={{ outline: 'none', minWidth: 180 }}
+        placeholder={placeholder}
+        value={draft}
+        onChange={onInputChange}
+        onKeyDown={onKeyDown}
+        onBlur={commitDraft}
+      />
+    </div>
+  </div>
+})
 
 const formatDate = (value) => {
   if (!value) return '-'
@@ -601,10 +712,10 @@ const Clients = ({
         {storageContext && <>
           <InputFormGroup eRef={shortCodeRef} label='Código corto' col='col-md-6' />
           <InputFormGroup eRef={addressRef} label='Dirección' col='col-md-6' />
-          <InputFormGroup
-            eRef={emailRef}
+          <EmailTagsInput
+            ref={emailRef}
             label='Emails para Envío de Comprobantes'
-            placeholder='Para: correo1@dominio.com, correo2@dominio.com'
+            placeholder='Para:'
             specification='Puedes separar varios correos con coma o punto y coma.'
             col='col-md-6'
           />
