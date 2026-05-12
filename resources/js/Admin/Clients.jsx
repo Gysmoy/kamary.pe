@@ -15,12 +15,14 @@ import UbigeoCascade from '@Adminto/form/UbigeoCascade';
 import ClientsRest from '../Actions/Admin/ClientsRest';
 import UsersRest from '../Actions/Admin/UsersRest';
 import StorageClientNotificationsRest from '../Actions/Admin/StorageClientNotificationsRest';
+import StorageClientTariffsRest from '../Actions/Admin/StorageClientTariffsRest';
 import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
 import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const clientsRest = new ClientsRest()
 const usersRest = new UsersRest()
 const storageClientNotificationsRest = new StorageClientNotificationsRest()
+const storageClientTariffsRest = new StorageClientTariffsRest()
 
 const QUICK_FILTERS = [
   { key: 'all', label: 'Todos' },
@@ -64,6 +66,16 @@ const DEFAULT_STORAGE_NOTIFICATION_OPTIONS = [
     value: 'storage_sample_order_registration',
     label: 'Notificacion de registro de pedidos muestra'
   }
+]
+const STORAGE_TEMPERATURE_OPTIONS = [
+  { value: '-15C a -25C', label: '-15°C a -25°C' },
+  { value: '2C a 8C', label: '2°C a 8°C' },
+  { value: '15C a 25C', label: '15°C a 25°C' },
+  { value: '-15C a -40C', label: '-15°C a -40°C' },
+]
+const STORAGE_CURRENCY_OPTIONS = [
+  { value: 'PEN', label: 'Soles' },
+  { value: 'USD', label: 'Dolares' },
 ]
 
 const getNotificationOptionValue = (option) => (option?.value ?? option?.id ?? '').toString()
@@ -233,6 +245,7 @@ const Clients = ({
   const usersGridRef = useRef()
   const notificationsModalRef = useRef()
   const notificationsGridRef = useRef()
+  const tariffModalRef = useRef()
   const lookupTimeoutRef = useRef()
   const pendingModalDataRef = useRef(null)
 
@@ -272,6 +285,9 @@ const Clients = ({
   const notificationSelectRef = useRef()
   const notificationToRef = useRef()
   const notificationCcRef = useRef()
+  const tariffIdRef = useRef()
+  const tariffTemperatureRef = useRef()
+  const tariffCurrencyRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
   const [isUserEditing, setIsUserEditing] = useState(false)
@@ -289,8 +305,11 @@ const Clients = ({
   const [ubigeoLocation, setUbigeoLocation] = useState(EMPTY_UBIGEO_SELECTION)
   const [selectedClientForUsers, setSelectedClientForUsers] = useState(null)
   const [selectedClientForNotifications, setSelectedClientForNotifications] = useState(null)
+  const [selectedClientForTariff, setSelectedClientForTariff] = useState(null)
   const [userStatus, setUserStatus] = useState('1')
   const [notificationValue, setNotificationValue] = useState('')
+  const [tariffTemperature, setTariffTemperature] = useState('')
+  const [tariffCurrency, setTariffCurrency] = useState('')
 
   const isEventual = clientKind === 'eventual'
   const isRuc = documentType === 'ruc'
@@ -572,6 +591,8 @@ const Clients = ({
   const selectedNotificationClientId = selectedClientForNotifications?.entity_id ?? selectedClientForNotifications?.id ?? null
   const selectedNotificationClientName = selectedClientForNotifications?.display_name ?? selectedClientForNotifications?.full_name ?? selectedClientForNotifications?.business_name ?? ''
   const notificationsFilterValue = selectedNotificationClientId ? ['client_id', '=', selectedNotificationClientId] : ['client_id', '=', null]
+  const selectedTariffClientId = selectedClientForTariff?.entity_id ?? selectedClientForTariff?.id ?? null
+  const selectedTariffClientName = selectedClientForTariff?.display_name ?? selectedClientForTariff?.full_name ?? selectedClientForTariff?.business_name ?? ''
 
   const getNotificationLabel = (value) => {
     const option = notificationOptions.find(current => getNotificationOptionValue(current) === `${value ?? ''}`)
@@ -683,6 +704,56 @@ const Clients = ({
     if (!result) return
     if (getRefValue(notificationIdRef) === `${id}`) clearNotificationForm()
     refreshNotificationsGrid()
+  }
+
+  const clearTariffForm = () => {
+    setRefValue(tariffIdRef, '')
+    setRefValue(tariffTemperatureRef, '')
+    setRefValue(tariffCurrencyRef, '')
+    setTariffTemperature('')
+    setTariffCurrency('')
+  }
+
+  const onTariffModalOpen = async (data) => {
+    const clientId = data?.entity_id ?? data?.id
+    setSelectedClientForTariff(data)
+    clearTariffForm()
+    setTimeout(() => $(tariffModalRef.current).modal('show'), 0)
+
+    if (!clientId) return
+    const result = await storageClientTariffsRest.getByClient(clientId)
+    if (!result) return
+
+    setRefValue(tariffIdRef, result.id)
+    setRefValue(tariffTemperatureRef, result.temperature_range ?? '')
+    setRefValue(tariffCurrencyRef, result.currency ?? '')
+    setTariffTemperature(result.temperature_range ?? '')
+    setTariffCurrency(result.currency ?? '')
+  }
+
+  const onTariffSubmit = async (e) => {
+    e.preventDefault()
+    if (!selectedTariffClientId) return
+
+    if (!tariffTemperature || !tariffCurrency) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Completa el tarifario',
+        text: 'Debes seleccionar temperatura y moneda.'
+      })
+      return
+    }
+
+    const result = await storageClientTariffsRest.save({
+      id: getRefValue(tariffIdRef) || undefined,
+      client_id: selectedTariffClientId,
+      temperature_range: tariffTemperature,
+      currency: tariffCurrency,
+    })
+    if (!result) return
+
+    $(tariffModalRef.current).modal('hide')
+    $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
   const clearUserForm = () => {
@@ -820,7 +891,7 @@ const Clients = ({
       columns={[
         {
           caption: 'Acciones',
-          width: storageContext ? 185 : 120,
+          width: storageContext ? 220 : 120,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
             container.append(DxButton({
@@ -830,6 +901,12 @@ const Clients = ({
               onClick: () => onModalOpen(data)
             }))
             if (storageContext) {
+              container.append(DxButton({
+                className: 'btn btn-xs btn-soft-success',
+                title: 'Tarifario',
+                icon: 'mdi mdi-currency-usd',
+                onClick: () => onTariffModalOpen(data)
+              }))
               container.append(DxButton({
                 className: 'btn btn-xs btn-soft-warning',
                 title: 'Mantenimiento usuarios',
@@ -1082,6 +1159,71 @@ const Clients = ({
     </Modal>
 
     {storageContext && <>
+      <Modal
+        id='modal-storage-tariff'
+        modalRef={tariffModalRef}
+        title='Tarifario'
+        size='xl'
+        hideFooter
+        onSubmit={onTariffSubmit}
+        onClose={() => {
+          setSelectedClientForTariff(null)
+          clearTariffForm()
+        }}
+      >
+        <input ref={tariffIdRef} type='hidden' />
+        {selectedTariffClientName && <div className='d-flex justify-content-end mb-2'>
+          <span className='badge badge-soft-secondary fs-14'>{selectedTariffClientName}</span>
+        </div>}
+        <div className='row justify-content-center'>
+          <div className='col-md-4'>
+            <div className='form-group mb-3'>
+              <label htmlFor='storage-client-tariff-temperature' className='form-label mb-1'>Temperatura</label>
+              <select
+                id='storage-client-tariff-temperature'
+                ref={tariffTemperatureRef}
+                className='form-select'
+                required
+                value={tariffTemperature}
+                onChange={(e) => setTariffTemperature(e.target.value)}
+              >
+                <option value=''>Seleccione temperatura</option>
+                {STORAGE_TEMPERATURE_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className='form-group mb-3'>
+              <label htmlFor='storage-client-tariff-currency' className='form-label mb-1'>Moneda</label>
+              <select
+                id='storage-client-tariff-currency'
+                ref={tariffCurrencyRef}
+                className='form-select'
+                required
+                value={tariffCurrency}
+                onChange={(e) => setTariffCurrency(e.target.value)}
+              >
+                <option value=''>Seleccione moneda</option>
+                {STORAGE_CURRENCY_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+        <hr />
+        <div className='d-flex flex-wrap justify-content-center gap-4 my-3'>
+          <button type='submit' className='btn btn-primary' disabled={!selectedTariffClientId}>
+            <i className='mdi mdi-plus me-1'></i>
+            Registrar
+          </button>
+          <button type='button' className='btn btn-light' data-bs-dismiss='modal'>
+            <i className='mdi mdi-close me-1'></i>
+            Cerrar
+          </button>
+        </div>
+      </Modal>
+
       <Modal
         id='modal-storage-notifications'
         modalRef={notificationsModalRef}

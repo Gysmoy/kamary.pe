@@ -48,6 +48,7 @@ use App\Http\Controllers\Admin\Magistrales\UnitController as AdminMagistralesUni
 use App\Http\Controllers\Admin\Storage\BillingControlController as AdminStorageBillingControlController;
 use App\Http\Controllers\Admin\Storage\ClientController as AdminStorageClientController;
 use App\Http\Controllers\Admin\Storage\ClientNotificationController as AdminStorageClientNotificationController;
+use App\Http\Controllers\Admin\Storage\ClientTariffController as AdminStorageClientTariffController;
 use App\Http\Controllers\Admin\Storage\EntryNoteController as AdminStorageEntryNoteController;
 use App\Http\Controllers\Admin\Storage\ExitNoteController as AdminStorageExitNoteController;
 use App\Http\Controllers\Admin\Storage\GeneralServiceController as AdminStorageGeneralServiceController;
@@ -339,6 +340,10 @@ Route::middleware('auth')->group(function () {
             Route::patch('/client-notifications/status', [AdminStorageClientNotificationController::class, 'status']);
             Route::patch('/client-notifications/{field}', [AdminStorageClientNotificationController::class, 'boolean']);
             Route::delete('/client-notifications/{id}', [AdminStorageClientNotificationController::class, 'delete']);
+
+            Route::get('/client-tariffs/client/{clientId}', [AdminStorageClientTariffController::class, 'byClient']);
+            Route::post('/client-tariffs', [AdminStorageClientTariffController::class, 'save']);
+            Route::delete('/client-tariffs/{id}', [AdminStorageClientTariffController::class, 'delete']);
 
             Route::post('/units', [AdminStorageUnitController::class, 'save']);
             Route::post('/units/import', [AdminStorageUnitController::class, 'import']);
