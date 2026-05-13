@@ -121,6 +121,10 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const taxAmountRef = useRef()
   const observationsRef = useRef()
   const storageCatalogPromiseRef = useRef(null)
+  const businessSelectRef = useRef()
+  const branchSelectRef = useRef()
+  const clientSelectRef = useRef()
+  const storageServiceSelectRef = useRef()
 
   const [businesses, setBusinesses] = useState([])
   const [branches, setBranches] = useState([])
@@ -208,6 +212,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   }
 
   const recalc = (row) => ({ ...row, total: Number(row.quantity || 0) * Number(row.unit_price || 0) })
+  const currentSelectValue = (ref, fallback = '') => ref.current?.value || fallback || ''
   const findStorageWarehouse = (warehouseName, warehouseRows = storageWarehouses) => warehouseRows.find(row => normalizeStorageText(storageWarehouseName(row)) === normalizeStorageText(warehouseName))
   const blockWarehouseId = (block, warehouseRows = storageWarehouses) => block.warehouse_id || findStorageWarehouse(block.warehouse_name, warehouseRows)?.id || ''
   const locationOptionsForBlock = (block, locationRows = storageLocations, warehouseRows = storageWarehouses) => {
@@ -363,9 +368,13 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const onSave = async (e) => {
     e.preventDefault()
     if (isStorageService) {
+      const businessId = currentSelectValue(businessSelectRef, selectedBusinessId)
+      const branchId = currentSelectValue(branchSelectRef, selectedBranchId)
+      const clientId = currentSelectValue(clientSelectRef, selectedClientId)
+      const storageServiceId = currentSelectValue(storageServiceSelectRef, selectedStorageServiceId)
       const selectedBlocks = storageBlocks.filter(row => row.enabled)
       const missingBlock = selectedBlocks.find(row => !blockLocationIds(row).length || !row.start_date || !row.months || !row.end_date || !row.quantity_m3 || !row.tariff)
-      if (!selectedBusinessId || !selectedBranchId || !selectedClientId || !expectedDocumentTypeRef.current.value || !currencyRef.current.value || !selectedStorageServiceId) {
+      if (!businessId || !branchId || !clientId || !expectedDocumentTypeRef.current.value || !currencyRef.current.value || !storageServiceId) {
         Swal.fire('Formulario incompleto', 'Completa empresa, cliente, tipo documento, moneda y tipo de servicio.', 'warning')
         return
       }
@@ -389,12 +398,12 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       }
       const startDates = selectedBlocks.map(row => row.start_date).filter(Boolean).sort()
       const maxMonths = Math.max(...selectedBlocks.map(row => Number(row.months || 1)))
-      const service = serviceMap[selectedStorageServiceId]
+      const service = serviceMap[storageServiceId]
       const request = {
         id: idRef.current.value || undefined,
-        business_id: selectedBusinessId || null,
-        business_branch_id: selectedBranchId || null,
-        client_id: selectedClientId || null,
+        business_id: businessId || null,
+        business_branch_id: branchId || null,
+        client_id: clientId || null,
         expected_document_type: expectedDocumentTypeRef.current.value,
         currency: currencyRef.current.value,
         billing_cycle: service?.name ?? '',
@@ -413,7 +422,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           const unitPrice = toNumber(block.tariff)
           const total = toNumber(block.monthly_amount) || quantity * unitPrice
           return {
-            service_id: selectedStorageServiceId,
+            service_id: storageServiceId,
             description: buildStorageDescription(block, locations),
             quantity,
             unit_price: unitPrice,
@@ -430,11 +439,14 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       $(modalRef.current).modal('hide')
       return
     }
+    const businessId = currentSelectValue(businessSelectRef, selectedBusinessId)
+    const branchId = currentSelectValue(branchSelectRef, selectedBranchId)
+    const clientId = currentSelectValue(clientSelectRef, selectedClientId)
     const request = {
       id: idRef.current.value || undefined,
-      business_id: selectedBusinessId || null,
-      business_branch_id: selectedBranchId || null,
-      client_id: selectedClientId || null,
+      business_id: businessId || null,
+      business_branch_id: branchId || null,
+      client_id: clientId || null,
       expected_document_type: expectedDocumentTypeRef.current.value,
       currency: currencyRef.current.value,
       billing_cycle: billingCycleRef.current.value.trim(),
@@ -715,6 +727,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           <div className='col-12 col-md-6 col-xl'>
             <label className='form-label'>Empresa</label>
             <select
+              ref={businessSelectRef}
               className='form-select'
               value={selectedBusinessId}
               onChange={async (e) => {
@@ -730,7 +743,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           </div>
           <div className='col-12 col-md-6 col-xl-4'>
             <label className='form-label'>Cliente</label>
-            <select className='form-select' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required>
+            <select ref={clientSelectRef} className='form-select' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required>
               <option value=''>Seleccione</option>
               {clients.map(row => <option key={`storage-order-client-${row.id}`} value={row.id}>{row.document_number ? `${row.document_number} | ` : ''}{row.full_name}</option>)}
             </select>
@@ -754,7 +767,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           </div>
           <div className='col-12 col-md-4 col-xl'>
             <label className='form-label'>Tipo de servicio</label>
-            <select className='form-select' value={selectedStorageServiceId} onChange={(e) => setSelectedStorageServiceId(e.target.value)} required>
+            <select ref={storageServiceSelectRef} className='form-select' value={selectedStorageServiceId} onChange={(e) => setSelectedStorageServiceId(e.target.value)} required>
               <option value=''>Seleccione</option>
               {storageServiceTypeOptions.map(service => <option key={`storage-order-service-${service.id}`} value={service.id}>{service.name}</option>)}
             </select>
@@ -898,9 +911,9 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       <div className='row'>
         <input ref={idRef} hidden />
         <div className='col-md-3 mb-3'><label className='form-label'>Código</label><input ref={codeRef} className='form-control' disabled /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Empresa</label><select className='form-control' value={selectedBusinessId} onChange={async (e) => { setSelectedBusinessId(e.target.value); await loadBranches(e.target.value, ''); }} required><option value=''>Seleccione</option>{businesses.map(row => <option key={`service-order-business-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Sede</label><select className='form-control' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)}><option value=''>Seleccione</option>{branches.map(row => <option key={`service-order-branch-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Cliente</label><select className='form-control' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required><option value=''>Seleccione</option>{clients.map(row => <option key={`service-order-client-${row.id}`} value={row.id}>{row.full_name}</option>)}</select></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Empresa</label><select ref={businessSelectRef} className='form-control' value={selectedBusinessId} onChange={async (e) => { setSelectedBusinessId(e.target.value); await loadBranches(e.target.value, ''); }} required><option value=''>Seleccione</option>{businesses.map(row => <option key={`service-order-business-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Sede</label><select ref={branchSelectRef} className='form-control' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)}><option value=''>Seleccione</option>{branches.map(row => <option key={`service-order-branch-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Cliente</label><select ref={clientSelectRef} className='form-control' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required><option value=''>Seleccione</option>{clients.map(row => <option key={`service-order-client-${row.id}`} value={row.id}>{row.full_name}</option>)}</select></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha</label><input ref={issueDateRef} type='date' className='form-control' required /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Programada</label><input ref={scheduledAtRef} type='date' className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Primera cuota</label><input ref={firstDueDateRef} type='date' className='form-control' /></div>
