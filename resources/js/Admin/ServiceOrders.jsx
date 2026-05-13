@@ -18,6 +18,60 @@ import {
 
 const serviceOrdersRest = new ServiceOrdersRest()
 const emptyItem = () => ({ uid: crypto.randomUUID(), service_id: '', description: '', quantity: 1, unit_price: 0, detraction_percent: 0, commission_percent: 0, total: 0 })
+const storageWarehouseNames = ['Almacen Km 1', 'Almacen Km 2', 'Almacen Km 3', 'Almacen Km 4', 'Oficina Administrativa', 'Almacen KM 5']
+const normalizeStorageText = (value = '') => value.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+const emptyStorageBlocks = () => storageWarehouseNames.map(name => ({
+  key: normalizeStorageText(name),
+  warehouse_name: name,
+  warehouse_id: '',
+  enabled: false,
+  location_id: '',
+  location_label: '',
+  start_date: '',
+  months: '',
+  end_date: '',
+  quantity_m3: '',
+  tariff: '',
+  monthly_amount: '',
+}))
+const toInputDate = (value) => value?.toString?.().slice?.(0, 10) ?? ''
+const toNumber = (value) => Number(value || 0)
+const addMonths = (dateValue, monthsValue) => {
+  if (!dateValue || !monthsValue) return ''
+  const months = Number(monthsValue)
+  if (!Number.isFinite(months) || months <= 0) return ''
+  const date = new Date(`${dateValue}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return ''
+  const result = new Date(date)
+  const day = result.getDate()
+  result.setDate(1)
+  result.setMonth(result.getMonth() + months)
+  result.setDate(Math.min(day, new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate()))
+  return result.toISOString().slice(0, 10)
+}
+const storageLocationLabel = (location) => {
+  if (!location) return ''
+  return [location.code, location.temperature_range].filter(Boolean).join(' | ')
+}
+const buildStorageDescription = (block, location) => [
+  block.warehouse_name,
+  storageLocationLabel(location) || block.location_label,
+  `${block.start_date || ''} - ${block.end_date || ''}`,
+  `${block.months || 0} meses`,
+  `${block.quantity_m3 || 0} m3`,
+].filter(Boolean).join('; ')
+const parseStorageDescription = (description = '') => {
+  const parts = description.split(';').map(part => part.trim())
+  const dates = (parts[2] ?? '').split('-').map(part => part.trim())
+  return {
+    warehouse_name: parts[0] ?? '',
+    location_label: parts[1] ?? '',
+    start_date: dates.length >= 3 ? `${dates[0]}-${dates[1]}-${dates[2]}`.slice(0, 10) : '',
+    end_date: dates.length >= 6 ? `${dates[3]}-${dates[4]}-${dates[5]}`.slice(0, 10) : '',
+    months: parseFloat(parts[3]) || '',
+    quantity_m3: parseFloat(parts[4]) || '',
+  }
+}
 
 const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType = 'service' }) => {
   const gridRef = useRef()
@@ -44,37 +98,125 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
   const [selectedClientId, setSelectedClientId] = useState('')
+  const [selectedStorageServiceId, setSelectedStorageServiceId] = useState('')
   const [items, setItems] = useState([emptyItem()])
+  const [storageWarehouses, setStorageWarehouses] = useState([])
+  const [storageLocations, setStorageLocations] = useState([])
+  const [storageBlocks, setStorageBlocks] = useState(() => emptyStorageBlocks())
   const [isEditing, setIsEditing] = useState(false)
 
   const isStorageGeneral = serviceOrderType === 'storage_general'
+  const isStorageService = serviceOrderType === 'storage_service'
   const serviceMap = Object.fromEntries(services.map(row => [`${row.id}`, row]))
 
   useEffect(() => {
-    Promise.all([serviceOrdersRest.getBusinesses(), serviceOrdersRest.getClients(), serviceOrdersRest.getServices()]).then(([businessList, clientList, serviceList]) => {
-      setBusinesses(businessList ?? [])
+    const loadInitialData = async () => {
+      const [businessList, clientList, serviceList] = await Promise.all([
+        serviceOrdersRest.getBusinesses(),
+        serviceOrdersRest.getClients(),
+        serviceOrdersRest.getServices(),
+      ])
+      const activeBusinesses = businessList ?? []
+      setBusinesses(activeBusinesses)
       setClients((clientList ?? []).filter(row => row.status !== null))
       setServices((serviceList ?? []).filter(row => row.status !== null))
-    })
+
+      if (isStorageService) {
+        const [storageOptions, locationList] = await Promise.all([
+          serviceOrdersRest.getStorageOptions(),
+          serviceOrdersRest.getStorageLocations(),
+        ])
+        setStorageWarehouses(storageOptions?.warehouses ?? [])
+        setStorageLocations(locationList ?? [])
+
+        const defaultBusiness = activeBusinesses[0]
+        if (defaultBusiness) {
+          setSelectedBusinessId(`${defaultBusiness.id}`)
+          const branchRows = await loadBranches(defaultBusiness.id)
+          if (branchRows[0]?.id) setSelectedBranchId(`${branchRows[0].id}`)
+        }
+      }
+    }
+    loadInitialData()
   }, [])
 
   const loadBranches = async (businessId, preferred = '') => {
     const data = await serviceOrdersRest.getBranchesByBusiness(businessId)
-    setBranches(data ?? [])
+    const branchRows = data ?? []
+    setBranches(branchRows)
     setSelectedBranchId(preferred ? `${preferred}` : '')
+    return branchRows
   }
 
   const recalc = (row) => ({ ...row, total: Number(row.quantity || 0) * Number(row.unit_price || 0) })
+  const findStorageWarehouse = (warehouseName) => storageWarehouses.find(row => normalizeStorageText(row.name) === normalizeStorageText(warehouseName))
+  const blockWarehouseId = (block) => block.warehouse_id || findStorageWarehouse(block.warehouse_name)?.id || ''
+  const locationOptionsForBlock = (block) => {
+    const warehouseId = blockWarehouseId(block)
+    return storageLocations.filter(location => {
+      if (warehouseId && `${location.warehouse_id}` === `${warehouseId}`) return true
+      return normalizeStorageText(location.warehouse_name) === normalizeStorageText(block.warehouse_name)
+    })
+  }
+  const findStorageLocation = (block) => {
+    const options = locationOptionsForBlock(block)
+    return options.find(location => `${location.id}` === `${block.location_id}`)
+      ?? options.find(location => normalizeStorageText(storageLocationLabel(location)) === normalizeStorageText(block.location_label))
+      ?? null
+  }
+  const buildStorageBlocksFromItems = (itemRows = []) => {
+    const blocks = emptyStorageBlocks()
+    itemRows.forEach(row => {
+      const parsed = parseStorageDescription(row.description ?? '')
+      const index = blocks.findIndex(block => normalizeStorageText(block.warehouse_name) === normalizeStorageText(parsed.warehouse_name))
+      if (index < 0) return
+      const next = {
+        ...blocks[index],
+        enabled: true,
+        warehouse_id: findStorageWarehouse(blocks[index].warehouse_name)?.id ?? '',
+        location_label: parsed.location_label,
+        start_date: parsed.start_date,
+        months: parsed.months || '',
+        end_date: parsed.end_date || addMonths(parsed.start_date, parsed.months),
+        quantity_m3: parsed.quantity_m3 || Number(row.quantity || 0) || '',
+        tariff: Number(row.unit_price || 0) || '',
+        monthly_amount: Number(row.total || 0) || '',
+      }
+      const location = findStorageLocation(next)
+      blocks[index] = { ...next, location_id: location?.id ? `${location.id}` : '' }
+    })
+    return blocks
+  }
+  const updateStorageBlock = (key, patch) => {
+    setStorageBlocks(prev => prev.map(block => {
+      if (block.key !== key) return block
+      const location = patch.location_id
+        ? storageLocations.find(row => `${row.id}` === `${patch.location_id}`)
+        : null
+      const next = {
+        ...block,
+        ...patch,
+        warehouse_id: blockWarehouseId(block),
+      }
+      if (location) next.location_label = storageLocationLabel(location)
+      if ('start_date' in patch || 'months' in patch) next.end_date = addMonths(next.start_date, next.months)
+      if ('quantity_m3' in patch || 'tariff' in patch) {
+        const amount = toNumber(next.quantity_m3) * toNumber(next.tariff)
+        next.monthly_amount = amount ? amount.toFixed(2) : ''
+      }
+      return next
+    }))
+  }
 
   const onModalOpen = async (data = null) => {
     setIsEditing(!!data?.id)
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
-    issueDateRef.current.value = data?.issue_date?.toString?.().slice?.(0, 10) ?? new Date().toISOString().slice(0, 10)
-    scheduledAtRef.current.value = data?.scheduled_at?.toString?.().slice?.(0, 10) ?? ''
-    firstDueDateRef.current.value = data?.first_due_date?.toString?.().slice?.(0, 10) ?? ''
-    expectedDocumentTypeRef.current.value = data?.expected_document_type ?? 'Factura'
-    currencyRef.current.value = data?.currency ?? 'PEN'
+    issueDateRef.current.value = toInputDate(data?.issue_date) || new Date().toISOString().slice(0, 10)
+    scheduledAtRef.current.value = toInputDate(data?.scheduled_at)
+    firstDueDateRef.current.value = toInputDate(data?.first_due_date)
+    expectedDocumentTypeRef.current.value = data?.expected_document_type ?? (isStorageService ? '' : 'Factura')
+    currencyRef.current.value = data?.currency ?? (isStorageService ? '' : 'PEN')
     billingCycleRef.current.value = data?.billing_cycle ?? ''
     paymentConditionRef.current.value = data?.payment_condition ?? 'Contado'
     installmentsRef.current.value = Number(data?.installments ?? 1)
@@ -82,10 +224,14 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     billingStatusRef.current.value = data?.billing_status ?? 'pending'
     taxAmountRef.current.value = Number(data?.tax_amount ?? 0)
     observationsRef.current.value = data?.observations ?? ''
-    setSelectedBusinessId(data?.business_id ? `${data.business_id}` : '')
+    const nextBusinessId = data?.business_id ? `${data.business_id}` : (selectedBusinessId || (businesses[0]?.id ? `${businesses[0].id}` : ''))
+    setSelectedBusinessId(nextBusinessId)
     setSelectedClientId(data?.client_id ? `${data.client_id}` : '')
-    await loadBranches(data?.business_id ?? '', data?.business_branch_id ?? '')
+    const branchRows = await loadBranches(nextBusinessId, data?.business_branch_id ?? selectedBranchId)
+    if (!data?.business_branch_id && !selectedBranchId && branchRows[0]?.id) setSelectedBranchId(`${branchRows[0].id}`)
     const itemRows = (data?.items ?? []).map(row => ({ uid: crypto.randomUUID(), service_id: `${row.service_id}`, description: row.description ?? '', quantity: Number(row.quantity || 0), unit_price: Number(row.unit_price || 0), detraction_percent: Number(row.detraction_percent || 0), commission_percent: Number(row.commission_percent || 0), total: Number(row.total || 0) }))
+    setSelectedStorageServiceId(itemRows[0]?.service_id ?? '')
+    setStorageBlocks(isStorageService ? buildStorageBlocksFromItems(data?.items ?? []) : emptyStorageBlocks())
     setItems(itemRows.length ? itemRows : [emptyItem()])
     $(modalRef.current).modal('show')
   }
@@ -105,6 +251,63 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
 
   const onSave = async (e) => {
     e.preventDefault()
+    if (isStorageService) {
+      const selectedBlocks = storageBlocks.filter(row => row.enabled)
+      const missingBlock = selectedBlocks.find(row => !row.location_id || !row.start_date || !row.months || !row.end_date || !row.quantity_m3 || !row.tariff)
+      if (!selectedBusinessId || !selectedBranchId || !selectedClientId || !expectedDocumentTypeRef.current.value || !currencyRef.current.value || !selectedStorageServiceId) {
+        Swal.fire('Formulario incompleto', 'Completa empresa, cliente, tipo documento, moneda y tipo de servicio.', 'warning')
+        return
+      }
+      if (!selectedBlocks.length) {
+        Swal.fire('Formulario incompleto', 'Selecciona al menos un almacen.', 'warning')
+        return
+      }
+      if (missingBlock) {
+        Swal.fire('Formulario incompleto', `Completa los datos de ${missingBlock.warehouse_name}.`, 'warning')
+        return
+      }
+      const startDates = selectedBlocks.map(row => row.start_date).filter(Boolean).sort()
+      const maxMonths = Math.max(...selectedBlocks.map(row => Number(row.months || 1)))
+      const service = serviceMap[selectedStorageServiceId]
+      const request = {
+        id: idRef.current.value || undefined,
+        business_id: selectedBusinessId || null,
+        business_branch_id: selectedBranchId || null,
+        client_id: selectedClientId || null,
+        expected_document_type: expectedDocumentTypeRef.current.value,
+        currency: currencyRef.current.value,
+        billing_cycle: service?.name ?? '',
+        payment_condition: 'Contado',
+        installments: maxMonths || 1,
+        issue_date: issueDateRef.current.value || new Date().toISOString().slice(0, 10),
+        scheduled_at: startDates[0] ?? null,
+        first_due_date: startDates[0] ?? null,
+        order_status: orderStatusRef.current.value || 'draft',
+        billing_status: billingStatusRef.current.value || 'pending',
+        tax_amount: 0,
+        observations: observationsRef.current.value.trim(),
+        items: selectedBlocks.map(block => {
+          const location = findStorageLocation(block)
+          const quantity = toNumber(block.quantity_m3)
+          const unitPrice = toNumber(block.tariff)
+          const total = toNumber(block.monthly_amount) || quantity * unitPrice
+          return {
+            service_id: selectedStorageServiceId,
+            description: buildStorageDescription(block, location),
+            quantity,
+            unit_price: unitPrice,
+            detraction_percent: 0,
+            commission_percent: 0,
+            total,
+          }
+        }),
+      }
+      const result = await serviceOrdersRest.save(request)
+      if (!result) return
+      $(gridRef.current).dxDataGrid('instance').refresh()
+      $(modalRef.current).modal('hide')
+      return
+    }
     const request = {
       id: idRef.current.value || undefined,
       business_id: selectedBusinessId || null,
@@ -200,6 +403,312 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       ]}
     />
 
+    {isStorageService ? (
+      <Modal
+        modalRef={modalRef}
+        title={<span className='storage-service-order-title'><i className='mdi mdi-menu me-1'></i> ORDEN DE SERVICIO</span>}
+        size='full-width'
+        dialogClass='storage-service-order-dialog modal-dialog-scrollable'
+        contentClass='storage-service-order-content'
+        headerClass='storage-service-order-header'
+        closeButtonClass='btn-close-white'
+        bodyClass='storage-service-order-body'
+        hideFooter
+        onSubmit={onSave}
+      >
+        <style>{`
+          .storage-service-order-dialog {
+            width: calc(100vw - 34px);
+            max-width: calc(100vw - 34px);
+            margin: 7px auto;
+            align-items: flex-start;
+          }
+          .storage-service-order-content {
+            border: 0;
+            border-radius: 0;
+            min-height: calc(100vh - 38px);
+          }
+          .storage-service-order-header {
+            background: #202146;
+            color: #fff;
+            min-height: 36px;
+            padding: 7px 14px;
+            border-bottom: 0;
+          }
+          .storage-service-order-header .btn-close {
+            transform: scale(.72);
+            opacity: .85;
+          }
+          .storage-service-order-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0;
+          }
+          .storage-service-order-body {
+            padding: 0 30px 28px;
+            color: #33394a;
+          }
+          .storage-service-order-actions {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            padding: 22px 0 14px;
+            border-bottom: 1px solid #e9ecef;
+          }
+          .storage-service-order-actions .btn {
+            border-radius: 0;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 16px;
+            line-height: 1;
+          }
+          .storage-service-order-actions .btn-primary-outline {
+            color: #11184a;
+            background: #fff;
+            border: 1px solid #11184a;
+          }
+          .storage-service-order-actions .btn-muted {
+            color: #8f949a;
+            background: #f0f0f0;
+            border: 1px solid #f0f0f0;
+          }
+          .storage-service-order-heading {
+            text-align: center;
+            font-size: 22px;
+            font-weight: 600;
+            color: #555b66;
+            margin: 32px 0 20px;
+          }
+          .storage-service-order-body .form-label {
+            color: #26324d;
+            font-size: 12px;
+            margin-bottom: 5px;
+          }
+          .storage-service-order-body .form-control,
+          .storage-service-order-body .form-select {
+            border-radius: 2px;
+            min-height: 26px;
+            padding: 3px 10px;
+            font-size: 12px;
+          }
+          .storage-service-order-body .form-control:disabled,
+          .storage-service-order-body .form-select:disabled {
+            background-color: #f5f5f5;
+            color: #9ca3af;
+          }
+          .storage-service-order-separator {
+            border-top: 1px solid #e9ecef;
+            margin: 28px 0 16px;
+          }
+          .storage-service-card {
+            border: 1px solid #e9ecef;
+            background: #fff;
+            min-height: 248px;
+          }
+          .storage-service-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f7f7f7;
+            padding: 11px 12px;
+            min-height: 44px;
+          }
+          .storage-service-card-title {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 500;
+            color: #3b4250;
+          }
+          .storage-service-card-body {
+            padding: 13px 12px 20px;
+          }
+          .storage-order-checkbox {
+            width: 22px;
+            height: 22px;
+            border-radius: 1px;
+            margin: 0;
+          }
+          @media (max-width: 767.98px) {
+            .storage-service-order-dialog {
+              width: calc(100vw - 12px);
+              max-width: calc(100vw - 12px);
+            }
+            .storage-service-order-body {
+              padding: 0 16px 24px;
+            }
+          }
+        `}</style>
+        <input ref={idRef} hidden />
+        <input ref={codeRef} hidden />
+        <input ref={issueDateRef} type='date' hidden />
+        <input ref={scheduledAtRef} type='date' hidden />
+        <input ref={firstDueDateRef} type='date' hidden />
+        <input ref={billingCycleRef} hidden />
+        <input ref={paymentConditionRef} hidden />
+        <input ref={installmentsRef} type='number' hidden />
+        <input ref={orderStatusRef} hidden />
+        <input ref={billingStatusRef} hidden />
+        <input ref={taxAmountRef} type='number' hidden />
+        <textarea ref={observationsRef} hidden />
+
+        <div className='storage-service-order-actions'>
+          <button type='submit' className='btn btn-primary-outline'><i className='mdi mdi-plus me-1'></i> Registrar</button>
+          <button type='button' className='btn btn-muted' data-bs-dismiss='modal'><i className='mdi mdi-close me-1'></i> Cerrar</button>
+        </div>
+
+        <h3 className='storage-service-order-heading'>Orden de servicio N&deg;</h3>
+
+        <div className='row g-4 align-items-end'>
+          <div className='col-12 col-md-6 col-xl'>
+            <label className='form-label'>Empresa</label>
+            <select
+              className='form-select'
+              value={selectedBusinessId}
+              onChange={async (e) => {
+                setSelectedBusinessId(e.target.value)
+                const branchRows = await loadBranches(e.target.value)
+                setSelectedBranchId(branchRows[0]?.id ? `${branchRows[0].id}` : '')
+              }}
+              required
+            >
+              <option value=''>Seleccione</option>
+              {businesses.map(row => <option key={`storage-order-business-${row.id}`} value={row.id}>{row.name}</option>)}
+            </select>
+          </div>
+          <div className='col-12 col-md-6 col-xl-4'>
+            <label className='form-label'>Cliente</label>
+            <select className='form-select' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required>
+              <option value=''>Seleccione</option>
+              {clients.map(row => <option key={`storage-order-client-${row.id}`} value={row.id}>{row.document_number ? `${row.document_number} | ` : ''}{row.full_name}</option>)}
+            </select>
+          </div>
+          <div className='col-12 col-md-4 col-xl'>
+            <label className='form-label'>Tipo documento</label>
+            <select ref={expectedDocumentTypeRef} className='form-select' required>
+              <option value=''>Seleccione</option>
+              <option value='Factura'>Factura</option>
+              <option value='Boleta'>Boleta</option>
+              <option value='Nota de pedido'>Nota de pedido</option>
+            </select>
+          </div>
+          <div className='col-12 col-md-4 col-xl'>
+            <label className='form-label'>Moneda</label>
+            <select ref={currencyRef} className='form-select' required>
+              <option value=''>Seleccione</option>
+              <option value='PEN'>Soles</option>
+              <option value='USD'>Dolares</option>
+            </select>
+          </div>
+          <div className='col-12 col-md-4 col-xl'>
+            <label className='form-label'>Tipo de servicio</label>
+            <select className='form-select' value={selectedStorageServiceId} onChange={(e) => setSelectedStorageServiceId(e.target.value)} required>
+              <option value=''>Seleccione</option>
+              {services.map(service => <option key={`storage-order-service-${service.id}`} value={service.id}>{service.name}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div className='storage-service-order-separator'></div>
+
+        <div className='row g-3'>
+          {storageBlocks.map(block => {
+            const locationOptions = locationOptionsForBlock(block)
+            const disabled = !block.enabled
+            return <div className='col-12 col-lg-4' key={`storage-order-block-${block.key}`}>
+              <div className='storage-service-card'>
+                <div className='storage-service-card-header'>
+                  <input
+                    type='checkbox'
+                    className='form-check-input storage-order-checkbox'
+                    checked={block.enabled}
+                    onChange={(e) => updateStorageBlock(block.key, { enabled: e.target.checked })}
+                  />
+                  <p className='storage-service-card-title'>{block.warehouse_name}</p>
+                </div>
+                <div className='storage-service-card-body'>
+                  <div className='mb-3'>
+                    <label className='form-label'>Ubicaci&oacute;n</label>
+                    <select
+                      className='form-select'
+                      value={block.location_id}
+                      disabled={disabled}
+                      onChange={(e) => updateStorageBlock(block.key, { location_id: e.target.value })}
+                      required={block.enabled}
+                    >
+                      <option value=''>{locationOptions.length ? 'Seleccione ubicacion' : 'Sin ubicaciones'}</option>
+                      {locationOptions.map(location => (
+                        <option key={`storage-order-location-${block.key}-${location.id}`} value={location.id}>{storageLocationLabel(location)}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className='row g-3 mb-3'>
+                    <div className='col-12 col-sm-4'>
+                      <label className='form-label'>Fecha de inicio</label>
+                      <input
+                        type='date'
+                        className='form-control'
+                        value={block.start_date}
+                        disabled={disabled}
+                        onChange={(e) => updateStorageBlock(block.key, { start_date: e.target.value })}
+                        required={block.enabled}
+                      />
+                    </div>
+                    <div className='col-12 col-sm-4'>
+                      <label className='form-label'>Nro de meses</label>
+                      <input
+                        type='number'
+                        min='1'
+                        className='form-control'
+                        value={block.months}
+                        disabled={disabled}
+                        onChange={(e) => updateStorageBlock(block.key, { months: e.target.value })}
+                        required={block.enabled}
+                      />
+                    </div>
+                    <div className='col-12 col-sm-4'>
+                      <label className='form-label'>Fecha fin</label>
+                      <input type='date' className='form-control' value={block.end_date} disabled />
+                    </div>
+                  </div>
+                  <div className='row g-3'>
+                    <div className='col-12 col-sm-4'>
+                      <label className='form-label'>Cantidad de m3</label>
+                      <input
+                        type='number'
+                        min='0'
+                        step='0.001'
+                        className='form-control'
+                        value={block.quantity_m3}
+                        disabled={disabled}
+                        onChange={(e) => updateStorageBlock(block.key, { quantity_m3: e.target.value })}
+                        required={block.enabled}
+                      />
+                    </div>
+                    <div className='col-12 col-sm-4'>
+                      <label className='form-label'>Tarifa</label>
+                      <input
+                        type='number'
+                        min='0'
+                        step='0.01'
+                        className='form-control'
+                        value={block.tariff}
+                        disabled={disabled}
+                        onChange={(e) => updateStorageBlock(block.key, { tariff: e.target.value })}
+                        required={block.enabled}
+                      />
+                    </div>
+                    <div className='col-12 col-sm-4'>
+                      <label className='form-label'>Importe mensual</label>
+                      <input type='number' className='form-control' value={block.monthly_amount} disabled />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          })}
+        </div>
+      </Modal>
+    ) : (
     <Modal modalRef={modalRef} title={isEditing ? `Editar ${isStorageGeneral ? 'orden de servicio general' : 'orden de servicio'}` : `Agregar ${isStorageGeneral ? 'orden de servicio general' : 'orden de servicio'}`} size='xl' onSubmit={onSave}>
       <div className='row'>
         <input ref={idRef} hidden />
@@ -237,6 +746,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         <div className='col-12 mb-1'><label className='form-label'>Observaciones</label><textarea ref={observationsRef} className='form-control' rows='3' /></div>
       </div>
     </Modal>
+    )}
   </>
 }
 

@@ -3,11 +3,11 @@ import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
 import { isStoragePath } from "../../Utils/permissionScope";
 
-const loadAll = async (path) => {
+const loadAll = async (path, body = {}) => {
   try {
     const { status, result } = await Fetch(path, {
       method: 'POST',
-      body: JSON.stringify({ take: 1000, skip: 0, isLoadingAll: true })
+      body: JSON.stringify({ take: 1000, skip: 0, isLoadingAll: true, ...body })
     })
     if (!status) throw new Error(result?.message || 'No se pudo cargar la lista')
     return result?.data ?? []
@@ -28,6 +28,10 @@ class ServiceOrdersRest extends BasicRest {
   getBusinesses = async () => await loadAll('/api/admin/businesses/paginate')
   getClients = async () => await loadAll(isStoragePath() ? '/api/admin/storage/clients/paginate' : '/api/admin/clients/paginate')
   getServices = async () => await loadAll(isStoragePath() ? '/api/admin/storage/general-service/paginate' : '/api/admin/services/paginate')
+  getStorageOptions = async () => isStoragePath() ? await this.simpleGet('/api/admin/storage/kardex/options') : null
+  getStorageLocations = async () => isStoragePath()
+    ? await loadAll('/api/admin/storage/kardex/paginate', { section: 'locations' })
+    : []
 }
 
 export default ServiceOrdersRest
