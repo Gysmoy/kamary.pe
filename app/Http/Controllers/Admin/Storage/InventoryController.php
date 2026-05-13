@@ -377,6 +377,11 @@ class InventoryController extends BasicController
             ->join('articles as article', 'article.id', '=', 'stock.article_id')
             ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
             ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'stock.warehouse_id')
+            ->leftJoin('storage_locations as storage_location', function ($join) {
+                $join->on('storage_location.warehouse_id', '=', 'stock.warehouse_id')
+                    ->whereRaw('storage_location.code = stock.location')
+                    ->whereNotNull('storage_location.status');
+            })
             ->leftJoinSub($outgoingTotals, 'outgoing', function ($join) {
                 $join->on('outgoing.article_id', '=', 'stock.article_id')
                     ->on('outgoing.warehouse_id', '=', 'stock.warehouse_id')
@@ -398,6 +403,7 @@ class InventoryController extends BasicController
                 COALESCE(article.name, '') as article_name,
                 COALESCE(unit.symbol, unit.name, '') as unit_label,
                 COALESCE(stock.location, '') as location,
+                storage_location.temperature_range as registered_temperature_range,
                 COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0) as system_stock
             ");
 
@@ -416,7 +422,7 @@ class InventoryController extends BasicController
                     'client_name' => $clientName,
                     'unit_label' => (string)($row->unit_label ?? ''),
                     'location' => (string)($row->location ?? ''),
-                    'temperature_range' => $temperature,
+                    'temperature_range' => (string)($row->registered_temperature_range ?? $temperature),
                     'system_stock' => $systemStock,
                     'real_stock' => 0,
                 ];
@@ -426,13 +432,32 @@ class InventoryController extends BasicController
 
     private function locationOptions(): array
     {
+        $registeredLocations = DB::table('storage_locations as storage_location')
+            ->join('warehouses as warehouse', 'warehouse.id', '=', 'storage_location.warehouse_id')
+            ->join('business_branches as branch', 'branch.id', '=', 'warehouse.business_branch_id')
+            ->join('businesses as business', 'business.id', '=', 'branch.business_id')
+            ->whereNotNull('storage_location.status')
+            ->whereNotNull('warehouse.status')
+            ->where('business.business_key', BusinessScope::KAMARY_PERU)
+            ->selectRaw("
+                storage_location.code as location,
+                storage_location.warehouse_id,
+                storage_location.temperature_range,
+                1 as priority
+            ");
+
         $entryLocations = DB::table('entry_note_items')
             ->join('entry_notes', 'entry_notes.id', '=', 'entry_note_items.entry_note_id')
             ->join('businesses', 'businesses.id', '=', 'entry_notes.business_id')
             ->whereNotNull('entry_note_items.location')
             ->where('entry_note_items.location', '!=', '')
             ->where('businesses.business_key', BusinessScope::KAMARY_PERU)
-            ->select('entry_note_items.location as location');
+            ->selectRaw("
+                entry_note_items.location as location,
+                COALESCE(entry_note_items.warehouse_id, entry_notes.warehouse_id) as warehouse_id,
+                CAST(NULL AS CHAR) as temperature_range,
+                2 as priority
+            ");
 
         $receiptLocations = DB::table('purchase_receipt_items')
             ->join('purchase_receipts', 'purchase_receipts.id', '=', 'purchase_receipt_items.purchase_receipt_id')
@@ -440,13 +465,28 @@ class InventoryController extends BasicController
             ->whereNotNull('purchase_receipt_items.location')
             ->where('purchase_receipt_items.location', '!=', '')
             ->where('businesses.business_key', BusinessScope::KAMARY_PERU)
-            ->select('purchase_receipt_items.location as location');
+            ->selectRaw("
+                purchase_receipt_items.location as location,
+                purchase_receipt_items.warehouse_id,
+                CAST(NULL AS CHAR) as temperature_range,
+                3 as priority
+            ");
 
-        return DB::query()
-            ->fromSub($entryLocations->union($receiptLocations), 'locations')
+        $rows = DB::query()
+            ->fromSub($registeredLocations->union($entryLocations)->union($receiptLocations), 'locations')
             ->distinct()
+            ->whereNotNull('location')
             ->orderBy('location')
-            ->pluck('location')
+            ->orderBy('priority')
+            ->get();
+
+        return $rows
+            ->map(fn($row) => [
+                'location' => (string)$row->location,
+                'warehouse_id' => $row->warehouse_id ? (int)$row->warehouse_id : null,
+                'temperature_range' => $row->temperature_range,
+            ])
+            ->unique(fn($row) => ($row['warehouse_id'] ?? 'all') . '|' . $row['location'])
             ->values()
             ->all();
     }

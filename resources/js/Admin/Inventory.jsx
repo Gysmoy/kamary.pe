@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
@@ -174,17 +174,56 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
   const [rows, setRows] = useState([])
   const [selectedCount, setSelectedCount] = useState(null)
   const [loadingRows, setLoadingRows] = useState(false)
+  const [tablePageSize, setTablePageSize] = useState(10)
+  const [tableSearch, setTableSearch] = useState('')
+  const [tablePage, setTablePage] = useState(1)
 
   useEffect(() => {
     inventoryRest.getStorageOptions().then(data => {
       setWarehouses(data?.warehouses ?? [])
       setClients(data?.clients ?? [])
-      setLocations(data?.locations ?? [])
+      setLocations((data?.locations ?? []).map(item => typeof item === 'string'
+        ? { location: item, warehouse_id: null, temperature_range: null }
+        : item
+      ))
     })
   }, [])
 
   const selectedCountCode = selectedCount?.code ?? ''
   const selectedClientName = selectedCount?.client?.full_name || clients.find(client => `${client.id}` === `${clientId}`)?.full_name || ''
+  const filteredRows = useMemo(() => {
+    const term = tableSearch.trim().toLowerCase()
+    if (!term) return rows
+
+    return rows.filter(row => [
+      row.id,
+      row.lot,
+      row.expiration_date,
+      row.article_name,
+      row.client_name,
+      row.unit_label,
+      row.location,
+      row.temperature_range,
+      row.system_stock,
+      row.real_stock,
+    ].some(value => `${value ?? ''}`.toLowerCase().includes(term)))
+  }, [rows, tableSearch])
+  const tablePageCount = Math.max(1, Math.ceil(filteredRows.length / tablePageSize))
+  const currentTablePage = Math.min(tablePage, tablePageCount)
+  const paginatedRows = filteredRows.slice((currentTablePage - 1) * tablePageSize, currentTablePage * tablePageSize)
+  const filteredLocations = useMemo(() => locations.filter(item => {
+    if (!warehouseId) return true
+    return !item.warehouse_id || `${item.warehouse_id}` === `${warehouseId}`
+  }), [locations, warehouseId])
+
+  const changeWarehouse = (value) => {
+    setWarehouseId(value)
+    setLocation('')
+  }
+
+  useEffect(() => {
+    setTablePage(1)
+  }, [rows, tablePageSize, tableSearch])
 
   const resetModal = () => {
     setSelectedCount(null)
@@ -192,6 +231,8 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
     setLocation('')
     setClientId('')
     setRows([])
+    setTableSearch('')
+    setTablePage(1)
   }
 
   const openNewModal = () => {
@@ -339,15 +380,29 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
 
     <Modal
       modalRef={modalRef}
-      title='Registrar pedidos'
-      size='xl'
+      title={<div className='d-flex align-items-center gap-2 text-white fw-bold fs-6 text-uppercase'>
+        <i className='mdi mdi-format-list-bulleted'></i>
+        Registrar pedidos
+      </div>}
+      size='fullscreen'
       hideFooter
-      bodyStyle={{ maxHeight: 'calc(100vh - 145px)', overflowY: 'auto', overflowX: 'hidden' }}
+      dialogClass='modal-dialog-scrollable'
+      contentClass='rounded-0'
+      headerClass='py-2 border-0 bg-storage-inventory-modal'
+      closeButtonClass='btn-close-white'
+      bodyClass='p-4'
+      bodyStyle={{ maxHeight: 'calc(100vh - 88px)', overflowY: 'auto', overflowX: 'hidden' }}
       onSubmit={(e) => e.preventDefault()}
       onClose={resetModal}
     >
+      <style>{`
+        .bg-storage-inventory-modal { background: #25274f; }
+        .storage-inventory-modal-actions { min-height: 43px; }
+        .storage-inventory-filter-row .form-label { margin-bottom: 0.45rem; font-weight: 600; }
+        .storage-inventory-table-wrap { min-height: 160px; }
+      `}</style>
       <input ref={fileRef} type='file' accept='.csv' hidden onChange={uploadFormat} />
-      <div className='d-flex justify-content-center gap-3 mb-4'>
+      <div className='d-flex justify-content-center gap-4 storage-inventory-modal-actions my-3'>
         {!selectedCount && <button type='button' className='btn btn-primary' onClick={registerInventory}>
           <i className='mdi mdi-plus me-1'></i>
           Registrar
@@ -357,59 +412,74 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           Cerrar
         </button>
       </div>
-      <hr className='mb-3' />
-      <div className='border rounded-2 p-3 mb-3 bg-light-subtle'>
-        <div className='row g-3 align-items-end'>
-          <div className='col-12 col-lg-3'>
-            <label className='form-label'>Almacen</label>
-            <select className='form-select' value={warehouseId} disabled={!!selectedCount} onChange={(e) => setWarehouseId(e.target.value)}>
-              <option value=''>Seleccione Almacen</option>
-              {warehouses.map(warehouse => (
-                <option key={`storage-inv-wh-${warehouse.id}`} value={warehouse.id}>
-                  {warehouse.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className='col-12 col-sm-6 col-lg-3'>
-            <label className='form-label'>Ubicacion</label>
-            <input className='form-control' list='storage-inventory-locations' value={location} disabled={!!selectedCount} placeholder='Seleccione ubicacion' onChange={(e) => setLocation(e.target.value)} />
-            <datalist id='storage-inventory-locations'>
-              {locations.map(item => <option key={`storage-inv-location-${item}`} value={item} />)}
-            </datalist>
-          </div>
-          <div className='col-12 col-lg-4'>
-            <label className='form-label'>Cliente</label>
-            <select className='form-select' value={clientId} disabled={!!selectedCount} onChange={(e) => setClientId(e.target.value)}>
-              <option value=''>Seleccione cliente</option>
-              {clients.map(client => (
-                <option key={`storage-inv-client-${client.id}`} value={client.id}>
-                  {client.full_name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className='col-12 col-sm-6 col-lg-2 d-grid'>
-            <button type='button' className='btn btn-primary py-2' disabled={!!selectedCount || loadingRows} onClick={refreshPreview}>
-              <i className='mdi mdi-magnify me-1'></i>
-              Filtrar
-            </button>
-          </div>
+      <hr className='my-4' />
+
+      <div className='row g-4 align-items-end storage-inventory-filter-row mb-4'>
+        <div className='col-12 col-md-6 col-xl-2'>
+          <label className='form-label'>Almacen</label>
+          <select className='form-select' value={warehouseId} disabled={!!selectedCount} onChange={(e) => changeWarehouse(e.target.value)}>
+            <option value=''>Seleccione Almacen</option>
+            {warehouses.map(warehouse => (
+              <option key={`storage-inv-wh-${warehouse.id}`} value={warehouse.id}>
+                {warehouse.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className='col-12 col-md-6 col-xl-3'>
+          <label className='form-label'>Ubicacion</label>
+          <select className='form-select' value={location} disabled={!!selectedCount} onChange={(e) => setLocation(e.target.value)}>
+            <option value=''>Seleccione ubicación</option>
+            {filteredLocations.map(item => (
+              <option key={`storage-inv-location-${item.warehouse_id ?? 'all'}-${item.location}`} value={item.location}>
+                {item.location}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className='col-12 col-xl-5'>
+          <label className='form-label'>Cliente</label>
+          <select className='form-select' value={clientId} disabled={!!selectedCount} onChange={(e) => setClientId(e.target.value)}>
+            <option value=''>Seleccione cliente</option>
+            {clients.map(client => (
+              <option key={`storage-inv-client-${client.id}`} value={client.id}>
+                {client.full_name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className='col-12 col-xl-2 d-grid'>
+          <button type='button' className='btn btn-outline-primary py-2 fw-semibold' disabled={!!selectedCount || loadingRows} onClick={refreshPreview}>
+            <i className='mdi mdi-magnify me-1'></i>
+            Filtrar
+          </button>
         </div>
       </div>
 
-      <div className='d-flex flex-wrap gap-3 mb-4'>
-        <button type='button' className='btn btn-outline-success px-4' disabled={!selectedCount?.id} onClick={downloadFormat}>
+      <div className='d-flex flex-wrap gap-4 mb-5'>
+        <button type='button' className='btn btn-outline-success px-5 py-2' disabled={!selectedCount?.id} onClick={downloadFormat}>
           Descargar Formato
         </button>
-        <button type='button' className='btn btn-outline-success px-4' disabled={!selectedCount?.id} onClick={() => fileRef.current?.click()}>
+        <button type='button' className='btn btn-outline-success px-5 py-2' disabled={!selectedCount?.id} onClick={() => fileRef.current?.click()}>
           Subir Formato
         </button>
       </div>
 
-      <h3 className='text-center mb-3'>INVENTARIO N° {selectedCountCode}</h3>
+      <h3 className='text-center mb-4'>INVENTARIO N° {selectedCountCode}</h3>
       {selectedClientName && <div className='d-flex justify-content-end mb-2'><span className='badge badge-soft-secondary fs-14'>{selectedClientName}</span></div>}
-      <div className='table-responsive border rounded position-relative'>
+      <div className='d-flex flex-wrap justify-content-between align-items-center gap-3 mb-2'>
+        <label className='d-inline-flex align-items-center gap-2 mb-0'>
+          Elementos:
+          <select className='form-select form-select-sm w-auto' value={tablePageSize} onChange={(e) => setTablePageSize(Number(e.target.value))}>
+            {[10, 25, 50, 100].map(size => <option key={`storage-inv-page-size-${size}`} value={size}>{size}</option>)}
+          </select>
+        </label>
+        <label className='d-inline-flex align-items-center gap-2 mb-0'>
+          Filtrar:
+          <input className='form-control form-control-sm' style={{ width: 220 }} value={tableSearch} onChange={(e) => setTableSearch(e.target.value)} />
+        </label>
+      </div>
+      <div className='table-responsive border rounded position-relative storage-inventory-table-wrap'>
         {loadingRows && <div className='position-absolute top-0 start-0 end-0 bottom-0 bg-white bg-opacity-75 d-flex align-items-center justify-content-center' style={{ zIndex: 1 }}>
           <i className='mdi mdi-spin mdi-loading mdi-36px'></i>
         </div>}
@@ -429,8 +499,8 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 && <tr><td colSpan='10' className='text-center py-4'>No existen elementos</td></tr>}
-            {rows.map((row, index) => (
+            {filteredRows.length === 0 && <tr><td colSpan='10' className='text-center py-4'>No existen elementos</td></tr>}
+            {paginatedRows.map((row, index) => (
               <tr key={`storage-inventory-detail-${row.id ?? index}`}>
                 <td>{row.id ?? index + 1}</td>
                 <td>{row.lot || '-'}</td>
@@ -447,7 +517,23 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           </tbody>
         </table>
       </div>
-      <div className='mt-2'>{rows.length} elementos</div>
+      <div className='d-flex flex-wrap justify-content-between align-items-center gap-3 mt-2'>
+        <div>
+          {filteredRows.length} elementos
+          {filteredRows.length > 0 && ` (Página ${currentTablePage} de ${tablePageCount})`}
+        </div>
+        <div className='d-inline-flex align-items-center gap-2'>
+          <button type='button' className='btn btn-link p-0 text-muted text-decoration-none' disabled={currentTablePage <= 1} onClick={() => setTablePage(page => Math.max(1, page - 1))}>
+            Anterior
+          </button>
+          <button type='button' className='btn btn-sm btn-primary' disabled>
+            {currentTablePage}
+          </button>
+          <button type='button' className='btn btn-link p-0 text-decoration-none' disabled={currentTablePage >= tablePageCount} onClick={() => setTablePage(page => Math.min(tablePageCount, page + 1))}>
+            Siguiente
+          </button>
+        </div>
+      </div>
     </Modal>
   </>
 }
