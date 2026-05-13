@@ -57,14 +57,7 @@ class KardexController extends BasicController
                 ->select('branch.id', 'branch.business_id', 'branch.name', 'branch.status')
                 ->get();
 
-            $warehouses = Warehouse::query()
-                ->with(['branch:id,name,business_id', 'branch.business:id,name,business_key'])
-                ->whereNotNull('status')
-                ->whereHas('branch.business', function ($business) {
-                    $business->where('business_key', BusinessScope::KAMARY_PERU)->whereNotNull('status');
-                })
-                ->orderBy('name')
-                ->get(['id', 'business_branch_id', 'name', 'status']);
+            $warehouses = $this->warehouseOptionsQuery()->get(['id', 'business_branch_id', 'name', 'status']);
 
             $clients = Client::query()
                 ->whereNotNull('status')
@@ -333,7 +326,7 @@ class KardexController extends BasicController
             ->leftJoin('businesses as business', 'business.id', '=', 'branch.business_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'warehouse.created_by')
             ->whereNotNull('warehouse.status')
-            ->where('business.business_key', BusinessScope::KAMARY_PERU)
+            ->whereIn('business.business_key', $this->listBusinessKeys())
             ->whereNotNull('business.status')
             ->selectRaw("
                 warehouse.id,
@@ -360,7 +353,7 @@ class KardexController extends BasicController
             ->leftJoin('businesses as business', 'business.id', '=', 'branch.business_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'location.created_by')
             ->whereNotNull('location.status')
-            ->where('business.business_key', BusinessScope::KAMARY_PERU)
+            ->whereIn('business.business_key', $this->listBusinessKeys())
             ->whereNotNull('business.status')
             ->selectRaw("
                 location.id,
@@ -542,6 +535,22 @@ class KardexController extends BasicController
         }
 
         return $warehouse;
+    }
+
+    private function warehouseOptionsQuery()
+    {
+        return Warehouse::query()
+            ->with(['branch:id,name,business_id', 'branch.business:id,name,business_key'])
+            ->whereNotNull('status')
+            ->whereHas('branch.business', function ($business) {
+                $business->whereIn('business_key', $this->listBusinessKeys())->whereNotNull('status');
+            })
+            ->orderBy('name');
+    }
+
+    private function listBusinessKeys(): array
+    {
+        return BusinessScope::fixedKeys();
     }
 
     private function nullableInt($value): ?int
