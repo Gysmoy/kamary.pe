@@ -19,6 +19,7 @@ import {
 const serviceOrdersRest = new ServiceOrdersRest()
 const emptyItem = () => ({ uid: crypto.randomUUID(), service_id: '', description: '', quantity: 1, unit_price: 0, detraction_percent: 0, commission_percent: 0, total: 0 })
 const normalizeStorageText = (value = '') => value.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
+const storageServiceTypeNames = ['Servicio de almacenamiento', 'Servicio de almacenamiento - Adicional']
 const storageWarehouseName = (warehouse) => warehouse?.name ?? warehouse?.warehouse_name ?? ''
 const storageWarehouseId = (warehouse) => warehouse?.id ?? warehouse?.warehouse_id ?? ''
 const storageBlockFromWarehouse = (warehouse) => {
@@ -136,6 +137,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
 
   const isStorageGeneral = serviceOrderType === 'storage_general'
   const isStorageService = serviceOrderType === 'storage_service'
+  const storageServiceTypeOptions = services.filter(service => storageServiceTypeNames.some(name => normalizeStorageText(name) === normalizeStorageText(service.name)))
   const serviceMap = Object.fromEntries(services.map(row => [`${row.id}`, row]))
 
   const loadStorageCatalog = async () => {
@@ -736,7 +738,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
             <label className='form-label'>Tipo de servicio</label>
             <select className='form-select' value={selectedStorageServiceId} onChange={(e) => setSelectedStorageServiceId(e.target.value)} required>
               <option value=''>Seleccione</option>
-              {services.map(service => <option key={`storage-order-service-${service.id}`} value={service.id}>{service.name}</option>)}
+              {storageServiceTypeOptions.map(service => <option key={`storage-order-service-${service.id}`} value={service.id}>{service.name}</option>)}
             </select>
           </div>
         </div>

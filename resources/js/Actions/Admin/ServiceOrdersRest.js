@@ -18,6 +18,7 @@ const loadAll = async (path, body = {}) => {
 }
 
 const isStorageGeneralOrdersPath = () => location.pathname.includes('/admin/storage-general-service-orders')
+const isStorageServiceOrdersPath = () => location.pathname.includes('/admin/storage-service-orders')
 
 class ServiceOrdersRest extends BasicRest {
   path = isStoragePath()
@@ -27,7 +28,10 @@ class ServiceOrdersRest extends BasicRest {
   getBranchesByBusiness = async (businessId) => businessId ? (await this.simpleGet(`/api/${this.path}/businesses/${businessId}/branches`)) ?? [] : []
   getBusinesses = async () => await loadAll('/api/admin/businesses/paginate')
   getClients = async () => await loadAll(isStoragePath() ? '/api/admin/storage/clients/paginate' : '/api/admin/clients/paginate')
-  getServices = async () => await loadAll(isStoragePath() ? '/api/admin/storage/general-service/paginate' : '/api/admin/services/paginate')
+  getServices = async () => await loadAll(
+    isStoragePath() ? '/api/admin/storage/general-service/paginate' : '/api/admin/services/paginate',
+    isStorageServiceOrdersPath() ? { storage_service_types: true } : {}
+  )
   getStorageOptions = async () => isStoragePath() ? await this.simpleGet('/api/admin/storage/kardex/options') : null
   getStorageWarehouses = async () => isStoragePath()
     ? await loadAll('/api/admin/storage/kardex/paginate', { section: 'warehouses', sort: [{ selector: 'warehouse_name', desc: false }] })
