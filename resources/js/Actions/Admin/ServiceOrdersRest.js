@@ -17,9 +17,11 @@ const loadAll = async (path) => {
   }
 }
 
+const isStorageGeneralOrdersPath = () => location.pathname.includes('/admin/storage-general-service-orders')
+
 class ServiceOrdersRest extends BasicRest {
   path = isStoragePath()
-    ? 'admin/storage/general-service-orders'
+    ? (isStorageGeneralOrdersPath() ? 'admin/storage/general-service-orders' : 'admin/storage/service-orders')
     : 'admin/service-orders'
 
   getBranchesByBusiness = async (businessId) => businessId ? (await this.simpleGet(`/api/${this.path}/businesses/${businessId}/branches`)) ?? [] : []

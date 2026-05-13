@@ -41,6 +41,7 @@ class ModulePermissions
 
             'storage-inventory' => 'Serv. Almacenamiento - Inventario',
             'storage-clients' => 'Serv. Almacenamiento - Clientes',
+            'storage-service-orders' => 'Serv. Almacenamiento - O. Servicio',
             'storage-units' => 'Serv. Almacenamiento - Und. de Medida',
             'storage-products' => 'Serv. Almacenamiento - Creacion del Producto',
             'storage-entry-note' => 'Serv. Almacenamiento - Nota de Entrada',

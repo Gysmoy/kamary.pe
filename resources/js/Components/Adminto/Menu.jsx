@@ -148,10 +148,11 @@ const Menu = ({ can, hasRole, panel = null }) => {
             </MenuItemContainer>
           )}
 
-          {canAccessAny('storage-inventory', 'storage-clients', 'storage-units', 'storage-products', 'storage-entry-note', 'storage-exit-note', 'storage-kardex', 'storage-general-service', 'storage-billing-control', 'storage-general-service-orders') && (
+          {canAccessAny('storage-inventory', 'storage-clients', 'storage-service-orders', 'storage-units', 'storage-products', 'storage-entry-note', 'storage-exit-note', 'storage-kardex', 'storage-general-service', 'storage-billing-control', 'storage-general-service-orders') && (
             <MenuItemContainer title='Serv. Almacenamiento' icon='ti ti-building-warehouse'>
               {canAccess('storage-inventory') && <MenuItem href='/admin/storage-inventory' icon='ti ti-stack-2'>Inventario</MenuItem>}
               {canAccess('storage-clients') && <MenuItem href='/admin/storage-clients' icon='ti ti-users'>Clientes</MenuItem>}
+              {canAccess('storage-service-orders') && <MenuItem href='/admin/storage-service-orders' icon='ti ti-list-details'>O. Servicio</MenuItem>}
               {canAccess('storage-units') && <MenuItem href='/admin/storage-units' icon='ti ti-ruler-measure'>Und. de medida</MenuItem>}
               {canAccess('storage-products') && <MenuItem href='/admin/storage-products' icon='ti ti-box'>Creación del producto</MenuItem>}
               {canAccess('storage-entry-note') && <MenuItem href='/admin/storage-entry-note' icon='ti ti-file-import'>Nota de entrada</MenuItem>}

@@ -69,6 +69,7 @@ const QUICK_FLAGS = {
     'units-of-measure',
     'storage-inventory',
     'storage-clients',
+    'storage-service-orders',
     'storage-units',
     'storage-products',
     'storage-entry-note',
@@ -106,7 +107,7 @@ const PERMISSION_GROUPS = [
   {
     key: 'almacenamiento',
     title: 'Serv. Almacenamiento',
-    permissions: ['storage-inventory', 'storage-clients', 'storage-units', 'storage-products', 'storage-entry-note', 'storage-exit-note', 'storage-kardex', 'storage-general-service', 'storage-billing-control', 'storage-general-service-orders']
+    permissions: ['storage-inventory', 'storage-clients', 'storage-service-orders', 'storage-units', 'storage-products', 'storage-entry-note', 'storage-exit-note', 'storage-kardex', 'storage-general-service', 'storage-billing-control', 'storage-general-service-orders']
   },
   {
     key: 'despacho',
@@ -591,4 +592,3 @@ CreateReactScript((el, properties) => {
     <Roles {...properties} />
   </BaseAdminto>)
 })
-
