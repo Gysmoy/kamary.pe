@@ -17,9 +17,14 @@ import {
 } from '../Utils/statusLabels';
 
 const serviceOrdersRest = new ServiceOrdersRest()
+const formatGridUser = (user) => user?.fullname || [user?.name, user?.lastname].filter(Boolean).join(' ') || user?.username || ''
 const emptyItem = () => ({ uid: crypto.randomUUID(), service_id: '', description: '', quantity: 1, unit_price: 0, detraction_percent: 0, commission_percent: 0, total: 0 })
 const normalizeStorageText = (value = '') => value.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
 const storageServiceTypeNames = ['Servicio de almacenamiento', 'Servicio de almacenamiento - Adicional']
+const currencyOptions = [
+  { value: 'PEN', label: 'Soles' },
+  { value: 'USD', label: 'Dolares' },
+]
 const storageWarehouseName = (warehouse) => warehouse?.name ?? warehouse?.warehouse_name ?? ''
 const storageWarehouseId = (warehouse) => warehouse?.id ?? warehouse?.warehouse_id ?? ''
 const storageBlockFromWarehouse = (warehouse) => {
@@ -489,6 +494,91 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
+  const actionColumn = {
+    caption: 'Acciones',
+    width: isStorageService ? 105 : 170,
+    allowFiltering: false,
+    allowExporting: false,
+    cellTemplate: (container, { data }) => {
+      container.css('text-overflow', 'unset')
+      container.append(DxButton({
+        className: isStorageService ? 'btn btn-xs btn-soft-warning' : 'btn btn-xs btn-soft-primary',
+        title: 'Editar',
+        icon: isStorageService ? 'mdi mdi-format-list-bulleted' : 'mdi mdi-pencil',
+        onClick: () => onModalOpen(data)
+      }))
+      if (!isStorageService) {
+        container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.serviceOrder(data)) }))
+      }
+      container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
+    }
+  }
+
+  const defaultServiceOrderColumns = [
+    { dataField: 'id', caption: 'ID', width: 70 },
+    {
+      dataField: 'code',
+      caption: 'Codigo',
+      width: 120,
+      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar orden de servicio')
+    },
+    { dataField: 'issue_date', caption: 'Fecha', dataType: 'date', width: 110 },
+    { dataField: 'scheduled_at', caption: 'Programada', dataType: 'date', width: 115 },
+    { dataField: 'business.name', caption: 'Empresa', minWidth: 140 },
+    { dataField: 'branch.name', caption: 'Sede', minWidth: 130 },
+    { dataField: 'client.full_name', caption: 'Cliente', minWidth: 200 },
+    { dataField: 'billing_cycle', caption: 'Ciclo', minWidth: 130 },
+    { dataField: 'expected_document_type', caption: 'Comp.', width: 100 },
+    { dataField: 'currency', caption: 'Moneda', width: 90 },
+    { dataField: 'subtotal', caption: 'Subtotal', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+    { dataField: 'tax_amount', caption: 'Impuesto', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+    { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+    {
+      caption: 'Detalle',
+      minWidth: 260,
+      allowFiltering: false,
+      calculateCellValue: (data) => (data.items ?? [])
+        .map(row => `${Number(row.quantity || 0).toFixed(3)} ${row.service?.billing_unit ?? ''} ${row.description ?? row.service?.name ?? ''}`.trim())
+        .join(' | ')
+    },
+    {
+      dataField: 'accounts_receivable_code',
+      caption: 'CXC',
+      width: 130,
+      calculateCellValue: (data) => data.accounts_receivable?.code ?? data.accountsReceivable?.code ?? '-'
+    },
+    {
+      dataField: 'payment_status',
+      caption: 'Cobranza',
+      width: 110,
+      calculateCellValue: (data) => getPaymentStatusLabel(data.accounts_receivable?.payment_status ?? data.accountsReceivable?.payment_status ?? data.payment_status ?? '-')
+    },
+    { dataField: 'order_status', caption: 'Estado', width: 110, lookup: toLookup(serviceOrderStatusOptions) },
+    { dataField: 'billing_status', caption: 'Facturacion', width: 110, lookup: toLookup(billingStatusOptions) },
+    { dataField: 'creator.fullname', caption: 'Creado por', minWidth: 140, visible: false },
+    { dataField: 'updater.fullname', caption: 'Actualizado por', minWidth: 140, visible: false },
+    actionColumn
+  ]
+
+  const storageServiceOrderColumns = [
+    actionColumn,
+    { dataField: 'order_status', caption: 'Estado', width: 115, lookup: toLookup(serviceOrderStatusOptions) },
+    {
+      dataField: 'code',
+      caption: 'Codigo',
+      width: 125,
+      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar orden de servicio')
+    },
+    { dataField: 'business.name', caption: 'Empresa', minWidth: 170 },
+    { dataField: 'client.full_name', caption: 'Cliente', minWidth: 220 },
+    { dataField: 'expected_document_type', caption: 'Tipo comprobante', width: 160 },
+    { dataField: 'currency', caption: 'Moneda', width: 105, lookup: toLookup(currencyOptions) },
+    { dataField: 'created_at', caption: 'Fecha registro', dataType: 'datetime', width: 170, format: 'yyyy-MM-dd HH:mm:ss' },
+    { dataField: 'creator.fullname', caption: 'Usuario registro', minWidth: 160, calculateCellValue: (data) => formatGridUser(data.creator) },
+  ]
+
+  const serviceOrderColumns = isStorageService ? storageServiceOrderColumns : defaultServiceOrderColumns
+
   return <>
     <Table
       gridRef={gridRef}
@@ -499,56 +589,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         itemsBar.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
         itemsBar.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
       }}
-      columns={[
-        { dataField: 'id', caption: 'ID', width: 70 },
-        {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: 120,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar orden de servicio')
-        },
-        { dataField: 'issue_date', caption: 'Fecha', dataType: 'date', width: 110 },
-        { dataField: 'scheduled_at', caption: 'Programada', dataType: 'date', width: 115 },
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 140 },
-        { dataField: 'branch.name', caption: 'Sede', minWidth: 130 },
-        { dataField: 'client.full_name', caption: 'Cliente', minWidth: 200 },
-        { dataField: 'billing_cycle', caption: 'Ciclo', minWidth: 130 },
-        { dataField: 'expected_document_type', caption: 'Comp.', width: 100 },
-        { dataField: 'currency', caption: 'Moneda', width: 90 },
-        { dataField: 'subtotal', caption: 'Subtotal', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        { dataField: 'tax_amount', caption: 'Impuesto', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        {
-          caption: 'Detalle',
-          minWidth: 260,
-          allowFiltering: false,
-          calculateCellValue: (data) => (data.items ?? [])
-            .map(row => `${Number(row.quantity || 0).toFixed(3)} ${row.service?.billing_unit ?? ''} ${row.description ?? row.service?.name ?? ''}`.trim())
-            .join(' | ')
-        },
-        {
-          dataField: 'accounts_receivable_code',
-          caption: 'CXC',
-          width: 130,
-          calculateCellValue: (data) => data.accounts_receivable?.code ?? data.accountsReceivable?.code ?? '-'
-        },
-        {
-          dataField: 'payment_status',
-          caption: 'Cobranza',
-          width: 110,
-          calculateCellValue: (data) => getPaymentStatusLabel(data.accounts_receivable?.payment_status ?? data.accountsReceivable?.payment_status ?? data.payment_status ?? '-')
-        },
-        { dataField: 'order_status', caption: 'Estado', width: 110, lookup: toLookup(serviceOrderStatusOptions) },
-        { dataField: 'billing_status', caption: 'Facturacion', width: 110, lookup: toLookup(billingStatusOptions) },
-        { dataField: 'creator.fullname', caption: 'Creado por', minWidth: 140, visible: false },
-        { dataField: 'updater.fullname', caption: 'Actualizado por', minWidth: 140, visible: false },
-        { caption: 'Acciones', width: 170, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
-          container.css('text-overflow', 'unset')
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.serviceOrder(data)) }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
-        } }
-      ]}
+      columns={serviceOrderColumns}
     />
 
     {isStorageService ? (
