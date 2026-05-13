@@ -30,7 +30,9 @@ const storageBlockFromWarehouse = (warehouse) => {
     warehouse_id: warehouseId ? `${warehouseId}` : '',
     enabled: false,
     location_id: '',
+    location_ids: [],
     location_label: '',
+    location_labels: [],
     start_date: '',
     months: '',
     end_date: '',
@@ -70,9 +72,18 @@ const storageLocationLabel = (location) => {
   if (!location) return ''
   return [location.code, location.temperature_range].filter(Boolean).join(' | ')
 }
-const buildStorageDescription = (block, location) => [
+const splitLocationLabels = (value = '') => value
+  .split(',')
+  .map(label => label.trim())
+  .filter(Boolean)
+const blockLocationIds = (block) => {
+  if (Array.isArray(block.location_ids)) return block.location_ids.filter(Boolean).map(value => `${value}`)
+  return block.location_id ? [`${block.location_id}`] : []
+}
+const buildStorageDescription = (block, locations) => [
   block.warehouse_name,
-  storageLocationLabel(location) || block.location_label,
+  (Array.isArray(locations) ? locations.map(storageLocationLabel).filter(Boolean).join(', ') : storageLocationLabel(locations))
+    || block.location_label,
   `${block.start_date || ''} - ${block.end_date || ''}`,
   `${block.months || 0} meses`,
   `${block.quantity_m3 || 0} m3`,
@@ -83,6 +94,7 @@ const parseStorageDescription = (description = '') => {
   return {
     warehouse_name: parts[0] ?? '',
     location_label: parts[1] ?? '',
+    location_labels: splitLocationLabels(parts[1] ?? ''),
     start_date: dates.length >= 3 ? `${dates[0]}-${dates[1]}-${dates[2]}`.slice(0, 10) : '',
     end_date: dates.length >= 6 ? `${dates[3]}-${dates[4]}-${dates[5]}`.slice(0, 10) : '',
     months: parseFloat(parts[3]) || '',
@@ -191,6 +203,21 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       ?? options.find(location => normalizeStorageText(storageLocationLabel(location)) === normalizeStorageText(block.location_label))
       ?? null
   }
+  const findStorageLocations = (block, locationRows = storageLocations, warehouseRows = storageWarehouses) => {
+    const options = locationOptionsForBlock(block, locationRows, warehouseRows)
+    const selectedIds = blockLocationIds(block)
+    const byId = selectedIds.length
+      ? options.filter(location => selectedIds.includes(`${location.id}`))
+      : []
+    if (byId.length) return byId
+
+    const labels = Array.isArray(block.location_labels) && block.location_labels.length
+      ? block.location_labels
+      : splitLocationLabels(block.location_label)
+    return labels
+      .map(label => options.find(location => normalizeStorageText(storageLocationLabel(location)) === normalizeStorageText(label)))
+      .filter(Boolean)
+  }
   const buildStorageBlocksFromItems = (itemRows = [], warehouseRows = storageWarehouses, locationRows = storageLocations) => {
     const blocks = emptyStorageBlocks(warehouseRows)
     itemRows.forEach(row => {
@@ -202,6 +229,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         enabled: true,
         warehouse_id: findStorageWarehouse(blocks[index].warehouse_name, warehouseRows)?.id ?? blocks[index].warehouse_id,
         location_label: parsed.location_label,
+        location_labels: parsed.location_labels,
         start_date: parsed.start_date,
         months: parsed.months || '',
         end_date: parsed.end_date || addMonths(parsed.start_date, parsed.months),
@@ -210,16 +238,26 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         tariff: Number(row.unit_price || 0) || '',
         monthly_amount: Number(row.total || 0) || '',
       }
-      const location = findStorageLocation(next, locationRows, warehouseRows)
-      blocks[index] = { ...next, location_id: location?.id ? `${location.id}` : '' }
+      const locations = findStorageLocations(next, locationRows, warehouseRows)
+      blocks[index] = {
+        ...next,
+        location_id: locations[0]?.id ? `${locations[0].id}` : '',
+        location_ids: locations.map(location => `${location.id}`),
+      }
     })
     return blocks
   }
   const updateStorageBlock = (key, patch) => {
     setStorageBlocks(prev => prev.map(block => {
       if (block.key !== key) return block
+      const patchLocationIds = 'location_ids' in patch
+        ? (Array.isArray(patch.location_ids) ? patch.location_ids : [patch.location_ids]).filter(Boolean).map(value => `${value}`)
+        : null
       const location = patch.location_id
         ? storageLocations.find(row => `${row.id}` === `${patch.location_id}`)
+        : null
+      const locations = patchLocationIds
+        ? storageLocations.filter(row => patchLocationIds.includes(`${row.id}`))
         : null
       const next = {
         ...block,
@@ -227,6 +265,12 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         warehouse_id: blockWarehouseId(block),
       }
       if (location) next.location_label = storageLocationLabel(location)
+      if (locations) {
+        next.location_ids = patchLocationIds
+        next.location_id = patchLocationIds[0] ?? ''
+        next.location_labels = locations.map(storageLocationLabel).filter(Boolean)
+        next.location_label = next.location_labels.join(', ')
+      }
       if ('start_date' in patch || 'months' in patch) {
         next.end_date = addMonths(next.start_date, next.months)
         next.billing_dates = billingDateRows(next.start_date, next.months)
@@ -300,7 +344,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     e.preventDefault()
     if (isStorageService) {
       const selectedBlocks = storageBlocks.filter(row => row.enabled)
-      const missingBlock = selectedBlocks.find(row => !row.location_id || !row.start_date || !row.months || !row.end_date || !row.quantity_m3 || !row.tariff)
+      const missingBlock = selectedBlocks.find(row => !blockLocationIds(row).length || !row.start_date || !row.months || !row.end_date || !row.quantity_m3 || !row.tariff)
       if (!selectedBusinessId || !selectedBranchId || !selectedClientId || !expectedDocumentTypeRef.current.value || !currencyRef.current.value || !selectedStorageServiceId) {
         Swal.fire('Formulario incompleto', 'Completa empresa, cliente, tipo documento, moneda y tipo de servicio.', 'warning')
         return
@@ -344,13 +388,13 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         tax_amount: 0,
         observations: observationsRef.current.value.trim(),
         items: selectedBlocks.map(block => {
-          const location = findStorageLocation(block)
+          const locations = findStorageLocations(block)
           const quantity = toNumber(block.quantity_m3)
           const unitPrice = toNumber(block.tariff)
           const total = toNumber(block.monthly_amount) || quantity * unitPrice
           return {
             service_id: selectedStorageServiceId,
-            description: buildStorageDescription(block, location),
+            description: buildStorageDescription(block, locations),
             quantity,
             unit_price: unitPrice,
             detraction_percent: 0,
@@ -719,12 +763,14 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
                     <label className='form-label'>Ubicaci&oacute;n</label>
                     <select
                       className='form-select'
-                      value={block.location_id}
+                      value={blockLocationIds(block)}
+                      multiple
+                      data-placeholder={locationOptions.length ? 'Seleccione ubicaciones' : 'Sin ubicaciones'}
                       disabled={disabled}
-                      onChange={(e) => updateStorageBlock(block.key, { location_id: e.target.value })}
+                      onChange={(e) => updateStorageBlock(block.key, { location_ids: Array.from(e.target.selectedOptions).map(option => option.value).filter(Boolean) })}
                       required={block.enabled}
                     >
-                      <option value=''>{locationOptions.length ? 'Seleccione ubicacion' : 'Sin ubicaciones'}</option>
+                      {!locationOptions.length && <option value=''>Sin ubicaciones</option>}
                       {locationOptions.map(location => (
                         <option key={`storage-order-location-${block.key}-${location.id}`} value={location.id}>{storageLocationLabel(location)}</option>
                       ))}
