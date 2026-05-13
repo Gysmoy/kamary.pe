@@ -115,6 +115,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {canAccessAny('businesses', 'articles', 'inventory', 'kardex', 'laboratories', 'batches', 'entry-note', 'exit-note', 'suppliers', 'units-of-measure') && (
             <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
               {canAccess('articles') && <MenuItem href='/admin/articles' icon='ti ti-box'>Artículos</MenuItem>}
+              {canAccessAny('businesses', 'exit-note') && <MenuItem href='/admin/warehouses' icon='ti ti-building-store'>Almacenes</MenuItem>}
               {canAccess('inventory') && <MenuItem href='/admin/inventory' icon='ti ti-stack-2'>Inventario</MenuItem>}
               {canAccess('kardex') && <MenuItem href='/admin/kardex' icon='ti ti-notebook'>Kardex</MenuItem>}
               {canAccess('laboratories') && <MenuItem href='/admin/laboratories' icon='ti ti-flask'>Laboratorios</MenuItem>}

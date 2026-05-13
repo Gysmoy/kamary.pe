@@ -196,8 +196,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/inventory/paginate', [AdminInventoryController::class, 'paginate']);
         Route::post('/inventory-report/paginate', [AdminInventoryReportController::class, 'paginate']);
         Route::post('/kardex/paginate', [AdminKardexController::class, 'paginate']);
-        Route::post('/kardex/locations', [AdminKardexController::class, 'saveLocation']);
-        Route::delete('/kardex/locations/{id}', [AdminKardexController::class, 'deleteLocation']);
 
         Route::post('/purchase-orders', [AdminPurchaseOrderController::class, 'save']);
         Route::post('/purchase-orders/paginate', [AdminPurchaseOrderController::class, 'paginate']);
