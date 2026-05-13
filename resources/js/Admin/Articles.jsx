@@ -96,6 +96,8 @@ const storageConditionOptions = [
   '-15°C a -40°C',
 ]
 
+const manufacturerCountryOptions = ['Perú']
+
 const storageProductExportColumns = [
   { caption: 'ACCIONES', value: () => '' },
   { caption: 'CODIGO', value: (row) => row?.code ?? '' },
@@ -139,6 +141,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const importFileRef = useRef()
   const principleCreateModalRef = useRef()
   const unitCreateModalRef = useRef()
+  const manufacturerCreateModalRef = useRef()
 
   const idRef = useRef()
   const codeRef = useRef()
@@ -178,6 +181,9 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const newPrincipleNameRef = useRef()
   const newUnitNameRef = useRef()
   const newUnitSymbolRef = useRef()
+  const newManufacturerNameRef = useRef()
+  const newManufacturerCountryRef = useRef()
+  const newManufacturerStatusRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
   const [isViewing, setIsViewing] = useState(false)
@@ -189,6 +195,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const [selectedUnitId, setSelectedUnitId] = useState('')
   const [selectedEquivalenceUnitId, setSelectedEquivalenceUnitId] = useState('')
   const [selectedStorageClientId, setSelectedStorageClientId] = useState('')
+  const [manufacturerTargetLotUid, setManufacturerTargetLotUid] = useState('')
   const [storageClients, setStorageClients] = useState([])
   const [storageManufacturers, setStorageManufacturers] = useState([])
   const [storageLots, setStorageLots] = useState([emptyStorageLot()])
@@ -653,7 +660,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     })
   }
 
-  const onCreateManufacturerForLot = async (uid) => {
+  const onCreateManufacturerForLot = (uid) => {
     if (window.$?.fn?.select2) {
       $('select.select2-hidden-accessible').select2('close')
     }
@@ -661,48 +668,37 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       document.activeElement.blur()
     }
 
-    const { value, isConfirmed } = await Swal.fire({
-      title: 'Agregar fabricante',
-      target: modalRef.current ?? document.body,
-      html: `
-        <input id="storage-manufacturer-name" class="swal2-input" placeholder="Nombre del fabricante">
-        <input id="storage-manufacturer-code" class="swal2-input" placeholder="Codigo">
-      `,
-      focusConfirm: false,
-      returnFocus: false,
-      showCancelButton: true,
-      confirmButtonText: 'Registrar',
-      cancelButtonText: 'Cancelar',
-      didOpen: () => {
-        const nameInput = document.getElementById('storage-manufacturer-name')
-        if (nameInput instanceof HTMLInputElement) {
-          nameInput.disabled = false
-          nameInput.readOnly = false
-          nameInput.focus()
-        }
-        const codeInput = document.getElementById('storage-manufacturer-code')
-        if (codeInput instanceof HTMLInputElement) {
-          codeInput.disabled = false
-          codeInput.readOnly = false
-        }
-      },
-      preConfirm: () => {
-        const name = document.getElementById('storage-manufacturer-name')?.value?.trim() ?? ''
-        const code = document.getElementById('storage-manufacturer-code')?.value?.trim() ?? ''
-        if (!name) {
-          Swal.showValidationMessage('El nombre del fabricante es obligatorio')
-          return false
-        }
-        return { name, code }
-      }
-    })
-    if (!isConfirmed || !value) return
+    setManufacturerTargetLotUid(uid)
+    if (newManufacturerNameRef.current) newManufacturerNameRef.current.value = ''
+    if (newManufacturerCountryRef.current) newManufacturerCountryRef.current.value = manufacturerCountryOptions[0]
+    if (newManufacturerStatusRef.current) newManufacturerStatusRef.current.value = '1'
+    $(manufacturerCreateModalRef.current).modal('show')
+  }
+
+  const onCreateManufacturerSubmit = async (e) => {
+    e.preventDefault()
+
+    const value = {
+      name: newManufacturerNameRef.current?.value?.trim() ?? '',
+      country: newManufacturerCountryRef.current?.value || manufacturerCountryOptions[0],
+      status: newManufacturerStatusRef.current?.value !== '0',
+    }
+
+    if (!value.name) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Dato obligatorio',
+        text: 'El nombre del fabricante es obligatorio',
+      })
+      return
+    }
 
     const created = await articlesRest.createManufacturer(value)
     if (!created?.id) return
 
     await loadStorageProductOptions()
-    onStorageLotUpdated(uid, 'manufacturer_id', `${created.id}`)
+    if (manufacturerTargetLotUid) onStorageLotUpdated(manufacturerTargetLotUid, 'manufacturer_id', `${created.id}`)
+    $(manufacturerCreateModalRef.current).modal('hide')
   }
 
   const previewRows = importRows.slice(0, 5).map((row, idx) => ({
@@ -1087,6 +1083,36 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
           border-bottom-left-radius: 0;
           border-top-left-radius: 0;
           flex: 0 0 40px;
+        }
+
+        .storage-manufacturer-form-modal .modal-header {
+          background: #24264f;
+          color: #fff;
+          padding-bottom: 0.45rem;
+          padding-top: 0.45rem;
+        }
+
+        .storage-manufacturer-form-modal .modal-title {
+          font-size: 0.78rem;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        .storage-manufacturer-form-modal .modal-body {
+          padding-bottom: 0.75rem;
+        }
+
+        .storage-manufacturer-form-grid {
+          align-items: end;
+          display: grid;
+          gap: 1rem;
+          grid-template-columns: minmax(0, 1fr) 150px 110px;
+        }
+
+        @media (max-width: 767.98px) {
+          .storage-manufacturer-form-grid {
+            grid-template-columns: 1fr;
+          }
         }
       `}</style>
     )}
@@ -1583,6 +1609,40 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
         </div>
         </fieldset>
         )}
+      </div>
+    </Modal>
+
+    <Modal
+      modalRef={manufacturerCreateModalRef}
+      title={<span><i className='mdi mdi-plus-circle-outline me-1'></i> FORMULARIO FABRICANTE</span>}
+      onSubmit={onCreateManufacturerSubmit}
+      size='md'
+      contentClass='storage-manufacturer-form-modal'
+      closeButtonClass='btn-close-white'
+      btnCancelText='Cerrar'
+      btnSubmitText='Registrar Fabricante'
+      zIndex={1065}
+    >
+      <div className='storage-manufacturer-form-grid'>
+        <div className='form-group mb-2'>
+          <label className='form-label'>Nombre del fabricante</label>
+          <input ref={newManufacturerNameRef} className='form-control' required />
+        </div>
+        <div className='form-group mb-2'>
+          <label className='form-label'>Pais</label>
+          <select ref={newManufacturerCountryRef} className='form-control' defaultValue={manufacturerCountryOptions[0]} required>
+            {manufacturerCountryOptions.map(country => (
+              <option key={`manufacturer-country-${country}`} value={country}>{country}</option>
+            ))}
+          </select>
+        </div>
+        <div className='form-group mb-2'>
+          <label className='form-label'>Estado</label>
+          <select ref={newManufacturerStatusRef} className='form-control' defaultValue='1' required>
+            <option value='1'>Activo</option>
+            <option value='0'>Inactivo</option>
+          </select>
+        </div>
       </div>
     </Modal>
 

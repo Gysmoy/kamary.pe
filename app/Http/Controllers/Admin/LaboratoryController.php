@@ -26,8 +26,13 @@ class LaboratoryController extends BasicController
             'creator:id,name,lastname,username,fullname',
             'updater:id,name,lastname,username,fullname',
         ])
-        ->join('users as creator', 'creator.id', '=', 'laboratories.created_by')
-        ->join('users as updater', 'updater.id', '=', 'laboratories.updated_by');
+        ->leftJoin('users as creator', 'creator.id', '=', 'laboratories.created_by')
+        ->leftJoin('users as updater', 'updater.id', '=', 'laboratories.updated_by');
+    }
+
+    public function afterSave(Request $request, object $jpa, bool $isNew)
+    {
+        return $jpa->fresh();
     }
 
     public function import(Request $request): HttpResponse|ResponseFactory
@@ -338,6 +343,10 @@ class LaboratoryController extends BasicController
     {
         $body = $request->all();
         $userId = Auth::id();
+
+        if (empty($body['country'])) {
+            $body['country'] = 'Perú';
+        }
 
         if (!isset($body['id']) || !$body['id']) {
             $body['created_by'] = $userId;

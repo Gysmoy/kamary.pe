@@ -12,6 +12,7 @@ class Laboratory extends Model
     protected $fillable = [
         'name',
         'code',
+        'country',
         'status',
         'created_by',
         'updated_by',

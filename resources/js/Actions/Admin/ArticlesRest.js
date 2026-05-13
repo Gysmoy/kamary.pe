@@ -127,7 +127,8 @@ class ArticlesRest extends BasicRest {
         body: JSON.stringify({
           name,
           code: finalCode,
-          status: true,
+          country: request?.country ?? 'Perú',
+          status: request?.status ?? true,
         })
       })
       if (!status) throw new Error(result?.message || 'Error al crear fabricante')
