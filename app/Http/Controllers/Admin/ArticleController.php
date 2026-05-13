@@ -6,9 +6,11 @@ use App\Http\Controllers\BasicController;
 use App\Models\ActivePrinciple;
 use App\Models\Article;
 use App\Models\ArticlePresentation;
+use App\Models\Client;
 use App\Models\Laboratory;
 use App\Models\MagistralCategory;
 use App\Models\MagistralFormat;
+use App\Models\StorageProductLot;
 use App\Models\Unit;
 use App\Models\Warehouse;
 use App\Services\StockService;
@@ -28,6 +30,7 @@ class ArticleController extends BasicController
     protected string $moduleScope = 'standard';
 
     private array $presentationsPayload = [];
+    private array $storageLotsPayload = [];
 
     public function setPaginationInstance(string $model)
     {
@@ -36,23 +39,31 @@ class ArticleController extends BasicController
             ->with([
                 'laboratory:id,name,code',
                 'activePrinciple:id,laboratory_id,name',
+                'client:id,full_name,document_number',
                 'unit:id,name,symbol',
                 'equivalenceUnit:id,name,symbol',
                 'magistralCategory:id,code,description',
                 'magistralFormat:id,description,quantity',
                 'presentations:id,article_id,name,units,price,sort_order,status',
+                'storageLots:id,article_id,lot,expiration_date,storage_condition,manufacturer_id,status',
+                'storageLots.manufacturer:id,name,code',
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ])
             ->join('units as unit', 'unit.id', '=', 'articles.unit_id')
             ->join('active_principles as active_principle', 'active_principle.id', '=', 'articles.active_principle_id')
             ->join('laboratories as laboratory', 'laboratory.id', '=', 'articles.laboratory_id')
+            ->leftJoin('clients as client', 'client.id', '=', 'articles.client_id')
             ->join('users as creator', 'creator.id', '=', 'articles.created_by')
             ->join('users as updater', 'updater.id', '=', 'articles.updated_by');
 
         if (Schema::hasColumn('articles', 'module_scope')) {
             $query->where(function ($scope) {
                 $scope->where('articles.module_scope', $this->moduleScope);
+                if ($this->moduleScope === 'storage') {
+                    $scope->orWhere('articles.module_scope', 'standard')
+                        ->orWhereNull('articles.module_scope');
+                }
                 if ($this->moduleScope === 'standard') {
                     $scope->orWhereNull('articles.module_scope');
                 }
@@ -291,6 +302,40 @@ class ArticleController extends BasicController
         $magistralFormatId = $this->toNullableInt($body['magistral_format_id'] ?? null);
         $equivalenceUnitId = $this->toNullableInt($body['equivalence_unit_id'] ?? null);
 
+        $this->presentationsPayload = is_array($request->presentations) ? $request->presentations : [];
+        $this->storageLotsPayload = [];
+
+        if ($this->moduleScope === 'storage') {
+            $clientId = $this->toNullableInt($body['client_id'] ?? null);
+            if (!$clientId) throw new \Exception('El cliente es obligatorio');
+            Client::findOrFail($clientId);
+            $body['client_id'] = $clientId;
+
+            $this->storageLotsPayload = $this->normalizeStorageLotsPayload($request->storage_lots ?? []);
+            if (count($this->storageLotsPayload) === 0) {
+                throw new \Exception('Debes agregar al menos un lote / serie');
+            }
+
+            $firstManufacturerId = collect($this->storageLotsPayload)
+                ->pluck('manufacturer_id')
+                ->filter()
+                ->first();
+            if (!$laboratoryId && $firstManufacturerId) {
+                $laboratoryId = $firstManufacturerId;
+            }
+            if (!$laboratoryId) {
+                $laboratoryId = $this->ensureDefaultStorageLaboratory()->id;
+            }
+            if (!$activePrincipleId) {
+                $activePrincipleId = $this->ensureDefaultActivePrinciple((int)$laboratoryId);
+            }
+            if ($code === '') {
+                $code = $this->nextStorageArticleCode($id);
+            }
+        } else {
+            unset($body['client_id'], $body['storage_lots']);
+        }
+
         if ($code === '') throw new \Exception('El codigo de articulo es obligatorio');
         if ($name === '') throw new \Exception('El nombre del articulo es obligatorio');
         if (!$laboratoryId) throw new \Exception('El laboratorio es obligatorio');
@@ -395,11 +440,13 @@ class ArticleController extends BasicController
             }
         }
 
-        $this->presentationsPayload = is_array($request->presentations) ? $request->presentations : [];
-        unset($body['presentations']);
+        $body['laboratory_id'] = $laboratoryId;
+        $body['active_principle_id'] = $activePrincipleId;
+        unset($body['presentations'], $body['storage_lots']);
 
         foreach ([
             'module_scope',
+            'client_id',
             'composition',
             'article_type',
             'administration_route',
@@ -434,6 +481,27 @@ class ArticleController extends BasicController
         DB::beginTransaction();
         try {
             ArticlePresentation::where('article_id', $jpa->id)->delete();
+
+            if ($this->moduleScope === 'storage') {
+                $this->ensureDefaultPresentation($jpa->id);
+
+                StorageProductLot::where('article_id', $jpa->id)->delete();
+                foreach ($this->storageLotsPayload as $lot) {
+                    StorageProductLot::create([
+                        'article_id' => $jpa->id,
+                        'lot' => $lot['lot'],
+                        'expiration_date' => $lot['expiration_date'],
+                        'storage_condition' => $lot['storage_condition'],
+                        'manufacturer_id' => $lot['manufacturer_id'],
+                        'status' => $lot['status'],
+                        'created_by' => Auth::id(),
+                        'updated_by' => Auth::id(),
+                    ]);
+                }
+
+                DB::commit();
+                return;
+            }
 
             $inserted = 0;
             foreach ($this->presentationsPayload as $index => $presentation) {
@@ -658,6 +726,101 @@ class ArticleController extends BasicController
         $timestamp = strtotime($text);
         if ($timestamp === false) throw new \Exception("Fecha invalida: {$value}");
         return date('Y-m-d', $timestamp);
+    }
+
+    private function normalizeStorageLotsPayload($lots): array
+    {
+        if (!is_array($lots)) return [];
+
+        $normalized = [];
+        foreach ($lots as $lotRow) {
+            if (!is_array($lotRow)) continue;
+
+            $lot = trim((string)($lotRow['lot'] ?? ''));
+            $expirationDate = $this->normalizeDate($lotRow['expiration_date'] ?? null);
+            $storageCondition = trim((string)($lotRow['storage_condition'] ?? '')) ?: null;
+            $manufacturerId = $this->toNullableInt($lotRow['manufacturer_id'] ?? null);
+            $status = array_key_exists('status', $lotRow)
+                ? $this->toBoolean($lotRow['status'])
+                : true;
+
+            if (
+                $lot === '' &&
+                is_null($expirationDate) &&
+                is_null($storageCondition) &&
+                is_null($manufacturerId)
+            ) {
+                continue;
+            }
+
+            if ($lot === '') throw new \Exception('Cada lote / serie debe tener codigo');
+            if ($manufacturerId) Laboratory::findOrFail($manufacturerId);
+
+            $normalized[] = [
+                'lot' => $lot,
+                'expiration_date' => $expirationDate,
+                'storage_condition' => $storageCondition,
+                'manufacturer_id' => $manufacturerId,
+                'status' => $status,
+            ];
+        }
+
+        return $normalized;
+    }
+
+    private function ensureDefaultStorageLaboratory(): Laboratory
+    {
+        $userId = Auth::id();
+        return Laboratory::firstOrCreate(
+            ['code' => 'FABRICANTE-GENERAL'],
+            [
+                'name' => 'FABRICANTE GENERAL',
+                'status' => true,
+                'created_by' => $userId,
+                'updated_by' => $userId,
+            ]
+        );
+    }
+
+    private function ensureDefaultActivePrinciple(int $laboratoryId): int
+    {
+        $userId = Auth::id();
+        $principle = ActivePrinciple::firstOrCreate(
+            [
+                'laboratory_id' => $laboratoryId,
+                'name' => 'GENERAL',
+            ],
+            [
+                'status' => true,
+                'created_by' => $userId,
+                'updated_by' => $userId,
+            ]
+        );
+
+        return (int)$principle->id;
+    }
+
+    private function nextStorageArticleCode($currentId = null): string
+    {
+        $lastId = (int)Article::query()
+            ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
+                $query->where('module_scope', $this->moduleScope);
+            })
+            ->max('id');
+        $next = max(1, $lastId + 1);
+
+        do {
+            $code = 'ART-' . str_pad((string)$next, 6, '0', STR_PAD_LEFT);
+            $exists = Article::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
+                ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
+                    $query->where('module_scope', $this->moduleScope);
+                })
+                ->when($currentId, fn($query) => $query->where('id', '!=', $currentId))
+                ->exists();
+            $next++;
+        } while ($exists);
+
+        return $code;
     }
 
     private function ensureDefaultPresentation(int $articleId): void

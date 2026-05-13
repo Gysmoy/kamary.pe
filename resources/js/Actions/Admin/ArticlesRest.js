@@ -63,6 +63,93 @@ class ArticlesRest extends BasicRest {
     }
   }
 
+  getStorageClients = async () => {
+    try {
+      const { status, result } = await Fetch('/api/admin/storage/clients/paginate', {
+        method: 'POST',
+        body: JSON.stringify({
+          isLoadingAll: true,
+          take: 1000,
+          sort: [{ selector: 'full_name', desc: false }],
+          filter: [
+            ['client_kind', '=', 'regular'],
+            'and',
+            ['has_storage_service', '=', 1],
+          ],
+        })
+      })
+      if (!status) throw new Error(result?.message || 'No se pudieron cargar los clientes')
+      return result.data ?? []
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return []
+    }
+  }
+
+  getManufacturers = async () => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.laboratoriesPath()}/paginate`, {
+        method: 'POST',
+        body: JSON.stringify({
+          isLoadingAll: true,
+          take: 1000,
+          sort: [{ selector: 'name', desc: false }]
+        })
+      })
+      if (!status) throw new Error(result?.message || 'No se pudieron cargar los fabricantes')
+      return result.data ?? []
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return []
+    }
+  }
+
+  createManufacturer = async (request) => {
+    try {
+      const name = (request?.name ?? '').trim()
+      const code = (request?.code ?? '').trim() || name
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^A-Za-z0-9]/g, '')
+        .toUpperCase()
+        .slice(0, 24)
+      const finalCode = code || `FAB-${Date.now()}`
+      const { status, result } = await Fetch(`/api/${this.laboratoriesPath()}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name,
+          code: finalCode,
+          status: true,
+        })
+      })
+      if (!status) throw new Error(result?.message || 'Error al crear fabricante')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      if (result?.data?.id) return result.data
+
+      const manufacturers = await this.getManufacturers()
+      return manufacturers.find(item => item.code === finalCode || item.name === name) ?? null
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
   getPrinciplesByLaboratory = async (laboratoryId) => {
     if (!laboratoryId) return []
     const result = await this.simpleGet(`/api/${this.path}/laboratories/${laboratoryId}/principles`)

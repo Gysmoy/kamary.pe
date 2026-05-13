@@ -12,6 +12,7 @@ class Article extends Model
     protected $fillable = [
         'code',
         'module_scope',
+        'client_id',
         'name',
         'composition',
         'article_type',
@@ -74,6 +75,11 @@ class Article extends Model
         return $this->belongsTo(Laboratory::class);
     }
 
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
+
     public function activePrinciple()
     {
         return $this->belongsTo(ActivePrinciple::class);
@@ -92,6 +98,11 @@ class Article extends Model
     public function presentations()
     {
         return $this->hasMany(ArticlePresentation::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function storageLots()
+    {
+        return $this->hasMany(StorageProductLot::class)->orderBy('id');
     }
 
     public function magistralCategory()

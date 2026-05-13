@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
@@ -80,6 +80,31 @@ const emptyPresentation = () => ({
   price: 0,
 })
 
+const emptyStorageLot = () => ({
+  uid: crypto.randomUUID(),
+  lot: '',
+  expiration_date: '',
+  storage_condition: '',
+  manufacturer_id: '',
+  status: true,
+})
+
+const storageConditionOptions = [
+  '-15°C a -25°C',
+  '2°C a 8°C',
+  '15°C a 25°C',
+  '-15°C a -40°C',
+]
+
+const storageProductExportColumns = [
+  { caption: 'ACCIONES', value: () => '' },
+  { caption: 'CODIGO', value: (row) => row?.code ?? '' },
+  { caption: 'CLIENTE', value: (row) => row?.client?.full_name ?? '' },
+  { caption: 'NOMBRE ARTICULO', value: (row) => row?.name ?? '' },
+  { caption: 'UNIDAD', value: (row) => row?.unit?.symbol || row?.unit?.name || '' },
+  { caption: 'ESTADO', value: (row) => row?.status === false || row?.status === 0 ? 'Inactivo' : 'Activo' },
+]
+
 const getStockByPresentation = (stockUnits, presentations) => {
   const totalUnits = Number(stockUnits || 0)
   const safeUnits = Number.isFinite(totalUnits) ? totalUnits : 0
@@ -106,6 +131,7 @@ const getStockByPresentation = (stockUnits, presentations) => {
 
 const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const isMagistrales = moduleScope === 'magistrales'
+  const isStorageProduct = moduleScope === 'storage'
   const gridRef = useRef()
   const modalRef = useRef()
   const stockModalRef = useRef()
@@ -162,6 +188,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const [selectedPrincipleId, setSelectedPrincipleId] = useState('')
   const [selectedUnitId, setSelectedUnitId] = useState('')
   const [selectedEquivalenceUnitId, setSelectedEquivalenceUnitId] = useState('')
+  const [selectedStorageClientId, setSelectedStorageClientId] = useState('')
+  const [storageClients, setStorageClients] = useState([])
+  const [storageManufacturers, setStorageManufacturers] = useState([])
+  const [storageLots, setStorageLots] = useState([emptyStorageLot()])
   const [isImporting, setIsImporting] = useState(false)
   const [isLoadingStock, setIsLoadingStock] = useState(false)
   const [stockArticle, setStockArticle] = useState(null)
@@ -214,6 +244,22 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     setSelectedPrincipleId('')
   }
 
+  const loadStorageProductOptions = async () => {
+    const [clients, manufacturers] = await Promise.all([
+      articlesRest.getStorageClients(),
+      articlesRest.getManufacturers(),
+    ])
+
+    setStorageClients(clients)
+    setStorageManufacturers(manufacturers)
+  }
+
+  useEffect(() => {
+    if (!isStorageProduct) return
+    loadStorageProductOptions()
+    loadUnits()
+  }, [isStorageProduct])
+
   const onModalOpen = async (data = null, mode = 'edit') => {
     setIsEditing(!!data?.id)
     setIsViewing(mode === 'view')
@@ -238,7 +284,13 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
     if (stockHasExpirationRef.current) stockHasExpirationRef.current.checked = !!data?.stock_has_expiration
     if (stockHasLotRef.current) stockHasLotRef.current.checked = !!data?.stock_has_lot
-    if (statusRef.current) statusRef.current.checked = data?.status !== false && data?.status !== 0
+    if (statusRef.current) {
+      if (isStorageProduct) {
+        statusRef.current.value = data?.status === false || data?.status === 0 ? '0' : '1'
+      } else {
+        statusRef.current.checked = data?.status !== false && data?.status !== 0
+      }
+    }
     if (costPriceRef.current) costPriceRef.current.value = data?.cost_price ?? ''
     if (salePriceRef.current) salePriceRef.current.value = data?.sale_price ?? ''
     if (equivalenceExchangeRateRef.current) equivalenceExchangeRateRef.current.value = data?.equivalence_exchange_rate ?? ''
@@ -264,12 +316,27 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       }
     }
 
-    const laboratoryId = data?.laboratory_id ? `${data.laboratory_id}` : ''
-    setSelectedLaboratoryId(laboratoryId)
-    if (data?.laboratory_id && data?.laboratory?.name) {
-      SetSelectValue(laboratoryRef.current, data.laboratory_id, data.laboratory.name)
+    if (isStorageProduct) {
+      setSelectedStorageClientId(data?.client_id ? `${data.client_id}` : '')
+      const lotRows = (data?.storage_lots ?? data?.storageLots ?? []).map(lot => ({
+        uid: crypto.randomUUID(),
+        lot: lot?.lot ?? '',
+        expiration_date: lot?.expiration_date ? lot.expiration_date.toString().slice(0, 10) : '',
+        storage_condition: lot?.storage_condition ?? '',
+        manufacturer_id: lot?.manufacturer_id ? `${lot.manufacturer_id}` : '',
+        status: lot?.status !== false && lot?.status !== 0,
+      }))
+      setStorageLots(lotRows.length ? lotRows : [emptyStorageLot()])
     } else {
-      $(laboratoryRef.current).empty().trigger('change')
+      setSelectedStorageClientId('')
+      setStorageLots([emptyStorageLot()])
+      const laboratoryId = data?.laboratory_id ? `${data.laboratory_id}` : ''
+      setSelectedLaboratoryId(laboratoryId)
+      if (data?.laboratory_id && data?.laboratory?.name) {
+        SetSelectValue(laboratoryRef.current, data.laboratory_id, data.laboratory.name)
+      } else {
+        $(laboratoryRef.current).empty().trigger('change')
+      }
     }
 
     const presentationRows = (data?.presentations ?? []).map(presentation => ({
@@ -282,7 +349,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
 
     $(modalRef.current).modal('show')
     await loadUnits(data?.unit_id ?? null, data?.equivalence_unit_id ?? null)
-    await loadPrinciples(data?.laboratory_id ?? null, data?.active_principle_id ?? null)
+    if (isStorageProduct) {
+      await loadStorageProductOptions()
+    } else {
+      await loadPrinciples(data?.laboratory_id ?? null, data?.active_principle_id ?? null)
+    }
   }
 
   const onModalSubmit = async (e) => {
@@ -307,6 +378,17 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       igv_rule: igvRuleRef.current?.checked ?? false,
       units_per_article: unitsPerArticleRef.current?.value || 1,
       ...(isMagistrales ? { status: statusRef.current?.checked ?? true } : {}),
+      ...(isStorageProduct ? {
+        client_id: selectedStorageClientId || null,
+        status: statusRef.current?.value === '0' ? false : true,
+        storage_lots: storageLots.map(item => ({
+          lot: (item.lot ?? '').toString().trim(),
+          expiration_date: item.expiration_date || null,
+          storage_condition: item.storage_condition || null,
+          manufacturer_id: item.manufacturer_id || null,
+          status: item.status !== false,
+        })),
+      } : {}),
       unit_weight: unitWeightRef.current?.value ?? '',
       default_lot: defaultLotRef.current?.value?.trim() ?? '',
       default_expiration_date: defaultExpirationDateRef.current?.value || null,
@@ -324,7 +406,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       purchase_price_national: purchasePriceNationalRef.current?.value ?? '',
       purchase_price_foreign: purchasePriceForeignRef.current?.value ?? '',
       notes: notesRef.current?.value?.trim() ?? '',
-      presentations: presentations.map(item => ({
+      presentations: isStorageProduct ? [] : presentations.map(item => ({
         name: (item.name ?? '').toString().trim(),
         units: item.units,
         price: item.price,
@@ -556,6 +638,51 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     })
   }
 
+  const onStorageLotUpdated = (uid, field, value) => {
+    setStorageLots(prev => prev.map(item => item.uid === uid ? { ...item, [field]: value } : item))
+  }
+
+  const onStorageLotAdded = () => {
+    setStorageLots(prev => [...prev, emptyStorageLot()])
+  }
+
+  const onStorageLotRemoved = (uid) => {
+    setStorageLots(prev => {
+      const next = prev.filter(item => item.uid !== uid)
+      return next.length ? next : [emptyStorageLot()]
+    })
+  }
+
+  const onCreateManufacturerForLot = async (uid) => {
+    const { value, isConfirmed } = await Swal.fire({
+      title: 'Agregar fabricante',
+      html: `
+        <input id="storage-manufacturer-name" class="swal2-input" placeholder="Nombre del fabricante">
+        <input id="storage-manufacturer-code" class="swal2-input" placeholder="Codigo">
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Registrar',
+      cancelButtonText: 'Cancelar',
+      preConfirm: () => {
+        const name = document.getElementById('storage-manufacturer-name')?.value?.trim() ?? ''
+        const code = document.getElementById('storage-manufacturer-code')?.value?.trim() ?? ''
+        if (!name) {
+          Swal.showValidationMessage('El nombre del fabricante es obligatorio')
+          return false
+        }
+        return { name, code }
+      }
+    })
+    if (!isConfirmed || !value) return
+
+    const created = await articlesRest.createManufacturer(value)
+    if (!created?.id) return
+
+    await loadStorageProductOptions()
+    onStorageLotUpdated(uid, 'manufacturer_id', `${created.id}`)
+  }
+
   const previewRows = importRows.slice(0, 5).map((row, idx) => ({
     row: idx + 1,
     code: mapping.code ? (row[mapping.code] ?? '') : '',
@@ -565,6 +692,119 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     unit: mapping.unit ? (row[mapping.unit] ?? '') : '',
     status: mapping.status ? (row[mapping.status] ?? '') : '',
   }))
+
+  const getStorageProductExportRows = () => {
+    const instance = $(gridRef.current).dxDataGrid('instance')
+    return instance?.getDataSource()?.items?.() ?? []
+  }
+
+  const buildStorageProductExportMatrix = () => {
+    const rows = getStorageProductExportRows()
+    const headers = storageProductExportColumns.map(column => column.caption)
+    const body = rows.map(row => storageProductExportColumns.map(column => column.value(row)))
+    return { headers, body }
+  }
+
+  const downloadTextFile = (content, filename, mime = 'text/plain;charset=utf-8;') => {
+    const blob = new Blob([content], { type: mime })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const onStorageProductExport = async (format) => {
+    const { headers, body } = buildStorageProductExportMatrix()
+    if (!body.length) {
+      Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay filas para exportar' })
+      return
+    }
+
+    if (format === 'copy') {
+      const text = [headers, ...body].map(row => row.join('\t')).join('\n')
+      await navigator.clipboard.writeText(text)
+      Swal.fire({ icon: 'success', title: 'Copiado', timer: 1200, showConfirmButton: false })
+      return
+    }
+
+    if (format === 'csv') {
+      const escapeCell = (value) => `"${String(value ?? '').replaceAll('"', '""')}"`
+      const csv = [headers, ...body].map(row => row.map(escapeCell).join(',')).join('\n')
+      downloadTextFile(csv, 'productos-almacenamiento.csv', 'text/csv;charset=utf-8;')
+      return
+    }
+
+    if (format === 'excel') {
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...body])
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Productos')
+      XLSX.writeFile(workbook, 'productos-almacenamiento.xlsx')
+      return
+    }
+
+    if (format === 'pdf') {
+      const JsPDF = window.jspdf?.jsPDF || window.jsPDF
+      if (!JsPDF) {
+        Swal.fire({ icon: 'error', title: 'PDF no disponible', text: 'jsPDF no esta cargado' })
+        return
+      }
+      const doc = new JsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+      if (!doc.autoTable) {
+        Swal.fire({ icon: 'error', title: 'PDF no disponible', text: 'AutoTable no esta cargado' })
+        return
+      }
+      doc.setFontSize(12)
+      doc.text('Lista de Serv. Almacenamiento - Creacion del producto', 24, 28)
+      doc.autoTable({
+        head: [headers],
+        body,
+        startY: 40,
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [31, 41, 82] },
+      })
+      doc.save('productos-almacenamiento.pdf')
+      return
+    }
+
+    if (format === 'print') {
+      const escapeHtml = (value) => String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;')
+      const rowsHtml = body
+        .map(row => `<tr>${row.map(value => `<td>${escapeHtml(value)}</td>`).join('')}</tr>`)
+        .join('')
+      const win = window.open('', '_blank')
+      if (!win) return
+      win.document.write(`
+        <html>
+          <head>
+            <title>Lista de productos</title>
+            <style>
+              body { font-family: Arial, sans-serif; font-size: 12px; }
+              table { width: 100%; border-collapse: collapse; }
+              th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+              th { background: #f3f4f6; }
+            </style>
+          </head>
+          <body>
+            <h3>Lista de Serv. Almacenamiento - Creacion del producto</h3>
+            <table>
+              <thead><tr>${headers.map(header => `<th>${escapeHtml(header)}</th>`).join('')}</tr></thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </body>
+        </html>
+      `)
+      win.document.close()
+      win.focus()
+      win.print()
+    }
+  }
 
   const igvColumn = {
     dataField: 'igv_rule',
@@ -619,6 +859,22 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
         return
       }
 
+      if (isStorageProduct) {
+        container.append(DxButton({
+          className: 'btn btn-xs btn-soft-primary',
+          title: 'Editar',
+          icon: 'mdi mdi-pencil',
+          onClick: () => onModalOpen(data)
+        }))
+        container.append(DxButton({
+          className: 'btn btn-xs btn-soft-danger',
+          title: 'Eliminar articulo',
+          icon: 'mdi mdi-delete',
+          onClick: () => onDeleteClicked(data.id)
+        }))
+        return
+      }
+
       container.append(DxButton({
         className: 'btn btn-xs btn-soft-primary',
         title: 'Editar',
@@ -647,6 +903,18 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     caption: 'Unidad',
     width: '110px',
     cellTemplate: (container, { data }) => container.text(data?.unit?.symbol || data?.unit?.name || '')
+  }
+
+  const storageStatusColumn = {
+    dataField: 'status',
+    caption: 'Estado',
+    width: '110px',
+    cellTemplate: (container, { data }) => {
+      const active = data?.status !== false && data?.status !== 0
+      ReactAppend(container, <span className={`badge ${active ? 'bg-success' : 'bg-secondary'}`}>
+        {active ? 'Activo' : 'Inactivo'}
+      </span>)
+    }
   }
 
   const presentationsColumn = {
@@ -749,7 +1017,26 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     actionsColumn,
   ]
 
-  const articleColumns = isMagistrales ? magistralesColumns : standardColumns
+  const storageProductColumns = [
+    actionsColumn,
+    {
+      dataField: 'code',
+      caption: 'Codigo',
+      width: '130px',
+      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar articulo')
+    },
+    {
+      dataField: 'client.full_name',
+      caption: 'Cliente',
+      minWidth: 220,
+      cellTemplate: (container, { data }) => container.text(data?.client?.full_name ?? '')
+    },
+    { dataField: 'name', caption: 'Nombre articulo', minWidth: 260 },
+    unitColumn,
+    storageStatusColumn,
+  ]
+
+  const articleColumns = isMagistrales ? magistralesColumns : (isStorageProduct ? storageProductColumns : standardColumns)
 
   return (<>
     <Table
@@ -757,6 +1044,44 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       title={moduleTitle}
       rest={articlesRest}
       toolBar={(container) => {
+        if (isStorageProduct) {
+          [
+            { text: 'Imprimir', format: 'print' },
+            { text: 'PDF', format: 'pdf' },
+            { text: 'Excel', format: 'excel' },
+            { text: 'CSV', format: 'csv' },
+            { text: 'Copiar', format: 'copy' },
+          ].forEach(item => {
+            container.unshift({
+              widget: 'dxButton',
+              location: 'before',
+              options: {
+                text: item.text,
+                stylingMode: 'outlined',
+                onClick: () => onStorageProductExport(item.format)
+              }
+            })
+          })
+          container.unshift({
+            widget: 'dxButton', location: 'after',
+            options: {
+              icon: 'refresh',
+              hint: 'Refrescar tabla',
+              onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
+            }
+          })
+          container.unshift({
+            widget: 'dxButton', location: 'after',
+            options: {
+              icon: 'add',
+              title: 'Agregar',
+              hint: 'Agregar articulo',
+              onClick: () => onModalOpen()
+            }
+          })
+          return
+        }
+
         container.unshift({
           widget: 'dxButton', location: 'after',
           options: {
@@ -857,7 +1182,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
 
     <Modal
       modalRef={modalRef}
-      title={isViewing ? 'Mostrar articulo' : (isEditing ? 'Editar articulo' : 'Agregar articulo')}
+      title={isStorageProduct ? 'ARTICULO' : (isViewing ? 'Mostrar articulo' : (isEditing ? 'Editar articulo' : 'Agregar articulo'))}
       onSubmit={onModalSubmit}
       size='xl'
       hideButtonSubmit={isViewing}
@@ -865,6 +1190,133 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     >
       <div className='row' id='article-form-container'>
         <input ref={idRef} type='hidden' />
+        {isStorageProduct ? (
+        <fieldset className='row p-0 m-0' disabled={isViewing}>
+          <div className='form-group col-md-4 mb-2'>
+            <label className='form-label'>Cliente <span className='text-danger'>*</span></label>
+            <select
+              className='form-control'
+              value={selectedStorageClientId}
+              onChange={(e) => setSelectedStorageClientId(e.target.value)}
+              required
+            >
+              <option value=''>Seleccione Cliente</option>
+              {storageClients.map(client => (
+                <option key={`storage-client-${client.entity_id ?? client.id}`} value={client.entity_id ?? client.id}>
+                  {client.document_number ? `${client.document_number} | ` : ''}{client.full_name ?? client.display_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <InputFormGroup eRef={codeRef} label='Codigo de Articulo' col='col-md-4' readOnly placeholder='Se genera al guardar' />
+          <InputFormGroup eRef={nameRef} label='Nombre de Articulo' col='col-md-4' required />
+          <SelectFormGroup
+            eRef={unitRef}
+            label='Und. Med.'
+            col='col-md-6'
+            dropdownParent='#article-form-container'
+            required
+            value={selectedUnitId}
+            onChange={(e) => setSelectedUnitId(e.target.value)}
+            effectWith={[selectedUnitId, units.length]}
+          >
+            <option value=''>Seleccione Unidad</option>
+            {units.map(unit => (
+              <option key={`storage-unit-${unit.id}`} value={unit.id}>
+                {unit.name}{unit.symbol ? ` (${unit.symbol})` : ''}
+              </option>
+            ))}
+          </SelectFormGroup>
+          <div className='form-group col-md-6 mb-2'>
+            <label className='form-label'>Estado</label>
+            <select ref={statusRef} className='form-control' defaultValue='1'>
+              <option value='1'>Activo</option>
+              <option value='0'>Inactivo</option>
+            </select>
+          </div>
+          <TextareaFormGroup eRef={notesRef} label='Observaciones' col='col-12' rows={3} />
+
+          <div className='col-12 mt-2'>
+            <button type='button' className='btn btn-sm btn-outline-primary mb-3' onClick={onStorageLotAdded}>
+              <i className='mdi mdi-plus-circle-outline me-1'></i> AÑADIR LOTE / SERIE
+            </button>
+            <div className='table-responsive border rounded'>
+              <table className='table table-sm table-bordered mb-0 align-middle'>
+                <thead>
+                  <tr>
+                    <th style={{ width: '34%' }}>LOTE / SERIE</th>
+                    <th style={{ width: '15%' }}>FECHA VENCIMIENTO</th>
+                    <th style={{ width: '30%' }}>CONDICION ALMACENAMIENTO</th>
+                    <th style={{ width: '17%' }}>FABRICANTE</th>
+                    <th style={{ width: '4%' }}>ESTADO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {storageLots.map(lot => (
+                    <tr key={lot.uid}>
+                      <td>
+                        <input
+                          className='form-control form-control-sm'
+                          value={lot.lot}
+                          onChange={(e) => onStorageLotUpdated(lot.uid, 'lot', e.target.value)}
+                          required
+                        />
+                      </td>
+                      <td>
+                        <input
+                          className='form-control form-control-sm'
+                          type='date'
+                          value={lot.expiration_date}
+                          onChange={(e) => onStorageLotUpdated(lot.uid, 'expiration_date', e.target.value)}
+                        />
+                      </td>
+                      <td>
+                        <select
+                          className='form-control form-control-sm'
+                          value={lot.storage_condition}
+                          onChange={(e) => onStorageLotUpdated(lot.uid, 'storage_condition', e.target.value)}
+                        >
+                          <option value=''>Seleccione</option>
+                          {storageConditionOptions.map(condition => (
+                            <option key={`storage-condition-${condition}`} value={condition}>{condition}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td>
+                        <div className='input-group input-group-sm'>
+                          <select
+                            className='form-control'
+                            value={lot.manufacturer_id}
+                            onChange={(e) => onStorageLotUpdated(lot.uid, 'manufacturer_id', e.target.value)}
+                          >
+                            <option value=''>Seleccione</option>
+                            {storageManufacturers.map(manufacturer => (
+                              <option key={`manufacturer-${manufacturer.id}`} value={manufacturer.id}>{manufacturer.name}</option>
+                            ))}
+                          </select>
+                          <button
+                            type='button'
+                            className='btn btn-outline-success'
+                            title='Agregar fabricante'
+                            onClick={() => onCreateManufacturerForLot(lot.uid)}
+                          >
+                            <i className='mdi mdi-plus'></i>
+                          </button>
+                        </div>
+                      </td>
+                      <td className='text-center'>
+                        <button type='button' className='btn btn-xs btn-soft-danger' onClick={() => onStorageLotRemoved(lot.uid)}>
+                          <i className='mdi mdi-close'></i>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </fieldset>
+        ) : (
         <fieldset className='row p-0 m-0' disabled={isViewing}>
         <InputFormGroup eRef={codeRef} label={isMagistrales ? 'Codigo' : 'Codigo de articulo'} col='col-md-4' required />
         <InputFormGroup eRef={nameRef} label={isMagistrales ? 'Descripcion' : 'Nombre del articulo'} col='col-md-8' required />
@@ -1079,6 +1531,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
           </div>
         </div>
         </fieldset>
+        )}
       </div>
     </Modal>
 
