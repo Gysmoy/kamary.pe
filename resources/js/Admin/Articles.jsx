@@ -1039,6 +1039,35 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const articleColumns = isMagistrales ? magistralesColumns : (isStorageProduct ? storageProductColumns : standardColumns)
 
   return (<>
+    {isStorageProduct && (
+      <style>{`
+        .storage-manufacturer-picker {
+          align-items: stretch;
+          display: flex;
+          flex-wrap: nowrap;
+          width: 100%;
+        }
+
+        .storage-manufacturer-picker select,
+        .storage-manufacturer-picker .select2-container {
+          flex: 1 1 auto;
+          min-width: 0;
+          width: auto !important;
+        }
+
+        .storage-manufacturer-picker .select2-container .select2-selection {
+          border-bottom-right-radius: 0;
+          border-top-right-radius: 0;
+          min-height: 31px;
+        }
+
+        .storage-manufacturer-picker .btn {
+          border-bottom-left-radius: 0;
+          border-top-left-radius: 0;
+          flex: 0 0 40px;
+        }
+      `}</style>
+    )}
     <Table
       gridRef={gridRef}
       title={moduleTitle}
@@ -1244,11 +1273,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
               <table className='table table-sm table-bordered mb-0 align-middle'>
                 <thead>
                   <tr>
-                    <th style={{ width: '34%' }}>LOTE / SERIE</th>
+                    <th style={{ width: '30%' }}>LOTE / SERIE</th>
                     <th style={{ width: '15%' }}>FECHA VENCIMIENTO</th>
-                    <th style={{ width: '30%' }}>CONDICION ALMACENAMIENTO</th>
-                    <th style={{ width: '17%' }}>FABRICANTE</th>
-                    <th style={{ width: '4%' }}>ESTADO</th>
+                    <th style={{ width: '29%' }}>CONDICION ALMACENAMIENTO</th>
+                    <th style={{ width: '21%' }}>FABRICANTE</th>
+                    <th style={{ width: '5%' }}>ESTADO</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1283,9 +1312,9 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
                         </select>
                       </td>
                       <td>
-                        <div className='input-group input-group-sm'>
+                        <div className='storage-manufacturer-picker'>
                           <select
-                            className='form-control'
+                            className='form-control form-control-sm'
                             value={lot.manufacturer_id}
                             onChange={(e) => onStorageLotUpdated(lot.uid, 'manufacturer_id', e.target.value)}
                           >
@@ -1296,7 +1325,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
                           </select>
                           <button
                             type='button'
-                            className='btn btn-outline-success'
+                            className='btn btn-sm btn-outline-success'
                             title='Agregar fabricante'
                             onClick={() => onCreateManufacturerForLot(lot.uid)}
                           >
