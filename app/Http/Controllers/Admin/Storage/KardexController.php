@@ -58,6 +58,10 @@ class KardexController extends BasicController
                 ->get();
 
             $warehouses = $this->warehouseOptionsQuery()->get(['id', 'business_branch_id', 'name', 'status']);
+            $locations = $this->locationsQuery()
+                ->orderBy('warehouse_name')
+                ->orderBy('code')
+                ->get(['id', 'status', 'warehouse_id', 'warehouse_name', 'code', 'temperature_range']);
 
             $clients = Client::query()
                 ->whereNotNull('status')
@@ -74,6 +78,7 @@ class KardexController extends BasicController
                 'businesses' => $businesses,
                 'branches' => $branches,
                 'warehouses' => $warehouses,
+                'locations' => $locations,
                 'clients' => $clients,
                 'temperatures' => self::TEMPERATURES,
                 'countries' => ['Perú'],

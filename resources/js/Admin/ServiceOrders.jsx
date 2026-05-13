@@ -120,6 +120,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const billingStatusRef = useRef()
   const taxAmountRef = useRef()
   const observationsRef = useRef()
+  const storageCatalogPromiseRef = useRef(null)
 
   const [businesses, setBusinesses] = useState([])
   const [branches, setBranches] = useState([])
@@ -133,6 +134,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const [storageWarehouses, setStorageWarehouses] = useState([])
   const [storageLocations, setStorageLocations] = useState([])
   const [storageBlocks, setStorageBlocks] = useState(() => emptyStorageBlocks())
+  const [isStorageCatalogLoaded, setIsStorageCatalogLoaded] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
 
   const isStorageGeneral = serviceOrderType === 'storage_general'
@@ -141,25 +143,42 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const serviceMap = Object.fromEntries(services.map(row => [`${row.id}`, row]))
 
   const loadStorageCatalog = async () => {
-    const [storageOptions, locationList, warehouseList] = await Promise.all([
-      serviceOrdersRest.getStorageOptions(),
-      serviceOrdersRest.getStorageLocations(),
-      serviceOrdersRest.getStorageWarehouses(),
-    ])
-    const optionWarehouses = storageOptions?.warehouses ?? []
-    const warehouseRows = (optionWarehouses.length ? optionWarehouses : warehouseList).filter(row => row.status !== null)
-    const locationRows = locationList ?? []
+    if (!isStorageService) return { warehouseRows: [], locationRows: [] }
+
+    if (!storageCatalogPromiseRef.current) {
+      storageCatalogPromiseRef.current = (async () => {
+        const storageOptions = await serviceOrdersRest.getStorageOptions()
+        let warehouseRows = (storageOptions?.warehouses ?? []).filter(row => row.status !== null)
+        let locationRows = (storageOptions?.locations ?? []).filter(row => row.status !== null)
+
+        if (!warehouseRows.length || !locationRows.length) {
+          const [fallbackLocations, fallbackWarehouses] = await Promise.all([
+            locationRows.length ? Promise.resolve(locationRows) : serviceOrdersRest.getStorageLocations(),
+            warehouseRows.length ? Promise.resolve(warehouseRows) : serviceOrdersRest.getStorageWarehouses(),
+          ])
+          warehouseRows = (warehouseRows.length ? warehouseRows : (fallbackWarehouses ?? [])).filter(row => row.status !== null)
+          locationRows = (locationRows.length ? locationRows : (fallbackLocations ?? [])).filter(row => row.status !== null)
+        }
+
+        return { warehouseRows, locationRows }
+      })()
+    }
+
+    const { warehouseRows, locationRows } = await storageCatalogPromiseRef.current
     setStorageWarehouses(warehouseRows)
     setStorageLocations(locationRows)
+    setIsStorageCatalogLoaded(true)
     return { warehouseRows, locationRows }
   }
 
   useEffect(() => {
     const loadInitialData = async () => {
-      const [businessList, clientList, serviceList] = await Promise.all([
+      const storageCatalogPromise = isStorageService ? loadStorageCatalog() : Promise.resolve({ warehouseRows: [], locationRows: [] })
+      const [businessList, clientList, serviceList, storageCatalog] = await Promise.all([
         serviceOrdersRest.getBusinesses(),
         serviceOrdersRest.getClients(),
         serviceOrdersRest.getServices(),
+        storageCatalogPromise,
       ])
       const activeBusinesses = businessList ?? []
       setBusinesses(activeBusinesses)
@@ -167,8 +186,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       setServices((serviceList ?? []).filter(row => row.status !== null))
 
       if (isStorageService) {
-        const { warehouseRows } = await loadStorageCatalog()
-        setStorageBlocks(emptyStorageBlocks(warehouseRows))
+        setStorageBlocks(emptyStorageBlocks(storageCatalog.warehouseRows))
 
         const defaultBusiness = activeBusinesses[0]
         if (defaultBusiness) {
@@ -319,7 +337,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     setSelectedStorageServiceId(itemRows[0]?.service_id ?? '')
     let warehouseRows = storageWarehouses
     let locationRows = storageLocations
-    if (isStorageService && !warehouseRows.length) {
+    if (isStorageService && (!warehouseRows.length || !locationRows.length || !isStorageCatalogLoaded)) {
       const catalog = await loadStorageCatalog()
       warehouseRows = catalog.warehouseRows
       locationRows = catalog.locationRows
@@ -748,7 +766,8 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         <div className='row g-3'>
           {storageBlocks.map(block => {
             const locationOptions = locationOptionsForBlock(block)
-            const disabled = !block.enabled
+            const locationsLoading = isStorageService && !isStorageCatalogLoaded
+            const disabled = !block.enabled || locationsLoading
             return <div className='col-12 col-lg-4' key={`storage-order-block-${block.key}`}>
               <div className='storage-service-card'>
                 <div className='storage-service-card-header'>
@@ -767,12 +786,13 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
                       className='form-select'
                       value={blockLocationIds(block)}
                       multiple
-                      data-placeholder={locationOptions.length ? 'Seleccione ubicaciones' : 'Sin ubicaciones'}
+                      data-placeholder={locationsLoading ? 'Cargando ubicaciones...' : (locationOptions.length ? 'Seleccione ubicaciones' : 'Sin ubicaciones')}
                       disabled={disabled}
                       onChange={(e) => updateStorageBlock(block.key, { location_ids: Array.from(e.target.selectedOptions).map(option => option.value).filter(Boolean) })}
                       required={block.enabled}
                     >
-                      {!locationOptions.length && <option value=''>Sin ubicaciones</option>}
+                      {locationsLoading && <option value=''>Cargando ubicaciones...</option>}
+                      {!locationsLoading && !locationOptions.length && <option value=''>Sin ubicaciones</option>}
                       {locationOptions.map(location => (
                         <option key={`storage-order-location-${block.key}-${location.id}`} value={location.id}>{storageLocationLabel(location)}</option>
                       ))}
