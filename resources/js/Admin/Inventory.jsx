@@ -384,22 +384,26 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         <i className='mdi mdi-format-list-bulleted'></i>
         Registrar pedidos
       </div>}
-      size='fullscreen'
+      size='xl'
       hideFooter
-      dialogClass='modal-dialog-scrollable'
-      contentClass='rounded-0'
+      dialogClass='modal-dialog-scrollable storage-inventory-dialog'
+      contentClass='rounded-2'
       headerClass='py-2 border-0 bg-storage-inventory-modal'
       closeButtonClass='btn-close-white'
       bodyClass='p-4'
-      bodyStyle={{ maxHeight: 'calc(100vh - 88px)', overflowY: 'auto', overflowX: 'hidden' }}
+      bodyStyle={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', overflowX: 'hidden' }}
       onSubmit={(e) => e.preventDefault()}
       onClose={resetModal}
     >
       <style>{`
         .bg-storage-inventory-modal { background: #25274f; }
+        .storage-inventory-dialog { max-width: min(1280px, calc(100vw - 64px)); }
         .storage-inventory-modal-actions { min-height: 43px; }
         .storage-inventory-filter-row .form-label { margin-bottom: 0.45rem; font-weight: 600; }
         .storage-inventory-table-wrap { min-height: 160px; }
+        @media (max-width: 767.98px) {
+          .storage-inventory-dialog { max-width: calc(100vw - 20px); margin-left: auto; margin-right: auto; }
+        }
       `}</style>
       <input ref={fileRef} type='file' accept='.csv' hidden onChange={uploadFormat} />
       <div className='d-flex justify-content-center gap-4 storage-inventory-modal-actions my-3'>
