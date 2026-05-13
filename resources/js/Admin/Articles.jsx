@@ -654,16 +654,38 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   }
 
   const onCreateManufacturerForLot = async (uid) => {
+    if (window.$?.fn?.select2) {
+      $('select.select2-hidden-accessible').select2('close')
+    }
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+
     const { value, isConfirmed } = await Swal.fire({
       title: 'Agregar fabricante',
+      target: modalRef.current ?? document.body,
       html: `
         <input id="storage-manufacturer-name" class="swal2-input" placeholder="Nombre del fabricante">
         <input id="storage-manufacturer-code" class="swal2-input" placeholder="Codigo">
       `,
       focusConfirm: false,
+      returnFocus: false,
       showCancelButton: true,
       confirmButtonText: 'Registrar',
       cancelButtonText: 'Cancelar',
+      didOpen: () => {
+        const nameInput = document.getElementById('storage-manufacturer-name')
+        if (nameInput instanceof HTMLInputElement) {
+          nameInput.disabled = false
+          nameInput.readOnly = false
+          nameInput.focus()
+        }
+        const codeInput = document.getElementById('storage-manufacturer-code')
+        if (codeInput instanceof HTMLInputElement) {
+          codeInput.disabled = false
+          codeInput.readOnly = false
+        }
+      },
       preConfirm: () => {
         const name = document.getElementById('storage-manufacturer-name')?.value?.trim() ?? ''
         const code = document.getElementById('storage-manufacturer-code')?.value?.trim() ?? ''
