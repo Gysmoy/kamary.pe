@@ -18,22 +18,30 @@ import {
 
 const serviceOrdersRest = new ServiceOrdersRest()
 const emptyItem = () => ({ uid: crypto.randomUUID(), service_id: '', description: '', quantity: 1, unit_price: 0, detraction_percent: 0, commission_percent: 0, total: 0 })
-const storageWarehouseNames = ['Almacen Km 1', 'Almacen Km 2', 'Almacen Km 3', 'Almacen Km 4', 'Oficina Administrativa', 'Almacen KM 5']
 const normalizeStorageText = (value = '') => value.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
-const emptyStorageBlocks = () => storageWarehouseNames.map(name => ({
-  key: normalizeStorageText(name),
-  warehouse_name: name,
-  warehouse_id: '',
-  enabled: false,
-  location_id: '',
-  location_label: '',
-  start_date: '',
-  months: '',
-  end_date: '',
-  quantity_m3: '',
-  tariff: '',
-  monthly_amount: '',
-}))
+const storageWarehouseName = (warehouse) => warehouse?.name ?? warehouse?.warehouse_name ?? ''
+const storageWarehouseId = (warehouse) => warehouse?.id ?? warehouse?.warehouse_id ?? ''
+const storageBlockFromWarehouse = (warehouse) => {
+  const warehouseId = storageWarehouseId(warehouse)
+  const warehouseName = storageWarehouseName(warehouse)
+  return {
+    key: warehouseId ? `warehouse-${warehouseId}` : normalizeStorageText(warehouseName),
+    warehouse_name: warehouseName,
+    warehouse_id: warehouseId ? `${warehouseId}` : '',
+    enabled: false,
+    location_id: '',
+    location_label: '',
+    start_date: '',
+    months: '',
+    end_date: '',
+    quantity_m3: '',
+    tariff: '',
+    monthly_amount: '',
+  }
+}
+const emptyStorageBlocks = (warehouses = []) => warehouses
+  .filter(warehouse => warehouse?.status !== null)
+  .map(storageBlockFromWarehouse)
 const toInputDate = (value) => value?.toString?.().slice?.(0, 10) ?? ''
 const toNumber = (value) => Number(value || 0)
 const addMonths = (dateValue, monthsValue) => {
@@ -126,8 +134,10 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           serviceOrdersRest.getStorageOptions(),
           serviceOrdersRest.getStorageLocations(),
         ])
-        setStorageWarehouses(storageOptions?.warehouses ?? [])
+        const warehouseRows = (storageOptions?.warehouses ?? []).filter(row => row.status !== null)
+        setStorageWarehouses(warehouseRows)
         setStorageLocations(locationList ?? [])
+        setStorageBlocks(emptyStorageBlocks(warehouseRows))
 
         const defaultBusiness = activeBusinesses[0]
         if (defaultBusiness) {
@@ -149,7 +159,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   }
 
   const recalc = (row) => ({ ...row, total: Number(row.quantity || 0) * Number(row.unit_price || 0) })
-  const findStorageWarehouse = (warehouseName) => storageWarehouses.find(row => normalizeStorageText(row.name) === normalizeStorageText(warehouseName))
+  const findStorageWarehouse = (warehouseName, warehouseRows = storageWarehouses) => warehouseRows.find(row => normalizeStorageText(storageWarehouseName(row)) === normalizeStorageText(warehouseName))
   const blockWarehouseId = (block) => block.warehouse_id || findStorageWarehouse(block.warehouse_name)?.id || ''
   const locationOptionsForBlock = (block) => {
     const warehouseId = blockWarehouseId(block)
@@ -164,8 +174,8 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       ?? options.find(location => normalizeStorageText(storageLocationLabel(location)) === normalizeStorageText(block.location_label))
       ?? null
   }
-  const buildStorageBlocksFromItems = (itemRows = []) => {
-    const blocks = emptyStorageBlocks()
+  const buildStorageBlocksFromItems = (itemRows = [], warehouseRows = storageWarehouses) => {
+    const blocks = emptyStorageBlocks(warehouseRows)
     itemRows.forEach(row => {
       const parsed = parseStorageDescription(row.description ?? '')
       const index = blocks.findIndex(block => normalizeStorageText(block.warehouse_name) === normalizeStorageText(parsed.warehouse_name))
@@ -173,7 +183,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       const next = {
         ...blocks[index],
         enabled: true,
-        warehouse_id: findStorageWarehouse(blocks[index].warehouse_name)?.id ?? '',
+        warehouse_id: findStorageWarehouse(blocks[index].warehouse_name, warehouseRows)?.id ?? blocks[index].warehouse_id,
         location_label: parsed.location_label,
         start_date: parsed.start_date,
         months: parsed.months || '',
