@@ -34,6 +34,7 @@ const storageBlockFromWarehouse = (warehouse) => {
     start_date: '',
     months: '',
     end_date: '',
+    billing_dates: [],
     quantity_m3: '',
     tariff: '',
     monthly_amount: '',
@@ -44,10 +45,10 @@ const emptyStorageBlocks = (warehouses = []) => warehouses
   .map(storageBlockFromWarehouse)
 const toInputDate = (value) => value?.toString?.().slice?.(0, 10) ?? ''
 const toNumber = (value) => Number(value || 0)
-const addMonths = (dateValue, monthsValue) => {
-  if (!dateValue || !monthsValue) return ''
+const addMonths = (dateValue, monthsValue, allowZero = false) => {
+  if (!dateValue) return ''
   const months = Number(monthsValue)
-  if (!Number.isFinite(months) || months <= 0) return ''
+  if (!Number.isFinite(months) || months < 0 || (!allowZero && months <= 0)) return ''
   const date = new Date(`${dateValue}T00:00:00`)
   if (Number.isNaN(date.getTime())) return ''
   const result = new Date(date)
@@ -56,6 +57,14 @@ const addMonths = (dateValue, monthsValue) => {
   result.setMonth(result.getMonth() + months)
   result.setDate(Math.min(day, new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate()))
   return result.toISOString().slice(0, 10)
+}
+const billingDateRows = (startDate, monthsValue) => {
+  const months = Number.parseInt(monthsValue, 10)
+  if (!startDate || !Number.isFinite(months) || months <= 0) return []
+  return Array.from({ length: months }, (_, index) => ({
+    month: index + 1,
+    date: addMonths(startDate, index, true),
+  }))
 }
 const storageLocationLabel = (location) => {
   if (!location) return ''
@@ -196,6 +205,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         start_date: parsed.start_date,
         months: parsed.months || '',
         end_date: parsed.end_date || addMonths(parsed.start_date, parsed.months),
+        billing_dates: billingDateRows(parsed.start_date, parsed.months),
         quantity_m3: parsed.quantity_m3 || Number(row.quantity || 0) || '',
         tariff: Number(row.unit_price || 0) || '',
         monthly_amount: Number(row.total || 0) || '',
@@ -217,12 +227,24 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         warehouse_id: blockWarehouseId(block),
       }
       if (location) next.location_label = storageLocationLabel(location)
-      if ('start_date' in patch || 'months' in patch) next.end_date = addMonths(next.start_date, next.months)
+      if ('start_date' in patch || 'months' in patch) {
+        next.end_date = addMonths(next.start_date, next.months)
+        next.billing_dates = billingDateRows(next.start_date, next.months)
+      }
       if ('quantity_m3' in patch || 'tariff' in patch) {
         const amount = toNumber(next.quantity_m3) * toNumber(next.tariff)
         next.monthly_amount = amount ? amount.toFixed(2) : ''
       }
       return next
+    }))
+  }
+  const updateStorageBillingDate = (key, index, date) => {
+    setStorageBlocks(prev => prev.map(block => {
+      if (block.key !== key) return block
+      return {
+        ...block,
+        billing_dates: (block.billing_dates ?? []).map((row, rowIndex) => rowIndex === index ? { ...row, date } : row),
+      }
     }))
   }
 
@@ -291,6 +313,16 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         Swal.fire('Formulario incompleto', `Completa los datos de ${missingBlock.warehouse_name}.`, 'warning')
         return
       }
+      const missingBillingDate = selectedBlocks.find(row => {
+        const months = Number.parseInt(row.months, 10)
+        return !Array.isArray(row.billing_dates)
+          || row.billing_dates.length !== months
+          || row.billing_dates.some(item => !item.date)
+      })
+      if (missingBillingDate) {
+        Swal.fire('Formulario incompleto', `Completa las fechas de facturacion de ${missingBillingDate.warehouse_name}.`, 'warning')
+        return
+      }
       const startDates = selectedBlocks.map(row => row.start_date).filter(Boolean).sort()
       const maxMonths = Math.max(...selectedBlocks.map(row => Number(row.months || 1)))
       const service = serviceMap[selectedStorageServiceId]
@@ -324,6 +356,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
             detraction_percent: 0,
             commission_percent: 0,
             total,
+            billing_dates: (block.billing_dates ?? []).map(item => item.date),
           }
         }),
       }
@@ -553,6 +586,37 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
             border-radius: 1px;
             margin: 0;
           }
+          .storage-billing-schedule {
+            margin-top: 16px;
+            border: 1px solid #e9ecef;
+            overflow-x: auto;
+          }
+          .storage-billing-schedule table {
+            width: 100%;
+            margin: 0;
+            border-collapse: collapse;
+            font-size: 11px;
+          }
+          .storage-billing-schedule th,
+          .storage-billing-schedule td {
+            border-bottom: 1px solid #eef0f2;
+            padding: 8px;
+            vertical-align: middle;
+          }
+          .storage-billing-schedule th {
+            color: #26324d;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            background: #fff;
+          }
+          .storage-billing-schedule td:first-child {
+            width: 86px;
+            text-align: center;
+          }
+          .storage-billing-schedule tr:last-child td {
+            border-bottom: 0;
+          }
           @media (max-width: 767.98px) {
             .storage-service-order-dialog {
               width: calc(100vw - 12px);
@@ -727,6 +791,34 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
                       <input type='number' className='form-control' value={block.monthly_amount} disabled />
                     </div>
                   </div>
+                  {block.enabled && (block.billing_dates ?? []).length > 0 && (
+                    <div className='storage-billing-schedule'>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>N&deg; mes</th>
+                            <th>Fecha facturaci&oacute;n</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {block.billing_dates.map((row, index) => (
+                            <tr key={`storage-order-billing-${block.key}-${row.month}`}>
+                              <td>{row.month}</td>
+                              <td>
+                                <input
+                                  type='date'
+                                  className='form-control'
+                                  value={row.date}
+                                  onChange={(e) => updateStorageBillingDate(block.key, index, e.target.value)}
+                                  required={block.enabled}
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

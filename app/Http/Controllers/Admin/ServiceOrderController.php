@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
+use App\Models\BillingDocument;
+use App\Models\BillingDocumentItem;
 use App\Models\Client;
 use App\Models\ServiceCatalog;
 use App\Models\ServiceOrder;
 use App\Models\ServiceOrderItem;
+use App\Services\BillingDocumentService;
 use App\Support\BusinessScope;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -151,6 +155,7 @@ class ServiceOrderController extends BasicController
             ServiceOrderItem::where('service_order_id', $jpa->id)->delete();
             $inserted = 0;
             $subtotal = 0;
+            $storageBillingItems = [];
 
             foreach ($this->itemsPayload as $item) {
                 if (!is_array($item)) continue;
@@ -163,8 +168,14 @@ class ServiceOrderController extends BasicController
                 $detraction = $this->toDecimal($item['detraction_percent'] ?? 0);
                 $commission = $this->toDecimal($item['commission_percent'] ?? 0);
                 $total = $this->toDecimal($item['total'] ?? round($quantity * $unitPrice, 2));
+                $parsedStorageSchedule = $this->parseStorageScheduleFromDescription($item['description'] ?? '');
+                $billingDates = $this->normalizeBillingDates(
+                    $item['billing_dates'] ?? [],
+                    $parsedStorageSchedule['start_date'],
+                    (int) $parsedStorageSchedule['months']
+                );
 
-                ServiceOrderItem::create([
+                $serviceOrderItem = ServiceOrderItem::create([
                     'service_order_id' => $jpa->id,
                     'service_id' => $service->id,
                     'description' => trim((string) ($item['description'] ?? '')) ?: $service->name,
@@ -175,7 +186,15 @@ class ServiceOrderController extends BasicController
                     'total' => $total,
                     'status' => true,
                 ]);
-                $subtotal += $total;
+                $subtotal += $this->orderType() === 'storage_service'
+                    ? $total * max(1, count($billingDates))
+                    : $total;
+                if ($this->orderType() === 'storage_service') {
+                    $storageBillingItems[] = [
+                        'item' => $serviceOrderItem,
+                        'billing_dates' => $billingDates,
+                    ];
+                }
                 $inserted++;
             }
 
@@ -185,6 +204,16 @@ class ServiceOrderController extends BasicController
             $taxAmount = round((float) ($request->input('tax_amount') ?? 0), 2);
             $total = round($subtotal + $taxAmount, 2);
             $jpa->update(['subtotal' => $subtotal, 'total' => $total, 'balance_amount' => $total]);
+
+            if ($this->orderType() === 'storage_service') {
+                $createdPrefactures = $this->syncStoragePrefactures(
+                    $jpa->fresh(['business', 'branch', 'client']),
+                    $storageBillingItems
+                );
+                if ($createdPrefactures > 0 && in_array($jpa->order_status, ['draft', 'approved', 'scheduled'], true)) {
+                    $jpa->update(['order_status' => 'prefactured']);
+                }
+            }
 
             app(\App\Services\AccountsReceivableService::class)->syncFromServiceOrder($jpa->fresh([
                 'client',
@@ -294,6 +323,194 @@ class ServiceOrderController extends BasicController
         }
     }
 
+    private function parseStorageScheduleFromDescription($description): array
+    {
+        $parts = explode(';', (string) $description);
+        $dateText = trim((string) ($parts[2] ?? ''));
+        preg_match_all('/\d{4}-\d{2}-\d{2}/', $dateText, $dateMatches);
+        $monthText = trim((string) ($parts[3] ?? ''));
+        preg_match('/\d+/', $monthText, $monthMatches);
+
+        return [
+            'start_date' => $dateMatches[0][0] ?? null,
+            'months' => isset($monthMatches[0]) ? (int) $monthMatches[0] : 0,
+        ];
+    }
+
+    private function normalizeBillingDates($value, ?string $fallbackStartDate, int $fallbackMonths): array
+    {
+        $rawDates = $value;
+        if (is_string($rawDates)) {
+            $decoded = json_decode($rawDates, true);
+            $rawDates = is_array($decoded) ? $decoded : array_filter(array_map('trim', explode(',', $rawDates)));
+        }
+        if (!is_array($rawDates)) $rawDates = [];
+
+        $dates = [];
+        foreach ($rawDates as $row) {
+            $date = is_array($row)
+                ? ($row['date'] ?? $row['billing_date'] ?? $row['fecha_facturacion'] ?? null)
+                : $row;
+            if (!$date) continue;
+            $dates[] = $this->normalizeDate($date);
+        }
+
+        if (empty($dates) && $fallbackStartDate && $fallbackMonths > 0) {
+            $start = Carbon::parse($fallbackStartDate);
+            for ($index = 0; $index < $fallbackMonths; $index++) {
+                $dates[] = $start->copy()->addMonthsNoOverflow($index)->format('Y-m-d');
+            }
+        }
+
+        return array_values(array_unique(array_filter($dates)));
+    }
+
+    private function syncStoragePrefactures(ServiceOrder $order, array $storageBillingItems): int
+    {
+        $this->deletePendingStoragePrefactures($order->id);
+
+        $protectedDates = $this->protectedStoragePrefactureDates($order->id);
+        $linesByDate = [];
+        foreach ($storageBillingItems as $scheduledItem) {
+            $serviceOrderItem = $scheduledItem['item'] ?? null;
+            if (!$serviceOrderItem instanceof ServiceOrderItem) continue;
+
+            foreach (($scheduledItem['billing_dates'] ?? []) as $index => $billingDate) {
+                if (!$billingDate || isset($protectedDates[$billingDate])) continue;
+                $linesByDate[$billingDate][] = [
+                    'item' => $serviceOrderItem,
+                    'month' => $index + 1,
+                ];
+            }
+        }
+
+        ksort($linesByDate);
+        $created = 0;
+        $userId = Auth::id();
+        $billingService = app(BillingDocumentService::class);
+
+        foreach ($linesByDate as $billingDate => $lines) {
+            $subtotal = round(array_reduce($lines, function ($carry, $line) {
+                return $carry + (float) $line['item']->total;
+            }, 0), 2);
+            if ($subtotal <= 0) continue;
+
+            $document = BillingDocument::create([
+                'code' => $this->nextBillingCode(),
+                'source_type' => 'service_order',
+                'source_id' => $order->id,
+                'commercial_order_id' => null,
+                'service_order_id' => $order->id,
+                'reference_billing_document_id' => null,
+                'business_id' => $order->business_id,
+                'business_branch_id' => $order->business_branch_id,
+                'warehouse_id' => null,
+                'client_id' => $order->client_id,
+                'eventual_client_id' => null,
+                'provider' => 'facturadorpro5',
+                'document_type' => $order->expected_document_type ?: 'Factura',
+                'series' => null,
+                'sequence' => null,
+                'issue_date' => $billingDate,
+                'due_date' => $billingDate,
+                'currency' => $order->currency ?: 'PEN',
+                'payment_condition' => $order->payment_condition ?: 'Contado',
+                'payment_method' => null,
+                'customer_email' => $order->client?->billing_email ?: $order->client?->email,
+                'provider_endpoint' => rtrim((string) config('facturadorpro5.base_url'), '/') . (string) config('facturadorpro5.issue_endpoint'),
+                'provider_mode' => config('facturadorpro5.mode', 'demo'),
+                'subtotal' => $subtotal,
+                'tax_amount' => 0,
+                'total' => $subtotal,
+                'local_status' => 'pending',
+                'external_status' => 'draft',
+                'metadata' => [
+                    'source_code' => $order->code,
+                    'document_origin' => 'storage_service_order',
+                    'storage_auto_prefacture' => true,
+                    'billing_date' => $billingDate,
+                ],
+                'observations' => "Prefactura mensual {$billingDate}",
+                'status' => true,
+                'created_by' => $userId,
+                'updated_by' => $userId,
+            ]);
+
+            foreach ($lines as $line) {
+                $serviceOrderItem = $line['item'];
+                BillingDocumentItem::create([
+                    'billing_document_id' => $document->id,
+                    'commercial_order_item_id' => null,
+                    'service_order_item_id' => $serviceOrderItem->id,
+                    'item_type' => 'service',
+                    'item_code' => $serviceOrderItem->service?->code,
+                    'description' => $serviceOrderItem->description ?: ($serviceOrderItem->service?->name ?: 'Servicio'),
+                    'quantity' => $serviceOrderItem->quantity,
+                    'unit_price' => $serviceOrderItem->unit_price,
+                    'total' => $serviceOrderItem->total,
+                    'metadata' => [
+                        'service_id' => $serviceOrderItem->service_id,
+                        'detraction_percent' => $serviceOrderItem->detraction_percent,
+                        'commission_percent' => $serviceOrderItem->commission_percent,
+                        'storage_billing_date' => $billingDate,
+                        'storage_billing_month' => $line['month'],
+                    ],
+                    'status' => true,
+                ]);
+            }
+
+            $freshDocument = $billingService->refreshConnectorPayload($document->fresh(['items', 'client', 'eventualClient', 'business', 'branch', 'serviceOrder']));
+            $billingService->registerEvent($freshDocument, 'prepared', [
+                'message' => 'Prefactura mensual generada desde la orden de almacenamiento',
+            ]);
+            $created++;
+        }
+
+        return $created;
+    }
+
+    private function deletePendingStoragePrefactures(int $orderId): void
+    {
+        $documents = BillingDocument::query()
+            ->where('source_type', 'service_order')
+            ->where('source_id', $orderId)
+            ->where('service_order_id', $orderId)
+            ->where('local_status', 'pending')
+            ->get();
+
+        foreach ($documents as $document) {
+            if (!$this->isStorageAutoPrefacture($document)) continue;
+            BillingDocumentItem::where('billing_document_id', $document->id)->delete();
+            $document->delete();
+        }
+    }
+
+    private function protectedStoragePrefactureDates(int $orderId): array
+    {
+        return BillingDocument::query()
+            ->where('source_type', 'service_order')
+            ->where('source_id', $orderId)
+            ->where('service_order_id', $orderId)
+            ->where('status', true)
+            ->get()
+            ->filter(function ($document) {
+                return $this->isStorageAutoPrefacture($document)
+                    && !in_array($document->local_status, ['pending', 'cancelled'], true);
+            })
+            ->mapWithKeys(function ($document) {
+                $date = $document->due_date ?: $document->issue_date;
+                return $date ? [$date->format('Y-m-d') => true] : [];
+            })
+            ->all();
+    }
+
+    private function isStorageAutoPrefacture(BillingDocument $document): bool
+    {
+        $metadata = is_array($document->metadata) ? $document->metadata : [];
+        return (bool) ($metadata['storage_auto_prefacture'] ?? false)
+            || ($metadata['document_origin'] ?? null) === 'storage_service_order';
+    }
+
     private function toNullableInt($value): ?int
     {
         if ($value === null) return null;
@@ -357,5 +574,13 @@ class ServiceOrderController extends BasicController
             ->value('code');
         if ($latest && preg_match('/(\d+)$/', $latest, $matches)) $next = ((int) $matches[1]) + 1;
         return $this->codePrefix() . '-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+    }
+
+    private function nextBillingCode(): string
+    {
+        $next = 1;
+        $latest = BillingDocument::query()->latest('id')->value('code');
+        if ($latest && preg_match('/(\d+)$/', $latest, $matches)) $next = ((int) $matches[1]) + 1;
+        return 'FAC-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
     }
 }
