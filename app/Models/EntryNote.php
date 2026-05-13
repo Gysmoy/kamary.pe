@@ -10,14 +10,28 @@ class EntryNote extends Model
     use HasFactory;
 
     protected $fillable = [
+        'code',
         'business_id',
         'business_branch_id',
         'warehouse_id',
         'supplier_id',
+        'client_id',
+        'provider_distributor',
+        'entry_date',
         'document_type',
         'document_series',
         'document_sequence',
+        'document_date',
         'document_file',
+        'invoice_type',
+        'invoice_series',
+        'invoice_sequence',
+        'invoice_date',
+        'dua_number',
+        'transport_agency',
+        'driver_name',
+        'driver_license',
+        'vehicle_plate',
         'currency',
         'observations',
         'guide_series',
@@ -25,12 +39,16 @@ class EntryNote extends Model
         'guide_ruc',
         'guide_file',
         'status',
+        'entry_status',
         'created_by',
         'updated_by',
     ];
 
     protected $casts = [
         'status' => 'boolean',
+        'entry_date' => 'date',
+        'document_date' => 'date',
+        'invoice_date' => 'date',
     ];
 
     public function business()
@@ -53,6 +71,11 @@ class EntryNote extends Model
         return $this->belongsTo(Supplier::class);
     }
 
+    public function client()
+    {
+        return $this->belongsTo(Client::class);
+    }
+
     public function items()
     {
         return $this->hasMany(EntryNoteItem::class)->orderBy('id');
@@ -68,4 +91,3 @@ class EntryNote extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 }
-

@@ -384,6 +384,7 @@ class KardexController extends BasicController
             ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
             ->join('businesses as entry_business', 'entry_business.id', '=', 'entry_note.business_id')
             ->where('entry_note.status', 1)
+            ->where('entry_note.entry_status', 'approved')
             ->where('entry_item.status', 1)
             ->where('entry_business.business_key', BusinessScope::KAMARY_MEDICALS)
             ->selectRaw("
@@ -391,7 +392,7 @@ class KardexController extends BasicController
                 entry_item.article_id as article_id,
                 COALESCE(entry_item.warehouse_id, entry_note.warehouse_id) as warehouse_id,
                 COALESCE(NULLIF(entry_item.lot, ''), NULLIF(entry_item.batch_code, ''), '') as lot,
-                CAST(NULL AS DATE) as expiration_date,
+                entry_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(entry_item.location, ''), '') as location,
                 entry_item.quantity as quantity
             ");

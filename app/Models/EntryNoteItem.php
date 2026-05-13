@@ -13,11 +13,16 @@ class EntryNoteItem extends Model
         'entry_note_id',
         'batch_code',
         'lot',
+        'expiration_date',
+        'storage_condition',
+        'manufacturer_id',
         'article_id',
         'warehouse_id',
         'stock',
         'cost_unit',
         'location',
+        'requested_quantity',
+        'received_quantity',
         'quantity',
         'total',
         'status',
@@ -26,9 +31,12 @@ class EntryNoteItem extends Model
     protected $casts = [
         'stock' => 'float',
         'cost_unit' => 'float',
+        'requested_quantity' => 'float',
+        'received_quantity' => 'float',
         'quantity' => 'float',
         'total' => 'float',
         'status' => 'boolean',
+        'expiration_date' => 'date',
     ];
 
     public function entryNote()
@@ -45,5 +53,9 @@ class EntryNoteItem extends Model
     {
         return $this->belongsTo(Warehouse::class);
     }
-}
 
+    public function manufacturer()
+    {
+        return $this->belongsTo(Laboratory::class, 'manufacturer_id');
+    }
+}

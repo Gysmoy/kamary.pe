@@ -180,6 +180,7 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/entry-notes', [AdminEntryNoteController::class, 'save']);
         Route::post('/entry-notes/paginate', [AdminEntryNoteController::class, 'paginate']);
+        Route::patch('/entry-notes/{id}/entry-status', [AdminEntryNoteController::class, 'entryStatus']);
         Route::patch('/entry-notes/status', [AdminEntryNoteController::class, 'status']);
         Route::patch('/entry-notes/{field}', [AdminEntryNoteController::class, 'boolean']);
         Route::delete('/entry-notes/{id}', [AdminEntryNoteController::class, 'delete']);
@@ -378,6 +379,7 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/entry-notes', [AdminStorageEntryNoteController::class, 'save']);
             Route::post('/entry-notes/paginate', [AdminStorageEntryNoteController::class, 'paginate']);
+            Route::patch('/entry-notes/{id}/entry-status', [AdminStorageEntryNoteController::class, 'entryStatus']);
             Route::patch('/entry-notes/status', [AdminStorageEntryNoteController::class, 'status']);
             Route::patch('/entry-notes/{field}', [AdminStorageEntryNoteController::class, 'boolean']);
             Route::delete('/entry-notes/{id}', [AdminStorageEntryNoteController::class, 'delete']);

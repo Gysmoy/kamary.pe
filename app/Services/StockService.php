@@ -14,6 +14,7 @@ class StockService
         $entryMovements = DB::table('entry_note_items as entry_item')
             ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
             ->where('entry_note.status', 1)
+            ->where('entry_note.entry_status', 'approved')
             ->where('entry_item.status', 1)
             ->selectRaw('entry_item.article_id as article_id, entry_item.quantity as quantity');
 
@@ -44,6 +45,7 @@ class StockService
         $entryMovements = DB::table('entry_note_items as entry_item')
             ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
             ->where('entry_note.status', 1)
+            ->where('entry_note.entry_status', 'approved')
             ->where('entry_item.status', 1)
             ->where('entry_item.article_id', $articleId)
             ->selectRaw('entry_item.warehouse_id as warehouse_id, entry_item.quantity as quantity');
@@ -254,6 +256,7 @@ class StockService
         $entryQty = (float)DB::table('entry_note_items as entry_item')
             ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
             ->where('entry_note.status', 1)
+            ->where('entry_note.entry_status', 'approved')
             ->where('entry_item.status', 1)
             ->where('entry_item.article_id', $articleId)
             ->where('entry_item.warehouse_id', $warehouseId)

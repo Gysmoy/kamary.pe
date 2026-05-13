@@ -13,6 +13,17 @@ class EntryNotesRest extends BasicRest {
     return result ?? []
   }
 
+  getStorageOptions = async () => {
+    const result = await this.simpleGet('/api/admin/storage/kardex/options')
+    return result ?? {
+      businesses: [],
+      branches: [],
+      warehouses: [],
+      locations: [],
+      clients: [],
+    }
+  }
+
   getBusinesses = async () => {
     try {
       const { status, result } = await Fetch('/api/admin/businesses/paginate', {
@@ -187,6 +198,29 @@ class EntryNotesRest extends BasicRest {
         richColors: true,
       });
       return { qty_in: 0, qty_out: 0, stock: 0 }
+    }
+  }
+
+  setEntryStatus = async (id, entryStatus) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${id}/entry-status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ entry_status: entryStatus })
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo actualizar la nota de entrada')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data ?? true
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
     }
   }
 }
