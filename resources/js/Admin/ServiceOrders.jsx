@@ -139,6 +139,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const [storageLocations, setStorageLocations] = useState([])
   const [storageBlocks, setStorageBlocks] = useState(() => emptyStorageBlocks())
   const [isStorageCatalogLoaded, setIsStorageCatalogLoaded] = useState(false)
+  const [openLocationPickerKey, setOpenLocationPickerKey] = useState('')
   const [isEditing, setIsEditing] = useState(false)
 
   const isStorageGeneral = serviceOrderType === 'storage_general'
@@ -315,6 +316,14 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         billing_dates: (block.billing_dates ?? []).map((row, rowIndex) => rowIndex === index ? { ...row, date } : row),
       }
     }))
+  }
+  const toggleStorageLocation = (block, locationId) => {
+    const id = `${locationId}`
+    const selectedIds = blockLocationIds(block)
+    const nextIds = selectedIds.includes(id)
+      ? selectedIds.filter(value => value !== id)
+      : [...selectedIds, id]
+    updateStorageBlock(block.key, { location_ids: nextIds })
   }
 
   const onModalOpen = async (data = null) => {
@@ -656,6 +665,82 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           .storage-service-card-body {
             padding: 13px 12px 20px;
           }
+          .storage-location-picker {
+            position: relative;
+          }
+          .storage-location-picker-toggle {
+            width: 100%;
+            min-height: 42px;
+            border: 1px solid #cfd6df;
+            border-radius: 2px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 5px 8px;
+            text-align: left;
+          }
+          .storage-location-picker-toggle:disabled {
+            background: #f5f5f5;
+            color: #9ca3af;
+          }
+          .storage-location-picker-values {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            min-width: 0;
+          }
+          .storage-location-picker-placeholder {
+            color: #8b919b;
+            font-size: 13px;
+          }
+          .storage-location-chip {
+            background: #0ea5c6;
+            color: #fff;
+            border-radius: 2px;
+            padding: 3px 7px;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.1;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .storage-location-picker-menu {
+            position: absolute;
+            z-index: 30;
+            top: calc(100% + 3px);
+            left: 0;
+            right: 0;
+            max-height: 230px;
+            overflow-y: auto;
+            border: 1px solid #cfd6df;
+            background: #fff;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, .16);
+          }
+          .storage-location-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            margin: 0;
+            cursor: pointer;
+            font-size: 12px;
+            color: #26324d;
+          }
+          .storage-location-option:hover {
+            background: #eef7fb;
+          }
+          .storage-location-option input {
+            margin: 0;
+          }
+          .storage-location-empty {
+            padding: 10px;
+            color: #8b919b;
+            font-size: 12px;
+          }
           .storage-order-checkbox {
             width: 22px;
             height: 22px;
@@ -781,6 +866,9 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
             const locationOptions = locationOptionsForBlock(block)
             const locationsLoading = isStorageService && !isStorageCatalogLoaded
             const disabled = !block.enabled || locationsLoading
+            const selectedLocationIds = blockLocationIds(block)
+            const selectedLocations = locationOptions.filter(location => selectedLocationIds.includes(`${location.id}`))
+            const pickerOpen = openLocationPickerKey === block.key
             return <div className='col-12 col-lg-4' key={`storage-order-block-${block.key}`}>
               <div className='storage-service-card'>
                 <div className='storage-service-card-header'>
@@ -788,28 +876,51 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
                     type='checkbox'
                     className='form-check-input storage-order-checkbox'
                     checked={block.enabled}
-                    onChange={(e) => updateStorageBlock(block.key, { enabled: e.target.checked })}
+                    onChange={(e) => {
+                      updateStorageBlock(block.key, { enabled: e.target.checked })
+                      if (!e.target.checked) setOpenLocationPickerKey('')
+                    }}
                   />
                   <p className='storage-service-card-title'>{block.warehouse_name}</p>
                 </div>
                 <div className='storage-service-card-body'>
                   <div className='mb-3'>
                     <label className='form-label'>Ubicaci&oacute;n</label>
-                    <select
-                      className='form-select'
-                      value={blockLocationIds(block)}
-                      multiple
-                      data-placeholder={locationsLoading ? 'Cargando ubicaciones...' : (locationOptions.length ? 'Seleccione ubicaciones' : 'Sin ubicaciones')}
-                      disabled={disabled}
-                      onChange={(e) => updateStorageBlock(block.key, { location_ids: Array.from(e.target.selectedOptions).map(option => option.value).filter(Boolean) })}
-                      required={block.enabled}
-                    >
-                      {locationsLoading && <option value=''>Cargando ubicaciones...</option>}
-                      {!locationsLoading && !locationOptions.length && <option value=''>Sin ubicaciones</option>}
-                      {locationOptions.map(location => (
-                        <option key={`storage-order-location-${block.key}-${location.id}`} value={location.id}>{storageLocationLabel(location)}</option>
-                      ))}
-                    </select>
+                    <div className='storage-location-picker'>
+                      <button
+                        type='button'
+                        className='storage-location-picker-toggle'
+                        disabled={disabled}
+                        onClick={() => setOpenLocationPickerKey(prev => prev === block.key ? '' : block.key)}
+                      >
+                        <span className='storage-location-picker-values'>
+                          {locationsLoading && <span className='storage-location-picker-placeholder'>Cargando ubicaciones...</span>}
+                          {!locationsLoading && !selectedLocations.length && <span className='storage-location-picker-placeholder'>{locationOptions.length ? 'Seleccione ubicaciones' : 'Sin ubicaciones'}</span>}
+                          {selectedLocations.map(location => (
+                            <span className='storage-location-chip' key={`storage-order-location-chip-${block.key}-${location.id}`}>{storageLocationLabel(location)}</span>
+                          ))}
+                        </span>
+                        <i className='mdi mdi-chevron-down'></i>
+                      </button>
+                      {pickerOpen && !disabled && (
+                        <div className='storage-location-picker-menu'>
+                          {!locationOptions.length && <div className='storage-location-empty'>Sin ubicaciones</div>}
+                          {locationOptions.map(location => {
+                            const locationId = `${location.id}`
+                            return (
+                              <label className='storage-location-option' key={`storage-order-location-${block.key}-${location.id}`}>
+                                <input
+                                  type='checkbox'
+                                  checked={selectedLocationIds.includes(locationId)}
+                                  onChange={() => toggleStorageLocation(block, locationId)}
+                                />
+                                <span>{storageLocationLabel(location)}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className='row g-3 mb-3'>
                     <div className='col-12 col-sm-4'>
