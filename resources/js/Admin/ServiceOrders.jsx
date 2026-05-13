@@ -117,6 +117,20 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const isStorageService = serviceOrderType === 'storage_service'
   const serviceMap = Object.fromEntries(services.map(row => [`${row.id}`, row]))
 
+  const loadStorageCatalog = async () => {
+    const [storageOptions, locationList, warehouseList] = await Promise.all([
+      serviceOrdersRest.getStorageOptions(),
+      serviceOrdersRest.getStorageLocations(),
+      serviceOrdersRest.getStorageWarehouses(),
+    ])
+    const optionWarehouses = storageOptions?.warehouses ?? []
+    const warehouseRows = (optionWarehouses.length ? optionWarehouses : warehouseList).filter(row => row.status !== null)
+    const locationRows = locationList ?? []
+    setStorageWarehouses(warehouseRows)
+    setStorageLocations(locationRows)
+    return { warehouseRows, locationRows }
+  }
+
   useEffect(() => {
     const loadInitialData = async () => {
       const [businessList, clientList, serviceList] = await Promise.all([
@@ -130,15 +144,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       setServices((serviceList ?? []).filter(row => row.status !== null))
 
       if (isStorageService) {
-        const [storageOptions, locationList, warehouseList] = await Promise.all([
-          serviceOrdersRest.getStorageOptions(),
-          serviceOrdersRest.getStorageLocations(),
-          serviceOrdersRest.getStorageWarehouses(),
-        ])
-        const optionWarehouses = storageOptions?.warehouses ?? []
-        const warehouseRows = (optionWarehouses.length ? optionWarehouses : warehouseList).filter(row => row.status !== null)
-        setStorageWarehouses(warehouseRows)
-        setStorageLocations(locationList ?? [])
+        const { warehouseRows } = await loadStorageCatalog()
         setStorageBlocks(emptyStorageBlocks(warehouseRows))
 
         const defaultBusiness = activeBusinesses[0]
@@ -162,21 +168,21 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
 
   const recalc = (row) => ({ ...row, total: Number(row.quantity || 0) * Number(row.unit_price || 0) })
   const findStorageWarehouse = (warehouseName, warehouseRows = storageWarehouses) => warehouseRows.find(row => normalizeStorageText(storageWarehouseName(row)) === normalizeStorageText(warehouseName))
-  const blockWarehouseId = (block) => block.warehouse_id || findStorageWarehouse(block.warehouse_name)?.id || ''
-  const locationOptionsForBlock = (block) => {
-    const warehouseId = blockWarehouseId(block)
-    return storageLocations.filter(location => {
+  const blockWarehouseId = (block, warehouseRows = storageWarehouses) => block.warehouse_id || findStorageWarehouse(block.warehouse_name, warehouseRows)?.id || ''
+  const locationOptionsForBlock = (block, locationRows = storageLocations, warehouseRows = storageWarehouses) => {
+    const warehouseId = blockWarehouseId(block, warehouseRows)
+    return locationRows.filter(location => {
       if (warehouseId && `${location.warehouse_id}` === `${warehouseId}`) return true
       return normalizeStorageText(location.warehouse_name) === normalizeStorageText(block.warehouse_name)
     })
   }
-  const findStorageLocation = (block) => {
-    const options = locationOptionsForBlock(block)
+  const findStorageLocation = (block, locationRows = storageLocations, warehouseRows = storageWarehouses) => {
+    const options = locationOptionsForBlock(block, locationRows, warehouseRows)
     return options.find(location => `${location.id}` === `${block.location_id}`)
       ?? options.find(location => normalizeStorageText(storageLocationLabel(location)) === normalizeStorageText(block.location_label))
       ?? null
   }
-  const buildStorageBlocksFromItems = (itemRows = [], warehouseRows = storageWarehouses) => {
+  const buildStorageBlocksFromItems = (itemRows = [], warehouseRows = storageWarehouses, locationRows = storageLocations) => {
     const blocks = emptyStorageBlocks(warehouseRows)
     itemRows.forEach(row => {
       const parsed = parseStorageDescription(row.description ?? '')
@@ -194,7 +200,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         tariff: Number(row.unit_price || 0) || '',
         monthly_amount: Number(row.total || 0) || '',
       }
-      const location = findStorageLocation(next)
+      const location = findStorageLocation(next, locationRows, warehouseRows)
       blocks[index] = { ...next, location_id: location?.id ? `${location.id}` : '' }
     })
     return blocks
@@ -243,7 +249,14 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     if (!data?.business_branch_id && !selectedBranchId && branchRows[0]?.id) setSelectedBranchId(`${branchRows[0].id}`)
     const itemRows = (data?.items ?? []).map(row => ({ uid: crypto.randomUUID(), service_id: `${row.service_id}`, description: row.description ?? '', quantity: Number(row.quantity || 0), unit_price: Number(row.unit_price || 0), detraction_percent: Number(row.detraction_percent || 0), commission_percent: Number(row.commission_percent || 0), total: Number(row.total || 0) }))
     setSelectedStorageServiceId(itemRows[0]?.service_id ?? '')
-    setStorageBlocks(isStorageService ? buildStorageBlocksFromItems(data?.items ?? []) : emptyStorageBlocks())
+    let warehouseRows = storageWarehouses
+    let locationRows = storageLocations
+    if (isStorageService && !warehouseRows.length) {
+      const catalog = await loadStorageCatalog()
+      warehouseRows = catalog.warehouseRows
+      locationRows = catalog.locationRows
+    }
+    setStorageBlocks(isStorageService ? buildStorageBlocksFromItems(data?.items ?? [], warehouseRows, locationRows) : emptyStorageBlocks())
     setItems(itemRows.length ? itemRows : [emptyItem()])
     $(modalRef.current).modal('show')
   }
