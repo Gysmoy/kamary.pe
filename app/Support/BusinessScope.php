@@ -33,7 +33,9 @@ class BusinessScope
 
     public static function keyForPath(?string $path): string
     {
-        return str_contains(strtolower((string) $path), 'magistrales')
+        $normalizedPath = strtolower((string) $path);
+
+        return str_contains($normalizedPath, 'magistrales') || str_contains($normalizedPath, '/admin/storage')
             ? self::KAMARY_MEDICALS
             : self::KAMARY_PERU;
     }

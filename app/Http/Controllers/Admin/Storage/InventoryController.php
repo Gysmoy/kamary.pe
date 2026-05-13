@@ -58,7 +58,7 @@ class InventoryController extends BasicController
                 ->with(['branch:id,name,business_id', 'branch.business:id,name,business_key'])
                 ->whereNotNull('status')
                 ->whereHas('branch.business', function ($business) {
-                    $business->where('business_key', BusinessScope::KAMARY_PERU)->whereNotNull('status');
+                    $business->where('business_key', BusinessScope::KAMARY_MEDICALS)->whereNotNull('status');
                 })
                 ->orderBy('name')
                 ->get(['id', 'business_branch_id', 'name', 'status']);
@@ -315,7 +315,7 @@ class InventoryController extends BasicController
             ->join('businesses as entry_business', 'entry_business.id', '=', 'entry_note.business_id')
             ->where('entry_note.status', 1)
             ->where('entry_item.status', 1)
-            ->where('entry_business.business_key', BusinessScope::KAMARY_PERU)
+            ->where('entry_business.business_key', BusinessScope::KAMARY_MEDICALS)
             ->selectRaw("
                 CONCAT('entry-', entry_item.id) as source_key,
                 entry_item.article_id as article_id,
@@ -332,7 +332,7 @@ class InventoryController extends BasicController
             ->where('receipt.status', 1)
             ->where('receipt.receipt_status', 'confirmed')
             ->where('receipt_item.status', 1)
-            ->where('receipt_business.business_key', BusinessScope::KAMARY_PERU)
+            ->where('receipt_business.business_key', BusinessScope::KAMARY_MEDICALS)
             ->selectRaw("
                 CONCAT('purchase-receipt-', receipt_item.id) as source_key,
                 receipt_item.article_id as article_id,
@@ -361,7 +361,7 @@ class InventoryController extends BasicController
             ->join('businesses as exit_business', 'exit_business.id', '=', 'exit_note.business_id')
             ->where('exit_note.status', 1)
             ->where('exit_item.status', 1)
-            ->where('exit_business.business_key', BusinessScope::KAMARY_PERU)
+            ->where('exit_business.business_key', BusinessScope::KAMARY_MEDICALS)
             ->selectRaw("
                 exit_item.article_id,
                 COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) as warehouse_id,
@@ -438,7 +438,7 @@ class InventoryController extends BasicController
             ->join('businesses as business', 'business.id', '=', 'branch.business_id')
             ->whereNotNull('storage_location.status')
             ->whereNotNull('warehouse.status')
-            ->where('business.business_key', BusinessScope::KAMARY_PERU)
+            ->where('business.business_key', BusinessScope::KAMARY_MEDICALS)
             ->selectRaw("
                 storage_location.code as location,
                 storage_location.warehouse_id,
@@ -451,7 +451,7 @@ class InventoryController extends BasicController
             ->join('businesses', 'businesses.id', '=', 'entry_notes.business_id')
             ->whereNotNull('entry_note_items.location')
             ->where('entry_note_items.location', '!=', '')
-            ->where('businesses.business_key', BusinessScope::KAMARY_PERU)
+            ->where('businesses.business_key', BusinessScope::KAMARY_MEDICALS)
             ->selectRaw("
                 entry_note_items.location as location,
                 COALESCE(entry_note_items.warehouse_id, entry_notes.warehouse_id) as warehouse_id,
@@ -464,7 +464,7 @@ class InventoryController extends BasicController
             ->join('businesses', 'businesses.id', '=', 'purchase_receipts.business_id')
             ->whereNotNull('purchase_receipt_items.location')
             ->where('purchase_receipt_items.location', '!=', '')
-            ->where('businesses.business_key', BusinessScope::KAMARY_PERU)
+            ->where('businesses.business_key', BusinessScope::KAMARY_MEDICALS)
             ->selectRaw("
                 purchase_receipt_items.location as location,
                 purchase_receipt_items.warehouse_id,

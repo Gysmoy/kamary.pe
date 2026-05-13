@@ -43,14 +43,14 @@ class KardexController extends BasicController
 
         try {
             $businesses = Business::query()
-                ->where('business_key', BusinessScope::KAMARY_PERU)
+                ->where('business_key', BusinessScope::KAMARY_MEDICALS)
                 ->whereNotNull('status')
                 ->orderBy('name')
                 ->get(['id', 'business_key', 'name', 'status']);
 
             $branches = DB::table('business_branches as branch')
                 ->join('businesses as business', 'business.id', '=', 'branch.business_id')
-                ->where('business.business_key', BusinessScope::KAMARY_PERU)
+                ->where('business.business_key', BusinessScope::KAMARY_MEDICALS)
                 ->whereNotNull('business.status')
                 ->whereNotNull('branch.status')
                 ->orderBy('branch.name')
@@ -130,7 +130,7 @@ class KardexController extends BasicController
         try {
             $business = Business::query()
                 ->whereKey($this->nullableInt($request->input('business_id')))
-                ->where('business_key', BusinessScope::KAMARY_PERU)
+                ->where('business_key', BusinessScope::KAMARY_MEDICALS)
                 ->whereNotNull('status')
                 ->first();
 
@@ -380,7 +380,7 @@ class KardexController extends BasicController
             ->join('businesses as entry_business', 'entry_business.id', '=', 'entry_note.business_id')
             ->where('entry_note.status', 1)
             ->where('entry_item.status', 1)
-            ->where('entry_business.business_key', BusinessScope::KAMARY_PERU)
+            ->where('entry_business.business_key', BusinessScope::KAMARY_MEDICALS)
             ->selectRaw("
                 CONCAT('entry-', entry_item.id) as source_key,
                 entry_item.article_id as article_id,
@@ -397,7 +397,7 @@ class KardexController extends BasicController
             ->where('receipt.status', 1)
             ->where('receipt.receipt_status', 'confirmed')
             ->where('receipt_item.status', 1)
-            ->where('receipt_business.business_key', BusinessScope::KAMARY_PERU)
+            ->where('receipt_business.business_key', BusinessScope::KAMARY_MEDICALS)
             ->selectRaw("
                 CONCAT('purchase-receipt-', receipt_item.id) as source_key,
                 receipt_item.article_id as article_id,
@@ -426,7 +426,7 @@ class KardexController extends BasicController
             ->join('businesses as exit_business', 'exit_business.id', '=', 'exit_note.business_id')
             ->where('exit_note.status', 1)
             ->where('exit_item.status', 1)
-            ->where('exit_business.business_key', BusinessScope::KAMARY_PERU)
+            ->where('exit_business.business_key', BusinessScope::KAMARY_MEDICALS)
             ->selectRaw("
                 exit_item.article_id,
                 COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) as warehouse_id,
@@ -526,7 +526,7 @@ class KardexController extends BasicController
             ->whereKey($this->nullableInt($id))
             ->whereNotNull('status')
             ->whereHas('branch.business', function ($business) {
-                $business->where('business_key', BusinessScope::KAMARY_PERU)->whereNotNull('status');
+                $business->where('business_key', BusinessScope::KAMARY_MEDICALS)->whereNotNull('status');
             })
             ->first();
 
@@ -550,7 +550,7 @@ class KardexController extends BasicController
 
     private function listBusinessKeys(): array
     {
-        return BusinessScope::fixedKeys();
+        return [BusinessScope::KAMARY_MEDICALS];
     }
 
     private function nullableInt($value): ?int
