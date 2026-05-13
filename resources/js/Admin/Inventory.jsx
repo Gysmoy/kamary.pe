@@ -212,8 +212,8 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
   const currentTablePage = Math.min(tablePage, tablePageCount)
   const paginatedRows = filteredRows.slice((currentTablePage - 1) * tablePageSize, currentTablePage * tablePageSize)
   const filteredLocations = useMemo(() => locations.filter(item => {
-    if (!warehouseId) return true
-    return !item.warehouse_id || `${item.warehouse_id}` === `${warehouseId}`
+    if (!warehouseId) return false
+    return `${item.warehouse_id}` === `${warehouseId}`
   }), [locations, warehouseId])
 
   const changeWarehouse = (value) => {
@@ -428,8 +428,8 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         </div>
         <div className='col-12 col-md-6 col-xl-3'>
           <label className='form-label'>Ubicacion</label>
-          <select className='form-select' value={location} disabled={!!selectedCount} onChange={(e) => setLocation(e.target.value)}>
-            <option value=''>Seleccione ubicación</option>
+          <select className='form-select' value={location} disabled={!!selectedCount || !warehouseId} onChange={(e) => setLocation(e.target.value)}>
+            <option value=''>{warehouseId ? 'Seleccione ubicación' : 'Seleccione almacén primero'}</option>
             {filteredLocations.map(item => (
               <option key={`storage-inv-location-${item.warehouse_id ?? 'all'}-${item.location}`} value={item.location}>
                 {item.location}
@@ -449,7 +449,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           </select>
         </div>
         <div className='col-12 col-xl-2 d-grid'>
-          <button type='button' className='btn btn-outline-primary py-2 fw-semibold' disabled={!!selectedCount || loadingRows} onClick={refreshPreview}>
+          <button type='button' className='btn btn-outline-primary py-2 fw-semibold' disabled={!!selectedCount || !warehouseId || loadingRows} onClick={refreshPreview}>
             <i className='mdi mdi-magnify me-1'></i>
             Filtrar
           </button>
