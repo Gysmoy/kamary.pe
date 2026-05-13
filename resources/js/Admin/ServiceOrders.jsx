@@ -130,11 +130,13 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       setServices((serviceList ?? []).filter(row => row.status !== null))
 
       if (isStorageService) {
-        const [storageOptions, locationList] = await Promise.all([
+        const [storageOptions, locationList, warehouseList] = await Promise.all([
           serviceOrdersRest.getStorageOptions(),
           serviceOrdersRest.getStorageLocations(),
+          serviceOrdersRest.getStorageWarehouses(),
         ])
-        const warehouseRows = (storageOptions?.warehouses ?? []).filter(row => row.status !== null)
+        const optionWarehouses = storageOptions?.warehouses ?? []
+        const warehouseRows = (optionWarehouses.length ? optionWarehouses : warehouseList).filter(row => row.status !== null)
         setStorageWarehouses(warehouseRows)
         setStorageLocations(locationList ?? [])
         setStorageBlocks(emptyStorageBlocks(warehouseRows))

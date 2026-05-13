@@ -29,6 +29,9 @@ class ServiceOrdersRest extends BasicRest {
   getClients = async () => await loadAll(isStoragePath() ? '/api/admin/storage/clients/paginate' : '/api/admin/clients/paginate')
   getServices = async () => await loadAll(isStoragePath() ? '/api/admin/storage/general-service/paginate' : '/api/admin/services/paginate')
   getStorageOptions = async () => isStoragePath() ? await this.simpleGet('/api/admin/storage/kardex/options') : null
+  getStorageWarehouses = async () => isStoragePath()
+    ? await loadAll('/api/admin/storage/kardex/paginate', { section: 'warehouses', sort: [{ selector: 'warehouse_name', desc: false }] })
+    : []
   getStorageLocations = async () => isStoragePath()
     ? await loadAll('/api/admin/storage/kardex/paginate', { section: 'locations' })
     : []
