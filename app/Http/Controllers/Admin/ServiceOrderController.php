@@ -86,7 +86,7 @@ class ServiceOrderController extends BasicController
         $id = $body['id'] ?? null;
         $businessId = (int) ($body['business_id'] ?? 0);
         $branchId = $this->toNullableInt($body['business_branch_id'] ?? null);
-        $clientId = (int) ($body['client_id'] ?? 0);
+        $clientId = $this->normalizeClientId($body['client_id'] ?? null);
         $sellerId = $this->toNullableInt($body['seller_id'] ?? null) ?: $userId;
         $issueDate = $this->normalizeDate($body['issue_date'] ?? now()->toDateString());
 
@@ -517,6 +517,21 @@ class ServiceOrderController extends BasicController
         $text = trim((string) $value);
         if ($text === '') return null;
         if (!ctype_digit(ltrim($text, '+'))) throw new \Exception("Valor entero invalido: {$value}");
+        return (int) $text;
+    }
+
+    private function normalizeClientId($value): int
+    {
+        if ($value === null) return 0;
+
+        $text = trim((string) $value);
+        if ($text === '') return 0;
+        if (preg_match('/^client-(\d+)$/i', $text, $matches)) return (int) $matches[1];
+        if (preg_match('/^eventual-(\d+)$/i', $text)) {
+            throw new \Exception('La orden de servicio debe trabajar con cliente regular');
+        }
+        if (!ctype_digit(ltrim($text, '+'))) throw new \Exception("Valor entero invalido: {$value}");
+
         return (int) $text;
     }
 
