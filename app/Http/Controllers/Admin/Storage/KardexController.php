@@ -223,14 +223,6 @@ class KardexController extends BasicController
                 throw new \Exception('La temperatura es obligatoria');
             }
 
-            $clientId = $this->nullableInt($request->input('client_id'));
-            if ($clientId) {
-                $clientExists = Client::query()->whereKey($clientId)->whereNotNull('status')->exists();
-                if (!$clientExists) {
-                    throw new \Exception('El cliente seleccionado no existe');
-                }
-            }
-
             DB::beginTransaction();
 
             $locationId = $this->nullableInt($request->input('id'));
@@ -245,10 +237,10 @@ class KardexController extends BasicController
 
             $location->fill([
                 'warehouse_id' => $warehouse->id,
-                'client_id' => $clientId,
+                'client_id' => null,
                 'code' => $code,
                 'temperature_range' => $temperature,
-                'service_order_code' => trim((string) $request->input('service_order_code')) ?: null,
+                'service_order_code' => null,
                 'status' => $this->requestBool($request->input('status', true)),
                 'updated_by' => Auth::id(),
             ]);
@@ -296,16 +288,13 @@ class KardexController extends BasicController
         return response()->streamDownload(function () use ($rows) {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, ['ESTADO', 'ALMACEN', 'UBICACION', 'TEMPERATURA', 'ORDEN_SERVICIO', 'RUC', 'RAZON_SOCIAL', 'FECHA_REGISTRO', 'USUARIO_REGISTRO']);
+            fputcsv($output, ['ESTADO', 'ALMACEN', 'UBICACION', 'TEMPERATURA', 'FECHA_REGISTRO', 'USUARIO_REGISTRO']);
             foreach ($rows as $row) {
                 fputcsv($output, [
                     $row->status ? 'Activo' : 'Inactivo',
                     $row->warehouse_name,
                     $row->code,
                     $row->temperature_range,
-                    $row->service_order_code,
-                    $row->document_number,
-                    $row->client_name,
                     $row->created_at,
                     $row->creator_label,
                 ]);
@@ -369,7 +358,6 @@ class KardexController extends BasicController
             ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'location.warehouse_id')
             ->leftJoin('business_branches as branch', 'branch.id', '=', 'warehouse.business_branch_id')
             ->leftJoin('businesses as business', 'business.id', '=', 'branch.business_id')
-            ->leftJoin('clients as client', 'client.id', '=', 'location.client_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'location.created_by')
             ->whereNotNull('location.status')
             ->where('business.business_key', BusinessScope::KAMARY_PERU)
@@ -379,13 +367,8 @@ class KardexController extends BasicController
                 location.status,
                 location.warehouse_id,
                 warehouse.name as warehouse_name,
-                location.client_id,
-                client.document_type,
-                client.document_number,
-                client.full_name as client_name,
                 location.code,
                 location.temperature_range,
-                location.service_order_code,
                 location.created_at,
                 COALESCE(NULLIF(creator.fullname, ''), NULLIF(TRIM(CONCAT(COALESCE(creator.name, ''), ' ', COALESCE(creator.lastname, ''))), ''), creator.username, '') as creator_label
             ");

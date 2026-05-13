@@ -328,10 +328,8 @@ const StorageKardex = () => {
   const [locationForm, setLocationForm] = useState({
     id: '',
     warehouse_id: '',
-    client_id: '',
     code: '',
     temperature_range: '',
-    service_order_code: '',
     status: '1',
   })
 
@@ -387,10 +385,8 @@ const StorageKardex = () => {
     setLocationForm({
       id: row?.id ? `${row.id}` : '',
       warehouse_id: row?.warehouse_id ? `${row.warehouse_id}` : '',
-      client_id: row?.client_id ? `${row.client_id}` : '',
       code: row?.code ?? '',
       temperature_range: row?.temperature_range ?? '',
-      service_order_code: row?.service_order_code ?? '',
       status: row?.status === false || row?.status === 0 ? '0' : '1',
     })
     $(locationModalRef.current).modal('show')
@@ -548,9 +544,6 @@ const StorageKardex = () => {
     { dataField: 'warehouse_name', caption: 'Almacen', minWidth: 160 },
     { dataField: 'code', caption: 'Ubicacion', minWidth: 120 },
     { dataField: 'temperature_range', caption: 'Temperatura', minWidth: 130 },
-    { dataField: 'service_order_code', caption: 'Orden servicio', minWidth: 140 },
-    { dataField: 'document_number', caption: 'RUC', minWidth: 130 },
-    { dataField: 'client_name', caption: 'Razon social', minWidth: 260 },
     {
       dataField: 'created_at',
       caption: 'Fecha registro',
@@ -738,17 +731,6 @@ const StorageKardex = () => {
           <input className='form-control' value={locationForm.code} onChange={(e) => setLocationForm(prev => ({ ...prev, code: e.target.value }))} />
         </div>
         <div className='col-12 col-md-6'>
-          <label className='form-label'>Orden servicio</label>
-          <input className='form-control' value={locationForm.service_order_code} onChange={(e) => setLocationForm(prev => ({ ...prev, service_order_code: e.target.value }))} />
-        </div>
-        <div className='col-12 col-md-8'>
-          <label className='form-label'>Cliente</label>
-          <select className='form-select' value={locationForm.client_id} onChange={(e) => setLocationForm(prev => ({ ...prev, client_id: e.target.value }))}>
-            <option value=''>Seleccione cliente</option>
-            {clients.map(client => <option key={`storage-location-client-${client.id}`} value={client.id}>{client.full_name}</option>)}
-          </select>
-        </div>
-        <div className='col-12 col-md-4'>
           <label className='form-label'>Estado</label>
           <select className='form-select' value={locationForm.status} onChange={(e) => setLocationForm(prev => ({ ...prev, status: e.target.value }))}>
             <option value='1'>Activo</option>
