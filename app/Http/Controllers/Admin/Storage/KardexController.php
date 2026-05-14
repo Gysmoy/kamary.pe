@@ -549,7 +549,8 @@ class KardexController extends BasicController
                 COALESCE(NULLIF(entry_item.lot, ''), NULLIF(entry_item.batch_code, ''), '') as lot,
                 entry_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(entry_item.location, ''), '') as location,
-                entry_item.quantity as quantity
+                entry_item.quantity as quantity,
+                COALESCE(entry_note.updated_at, entry_note.created_at) as movement_at
             ");
 
         $receiptMovements = DB::table('purchase_receipt_items as receipt_item')
@@ -566,7 +567,8 @@ class KardexController extends BasicController
                 COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') as lot,
                 receipt_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(receipt_item.location, ''), '') as location,
-                receipt_item.quantity as quantity
+                receipt_item.quantity as quantity,
+                COALESCE(receipt.confirmed_at, receipt.updated_at, receipt.created_at) as movement_at
             ");
 
         $incomingTotals = DB::query()
@@ -578,7 +580,8 @@ class KardexController extends BasicController
                 incoming.lot,
                 incoming.expiration_date,
                 incoming.location,
-                COALESCE(SUM(incoming.quantity), 0) as qty_in
+                COALESCE(SUM(incoming.quantity), 0) as qty_in,
+                MAX(incoming.movement_at) as last_movement_at
             ')
             ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location');
 
@@ -594,7 +597,8 @@ class KardexController extends BasicController
                 COALESCE(NULLIF(exit_item.batch_code, ''), '') as lot,
                 exit_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(exit_item.location, ''), '') as location,
-                COALESCE(SUM(exit_item.quantity), 0) as qty_out
+                COALESCE(SUM(exit_item.quantity), 0) as qty_out,
+                MAX(COALESCE(exit_note.updated_at, exit_note.created_at)) as last_movement_at
             ")
             ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location');
 
@@ -632,7 +636,13 @@ class KardexController extends BasicController
                 storage_location.temperature_range,
                 storage_location.client_id,
                 client.full_name as client_name,
-                COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0) as system_stock
+                COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0) as system_stock,
+                CASE
+                    WHEN outgoing.last_movement_at IS NULL THEN stock.last_movement_at
+                    WHEN stock.last_movement_at IS NULL THEN outgoing.last_movement_at
+                    WHEN outgoing.last_movement_at > stock.last_movement_at THEN outgoing.last_movement_at
+                    ELSE stock.last_movement_at
+                END as last_movement_at
             ");
 
         $query = DB::query()->fromSub($base, 'rows')->select('rows.*');
@@ -677,7 +687,7 @@ class KardexController extends BasicController
         match ($section) {
             'warehouses' => $query->orderBy('warehouse_name'),
             'locations' => $query->orderBy('warehouse_name')->orderBy('code'),
-            default => $query->orderBy('inventory')->orderBy('lot'),
+            default => $query->orderBy('last_movement_at', 'DESC')->orderBy('inventory')->orderBy('lot'),
         };
     }
 

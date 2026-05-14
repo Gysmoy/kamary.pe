@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
@@ -20,6 +20,12 @@ const formatDate = (value) => {
   const date = new Date(`${text}T00:00:00`)
   if (Number.isNaN(date.getTime())) return text
   return date.toLocaleDateString('es-PE', { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+const formatDateIso = (value) => {
+  if (!value) return '-'
+  const text = value.toString().slice(0, 10)
+  if (!text || text === '0000-00-00') return '-'
+  return text
 }
 const formatDateTime = (value) => {
   if (!value) return '0000-00-00 00:00:00'
@@ -316,6 +322,13 @@ const StorageKardex = () => {
   const [clientId, setClientId] = useState('')
   const [warehouseId, setWarehouseId] = useState('')
   const [stockMode, setStockMode] = useState('with_stock')
+  const [kardexRows, setKardexRows] = useState([])
+  const [kardexTotalCount, setKardexTotalCount] = useState(0)
+  const [kardexPage, setKardexPage] = useState(1)
+  const [kardexPageSize, setKardexPageSize] = useState(10)
+  const [kardexSearch, setKardexSearch] = useState('')
+  const [kardexSort, setKardexSort] = useState({ selector: 'last_movement_at', desc: true })
+  const [kardexLoading, setKardexLoading] = useState(false)
   const [warehouseForm, setWarehouseForm] = useState({
     id: '',
     business_id: '',
@@ -346,6 +359,57 @@ const StorageKardex = () => {
     loadOptions()
   }, [])
 
+  const buildKardexSearchFilter = useCallback(() => {
+    const text = kardexSearch.trim()
+    if (!text) return undefined
+
+    return [
+      ['inventory', 'contains', text],
+      'or',
+      ['lot', 'contains', text],
+      'or',
+      ['expiration_date', 'contains', text],
+      'or',
+      ['unit_label', 'contains', text],
+      'or',
+      ['location', 'contains', text],
+      'or',
+      ['warehouse_name', 'contains', text],
+    ]
+  }, [kardexSearch])
+
+  const buildKardexParams = useCallback((overrides = {}) => {
+    const filter = buildKardexSearchFilter()
+    return {
+      skip: (kardexPage - 1) * kardexPageSize,
+      take: kardexPageSize,
+      requireTotalCount: true,
+      sort: kardexSort ? [kardexSort] : undefined,
+      ...(filter ? { filter } : {}),
+      ...overrides,
+    }
+  }, [buildKardexSearchFilter, kardexPage, kardexPageSize, kardexSort])
+
+  const loadStorageKardexRows = useCallback(async () => {
+    if (activeTab !== 'kardex') return
+
+    setKardexLoading(true)
+    try {
+      const result = await kardexRest.paginate(buildKardexParams())
+      if (Number(result?.status ?? 200) >= 400) {
+        throw new Error(result?.message || 'No se pudo cargar el kardex')
+      }
+      setKardexRows(result?.data ?? [])
+      setKardexTotalCount(Number(result?.totalCount ?? result?.data?.length ?? 0))
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'No se pudo cargar el kardex' })
+      }
+    } finally {
+      setKardexLoading(false)
+    }
+  }, [activeTab, buildKardexParams])
+
   useEffect(() => {
     kardexRest.setFilters({
       section: activeTab,
@@ -357,8 +421,28 @@ const StorageKardex = () => {
       laboratory_id: '',
       article_id: '',
     })
-    setTimeout(() => refreshGrid(gridRef), 0)
+    if (activeTab !== 'kardex') setTimeout(() => refreshGrid(gridRef), 0)
   }, [activeTab, clientId, warehouseId, stockMode])
+
+  useEffect(() => {
+    setKardexPage(1)
+  }, [clientId, warehouseId, stockMode, kardexSearch, kardexPageSize])
+
+  useEffect(() => {
+    loadStorageKardexRows()
+  }, [loadStorageKardexRows])
+
+  const kardexTotalPages = useMemo(() => Math.max(1, Math.ceil(kardexTotalCount / kardexPageSize)), [kardexTotalCount, kardexPageSize])
+  const kardexCurrentPage = Math.min(kardexPage, kardexTotalPages)
+  const kardexPageNumbers = useMemo(() => {
+    const start = Math.max(1, Math.min(kardexCurrentPage - 2, kardexTotalPages - 4))
+    const end = Math.min(kardexTotalPages, Math.max(1, start) + 4)
+    return Array.from({ length: Math.max(0, end - Math.max(1, start) + 1) }, (_, index) => Math.max(1, start) + index)
+  }, [kardexCurrentPage, kardexTotalPages])
+
+  useEffect(() => {
+    if (kardexPage > kardexTotalPages) setKardexPage(kardexTotalPages)
+  }, [kardexPage, kardexTotalPages])
 
   const defaultBusinessId = businesses[0]?.id ? `${businesses[0].id}` : ''
   const filteredBranches = useMemo(() => {
@@ -453,6 +537,121 @@ const StorageKardex = () => {
     window.open(`/api/admin/storage/kardex/inventory-report?${params.toString()}`, '_blank', 'noopener,noreferrer')
   }
 
+  const storageKardexExportColumns = [
+    { caption: 'INVENTARIO', value: row => row.inventory ?? '' },
+    { caption: 'LOTE', value: row => row.lot ?? '' },
+    { caption: 'F.V.', value: row => formatDateIso(row.expiration_date) },
+    { caption: 'U. MEDIDA', value: row => row.unit_label ?? '' },
+    { caption: 'STOCK SISTEMA', value: row => formatQty(row.system_stock) },
+    { caption: 'UBICACION', value: row => row.location ?? '' },
+    { caption: 'ALMACEN', value: row => row.warehouse_name ?? '' },
+  ]
+
+  const loadAllStorageKardexRows = async () => {
+    const result = await kardexRest.paginate(buildKardexParams({
+      skip: 0,
+      take: 100000,
+      isLoadingAll: true,
+      requireTotalCount: false,
+    }))
+    if (Number(result?.status ?? 200) >= 400) {
+      throw new Error(result?.message || 'No se pudo exportar el kardex')
+    }
+    return result?.data ?? []
+  }
+
+  const escapeHtml = (value) => String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
+
+  const exportStorageKardex = async (format) => {
+    try {
+      const rows = await loadAllStorageKardexRows()
+      if (!rows.length) {
+        Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay filas para exportar' })
+        return
+      }
+
+      const headers = storageKardexExportColumns.map(column => column.caption)
+      const body = rows.map(row => storageKardexExportColumns.map(column => column.value(row)))
+
+      if (format === 'copy') {
+        await navigator.clipboard.writeText([headers, ...body].map(row => row.join('\t')).join('\n'))
+        Swal.fire({ icon: 'success', title: 'Copiado', timer: 1200, showConfirmButton: false })
+        return
+      }
+
+      if (format === 'excel') {
+        const XLSX = await import('xlsx')
+        const worksheet = XLSX.utils.aoa_to_sheet([headers, ...body])
+        const workbook = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Kardex')
+        XLSX.writeFile(workbook, 'kardex-almacenamiento.xlsx')
+        return
+      }
+
+      if (format === 'pdf') {
+        const JsPDF = window.jspdf?.jsPDF || window.jsPDF
+        if (!JsPDF) {
+          Swal.fire({ icon: 'error', title: 'PDF no disponible', text: 'jsPDF no esta cargado' })
+          return
+        }
+        const doc = new JsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+        if (!doc.autoTable) {
+          Swal.fire({ icon: 'error', title: 'PDF no disponible', text: 'AutoTable no esta cargado' })
+          return
+        }
+        doc.setFontSize(12)
+        doc.text('Lista de Kardex', 24, 28)
+        doc.autoTable({
+          head: [headers],
+          body,
+          startY: 40,
+          styles: { fontSize: 8, cellPadding: 3 },
+          headStyles: { fillColor: [31, 41, 82] },
+        })
+        doc.save('kardex-almacenamiento.pdf')
+        return
+      }
+
+      if (format === 'print') {
+        const rowsHtml = body.map(row => `<tr>${row.map(value => `<td>${escapeHtml(value)}</td>`).join('')}</tr>`).join('')
+        const win = window.open('', '_blank')
+        if (!win) return
+        win.document.write(`
+          <html>
+            <head>
+              <title>Lista de Kardex</title>
+              <style>
+                body { font-family: Arial, sans-serif; font-size: 12px; }
+                table { width: 100%; border-collapse: collapse; }
+                th, td { border: 1px solid #ddd; padding: 6px; text-align: left; }
+                th { background: #f3f4f6; }
+              </style>
+            </head>
+            <body>
+              <h3>Lista de Kardex</h3>
+              <table>
+                <thead><tr>${headers.map(header => `<th>${escapeHtml(header)}</th>`).join('')}</tr></thead>
+                <tbody>${rowsHtml}</tbody>
+              </table>
+            </body>
+          </html>
+        `)
+        win.document.close()
+        win.focus()
+        win.print()
+      }
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'No se pudo exportar el kardex' })
+      }
+    }
+  }
+
   const statusBadge = (container, status) => {
     const active = status === true || status === 1 || status === '1'
     container.html(`<span class="badge ${active ? 'badge-soft-success' : 'badge-soft-secondary'}">${active ? 'Activo' : 'Inactivo'}</span>`)
@@ -461,6 +660,26 @@ const StorageKardex = () => {
   const occupancyBadge = (container, status) => {
     const occupied = status === 'Ocupado'
     container.html(`<span class="badge ${occupied ? 'badge-soft-warning' : 'badge-soft-success'}">${occupied ? 'Ocupado' : 'Libre'}</span>`)
+  }
+
+  const storageClientLabel = (client) => [client.document_number, client.full_name].filter(Boolean).join(' - ') || client.full_name || ''
+
+  const changeKardexSort = (selector) => {
+    setKardexPage(1)
+    setKardexSort(prev => prev?.selector === selector
+      ? { selector, desc: !prev.desc }
+      : { selector, desc: false })
+  }
+
+  const sortableKardexHeader = (selector, label) => {
+    const active = kardexSort?.selector === selector
+    const icon = active ? (kardexSort.desc ? 'mdi-menu-down' : 'mdi-menu-up') : 'mdi-swap-vertical'
+    return (
+      <button type='button' className='btn btn-link p-0 text-uppercase text-muted fw-semibold text-decoration-none d-inline-flex align-items-center gap-1' onClick={() => changeKardexSort(selector)}>
+        <span>{label}</span>
+        <i className={`mdi ${icon}`}></i>
+      </button>
+    )
   }
 
   const kardexColumns = [
@@ -614,7 +833,7 @@ const StorageKardex = () => {
   }
 
   return <>
-    <div className='row g-3 mb-3'>
+    <div className='row g-3 mb-3' hidden={activeTab === 'kardex'}>
       <div className='col-12 col-lg-4'>
         <button type='button' className='btn btn-success w-100 d-flex align-items-center justify-content-between py-3' onClick={downloadLocationsReport}>
           <span><i className='mdi mdi-plus-circle-outline me-1'></i> Descargar reporte de Ubicaciones</span>
@@ -636,7 +855,7 @@ const StorageKardex = () => {
     </div>
 
     <div className='card mb-3'>
-      <div className='card-body pb-0'>
+      <div className='card-body'>
         <ul className='nav nav-tabs'>
           {[
             { key: 'kardex', label: 'Kárdex' },
@@ -657,17 +876,17 @@ const StorageKardex = () => {
               <label className='form-label'>Cliente</label>
               <select className='form-select' value={clientId} onChange={(e) => setClientId(e.target.value)}>
                 <option value=''>Seleccione Cliente</option>
-                {clients.map(client => <option key={`storage-kardex-client-${client.id}`} value={client.id}>{client.full_name}</option>)}
+                {clients.map(client => <option key={`storage-kardex-client-${client.id}`} value={client.id}>{storageClientLabel(client)}</option>)}
               </select>
             </div>
-            <div className='col-12 col-md-6 col-lg-4'>
+            <div className='col-12 col-md-6 col-lg-5'>
               <label className='form-label'>Almacen</label>
               <select className='form-select' value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
                 <option value=''>Todos</option>
                 {warehouses.map(warehouse => <option key={`storage-kardex-wh-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
               </select>
             </div>
-            <div className='col-12 col-md-6 col-lg-3'>
+            <div className='col-12 col-md-6 col-lg-2'>
               <label className='form-label'>Stock</label>
               <select className='form-select' value={stockMode} onChange={(e) => setStockMode(e.target.value)}>
                 <option value='with_stock'>Con stock</option>
@@ -676,7 +895,7 @@ const StorageKardex = () => {
               </select>
             </div>
             <div className='col-12 d-flex justify-content-center gap-2'>
-              <button type='button' className='btn btn-outline-primary' onClick={() => refreshGrid(gridRef)}>
+              <button type='button' className='btn btn-outline-primary text-uppercase' onClick={loadStorageKardexRows}>
                 <i className='mdi mdi-magnify me-1'></i>
                 Buscar artículos
               </button>
@@ -687,10 +906,86 @@ const StorageKardex = () => {
             </div>
           </div>
         </div>}
+
+        {activeTab === 'kardex' && <>
+          <hr className='my-3' />
+
+          <div className='d-flex flex-wrap gap-2 mb-4'>
+            <button type='button' className='btn btn-sm btn-light border' onClick={() => exportStorageKardex('copy')}>Copiar</button>
+            <button type='button' className='btn btn-sm btn-light border' onClick={() => exportStorageKardex('excel')}>Excel</button>
+            <button type='button' className='btn btn-sm btn-light border' onClick={() => exportStorageKardex('pdf')}>PDF</button>
+            <button type='button' className='btn btn-sm btn-light border' onClick={() => exportStorageKardex('print')}>Imprimir</button>
+          </div>
+
+          <div className='d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2'>
+            <label className='d-inline-flex align-items-center gap-2 mb-0'>
+              <span>Elementos :</span>
+              <select className='form-select form-select-sm' style={{ width: 72 }} value={kardexPageSize} onChange={(e) => { setKardexPageSize(Number(e.target.value)); setKardexPage(1) }}>
+                {[10, 25, 50, 100].map(size => <option key={`storage-kardex-size-${size}`} value={size}>{size}</option>)}
+              </select>
+            </label>
+            <label className='d-inline-flex align-items-center gap-2 mb-0'>
+              <span>Filtrar :</span>
+              <input className='form-control form-control-sm' style={{ width: 190 }} value={kardexSearch} onChange={(e) => { setKardexSearch(e.target.value); setKardexPage(1) }} />
+            </label>
+          </div>
+
+          <div className='table-responsive border'>
+            <table className='table table-sm table-hover mb-0'>
+              <thead>
+                <tr>
+                  <th className='text-center text-uppercase' style={{ width: 150 }}>Acciones</th>
+                  <th style={{ minWidth: 260 }}>{sortableKardexHeader('inventory', 'Inventario')}</th>
+                  <th style={{ minWidth: 110 }}>{sortableKardexHeader('lot', 'Lote')}</th>
+                  <th style={{ minWidth: 110 }}>{sortableKardexHeader('expiration_date', 'F.V.')}</th>
+                  <th style={{ minWidth: 120 }}>{sortableKardexHeader('unit_label', 'U. Medida')}</th>
+                  <th style={{ minWidth: 145 }}>{sortableKardexHeader('system_stock', 'Stock Sistema')}</th>
+                  <th style={{ minWidth: 130 }}>{sortableKardexHeader('location', 'Ubicacion')}</th>
+                  <th style={{ minWidth: 170 }}>{sortableKardexHeader('warehouse_name', 'Almacen')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {kardexLoading && <tr><td colSpan='8' className='text-center text-muted py-4'><i className='mdi mdi-spin mdi-loading me-1'></i> Cargando...</td></tr>}
+                {!kardexLoading && kardexRows.length === 0 && <tr><td colSpan='8' className='text-center text-muted py-4'>No existen elementos</td></tr>}
+                {!kardexLoading && kardexRows.map(row => (
+                  <tr key={row.id}>
+                    <td className='text-center'>
+                      <button type='button' className='btn btn-xs btn-outline-primary' title='Stock'>
+                        <i className='mdi mdi-swap-horizontal'></i>
+                      </button>
+                    </td>
+                    <td>{row.inventory}</td>
+                    <td>{row.lot}</td>
+                    <td>{formatDateIso(row.expiration_date)}</td>
+                    <td>{row.unit_label}</td>
+                    <td className='text-end'>{formatQty(row.system_stock)}</td>
+                    <td>{row.location}</td>
+                    <td>{row.warehouse_name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className='d-flex flex-wrap align-items-center justify-content-between gap-2 pt-3'>
+            <span className='text-muted'>
+              {kardexTotalCount} elementos (Pagina {kardexCurrentPage} de {kardexTotalPages})
+            </span>
+            <div className='btn-group btn-group-sm'>
+              <button type='button' className='btn btn-light border' disabled={kardexCurrentPage <= 1} onClick={() => setKardexPage(page => Math.max(1, page - 1))}>Anterior</button>
+              {kardexPageNumbers.map(page => (
+                <button key={`storage-kardex-page-${page}`} type='button' className={`btn border ${page === kardexCurrentPage ? 'btn-secondary' : 'btn-light'}`} onClick={() => setKardexPage(page)}>
+                  {page}
+                </button>
+              ))}
+              <button type='button' className='btn btn-light border' disabled={kardexCurrentPage >= kardexTotalPages} onClick={() => setKardexPage(page => Math.min(kardexTotalPages, page + 1))}>Siguiente</button>
+            </div>
+          </div>
+        </>}
       </div>
     </div>
 
-    <Table
+    {activeTab !== 'kardex' && <Table
       key={`storage-kardex-table-${activeTab}`}
       gridRef={gridRef}
       title={titlesByTab[activeTab]}
@@ -705,7 +1000,7 @@ const StorageKardex = () => {
         })
       }}
       columns={columnsByTab[activeTab]}
-    />
+    />}
 
     <Modal
       modalRef={warehouseModalRef}
