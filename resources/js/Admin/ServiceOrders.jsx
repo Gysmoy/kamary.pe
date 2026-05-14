@@ -1233,10 +1233,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         <input ref={billingStatusRef} hidden />
         <input ref={taxAmountRef} type='number' hidden />
         <textarea ref={observationsRef} hidden />
-        <select ref={branchSelectRef} value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)} hidden>
-          <option value=''>Seleccione</option>
-          {branches.map(row => <option key={`general-order-branch-${row.id}`} value={row.id}>{row.name}</option>)}
-        </select>
+        <input ref={branchSelectRef} type='hidden' value={selectedBranchId} readOnly />
 
         <div className='storage-general-order-actions'>
           <button type='submit' className='btn btn-primary-outline'><i className='mdi mdi-plus me-1'></i> Guardar</button>
