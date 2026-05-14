@@ -25,6 +25,8 @@ const toDateInput = (value) => {
   return `${value}`.slice(0, 10)
 }
 
+const todayInput = () => new Date().toISOString().slice(0, 10)
+
 const normalizeSearchText = (value) => `${value ?? ''}`
   .toLowerCase()
   .normalize('NFD')
@@ -42,12 +44,49 @@ const formatAuditUser = (user) => {
   return ''
 }
 
+const clientLabel = (client) => {
+  if (!client) return ''
+  return [client.document_number, client.full_name].filter(Boolean).join(' - ')
+}
+
+const warehouseBusinessId = (warehouse) => warehouse?.branch?.business_id || warehouse?.branch?.business?.id || ''
+const warehouseBranchId = (warehouse) => warehouse?.business_branch_id || warehouse?.branch?.id || ''
+
+const documentOptions = ['Guia Remision', 'Factura', 'Boleta', 'Nota de salida interna']
+const motiveOptions = ['Despacho', 'Traslado interno', 'Retiro de producto', 'Muestra', 'Ajuste de inventario', 'Otro']
+
+const exitStatusLabel = (status) => {
+  if (status === 'approved') return 'Aprobado'
+  if (status === 'cancelled') return 'Anulado'
+  return 'En espera'
+}
+
+const exitStatusClass = (status) => {
+  if (status === 'approved') return 'badge bg-soft-info text-info border border-info'
+  if (status === 'cancelled') return 'badge bg-soft-danger text-danger border border-danger'
+  return 'badge bg-soft-warning text-warning border border-warning'
+}
+
+const combineFilters = (filters) => {
+  const active = filters.filter(Boolean)
+  if (active.length === 0) return null
+  return active.reduce((carry, filter) => carry ? [carry, 'and', filter] : filter, null)
+}
+
+const storageDestinationLabel = (data) => [...new Set((data?.items ?? [])
+  .map(item => item?.destination_location)
+  .filter(Boolean))]
+  .join(', ')
+
+const storageMotivesLabel = (data) => (data?.motives ?? []).join(', ')
+
 const emptyItem = () => ({
   uid: crypto.randomUUID(),
   batch_id: '',
   batch_label: '',
   batch_code: '',
   lot: '',
+  health_registration: '',
   article_id: '',
   article_label: '',
   article_laboratory: '',
@@ -77,6 +116,12 @@ const ExitNotes = () => {
   const clientNameRef = useRef()
   const observationsRef = useRef()
   const motiveInputRef = useRef()
+  const motiveSelectRef = useRef()
+  const exitDateRef = useRef()
+  const documentTypeRef = useRef()
+  const documentSeriesRef = useRef()
+  const documentSequenceRef = useRef()
+  const documentDateRef = useRef()
   const articleRefs = useRef({})
   const batchRefs = useRef({})
 
@@ -84,10 +129,16 @@ const ExitNotes = () => {
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
+  const [selectedClientId, setSelectedClientId] = useState('')
   const [branches, setBranches] = useState([])
   const [warehouses, setWarehouses] = useState([])
-  const [items, setItems] = useState([emptyItem()])
+  const [storageClients, setStorageClients] = useState([])
+  const [items, setItems] = useState(storageContext ? [] : [emptyItem()])
   const [motives, setMotives] = useState([])
+  const [storageFilterClientId, setStorageFilterClientId] = useState('')
+  const [storageFilterStartDate, setStorageFilterStartDate] = useState('')
+  const [storageFilterEndDate, setStorageFilterEndDate] = useState('')
+  const [storageGridFilter, setStorageGridFilter] = useState(null)
   const [stockSearchWarehouseId, setStockSearchWarehouseId] = useState('')
   const [stockSearchTerm, setStockSearchTerm] = useState('')
   const [stockSearchRows, setStockSearchRows] = useState([])
@@ -108,6 +159,13 @@ const ExitNotes = () => {
   }
 
   useEffect(() => {
+    if (!storageContext) return
+    loadWarehouses()
+    loadStorageClients()
+  }, [])
+
+  useEffect(() => {
+    if (storageContext) return
     items.forEach(item => {
       const ref = getArticleRef(item.uid)
       if (!ref.current || !item.article_id || !item.article_label) return
@@ -118,6 +176,7 @@ const ExitNotes = () => {
   }, [items])
 
   useEffect(() => {
+    if (storageContext) return
     items.forEach(item => {
       const ref = getBatchRef(item.uid)
       if (!ref.current || !item.batch_id || !item.batch_label) return
@@ -129,47 +188,84 @@ const ExitNotes = () => {
 
   const loadWarehouses = async () => {
     const warehousesData = await exitNotesRest.getWarehouses()
-    setWarehouses((warehousesData ?? []).filter(item => item.status !== null))
+    const active = (warehousesData ?? []).filter(item => item.status !== null)
+    setWarehouses(active)
+    return active
+  }
+
+  const loadStorageClients = async () => {
+    const clientsData = await exitNotesRest.getClients()
+    setStorageClients(clientsData ?? [])
+    return clientsData ?? []
   }
 
   const loadBranches = async (businessId, preferredId = null) => {
     if (!businessId) {
       setBranches([])
       setSelectedBranchId('')
-      return
+      return []
     }
     const data = await exitNotesRest.getBranchesByBusiness(businessId)
     const active = (data ?? []).filter(item => item.status !== null)
     setBranches(active)
     if (preferredId && active.some(item => `${item.id}` === `${preferredId}`)) {
       setSelectedBranchId(`${preferredId}`)
-      return
+      return active
     }
     setSelectedBranchId('')
+    return active
+  }
+
+  const syncWarehouseContext = async (warehouseId, sourceWarehouses = warehouses) => {
+    const warehouse = sourceWarehouses.find(item => `${item.id}` === `${warehouseId}`)
+    const businessId = warehouseBusinessId(warehouse)
+    const branchId = warehouseBranchId(warehouse)
+    setSelectedBusinessId(businessId ? `${businessId}` : '')
+    setSelectedBranchId(branchId ? `${branchId}` : '')
+    if (businessId) await loadBranches(businessId, branchId)
+  }
+
+  const onStorageWarehouseChanged = async (value) => {
+    const warehouseId = value || ''
+    setSelectedWarehouseId(warehouseId)
+    await syncWarehouseContext(warehouseId)
   }
 
   const onModalOpen = async (data = null) => {
     setIsEditing(!!data?.id)
 
-    idRef.current.value = data?.id ?? ''
-    clientNameRef.current.value = data?.client_name ?? ''
-    observationsRef.current.value = data?.observations ?? ''
+    if (idRef.current) idRef.current.value = data?.id ?? ''
+    if (clientNameRef.current) clientNameRef.current.value = data?.client_name ?? ''
+    if (observationsRef.current) observationsRef.current.value = data?.observations ?? ''
+    if (exitDateRef.current) exitDateRef.current.value = toDateInput(data?.exit_date) || todayInput()
+    if (documentTypeRef.current) documentTypeRef.current.value = data?.document_type ?? ''
+    if (documentSeriesRef.current) documentSeriesRef.current.value = data?.document_series ?? ''
+    if (documentSequenceRef.current) documentSequenceRef.current.value = data?.document_sequence ?? ''
+    if (documentDateRef.current) documentDateRef.current.value = toDateInput(data?.document_date) || todayInput()
     setMotives(Array.isArray(data?.motives) ? data.motives : [])
+    setSelectedClientId(data?.client_id ? `${data.client_id}` : '')
 
+    const currentWarehouses = warehouses.length ? warehouses : await loadWarehouses()
     const businessId = data?.business_id ? `${data.business_id}` : ''
-    const warehouseId = data?.warehouse_id ? `${data.warehouse_id}` : ''
+    const warehouseId = data?.warehouse_id ? `${data.warehouse_id}` : (storageContext && currentWarehouses[0]?.id ? `${currentWarehouses[0].id}` : '')
+
     setSelectedBusinessId(businessId)
     setSelectedWarehouseId(warehouseId)
 
-    if (businessId && data?.business?.name) {
-      SetSelectValue(businessRef.current, businessId, data.business.name)
+    if (storageContext) {
+      await syncWarehouseContext(warehouseId, currentWarehouses)
     } else {
-      $(businessRef.current).empty().trigger('change')
-    }
-    if (warehouseId && data?.warehouse?.name) {
-      SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
-    } else {
-      $(warehouseRef.current).empty().trigger('change')
+      if (businessId && data?.business?.name) {
+        SetSelectValue(businessRef.current, businessId, data.business.name)
+      } else {
+        $(businessRef.current).empty().trigger('change')
+      }
+      if (warehouseId && data?.warehouse?.name) {
+        SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
+      } else {
+        $(warehouseRef.current).empty().trigger('change')
+      }
+      await loadBranches(data?.business_id ?? null, data?.business_branch_id ?? null)
     }
 
     const detail = (data?.items ?? []).map(row => ({
@@ -178,6 +274,7 @@ const ExitNotes = () => {
       batch_label: row.batch_code ?? '',
       batch_code: row.batch_code ?? '',
       lot: row.batch_code ?? '',
+      health_registration: row.article?.health_registration ?? '',
       article_id: row.article_id ? `${row.article_id}` : '',
       article_label: row.article ? `${row.article.code ?? ''} - ${row.article.name ?? ''}`.trim() : '',
       article_laboratory: row.article?.laboratory?.name ?? '',
@@ -190,25 +287,30 @@ const ExitNotes = () => {
       location: row.location ?? '',
       destination_location: row.destination_location ?? '',
       quantity: row.quantity ?? 0,
-      total: row.total ?? 0,
+      total: row.total ?? row.quantity ?? 0,
     }))
-    setItems(detail.length ? detail : [emptyItem()])
+    setItems(detail.length ? detail : (storageContext ? [] : [emptyItem()]))
 
     $(modalRef.current).modal('show')
-    await loadWarehouses()
-    await loadBranches(data?.business_id ?? null, data?.business_branch_id ?? null)
   }
 
   const onModalSubmit = async (e) => {
     e.preventDefault()
+    const selectedClient = storageClients.find(client => `${client.id}` === `${selectedClientId}`)
     const request = {
       id: idRef.current.value || undefined,
       business_id: selectedBusinessId || null,
       business_branch_id: selectedBranchId || null,
       warehouse_id: selectedWarehouseId || null,
-      client_name: (clientNameRef.current.value ?? '').trim(),
+      client_id: storageContext ? selectedClientId || null : undefined,
+      client_name: storageContext ? clientLabel(selectedClient) : (clientNameRef.current.value ?? '').trim(),
+      exit_date: storageContext ? exitDateRef.current?.value || null : undefined,
+      document_type: storageContext ? (documentTypeRef.current?.value ?? '').trim() : undefined,
+      document_series: storageContext ? (documentSeriesRef.current?.value ?? '').trim() : undefined,
+      document_sequence: storageContext ? (documentSequenceRef.current?.value ?? '').trim() : undefined,
+      document_date: storageContext ? documentDateRef.current?.value || null : undefined,
       motives,
-      observations: (observationsRef.current.value ?? '').trim(),
+      observations: (observationsRef.current?.value ?? '').trim(),
       items: items.map(item => ({
         batch_code: (item.batch_code ?? item.lot ?? '').toString().trim(),
         lot: (item.lot ?? item.batch_code ?? '').toString().trim(),
@@ -250,6 +352,26 @@ const ExitNotes = () => {
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
+  const onExitStatusChange = async (data, nextStatus) => {
+    const approving = nextStatus === 'approved'
+    const cancelling = nextStatus === 'cancelled'
+    const { isConfirmed } = await Swal.fire({
+      title: approving ? 'Aprobar nota de salida' : 'Anular nota de salida',
+      text: approving
+        ? 'La nota aprobada descontara el stock disponible.'
+        : 'La nota anulada dejara de afectar el stock.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: approving ? 'Si, aprobar' : 'Si, anular',
+      cancelButtonText: 'Cancelar'
+    })
+    if (!isConfirmed) return
+
+    const result = await exitNotesRest.setExitStatus(data.id, cancelling ? 'cancelled' : 'approved')
+    if (!result) return
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
   const onDeleteClicked = async (id) => {
     const { isConfirmed } = await Swal.fire({
       title: 'Eliminar nota de salida',
@@ -272,10 +394,13 @@ const ExitNotes = () => {
   }
 
   const addMotive = () => {
-    const value = (motiveInputRef.current?.value ?? '').trim()
-    if (!value) return
+    const value = storageContext
+      ? (motiveSelectRef.current?.value ?? '').trim()
+      : (motiveInputRef.current?.value ?? '').trim()
+    if (!value || motives.includes(value)) return
     setMotives(prev => [...prev, value])
-    motiveInputRef.current.value = ''
+    if (storageContext && motiveSelectRef.current) motiveSelectRef.current.value = ''
+    if (!storageContext && motiveInputRef.current) motiveInputRef.current.value = ''
   }
 
   const removeMotive = (index) => setMotives(prev => prev.filter((_, i) => i !== index))
@@ -287,7 +412,7 @@ const ExitNotes = () => {
       const next = { ...item, [field]: value }
       const quantity = Number(next.quantity || 0)
       const total = Number(next.total || 0)
-      next.total = Number.isFinite(total) ? total : quantity
+      next.total = Number.isFinite(total) && total > 0 ? total : quantity
       return next
     }))
   }
@@ -507,6 +632,7 @@ const ExitNotes = () => {
           batch_label: row.lot,
           batch_code: row.lot,
           lot: row.lot,
+          health_registration: row.health_registration ?? '',
           article_id: row.article_id ? `${row.article_id}` : '',
           article_label: [row.article_code, row.article_name].filter(Boolean).join(' - '),
           article_laboratory: row.laboratory_name ?? '',
@@ -530,19 +656,29 @@ const ExitNotes = () => {
   const onItemRemoved = (uid) => {
     setItems(prev => {
       const next = prev.filter(item => item.uid !== uid)
-      return next.length ? next : [emptyItem()]
+      return next.length ? next : (storageContext ? [] : [emptyItem()])
     })
   }
 
+  const applyStorageFilter = () => {
+    setStorageGridFilter(combineFilters([
+      storageFilterClientId ? ['client_id', '=', Number(storageFilterClientId)] : null,
+      storageFilterStartDate ? ['exit_date', '>=', storageFilterStartDate] : null,
+      storageFilterEndDate ? ['exit_date', '<=', storageFilterEndDate] : null,
+    ]))
+  }
+
+  const storageQuantityTotal = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)
   const stockSearchFilterNeedle = normalizeSearchText(stockSearchFilter)
   const stockSearchFilteredRows = stockSearchFilterNeedle
     ? stockSearchRows.filter(row => normalizeSearchText([
+      row.location,
+      row.stock,
       row.lot,
+      row.health_registration,
+      row.expiration_date,
       row.article_code,
       row.article_name,
-      row.health_registration,
-      row.location,
-      row.client_name,
       row.unit_label,
     ].join(' ')).includes(stockSearchFilterNeedle))
     : stockSearchRows
@@ -558,11 +694,139 @@ const ExitNotes = () => {
       : prev.filter(id => !pageIds.includes(id)))
   }
 
+  const storageColumns = [
+    {
+      caption: 'Acciones',
+      width: 160,
+      fixed: true,
+      fixedPosition: 'left',
+      cellTemplate: (container, { data }) => {
+        container.css('text-overflow', 'unset')
+        const status = data?.exit_status ?? 'pending'
+        if (status === 'pending') {
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-success me-1 tippy-here', title: 'Aprobar nota de salida', icon: 'mdi mdi-check-bold', onClick: () => onExitStatusChange(data, 'approved') }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-primary me-1 tippy-here', title: 'Editar nota de salida', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger me-1 tippy-here', title: 'Anular nota de salida', icon: 'mdi mdi-close', onClick: () => onExitStatusChange(data, 'cancelled') }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger tippy-here', title: 'PDF nota de salida', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
+          return
+        }
+        container.append(DxButton({ className: 'btn btn-xs btn-soft-warning me-1 tippy-here', title: 'Detalle nota de salida', icon: 'mdi mdi-menu', onClick: () => onModalOpen(data) }))
+        container.append(DxButton({ className: 'btn btn-xs btn-soft-info me-1 tippy-here', title: 'Ver nota de salida', icon: 'mdi mdi-eye', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
+        container.append(DxButton({ className: 'btn btn-xs btn-soft-danger tippy-here', title: 'PDF nota de salida', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
+      },
+      allowFiltering: false,
+      allowExporting: false,
+    },
+    { dataField: 'code', caption: 'Codigo', minWidth: 110, cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code || `NS${`${data?.id ?? ''}`.padStart(5, '0')}`, () => onModalOpen(data), 'Editar nota de salida') },
+    { dataField: 'client_name', caption: 'Cliente', minWidth: 260 },
+    { dataField: 'warehouse.name', caption: 'Almacen origen', minWidth: 180 },
+    { caption: 'Destino', minWidth: 150, calculateCellValue: storageDestinationLabel, allowFiltering: false },
+    { caption: 'Motivo', minWidth: 160, calculateCellValue: storageMotivesLabel, allowFiltering: false },
+    { dataField: 'document_type', caption: 'Tipo de documento', minWidth: 160 },
+    { dataField: 'document_series', caption: 'Serie', minWidth: 100 },
+    { dataField: 'document_sequence', caption: 'Secuencia', minWidth: 120 },
+    { dataField: 'exit_date', caption: 'Fecha salida', dataType: 'date', minWidth: 120 },
+    { dataField: 'creator.fullname', caption: 'Usuario registro', minWidth: 150, cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator)) },
+    { dataField: 'created_at', caption: 'Fecha registro', dataType: 'datetime', minWidth: 160 },
+    {
+      dataField: 'exit_status',
+      caption: 'Estado',
+      minWidth: 110,
+      cellTemplate: (container, { data }) => ReactAppend(container, <span className={exitStatusClass(data?.exit_status)}>{exitStatusLabel(data?.exit_status)}</span>)
+    },
+  ]
+
+  const standardColumns = [
+    { dataField: 'id', caption: 'ID', visible: false },
+    {
+      dataField: 'business.name',
+      caption: 'Empresa',
+      minWidth: 150,
+      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business?.name, () => onModalOpen(data), 'Editar nota de salida')
+    },
+    { dataField: 'branch.name', caption: 'Sede', minWidth: 140 },
+    { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 140 },
+    { dataField: 'client_name', caption: 'Cliente', minWidth: 180 },
+    { dataField: 'motives', caption: 'Motivos', minWidth: 220, cellTemplate: (container, { data }) => container.text((data?.motives ?? []).join(', ')) },
+    {
+      dataField: 'items.id', caption: 'Detalle', minWidth: 240, allowFiltering: false,
+      cellTemplate: (container, { data }) => {
+        const lines = (data?.items ?? []).map(item => `${item?.article?.name || 'Articulo'} | Cant. ${Number(item?.quantity || 0).toFixed(2)} | Total ${Number(item?.total || 0).toFixed(2)}`)
+        ReactAppend(container, <div>
+          {lines.length === 0 && <small className='text-muted'>Sin detalle</small>}
+          {lines.map((line, idx) => <div key={`exit-note-${data.id}-${idx}`}><small>{line}</small></div>)}
+        </div>)
+      }
+    },
+    { dataField: 'creator.fullname', caption: 'Creado por', visible: false, cellTemplate: (c, { data }) => c.text(formatAuditUser(data.creator)) },
+    { dataField: 'updater.fullname', caption: 'Actualizado por', visible: false, cellTemplate: (c, { data }) => c.text(formatAuditUser(data.updater)) },
+    {
+      dataField: 'status', caption: 'Estado', dataType: 'boolean', width: '95px',
+      cellTemplate: (container, { data }) => {
+        $(container).empty()
+        if (data.status === null) return
+        ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onStatusChange(data)} />)
+      }
+    },
+    {
+      caption: 'Acciones', width: '120px',
+      cellTemplate: (container, { data }) => {
+        container.css('text-overflow', 'unset')
+        container.append(DxButton({ className: 'btn btn-xs btn-soft-primary me-1', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+        container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar nota de salida', icon: 'mdi mdi-delete', onClick: () => onDeleteClicked(data.id) }))
+      },
+      allowFiltering: false, allowExporting: false
+    }
+  ]
+
   return (<>
+    {storageContext && <>
+      <style>{`
+        .storage-exit-modal { border-radius: 0; }
+        .storage-exit-modal-header { background: #272954; color: #fff; padding: 0.45rem 1rem; }
+        .storage-exit-modal-header .modal-title { color: #fff; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; }
+        .storage-exit-dialog { width: calc(100vw - 24px); max-width: calc(100vw - 24px); }
+        .storage-exit-form label { font-size: 0.78rem; color: #30384d; margin-bottom: 0.25rem; }
+        .storage-exit-form .form-control, .storage-exit-form .form-select { min-height: 28px; border-radius: 0; font-size: 0.78rem; padding: 0.25rem 0.55rem; }
+        .storage-exit-form .btn { border-radius: 0; font-weight: 700; font-size: 0.74rem; }
+        .storage-exit-form table th { font-size: 0.72rem; color: #30384d; text-transform: uppercase; vertical-align: middle; }
+        .storage-exit-form table td { vertical-align: middle; }
+        .storage-exit-toolbar { border-bottom: 1px solid #e4e7ec; padding: 1.1rem 0 1rem; }
+        .storage-exit-total-label { font-style: italic; font-weight: 700; text-align: right; }
+      `}</style>
+      <div className='card mb-3'>
+        <div className='card-body'>
+          <div className='row align-items-end g-3'>
+            <div className='col-md-4'>
+              <label className='form-label'>Cliente</label>
+              <select className='form-select' value={storageFilterClientId} onChange={(e) => setStorageFilterClientId(e.target.value)}>
+                <option value=''>Seleccione</option>
+                {storageClients.map(client => <option key={`exit-filter-client-${client.id}`} value={client.id}>{clientLabel(client)}</option>)}
+              </select>
+            </div>
+            <div className='col-md-3'>
+              <label className='form-label'>Fecha inicio</label>
+              <input className='form-control' type='date' value={storageFilterStartDate} onChange={(e) => setStorageFilterStartDate(e.target.value)} />
+            </div>
+            <div className='col-md-3'>
+              <label className='form-label'>Fecha fin</label>
+              <input className='form-control' type='date' value={storageFilterEndDate} onChange={(e) => setStorageFilterEndDate(e.target.value)} />
+            </div>
+            <div className='col-md-2'>
+              <button type='button' className='btn btn-outline-primary w-100' onClick={applyStorageFilter}>
+                <i className='mdi mdi-magnify me-1'></i> Buscar notas de salida
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>}
+
     <Table
       gridRef={gridRef}
-      title='Notas de salida'
+      title={storageContext ? 'Nota de salida' : 'Notas de salida'}
       rest={exitNotesRest}
+      filterValue={storageContext ? storageGridFilter : null}
       toolBar={(container) => {
         container.unshift({
           widget: 'dxButton', location: 'after',
@@ -573,131 +837,218 @@ const ExitNotes = () => {
           options: { icon: 'add', title: 'Agregar', hint: 'Agregar nota de salida', onClick: () => onModalOpen(null) }
         });
       }}
-      pageSize={25}
-      columns={[
-        { dataField: 'id', caption: 'ID', visible: false },
-        {
-          dataField: 'business.name',
-          caption: 'Empresa',
-          minWidth: 150,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business?.name, () => onModalOpen(data), 'Editar nota de salida')
-        },
-        { dataField: 'branch.name', caption: 'Sede', minWidth: 140 },
-        { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 140 },
-        { dataField: 'client_name', caption: 'Cliente', minWidth: 180 },
-        { dataField: 'motives', caption: 'Motivos', minWidth: 220, cellTemplate: (container, { data }) => container.text((data?.motives ?? []).join(', ')) },
-        {
-          dataField: 'items.id', caption: 'Detalle', minWidth: 240, allowFiltering: false,
-          cellTemplate: (container, { data }) => {
-            const lines = (data?.items ?? []).map(item => `${item?.article?.name || 'Articulo'} | Cant. ${Number(item?.quantity || 0).toFixed(2)} | Total ${Number(item?.total || 0).toFixed(2)}`)
-            ReactAppend(container, <div>
-              {lines.length === 0 && <small className='text-muted'>Sin detalle</small>}
-              {lines.map((line, idx) => <div key={`exit-note-${data.id}-${idx}`}><small>{line}</small></div>)}
-            </div>)
-          }
-        },
-        { dataField: 'creator.fullname', caption: 'Creado por', visible: false, cellTemplate: (c, { data }) => c.text(formatAuditUser(data.creator)) },
-        { dataField: 'updater.fullname', caption: 'Actualizado por', visible: false, cellTemplate: (c, { data }) => c.text(formatAuditUser(data.updater)) },
-        {
-          dataField: 'status', caption: 'Estado', dataType: 'boolean', width: '95px',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onStatusChange(data)} />)
-          }
-        },
-        {
-          caption: 'Acciones', width: storageContext ? '160px' : '120px',
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            if (storageContext) {
-              container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
-            }
-            container.append(DxButton({ className: `btn btn-xs btn-soft-primary${storageContext ? ' ms-1' : ''}`, title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar nota de salida', icon: 'mdi mdi-delete', onClick: () => onDeleteClicked(data.id) }))
-          },
-          allowFiltering: false, allowExporting: false
-        }
-      ]}
+      pageSize={storageContext ? 10 : 25}
+      columns={storageContext ? storageColumns : standardColumns}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar nota de salida' : 'Agregar nota de salida'} onSubmit={onModalSubmit} size='full-width'>
-      <div className='row' id='exit-note-form-container'>
+    <Modal
+      modalRef={modalRef}
+      title={storageContext
+        ? <h4 className='modal-title'><i className='mdi mdi-menu me-1'></i> {isEditing ? 'EDITAR NOTA DE SALIDA' : 'REGISTRAR NOTA DE SALIDA'}</h4>
+        : (isEditing ? 'Editar nota de salida' : 'Agregar nota de salida')}
+      onSubmit={onModalSubmit}
+      size='full-width'
+      hideFooter={storageContext}
+      headerClass={storageContext ? 'storage-exit-modal-header' : ''}
+      closeButtonClass={storageContext ? 'btn-close-white' : ''}
+      contentClass={storageContext ? 'storage-exit-modal' : ''}
+      dialogClass={storageContext ? 'storage-exit-dialog' : ''}
+      bodyClass={storageContext ? 'storage-exit-form' : ''}
+    >
+      <div id='exit-note-form-container'>
         <input ref={idRef} type='hidden' />
-
-        <SelectAPIFormGroup eRef={businessRef} label='Empresa' col='col-md-3' required searchAPI='/api/admin/businesses/paginate' searchBy='name' dropdownParent='#exit-note-form-container' onChange={onBusinessChanged} />
-        <SelectFormGroup eRef={branchRef} label='Sede' col='col-md-3' dropdownParent='#exit-note-form-container' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)} effectWith={[selectedBranchId, branches.length]}>
-          <option value=''>-- Seleccionar sede --</option>
-          {branches.map(branch => <option key={`exit-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
-        </SelectFormGroup>
-        <SelectAPIFormGroup eRef={warehouseRef} label='Almacen' col='col-md-3' required searchAPI='/api/admin/warehouses/paginate' searchBy='name' dropdownParent='#exit-note-form-container' onChange={(e) => setSelectedWarehouseId(e.target.value || '')} />
-        <InputFormGroup eRef={clientNameRef} label='Cliente' col='col-md-3' />
-
-        <div className='form-group col-md-8 mb-2'>
-          <label className='form-label'>Motivos</label>
-          <div className='d-flex gap-2'>
-            <input ref={motiveInputRef} className='form-control' placeholder='Escribe un motivo y pulsa agregar' />
-            <button type='button' className='btn btn-primary' onClick={addMotive}>Agregar</button>
-          </div>
-          <div className='d-flex flex-wrap gap-1 mt-2'>
-            {motives.map((motive, idx) => (
-              <span key={`motive-${idx}`} className='badge bg-soft-secondary text-dark'>
-                {motive}
-                <button type='button' className='btn btn-link btn-xs p-0 ms-1 text-danger' onClick={() => removeMotive(idx)}>x</button>
-              </span>
-            ))}
-          </div>
-        </div>
-        <TextareaFormGroup eRef={observationsRef} label='Observaciones' col='col-md-4' rows={3} />
-
-        <div className='col-12 mt-3'>
-          <div className='d-flex justify-content-between align-items-center mb-2'>
-            <h6 className='mb-0'>Nota de Salida</h6>
-            {storageContext
-              ? <button type='button' className='btn btn-sm btn-outline-primary' onClick={openStockSearchModal}>
-                <i className='mdi mdi-plus-circle me-1'></i> Insertar producto
-              </button>
-              : <button type='button' className='btn btn-sm btn-soft-primary' onClick={onItemAdded}>
-                <i className='mdi mdi-plus me-1'></i> Agregar linea
-              </button>}
+        {storageContext ? <>
+          <div className='storage-exit-toolbar text-center'>
+            <button type='submit' className='btn btn-outline-primary me-2'>
+              <i className='mdi mdi-plus me-1'></i> Registrar
+            </button>
+            <button type='button' className='btn btn-light' data-bs-dismiss='modal'>
+              <i className='mdi mdi-close me-1'></i> Cerrar
+            </button>
           </div>
 
-          <div className='table-responsive border rounded'>
-            <table className='table table-sm table-striped mb-0'>
-              <thead>
-                <tr>
-                  <th>Lote registrado</th>
-                  <th>Nombre</th>
-                  <th>Laboratorio | Principio activo</th>
-                  <th>Unidad</th>
-                  <th>Stock</th>
-                  <th>Almacen</th>
-                  <th>Fecha Vencimiento</th>
-                  <th>Ubicacion</th>
-                  <th>Ubi. Destino</th>
-                  <th>Cantidad</th>
-                  <th>Total</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map(item => {
-                  const articleExtra = item.article_id ? `${item.article_laboratory || '-'} | ${item.article_principle || '-'}` : '-'
-                  const unitLabel = item.article_id ? (item.article_unit || '-') : '-'
-                  let batchFilter = null
-                  if (selectedBusinessId && item.article_id) {
-                    batchFilter = [['business_id', '=', Number(selectedBusinessId)], 'and', ['article_id', '=', Number(item.article_id)]]
-                  } else if (selectedBusinessId) {
-                    batchFilter = ['business_id', '=', Number(selectedBusinessId)]
-                  } else if (item.article_id) {
-                    batchFilter = ['article_id', '=', Number(item.article_id)]
-                  }
-                  return (
+          <div className='px-2 pt-4'>
+            <div className='row g-3'>
+              <div className='col-md-3'>
+                <label>Cliente</label>
+                <select className='form-select' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required>
+                  <option value=''>Seleccione Cliente</option>
+                  {storageClients.map(client => <option key={`exit-client-${client.id}`} value={client.id}>{clientLabel(client)}</option>)}
+                </select>
+              </div>
+              <div className='col-md-3'>
+                <label>Almacen</label>
+                <select className='form-select' value={selectedWarehouseId} onChange={(e) => onStorageWarehouseChanged(e.target.value)} required>
+                  <option value=''>Seleccione</option>
+                  {warehouses.map(warehouse => <option key={`exit-warehouse-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
+                </select>
+              </div>
+              <div className='col-md-2'>
+                <label>Fecha salida</label>
+                <input ref={exitDateRef} className='form-control' type='date' required />
+              </div>
+              <div className='col-md-4'>
+                <label>Motivos</label>
+                <div className='d-flex gap-2'>
+                  <select ref={motiveSelectRef} className='form-select'>
+                    <option value=''>Seleccione motivos</option>
+                    {motiveOptions.map(option => <option key={`exit-motive-${option}`} value={option}>{option}</option>)}
+                  </select>
+                  <button type='button' className='btn btn-light border' onClick={addMotive}>+</button>
+                </div>
+                {motives.length > 0 && <div className='d-flex flex-wrap gap-1 mt-2'>
+                  {motives.map((motive, idx) => (
+                    <span key={`motive-${idx}`} className='badge bg-soft-secondary text-dark'>
+                      {motive}
+                      <button type='button' className='btn btn-link btn-xs p-0 ms-1 text-danger' onClick={() => removeMotive(idx)}>x</button>
+                    </span>
+                  ))}
+                </div>}
+              </div>
+
+              <div className='col-md-3'>
+                <label>Tipo documento</label>
+                <select ref={documentTypeRef} className='form-select' required>
+                  <option value=''>Seleccione</option>
+                  {documentOptions.map(option => <option key={`exit-doc-${option}`} value={option}>{option}</option>)}
+                </select>
+              </div>
+              <div className='col-md-3'>
+                <label>Serie</label>
+                <input ref={documentSeriesRef} className='form-control' required />
+              </div>
+              <div className='col-md-3'>
+                <label>Secuencia</label>
+                <input ref={documentSequenceRef} className='form-control' required />
+              </div>
+              <div className='col-md-3'>
+                <label>Fecha de documento</label>
+                <input ref={documentDateRef} className='form-control' type='date' required />
+              </div>
+              <div className='col-12'>
+                <label>Observaciones</label>
+                <textarea ref={observationsRef} className='form-control' rows='3'></textarea>
+              </div>
+            </div>
+
+            <button type='button' className='btn btn-outline-primary mt-3' onClick={openStockSearchModal}>
+              <i className='mdi mdi-plus-circle me-1'></i> Insertar producto
+            </button>
+
+            <h4 className='text-center my-4'>Nota de salida</h4>
+            <div className='table-responsive border'>
+              <table className='table table-sm mb-0'>
+                <thead>
+                  <tr>
+                    <th>Numero de lote</th>
+                    <th>Registro sanitario</th>
+                    <th>Fecha de vencimiento</th>
+                    <th>Articulo</th>
+                    <th>U. medida</th>
+                    <th>Stock</th>
+                    <th>Ubic.</th>
+                    <th>Ubic. destino</th>
+                    <th>Cantidad</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(item => (
                     <tr key={item.uid}>
-                      <td style={{ width: '20%' }}>
-                        {storageContext
-                          ? <input className='form-control form-control-sm' value={item.lot || item.batch_code} readOnly />
-                          : <div className='d-flex gap-1 align-items-center'>
+                      <td style={{ minWidth: 160 }}><input className='form-control' value={item.lot || item.batch_code} readOnly /></td>
+                      <td style={{ minWidth: 180 }}><input className='form-control' value={item.health_registration || ''} readOnly /></td>
+                      <td style={{ minWidth: 150 }}><input className='form-control' type='date' value={item.expiration_date} readOnly /></td>
+                      <td style={{ minWidth: 320 }}><input className='form-control' value={item.article_label || ''} readOnly /></td>
+                      <td style={{ minWidth: 110 }}><input className='form-control' value={item.article_unit || ''} readOnly /></td>
+                      <td style={{ minWidth: 95 }}><input className='form-control' value={Number(item.stock || 0).toFixed(3)} readOnly /></td>
+                      <td style={{ minWidth: 120 }}><input className='form-control' value={item.location || ''} readOnly /></td>
+                      <td style={{ minWidth: 170 }}><input className='form-control' value={item.destination_location || ''} onChange={(e) => onItemUpdated(item.uid, 'destination_location', e.target.value)} /></td>
+                      <td style={{ minWidth: 130 }}><input className='form-control' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => onItemUpdated(item.uid, 'quantity', e.target.value)} /></td>
+                      <td style={{ width: 54 }}>
+                        <button type='button' className='btn btn-soft-danger' onClick={() => onItemRemoved(item.uid)}>
+                          <i className='mdi mdi-delete'></i>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td colSpan='7'></td>
+                    <td className='storage-exit-total-label'>Total</td>
+                    <td><input className='form-control' value={storageQuantityTotal.toFixed(3)} readOnly /></td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </> : <div className='row'>
+          <SelectAPIFormGroup eRef={businessRef} label='Empresa' col='col-md-3' required searchAPI='/api/admin/businesses/paginate' searchBy='name' dropdownParent='#exit-note-form-container' onChange={onBusinessChanged} />
+          <SelectFormGroup eRef={branchRef} label='Sede' col='col-md-3' dropdownParent='#exit-note-form-container' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)} effectWith={[selectedBranchId, branches.length]}>
+            <option value=''>-- Seleccionar sede --</option>
+            {branches.map(branch => <option key={`exit-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
+          </SelectFormGroup>
+          <SelectAPIFormGroup eRef={warehouseRef} label='Almacen' col='col-md-3' required searchAPI='/api/admin/warehouses/paginate' searchBy='name' dropdownParent='#exit-note-form-container' onChange={(e) => setSelectedWarehouseId(e.target.value || '')} />
+          <InputFormGroup eRef={clientNameRef} label='Cliente' col='col-md-3' />
+
+          <div className='form-group col-md-8 mb-2'>
+            <label className='form-label'>Motivos</label>
+            <div className='d-flex gap-2'>
+              <input ref={motiveInputRef} className='form-control' placeholder='Escribe un motivo y pulsa agregar' />
+              <button type='button' className='btn btn-primary' onClick={addMotive}>Agregar</button>
+            </div>
+            <div className='d-flex flex-wrap gap-1 mt-2'>
+              {motives.map((motive, idx) => (
+                <span key={`motive-${idx}`} className='badge bg-soft-secondary text-dark'>
+                  {motive}
+                  <button type='button' className='btn btn-link btn-xs p-0 ms-1 text-danger' onClick={() => removeMotive(idx)}>x</button>
+                </span>
+              ))}
+            </div>
+          </div>
+          <TextareaFormGroup eRef={observationsRef} label='Observaciones' col='col-md-4' rows={3} />
+
+          <div className='col-12 mt-3'>
+            <div className='d-flex justify-content-between align-items-center mb-2'>
+              <h6 className='mb-0'>Nota de Salida</h6>
+              <button type='button' className='btn btn-sm btn-soft-primary' onClick={onItemAdded}>
+                <i className='mdi mdi-plus me-1'></i> Agregar linea
+              </button>
+            </div>
+
+            <div className='table-responsive border rounded'>
+              <table className='table table-sm table-striped mb-0'>
+                <thead>
+                  <tr>
+                    <th>Lote registrado</th>
+                    <th>Nombre</th>
+                    <th>Laboratorio | Principio activo</th>
+                    <th>Unidad</th>
+                    <th>Stock</th>
+                    <th>Almacen</th>
+                    <th>Fecha Vencimiento</th>
+                    <th>Ubicacion</th>
+                    <th>Ubi. Destino</th>
+                    <th>Cantidad</th>
+                    <th>Total</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(item => {
+                    const articleExtra = item.article_id ? `${item.article_laboratory || '-'} | ${item.article_principle || '-'}` : '-'
+                    const unitLabel = item.article_id ? (item.article_unit || '-') : '-'
+                    let batchFilter = null
+                    if (selectedBusinessId && item.article_id) {
+                      batchFilter = [['business_id', '=', Number(selectedBusinessId)], 'and', ['article_id', '=', Number(item.article_id)]]
+                    } else if (selectedBusinessId) {
+                      batchFilter = ['business_id', '=', Number(selectedBusinessId)]
+                    } else if (item.article_id) {
+                      batchFilter = ['article_id', '=', Number(item.article_id)]
+                    }
+                    return (
+                      <tr key={item.uid}>
+                        <td style={{ width: '20%' }}>
+                          <div className='d-flex gap-1 align-items-center'>
                             <div style={{ flex: 1 }}>
                               <SelectAPIFormGroup
                                 eRef={getBatchRef(item.uid)}
@@ -712,61 +1063,62 @@ const ExitNotes = () => {
                             <button type='button' className='btn btn-xs btn-soft-success' title='Crear lote' onClick={() => onCreateBatchForItem(item.uid)}>
                               <i className='mdi mdi-plus'></i>
                             </button>
-                          </div>}
-                      </td>
-                      <td style={{width: '20%'}}>
-                        {storageContext
-                          ? <input className='form-control form-control-sm' value={item.article_label || ''} readOnly />
-                          : <SelectAPIFormGroup
+                          </div>
+                        </td>
+                        <td style={{ width: '20%' }}>
+                          <SelectAPIFormGroup
                             eRef={getArticleRef(item.uid)}
                             col='col-12'
                             searchAPI='/api/admin/articles/paginate'
                             searchBy='name'
                             dropdownParent='#exit-note-form-container'
                             onChange={(e) => onItemArticleChanged(item.uid, e)}
-                          />}
-                      </td>
-                      <td><small>{articleExtra}</small></td>
-                      <td><small>{unitLabel}</small></td>
-                      <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.stock} readOnly={storageContext} onChange={(e) => onItemUpdated(item.uid, 'stock', e.target.value)} /></td>
-                      <td>
-                        <select className='form-control form-control-sm' value={item.warehouse_id || selectedWarehouseId || ''} disabled={storageContext} onChange={(e) => onItemUpdated(item.uid, 'warehouse_id', e.target.value)}>
-                          <option value=''>Seleccionar...</option>
-                          {warehouses.map(warehouse => <option key={`exit-warehouse-item-${item.uid}-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
-                        </select>
-                      </td>
-                      <td><input className='form-control form-control-sm' type='date' value={item.expiration_date} readOnly={storageContext} onChange={(e) => onItemUpdated(item.uid, 'expiration_date', e.target.value)} /></td>
-                      <td><input className='form-control form-control-sm' value={item.location} readOnly={storageContext} onChange={(e) => onItemUpdated(item.uid, 'location', e.target.value)} /></td>
-                      <td><input className='form-control form-control-sm' value={item.destination_location} onChange={(e) => onItemUpdated(item.uid, 'destination_location', e.target.value)} /></td>
-                      <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => onItemUpdated(item.uid, 'quantity', e.target.value)} /></td>
-                      <td><input className='form-control form-control-sm' type='number' value={Number(item.total || 0).toFixed(2)} onChange={(e) => onItemUpdated(item.uid, 'total', e.target.value)} /></td>
-                      <td>
-                        <button type='button' className='btn btn-xs btn-soft-danger' onClick={() => onItemRemoved(item.uid)}>
-                          <i className='mdi mdi-delete'></i>
-                        </button>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
+                          />
+                        </td>
+                        <td><small>{articleExtra}</small></td>
+                        <td><small>{unitLabel}</small></td>
+                        <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.stock} onChange={(e) => onItemUpdated(item.uid, 'stock', e.target.value)} /></td>
+                        <td>
+                          <select className='form-control form-control-sm' value={item.warehouse_id || selectedWarehouseId || ''} onChange={(e) => onItemUpdated(item.uid, 'warehouse_id', e.target.value)}>
+                            <option value=''>Seleccionar...</option>
+                            {warehouses.map(warehouse => <option key={`exit-warehouse-item-${item.uid}-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
+                          </select>
+                        </td>
+                        <td><input className='form-control form-control-sm' type='date' value={item.expiration_date} onChange={(e) => onItemUpdated(item.uid, 'expiration_date', e.target.value)} /></td>
+                        <td><input className='form-control form-control-sm' value={item.location} onChange={(e) => onItemUpdated(item.uid, 'location', e.target.value)} /></td>
+                        <td><input className='form-control form-control-sm' value={item.destination_location} onChange={(e) => onItemUpdated(item.uid, 'destination_location', e.target.value)} /></td>
+                        <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => onItemUpdated(item.uid, 'quantity', e.target.value)} /></td>
+                        <td><input className='form-control form-control-sm' type='number' value={Number(item.total || 0).toFixed(2)} onChange={(e) => onItemUpdated(item.uid, 'total', e.target.value)} /></td>
+                        <td>
+                          <button type='button' className='btn btn-xs btn-soft-danger' onClick={() => onItemRemoved(item.uid)}>
+                            <i className='mdi mdi-delete'></i>
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        </div>}
       </div>
     </Modal>
 
     {storageContext && <Modal
       modalRef={stockSearchModalRef}
-      title={<span><i className='mdi mdi-menu me-1'></i> BUSCAR STOCK DISPONIBLE</span>}
+      title={<h4 className='modal-title'><i className='mdi mdi-menu me-1'></i> BUSCAR LOTES</h4>}
       onSubmit={(e) => { e.preventDefault(); searchAvailableStockRows() }}
       size='full-width'
       hideFooter
-      headerClass='bg-primary text-white py-2'
+      headerClass='storage-exit-modal-header'
       closeButtonClass='btn-close-white'
+      contentClass='storage-exit-modal'
+      dialogClass='storage-exit-dialog'
       bodyStyle={{ maxHeight: 'calc(100vh - 150px)', overflowY: 'auto' }}
       zIndex={1070}
     >
-      <div className='px-1'>
+      <div className='px-1 storage-exit-form'>
         <div className='d-flex align-items-center gap-2 mb-2'>
           <i className='mdi mdi-menu text-muted'></i>
           <strong className='text-muted'>INGRESAR DATOS</strong>
@@ -802,12 +1154,12 @@ const ExitNotes = () => {
         </div>
 
         <div className='d-flex gap-2 justify-content-center mb-4'>
-          <button type='button' className='btn btn-primary' onClick={searchAvailableStockRows} disabled={stockSearchLoading}>
+          <button type='button' className='btn btn-outline-primary' onClick={searchAvailableStockRows} disabled={stockSearchLoading}>
             {stockSearchLoading ? <i className='mdi mdi-loading mdi-spin me-1'></i> : <i className='mdi mdi-magnify me-1'></i>}
             Buscar
           </button>
           <button type='button' className='btn btn-light' onClick={addSelectedStockRows} disabled={stockSearchSelectedIds.length === 0}>
-            <i className='mdi mdi-plus me-1'></i> Insertar seleccionados
+            <i className='mdi mdi-keyboard-return me-1'></i> Regresar
           </button>
         </div>
 
@@ -845,33 +1197,31 @@ const ExitNotes = () => {
                 <th style={{ width: 55 }} className='text-center'>
                   <input type='checkbox' checked={allStockSearchPageSelected} onChange={(e) => toggleStockSearchPage(e.target.checked)} />
                 </th>
+                <th>UBICACION</th>
                 <th className='text-center'>STOCK</th>
                 <th>NUMERO DE LOTE</th>
                 <th>REGISTRO SANITARIO</th>
                 <th>FECHA DE VENCIMIENTO</th>
                 <th>ARTICULO</th>
                 <th>U. MEDIDA</th>
-                <th>UBICACION</th>
-                <th>CLIENTE</th>
               </tr>
             </thead>
             <tbody>
-              {stockSearchLoading && <tr><td colSpan='9' className='text-center py-4'><i className='mdi mdi-loading mdi-spin me-1'></i> Buscando stock...</td></tr>}
-              {!stockSearchLoading && stockSearchRows.length === 0 && <tr><td colSpan='9' className='text-muted py-3'>No existen elementos</td></tr>}
-              {!stockSearchLoading && stockSearchRows.length > 0 && stockSearchPageRows.length === 0 && <tr><td colSpan='9' className='text-muted py-3'>No hay elementos a mostrar</td></tr>}
+              {stockSearchLoading && <tr><td colSpan='8' className='text-center py-4'><i className='mdi mdi-loading mdi-spin me-1'></i> Buscando stock...</td></tr>}
+              {!stockSearchLoading && stockSearchRows.length === 0 && <tr><td colSpan='8' className='text-muted py-3'>No existen elementos</td></tr>}
+              {!stockSearchLoading && stockSearchRows.length > 0 && stockSearchPageRows.length === 0 && <tr><td colSpan='8' className='text-muted py-3'>No hay elementos a mostrar</td></tr>}
               {!stockSearchLoading && stockSearchPageRows.map(row => (
                 <tr key={row.id}>
                   <td className='text-center'>
                     <input type='checkbox' checked={stockSearchSelectedIds.includes(row.id)} onChange={(e) => toggleStockSearchRow(row.id, e.target.checked)} />
                   </td>
+                  <td>{row.location}</td>
                   <td className='text-center'>{Number(row.stock || 0).toFixed(3)}</td>
                   <td>{row.lot}</td>
                   <td>{row.health_registration}</td>
                   <td>{row.expiration_date}</td>
                   <td>{row.article_name}</td>
                   <td>{row.unit_label}</td>
-                  <td>{row.location}</td>
-                  <td>{row.client_name}</td>
                 </tr>
               ))}
             </tbody>

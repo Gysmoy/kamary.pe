@@ -7,6 +7,7 @@ use App\Models\PurchaseReceipt;
 use App\Support\BusinessScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class StockService
 {
@@ -120,6 +121,9 @@ class StockService
             ->whereRaw("COALESCE(NULLIF(exit_item.location, ''), '') = ?", [$location])
             ->whereRaw("COALESCE(DATE(exit_item.expiration_date), '1000-01-01') = ?", [$dateKey])
             ->when($businessId, fn($query) => $query->where('exit_note.business_id', $businessId));
+        if (Schema::hasColumn('exit_notes', 'exit_status')) {
+            $qtyOutQuery->where('exit_note.exit_status', 'approved');
+        }
 
         if ($excludedExitNoteId > 0) {
             $qtyOutQuery->where('exit_note.id', '!=', $excludedExitNoteId);
@@ -202,6 +206,9 @@ class StockService
                 COALESCE(SUM(exit_item.quantity), 0) as qty_out
             ")
             ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location');
+        if (Schema::hasColumn('exit_notes', 'exit_status')) {
+            $outgoingTotals->where('exit_note.exit_status', 'approved');
+        }
 
         $query = DB::query()
             ->fromSub($incomingTotals, 'stock')
@@ -372,6 +379,9 @@ class StockService
                 COALESCE(SUM(exit_item.quantity), 0) as qty_out
             ")
             ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location');
+        if (Schema::hasColumn('exit_notes', 'exit_status')) {
+            $outgoingTotals->where('exit_note.exit_status', 'approved');
+        }
 
         $query = DB::query()
             ->fromSub($incomingTotals, 'stock')
@@ -441,6 +451,9 @@ class StockService
             ->where('exit_item.status', 1)
             ->where('exit_item.article_id', $articleId)
             ->where('exit_item.warehouse_id', $warehouseId);
+        if (Schema::hasColumn('exit_notes', 'exit_status')) {
+            $qtyOutQuery->where('exit_note.exit_status', 'approved');
+        }
 
         if ($excludedExitNoteId > 0) {
             $qtyOutQuery->where('exit_note.id', '!=', $excludedExitNoteId);
