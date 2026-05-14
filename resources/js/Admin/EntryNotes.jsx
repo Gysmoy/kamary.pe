@@ -39,6 +39,7 @@ const toDateInput = (value) => {
 }
 
 const clientLabel = (client) => [client?.document_number, client?.full_name].filter(Boolean).join(' | ')
+const locationCodeFromValue = (value) => `${value ?? ''}`.split(',')[0].split('|')[0].trim()
 
 const normalizeSearchText = (value) => `${value ?? ''}`
   .toLowerCase()
@@ -318,32 +319,35 @@ const EntryNotes = () => {
       }
     }
 
-    const detail = (data?.items ?? []).map(row => ({
-      uid: crypto.randomUUID(),
-      batch_id: row.lot ?? row.batch_code ?? '',
-      batch_label: row.lot ?? row.batch_code ?? '',
-      batch_code: row.batch_code ?? '',
-      lot: row.lot ?? '',
-      expiration_date: toDateInput(row.expiration_date),
-      storage_condition: row.storage_condition ?? '',
-      manufacturer_id: row.manufacturer_id ? `${row.manufacturer_id}` : '',
-      manufacturer_label: row.manufacturer?.name ?? '',
-      article_id: row.article_id ? `${row.article_id}` : '',
-      article_label: row.article ? `${row.article.code ?? ''} - ${row.article.name ?? ''}`.trim() : '',
-      article_laboratory: row.article?.laboratory?.name ?? '',
-      article_principle: row.article?.activePrinciple?.name ?? row.article?.active_principle?.name ?? '',
-      article_unit: row.article?.unit?.symbol ?? row.article?.unit?.name ?? '',
-      storage_lots: row.article?.storageLots ?? row.article?.storage_lots ?? [],
-      warehouse_id: row.warehouse_id ? `${row.warehouse_id}` : warehouseId,
-      stock: row.stock ?? 0,
-      cost_unit: row.cost_unit ?? 0,
-      location: row.location ?? '',
-      locations: (row.location ?? '').toString().split(',').map(value => value.trim()).filter(Boolean),
-      requested_quantity: row.requested_quantity ?? row.quantity ?? 0,
-      received_quantity: row.received_quantity ?? row.quantity ?? 0,
-      quantity: row.quantity ?? 0,
-      total: row.total ?? 0,
-    }))
+    const detail = (data?.items ?? []).map(row => {
+      const locationCode = locationCodeFromValue(row.location)
+      return ({
+        uid: crypto.randomUUID(),
+        batch_id: row.lot ?? row.batch_code ?? '',
+        batch_label: row.lot ?? row.batch_code ?? '',
+        batch_code: row.batch_code ?? '',
+        lot: row.lot ?? '',
+        expiration_date: toDateInput(row.expiration_date),
+        storage_condition: row.storage_condition ?? '',
+        manufacturer_id: row.manufacturer_id ? `${row.manufacturer_id}` : '',
+        manufacturer_label: row.manufacturer?.name ?? '',
+        article_id: row.article_id ? `${row.article_id}` : '',
+        article_label: row.article ? `${row.article.code ?? ''} - ${row.article.name ?? ''}`.trim() : '',
+        article_laboratory: row.article?.laboratory?.name ?? '',
+        article_principle: row.article?.activePrinciple?.name ?? row.article?.active_principle?.name ?? '',
+        article_unit: row.article?.unit?.symbol ?? row.article?.unit?.name ?? '',
+        storage_lots: row.article?.storageLots ?? row.article?.storage_lots ?? [],
+        warehouse_id: row.warehouse_id ? `${row.warehouse_id}` : warehouseId,
+        stock: row.stock ?? 0,
+        cost_unit: row.cost_unit ?? 0,
+        location: locationCode,
+        locations: locationCode ? [locationCode] : [],
+        requested_quantity: row.requested_quantity ?? row.quantity ?? 0,
+        received_quantity: row.received_quantity ?? row.quantity ?? 0,
+        quantity: row.quantity ?? 0,
+        total: row.total ?? 0,
+      })
+    })
     const loadedItems = detail.length ? detail : (storageContext ? [] : [emptyItem()])
     setItems(loadedItems)
 
@@ -386,9 +390,7 @@ const EntryNotes = () => {
     formData.append('guide_sequence', storageContext ? '' : (guideSequenceRef.current.value || ''))
     formData.append('guide_ruc', storageContext ? '' : (guideRucRef.current.value || ''))
     formData.append('items', JSON.stringify(items.map(item => {
-      const locations = Array.isArray(item.locations)
-        ? item.locations
-        : (item.location ?? '').toString().split(',').map(value => value.trim()).filter(Boolean)
+      const location = locationCodeFromValue(Array.isArray(item.locations) ? item.locations[0] : item.location)
       const receivedQuantity = storageContext ? item.received_quantity : item.quantity
       const costUnit = Number(item.cost_unit || 0)
       return {
@@ -401,7 +403,7 @@ const EntryNotes = () => {
         warehouse_id: item.warehouse_id || selectedWarehouseId || null,
         stock: item.stock,
         cost_unit: costUnit,
-        location: storageContext ? locations.join(', ') : (item.location ?? '').toString().trim(),
+        location: storageContext ? location : (item.location ?? '').toString().trim(),
         requested_quantity: storageContext ? item.requested_quantity : item.quantity,
         received_quantity: receivedQuantity,
         quantity: receivedQuantity,
@@ -530,9 +532,12 @@ const EntryNotes = () => {
     }
   }
 
-  const storageLocationsForWarehouse = (warehouseId) => {
+  const storageLocationsForWarehouse = (warehouseId, selectedLocation = '') => {
     if (!warehouseId) return []
-    return (storageOptions.locations ?? []).filter(location => `${location.warehouse_id}` === `${warehouseId}`)
+    const selectedCode = locationCodeFromValue(selectedLocation)
+    return (storageOptions.locations ?? [])
+      .filter(location => `${location.warehouse_id}` === `${warehouseId}` && (location.status === true || location.status === 1 || location.status === '1'))
+      .filter(location => location.occupancy_status !== 'Ocupado' || `${location.code}` === selectedCode)
   }
 
   const onStorageArticleChanged = async (uid, e) => {
@@ -617,11 +622,11 @@ const EntryNotes = () => {
   }
 
   const onStorageLocationsChanged = (uid, e) => {
-    const selected = Array.from(e.target.selectedOptions).map(option => option.value)
+    const selected = locationCodeFromValue(e.target.value)
     setItems(prev => prev.map(item => item.uid === uid ? {
       ...item,
-      locations: selected,
-      location: selected.join(', '),
+      locations: selected ? [selected] : [],
+      location: selected,
     } : item))
   }
 
@@ -1353,7 +1358,8 @@ const EntryNotes = () => {
                 <tbody>
                   {items.length === 0 && <tr><td colSpan='12' className='text-center text-muted py-3'>Sin productos</td></tr>}
                   {items.map(item => {
-                    const locations = storageLocationsForWarehouse(item.warehouse_id || selectedWarehouseId)
+                    const selectedLocation = locationCodeFromValue(item.location || item.locations?.[0])
+                    const locations = storageLocationsForWarehouse(item.warehouse_id || selectedWarehouseId, selectedLocation)
                     const lots = item.storage_lots ?? []
                     return (
                       <tr key={item.uid}>
@@ -1384,15 +1390,15 @@ const EntryNotes = () => {
                           <SelectFormGroup
                             col='col-12'
                             noMargin
-                            multiple
-                            value={item.locations ?? []}
+                            value={selectedLocation}
                             disabled={locations.length === 0}
                             onChange={(e) => onStorageLocationsChanged(item.uid, e)}
-                            effectWith={[locations.length, item.locations?.join('|')]}
+                            effectWith={[locations.length, selectedLocation]}
                           >
+                            <option value=''>Seleccione</option>
                             {locations.map(location => (
-                              <option key={`entry-note-location-${item.uid}-${location.id}`} value={`${location.code} | ${location.temperature_range}`}>
-                                {location.code} | {location.temperature_range}
+                              <option key={`entry-note-location-${item.uid}-${location.id}`} value={`${location.code}`}>
+                                {location.code} | {location.temperature_range}{location.occupancy_status === 'Ocupado' ? ' | Ocupado' : ''}
                               </option>
                             ))}
                           </SelectFormGroup>

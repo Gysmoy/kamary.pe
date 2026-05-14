@@ -165,6 +165,17 @@ class EntryNoteController extends BasicController
         $this->itemsPayload = $rawItems;
         unset($body['items']);
 
+        if ($isStorage) {
+            if (!collect($this->itemsPayload)->contains(fn($item) => is_array($item) && !empty($item['article_id']))) {
+                throw new \Exception('Debes agregar al menos una linea en la nota de entrada');
+            }
+            $this->assertStorageLocationsAvailable((object)[
+                'id' => (int)($body['id'] ?? 0),
+                'business_id' => $business->id,
+                'warehouse_id' => $warehouse->id,
+            ], $this->itemsPayload);
+        }
+
         if (!isset($body['id']) || !$body['id']) {
             $body['created_by'] = $userId;
             $body['status'] = true;
@@ -203,6 +214,10 @@ class EntryNoteController extends BasicController
             if (!$jpa->code) {
                 $jpa->code = 'NE' . str_pad((string)$jpa->id, 5, '0', STR_PAD_LEFT);
                 $jpa->save();
+            }
+
+            if ($this->isStorageRequest($request)) {
+                $this->assertStorageLocationsAvailable($jpa, $this->itemsPayload);
             }
 
             EntryNoteItem::where('entry_note_id', $jpa->id)->delete();
@@ -254,7 +269,7 @@ class EntryNoteController extends BasicController
                     'warehouse_id' => $warehouseId,
                     'stock' => $stock,
                     'cost_unit' => $costUnit,
-                    'location' => trim((string)($item['location'] ?? '')) ?: null,
+                    'location' => $this->normalizeStorageLocationCode($item['location'] ?? '') ?: null,
                     'requested_quantity' => $requestedQuantity,
                     'received_quantity' => $receivedQuantity,
                     'quantity' => $quantity,
@@ -378,6 +393,11 @@ class EntryNoteController extends BasicController
             }
 
             $entryNote = $this->model::findOrFail($id);
+            if ($status === 'approved' && $this->isStorageRequest($request)) {
+                $entryNote->load('items');
+                $this->assertStorageLocationsAvailable($entryNote, $entryNote->items);
+            }
+
             $entryNote->entry_status = $status;
             $entryNote->status = $status === 'cancelled' ? false : true;
             $entryNote->updated_by = Auth::id();
@@ -403,6 +423,113 @@ class EntryNoteController extends BasicController
         $path = '/' . trim($request->path(), '/');
         $referer = (string)$request->headers->get('referer', '');
         return str_contains($path, '/storage/entry-notes') || str_contains($referer, '/storage-entry-note');
+    }
+
+    private function assertStorageLocationsAvailable(object $entryNote, iterable $items): void
+    {
+        $business = BusinessScope::findFixedBusiness($entryNote->business_id);
+        if ($business->business_key !== BusinessScope::KAMARY_MEDICALS) {
+            return;
+        }
+
+        $stockService = app(StockService::class);
+        $usedLocations = [];
+
+        foreach ($items as $idx => $item) {
+            $articleId = $this->itemValue($item, 'article_id');
+            if (!$articleId) {
+                continue;
+            }
+
+            $location = $this->normalizeStorageLocationCode($this->itemValue($item, 'location'));
+            $lineNumber = is_numeric($idx) ? ((int)$idx + 1) : 0;
+            $lineLabel = $lineNumber > 0 ? " en la linea {$lineNumber}" : '';
+            if ($location === '') {
+                throw new \Exception("La ubicacion de almacen es obligatoria{$lineLabel}");
+            }
+
+            $warehouseId = (int)($this->itemValue($item, 'warehouse_id') ?: $entryNote->warehouse_id);
+            if ($warehouseId <= 0) {
+                throw new \Exception("El almacen es obligatorio{$lineLabel}");
+            }
+
+            $locationRow = DB::table('storage_locations as location')
+                ->where('location.warehouse_id', $warehouseId)
+                ->where('location.status', 1)
+                ->whereRaw("LOWER(location.code) = ?", [mb_strtolower($location)])
+                ->first(['location.id', 'location.code']);
+
+            if (!$locationRow) {
+                $warehouseName = optional(Warehouse::find($warehouseId))->name ?: 'seleccionado';
+                throw new \Exception("La ubicacion {$location} no esta registrada o activa para el almacen {$warehouseName}");
+            }
+
+            $locationKey = $warehouseId . '|' . mb_strtolower((string)$locationRow->code);
+            if (isset($usedLocations[$locationKey])) {
+                throw new \Exception("La ubicacion {$locationRow->code} ya fue usada en otra linea de esta nota. Usa una ubicacion libre por producto");
+            }
+            $usedLocations[$locationKey] = true;
+
+            $occupancyRows = $stockService->storageLocationOccupancyRows(
+                $warehouseId,
+                (string)$locationRow->code,
+                (int)$entryNote->id,
+                BusinessScope::KAMARY_MEDICALS
+            );
+
+            if (count($occupancyRows) > 0) {
+                throw new \Exception($this->occupiedLocationMessage((string)$locationRow->code, $occupancyRows));
+            }
+        }
+    }
+
+    private function occupiedLocationMessage(string $location, array $rows): string
+    {
+        $warehouseName = (string)($rows[0]['warehouse_name'] ?? 'seleccionado');
+        $clients = collect($rows)
+            ->pluck('client_name')
+            ->filter()
+            ->unique()
+            ->values()
+            ->implode(', ');
+        $clients = $clients !== '' ? $clients : 'sin cliente registrado';
+
+        $products = collect($rows)
+            ->map(function ($row) {
+                $name = trim((string)($row['article_name'] ?? 'Producto'));
+                $lot = trim((string)($row['lot'] ?? ''));
+                $stock = number_format((float)($row['stock'] ?? 0), 3, '.', '');
+                $label = $lot !== '' ? "{$name} lote {$lot}" : $name;
+                return "{$label} ({$stock})";
+            })
+            ->unique()
+            ->values();
+
+        $visibleProducts = $products->take(3)->implode('; ');
+        if ($products->count() > 3) {
+            $visibleProducts .= ' y ' . ($products->count() - 3) . ' mas';
+        }
+
+        $from = collect($rows)->pluck('occupied_from')->filter()->min() ?: 'sin fecha';
+        $until = collect($rows)->pluck('occupied_until')->filter()->max() ?: 'sin vencimiento';
+
+        return "La ubicacion {$location} del almacen {$warehouseName} ya esta ocupada por {$visibleProducts}. Cliente: {$clients}. Ocupacion: {$from} a {$until}";
+    }
+
+    private function itemValue($item, string $key, $default = null)
+    {
+        if (is_array($item)) {
+            return $item[$key] ?? $default;
+        }
+        if (is_object($item)) {
+            return $item->{$key} ?? $default;
+        }
+        return $default;
+    }
+
+    private function normalizeStorageLocationCode($value): string
+    {
+        return trim(explode('|', explode(',', (string)($value ?? ''))[0] ?? '')[0] ?? '');
     }
 
     private function toNullableDecimal($value): ?float

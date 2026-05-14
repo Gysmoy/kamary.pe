@@ -458,6 +458,11 @@ const StorageKardex = () => {
     container.html(`<span class="badge ${active ? 'badge-soft-success' : 'badge-soft-secondary'}">${active ? 'Activo' : 'Inactivo'}</span>`)
   }
 
+  const occupancyBadge = (container, status) => {
+    const occupied = status === 'Ocupado'
+    container.html(`<span class="badge ${occupied ? 'badge-soft-warning' : 'badge-soft-success'}">${occupied ? 'Ocupado' : 'Libre'}</span>`)
+  }
+
   const kardexColumns = [
     {
       caption: 'Acciones',
@@ -541,9 +546,51 @@ const StorageKardex = () => {
       minWidth: 95,
       cellTemplate: (container, { data }) => statusBadge(container, data.status)
     },
+    {
+      dataField: 'occupancy_status',
+      caption: 'Ocupacion',
+      minWidth: 105,
+      cellTemplate: (container, { data }) => occupancyBadge(container, data.occupancy_status)
+    },
     { dataField: 'warehouse_name', caption: 'Almacen', minWidth: 160 },
     { dataField: 'code', caption: 'Ubicacion', minWidth: 120 },
     { dataField: 'temperature_range', caption: 'Temperatura', minWidth: 130 },
+    {
+      dataField: 'occupied_clients',
+      caption: 'Cliente ocupante',
+      minWidth: 230,
+      cellTemplate: (container, { data }) => {
+        const text = data.occupied_clients || '-'
+        container.attr('title', text).text(text)
+      }
+    },
+    {
+      dataField: 'occupied_products',
+      caption: 'Productos ocupando',
+      minWidth: 320,
+      cellTemplate: (container, { data }) => {
+        const text = data.occupied_products || '-'
+        container.attr('title', text).text(text)
+      }
+    },
+    {
+      dataField: 'occupied_stock',
+      caption: 'Stock ocupado',
+      minWidth: 125,
+      cellTemplate: (container, { data }) => container.text(formatQty(data.occupied_stock))
+    },
+    {
+      dataField: 'occupied_from',
+      caption: 'Ocupado desde',
+      minWidth: 130,
+      cellTemplate: (container, { data }) => container.text(formatDate(data.occupied_from))
+    },
+    {
+      dataField: 'occupied_until',
+      caption: 'Ocupado hasta',
+      minWidth: 130,
+      cellTemplate: (container, { data }) => container.text(formatDate(data.occupied_until))
+    },
     {
       dataField: 'created_at',
       caption: 'Fecha registro',

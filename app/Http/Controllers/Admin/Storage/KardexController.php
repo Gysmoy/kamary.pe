@@ -61,7 +61,20 @@ class KardexController extends BasicController
             $locations = $this->locationsQuery()
                 ->orderBy('warehouse_name')
                 ->orderBy('code')
-                ->get(['id', 'status', 'warehouse_id', 'warehouse_name', 'code', 'temperature_range']);
+                ->get([
+                    'id',
+                    'status',
+                    'warehouse_id',
+                    'warehouse_name',
+                    'code',
+                    'temperature_range',
+                    'occupancy_status',
+                    'occupied_clients',
+                    'occupied_products',
+                    'occupied_stock',
+                    'occupied_from',
+                    'occupied_until',
+                ]);
 
             $clients = Client::query()
                 ->whereNotNull('status')
@@ -286,13 +299,32 @@ class KardexController extends BasicController
         return response()->streamDownload(function () use ($rows) {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, ['ESTADO', 'ALMACEN', 'UBICACION', 'TEMPERATURA', 'FECHA_REGISTRO', 'USUARIO_REGISTRO']);
+            fputcsv($output, [
+                'ESTADO',
+                'OCUPACION',
+                'ALMACEN',
+                'UBICACION',
+                'TEMPERATURA',
+                'CLIENTE_OCUPANTE',
+                'PRODUCTOS_OCUPANTES',
+                'STOCK_OCUPADO',
+                'OCUPADO_DESDE',
+                'OCUPADO_HASTA',
+                'FECHA_REGISTRO',
+                'USUARIO_REGISTRO',
+            ]);
             foreach ($rows as $row) {
                 fputcsv($output, [
                     $row->status ? 'Activo' : 'Inactivo',
+                    $row->occupancy_status,
                     $row->warehouse_name,
                     $row->code,
                     $row->temperature_range,
+                    $row->occupied_clients,
+                    $row->occupied_products,
+                    number_format((float) $row->occupied_stock, 3, '.', ''),
+                    $row->occupied_from,
+                    $row->occupied_until,
                     $row->created_at,
                     $row->creator_label,
                 ]);
@@ -357,6 +389,10 @@ class KardexController extends BasicController
             ->leftJoin('business_branches as branch', 'branch.id', '=', 'warehouse.business_branch_id')
             ->leftJoin('businesses as business', 'business.id', '=', 'branch.business_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'location.created_by')
+            ->leftJoinSub($this->locationOccupancySummaryQuery(), 'occupancy', function ($join) {
+                $join->on('occupancy.warehouse_id', '=', 'location.warehouse_id')
+                    ->whereRaw('occupancy.location = location.code');
+            })
             ->whereNotNull('location.status')
             ->whereIn('business.business_key', $this->listBusinessKeys())
             ->whereNotNull('business.status')
@@ -367,11 +403,130 @@ class KardexController extends BasicController
                 warehouse.name as warehouse_name,
                 location.code,
                 location.temperature_range,
+                CASE WHEN COALESCE(occupancy.occupied_stock, 0) > 0 THEN 'Ocupado' ELSE 'Libre' END as occupancy_status,
+                COALESCE(occupancy.occupied_clients, '') as occupied_clients,
+                COALESCE(occupancy.occupied_products, '') as occupied_products,
+                COALESCE(occupancy.occupied_stock, 0) as occupied_stock,
+                occupancy.occupied_from,
+                occupancy.occupied_until,
                 location.created_at,
                 COALESCE(NULLIF(creator.fullname, ''), NULLIF(TRIM(CONCAT(COALESCE(creator.name, ''), ' ', COALESCE(creator.lastname, ''))), ''), creator.username, '') as creator_label
             ");
 
         return DB::query()->fromSub($base, 'rows')->select('rows.*');
+    }
+
+    private function locationOccupancySummaryQuery()
+    {
+        $entryMovements = DB::table('entry_note_items as entry_item')
+            ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
+            ->join('businesses as entry_business', 'entry_business.id', '=', 'entry_note.business_id')
+            ->leftJoin('clients as entry_client', 'entry_client.id', '=', 'entry_note.client_id')
+            ->where('entry_note.status', 1)
+            ->where('entry_note.entry_status', 'approved')
+            ->where('entry_item.status', 1)
+            ->where('entry_business.business_key', BusinessScope::KAMARY_MEDICALS)
+            ->selectRaw("
+                entry_item.article_id as article_id,
+                COALESCE(entry_item.warehouse_id, entry_note.warehouse_id) as warehouse_id,
+                COALESCE(NULLIF(entry_item.lot, ''), NULLIF(entry_item.batch_code, ''), '') as lot,
+                entry_item.expiration_date as expiration_date,
+                COALESCE(NULLIF(entry_item.location, ''), '') as location,
+                entry_note.client_id as client_id,
+                COALESCE(entry_client.full_name, '') as client_name,
+                COALESCE(entry_note.entry_date, DATE(entry_note.created_at)) as occupied_from,
+                entry_item.quantity as quantity
+            ");
+
+        $receiptMovements = DB::table('purchase_receipt_items as receipt_item')
+            ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
+            ->join('businesses as receipt_business', 'receipt_business.id', '=', 'receipt.business_id')
+            ->where('receipt.status', 1)
+            ->where('receipt.receipt_status', 'confirmed')
+            ->where('receipt_item.status', 1)
+            ->where('receipt_business.business_key', BusinessScope::KAMARY_MEDICALS)
+            ->selectRaw("
+                receipt_item.article_id as article_id,
+                receipt_item.warehouse_id as warehouse_id,
+                COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') as lot,
+                receipt_item.expiration_date as expiration_date,
+                COALESCE(NULLIF(receipt_item.location, ''), '') as location,
+                NULL as client_id,
+                '' as client_name,
+                COALESCE(DATE(receipt.confirmed_at), DATE(receipt.created_at)) as occupied_from,
+                receipt_item.quantity as quantity
+            ");
+
+        $incomingTotals = DB::query()
+            ->fromSub($entryMovements->unionAll($receiptMovements), 'incoming')
+            ->selectRaw("
+                incoming.article_id,
+                incoming.warehouse_id,
+                incoming.lot,
+                incoming.expiration_date,
+                incoming.location,
+                MIN(incoming.client_id) as client_id,
+                GROUP_CONCAT(DISTINCT NULLIF(incoming.client_name, '') SEPARATOR ', ') as client_name,
+                MIN(incoming.occupied_from) as occupied_from,
+                COALESCE(SUM(incoming.quantity), 0) as qty_in
+            ")
+            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location');
+
+        $outgoingTotals = DB::table('exit_note_items as exit_item')
+            ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
+            ->join('businesses as exit_business', 'exit_business.id', '=', 'exit_note.business_id')
+            ->where('exit_note.status', 1)
+            ->where('exit_item.status', 1)
+            ->where('exit_business.business_key', BusinessScope::KAMARY_MEDICALS)
+            ->selectRaw("
+                exit_item.article_id,
+                COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) as warehouse_id,
+                COALESCE(NULLIF(exit_item.batch_code, ''), '') as lot,
+                exit_item.expiration_date as expiration_date,
+                COALESCE(NULLIF(exit_item.location, ''), '') as location,
+                COALESCE(SUM(exit_item.quantity), 0) as qty_out
+            ")
+            ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location');
+
+        $currentRows = DB::query()
+            ->fromSub($incomingTotals, 'stock')
+            ->join('articles as article', 'article.id', '=', 'stock.article_id')
+            ->leftJoinSub($outgoingTotals, 'outgoing', function ($join) {
+                $join->on('outgoing.article_id', '=', 'stock.article_id')
+                    ->on('outgoing.warehouse_id', '=', 'stock.warehouse_id')
+                    ->whereRaw("COALESCE(outgoing.lot, '') = COALESCE(stock.lot, '')")
+                    ->whereRaw("COALESCE(outgoing.location, '') = COALESCE(stock.location, '')")
+                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')");
+            })
+            ->whereRaw('(COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0)) > 0')
+            ->selectRaw("
+                stock.warehouse_id,
+                COALESCE(stock.location, '') as location,
+                COALESCE(stock.client_name, '') as client_name,
+                CONCAT(
+                    COALESCE(article.name, ''),
+                    CASE WHEN COALESCE(stock.lot, '') <> '' THEN CONCAT(' lote ', stock.lot) ELSE '' END,
+                    ' (',
+                    ROUND(COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0), 3),
+                    ')'
+                ) as product_label,
+                stock.occupied_from,
+                stock.expiration_date as occupied_until,
+                COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0) as current_stock
+            ");
+
+        return DB::query()
+            ->fromSub($currentRows, 'current')
+            ->selectRaw("
+                current.warehouse_id,
+                current.location,
+                SUM(current.current_stock) as occupied_stock,
+                MIN(current.occupied_from) as occupied_from,
+                MAX(current.occupied_until) as occupied_until,
+                GROUP_CONCAT(DISTINCT NULLIF(current.client_name, '') SEPARATOR ', ') as occupied_clients,
+                GROUP_CONCAT(DISTINCT current.product_label SEPARATOR '; ') as occupied_products
+            ")
+            ->groupBy('current.warehouse_id', 'current.location');
     }
 
     private function kardexQuery(Request $request)
