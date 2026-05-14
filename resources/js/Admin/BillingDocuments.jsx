@@ -185,6 +185,8 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     return ['accepted', 'observed', 'cancelled'].includes(row.local_status) || !!row.external_id
   }
 
+  const hasPreparedVoucher = (row) => !!(`${row?.series ?? ''}`.trim() && `${row?.sequence ?? ''}`.trim())
+
   const showBlockedAction = async (title, text) => {
     await Swal.fire({
       icon: 'warning',
@@ -378,6 +380,101 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     window.open(billingDocumentsRest.downloadUrl(row.id, type), '_blank', 'noopener')
   }
 
+  const onPrintPreparedVoucher = async (row) => {
+    if (canDownloadDocument(row)) {
+      onDownload(row, 'pdf')
+      return
+    }
+
+    if (!hasPreparedVoucher(row)) {
+      await showBlockedAction('Comprobante no preparado', 'Primero debes facturar la prefactura para generar serie y numero.')
+      return
+    }
+
+    const popup = window.open('', '_blank')
+    if (!popup) {
+      await showBlockedAction('Impresion bloqueada', 'El navegador bloqueo la ventana de impresion.')
+      return
+    }
+
+    const items = row?.items ?? []
+    const itemsHtml = items.length
+      ? items.map(item => `
+        <tr>
+          <td>${escapeHtml(item.description)}</td>
+          <td class="right">${Number(item.quantity ?? 0).toFixed(2)}</td>
+          <td class="right">${Number(item.unit_price ?? 0).toFixed(2)}</td>
+          <td class="right">${Number(item.total ?? 0).toFixed(2)}</td>
+        </tr>
+      `).join('')
+      : '<tr><td colspan="4" class="muted">Sin detalle de items</td></tr>'
+
+    popup.document.write(`<!doctype html>
+      <html>
+        <head>
+          <title>${escapeHtml(row.code)} - ${escapeHtml(row.series)}-${escapeHtml(row.sequence)}</title>
+          <style>
+            body { font-family: Arial, sans-serif; color: #222; margin: 28px; font-size: 12px; }
+            h1 { font-size: 20px; margin: 0 0 4px; }
+            h2 { font-size: 15px; margin: 20px 0 8px; }
+            .muted { color: #666; }
+            .header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 1px solid #ddd; padding-bottom: 14px; }
+            .number { text-align: right; font-size: 16px; font-weight: 700; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-top: 18px; }
+            .label { color: #666; font-size: 11px; text-transform: uppercase; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
+            th { background: #f5f5f5; text-align: left; }
+            .right { text-align: right; }
+            .totals { width: 260px; margin-left: auto; margin-top: 14px; }
+            @media print { button { display: none; } body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <button onclick="window.print()">Imprimir</button>
+          <div class="header">
+            <div>
+              <h1>${escapeHtml(row?.business?.name ?? 'Empresa')}</h1>
+              <div class="muted">${escapeHtml(row?.branch?.address ?? '')}</div>
+              <div class="muted">${escapeHtml(row?.business?.tax_number ?? '')}</div>
+            </div>
+            <div class="number">
+              ${escapeHtml(row.document_type ?? 'Comprobante')}<br>
+              ${escapeHtml(row.series)}-${escapeHtml(row.sequence)}
+            </div>
+          </div>
+          <div class="grid">
+            <div><div class="label">Prefactura</div>${escapeHtml(row.code)}</div>
+            <div><div class="label">Fecha</div>${escapeHtml(formatDate(row.issue_date))}</div>
+            <div><div class="label">Cliente</div>${escapeHtml(rowClientName(row))}</div>
+            <div><div class="label">Moneda</div>${escapeHtml(currencyLabel(row.currency))}</div>
+            <div><div class="label">Orden de servicio</div>${escapeHtml(rowSourceCode(row))}</div>
+            <div><div class="label">Condicion</div>${escapeHtml(row.payment_condition ?? '-')}</div>
+          </div>
+          <h2>Detalle</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Descripcion</th>
+                <th class="right">Cantidad</th>
+                <th class="right">P. Unitario</th>
+                <th class="right">Total</th>
+              </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+          <table class="totals">
+            <tr><th>Subtotal</th><td class="right">${Number(row.subtotal ?? 0).toFixed(2)}</td></tr>
+            <tr><th>IGV</th><td class="right">${Number(row.tax_amount ?? 0).toFixed(2)}</td></tr>
+            <tr><th>Total</th><td class="right">${Number(row.total ?? 0).toFixed(2)}</td></tr>
+          </table>
+        </body>
+      </html>`)
+    popup.document.close()
+    popup.focus()
+    popup.print()
+  }
+
   const refreshGrid = () => $(gridRef.current).dxDataGrid('instance')?.refresh()
   const updateStorageFilter = (field, value) => setStorageFilters(prev => ({ ...prev, [field]: value }))
   const applyStorageFilters = (e) => {
@@ -511,8 +608,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   }
   const storageStatusBadge = (row) => {
     if (row?.local_status === 'pending') {
-      const ready = row?.fiscal_readiness?.can_issue !== false
-      return ready
+      return hasPreparedVoucher(row)
         ? { label: 'En Preparacion', className: 'badge bg-info text-dark' }
         : { label: 'En espera', className: 'badge bg-soft-warning text-warning border border-warning' }
     }
@@ -528,16 +624,16 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     allowExporting: false,
     allowSorting: false,
     cellTemplate: (container, { data }) => {
-      const canIssue = data?.fiscal_readiness?.can_issue !== false
       const canDownload = canDownloadDocument(data)
+      const isPrepared = hasPreparedVoucher(data)
       container.css({ textOverflow: 'unset', overflow: 'visible' })
 
       if (activeStorageTab === 'prefactures') {
         container.append(DxButton({
-          className: `btn btn-xs ${canIssue ? 'btn-outline-success' : 'btn-outline-warning'}`,
-          title: canIssue ? 'Facturar prefactura' : 'Revisar validacion fiscal',
-          icon: canIssue ? 'mdi mdi-file-send-outline' : 'mdi mdi-alert-outline',
-          onClick: () => canIssue ? onIssue(data) : openReadinessModal(data, `Validacion fiscal - ${data.code}`)
+          className: `btn btn-xs ${isPrepared ? 'btn-outline-success' : 'btn-outline-primary'}`,
+          title: isPrepared ? 'Imprimir comprobante' : 'Facturar',
+          icon: isPrepared ? 'mdi mdi-file-document-outline' : 'mdi mdi-file-send-outline',
+          onClick: () => isPrepared ? onPrintPreparedVoucher(data) : onIssue(data)
         }))
         return
       }
