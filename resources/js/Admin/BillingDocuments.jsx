@@ -523,30 +523,31 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
 
   const storageActionColumn = {
     caption: 'Acciones',
-    width: activeStorageTab === 'prefactures' ? 130 : 210,
+    width: 90,
     allowFiltering: false,
     allowExporting: false,
     allowSorting: false,
     cellTemplate: (container, { data }) => {
       const canIssue = data?.fiscal_readiness?.can_issue !== false
       const canDownload = canDownloadDocument(data)
-      container.css('text-overflow', 'unset')
+      container.css({ textOverflow: 'unset', overflow: 'visible' })
 
       if (activeStorageTab === 'prefactures') {
-        container.append(DxButton({ className: 'btn btn-xs btn-outline-success', title: canIssue ? 'Facturar' : 'Revisar validacion fiscal', icon: canIssue ? 'mdi mdi-file-send-outline' : 'mdi mdi-alert-outline', onClick: () => canIssue ? onIssue(data) : openReadinessModal(data, `Validacion fiscal - ${data.code}`) }))
-        container.append(DxButton({ className: 'btn btn-xs btn-outline-primary ms-1', title: 'Editar prefactura', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
-        container.append(DxButton({ className: 'btn btn-xs btn-outline-info ms-1', title: 'Ver payload', icon: 'mdi mdi-code-json', onClick: () => onOpenPayload(data) }))
+        container.append(DxButton({
+          className: `btn btn-xs ${canIssue ? 'btn-outline-success' : 'btn-outline-warning'}`,
+          title: canIssue ? 'Facturar prefactura' : 'Revisar validacion fiscal',
+          icon: canIssue ? 'mdi mdi-file-send-outline' : 'mdi mdi-alert-outline',
+          onClick: () => canIssue ? onIssue(data) : openReadinessModal(data, `Validacion fiscal - ${data.code}`)
+        }))
         return
       }
 
-      container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-outline-danger' : 'btn-outline-secondary'}`, title: 'PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => canDownload ? onDownload(data, 'pdf') : showBlockedAction('Descarga no disponible', 'El comprobante todavia no tiene PDF disponible.') }))
-      container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-outline-primary' : 'btn-outline-secondary'} ms-1`, title: 'XML', icon: 'mdi mdi-code-tags', onClick: () => canDownload ? onDownload(data, 'xml') : showBlockedAction('Descarga no disponible', 'El comprobante todavia no tiene XML disponible.') }))
-      container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-outline-success' : 'btn-outline-secondary'} ms-1`, title: 'CDR', icon: 'mdi mdi-shield-check', onClick: () => canDownload ? onDownload(data, 'cdr') : showBlockedAction('Descarga no disponible', 'El comprobante todavia no tiene CDR disponible.') }))
-      container.append(DxButton({ className: 'btn btn-xs btn-outline-info ms-1', title: 'Sincronizar estado', icon: 'mdi mdi-sync', onClick: () => onSyncStatus(data) }))
-      if (activeStorageTab === 'issued') {
-        container.append(DxButton({ className: 'btn btn-xs btn-outline-warning ms-1', title: 'Anular comprobante', icon: 'mdi mdi-close-circle-outline', onClick: () => onOpenCancel(data) }))
-        container.append(DxButton({ className: 'btn btn-xs btn-outline-secondary ms-1', title: 'Nota de credito', icon: 'mdi mdi-file-replace-outline', onClick: () => onOpenCreditNote(data) }))
-      }
+      container.append(DxButton({
+        className: `btn btn-xs ${canDownload ? 'btn-outline-danger' : 'btn-outline-info'}`,
+        title: canDownload ? 'Descargar PDF' : 'Ver validacion fiscal',
+        icon: canDownload ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-document-outline',
+        onClick: () => canDownload ? onDownload(data, 'pdf') : openReadinessModal(data, `Validacion fiscal - ${data.code}`)
+      }))
     }
   }
 
