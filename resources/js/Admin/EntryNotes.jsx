@@ -784,34 +784,26 @@ const EntryNotes = () => {
           flexWrap: 'nowrap'
         })
         container.append(actions)
-        const appendAction = ({ disabled = false, ...options }) => {
-          const button = DxButton(options)
-          if (disabled) button.dxButton('instance').option('disabled', true)
-          actions.append(button)
-        }
+        const appendAction = (options) => actions.append(DxButton(options))
         const status = data?.entry_status ?? 'pending'
         if (status !== 'cancelled') {
-          const canApprove = status !== 'approved'
           appendAction({
             className: 'btn btn-xs btn-soft-success',
-            title: canApprove ? 'Aprobar nota de entrada' : 'Nota de entrada aprobada',
+            title: 'Aprobar nota de entrada',
             icon: 'mdi mdi-check',
-            disabled: !canApprove,
-            onClick: () => canApprove && onEntryStatusChange(data, 'approved')
-          })
-        }
-        if (status !== 'cancelled') {
-          appendAction({
-            className: 'btn btn-xs btn-soft-primary',
-            title: 'Editar nota de entrada',
-            icon: 'mdi mdi-pencil',
-            onClick: () => onModalOpen(data)
+            onClick: () => onEntryStatusChange(data, 'approved')
           })
           appendAction({
             className: 'btn btn-xs btn-soft-danger',
             title: 'Anular nota de entrada',
             icon: 'mdi mdi-close',
             onClick: () => onEntryStatusChange(data, 'cancelled')
+          })
+          appendAction({
+            className: 'btn btn-xs btn-soft-primary',
+            title: 'Editar nota de entrada',
+            icon: 'mdi mdi-pencil',
+            onClick: () => onModalOpen(data)
           })
         }
         appendAction({
