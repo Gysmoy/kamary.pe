@@ -223,15 +223,15 @@ const EntryNotes = () => {
   const onModalOpen = async (data = null) => {
     setIsEditing(!!data?.id)
 
-    idRef.current.value = data?.id ?? ''
-    documentTypeRef.current.value = data?.document_type ?? (storageContext ? 'Guia Remision' : 'Boleta')
-    documentSeriesRef.current.value = data?.document_series ?? ''
-    documentSequenceRef.current.value = data?.document_sequence ?? ''
-    currencyRef.current.value = data?.currency ?? 'PEN'
-    observationsRef.current.value = data?.observations ?? ''
-    guideSeriesRef.current.value = data?.guide_series ?? ''
-    guideSequenceRef.current.value = data?.guide_sequence ?? ''
-    guideRucRef.current.value = data?.guide_ruc ?? ''
+    if (idRef.current) idRef.current.value = data?.id ?? ''
+    if (documentTypeRef.current) documentTypeRef.current.value = data?.document_type ?? (storageContext ? 'Guia Remision' : 'Boleta')
+    if (documentSeriesRef.current) documentSeriesRef.current.value = data?.document_series ?? ''
+    if (documentSequenceRef.current) documentSequenceRef.current.value = data?.document_sequence ?? ''
+    if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
+    if (observationsRef.current) observationsRef.current.value = data?.observations ?? ''
+    if (guideSeriesRef.current) guideSeriesRef.current.value = data?.guide_series ?? ''
+    if (guideSequenceRef.current) guideSequenceRef.current.value = data?.guide_sequence ?? ''
+    if (guideRucRef.current) guideRucRef.current.value = data?.guide_ruc ?? ''
     if (documentFileRef.current) documentFileRef.current.value = ''
     if (guideFileRef.current) guideFileRef.current.value = ''
 
