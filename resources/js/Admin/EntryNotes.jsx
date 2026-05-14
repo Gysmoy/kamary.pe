@@ -739,6 +739,17 @@ const EntryNotes = () => {
     await navigator.clipboard.writeText(text)
   }
 
+  const downloadStorageBlob = (blob, filename) => {
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
   const downloadStorageCsv = () => {
     const rows = storageExportRows()
     const csv = [
@@ -746,11 +757,7 @@ const EntryNotes = () => {
       ...rows.map(row => storageExportColumns.map(([, getter]) => `"${`${getter(row)}`.replace(/"/g, '""')}"`).join(',')),
     ].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = 'notas-entrada.csv'
-    link.click()
-    URL.revokeObjectURL(link.href)
+    downloadStorageBlob(blob, 'notas-entrada.csv')
   }
 
   const downloadStorageExcel = () => {
@@ -762,7 +769,11 @@ const EntryNotes = () => {
     const worksheet = XLSX.utils.aoa_to_sheet(matrix)
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Notas de entrada')
-    XLSX.writeFile(workbook, 'notas-entrada.xlsx')
+    const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    downloadStorageBlob(blob, 'notas-entrada.xlsx')
   }
 
   const downloadStoragePdf = () => {
