@@ -46,7 +46,30 @@ const formatAuditUser = (user) => {
 
 const clientLabel = (client) => {
   if (!client) return ''
-  return [client.document_number, client.full_name].filter(Boolean).join(' - ')
+  return [client.document_number, client.full_name || client.business_name || client.display_name].filter(Boolean).join(' - ')
+}
+
+const clientRealId = (client) => {
+  if (!client) return ''
+  if (client.entity_id) return `${client.entity_id}`
+  const rawId = `${client.id ?? ''}`.trim()
+  const match = rawId.match(/^client-(\d+)$/i)
+  return match ? match[1] : rawId
+}
+
+const clientDocumentNumber = (client) => `${client?.document_number ?? ''}`.replace(/\D+/g, '')
+
+const extractDocumentNumber = (value) => {
+  const match = `${value ?? ''}`.match(/\b\d{8,11}\b/)
+  return match ? match[0] : ''
+}
+
+const normalizeClientSelectionValue = (value) => {
+  const text = `${value ?? ''}`.trim()
+  const match = text.match(/^client-(\d+)$/i)
+  if (match) return match[1]
+  if (/^\d+$/.test(text) && text.length < 8) return text
+  return ''
 }
 
 const warehouseBusinessId = (warehouse) => warehouse?.branch?.business_id || warehouse?.branch?.business?.id || ''
@@ -297,12 +320,23 @@ const ExitNotes = () => {
 
   const onModalSubmit = async (e) => {
     e.preventDefault()
-    const currentClientId = storageContext
+    const rawClientValue = storageContext
       ? `${$(storageClientRef.current).val() || storageClientRef.current?.value || selectedClientId || ''}`
       : ''
-    const selectedClient = storageClients.find(client => `${client.id}` === currentClientId)
+    const selectedOptionText = storageContext ? storageClientRef.current?.selectedOptions?.[0]?.textContent?.trim() || '' : ''
+    const selectedDocumentNumber = extractDocumentNumber(selectedOptionText || rawClientValue)
+    const selectedClient = storageContext
+      ? storageClients.find(client => (
+        clientRealId(client) === rawClientValue ||
+        `${client.id ?? ''}` === rawClientValue ||
+        (selectedDocumentNumber && clientDocumentNumber(client) === selectedDocumentNumber)
+      ))
+      : null
+    const currentClientId = storageContext
+      ? (selectedClient ? clientRealId(selectedClient) : normalizeClientSelectionValue(rawClientValue))
+      : ''
     const selectedClientText = storageContext
-      ? (selectedClient ? clientLabel(selectedClient) : storageClientRef.current?.selectedOptions?.[0]?.textContent?.trim() || '')
+      ? (selectedClient ? clientLabel(selectedClient) : selectedOptionText)
       : ''
     const request = {
       id: idRef.current.value || undefined,
@@ -310,6 +344,7 @@ const ExitNotes = () => {
       business_branch_id: selectedBranchId || null,
       warehouse_id: selectedWarehouseId || null,
       client_id: storageContext ? currentClientId || null : undefined,
+      client_document_number: storageContext ? (selectedClient ? clientDocumentNumber(selectedClient) : selectedDocumentNumber) || undefined : undefined,
       client_name: storageContext ? selectedClientText : (clientNameRef.current.value ?? '').trim(),
       exit_date: storageContext ? exitDateRef.current?.value || null : undefined,
       document_type: storageContext ? (documentTypeRef.current?.value ?? '').trim() : undefined,
@@ -808,7 +843,7 @@ const ExitNotes = () => {
               <label className='form-label'>Cliente</label>
               <select className='form-select' value={storageFilterClientId} onChange={(e) => setStorageFilterClientId(e.target.value)}>
                 <option value=''>Seleccione</option>
-                {storageClients.map(client => <option key={`exit-filter-client-${client.id}`} value={client.id}>{clientLabel(client)}</option>)}
+                {storageClients.map(client => <option key={`exit-filter-client-${client.id}`} value={clientRealId(client)}>{clientLabel(client)}</option>)}
               </select>
             </div>
             <div className='col-md-3'>
@@ -880,7 +915,7 @@ const ExitNotes = () => {
                 <label>Cliente</label>
                 <select ref={storageClientRef} className='form-select' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required>
                   <option value=''>Seleccione Cliente</option>
-                  {storageClients.map(client => <option key={`exit-client-${client.id}`} value={client.id}>{clientLabel(client)}</option>)}
+                  {storageClients.map(client => <option key={`exit-client-${client.id}`} value={clientRealId(client)} data-document-number={clientDocumentNumber(client)}>{clientLabel(client)}</option>)}
                 </select>
               </div>
               <div className='col-md-3'>

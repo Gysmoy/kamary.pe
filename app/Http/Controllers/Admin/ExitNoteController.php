@@ -64,7 +64,19 @@ class ExitNoteController extends BasicController
         $branchId = $body['business_branch_id'] ?? null;
         $warehouseId = $body['warehouse_id'] ?? null;
         $isStorage = $this->isStorageRequest($request);
-        $clientId = $this->toNullableInt($body['client_id'] ?? null);
+        $clientId = $this->normalizeClientId($body['client_id'] ?? null);
+        $client = null;
+        if ($clientId) {
+            $client = Client::find($clientId);
+            if (!$client && strlen((string)$clientId) >= 8) {
+                $client = Client::where('document_number', (string)$clientId)->first();
+                $clientId = $client?->id;
+            }
+        }
+        if (!$client) {
+            $client = $this->findClientFromPayload($body);
+            $clientId = $client?->id;
+        }
 
         if (!$businessId) throw new \Exception('La empresa es obligatoria');
         if (!$warehouseId) throw new \Exception('El almacen es obligatorio');
@@ -79,10 +91,10 @@ class ExitNoteController extends BasicController
 
         $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
         $warehouse = Warehouse::findOrFail($warehouseId);
-        $client = $clientId ? Client::findOrFail($clientId) : null;
 
         $body['business_branch_id'] = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
         $body['client_id'] = $clientId;
+        unset($body['client_document_number']);
 
         $rawItems = $body['items'] ?? [];
         if (is_string($rawItems)) {
@@ -324,11 +336,54 @@ class ExitNoteController extends BasicController
         return (float)$text;
     }
 
+    private function normalizeClientId($value): ?int
+    {
+        if ($value === null) return null;
+
+        $text = trim((string)$value);
+        if ($text === '') return null;
+        if (preg_match('/^client-(\d+)$/i', $text, $matches)) return (int)$matches[1];
+        if (ctype_digit($text)) return (int)$text;
+
+        return null;
+    }
+
+    private function findClientFromPayload(array $body): ?Client
+    {
+        $documentNumber = preg_replace('/\D+/', '', (string)($body['client_document_number'] ?? ''));
+        $clientName = trim((string)($body['client_name'] ?? ''));
+
+        if ($documentNumber === '') {
+            $rawClientId = (string)($body['client_id'] ?? '');
+            if (preg_match('/\b\d{8,11}\b/', $rawClientId, $matches)) {
+                $documentNumber = $matches[0];
+            }
+        }
+
+        if ($documentNumber === '' && $clientName !== '' && preg_match('/\b\d{8,11}\b/', $clientName, $matches)) {
+            $documentNumber = $matches[0];
+        }
+
+        if ($documentNumber !== '') {
+            $client = Client::where('document_number', $documentNumber)->first();
+            if ($client) return $client;
+        }
+
+        if ($clientName === '') return null;
+
+        $cleanName = trim(preg_replace('/^\s*\d{8,11}\s*[-|]\s*/', '', $clientName));
+        return Client::query()
+            ->where('full_name', $clientName)
+            ->orWhere('full_name', $cleanName)
+            ->first();
+    }
+
     private function toNullableInt($value): ?int
     {
         if ($value === null) return null;
         $text = trim((string)$value);
         if ($text === '') return null;
+        if (!is_numeric($text)) return null;
         return (int)$text;
     }
 
