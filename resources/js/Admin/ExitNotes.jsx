@@ -739,22 +739,26 @@ const ExitNotes = () => {
   const storageColumns = [
     {
       caption: 'Acciones',
-      width: 160,
+      width: 210,
+      minWidth: 210,
       fixed: true,
       fixedPosition: 'left',
       cellTemplate: (container, { data }) => {
-        container.css('text-overflow', 'unset')
+        container.css({ overflow: 'visible', 'text-overflow': 'unset' })
+        const actions = $('<div/>').addClass('storage-exit-actions')
         const status = data?.exit_status ?? 'pending'
         if (status === 'pending') {
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-success me-1 tippy-here', title: 'Aprobar nota de salida', icon: 'mdi mdi-check-bold', onClick: () => onExitStatusChange(data, 'approved') }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-primary me-1 tippy-here', title: 'Editar nota de salida', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger me-1 tippy-here', title: 'Anular nota de salida', icon: 'mdi mdi-close', onClick: () => onExitStatusChange(data, 'cancelled') }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger tippy-here', title: 'PDF nota de salida', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
+          actions.append(DxButton({ className: 'btn btn-xs btn-soft-success tippy-here', title: 'Aprobar nota de salida', icon: 'mdi mdi-check-bold', onClick: () => onExitStatusChange(data, 'approved') }))
+          actions.append(DxButton({ className: 'btn btn-xs btn-soft-primary tippy-here', title: 'Editar nota de salida', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+          actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger tippy-here', title: 'Anular nota de salida', icon: 'mdi mdi-close', onClick: () => onExitStatusChange(data, 'cancelled') }))
+          actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger tippy-here', title: 'PDF nota de salida', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
+          container.append(actions)
           return
         }
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-warning me-1 tippy-here', title: 'Detalle nota de salida', icon: 'mdi mdi-menu', onClick: () => onModalOpen(data) }))
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-info me-1 tippy-here', title: 'Ver nota de salida', icon: 'mdi mdi-eye', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-danger tippy-here', title: 'PDF nota de salida', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
+        actions.append(DxButton({ className: 'btn btn-xs btn-soft-warning tippy-here', title: 'Detalle nota de salida', icon: 'mdi mdi-menu', onClick: () => onModalOpen(data) }))
+        actions.append(DxButton({ className: 'btn btn-xs btn-soft-info tippy-here', title: 'Ver nota de salida', icon: 'mdi mdi-eye', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
+        actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger tippy-here', title: 'PDF nota de salida', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
+        container.append(actions)
       },
       allowFiltering: false,
       allowExporting: false,
@@ -835,6 +839,8 @@ const ExitNotes = () => {
         .storage-exit-form table td { vertical-align: middle; }
         .storage-exit-toolbar { border-bottom: 1px solid #e4e7ec; padding: 1.1rem 0 1rem; }
         .storage-exit-total-label { font-style: italic; font-weight: 700; text-align: right; }
+        .storage-exit-actions { display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; min-width: max-content; }
+        .storage-exit-actions .btn { flex: 0 0 auto; margin-right: 0 !important; }
       `}</style>
       <div className='card mb-3'>
         <div className='card-body'>
