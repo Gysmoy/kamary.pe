@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Batch;
 use App\Models\PurchaseReceipt;
+use App\Support\BusinessScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
@@ -67,6 +68,229 @@ class StockService
     public function getAvailableStockByWarehouse(int $articleId, int $warehouseId, int $excludedExitNoteId = 0, ?int $excludedPurchaseReceiptId = null): float
     {
         return (float)max(0, $this->getNetStockByWarehouse($articleId, $warehouseId, $excludedExitNoteId, $excludedPurchaseReceiptId));
+    }
+
+    public function getAvailableStockByStorageKey(
+        int $articleId,
+        int $warehouseId,
+        ?string $lot,
+        ?string $expirationDate,
+        ?string $location,
+        int $excludedExitNoteId = 0,
+        ?int $businessId = null
+    ): float {
+        $lot = $this->normalizeStockText($lot);
+        $location = $this->normalizeStockText($location);
+        $expirationDate = $this->normalizeStockDate($expirationDate);
+        $dateKey = $expirationDate ?: '1000-01-01';
+
+        $entryQty = (float)DB::table('entry_note_items as entry_item')
+            ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
+            ->where('entry_note.status', 1)
+            ->where('entry_note.entry_status', 'approved')
+            ->where('entry_item.status', 1)
+            ->where('entry_item.article_id', $articleId)
+            ->whereRaw('COALESCE(entry_item.warehouse_id, entry_note.warehouse_id) = ?', [$warehouseId])
+            ->whereRaw("COALESCE(NULLIF(entry_item.lot, ''), NULLIF(entry_item.batch_code, ''), '') = ?", [$lot])
+            ->whereRaw("COALESCE(NULLIF(entry_item.location, ''), '') = ?", [$location])
+            ->whereRaw("COALESCE(DATE(entry_item.expiration_date), '1000-01-01') = ?", [$dateKey])
+            ->when($businessId, fn($query) => $query->where('entry_note.business_id', $businessId))
+            ->sum('entry_item.quantity');
+
+        $receiptQty = (float)DB::table('purchase_receipt_items as receipt_item')
+            ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
+            ->where('receipt.status', 1)
+            ->where('receipt.receipt_status', 'confirmed')
+            ->where('receipt_item.status', 1)
+            ->where('receipt_item.article_id', $articleId)
+            ->where('receipt_item.warehouse_id', $warehouseId)
+            ->whereRaw("COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') = ?", [$lot])
+            ->whereRaw("COALESCE(NULLIF(receipt_item.location, ''), '') = ?", [$location])
+            ->whereRaw("COALESCE(DATE(receipt_item.expiration_date), '1000-01-01') = ?", [$dateKey])
+            ->when($businessId, fn($query) => $query->where('receipt.business_id', $businessId))
+            ->sum('receipt_item.quantity');
+
+        $qtyOutQuery = DB::table('exit_note_items as exit_item')
+            ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
+            ->where('exit_note.status', 1)
+            ->where('exit_item.status', 1)
+            ->where('exit_item.article_id', $articleId)
+            ->whereRaw('COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) = ?', [$warehouseId])
+            ->whereRaw("COALESCE(NULLIF(exit_item.batch_code, ''), '') = ?", [$lot])
+            ->whereRaw("COALESCE(NULLIF(exit_item.location, ''), '') = ?", [$location])
+            ->whereRaw("COALESCE(DATE(exit_item.expiration_date), '1000-01-01') = ?", [$dateKey])
+            ->when($businessId, fn($query) => $query->where('exit_note.business_id', $businessId));
+
+        if ($excludedExitNoteId > 0) {
+            $qtyOutQuery->where('exit_note.id', '!=', $excludedExitNoteId);
+        }
+
+        $qtyOut = (float)$qtyOutQuery->sum('exit_item.quantity');
+
+        return (float)max(0, round($entryQty + $receiptQty - $qtyOut, 3));
+    }
+
+    public function availableStorageStockRows(
+        ?int $warehouseId = null,
+        ?string $search = '',
+        int $excludedExitNoteId = 0,
+        ?string $businessKey = null
+    ): array {
+        $businessKey = BusinessScope::normalize($businessKey) ?: BusinessScope::KAMARY_MEDICALS;
+        $needle = mb_strtolower(trim((string)$search));
+
+        $entryMovements = DB::table('entry_note_items as entry_item')
+            ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
+            ->join('businesses as entry_business', 'entry_business.id', '=', 'entry_note.business_id')
+            ->where('entry_note.status', 1)
+            ->where('entry_note.entry_status', 'approved')
+            ->where('entry_item.status', 1)
+            ->where('entry_business.business_key', $businessKey)
+            ->selectRaw("
+                CONCAT('entry-', entry_item.id) as source_key,
+                entry_item.article_id as article_id,
+                COALESCE(entry_item.warehouse_id, entry_note.warehouse_id) as warehouse_id,
+                COALESCE(NULLIF(entry_item.lot, ''), NULLIF(entry_item.batch_code, ''), '') as lot,
+                entry_item.expiration_date as expiration_date,
+                COALESCE(NULLIF(entry_item.location, ''), '') as location,
+                entry_item.quantity as quantity
+            ");
+
+        $receiptMovements = DB::table('purchase_receipt_items as receipt_item')
+            ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
+            ->join('businesses as receipt_business', 'receipt_business.id', '=', 'receipt.business_id')
+            ->where('receipt.status', 1)
+            ->where('receipt.receipt_status', 'confirmed')
+            ->where('receipt_item.status', 1)
+            ->where('receipt_business.business_key', $businessKey)
+            ->selectRaw("
+                CONCAT('purchase-receipt-', receipt_item.id) as source_key,
+                receipt_item.article_id as article_id,
+                receipt_item.warehouse_id as warehouse_id,
+                COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') as lot,
+                receipt_item.expiration_date as expiration_date,
+                COALESCE(NULLIF(receipt_item.location, ''), '') as location,
+                receipt_item.quantity as quantity
+            ");
+
+        $incomingTotals = DB::query()
+            ->fromSub($entryMovements->unionAll($receiptMovements), 'incoming')
+            ->selectRaw('
+                MIN(incoming.source_key) as source_key,
+                incoming.article_id,
+                incoming.warehouse_id,
+                incoming.lot,
+                incoming.expiration_date,
+                incoming.location,
+                COALESCE(SUM(incoming.quantity), 0) as qty_in
+            ')
+            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location');
+
+        $outgoingTotals = DB::table('exit_note_items as exit_item')
+            ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
+            ->join('businesses as exit_business', 'exit_business.id', '=', 'exit_note.business_id')
+            ->where('exit_note.status', 1)
+            ->where('exit_item.status', 1)
+            ->where('exit_business.business_key', $businessKey)
+            ->when($excludedExitNoteId > 0, fn($query) => $query->where('exit_note.id', '!=', $excludedExitNoteId))
+            ->selectRaw("
+                exit_item.article_id,
+                COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) as warehouse_id,
+                COALESCE(NULLIF(exit_item.batch_code, ''), '') as lot,
+                exit_item.expiration_date as expiration_date,
+                COALESCE(NULLIF(exit_item.location, ''), '') as location,
+                COALESCE(SUM(exit_item.quantity), 0) as qty_out
+            ")
+            ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location');
+
+        $query = DB::query()
+            ->fromSub($incomingTotals, 'stock')
+            ->join('articles as article', 'article.id', '=', 'stock.article_id')
+            ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
+            ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'article.laboratory_id')
+            ->leftJoin('active_principles as active_principle', 'active_principle.id', '=', 'article.active_principle_id')
+            ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'stock.warehouse_id')
+            ->leftJoin('storage_locations as storage_location', function ($join) {
+                $join->on('storage_location.warehouse_id', '=', 'stock.warehouse_id')
+                    ->whereRaw('storage_location.code = stock.location')
+                    ->whereNotNull('storage_location.status');
+            })
+            ->leftJoin('clients as client', 'client.id', '=', 'storage_location.client_id')
+            ->leftJoinSub($outgoingTotals, 'outgoing', function ($join) {
+                $join->on('outgoing.article_id', '=', 'stock.article_id')
+                    ->on('outgoing.warehouse_id', '=', 'stock.warehouse_id')
+                    ->whereRaw("COALESCE(outgoing.lot, '') = COALESCE(stock.lot, '')")
+                    ->whereRaw("COALESCE(outgoing.location, '') = COALESCE(stock.location, '')")
+                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')");
+            })
+            ->when($warehouseId, fn($query) => $query->where('stock.warehouse_id', $warehouseId))
+            ->whereRaw('(COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0)) > 0')
+            ->when($needle !== '', function ($query) use ($needle) {
+                $like = '%' . $needle . '%';
+                $query->where(function ($inner) use ($like) {
+                    $inner->whereRaw("LOWER(COALESCE(article.code, '')) LIKE ?", [$like])
+                        ->orWhereRaw("LOWER(COALESCE(article.name, '')) LIKE ?", [$like])
+                        ->orWhereRaw("LOWER(COALESCE(article.health_registration, '')) LIKE ?", [$like])
+                        ->orWhereRaw("LOWER(COALESCE(stock.lot, '')) LIKE ?", [$like])
+                        ->orWhereRaw("LOWER(COALESCE(stock.location, '')) LIKE ?", [$like])
+                        ->orWhereRaw("LOWER(COALESCE(client.full_name, '')) LIKE ?", [$like]);
+                });
+            })
+            ->orderBy('article.name')
+            ->orderBy('stock.expiration_date')
+            ->orderBy('stock.lot')
+            ->selectRaw("
+                stock.source_key,
+                stock.article_id,
+                stock.warehouse_id,
+                COALESCE(article.code, '') as article_code,
+                COALESCE(article.name, '') as article_name,
+                COALESCE(article.health_registration, '') as health_registration,
+                COALESCE(laboratory.name, '') as laboratory_name,
+                COALESCE(active_principle.name, '') as principle_name,
+                COALESCE(unit.symbol, unit.name, '') as unit_label,
+                COALESCE(warehouse.name, '') as warehouse_name,
+                COALESCE(stock.lot, '') as lot,
+                stock.expiration_date,
+                COALESCE(stock.location, '') as location,
+                storage_location.temperature_range,
+                storage_location.client_id,
+                COALESCE(client.full_name, '') as client_name,
+                COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0) as stock
+            ");
+
+        return $query->get()
+            ->values()
+            ->map(function ($row, $index) {
+                $expirationDate = $row->expiration_date ? substr((string)$row->expiration_date, 0, 10) : '';
+                return [
+                    'id' => implode('|', [
+                        $row->article_id,
+                        $row->warehouse_id,
+                        (string)$row->lot,
+                        $expirationDate,
+                        (string)$row->location,
+                    ]),
+                    'source_key' => (string)$row->source_key,
+                    'article_id' => $row->article_id,
+                    'warehouse_id' => $row->warehouse_id,
+                    'article_code' => (string)$row->article_code,
+                    'article_name' => (string)$row->article_name,
+                    'health_registration' => (string)$row->health_registration,
+                    'laboratory_name' => (string)$row->laboratory_name,
+                    'principle_name' => (string)$row->principle_name,
+                    'unit_label' => (string)$row->unit_label,
+                    'warehouse_name' => (string)$row->warehouse_name,
+                    'lot' => (string)$row->lot,
+                    'expiration_date' => $expirationDate,
+                    'location' => (string)$row->location,
+                    'temperature_range' => (string)($row->temperature_range ?? ''),
+                    'client_id' => $row->client_id,
+                    'client_name' => (string)$row->client_name,
+                    'stock' => round((float)$row->stock, 3),
+                ];
+            })
+            ->all();
     }
 
     public function getNetStockByWarehouse(int $articleId, int $warehouseId, int $excludedExitNoteId = 0, ?int $excludedPurchaseReceiptId = null): float
@@ -277,5 +501,19 @@ class StockService
         $receiptQty = (float)$receiptQtyQuery->sum('receipt_item.quantity');
 
         return round($entryQty + $receiptQty, 3);
+    }
+
+    private function normalizeStockText($value): string
+    {
+        return trim((string)($value ?? ''));
+    }
+
+    private function normalizeStockDate($value): ?string
+    {
+        $text = trim((string)($value ?? ''));
+        if ($text === '') return null;
+        $timestamp = strtotime($text);
+        if ($timestamp === false) return null;
+        return date('Y-m-d', $timestamp);
     }
 }

@@ -190,6 +190,7 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/exit-notes', [AdminExitNoteController::class, 'save']);
         Route::post('/exit-notes/paginate', [AdminExitNoteController::class, 'paginate']);
+        Route::get('/exit-notes/available-stock', [AdminExitNoteController::class, 'availableStock']);
         Route::patch('/exit-notes/status', [AdminExitNoteController::class, 'status']);
         Route::patch('/exit-notes/{field}', [AdminExitNoteController::class, 'boolean']);
         Route::delete('/exit-notes/{id}', [AdminExitNoteController::class, 'delete']);
@@ -390,6 +391,7 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/exit-notes', [AdminStorageExitNoteController::class, 'save']);
             Route::post('/exit-notes/paginate', [AdminStorageExitNoteController::class, 'paginate']);
+            Route::get('/exit-notes/available-stock', [AdminStorageExitNoteController::class, 'availableStock']);
             Route::patch('/exit-notes/status', [AdminStorageExitNoteController::class, 'status']);
             Route::patch('/exit-notes/{field}', [AdminStorageExitNoteController::class, 'boolean']);
             Route::delete('/exit-notes/{id}', [AdminStorageExitNoteController::class, 'delete']);

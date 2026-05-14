@@ -112,6 +112,8 @@ class ExitNoteController extends BasicController
 
             $inserted = 0;
             $business = BusinessScope::findFixedBusiness($jpa->business_id);
+            $isStorage = $this->isStorageRequest($request);
+            $reservedStock = [];
             foreach ($this->itemsPayload as $item) {
                 if (!is_array($item)) continue;
 
@@ -129,10 +131,8 @@ class ExitNoteController extends BasicController
                 $total = $this->toNullableDecimal($item['total'] ?? null) ?? 0;
                 if ($quantity <= 0) throw new \Exception('La cantidad debe ser mayor a 0');
 
-                $availableStock = $this->getAvailableStockByWarehouse((int)$articleId, (int)$warehouseId, (int)$jpa->id);
-                if ($quantity > $availableStock) {
-                    throw new \Exception("Stock insuficiente para el articulo {$articleId} en el almacen {$warehouseId}. Disponible: {$availableStock}");
-                }
+                $lot = trim((string)($item['batch_code'] ?? $item['lot'] ?? ''));
+                $location = trim((string)($item['location'] ?? ''));
 
                 $expirationDate = null;
                 $rawExpirationDate = trim((string)($item['expiration_date'] ?? ''));
@@ -142,17 +142,33 @@ class ExitNoteController extends BasicController
                     $expirationDate = date('Y-m-d', $timestamp);
                 }
 
+                if ($isStorage && $lot === '') throw new \Exception('Cada linea de salida debe tener lote');
+                if ($isStorage && !$expirationDate) throw new \Exception('Cada linea de salida debe tener fecha de vencimiento');
+
+                $hasStorageKey = $isStorage || ($lot !== '' && $expirationDate) || $location !== '';
+                $availableStock = $hasStorageKey
+                    ? app(StockService::class)->getAvailableStockByStorageKey((int)$articleId, (int)$warehouseId, $lot, $expirationDate, $location, (int)$jpa->id, (int)$jpa->business_id)
+                    : $this->getAvailableStockByWarehouse((int)$articleId, (int)$warehouseId, (int)$jpa->id);
+                $stockKey = $this->stockReservationKey((int)$articleId, (int)$warehouseId, $hasStorageKey ? $lot : '', $hasStorageKey ? $expirationDate : null, $hasStorageKey ? $location : '');
+                $alreadyReserved = (float)($reservedStock[$stockKey] ?? 0);
+                $remainingStock = round($availableStock - $alreadyReserved, 3);
+
+                if ($quantity > $remainingStock + 0.0001) {
+                    throw new \Exception("Stock insuficiente para el articulo {$articleId}, lote {$lot}. Disponible: {$remainingStock}");
+                }
+                $reservedStock[$stockKey] = round($alreadyReserved + $quantity, 3);
+
                 ExitNoteItem::create([
                     'exit_note_id' => $jpa->id,
-                    'batch_code' => trim((string)($item['batch_code'] ?? '')) ?: null,
+                    'batch_code' => $lot ?: null,
                     'article_id' => $articleId,
                     'warehouse_id' => $warehouseId,
-                    'stock' => $stock,
+                    'stock' => $availableStock,
                     'expiration_date' => $expirationDate,
-                    'location' => trim((string)($item['location'] ?? '')) ?: null,
+                    'location' => $location ?: null,
                     'destination_location' => trim((string)($item['destination_location'] ?? '')) ?: null,
                     'quantity' => $quantity,
-                    'total' => $total,
+                    'total' => $total > 0 ? $total : $quantity,
                     'status' => isset($item['status']) ? (bool)$item['status'] : true,
                 ]);
                 $inserted++;
@@ -172,6 +188,29 @@ class ExitNoteController extends BasicController
     private function getAvailableStockByWarehouse(int $articleId, int $warehouseId, int $excludedExitNoteId = 0): float
     {
         return app(StockService::class)->getAvailableStockByWarehouse($articleId, $warehouseId, $excludedExitNoteId);
+    }
+
+    public function availableStock(Request $request): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+        try {
+            $warehouseId = $this->toNullableInt($request->input('warehouse_id'));
+            $exitNoteId = $this->toNullableInt($request->input('exit_note_id')) ?? 0;
+            $search = trim((string)$request->input('q', ''));
+
+            if ($warehouseId) Warehouse::findOrFail($warehouseId);
+
+            $businessKey = BusinessScope::scopedKeyForRequest($request) ?: BusinessScope::keyForPath($request->path());
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = app(StockService::class)->availableStorageStockRows($warehouseId, $search, $exitNoteId, $businessKey);
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
     }
 
     public function branches(Request $request, string $businessId): HttpResponse|ResponseFactory
@@ -212,17 +251,30 @@ class ExitNoteController extends BasicController
     {
         $response = new Response();
         try {
-            $jpa = $this->model::with(['items:id,exit_note_id,article_id,warehouse_id,quantity,status'])
+            $jpa = $this->model::with(['items:id,exit_note_id,batch_code,article_id,warehouse_id,expiration_date,location,quantity,status'])
                 ->findOrFail($request->id);
 
             $nextStatus = $request->status ? 0 : 1;
             if ((int)$nextStatus === 1) {
+                $reservedStock = [];
                 foreach ($jpa->items as $item) {
                     if (!$item->article_id || !$item->warehouse_id || (float)$item->quantity <= 0) continue;
-                    $availableStock = $this->getAvailableStockByWarehouse((int)$item->article_id, (int)$item->warehouse_id, (int)$jpa->id);
-                    if ((float)$item->quantity > $availableStock) {
-                        throw new \Exception("No se puede activar la nota. Stock insuficiente para articulo {$item->article_id} en almacen {$item->warehouse_id}. Disponible: {$availableStock}");
+
+                    $lot = trim((string)($item->batch_code ?? ''));
+                    $location = trim((string)($item->location ?? ''));
+                    $expirationDate = $item->expiration_date ? $item->expiration_date->format('Y-m-d') : null;
+                    $hasStorageKey = ($lot !== '' && $expirationDate) || $location !== '';
+                    $availableStock = $hasStorageKey
+                        ? app(StockService::class)->getAvailableStockByStorageKey((int)$item->article_id, (int)$item->warehouse_id, $lot, $expirationDate, $location, (int)$jpa->id, (int)$jpa->business_id)
+                        : $this->getAvailableStockByWarehouse((int)$item->article_id, (int)$item->warehouse_id, (int)$jpa->id);
+                    $stockKey = $this->stockReservationKey((int)$item->article_id, (int)$item->warehouse_id, $hasStorageKey ? $lot : '', $hasStorageKey ? $expirationDate : null, $hasStorageKey ? $location : '');
+                    $alreadyReserved = (float)($reservedStock[$stockKey] ?? 0);
+                    $remainingStock = round($availableStock - $alreadyReserved, 3);
+
+                    if ((float)$item->quantity > $remainingStock + 0.0001) {
+                        throw new \Exception("No se puede activar la nota. Stock insuficiente para articulo {$item->article_id}, lote {$lot}. Disponible: {$remainingStock}");
                     }
+                    $reservedStock[$stockKey] = round($alreadyReserved + (float)$item->quantity, 3);
                 }
             }
 
@@ -247,5 +299,31 @@ class ExitNoteController extends BasicController
         if ($text === '') return null;
         if (!is_numeric($text)) throw new \Exception("Valor numerico invalido: {$value}");
         return (float)$text;
+    }
+
+    private function toNullableInt($value): ?int
+    {
+        if ($value === null) return null;
+        $text = trim((string)$value);
+        if ($text === '') return null;
+        return (int)$text;
+    }
+
+    private function isStorageRequest(Request $request): bool
+    {
+        $path = '/' . trim($request->path(), '/');
+        $referer = (string)$request->headers->get('referer', '');
+        return str_contains($path, '/storage/exit-notes') || str_contains($referer, '/storage-exit-note');
+    }
+
+    private function stockReservationKey(int $articleId, int $warehouseId, string $lot, ?string $expirationDate, string $location): string
+    {
+        return implode('|', [
+            $articleId,
+            $warehouseId,
+            mb_strtolower(trim($lot)),
+            $expirationDate ?: '',
+            mb_strtolower(trim($location)),
+        ]);
     }
 }

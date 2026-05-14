@@ -78,6 +78,30 @@ class ExitNotesRest extends BasicRest {
       return null
     }
   }
+
+  getAvailableStock = async ({ warehouseId, search = '', exitNoteId = '' } = {}) => {
+    try {
+      const params = new URLSearchParams()
+      if (warehouseId) params.set('warehouse_id', warehouseId)
+      if (search) params.set('q', search)
+      if (exitNoteId) params.set('exit_note_id', exitNoteId)
+
+      const response = await fetch(`/api/${this.path}/available-stock?${params.toString()}`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' }
+      })
+      const result = await response.json()
+      if (!response.ok || !result?.status) throw new Error(result?.message || 'No se pudo obtener el stock disponible')
+      return result.data ?? []
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return []
+    }
+  }
 }
 
 export default ExitNotesRest
