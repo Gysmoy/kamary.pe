@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
@@ -16,13 +16,86 @@ import { scopedPermission } from '../Utils/permissionScope';
 
 const billingDocumentsRest = new BillingDocumentsRest()
 
-const BillingDocuments = ({ moduleTitle = 'Facturacion' }) => {
+const today = () => new Date().toISOString().slice(0, 10)
+
+const storageTabs = [
+  { id: 'prefactures', label: 'Prefacturas' },
+  { id: 'issued', label: 'Facturas Emitidas' },
+  { id: 'cancelled', label: 'Facturas Anuladas' },
+  { id: 'credit-notes', label: 'Notas de Credito' },
+]
+
+const emptyFilters = () => ({
+  businessId: '',
+  clientId: '',
+  startDate: '',
+  endDate: '',
+})
+
+const reportFilters = () => ({
+  businessId: '',
+  startDate: today(),
+  endDate: today(),
+})
+
+const formatMoney = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const formatDate = (value) => value?.toString?.().slice?.(0, 10) ?? ''
+const currencyLabel = (value) => `${value ?? ''}`.toUpperCase() === 'USD' ? 'Dolares' : 'Soles'
+
+const rowClientName = (row) => row?.client?.full_name
+  ?? row?.eventualClient?.business_name
+  ?? row?.eventual_client?.business_name
+  ?? '-'
+
+const rowSourceCode = (row) => row?.commercial_order?.code
+  ?? row?.commercialOrder?.code
+  ?? row?.service_order?.code
+  ?? row?.serviceOrder?.code
+  ?? row?.metadata?.source_code
+  ?? '-'
+
+const rowDescription = (row) => row?.items?.[0]?.description
+  ?? row?.observations
+  ?? row?.document_type
+  ?? '-'
+
+const rowSunatLabel = (row) => row?.external_reference || row?.external_id || getBillingDocumentStatusLabel(row?.external_status)
+
+const combineFilters = (filters) => filters.filter(Boolean).reduce((carry, filter) => {
+  if (!carry) return filter
+  return [carry, 'and', filter]
+}, null)
+
+const tabFilter = (tab) => {
+  const notCreditNote = ['document_type', '<>', 'Nota de credito']
+  if (tab === 'issued') {
+    return [[['local_status', '=', 'sent'], 'or', ['local_status', '=', 'accepted'], 'or', ['local_status', '=', 'observed'], 'or', ['local_status', '=', 'rejected']], 'and', notCreditNote]
+  }
+  if (tab === 'cancelled') return [['local_status', '=', 'cancelled'], 'and', notCreditNote]
+  if (tab === 'credit-notes') return ['document_type', '=', 'Nota de credito']
+  return [['local_status', '=', 'pending'], 'and', notCreditNote]
+}
+
+const buildStorageFilter = (tab, filters) => {
+  const dateField = tab === 'prefactures' ? 'issue_date' : 'created_at'
+  return combineFilters([
+    tabFilter(tab),
+    filters.businessId ? ['business_id', '=', Number(filters.businessId)] : null,
+    filters.clientId ? ['client_id', '=', Number(filters.clientId)] : null,
+    filters.startDate ? [dateField, '>=', filters.startDate] : null,
+    filters.endDate ? [dateField, '<=', dateField === 'created_at' ? `${filters.endDate} 23:59:59` : filters.endDate] : null,
+  ])
+}
+
+const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, billingMode }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const payloadModalRef = useRef()
   const providerModalRef = useRef()
   const cancelModalRef = useRef()
   const creditNoteModalRef = useRef()
+  const reportModalRef = useRef()
+  const bulkModalRef = useRef()
   const idRef = useRef()
   const issueDateRef = useRef()
   const dueDateRef = useRef()
@@ -44,18 +117,36 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion' }) => {
   const creditNoteIssueDateRef = useRef()
   const creditNoteReasonRef = useRef()
   const creditNoteNoteRef = useRef()
+  const isStorageBilling = billingMode === 'storage' || requiredPermission === 'storage-billing-control' || location.pathname.includes('storage-billing-control')
 
-  const [sourceType, setSourceType] = useState('commercial_order')
+  const [sourceType, setSourceType] = useState(isStorageBilling ? 'service_order' : 'commercial_order')
   const [sourceId, setSourceId] = useState('')
   const [commercialOrders, setCommercialOrders] = useState([])
   const [serviceOrders, setServiceOrders] = useState([])
+  const [businesses, setBusinesses] = useState([])
+  const [clients, setClients] = useState([])
   const [selectedRow, setSelectedRow] = useState(null)
   const [payloadText, setPayloadText] = useState('')
+  const [activeStorageTab, setActiveStorageTab] = useState('prefactures')
+  const [storageFilters, setStorageFilters] = useState(emptyFilters())
+  const [appliedStorageFilters, setAppliedStorageFilters] = useState(emptyFilters())
+  const [modalReportFilters, setModalReportFilters] = useState(reportFilters())
+  const [bulkFilters, setBulkFilters] = useState({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false })
+  const [bulkRows, setBulkRows] = useState([])
+  const [bulkSelected, setBulkSelected] = useState([])
+  const [bulkLoading, setBulkLoading] = useState(false)
 
   useEffect(() => {
-    Promise.all([billingDocumentsRest.getCommercialOrders(), billingDocumentsRest.getServiceOrders()]).then(([commercial, services]) => {
+    Promise.all([
+      billingDocumentsRest.getCommercialOrders(),
+      billingDocumentsRest.getServiceOrders(),
+      billingDocumentsRest.getBusinesses(),
+      billingDocumentsRest.getClients(),
+    ]).then(([commercial, services, businessRows, clientRows]) => {
       setCommercialOrders((commercial ?? []).filter(row => row.status !== null))
       setServiceOrders((services ?? []).filter(row => row.status !== null))
+      setBusinesses((businessRows ?? []).filter(row => row.status !== null))
+      setClients((clientRows ?? []).filter(row => row.status !== null))
     })
   }, [])
 
@@ -140,7 +231,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion' }) => {
     paymentMethodRef.current.value = data?.payment_method ?? 'Transferencia'
     customerEmailRef.current.value = data?.customer_email ?? ''
     observationsRef.current.value = data?.observations ?? ''
-    setSourceType(data?.source_type ?? 'commercial_order')
+    setSourceType(isStorageBilling ? 'service_order' : (data?.source_type ?? 'commercial_order'))
     setSourceId(`${data?.source_id ?? ''}`)
     $(modalRef.current).modal('show')
   }
@@ -159,7 +250,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion' }) => {
       customer_email: customerEmailRef.current.value.trim(),
       observations: observationsRef.current.value.trim(),
     }
-    if (sourceType === 'commercial_order') request.commercial_order_id = sourceId || null
+    if (!isStorageBilling && sourceType === 'commercial_order') request.commercial_order_id = sourceId || null
     else request.service_order_id = sourceId || null
 
     const result = await billingDocumentsRest.save(request)
@@ -287,17 +378,329 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion' }) => {
     window.open(billingDocumentsRest.downloadUrl(row.id, type), '_blank', 'noopener')
   }
 
+  const refreshGrid = () => $(gridRef.current).dxDataGrid('instance')?.refresh()
+  const updateStorageFilter = (field, value) => setStorageFilters(prev => ({ ...prev, [field]: value }))
+  const applyStorageFilters = (e) => {
+    e?.preventDefault?.()
+    setAppliedStorageFilters({ ...storageFilters })
+  }
+  const openReportModal = () => {
+    setModalReportFilters(reportFilters())
+    $(reportModalRef.current).modal('show')
+  }
+  const openBulkModal = () => {
+    setBulkFilters({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false })
+    setBulkRows([])
+    setBulkSelected([])
+    $(bulkModalRef.current).modal('show')
+  }
+  const storageFilterValue = useMemo(
+    () => isStorageBilling ? buildStorageFilter(activeStorageTab, appliedStorageFilters) : null,
+    [isStorageBilling, activeStorageTab, appliedStorageFilters]
+  )
+  const prefacturesForBulkFilter = () => combineFilters([
+    tabFilter('prefactures'),
+    bulkFilters.clientId ? ['client_id', '=', Number(bulkFilters.clientId)] : null,
+    bulkFilters.currency ? ['currency', '=', bulkFilters.currency] : null,
+    bulkFilters.documentType ? ['document_type', '=', bulkFilters.documentType] : null,
+  ])
+  const loadBulkPrefactures = async (e) => {
+    e?.preventDefault?.()
+    if (!bulkFilters.clientId) {
+      await showBlockedAction('Cliente requerido', 'Selecciona un cliente para buscar prefacturas.')
+      return
+    }
+    setBulkLoading(true)
+    try {
+      const response = await billingDocumentsRest.paginate({ skip: 0, take: 1000, isLoadingAll: true, filter: prefacturesForBulkFilter() })
+      if (Number(response?.status ?? 200) >= 400) throw new Error(response?.message || 'No se pudieron cargar las prefacturas')
+      const rows = response?.data ?? []
+      setBulkRows(rows)
+      setBulkSelected(rows.map(row => row.id))
+    } catch (error) {
+      await showBlockedAction('Error', error.message || 'No se pudieron cargar las prefacturas.')
+    } finally {
+      setBulkLoading(false)
+    }
+  }
+  const toggleBulkRow = (id, checked) => setBulkSelected(prev => checked ? Array.from(new Set([...prev, id])) : prev.filter(item => item !== id))
+  const toggleAllBulkRows = (checked) => setBulkSelected(checked ? bulkRows.map(row => row.id) : [])
+  const bulkTotal = bulkRows.filter(row => bulkSelected.includes(row.id)).reduce((sum, row) => sum + Number(row.total ?? 0), 0)
+  const onIssueBulk = async (e) => {
+    e.preventDefault()
+    if (bulkSelected.length === 0) {
+      await showBlockedAction('Seleccion requerida', 'Selecciona al menos una prefactura.')
+      return
+    }
+    const { isConfirmed } = await Swal.fire({
+      title: 'Facturar en bloque',
+      text: `Se emitiran ${bulkSelected.length} prefacturas seleccionadas.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Facturar',
+      cancelButtonText: 'Cancelar',
+    })
+    if (!isConfirmed) return
+    for (const id of bulkSelected) {
+      const result = await billingDocumentsRest.issue(id)
+      if (!result) break
+    }
+    $(bulkModalRef.current).modal('hide')
+    refreshGrid()
+  }
+
+  const reportFilterValue = (filters = modalReportFilters) => buildStorageFilter('issued', filters)
+  const loadReportRows = async (filters = modalReportFilters) => {
+    const response = await billingDocumentsRest.paginate({ skip: 0, take: 5000, isLoadingAll: true, filter: reportFilterValue(filters) })
+    if (Number(response?.status ?? 200) >= 400) throw new Error(response?.message || 'No se pudo generar el reporte')
+    return response?.data ?? []
+  }
+  const reportColumns = [
+    ['Serie', row => row.series ?? ''],
+    ['Secuencia', row => row.sequence ?? ''],
+    ['SUNAT', row => rowSunatLabel(row)],
+    ['E. Pago', row => row.payment_condition ?? ''],
+    ['Cliente', row => rowClientName(row)],
+    ['Moneda', row => currencyLabel(row.currency)],
+    ['Gravada', row => Number(row.subtotal ?? 0)],
+    ['IGV', row => Number(row.tax_amount ?? 0)],
+    ['Importe', row => Number(row.total ?? 0)],
+    ['A cuenta', () => 0],
+    ['Saldo', () => 0],
+    ['Fecha Facturacion', row => formatDate(row.issue_date)],
+  ]
+  const exportRows = async (rows, fileName, type = 'xlsx') => {
+    if (type === 'pdf') {
+      const JsPDF = window.jspdf?.jsPDF || window.jsPDF
+      if (!JsPDF || !JsPDF.API?.autoTable) throw new Error('jsPDF o AutoTable no estan disponibles')
+      const doc = new JsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+      doc.setFontSize(12)
+      doc.text(fileName, 24, 28)
+      doc.autoTable({
+        head: [reportColumns.map(([label]) => label)],
+        body: rows.map(row => reportColumns.map(([, value]) => value(row))),
+        startY: 40,
+        styles: { fontSize: 7, cellPadding: 3 },
+      })
+      doc.save(`${fileName}.pdf`)
+      return
+    }
+    if (window.ExcelJS && window.saveAs) {
+      const workbook = new window.ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Reporte')
+      worksheet.addRow(reportColumns.map(([label]) => label))
+      rows.forEach(row => worksheet.addRow(reportColumns.map(([, value]) => value(row))))
+      worksheet.columns.forEach(column => { column.width = 18 })
+      const buffer = await workbook.xlsx.writeBuffer()
+      window.saveAs(new Blob([buffer], { type: 'application/octet-stream' }), `${fileName}.xlsx`)
+      return
+    }
+    const csv = [
+      reportColumns.map(([label]) => `"${label}"`).join(','),
+      ...rows.map(row => reportColumns.map(([, value]) => `"${`${value(row) ?? ''}`.replaceAll('"', '""')}"`).join(',')),
+    ].join('\n')
+    window.saveAs(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `${fileName}.csv`)
+  }
+  const generateIssuedReport = async (type = 'xlsx', filters = modalReportFilters) => {
+    try {
+      const rows = await loadReportRows(filters)
+      await exportRows(rows, 'reporte-facturas-emitidas', type)
+    } catch (error) {
+      await showBlockedAction('Reporte no disponible', error.message || 'No se pudo generar el reporte.')
+    }
+  }
+  const storageStatusBadge = (row) => {
+    if (row?.local_status === 'pending') {
+      const ready = row?.fiscal_readiness?.can_issue !== false
+      return ready
+        ? { label: 'En Preparacion', className: 'badge bg-info text-dark' }
+        : { label: 'En espera', className: 'badge bg-soft-warning text-warning border border-warning' }
+    }
+    if (row?.local_status === 'accepted') return { label: 'Emitida', className: 'badge bg-soft-success text-success border border-success' }
+    if (row?.local_status === 'cancelled') return { label: 'Anulada', className: 'badge bg-soft-danger text-danger border border-danger' }
+    return { label: getBillingDocumentStatusLabel(row?.local_status), className: 'badge bg-soft-secondary text-secondary' }
+  }
+
+  const storageActionColumn = {
+    caption: 'Acciones',
+    width: activeStorageTab === 'prefactures' ? 130 : 210,
+    allowFiltering: false,
+    allowExporting: false,
+    allowSorting: false,
+    cellTemplate: (container, { data }) => {
+      const canIssue = data?.fiscal_readiness?.can_issue !== false
+      const canDownload = canDownloadDocument(data)
+      container.css('text-overflow', 'unset')
+
+      if (activeStorageTab === 'prefactures') {
+        container.append(DxButton({ className: 'btn btn-xs btn-outline-success', title: canIssue ? 'Facturar' : 'Revisar validacion fiscal', icon: canIssue ? 'mdi mdi-file-send-outline' : 'mdi mdi-alert-outline', onClick: () => canIssue ? onIssue(data) : openReadinessModal(data, `Validacion fiscal - ${data.code}`) }))
+        container.append(DxButton({ className: 'btn btn-xs btn-outline-primary ms-1', title: 'Editar prefactura', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+        container.append(DxButton({ className: 'btn btn-xs btn-outline-info ms-1', title: 'Ver payload', icon: 'mdi mdi-code-json', onClick: () => onOpenPayload(data) }))
+        return
+      }
+
+      container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-outline-danger' : 'btn-outline-secondary'}`, title: 'PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => canDownload ? onDownload(data, 'pdf') : showBlockedAction('Descarga no disponible', 'El comprobante todavia no tiene PDF disponible.') }))
+      container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-outline-primary' : 'btn-outline-secondary'} ms-1`, title: 'XML', icon: 'mdi mdi-code-tags', onClick: () => canDownload ? onDownload(data, 'xml') : showBlockedAction('Descarga no disponible', 'El comprobante todavia no tiene XML disponible.') }))
+      container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-outline-success' : 'btn-outline-secondary'} ms-1`, title: 'CDR', icon: 'mdi mdi-shield-check', onClick: () => canDownload ? onDownload(data, 'cdr') : showBlockedAction('Descarga no disponible', 'El comprobante todavia no tiene CDR disponible.') }))
+      container.append(DxButton({ className: 'btn btn-xs btn-outline-info ms-1', title: 'Sincronizar estado', icon: 'mdi mdi-sync', onClick: () => onSyncStatus(data) }))
+      if (activeStorageTab === 'issued') {
+        container.append(DxButton({ className: 'btn btn-xs btn-outline-warning ms-1', title: 'Anular comprobante', icon: 'mdi mdi-close-circle-outline', onClick: () => onOpenCancel(data) }))
+        container.append(DxButton({ className: 'btn btn-xs btn-outline-secondary ms-1', title: 'Nota de credito', icon: 'mdi mdi-file-replace-outline', onClick: () => onOpenCreditNote(data) }))
+      }
+    }
+  }
+
+  const storageColumnsByTab = {
+    prefactures: [
+      storageActionColumn,
+      {
+        dataField: 'local_status',
+        caption: 'E. Facturacion',
+        width: 130,
+        cellTemplate: (container, { data }) => {
+          const badge = storageStatusBadge(data)
+          container.append($('<span>').addClass(badge.className).text(badge.label))
+        }
+      },
+      { dataField: 'code', caption: 'Codigo', width: 115 },
+      { caption: 'Comprobante', width: 130, allowSorting: false, calculateCellValue: (data) => `${data.series || ''}${data.series || data.sequence ? ' - ' : ''}${data.sequence || ''}` || data.document_type },
+      { caption: 'OS', width: 120, allowSorting: false, calculateCellValue: rowSourceCode },
+      { caption: 'Tipo', minWidth: 260, allowSorting: false, calculateCellValue: rowDescription },
+      { caption: 'Cliente', minWidth: 220, allowSorting: false, calculateCellValue: rowClientName },
+      { dataField: 'total', caption: 'Importe', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+      { dataField: 'document_type', caption: 'Tipo comprobante', width: 140 },
+      { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (data) => currencyLabel(data.currency) },
+      { dataField: 'issue_date', caption: 'F. Facturacion', dataType: 'date', width: 130 },
+      { dataField: 'created_at', caption: 'F. Registro', dataType: 'datetime', width: 160 },
+    ],
+    issued: [
+      storageActionColumn,
+      { dataField: 'series', caption: 'Serie', width: 90 },
+      { dataField: 'sequence', caption: 'Secuencia', width: 110 },
+      { caption: 'SUNAT', width: 140, allowSorting: false, calculateCellValue: rowSunatLabel },
+      { dataField: 'payment_condition', caption: 'E. Pago', width: 110 },
+      { caption: 'Cliente', minWidth: 220, allowSorting: false, calculateCellValue: rowClientName },
+      { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (data) => currencyLabel(data.currency) },
+      { dataField: 'subtotal', caption: 'Gravada', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+      { dataField: 'tax_amount', caption: 'IGV', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+      { dataField: 'total', caption: 'Importe', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+      { caption: 'A cuenta', width: 100, allowSorting: false, calculateCellValue: () => '0.00' },
+      { caption: 'Saldo', width: 100, allowSorting: false, calculateCellValue: () => '0.00' },
+      { dataField: 'issue_date', caption: 'Fecha Facturacion', dataType: 'date', width: 150 },
+    ],
+    cancelled: [
+      storageActionColumn,
+      { dataField: 'series', caption: 'Serie', width: 90 },
+      { dataField: 'sequence', caption: 'Secuencia', width: 110 },
+      { caption: 'Cliente', minWidth: 220, allowSorting: false, calculateCellValue: rowClientName },
+      { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (data) => currencyLabel(data.currency) },
+      { dataField: 'subtotal', caption: 'Total Gravada', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+      { dataField: 'tax_amount', caption: 'IGV', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+      { dataField: 'total', caption: 'Importe Factura', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+      { dataField: 'issue_date', caption: 'F. Facturacion', dataType: 'date', width: 130 },
+      { dataField: 'cancelled_at', caption: 'F. Anulacion', dataType: 'datetime', width: 160 },
+    ],
+    'credit-notes': [
+      storageActionColumn,
+      { dataField: 'series', caption: 'Serie', width: 90 },
+      { dataField: 'sequence', caption: 'Secuencia', width: 110 },
+      { caption: 'SUNAT', width: 140, allowSorting: false, calculateCellValue: rowSunatLabel },
+      { caption: 'Doc. Afecto', width: 130, allowSorting: false, calculateCellValue: (data) => data.reference_document?.code ?? data.referenceDocument?.code ?? '-' },
+      { caption: 'Cliente', minWidth: 220, allowSorting: false, calculateCellValue: rowClientName },
+      { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (data) => currencyLabel(data.currency) },
+      { dataField: 'subtotal', caption: 'Total Gravada', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+      { dataField: 'tax_amount', caption: 'IGV', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+      { dataField: 'total', caption: 'Importe Factura', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+      { dataField: 'payment_condition', caption: 'Tipo de pago', width: 120 },
+      { dataField: 'issue_date', caption: 'Fecha Facturacion', dataType: 'date', width: 150 },
+    ],
+  }
+
+  const currentStorageColumns = storageColumnsByTab[activeStorageTab] ?? storageColumnsByTab.prefactures
+
+  const storageTitle = <div>
+    <div className='d-flex align-items-center justify-content-between mb-2'>
+      <h4 className='header-title mb-0'>Listado</h4>
+      <button type='button' className='btn btn-xs btn-light' onClick={refreshGrid} title='Actualizar'><i className='mdi mdi-refresh'></i></button>
+    </div>
+    <ul className='nav nav-tabs nav-bordered mb-3'>
+      {storageTabs.map(tab => (
+        <li className='nav-item' key={`storage-billing-tab-${tab.id}`}>
+          <button
+            type='button'
+            className={`nav-link ${activeStorageTab === tab.id ? 'active' : ''}`}
+            onClick={() => {
+              setActiveStorageTab(tab.id)
+              setStorageFilters(tab.id === 'prefactures' ? emptyFilters() : reportFilters())
+              setAppliedStorageFilters(tab.id === 'prefactures' ? emptyFilters() : reportFilters())
+            }}
+          >
+            {tab.label}
+          </button>
+        </li>
+      ))}
+    </ul>
+    <form className='row g-3 align-items-end' onSubmit={applyStorageFilters}>
+      <div className='col-12 col-lg-4'>
+        <label className='form-label'>Empresa</label>
+        <select className='form-select' value={storageFilters.businessId} onChange={(e) => updateStorageFilter('businessId', e.target.value)}>
+          <option value=''>Todos</option>
+          {businesses.map(row => <option key={`billing-business-${row.id}`} value={row.id}>{row.name}</option>)}
+        </select>
+      </div>
+      {activeStorageTab === 'prefactures' && <div className='col-12 col-lg-3'>
+        <label className='form-label'>Cliente</label>
+        <select className='form-select' value={storageFilters.clientId} onChange={(e) => updateStorageFilter('clientId', e.target.value)}>
+          <option value=''>Todos</option>
+          {clients.map(row => <option key={`billing-client-${row.id}`} value={row.id}>{row.document_number ? `${row.document_number} - ` : ''}{row.full_name}</option>)}
+        </select>
+      </div>}
+      <div className='col-12 col-md-6 col-lg-2'>
+        <label className='form-label'>{activeStorageTab === 'prefactures' ? 'Fecha Inicio' : 'Fecha Registro Inicio'}</label>
+        <input type='date' className='form-control' value={storageFilters.startDate} onChange={(e) => updateStorageFilter('startDate', e.target.value)} />
+      </div>
+      <div className='col-12 col-md-6 col-lg-2'>
+        <label className='form-label'>{activeStorageTab === 'prefactures' ? 'Fecha Fin' : 'Fecha Registro Fin'}</label>
+        <input type='date' className='form-control' value={storageFilters.endDate} onChange={(e) => updateStorageFilter('endDate', e.target.value)} />
+      </div>
+      <div className='col-12 col-lg-1 d-flex gap-2'>
+        <button type='submit' className='btn btn-outline-primary w-100'><i className='mdi mdi-magnify me-1'></i>Filtrar</button>
+      </div>
+      {activeStorageTab === 'issued' && <div className='col-12 d-flex justify-content-center gap-2'>
+        <button type='button' className='btn btn-outline-danger' onClick={() => generateIssuedReport('pdf', appliedStorageFilters)}><i className='mdi mdi-file-pdf-box me-1'></i>Generar reporte</button>
+        <button type='button' className='btn btn-outline-success' onClick={() => generateIssuedReport('xlsx', appliedStorageFilters)}><i className='mdi mdi-file-excel-box me-1'></i>Reporte Excel</button>
+      </div>}
+    </form>
+  </div>
+
   return <>
+    {isStorageBilling && <div className='row g-3 mb-3'>
+      <div className='col-12 col-md-6 col-xl-3'>
+        <button type='button' className='btn w-100 d-flex align-items-center justify-content-between py-3 text-white' style={{ background: '#23264f' }} onClick={openBulkModal}>
+          <span><i className='mdi mdi-plus-circle-outline me-1'></i>Facturar en bloque</span>
+          <i className='mdi mdi-file-outline fs-4'></i>
+        </button>
+      </div>
+      <div className='col-12 col-md-6 col-xl-3'>
+        <button type='button' className='btn btn-success w-100 d-flex align-items-center justify-content-between py-3' onClick={openReportModal}>
+          <span><i className='mdi mdi-plus-circle-outline me-1'></i>Reporte Facturas Emitidas</span>
+          <i className='mdi mdi-file-outline fs-4'></i>
+        </button>
+      </div>
+    </div>}
+
     <Table
       gridRef={gridRef}
-      title={moduleTitle}
+      title={isStorageBilling ? storageTitle : moduleTitle}
       rest={billingDocumentsRest}
-      pageSize={25}
+      pageSize={isStorageBilling ? 20 : 25}
+      filterValue={storageFilterValue}
+      exportable={isStorageBilling}
       toolBar={(items) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
+        if (!isStorageBilling) items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
       }}
-      columns={[
+      columns={isStorageBilling ? currentStorageColumns : [
         { dataField: 'id', caption: 'ID', width: 70 },
         { dataField: 'code', caption: 'Código', width: 120 },
         { dataField: 'source_type', caption: 'Origen', width: 120, calculateCellValue: (data) => getSourceTypeLabel(data.source_type) },
@@ -352,18 +755,18 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion' }) => {
     <Modal modalRef={modalRef} title='Documento de facturación' size='xl' onSubmit={onSave}>
       <div className='row'>
         <input ref={idRef} hidden />
-        <div className='col-md-4 mb-3'>
+        {!isStorageBilling && <div className='col-md-4 mb-3'>
           <label className='form-label'>Origen</label>
           <select className='form-control' value={sourceType} onChange={(e) => { setSourceType(e.target.value); setSourceId('') }}>
             <option value='commercial_order'>Pedido comercial</option>
             <option value='service_order'>Orden de servicio</option>
           </select>
-        </div>
-        <div className='col-md-8 mb-3'>
-          <label className='form-label'>Documento origen</label>
+        </div>}
+        <div className={`${isStorageBilling ? 'col-md-12' : 'col-md-8'} mb-3`}>
+          <label className='form-label'>{isStorageBilling ? 'Orden de servicio de almacenamiento' : 'Documento origen'}</label>
           <select className='form-control' value={sourceId} onChange={(e) => setSourceId(e.target.value)} required>
             <option value=''>Seleccione</option>
-            {(sourceType === 'commercial_order' ? commercialOrders : serviceOrders).map(row => <option key={`billing-source-${sourceType}-${row.id}`} value={row.id}>{row.code} - {row.client?.full_name ?? row.eventual_client?.business_name ?? row.eventualClient?.business_name ?? 'Cliente'}</option>)}
+            {((!isStorageBilling && sourceType === 'commercial_order') ? commercialOrders : serviceOrders).map(row => <option key={`billing-source-${sourceType}-${row.id}`} value={row.id}>{row.code} - {row.client?.full_name ?? row.eventual_client?.business_name ?? row.eventualClient?.business_name ?? 'Cliente'}</option>)}
           </select>
         </div>
         <div className='col-md-3 mb-3'>
@@ -396,6 +799,109 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion' }) => {
         <div className='col-12 mb-1'><label className='form-label'>Observaciones</label><textarea ref={observationsRef} className='form-control' rows='3' /></div>
       </div>
     </Modal>
+
+    {isStorageBilling && <Modal modalRef={reportModalRef} title='Reporte de Facturas Emitidas' size='xl' btnSubmitText='Generar Reporte Excel' onSubmit={(e) => { e.preventDefault(); generateIssuedReport('xlsx', modalReportFilters) }}>
+      <div className='row align-items-end'>
+        <div className='col-12 col-lg-4 mb-3'>
+          <label className='form-label'>Empresa</label>
+          <select className='form-select' value={modalReportFilters.businessId} onChange={(e) => setModalReportFilters(prev => ({ ...prev, businessId: e.target.value }))}>
+            <option value=''>Todos</option>
+            {businesses.map(row => <option key={`billing-report-business-${row.id}`} value={row.id}>{row.name}</option>)}
+          </select>
+        </div>
+        <div className='col-12 col-lg-4 mb-3'>
+          <label className='form-label'>Fecha Inicio</label>
+          <input type='date' className='form-control' value={modalReportFilters.startDate} onChange={(e) => setModalReportFilters(prev => ({ ...prev, startDate: e.target.value }))} />
+        </div>
+        <div className='col-12 col-lg-4 mb-3'>
+          <label className='form-label'>Fecha Fin</label>
+          <input type='date' className='form-control' value={modalReportFilters.endDate} onChange={(e) => setModalReportFilters(prev => ({ ...prev, endDate: e.target.value }))} />
+        </div>
+      </div>
+    </Modal>}
+
+    {isStorageBilling && <Modal modalRef={bulkModalRef} title='Facturar Pre-Facturas' size='xl' btnSubmitText='Facturar' onSubmit={onIssueBulk}>
+      <div className='row align-items-end'>
+        <div className='col-12 col-lg-7 mb-3'>
+          <label className='form-label'>Cliente</label>
+          <select className='form-select' value={bulkFilters.clientId} onChange={(e) => setBulkFilters(prev => ({ ...prev, clientId: e.target.value }))}>
+            <option value=''>Seleccione cliente</option>
+            {clients.map(row => <option key={`billing-bulk-client-${row.id}`} value={row.id}>{row.document_number ? `${row.document_number} - ` : ''}{row.full_name}</option>)}
+          </select>
+        </div>
+        <div className='col-12 col-md-6 col-lg-2 mb-3'>
+          <label className='form-label'>Tipo documento</label>
+          <select className='form-select' value={bulkFilters.documentType} onChange={(e) => setBulkFilters(prev => ({ ...prev, documentType: e.target.value }))}>
+            <option value='Factura'>Factura</option>
+            <option value='Boleta'>Boleta</option>
+          </select>
+        </div>
+        <div className='col-12 col-md-6 col-lg-2 mb-3'>
+          <label className='form-label'>Moneda</label>
+          <select className='form-select' value={bulkFilters.currency} onChange={(e) => setBulkFilters(prev => ({ ...prev, currency: e.target.value }))}>
+            <option value='PEN'>Soles</option>
+            <option value='USD'>Dolares</option>
+          </select>
+        </div>
+        <div className='col-12 col-lg-1 mb-3'>
+          <button type='button' className='btn btn-outline-primary w-100' onClick={loadBulkPrefactures} disabled={bulkLoading}>
+            <i className={`mdi ${bulkLoading ? 'mdi-loading mdi-spin' : 'mdi-check'} me-1`}></i>Filtrar
+          </button>
+        </div>
+      </div>
+      <div className='d-flex justify-content-between align-items-center mt-3 mb-2'>
+        <div>
+          <label className='form-label d-block mb-1'>Detraccion</label>
+          <div className='form-check form-switch'>
+            <input className='form-check-input' type='checkbox' checked={bulkFilters.detraction} onChange={(e) => setBulkFilters(prev => ({ ...prev, detraction: e.target.checked }))} id='billing-bulk-detraction' />
+            <label className='form-check-label' htmlFor='billing-bulk-detraction'>{bulkFilters.detraction ? 'SI' : 'NO'}</label>
+          </div>
+        </div>
+        <h3 className='mb-0'>Importe: <span className='text-success'>{formatMoney(bulkTotal)}</span></h3>
+      </div>
+      <h5 className='mt-4'>Lista de Pedidos</h5>
+      <div className='d-flex justify-content-end mb-2'>
+        <div className='form-check'>
+          <input className='form-check-input' type='checkbox' checked={bulkRows.length > 0 && bulkSelected.length === bulkRows.length} onChange={(e) => toggleAllBulkRows(e.target.checked)} id='billing-bulk-check-all' />
+          <label className='form-check-label' htmlFor='billing-bulk-check-all'>Seleccionar todos</label>
+        </div>
+      </div>
+      <div className='table-responsive border'>
+        <table className='table table-sm table-hover mb-0'>
+          <thead>
+            <tr>
+              <th style={{ width: 90 }}>Acciones</th>
+              <th>O. Servicio</th>
+              <th>Tipo</th>
+              <th>T. Documento</th>
+              <th>N de Pre-Factura</th>
+              <th>Cliente</th>
+              <th>Moneda</th>
+              <th className='text-end'>Importe</th>
+              <th>Fecha Registro</th>
+              <th>Usuario Registro</th>
+            </tr>
+          </thead>
+          <tbody>
+            {bulkRows.length === 0 && <tr><td colSpan='10' className='text-muted'>No existen elementos</td></tr>}
+            {bulkRows.map(row => (
+              <tr key={`bulk-billing-row-${row.id}`}>
+                <td><input type='checkbox' checked={bulkSelected.includes(row.id)} onChange={(e) => toggleBulkRow(row.id, e.target.checked)} /></td>
+                <td>{rowSourceCode(row)}</td>
+                <td>{rowDescription(row)}</td>
+                <td>{row.document_type}</td>
+                <td>{row.code}</td>
+                <td>{rowClientName(row)}</td>
+                <td>{currencyLabel(row.currency)}</td>
+                <td className='text-end'>{formatMoney(row.total)}</td>
+                <td>{formatDate(row.created_at)}</td>
+                <td>{row.creator?.fullname ?? row.creator?.username ?? '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Modal>}
 
     <Modal modalRef={payloadModalRef} title={`Payload del conector${selectedRow ? ` - ${selectedRow.code}` : ''}`} size='xl' hideFooter>
       <textarea className='form-control' rows='24' value={payloadText} readOnly />

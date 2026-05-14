@@ -20,8 +20,19 @@ const loadAll = async (path) => {
 class BillingDocumentsRest extends BasicRest {
   path = isStoragePath() ? 'admin/storage/billing-control' : 'admin/billing-documents'
 
+  getBusinesses = async () => await loadAll('/api/admin/businesses/paginate')
+  getClients = async () => await loadAll(isStoragePath() ? '/api/admin/storage/clients/paginate' : '/api/admin/clients/paginate')
   getCommercialOrders = async () => await loadAll('/api/admin/commercial-orders/paginate')
-  getServiceOrders = async () => await loadAll(isStoragePath() ? '/api/admin/storage/general-service-orders/paginate' : '/api/admin/service-orders/paginate')
+  getServiceOrders = async () => {
+    if (!isStoragePath()) return await loadAll('/api/admin/service-orders/paginate')
+
+    const [storageOrders, generalOrders] = await Promise.all([
+      loadAll('/api/admin/storage/service-orders/paginate'),
+      loadAll('/api/admin/storage/general-service-orders/paginate'),
+    ])
+
+    return [...storageOrders, ...generalOrders].sort((a, b) => Number(b.id ?? 0) - Number(a.id ?? 0))
+  }
 
   getConnectorPayload = async (id) => {
     try {
