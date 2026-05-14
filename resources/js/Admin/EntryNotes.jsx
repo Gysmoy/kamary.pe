@@ -40,6 +40,7 @@ const toDateInput = (value) => {
 
 const clientLabel = (client) => [client?.document_number, client?.full_name].filter(Boolean).join(' | ')
 const locationCodeFromValue = (value) => `${value ?? ''}`.split(',')[0].split('|')[0].trim()
+const storageLocationOptionLabel = (location) => [location?.temperature_range, location?.code].filter(Boolean).join(' - ')
 
 const normalizeSearchText = (value) => `${value ?? ''}`
   .toLowerCase()
@@ -390,15 +391,17 @@ const EntryNotes = () => {
     formData.append('guide_sequence', storageContext ? '' : (guideSequenceRef.current.value || ''))
     formData.append('guide_ruc', storageContext ? '' : (guideRucRef.current.value || ''))
     formData.append('items', JSON.stringify(items.map(item => {
+      const selectedLot = selectedStorageLotForItem(item)
       const location = locationCodeFromValue(Array.isArray(item.locations) ? item.locations[0] : item.location)
       const receivedQuantity = storageContext ? item.received_quantity : item.quantity
       const costUnit = Number(item.cost_unit || 0)
+      const lot = (item.lot || item.batch_code || selectedLot?.lot || '').toString().trim()
       return {
-        batch_code: (item.batch_code ?? item.lot ?? '').toString().trim(),
-        lot: (item.lot ?? item.batch_code ?? '').toString().trim(),
-        expiration_date: item.expiration_date || null,
-        storage_condition: item.storage_condition || null,
-        manufacturer_id: item.manufacturer_id || null,
+        batch_code: lot,
+        lot,
+        expiration_date: item.expiration_date || selectedLot?.expiration_date || null,
+        storage_condition: item.storage_condition || selectedLot?.storage_condition || null,
+        manufacturer_id: item.manufacturer_id || selectedLot?.manufacturer_id || null,
         article_id: item.article_id || null,
         warehouse_id: item.warehouse_id || selectedWarehouseId || null,
         stock: item.stock,
@@ -538,6 +541,15 @@ const EntryNotes = () => {
     return (storageOptions.locations ?? [])
       .filter(location => `${location.warehouse_id}` === `${warehouseId}` && (location.status === true || location.status === 1 || location.status === '1'))
       .filter(location => location.occupancy_status !== 'Ocupado' || `${location.code}` === selectedCode)
+  }
+
+  const selectedStorageLotForItem = (item) => {
+    const lotKey = `${item.batch_id || item.lot || item.batch_code || item.batch_label || ''}`
+    if (!lotKey) return null
+    return (item.storage_lots ?? []).find(lot => {
+      const values = [lot?.id, lot?.lot].filter(value => value !== undefined && value !== null)
+      return values.some(value => `${value}` === lotKey)
+    }) ?? null
   }
 
   const onStorageArticleChanged = async (uid, e) => {
@@ -1360,32 +1372,26 @@ const EntryNotes = () => {
                   {items.map(item => {
                     const selectedLocation = locationCodeFromValue(item.location || item.locations?.[0])
                     const locations = storageLocationsForWarehouse(item.warehouse_id || selectedWarehouseId, selectedLocation)
-                    const lots = item.storage_lots ?? []
+                    const selectedLot = selectedStorageLotForItem(item)
+                    const lotCode = item.lot || item.batch_code || selectedLot?.lot || ''
+                    const expirationDate = toDateInput(item.expiration_date || selectedLot?.expiration_date)
+                    const manufacturerLabel = item.manufacturer_label || selectedLot?.manufacturer?.name || ''
+                    const storageCondition = item.storage_condition || selectedLot?.storage_condition || ''
                     return (
                       <tr key={item.uid}>
                         <td style={{ minWidth: 160 }}>
-                          <select className='form-control form-control-sm' value={item.batch_id || item.lot || ''} onChange={(e) => onStorageLotChanged(item.uid, e.target.value)}>
-                            <option value=''>Seleccione</option>
-                            {lots.map(lot => <option key={`entry-note-lot-${item.uid}-${lot.id ?? lot.lot}`} value={lot.id ?? lot.lot}>{lot.lot}</option>)}
-                          </select>
+                          <input className='form-control form-control-sm' value={lotCode} readOnly />
                         </td>
                         <td style={{ minWidth: 145 }}>
-                          <input className='form-control form-control-sm' type='date' value={item.expiration_date || ''} onChange={(e) => onItemUpdated(item.uid, 'expiration_date', e.target.value)} />
+                          <input className='form-control form-control-sm' value={expirationDate} readOnly />
                         </td>
                         <td style={{ minWidth: 260 }}>
-                          <SelectAPIFormGroup
-                            eRef={getArticleRef(item.uid)}
-                            col='col-12'
-                            searchAPI='/api/admin/storage/articles/paginate'
-                            searchBy='name'
-                            dropdownParent='#entry-note-form-container'
-                            onChange={(e) => onStorageArticleChanged(item.uid, e)}
-                          />
+                          <input className='form-control form-control-sm' value={item.article_label} readOnly />
                         </td>
                         <td style={{ minWidth: 110 }}><input className='form-control form-control-sm' value={item.article_unit} readOnly /></td>
                         <td style={{ minWidth: 95 }}><input className='form-control form-control-sm' type='number' value={Number(item.stock || 0).toFixed(3)} readOnly /></td>
-                        <td style={{ minWidth: 170 }}><input className='form-control form-control-sm' value={item.manufacturer_label} readOnly /></td>
-                        <td style={{ minWidth: 210 }}><input className='form-control form-control-sm' value={item.storage_condition || ''} onChange={(e) => onItemUpdated(item.uid, 'storage_condition', e.target.value)} /></td>
+                        <td style={{ minWidth: 170 }}><input className='form-control form-control-sm' value={manufacturerLabel} readOnly /></td>
+                        <td style={{ minWidth: 210 }}><input className='form-control form-control-sm' value={storageCondition} readOnly /></td>
                         <td style={{ minWidth: 240 }}>
                           <SelectFormGroup
                             col='col-12'
@@ -1398,7 +1404,7 @@ const EntryNotes = () => {
                             <option value=''>Seleccione</option>
                             {locations.map(location => (
                               <option key={`entry-note-location-${item.uid}-${location.id}`} value={`${location.code}`}>
-                                {location.code} | {location.temperature_range}{location.occupancy_status === 'Ocupado' ? ' | Ocupado' : ''}
+                                {storageLocationOptionLabel(location)}{location.occupancy_status === 'Ocupado' ? ' | Ocupado' : ''}
                               </option>
                             ))}
                           </SelectFormGroup>
