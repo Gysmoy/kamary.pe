@@ -130,7 +130,7 @@ class EntryNoteController extends BasicController
         $branchId = $body['business_branch_id'] ?? null;
         $warehouseId = $body['warehouse_id'] ?? null;
         $supplierId = $body['supplier_id'] ?? null;
-        $clientId = $body['client_id'] ?? null;
+        $clientId = $this->normalizeClientId($body['client_id'] ?? null);
         $documentType = trim((string)($body['document_type'] ?? 'Boleta'));
         $currency = trim((string)($body['currency'] ?? 'PEN'));
 
@@ -154,7 +154,7 @@ class EntryNoteController extends BasicController
         $warehouse = Warehouse::findOrFail($warehouseId);
         $body['business_branch_id'] = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
         $body['supplier_id'] = ($supplierId === '' || is_null($supplierId)) ? null : (int)$supplierId;
-        $body['client_id'] = ($clientId === '' || is_null($clientId)) ? null : (int)$clientId;
+        $body['client_id'] = $clientId;
 
         $rawItems = $body['items'] ?? [];
         if (is_string($rawItems)) {
@@ -530,6 +530,18 @@ class EntryNoteController extends BasicController
     private function normalizeStorageLocationCode($value): string
     {
         return trim(explode('|', explode(',', (string)($value ?? ''))[0] ?? '')[0] ?? '');
+    }
+
+    private function normalizeClientId($value): ?int
+    {
+        if ($value === null) return null;
+
+        $text = trim((string)$value);
+        if ($text === '') return null;
+        if (preg_match('/^client-(\d+)$/i', $text, $matches)) return (int)$matches[1];
+        if (ctype_digit($text)) return (int)$text;
+
+        throw new \Exception('El cliente seleccionado no es valido');
     }
 
     private function toNullableDecimal($value): ?float

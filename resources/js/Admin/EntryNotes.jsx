@@ -1187,6 +1187,7 @@ const EntryNotes = () => {
   const lotSearchStart = (lotSearchCurrentPage - 1) * lotSearchPageSize
   const lotSearchPageRows = lotSearchFilteredRows.slice(lotSearchStart, lotSearchStart + lotSearchPageSize)
   const allLotSearchPageSelected = lotSearchPageRows.length > 0 && lotSearchPageRows.every(row => lotSearchSelectedIds.includes(row.id))
+  const storageEntryQuantityTotal = items.reduce((total, item) => total + Number(item.received_quantity || item.quantity || 0), 0)
 
   const toggleLotSearchPage = (checked) => {
     const pageIds = lotSearchPageRows.map(row => row.id)
@@ -1363,12 +1364,11 @@ const EntryNotes = () => {
                     <th>Ubicacion</th>
                     <th>Cantidad solicitada</th>
                     <th>Cantidad recibida</th>
-                    <th>Total</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.length === 0 && <tr><td colSpan='12' className='text-center text-muted py-3'>Sin productos</td></tr>}
+                  {items.length === 0 && <tr><td colSpan='11' className='text-center text-muted py-3'>Sin productos</td></tr>}
                   {items.map(item => {
                     const selectedLocation = locationCodeFromValue(item.location || item.locations?.[0])
                     const locations = storageLocationsForWarehouse(item.warehouse_id || selectedWarehouseId, selectedLocation)
@@ -1411,7 +1411,6 @@ const EntryNotes = () => {
                         </td>
                         <td style={{ minWidth: 140 }}><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.requested_quantity} onChange={(e) => onItemUpdated(item.uid, 'requested_quantity', e.target.value)} /></td>
                         <td style={{ minWidth: 140 }}><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.received_quantity} onChange={(e) => onItemUpdated(item.uid, 'received_quantity', e.target.value)} /></td>
-                        <td style={{ minWidth: 110 }}><input className='form-control form-control-sm' type='number' value={Number(item.total || 0).toFixed(2)} readOnly /></td>
                         <td>
                           <button type='button' className='btn btn-xs btn-soft-danger' onClick={() => onItemRemoved(item.uid)}>
                             <i className='mdi mdi-delete'></i>
@@ -1420,6 +1419,16 @@ const EntryNotes = () => {
                       </tr>
                     )
                   })}
+                  {items.length > 0 && (
+                    <tr>
+                      <td colSpan='8'></td>
+                      <td className='text-end fw-semibold fst-italic align-middle'>Total</td>
+                      <td style={{ minWidth: 140 }}>
+                        <input className='form-control form-control-sm' type='number' value={storageEntryQuantityTotal.toFixed(2)} readOnly />
+                      </td>
+                      <td></td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
