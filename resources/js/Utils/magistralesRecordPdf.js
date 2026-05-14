@@ -129,12 +129,22 @@ const manufacturerWithCountry = (item) => (
     .join(' | ')
 )
 
-const documentLabel = (data) => (
+const documentLabel = (data, separator = '-') => (
   [data?.document_series, data?.document_sequence]
     .filter(Boolean)
-    .join('-')
+    .join(separator)
     || [data?.document_type, data?.document_series, data?.document_sequence].filter(Boolean).join(' ')
 )
+
+const documentTypeLabel = (value) => {
+  const text = asText(value, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+  return text || 'DOCUMENTO'
+}
+
+const asQuantity = (value) => {
+  const number = Number(value || 0)
+  return Number.isInteger(number) ? `${number}` : number.toFixed(3)
+}
 
 const invoicePackingLabel = (data) => (
   [data?.invoice_series, data?.invoice_sequence]
@@ -296,6 +306,83 @@ const renderStorageEntryNoteActaPdf = (doc, document, now) => {
   doc.text('Transportista', pageWidth - margin - 90 - (signatureWidth / 2), y + 12, { align: 'center' })
   doc.text(`Generado: ${now}`, pageWidth - margin, pageHeight - 12, { align: 'right' })
   doc.text('Page 1', margin, pageHeight - 12)
+}
+
+const renderStorageEntryNoteDetailPdf = (doc, document) => {
+  const data = document.source ?? {}
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 52
+  const rightX = pageWidth - margin - 190
+  let y = 82
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(15)
+  doc.text(`NOTA DE ENTRADA: ${asText(document.code)}`, pageWidth / 2, y, { align: 'center' })
+
+  doc.setFontSize(9)
+  y += 36
+  const clientHeight = addInlineField(
+    doc,
+    'CLIENTE :',
+    [nested(data, 'client.document_number'), nested(data, 'client.full_name')].filter(Boolean).join(' - '),
+    margin,
+    y,
+    pageWidth - (margin * 2),
+    62
+  )
+  y += clientHeight + 6
+
+  addInlineField(doc, `${documentTypeLabel(data?.document_type)} :`, documentLabel(data, ' - '), margin, y, 270, 94)
+  addInlineField(doc, 'F. DOCUMENTO :', asDate(data?.document_date), rightX, y, 190, 92)
+  y += 18
+  addInlineField(doc, 'ALMACEN :', nested(data, 'warehouse.name'), margin, y, 270, 62)
+  addInlineField(doc, 'F. DESPACHO :', asDate(data?.entry_date), rightX, y, 190, 86)
+  y += 24
+
+  const rows = (data?.items ?? []).map(item => [
+    nested(item, 'article.name'),
+    item?.lot || item?.batch_code,
+    asDate(item?.expiration_date),
+    item?.location,
+    asQuantity(item?.received_quantity ?? item?.quantity),
+  ])
+
+  doc.autoTable({
+    startY: y,
+    head: [['Descripcion', 'Lote/Serie', 'F. Vencim.', 'Ubic.', 'Cantidad']],
+    body: rows.length ? rows : [['Sin detalle', '', '', '', '']],
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 5, overflow: 'linebreak', lineColor: [220, 224, 230], lineWidth: 0.3 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [45, 55, 72], fontStyle: 'bold', lineColor: [220, 224, 230], lineWidth: 0.3 },
+    bodyStyles: { textColor: [45, 55, 72] },
+    columnStyles: {
+      0: { cellWidth: 230 },
+      1: { cellWidth: 75 },
+      2: { cellWidth: 70 },
+      3: { cellWidth: 62 },
+      4: { cellWidth: 54, halign: 'right' },
+    },
+    margin: { left: margin, right: margin },
+  })
+
+  y = doc.lastAutoTable.finalY + 28
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.text('OBSERVACIONES :', margin, y)
+  doc.setFont('helvetica', 'normal')
+  const observations = asClientText(data?.observations, '')
+  if (observations) doc.text(doc.splitTextToSize(observations, pageWidth - (margin * 2) - 100), margin + 95, y)
+
+  const signatureY = Math.max(y + 74, pageHeight - 142)
+  const signatureWidth = 155
+  doc.setDrawColor(70, 70, 70)
+  doc.line(margin + 18, signatureY, margin + 18 + signatureWidth, signatureY)
+  doc.line(pageWidth - margin - 18 - signatureWidth, signatureY, pageWidth - margin - 18, signatureY)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.text('Jefe de Almacen', margin + 18 + (signatureWidth / 2), signatureY + 14, { align: 'center' })
+  doc.text('Responsable del cliente', pageWidth - margin - 18 - (signatureWidth / 2), signatureY + 14, { align: 'center' })
 }
 
 export const buildMagistralesRows = {
@@ -779,9 +866,11 @@ export const buildMagistralesRows = {
     ].filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join('\n\n'),
   }),
   storageEntryNote: (data) => ({
+    layout: 'storage-entry-note-detail',
     title: 'Detalle de nota de entrada',
     code: data?.code || data?.id,
     filename: `nota-entrada-almacenamiento-${data?.code || data?.id}`,
+    source: data,
     meta: [
       ['Empresa', nested(data, 'business.name')],
       ['Sede', nested(data, 'branch.name')],
@@ -911,6 +1000,11 @@ export const openMagistralesRecordPdf = (document) => {
   try {
     const doc = ensurePdf(document.orientation ?? 'portrait')
     const now = new Date().toLocaleString('es-PE')
+    if (document.layout === 'storage-entry-note-detail') {
+      renderStorageEntryNoteDetailPdf(doc, document)
+      showPdfInModal(doc, document)
+      return
+    }
     if (document.layout === 'storage-entry-note-acta') {
       renderStorageEntryNoteActaPdf(doc, document, now)
       showPdfInModal(doc, document)
