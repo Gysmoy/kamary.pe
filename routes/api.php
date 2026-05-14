@@ -401,6 +401,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/kardex/options', [AdminStorageKardexController::class, 'options']);
             Route::get('/kardex/locations-report', [AdminStorageKardexController::class, 'locationsReport']);
             Route::get('/kardex/inventory-report', [AdminStorageKardexController::class, 'inventoryReport']);
+            Route::post('/kardex/movements', [AdminStorageKardexController::class, 'movements']);
             Route::post('/kardex/warehouses', [AdminStorageKardexController::class, 'saveWarehouse']);
             Route::delete('/kardex/warehouses/{id}', [AdminStorageKardexController::class, 'deleteWarehouse']);
             Route::post('/kardex/locations', [AdminStorageKardexController::class, 'saveLocation']);

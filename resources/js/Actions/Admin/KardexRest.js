@@ -143,11 +143,11 @@ class KardexRest extends BasicRest {
     }
   }
 
-  getMovements = async ({ article_id, warehouse_id }) => {
+  getMovements = async (params = {}) => {
     try {
       const { status, result } = await Fetch(`/api/${this.path}/movements`, {
         method: 'POST',
-        body: JSON.stringify({ article_id, warehouse_id })
+        body: JSON.stringify(params)
       })
       if (!status) throw new Error(result?.message || 'No se pudieron cargar movimientos')
       return result.data ?? []

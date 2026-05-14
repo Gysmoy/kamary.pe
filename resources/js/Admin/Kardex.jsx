@@ -312,6 +312,7 @@ const StorageKardex = () => {
   const gridRef = useRef()
   const warehouseModalRef = useRef()
   const locationModalRef = useRef()
+  const monthlyKardexModalRef = useRef()
 
   const [activeTab, setActiveTab] = useState('kardex')
   const [businesses, setBusinesses] = useState([])
@@ -329,6 +330,11 @@ const StorageKardex = () => {
   const [kardexSearch, setKardexSearch] = useState('')
   const [kardexSort, setKardexSort] = useState({ selector: 'last_movement_at', desc: true })
   const [kardexLoading, setKardexLoading] = useState(false)
+  const [monthlyKardexRow, setMonthlyKardexRow] = useState(null)
+  const [monthlyKardexRows, setMonthlyKardexRows] = useState([])
+  const [monthlyStartMonth, setMonthlyStartMonth] = useState('')
+  const [monthlyEndMonth, setMonthlyEndMonth] = useState('')
+  const [monthlyLoading, setMonthlyLoading] = useState(false)
   const [warehouseForm, setWarehouseForm] = useState({
     id: '',
     business_id: '',
@@ -660,6 +666,84 @@ const StorageKardex = () => {
     }
   }
 
+  const monthFromDate = (value) => {
+    const text = value?.toString()
+    if (text && /^\d{4}-\d{2}/.test(text)) return text.slice(0, 7)
+    return new Date().toISOString().slice(0, 7)
+  }
+
+  const loadMonthlyKardexRows = async (row = monthlyKardexRow, startMonth = monthlyStartMonth, endMonth = monthlyEndMonth) => {
+    if (!row) return
+    if (startMonth && endMonth && startMonth > endMonth) {
+      Swal.fire({ icon: 'warning', title: 'Rango invalido', text: 'La fecha inicial no puede ser mayor que la fecha final' })
+      return
+    }
+
+    setMonthlyLoading(true)
+    try {
+      const rows = await kardexRest.getMovements({
+        article_id: row.article_id,
+        warehouse_id: row.warehouse_id,
+        client_id: row.client_id || '',
+        lot: row.lot || '',
+        expiration_date: formatDateIso(row.expiration_date) === '-' ? '' : formatDateIso(row.expiration_date),
+        location: row.location || '',
+        start_month: startMonth || '',
+        end_month: endMonth || '',
+      })
+      setMonthlyKardexRows(rows ?? [])
+    } finally {
+      setMonthlyLoading(false)
+    }
+  }
+
+  const openMonthlyKardex = async (row) => {
+    const month = monthFromDate(row?.last_movement_at)
+    setMonthlyKardexRow(row)
+    setMonthlyKardexRows([])
+    setMonthlyStartMonth(month)
+    setMonthlyEndMonth(month)
+    $(monthlyKardexModalRef.current).modal('show')
+    await loadMonthlyKardexRows(row, month, month)
+  }
+
+  const exportMonthlyKardexPdf = () => {
+    if (!monthlyKardexRows.length) {
+      Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay movimientos para exportar' })
+      return
+    }
+
+    const JsPDF = window.jspdf?.jsPDF || window.jsPDF
+    if (!JsPDF) {
+      Swal.fire({ icon: 'error', title: 'PDF no disponible', text: 'jsPDF no esta cargado' })
+      return
+    }
+    const doc = new JsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+    if (!doc.autoTable) {
+      Swal.fire({ icon: 'error', title: 'PDF no disponible', text: 'AutoTable no esta cargado' })
+      return
+    }
+
+    doc.setFontSize(12)
+    doc.text(`Kardex mensual - ${monthlyKardexRow?.inventory ?? ''}`, 24, 28)
+    doc.autoTable({
+      head: [['FECHA', 'CODIGO', 'DOCUMENTO', 'OPERACION', 'ENTRADA', 'SALIDA', 'SALDO']],
+      body: monthlyKardexRows.map(row => [
+        formatDateTime(row.movement_date),
+        row.code ?? '',
+        row.document ?? '',
+        row.operation ?? '',
+        formatQty(row.quantity_in),
+        formatQty(row.quantity_out),
+        formatQty(row.balance),
+      ]),
+      startY: 42,
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fillColor: [9, 154, 164] },
+    })
+    doc.save('kardex-mensual.pdf')
+  }
+
   const statusBadge = (container, status) => {
     const active = status === true || status === 1 || status === '1'
     container.html(`<span class="badge ${active ? 'badge-soft-success' : 'badge-soft-secondary'}">${active ? 'Activo' : 'Inactivo'}</span>`)
@@ -958,7 +1042,7 @@ const StorageKardex = () => {
                 {!kardexLoading && kardexRows.map(row => (
                   <tr key={row.id}>
                     <td className='text-center'>
-                      <button type='button' className='btn btn-xs btn-outline-primary' title='Stock'>
+                      <button type='button' className='btn btn-xs btn-outline-primary' title='Kardex mensual' onClick={() => openMonthlyKardex(row)}>
                         <i className='mdi mdi-swap-horizontal'></i>
                       </button>
                     </td>
@@ -1009,6 +1093,87 @@ const StorageKardex = () => {
       }}
       columns={columnsByTab[activeTab]}
     />}
+
+    <Modal
+      modalRef={monthlyKardexModalRef}
+      title={<h5 className='modal-title text-white mb-0'><i className='mdi mdi-menu me-1'></i> KARDEX MENSUAL</h5>}
+      size='xl'
+      hideFooter
+      headerClass='py-2'
+      closeButtonClass='btn-close-white'
+      contentClass='border-0 storage-monthly-kardex'
+      onSubmit={(e) => { e.preventDefault(); loadMonthlyKardexRows() }}
+      bodyStyle={{ maxHeight: 'calc(100vh - 90px)', overflowY: 'auto', overflowX: 'hidden' }}
+    >
+      <style>{`
+        .storage-monthly-kardex .modal-header { background: #23264f; }
+        .storage-monthly-kardex-table th,
+        .storage-monthly-kardex-table td { vertical-align: middle; }
+        .storage-monthly-kardex-band { background: #079aa3; color: #fff; font-weight: 700; font-size: 18px; }
+        .storage-monthly-kardex-head { background: #079aa3; color: #fff; font-weight: 700; }
+      `}</style>
+      <div>
+        <div className='row justify-content-center g-3 mb-3'>
+          <div className='col-12 col-md-4'>
+            <label className='form-label text-center w-100'>Seleccionar fecha inicial</label>
+            <input type='month' className='form-control' value={monthlyStartMonth} onChange={(e) => setMonthlyStartMonth(e.target.value)} />
+          </div>
+          <div className='col-12 col-md-4'>
+            <label className='form-label text-center w-100'>Seleccionar fecha final</label>
+            <input type='month' className='form-control' value={monthlyEndMonth} onChange={(e) => setMonthlyEndMonth(e.target.value)} />
+          </div>
+          <div className='col-12 d-flex justify-content-center gap-2'>
+            <button type='button' className='btn btn-outline-primary' disabled={monthlyLoading} onClick={() => loadMonthlyKardexRows()}>
+              <i className={`mdi ${monthlyLoading ? 'mdi-spin mdi-loading' : 'mdi-magnify'} me-1`}></i>
+              Buscar
+            </button>
+            <button type='button' className='btn btn-outline-danger' onClick={exportMonthlyKardexPdf}>
+              <i className='mdi mdi-file-pdf-box me-1'></i>
+              Exportar PDF
+            </button>
+          </div>
+        </div>
+
+        <div className='table-responsive'>
+          <table className='table table-bordered table-sm storage-monthly-kardex-table mb-0'>
+            <thead>
+              <tr>
+                <th colSpan='7' className='text-center storage-monthly-kardex-band py-3'>TRANSACCION -</th>
+              </tr>
+              <tr className='storage-monthly-kardex-head text-center'>
+                <th style={{ minWidth: 150 }}>FECHA</th>
+                <th style={{ minWidth: 130 }}>CODIGO</th>
+                <th style={{ minWidth: 220 }}>DOCUMENTO</th>
+                <th style={{ minWidth: 150 }}>OPERACION</th>
+                <th style={{ minWidth: 120 }}>ENTRADA</th>
+                <th style={{ minWidth: 120 }}>SALIDA</th>
+                <th style={{ minWidth: 120 }}>SALDO</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td colSpan='7' className='text-center fw-bold fs-5 text-muted'>
+                  {[monthlyKardexRow?.inventory, monthlyKardexRow?.unit_label ? `(${monthlyKardexRow.unit_label})` : ''].filter(Boolean).join(' ')}
+                </td>
+              </tr>
+              {monthlyLoading && <tr><td colSpan='7' className='text-center text-muted py-4'><i className='mdi mdi-spin mdi-loading me-1'></i> Cargando...</td></tr>}
+              {!monthlyLoading && monthlyKardexRows.length === 0 && <tr><td colSpan='7' className='text-center text-muted py-4'>No existen movimientos</td></tr>}
+              {!monthlyLoading && monthlyKardexRows.map(row => (
+                <tr key={row.id}>
+                  <td className='text-center'>{formatDateTime(row.movement_date)}</td>
+                  <td className='text-center text-danger'>{row.code}</td>
+                  <td className='text-center'>{row.document}</td>
+                  <td className='text-center'>{row.operation}</td>
+                  <td className='text-end text-primary'>{Number(row.quantity_in ?? 0) > 0 ? formatQty(row.quantity_in) : ''}</td>
+                  <td className='text-end text-danger'>{Number(row.quantity_out ?? 0) > 0 ? formatQty(row.quantity_out) : ''}</td>
+                  <td className='text-end fw-bold text-info'>{formatQty(row.balance)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Modal>
 
     <Modal
       modalRef={warehouseModalRef}

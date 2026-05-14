@@ -13,6 +13,7 @@ use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use SoDe\Extend\Response;
@@ -354,6 +355,145 @@ class KardexController extends BasicController
             }
             fclose($output);
         }, 'reporte_inventario_almacenamiento.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    public function movements(Request $request): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+
+        try {
+            $articleId = $this->nullableInt($request->input('article_id'));
+            if (!$articleId) {
+                throw new \Exception('El articulo es obligatorio');
+            }
+
+            $warehouseId = $this->nullableInt($request->input('warehouse_id'));
+            $clientId = $this->nullableInt($request->input('client_id'));
+            $lot = trim((string) $request->input('lot', ''));
+            $expirationDate = $this->nullableDate($request->input('expiration_date'));
+            $location = trim((string) $request->input('location', ''));
+            $startDate = $this->monthBoundary($request->input('start_month'), false);
+            $endDate = $this->monthBoundary($request->input('end_month'), true);
+
+            $entryMovements = DB::table('entry_note_items as entry_item')
+                ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
+                ->join('businesses as entry_business', 'entry_business.id', '=', 'entry_note.business_id')
+                ->where('entry_note.status', 1)
+                ->where('entry_note.entry_status', 'approved')
+                ->where('entry_item.status', 1)
+                ->where('entry_business.business_key', BusinessScope::KAMARY_MEDICALS)
+                ->where('entry_item.article_id', $articleId)
+                ->when($warehouseId, fn($query) => $query->whereRaw('COALESCE(entry_item.warehouse_id, entry_note.warehouse_id) = ?', [$warehouseId]))
+                ->when($clientId, fn($query) => $query->where('entry_note.client_id', $clientId))
+                ->whereRaw("COALESCE(NULLIF(entry_item.lot, ''), NULLIF(entry_item.batch_code, ''), '') = ?", [$lot])
+                ->whereRaw("COALESCE(entry_item.expiration_date, '1000-01-01') = COALESCE(?, '1000-01-01')", [$expirationDate])
+                ->whereRaw("COALESCE(NULLIF(entry_item.location, ''), '') = ?", [$location])
+                ->selectRaw("
+                    CONCAT('entry-', entry_item.id) as id,
+                    COALESCE(entry_note.updated_at, entry_note.created_at) as movement_date,
+                    COALESCE(entry_note.code, CONCAT('NE', LPAD(entry_note.id, 5, '0'))) as code,
+                    TRIM(CONCAT(
+                        COALESCE(entry_note.document_type, ''),
+                        CASE WHEN COALESCE(entry_note.document_series, '') <> '' OR COALESCE(entry_note.document_sequence, '') <> '' THEN ' ' ELSE '' END,
+                        COALESCE(entry_note.document_series, ''),
+                        CASE WHEN COALESCE(entry_note.document_series, '') <> '' AND COALESCE(entry_note.document_sequence, '') <> '' THEN '-' ELSE '' END,
+                        COALESCE(entry_note.document_sequence, '')
+                    )) as document,
+                    'ENTRADA' as operation,
+                    entry_item.quantity as quantity_in,
+                    0 as quantity_out,
+                    1 as sort_order
+                ");
+
+            $receiptMovements = DB::table('purchase_receipt_items as receipt_item')
+                ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
+                ->join('businesses as receipt_business', 'receipt_business.id', '=', 'receipt.business_id')
+                ->where('receipt.status', 1)
+                ->where('receipt.receipt_status', 'confirmed')
+                ->where('receipt_item.status', 1)
+                ->where('receipt_business.business_key', BusinessScope::KAMARY_MEDICALS)
+                ->where('receipt_item.article_id', $articleId)
+                ->when($clientId, fn($query) => $query->whereRaw('1 = 0'))
+                ->when($warehouseId, fn($query) => $query->where('receipt_item.warehouse_id', $warehouseId))
+                ->whereRaw("COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') = ?", [$lot])
+                ->whereRaw("COALESCE(receipt_item.expiration_date, '1000-01-01') = COALESCE(?, '1000-01-01')", [$expirationDate])
+                ->whereRaw("COALESCE(NULLIF(receipt_item.location, ''), '') = ?", [$location])
+                ->selectRaw("
+                    CONCAT('receipt-', receipt_item.id) as id,
+                    COALESCE(receipt.confirmed_at, receipt.updated_at, receipt.created_at) as movement_date,
+                    receipt.code as code,
+                    TRIM(CONCAT(
+                        COALESCE(receipt.document_type, ''),
+                        CASE WHEN COALESCE(receipt.document_series, '') <> '' OR COALESCE(receipt.document_sequence, '') <> '' THEN ' ' ELSE '' END,
+                        COALESCE(receipt.document_series, ''),
+                        CASE WHEN COALESCE(receipt.document_series, '') <> '' AND COALESCE(receipt.document_sequence, '') <> '' THEN '-' ELSE '' END,
+                        COALESCE(receipt.document_sequence, '')
+                    )) as document,
+                    'ENTRADA' as operation,
+                    receipt_item.quantity as quantity_in,
+                    0 as quantity_out,
+                    2 as sort_order
+                ");
+
+            $exitMovements = DB::table('exit_note_items as exit_item')
+                ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
+                ->join('businesses as exit_business', 'exit_business.id', '=', 'exit_note.business_id')
+                ->where('exit_note.status', 1)
+                ->where('exit_item.status', 1)
+                ->where('exit_business.business_key', BusinessScope::KAMARY_MEDICALS)
+                ->where('exit_item.article_id', $articleId)
+                ->when($warehouseId, fn($query) => $query->whereRaw('COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) = ?', [$warehouseId]))
+                ->whereRaw("COALESCE(NULLIF(exit_item.batch_code, ''), '') = ?", [$lot])
+                ->whereRaw("COALESCE(exit_item.expiration_date, '1000-01-01') = COALESCE(?, '1000-01-01')", [$expirationDate])
+                ->whereRaw("COALESCE(NULLIF(exit_item.location, ''), '') = ?", [$location])
+                ->selectRaw("
+                    CONCAT('exit-', exit_item.id) as id,
+                    COALESCE(exit_note.updated_at, exit_note.created_at) as movement_date,
+                    CONCAT('NS', LPAD(exit_note.id, 5, '0')) as code,
+                    COALESCE(NULLIF(exit_note.client_name, ''), NULLIF(exit_note.observations, ''), '') as document,
+                    'SALIDA' as operation,
+                    0 as quantity_in,
+                    exit_item.quantity as quantity_out,
+                    3 as sort_order
+                ");
+
+            $movementQuery = $entryMovements
+                ->unionAll($receiptMovements)
+                ->unionAll($exitMovements);
+
+            $rows = DB::query()
+                ->fromSub($movementQuery, 'movements')
+                ->when($endDate, fn($query) => $query->whereDate('movement_date', '<=', $endDate))
+                ->orderBy('movement_date')
+                ->orderBy('sort_order')
+                ->get();
+
+            $balance = 0;
+            $visibleRows = [];
+            foreach ($rows as $row) {
+                $qtyIn = (float) ($row->quantity_in ?? 0);
+                $qtyOut = (float) ($row->quantity_out ?? 0);
+                $balance = round($balance + $qtyIn - $qtyOut, 3);
+
+                if ($startDate && substr((string) $row->movement_date, 0, 10) < $startDate) {
+                    continue;
+                }
+
+                $row->quantity_in = $qtyIn;
+                $row->quantity_out = $qtyOut;
+                $row->balance = $balance;
+                $visibleRows[] = $row;
+            }
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = $visibleRows;
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
     }
 
     private function warehousesQuery()
@@ -736,6 +876,30 @@ class KardexController extends BasicController
             throw new \Exception("Valor entero invalido: {$value}");
         }
         return (int) $text;
+    }
+
+    private function nullableDate($value): ?string
+    {
+        if ($value === null) return null;
+        $text = trim((string) $value);
+        if ($text === '' || $text === '0000-00-00') return null;
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $text)) {
+            throw new \Exception("Fecha invalida: {$value}");
+        }
+        return $text;
+    }
+
+    private function monthBoundary($value, bool $endOfMonth): ?string
+    {
+        if ($value === null) return null;
+        $text = trim((string) $value);
+        if ($text === '') return null;
+        if (!preg_match('/^\d{4}-\d{2}$/', $text)) {
+            throw new \Exception("Mes invalido: {$value}");
+        }
+
+        $date = Carbon::createFromFormat('Y-m-d', "{$text}-01");
+        return ($endOfMonth ? $date->endOfMonth() : $date->startOfMonth())->format('Y-m-d');
     }
 
     private function requestBool($value): bool
