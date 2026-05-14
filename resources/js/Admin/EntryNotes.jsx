@@ -1001,15 +1001,15 @@ const EntryNotes = () => {
           })
           appendAction({
             className: 'btn btn-xs btn-soft-danger',
-            title: 'Imprimir acta de nota de entrada',
+            title: 'Detalle de nota de entrada',
             icon: 'mdi mdi-file-pdf-box',
-            onClick: () => openStorageActaPdf(data)
+            onClick: () => openStorageDetailPdf(data)
           })
           appendAction({
             className: 'btn btn-xs btn-soft-info',
-            title: 'Imprimir detalle de nota de entrada',
+            title: 'Acta de nota de entrada',
             icon: 'mdi mdi-file-document-outline',
-            onClick: () => openStorageDetailPdf(data)
+            onClick: () => openStorageActaPdf(data)
           })
           return
         }
@@ -1036,15 +1036,15 @@ const EntryNotes = () => {
         }
         appendAction({
           className: 'btn btn-xs btn-soft-danger',
-          title: 'Imprimir acta de nota de entrada',
+          title: 'Detalle de nota de entrada',
           icon: 'mdi mdi-file-pdf-box',
-          onClick: () => openStorageActaPdf(data)
+          onClick: () => openStorageDetailPdf(data)
         })
         appendAction({
           className: 'btn btn-xs btn-soft-info',
-          title: 'Detalle de nota de entrada',
+          title: 'Acta de nota de entrada',
           icon: 'mdi mdi-file-document-outline',
-          onClick: () => openStorageDetailPdf(data)
+          onClick: () => openStorageActaPdf(data)
         })
       },
       allowFiltering: false,

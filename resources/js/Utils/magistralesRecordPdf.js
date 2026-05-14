@@ -52,10 +52,10 @@ const PDF_MODAL_ID = 'magistrales-record-pdf-modal'
 const PDF_IFRAME_ID = 'magistrales-record-pdf-frame'
 let currentPdfBlobUrl = null
 
-const ensurePdf = () => {
+const ensurePdf = (orientation = 'portrait') => {
   const JsPDF = window.jspdf?.jsPDF || window.jsPDF
   if (!JsPDF) throw new Error('jsPDF no esta disponible')
-  const doc = new JsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
+  const doc = new JsPDF({ orientation, unit: 'pt', format: 'a4' })
   if (!doc.autoTable) throw new Error('AutoTable no esta disponible')
   return doc
 }
@@ -121,6 +121,181 @@ const showPdfInModal = (doc, document) => {
   title.textContent = `${document.title}${document.code ? ` - ${document.code}` : ''}`
   iframe.src = withPdfViewerOptions(currentPdfBlobUrl)
   $(modal).modal('show')
+}
+
+const manufacturerWithCountry = (item) => (
+  [nested(item, 'manufacturer.name'), nested(item, 'manufacturer.country')]
+    .filter(Boolean)
+    .join(' | ')
+)
+
+const documentLabel = (data) => (
+  [data?.document_series, data?.document_sequence]
+    .filter(Boolean)
+    .join('-')
+    || [data?.document_type, data?.document_series, data?.document_sequence].filter(Boolean).join(' ')
+)
+
+const invoicePackingLabel = (data) => (
+  [data?.invoice_series, data?.invoice_sequence]
+    .filter(Boolean)
+    .join('-')
+    || [data?.invoice_type, data?.invoice_series, data?.invoice_sequence].filter(Boolean).join(' ')
+)
+
+const addInlineField = (doc, label, value, x, y, width, labelWidth = 72) => {
+  doc.setFont('helvetica', 'bold')
+  doc.text(label, x, y)
+  doc.setFont('helvetica', 'normal')
+  const lines = doc.splitTextToSize(asClientText(value), width - labelWidth)
+  doc.text(lines, x + labelWidth, y)
+  return Math.max(12, lines.length * 10)
+}
+
+const renderStorageEntryNoteActaPdf = (doc, document, now) => {
+  const data = document.source ?? {}
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 24
+  const contentWidth = pageWidth - (margin * 2)
+  let y = 30
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(14)
+  doc.text('ACTA DE RECEPCION DE PRODUCTOS FORM-F-46', pageWidth / 2, y, { align: 'center' })
+
+  doc.setFontSize(8)
+  y += 22
+  const clientHeight = addInlineField(
+    doc,
+    'CLIENTE:',
+    [nested(data, 'client.document_number'), nested(data, 'client.full_name')].filter(Boolean).join(' - '),
+    margin,
+    y,
+    contentWidth - 190,
+    48
+  )
+  addInlineField(doc, 'Nro ACTA:', document.code, pageWidth - 175, y, 150, 58)
+  y += clientHeight + 4
+
+  const providerHeight = addInlineField(
+    doc,
+    'PROVEEDOR/DISTRIBUIDOR:',
+    data?.provider_distributor || nested(data, 'supplier.business_name'),
+    margin,
+    y,
+    contentWidth - 260,
+    128
+  )
+  addInlineField(doc, 'FACTURA/GUIA:', documentLabel(data), pageWidth - 282, y, 132, 72)
+  addInlineField(doc, 'FECHA:', asDate(data?.document_date), pageWidth - 132, y, 108, 42)
+  y += providerHeight + 8
+
+  doc.setFont('helvetica', 'bold')
+  doc.text('PARA IMPORTACIONES:', margin, y)
+  y += 13
+  addInlineField(doc, 'DUA Nro:', data?.dua_number, margin, y, 200, 48)
+  addInlineField(doc, 'INVOICE/PACKING:', invoicePackingLabel(data), margin + 245, y, 260, 94)
+  y += 15
+
+  y += addInlineField(doc, 'Agencia de Transporte:', data?.transport_agency, margin, y, contentWidth, 116)
+  y += 3
+  addInlineField(doc, 'Nombre del Chofer:', data?.driver_name, margin, y, 310, 96)
+  addInlineField(doc, 'Nro Brevete:', data?.driver_license, margin + 330, y, 180, 66)
+  addInlineField(doc, 'Hora de Inicio:', '____:____', pageWidth - 190, y, 160, 78)
+  y += 15
+  addInlineField(doc, 'Fecha de Registro:', asDate(data?.created_at || data?.entry_date), margin, y, 230, 94)
+  addInlineField(doc, 'Nro de Placa:', data?.vehicle_plate, margin + 330, y, 180, 72)
+  addInlineField(doc, 'Hora de Termino:', '____:____', pageWidth - 190, y, 160, 84)
+  y += 18
+
+  const itemRows = (data?.items ?? []).map((item, index) => [
+    `${index + 1}`,
+    nested(item, 'article.code') || item?.batch_code || item?.lot,
+    nested(item, 'article.name'),
+    nested(item, 'article.unit.symbol') || nested(item, 'article.unit.name'),
+    item?.lot || item?.batch_code,
+    asDate(item?.expiration_date),
+    manufacturerWithCountry(item),
+    item?.protocol_certificate || item?.certificate || '',
+    item?.storage_condition,
+    asNumber(item?.requested_quantity ?? item?.quantity),
+    asNumber(item?.received_quantity ?? item?.quantity),
+  ])
+
+  doc.autoTable({
+    startY: y,
+    head: [[
+      'Item',
+      'Codigo /\nModelo',
+      'Nombre del Producto / Dispositivo Medico, Concentracion y Forma Farmaceutica',
+      'Presentacion',
+      'Lote',
+      'Fecha\nVencimiento',
+      'Fabricante | Pais',
+      'Protocolo/\nCertificado',
+      'Condicion\nAlmacenamiento',
+      'Cantidad\nSolicitada',
+      'Cantidad\nRecibida',
+    ]],
+    body: itemRows.length ? itemRows : [['', '', 'Sin detalle', '', '', '', '', '', '', '', '']],
+    theme: 'grid',
+    styles: { fontSize: 6, cellPadding: 3, overflow: 'linebreak', lineColor: [210, 214, 220], lineWidth: 0.3 },
+    headStyles: { fillColor: [36, 36, 76], textColor: 255, fontStyle: 'bold', halign: 'center', valign: 'middle' },
+    columnStyles: {
+      0: { cellWidth: 24, halign: 'center' },
+      1: { cellWidth: 58 },
+      2: { cellWidth: 140 },
+      3: { cellWidth: 58 },
+      4: { cellWidth: 58 },
+      5: { cellWidth: 60 },
+      6: { cellWidth: 88 },
+      7: { cellWidth: 62 },
+      8: { cellWidth: 78 },
+      9: { cellWidth: 55, halign: 'right' },
+      10: { cellWidth: 55, halign: 'right' },
+    },
+    margin: { left: margin, right: margin },
+  })
+  y = doc.lastAutoTable.finalY + 12
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.text('VERIFICACIONES', margin, y)
+  y += 8
+
+  doc.autoTable({
+    startY: y,
+    head: [['Descripcion', 'SI', 'NO', 'N.A.', 'OBSERVACIONES']],
+    body: [
+      ['Las cajas se encuentran debidamente selladas', '', '', '', ''],
+      ['Las cajas se encuentran limpias, no arrugadas, quebradas o humedas', '', '', '', ''],
+      ['Temperatura de Ingreso | Producto con cadena de frio', '', '', '', ''],
+    ],
+    theme: 'grid',
+    styles: { fontSize: 7, cellPadding: 4, lineColor: [210, 214, 220], lineWidth: 0.3 },
+    headStyles: { fillColor: [245, 247, 250], textColor: [40, 48, 64], fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 310 },
+      1: { cellWidth: 34, halign: 'center' },
+      2: { cellWidth: 34, halign: 'center' },
+      3: { cellWidth: 40, halign: 'center' },
+      4: { cellWidth: contentWidth - 418 },
+    },
+    margin: { left: margin, right: margin },
+  })
+  y = doc.lastAutoTable.finalY + 36
+
+  const signatureWidth = 190
+  doc.setDrawColor(90, 90, 90)
+  doc.line(margin + 90, y, margin + 90 + signatureWidth, y)
+  doc.line(pageWidth - margin - 90 - signatureWidth, y, pageWidth - margin - 90, y)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  doc.text('Encargado de almacen', margin + 90 + (signatureWidth / 2), y + 12, { align: 'center' })
+  doc.text('Transportista', pageWidth - margin - 90 - (signatureWidth / 2), y + 12, { align: 'center' })
+  doc.text(`Generado: ${now}`, pageWidth - margin, pageHeight - 12, { align: 'right' })
+  doc.text('Page 1', margin, pageHeight - 12)
 }
 
 export const buildMagistralesRows = {
@@ -640,9 +815,12 @@ export const buildMagistralesRows = {
     observations: data?.observations,
   }),
   storageEntryNoteActa: (data) => ({
-    title: 'Acta de recepcion',
+    layout: 'storage-entry-note-acta',
+    orientation: 'landscape',
+    title: 'Acta de nota de entrada',
     code: data?.code || data?.id,
     filename: `acta-nota-entrada-${data?.code || data?.id}`,
+    source: data,
     meta: [
       ['Cliente', [nested(data, 'client.document_number'), nested(data, 'client.full_name')].filter(Boolean).join(' - ')],
       ['Proveedor/Distribuidor', data?.provider_distributor || nested(data, 'supplier.business_name')],
@@ -666,7 +844,7 @@ export const buildMagistralesRows = {
       asDate(item?.expiration_date),
       nested(item, 'article.name'),
       nested(item, 'article.unit.symbol') || nested(item, 'article.unit.name'),
-      nested(item, 'manufacturer.name'),
+      manufacturerWithCountry(item),
       item?.storage_condition,
       item?.location,
       asNumber(item?.requested_quantity ?? item?.quantity),
@@ -731,8 +909,13 @@ export const buildMagistralesRows = {
 
 export const openMagistralesRecordPdf = (document) => {
   try {
-    const doc = ensurePdf()
+    const doc = ensurePdf(document.orientation ?? 'portrait')
     const now = new Date().toLocaleString('es-PE')
+    if (document.layout === 'storage-entry-note-acta') {
+      renderStorageEntryNoteActaPdf(doc, document, now)
+      showPdfInModal(doc, document)
+      return
+    }
     const pageWidth = doc.internal.pageSize.getWidth()
     let y = 42
 

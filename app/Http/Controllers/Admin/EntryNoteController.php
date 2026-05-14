@@ -58,9 +58,9 @@ class EntryNoteController extends BasicController
             'items.article.activePrinciple:id,name',
             'items.article.unit:id,name,symbol',
             'items.article.storageLots:id,article_id,lot,expiration_date,storage_condition,manufacturer_id,status',
-            'items.article.storageLots.manufacturer:id,name,code',
+            'items.article.storageLots.manufacturer:id,name,code,country',
             'items.warehouse:id,name',
-            'items.manufacturer:id,name,code',
+            'items.manufacturer:id,name,code,country',
             'creator:id,name,lastname,username,fullname',
             'updater:id,name,lastname,username,fullname',
         ];
