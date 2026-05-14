@@ -40,6 +40,11 @@ const toDateInput = (value) => {
 
 const clientLabel = (client) => [client?.document_number, client?.full_name].filter(Boolean).join(' | ')
 
+const normalizeSearchText = (value) => `${value ?? ''}`
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+
 const entryStatusLabel = (status) => ({
   approved: 'Aprobado',
   cancelled: 'Anulado',
@@ -78,6 +83,8 @@ const EntryNotes = () => {
   const gridRef = useRef()
   const modalRef = useRef()
   const createBatchModalRef = useRef()
+  const lotSearchModalRef = useRef()
+  const lotSearchTextRef = useRef()
 
   const idRef = useRef()
   const businessRef = useRef()
@@ -129,6 +136,14 @@ const EntryNotes = () => {
   const [items, setItems] = useState([emptyItem()])
   const [createBatchTargetUid, setCreateBatchTargetUid] = useState('')
   const [createBatchArticleId, setCreateBatchArticleId] = useState('')
+  const [lotSearchWarehouseId, setLotSearchWarehouseId] = useState('')
+  const [lotSearchTerm, setLotSearchTerm] = useState('')
+  const [lotSearchRows, setLotSearchRows] = useState([])
+  const [lotSearchSelectedIds, setLotSearchSelectedIds] = useState([])
+  const [lotSearchFilter, setLotSearchFilter] = useState('')
+  const [lotSearchPage, setLotSearchPage] = useState(1)
+  const [lotSearchPageSize, setLotSearchPageSize] = useState(20)
+  const [lotSearchLoading, setLotSearchLoading] = useState(false)
 
   const getBatchRef = (uid) => {
     if (!batchRefs.current[uid]) batchRefs.current[uid] = createRef()
@@ -577,6 +592,8 @@ const EntryNotes = () => {
       if (!value || !lot) {
         return {
           ...item,
+          batch_id: value || '',
+          batch_label: value || '',
           batch_code: value || '',
           lot: value || '',
           expiration_date: '',
@@ -587,6 +604,8 @@ const EntryNotes = () => {
       }
       return {
         ...item,
+        batch_id: `${lot.id ?? lot.lot ?? value}`,
+        batch_label: lot.lot ?? value,
         batch_code: lot.lot ?? value,
         lot: lot.lot ?? value,
         expiration_date: toDateInput(lot.expiration_date),
@@ -670,6 +689,130 @@ const EntryNotes = () => {
     }
 
     $(createBatchModalRef.current).modal('hide')
+  }
+
+  const openLotSearchModal = async () => {
+    if (!selectedWarehouseId) {
+      await Swal.fire({ icon: 'warning', title: 'Almacen requerido', text: 'Selecciona el almacen antes de insertar productos.' })
+      return
+    }
+    setLotSearchWarehouseId(selectedWarehouseId)
+    setLotSearchTerm('')
+    setLotSearchRows([])
+    setLotSearchSelectedIds([])
+    setLotSearchFilter('')
+    setLotSearchPage(1)
+    $(lotSearchModalRef.current).modal('show')
+    setTimeout(() => lotSearchTextRef.current?.focus(), 250)
+  }
+
+  const lotSearchRowId = (article, lot) => `${article?.id ?? ''}-${lot?.id ?? lot?.lot ?? ''}`
+
+  const searchStorageLots = async () => {
+    const warehouseId = lotSearchWarehouseId || selectedWarehouseId
+    if (!warehouseId) {
+      await Swal.fire({ icon: 'warning', title: 'Almacen requerido', text: 'Selecciona el almacen para buscar lotes.' })
+      return
+    }
+
+    setLotSearchLoading(true)
+    try {
+      const articles = await entryNotesRest.getArticles()
+      const needle = normalizeSearchText(lotSearchTerm)
+      const rows = []
+
+      ;(articles ?? []).forEach(article => {
+        const lots = (article?.storageLots ?? article?.storage_lots ?? []).filter(lot => lot?.status !== null)
+        lots.forEach(lot => {
+          const unit = article?.unit?.symbol ?? article?.unit?.name ?? ''
+          const articleLabel = [article?.code, article?.name].filter(Boolean).join(' - ')
+          const searchable = normalizeSearchText([
+            article?.code,
+            article?.name,
+            article?.health_registration,
+            lot?.lot,
+            unit,
+          ].filter(Boolean).join(' '))
+          if (needle && !searchable.includes(needle)) return
+
+          rows.push({
+            id: lotSearchRowId(article, lot),
+            lot_id: lot?.id ?? lot?.lot ?? '',
+            lot: lot?.lot ?? '',
+            stock: 0,
+            health_registration: article?.health_registration ?? '',
+            expiration_date: toDateInput(lot?.expiration_date),
+            storage_condition: lot?.storage_condition ?? '',
+            manufacturer_id: lot?.manufacturer_id ? `${lot.manufacturer_id}` : '',
+            manufacturer_label: lot?.manufacturer?.name ?? '',
+            article_id: article?.id ? `${article.id}` : '',
+            article_code: article?.code ?? '',
+            article_name: article?.name ?? '',
+            article_label: articleLabel,
+            article_laboratory: article?.laboratory?.name ?? '',
+            article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? '',
+            article_unit: unit,
+            article_lots: lots,
+          })
+        })
+      })
+
+      const stockByArticle = {}
+      const articleIds = [...new Set(rows.map(row => row.article_id).filter(Boolean))]
+      await Promise.all(articleIds.map(async articleId => {
+        const stockData = await entryNotesRest.getCurrentStock(articleId, warehouseId)
+        stockByArticle[articleId] = Number(stockData?.stock || 0)
+      }))
+
+      setLotSearchRows(rows.map(row => ({ ...row, stock: stockByArticle[row.article_id] ?? 0 })))
+      setLotSearchSelectedIds([])
+      setLotSearchPage(1)
+    } finally {
+      setLotSearchLoading(false)
+    }
+  }
+
+  const toggleLotSearchRow = (rowId, checked) => {
+    setLotSearchSelectedIds(prev => {
+      if (checked) return prev.includes(rowId) ? prev : [...prev, rowId]
+      return prev.filter(id => id !== rowId)
+    })
+  }
+
+  const addSelectedStorageLots = async () => {
+    const selectedRows = lotSearchRows.filter(row => lotSearchSelectedIds.includes(row.id))
+    if (selectedRows.length === 0) {
+      await Swal.fire({ icon: 'warning', title: 'Selecciona lotes', text: 'Marca al menos un lote para insertarlo en la nota.' })
+      return
+    }
+    const warehouseId = lotSearchWarehouseId || selectedWarehouseId
+    setItems(prev => {
+      const currentRows = prev.filter(item => item.article_id || item.lot || item.batch_code)
+      const existing = new Set(currentRows.map(item => `${item.article_id}|${item.lot}`))
+      const nextRows = selectedRows
+        .filter(row => !existing.has(`${row.article_id}|${row.lot}`))
+        .map(row => ({
+          ...emptyItem(),
+          batch_id: `${row.lot_id || row.lot}`,
+          batch_label: row.lot,
+          batch_code: row.lot,
+          lot: row.lot,
+          expiration_date: row.expiration_date,
+          storage_condition: row.storage_condition,
+          manufacturer_id: row.manufacturer_id,
+          manufacturer_label: row.manufacturer_label,
+          article_id: row.article_id,
+          article_label: row.article_label,
+          article_laboratory: row.article_laboratory,
+          article_principle: row.article_principle,
+          article_unit: row.article_unit,
+          storage_lots: row.article_lots,
+          warehouse_id: warehouseId,
+          stock: row.stock,
+        }))
+      return [...currentRows, ...nextRows]
+    })
+    $(lotSearchModalRef.current).modal('hide')
   }
 
   const onItemAdded = () => setItems(prev => [...prev, {
@@ -1011,6 +1154,31 @@ const EntryNotes = () => {
     }
   ]
 
+  const lotSearchFilterNeedle = normalizeSearchText(lotSearchFilter)
+  const lotSearchFilteredRows = lotSearchFilterNeedle
+    ? lotSearchRows.filter(row => normalizeSearchText([
+      row.lot,
+      row.health_registration,
+      row.expiration_date,
+      row.article_label,
+      row.article_unit,
+      row.stock,
+    ].join(' ')).includes(lotSearchFilterNeedle))
+    : lotSearchRows
+  const lotSearchTotalPages = Math.max(1, Math.ceil(lotSearchFilteredRows.length / lotSearchPageSize))
+  const lotSearchCurrentPage = Math.min(lotSearchPage, lotSearchTotalPages)
+  const lotSearchStart = (lotSearchCurrentPage - 1) * lotSearchPageSize
+  const lotSearchPageRows = lotSearchFilteredRows.slice(lotSearchStart, lotSearchStart + lotSearchPageSize)
+  const allLotSearchPageSelected = lotSearchPageRows.length > 0 && lotSearchPageRows.every(row => lotSearchSelectedIds.includes(row.id))
+
+  const toggleLotSearchPage = (checked) => {
+    const pageIds = lotSearchPageRows.map(row => row.id)
+    setLotSearchSelectedIds(prev => {
+      if (checked) return [...new Set([...prev, ...pageIds])]
+      return prev.filter(id => !pageIds.includes(id))
+    })
+  }
+
   return (<>
     {storageContext && <div className='card mb-3'>
       <div className='card-header'>Nota de entrada registrados</div>
@@ -1157,7 +1325,7 @@ const EntryNotes = () => {
           <TextareaFormGroup eRef={observationsRef} label='Observaciones' col='col-12' rows={2} />
 
           <div className='col-12 my-2'>
-            <button type='button' className='btn btn-sm btn-outline-primary' onClick={onItemAdded}>
+            <button type='button' className='btn btn-sm btn-outline-primary' onClick={openLotSearchModal}>
               <i className='mdi mdi-plus-circle me-1'></i> Insertar producto
             </button>
           </div>
@@ -1190,7 +1358,7 @@ const EntryNotes = () => {
                     return (
                       <tr key={item.uid}>
                         <td style={{ minWidth: 160 }}>
-                          <select className='form-control form-control-sm' value={item.lot || ''} onChange={(e) => onStorageLotChanged(item.uid, e.target.value)}>
+                          <select className='form-control form-control-sm' value={item.batch_id || item.lot || ''} onChange={(e) => onStorageLotChanged(item.uid, e.target.value)}>
                             <option value=''>Seleccione</option>
                             {lots.map(lot => <option key={`entry-note-lot-${item.uid}-${lot.id ?? lot.lot}`} value={lot.id ?? lot.lot}>{lot.lot}</option>)}
                           </select>
@@ -1403,6 +1571,139 @@ const EntryNotes = () => {
       </fieldset>
       )}
     </Modal>
+
+    {storageContext && <Modal
+      modalRef={lotSearchModalRef}
+      title={<span><i className='mdi mdi-menu me-1'></i> BUSCAR LOTES</span>}
+      onSubmit={(e) => { e.preventDefault(); searchStorageLots() }}
+      size='full-width'
+      hideFooter
+      headerClass='bg-primary text-white py-2'
+      closeButtonClass='btn-close-white'
+      bodyStyle={{ maxHeight: 'calc(100vh - 150px)', overflowY: 'auto' }}
+      zIndex={1070}
+    >
+      <div className='px-1'>
+        <div className='d-flex align-items-center gap-2 mb-2'>
+          <i className='mdi mdi-menu text-muted'></i>
+          <strong className='text-muted'>INGRESAR DATOS</strong>
+        </div>
+        <hr className='mt-0' />
+
+        <div className='row align-items-end'>
+          <div className='form-group col-md-6 mb-3'>
+            <label className='form-label'>Descripcion del Articulo</label>
+            <input
+              ref={lotSearchTextRef}
+              className='form-control'
+              value={lotSearchTerm}
+              placeholder='Ingrese codigo, nombre, lote'
+              onChange={(e) => setLotSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== 'Enter') return
+                e.preventDefault()
+                searchStorageLots()
+              }}
+            />
+          </div>
+          <SelectFormGroup
+            label='Seleccionar almacen'
+            col='col-md-6'
+            value={lotSearchWarehouseId}
+            onChange={(e) => setLotSearchWarehouseId(e.target.value)}
+            effectWith={[storageOptions.warehouses.length, lotSearchWarehouseId]}
+          >
+            <option value=''>Seleccione</option>
+            {storageOptions.warehouses.map(warehouse => <option key={`entry-note-lot-search-warehouse-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
+          </SelectFormGroup>
+        </div>
+
+        <div className='d-flex gap-2 justify-content-center mb-4'>
+          <button type='button' className='btn btn-primary' onClick={searchStorageLots} disabled={lotSearchLoading}>
+            {lotSearchLoading ? <i className='mdi mdi-loading mdi-spin me-1'></i> : <i className='mdi mdi-magnify me-1'></i>}
+            Buscar
+          </button>
+          <button type='button' className='btn btn-light' onClick={addSelectedStorageLots} disabled={lotSearchSelectedIds.length === 0}>
+            <i className='mdi mdi-close me-1'></i> Regresar
+          </button>
+        </div>
+
+        <div className='d-flex align-items-center gap-2 mb-2'>
+          <i className='mdi mdi-menu text-muted'></i>
+          <strong className='text-muted'>SELECCIONAR LOTES</strong>
+        </div>
+        <hr className='mt-0' />
+
+        <div className='d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2'>
+          <label className='d-flex align-items-center gap-2 mb-0'>
+            <span>Elementos:</span>
+            <select
+              className='form-select form-select-sm'
+              style={{ width: 80 }}
+              value={lotSearchPageSize}
+              onChange={(e) => {
+                setLotSearchPageSize(Number(e.target.value))
+                setLotSearchPage(1)
+              }}
+            >
+              {[10, 20, 50].map(size => <option key={`entry-note-lot-search-size-${size}`} value={size}>{size}</option>)}
+            </select>
+          </label>
+          <label className='d-flex align-items-center gap-2 mb-0'>
+            <span>Filtrar:</span>
+            <input className='form-control form-control-sm' value={lotSearchFilter} onChange={(e) => { setLotSearchFilter(e.target.value); setLotSearchPage(1) }} />
+          </label>
+        </div>
+
+        <div className='table-responsive border'>
+          <table className='table table-sm table-hover mb-0'>
+            <thead>
+              <tr>
+                <th style={{ width: 55 }} className='text-center'>
+                  <input type='checkbox' checked={allLotSearchPageSelected} onChange={(e) => toggleLotSearchPage(e.target.checked)} />
+                </th>
+                <th className='text-center'>STOCK</th>
+                <th>NUMERO DE LOTE</th>
+                <th>REGISTRO SANITARIO</th>
+                <th>FECHA DE VENCIMIENTO</th>
+                <th>ARTICULO</th>
+                <th>U. MEDIDA</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lotSearchLoading && <tr><td colSpan='7' className='text-center py-4'><i className='mdi mdi-loading mdi-spin me-1'></i> Buscando lotes...</td></tr>}
+              {!lotSearchLoading && lotSearchRows.length === 0 && <tr><td colSpan='7' className='text-muted py-3'>No existen elementos</td></tr>}
+              {!lotSearchLoading && lotSearchRows.length > 0 && lotSearchPageRows.length === 0 && <tr><td colSpan='7' className='text-muted py-3'>No hay elementos a mostrar</td></tr>}
+              {!lotSearchLoading && lotSearchPageRows.map(row => (
+                <tr key={row.id}>
+                  <td className='text-center'>
+                    <input type='checkbox' checked={lotSearchSelectedIds.includes(row.id)} onChange={(e) => toggleLotSearchRow(row.id, e.target.checked)} />
+                  </td>
+                  <td className='text-center'>{Number(row.stock || 0).toFixed(3)}</td>
+                  <td>{row.lot}</td>
+                  <td>{row.health_registration}</td>
+                  <td>{row.expiration_date}</td>
+                  <td>{row.article_name}</td>
+                  <td>{row.article_unit}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className='d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2'>
+          <span className='text-muted'>
+            {lotSearchFilteredRows.length > 0
+              ? `${lotSearchFilteredRows.length} elementos (Pagina ${lotSearchCurrentPage} de ${lotSearchTotalPages})`
+              : 'No hay elementos a mostrar'}
+          </span>
+          <div className='btn-group btn-group-sm'>
+            <button type='button' className='btn btn-light' disabled={lotSearchCurrentPage <= 1} onClick={() => setLotSearchPage(page => Math.max(1, page - 1))}>Anterior</button>
+            <button type='button' className='btn btn-light' disabled={lotSearchCurrentPage >= lotSearchTotalPages} onClick={() => setLotSearchPage(page => Math.min(lotSearchTotalPages, page + 1))}>Siguiente</button>
+          </div>
+        </div>
+      </div>
+    </Modal>}
 
     <Modal modalRef={createBatchModalRef} title='Crear lote' onSubmit={onCreateBatchModalSubmit} size='md'>
       <div className='row' id='entry-note-create-batch-container'>
