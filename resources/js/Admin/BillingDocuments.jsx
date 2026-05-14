@@ -41,6 +41,12 @@ const reportFilters = () => ({
 const formatMoney = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const formatDate = (value) => value?.toString?.().slice?.(0, 10) ?? ''
 const currencyLabel = (value) => `${value ?? ''}`.toUpperCase() === 'USD' ? 'Dolares' : 'Soles'
+const emptyBulkFilters = () => ({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false, detractionPercent: 12 })
+const toNumber = (value, fallback = 0) => {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : fallback
+}
+const roundMoney = (value) => Math.round(toNumber(value) * 100) / 100
 
 const rowClientName = (row) => row?.client?.full_name
   ?? row?.eventualClient?.business_name
@@ -60,6 +66,17 @@ const rowDescription = (row) => row?.items?.[0]?.description
   ?? '-'
 
 const rowSunatLabel = (row) => row?.external_reference || row?.external_id || getBillingDocumentStatusLabel(row?.external_status)
+const rowDetractionPercent = (row) => {
+  const metadataPercent = toNumber(row?.metadata?.detraction_percent, 0)
+  if (metadataPercent > 0) return metadataPercent
+  return (row?.items ?? []).reduce((carry, item) => Math.max(carry, toNumber(item?.metadata?.detraction_percent, 0)), 0)
+}
+const rowsDetractionPercent = (rows) => rows.reduce((carry, row) => Math.max(carry, rowDetractionPercent(row)), 0)
+const rowDetractionAmount = (row, percent) => {
+  const metadataAmount = toNumber(row?.metadata?.detraction_amount, 0)
+  if (metadataAmount > 0) return roundMoney(metadataAmount)
+  return roundMoney(toNumber(row?.total, 0) * toNumber(percent, 0) / 100)
+}
 
 const combineFilters = (filters) => filters.filter(Boolean).reduce((carry, filter) => {
   if (!carry) return filter
@@ -131,7 +148,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const [storageFilters, setStorageFilters] = useState(emptyFilters())
   const [appliedStorageFilters, setAppliedStorageFilters] = useState(emptyFilters())
   const [modalReportFilters, setModalReportFilters] = useState(reportFilters())
-  const [bulkFilters, setBulkFilters] = useState({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false })
+  const [bulkFilters, setBulkFilters] = useState(emptyBulkFilters())
   const [bulkRows, setBulkRows] = useState([])
   const [bulkSelected, setBulkSelected] = useState([])
   const [bulkLoading, setBulkLoading] = useState(false)
@@ -313,11 +330,6 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   }
 
   const onPrepareVoucher = async (row) => {
-    if (row?.fiscal_readiness?.can_issue === false) {
-      await openReadinessModal(row, 'El comprobante no esta listo para preparar')
-      return
-    }
-
     openBulkModal(row)
   }
 
@@ -496,11 +508,15 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   }
   const openBulkModal = (row = null) => {
     const rowClientId = row?.client_id ?? row?.client?.id ?? ''
+    const defaultFilters = emptyBulkFilters()
+    const rawDetractionPercent = row ? rowDetractionPercent(row) : 0
+    const detractionPercent = rawDetractionPercent || defaultFilters.detractionPercent
     setBulkFilters({
       clientId: row ? `${rowClientId}` : '',
-      documentType: row?.document_type ?? 'Factura',
-      currency: row?.currency ?? 'PEN',
-      detraction: Boolean(row?.metadata?.detraction_enabled),
+      documentType: row?.document_type ?? defaultFilters.documentType,
+      currency: row?.currency ?? defaultFilters.currency,
+      detraction: Boolean(row?.metadata?.detraction_enabled) || rawDetractionPercent > 0,
+      detractionPercent,
     })
     setBulkRows(row ? [row] : [])
     setBulkSelected(row?.id ? [row.id] : [])
@@ -527,8 +543,10 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       const response = await billingDocumentsRest.paginate({ skip: 0, take: 1000, isLoadingAll: true, filter: prefacturesForBulkFilter() })
       if (Number(response?.status ?? 200) >= 400) throw new Error(response?.message || 'No se pudieron cargar las prefacturas')
       const rows = response?.data ?? []
+      const detractionPercent = rowsDetractionPercent(rows)
       setBulkRows(rows)
       setBulkSelected(rows.map(row => row.id))
+      setBulkFilters(prev => ({ ...prev, detraction: prev.detraction || detractionPercent > 0, detractionPercent: detractionPercent || prev.detractionPercent || 12 }))
     } catch (error) {
       await showBlockedAction('Error', error.message || 'No se pudieron cargar las prefacturas.')
     } finally {
@@ -537,14 +555,18 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   }
   const toggleBulkRow = (id, checked) => setBulkSelected(prev => checked ? Array.from(new Set([...prev, id])) : prev.filter(item => item !== id))
   const toggleAllBulkRows = (checked) => setBulkSelected(checked ? bulkRows.map(row => row.id) : [])
-  const bulkTotal = bulkRows.filter(row => bulkSelected.includes(row.id)).reduce((sum, row) => sum + Number(row.total ?? 0), 0)
+  const selectedBulkRows = bulkRows.filter(row => bulkSelected.includes(row.id))
+  const bulkTotal = selectedBulkRows.reduce((sum, row) => sum + Number(row.total ?? 0), 0)
+  const bulkDetractionPercent = toNumber(bulkFilters.detractionPercent, 0)
+  const bulkDetractionAmount = bulkFilters.detraction ? selectedBulkRows.reduce((sum, row) => sum + rowDetractionAmount(row, bulkDetractionPercent), 0) : 0
+  const bulkNetTotal = roundMoney(bulkTotal - bulkDetractionAmount)
   const onIssueBulk = async (e) => {
     e.preventDefault()
     if (bulkSelected.length === 0) {
       await showBlockedAction('Seleccion requerida', 'Selecciona al menos una prefactura.')
       return
     }
-    const selectedRows = bulkRows.filter(row => bulkSelected.includes(row.id))
+    const selectedRows = selectedBulkRows
     const selectedLabel = selectedRows.length === 1 ? selectedRows[0]?.code : `${bulkSelected.length} prefacturas seleccionadas`
     const { isConfirmed } = await Swal.fire({
       title: selectedRows.length === 1 ? 'Facturar prefactura' : 'Facturar en bloque',
@@ -555,8 +577,14 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       cancelButtonText: 'Cancelar',
     })
     if (!isConfirmed) return
-    for (const id of bulkSelected) {
-      const result = await billingDocumentsRest.prepareVoucher(id)
+    for (const row of selectedRows) {
+      const result = await billingDocumentsRest.prepareVoucher(row.id, {
+        detraction_enabled: bulkFilters.detraction,
+        detraction_percent: bulkFilters.detraction ? bulkDetractionPercent : null,
+        detraction_amount: bulkFilters.detraction ? rowDetractionAmount(row, bulkDetractionPercent) : null,
+        detraction_code: '022',
+        detraction_payment_method_code: '001',
+      })
       if (!result) return
     }
     $(bulkModalRef.current).modal('hide')
@@ -964,14 +992,25 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
         </div>
       </div>
       <div className='d-flex justify-content-between align-items-center mt-3 mb-2'>
-        <div>
+        <div className='d-flex align-items-end gap-3 flex-wrap'>
+          <div>
           <label className='form-label d-block mb-1'>Detraccion</label>
           <div className='form-check form-switch'>
             <input className='form-check-input' type='checkbox' checked={bulkFilters.detraction} onChange={(e) => setBulkFilters(prev => ({ ...prev, detraction: e.target.checked }))} id='billing-bulk-detraction' />
             <label className='form-check-label' htmlFor='billing-bulk-detraction'>{bulkFilters.detraction ? 'SI' : 'NO'}</label>
           </div>
+          </div>
+          {bulkFilters.detraction && <div style={{ width: 140 }}>
+            <label className='form-label'>% detraccion</label>
+            <input type='number' min='0' step='0.01' className='form-control' value={bulkFilters.detractionPercent} onChange={(e) => setBulkFilters(prev => ({ ...prev, detractionPercent: e.target.value }))} />
+          </div>}
         </div>
-        <h3 className='mb-0'>Importe: <span className='text-success'>{formatMoney(bulkTotal)}</span></h3>
+        <div className='text-end'>
+          <h3 className='mb-0'>Importe: <span className='text-success'>{formatMoney(bulkTotal)}</span></h3>
+          {bulkFilters.detraction && <div className='text-muted mt-1'>
+            Detraccion: {formatMoney(bulkDetractionAmount)} | Neto: {formatMoney(bulkNetTotal)}
+          </div>}
+        </div>
       </div>
       <h5 className='mt-4'>Lista de Pedidos</h5>
       <div className='d-flex justify-content-end mb-2'>

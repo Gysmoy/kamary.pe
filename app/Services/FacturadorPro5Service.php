@@ -230,7 +230,7 @@ class FacturadorPro5Service
 
     public function buildIssueRequestBody(BillingDocument $document): array
     {
-        $document->loadMissing('items', 'client', 'eventualClient', 'commercialOrder', 'serviceOrder', 'referenceDocument', 'branch');
+        $document->loadMissing('items', 'client', 'eventualClient', 'commercialOrder', 'serviceOrder', 'referenceDocument', 'branch', 'business');
 
         $documentTypeId = $this->mapDocumentTypeId($document->document_type);
         $issueDate = optional($document->issue_date)->format('Y-m-d') ?: now()->format('Y-m-d');
@@ -240,6 +240,9 @@ class FacturadorPro5Service
         $sequence = $this->normalizeSequenceForProvider($document->sequence);
         $effectiveTaxRate = $this->resolveEffectiveTaxRate($document);
         $establishmentId = $this->resolveEstablishmentIdForBranch($document->branch);
+        $detractionPayload = $documentTypeId !== '07' && $this->hasDetraction($document)
+            ? $this->buildDetractionPayload($document)
+            : null;
 
         $payload = [
             'serie_documento' => $document->series ?: $this->resolveSeriesFromTypeId($documentTypeId),
@@ -247,7 +250,7 @@ class FacturadorPro5Service
             'fecha_de_emision' => $issueDate,
             'hora_de_emision' => now()->format('H:i:s'),
             'codigo_tipo_documento' => $documentTypeId,
-            'codigo_tipo_operacion' => '0101',
+            'codigo_tipo_operacion' => $detractionPayload ? '1001' : '0101',
             'fecha_de_vencimiento' => optional($document->due_date)->format('Y-m-d') ?: $issueDate,
             'codigo_tipo_moneda' => $document->currency ?: 'PEN',
             'factor_tipo_de_cambio' => 1,
@@ -276,12 +279,18 @@ class FacturadorPro5Service
             $payload['establishment_id'] = $establishmentId;
         }
 
+        if ($detractionPayload) {
+            $payload['detraccion'] = $detractionPayload;
+            $payload['totales']['total_detraccion'] = $detractionPayload['monto'];
+            $payload['total_detraccion'] = $detractionPayload['monto'];
+        }
+
         if ($paymentConditionId === '01' && $documentTypeId !== '07') {
             $payload['pagos'] = [[
                 'fecha_de_emision' => $issueDate,
                 'codigo_metodo_pago' => $this->mapPaymentMethodCode($document->payment_method),
                 'codigo_destino_pago' => $this->mapPaymentDestination($document->payment_method),
-                'monto' => round(abs((float) $document->total), 2),
+                'monto' => round(max(0, abs((float) $document->total) - (float) Arr::get($detractionPayload ?? [], 'monto', 0)), 2),
             ]];
         }
 
@@ -534,11 +543,69 @@ class FacturadorPro5Service
         ];
     }
 
+    private function hasDetraction(BillingDocument $document): bool
+    {
+        $enabled = filter_var(Arr::get($document->metadata ?? [], 'detraction_enabled'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        return $enabled === true;
+    }
+
+    private function buildDetractionPayload(BillingDocument $document): array
+    {
+        $percent = $this->resolveDetractionPercent($document);
+        $amount = $this->resolveDetractionAmount($document, $percent);
+        $code = (string) Arr::get($document->metadata ?? [], 'detraction_code', '022');
+        $paymentMethodCode = (string) Arr::get($document->metadata ?? [], 'detraction_payment_method_code', '001');
+        $account = trim((string) $document->business?->detraction_account);
+
+        return [
+            'codigo_tipo_detraccion' => $code ?: '022',
+            'codigo_bien_servicio' => $code ?: '022',
+            'codigo_medio_pago' => $paymentMethodCode ?: '001',
+            'codigo_metodo_pago' => $paymentMethodCode ?: '001',
+            'cuenta_bancaria' => $account,
+            'porcentaje' => round($percent, 2),
+            'monto' => round($amount, 2),
+        ];
+    }
+
+    private function resolveDetractionPercent(BillingDocument $document): float
+    {
+        $metadataPercent = $this->decimalValue(Arr::get($document->metadata ?? [], 'detraction_percent'));
+        if ($metadataPercent > 0) {
+            return $metadataPercent;
+        }
+
+        return (float) $document->items
+            ->where('status', true)
+            ->reduce(fn($carry, $item) => max((float) $carry, $this->decimalValue(Arr::get($item->metadata, 'detraction_percent'))), 0);
+    }
+
+    private function resolveDetractionAmount(BillingDocument $document, float $percent): float
+    {
+        $metadataAmount = $this->decimalValue(Arr::get($document->metadata ?? [], 'detraction_amount'));
+        if ($metadataAmount > 0) {
+            return $metadataAmount;
+        }
+
+        return round(abs((float) $document->total) * $percent / 100, 2);
+    }
+
+    private function decimalValue($value, float $fallback = 0): float
+    {
+        if ($value === null || $value === '') {
+            return $fallback;
+        }
+
+        $normalized = str_replace(',', '.', (string) $value);
+        return is_numeric($normalized) ? (float) $normalized : $fallback;
+    }
+
     private function buildAdditionalInformation(BillingDocument $document): string
     {
         $lines = array_filter([
             $document->observations,
             Arr::get($document->metadata, 'source_code') ? 'Origen: ' . Arr::get($document->metadata, 'source_code') : null,
+            $this->hasDetraction($document) ? 'Detraccion: ' . number_format($this->resolveDetractionAmount($document, $this->resolveDetractionPercent($document)), 2, '.', '') : null,
             Arr::get($document->metadata, 'delivery_address') ? 'Entrega: ' . Arr::get($document->metadata, 'delivery_address') : null,
         ]);
 

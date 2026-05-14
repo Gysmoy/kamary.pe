@@ -339,6 +339,31 @@ class BillingDocumentService
             }
         }
 
+        if ($this->documentHasDetractionEnabled($document)) {
+            $detractionPercent = (float) Arr::get($document->metadata, 'detraction_percent', 0);
+            $detractionAmount = (float) Arr::get($document->metadata, 'detraction_amount', 0);
+
+            if ($normalizedType !== 'factura') {
+                $errors[] = 'La detraccion solo se debe aplicar a facturas.';
+            }
+
+            if ($detractionPercent <= 0) {
+                $errors[] = 'La detraccion requiere un porcentaje mayor a cero.';
+            }
+
+            if ($detractionAmount <= 0) {
+                $errors[] = 'La detraccion requiere un monto calculado mayor a cero.';
+            }
+
+            if (!$business || trim((string) $business->detraction_account) === '') {
+                $errors[] = 'La detraccion requiere la cuenta de detracciones de la empresa.';
+            }
+
+            if (strtoupper((string) $document->currency) !== 'PEN') {
+                $warnings[] = 'La detraccion se enviara en soles; revisa la moneda del comprobante.';
+            }
+        }
+
         if ($business) {
             $productionFindings = [];
 
@@ -422,13 +447,17 @@ class BillingDocumentService
         );
     }
 
-    public function prepareVoucher(BillingDocument $document): BillingDocument
+    public function prepareVoucher(BillingDocument $document, array $options = []): BillingDocument
     {
         if (!$document->status) throw new \Exception('El comprobante esta inactivo');
         if ($document->local_status !== 'pending') throw new \Exception('Solo puedes preparar comprobantes pendientes');
 
         $document = $this->prepareIfNeeded($document);
         $updates = [];
+        $metadata = $this->buildDetractionMetadata($document, $options);
+        if ($metadata !== null) {
+            $updates['metadata'] = $metadata;
+        }
 
         if (!$document->series) {
             $document->loadMissing('branch');
@@ -770,6 +799,88 @@ class BillingDocumentService
         }
 
         return $baseUrl . $endpoint;
+    }
+
+    private function buildDetractionMetadata(BillingDocument $document, array $options): ?array
+    {
+        $trackedKeys = ['detraction_enabled', 'detraction_percent', 'detraction_amount', 'detraction_code', 'detraction_payment_method_code'];
+        $hasDetractionInput = false;
+        foreach ($trackedKeys as $key) {
+            if (array_key_exists($key, $options)) {
+                $hasDetractionInput = true;
+                break;
+            }
+        }
+
+        if (!$hasDetractionInput) {
+            return null;
+        }
+
+        $metadata = $document->metadata ?? [];
+        $enabled = $this->boolValue($options['detraction_enabled'] ?? Arr::get($metadata, 'detraction_enabled'), false);
+        $code = (string) ($options['detraction_code'] ?? Arr::get($metadata, 'detraction_code', '022'));
+        $paymentMethodCode = (string) ($options['detraction_payment_method_code'] ?? Arr::get($metadata, 'detraction_payment_method_code', '001'));
+
+        if (!$enabled) {
+            return array_merge($metadata, [
+                'detraction_enabled' => false,
+                'detraction_percent' => null,
+                'detraction_amount' => null,
+                'detraction_code' => $code ?: '022',
+                'detraction_payment_method_code' => $paymentMethodCode ?: '001',
+            ]);
+        }
+
+        $percent = $this->decimalValue($options['detraction_percent'] ?? Arr::get($metadata, 'detraction_percent'));
+        if ($percent <= 0) {
+            $percent = $this->maxItemDetractionPercent($document);
+        }
+        if ($percent <= 0) {
+            $percent = 12;
+        }
+
+        $amount = $this->decimalValue($options['detraction_amount'] ?? Arr::get($metadata, 'detraction_amount'));
+        if ($amount <= 0) {
+            $amount = round(abs((float) $document->total) * $percent / 100, 2);
+        }
+
+        return array_merge($metadata, [
+            'detraction_enabled' => true,
+            'detraction_percent' => round($percent, 2),
+            'detraction_amount' => round($amount, 2),
+            'detraction_code' => $code ?: '022',
+            'detraction_payment_method_code' => $paymentMethodCode ?: '001',
+        ]);
+    }
+
+    private function documentHasDetractionEnabled(BillingDocument $document): bool
+    {
+        return $this->boolValue(Arr::get($document->metadata ?? [], 'detraction_enabled'), false);
+    }
+
+    private function maxItemDetractionPercent(BillingDocument $document): float
+    {
+        $document->loadMissing('items');
+
+        return (float) $document->items
+            ->where('status', true)
+            ->reduce(fn($carry, $item) => max((float) $carry, $this->decimalValue(Arr::get($item->metadata, 'detraction_percent'))), 0);
+    }
+
+    private function boolValue($value, bool $fallback = false): bool
+    {
+        $parsed = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        return $parsed === null ? $fallback : $parsed;
+    }
+
+    private function decimalValue($value, float $fallback = 0): float
+    {
+        if ($value === null || $value === '') {
+            return $fallback;
+        }
+
+        $normalized = str_replace(',', '.', (string) $value);
+        return is_numeric($normalized) ? (float) $normalized : $fallback;
     }
 
     private function assertReadyForIssue(BillingDocument $document): void
