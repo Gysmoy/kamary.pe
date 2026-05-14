@@ -1027,7 +1027,8 @@ const EntryNotes = () => {
               <option value='Guia Remision'>Guia Remision</option>
               <option value='Factura'>Factura</option>
               <option value='Boleta'>Boleta</option>
-              <option value='Nota de pedido'>Nota de pedido</option>
+              <option value='Nota de salida interna'>Nota de salida interna</option>
+              <option value='Nota de entrada interna'>Nota de entrada interna</option>
             </select>
           </div>
           <InputFormGroup eRef={documentSeriesRef} label='Serie' col='col-md-3' required />
