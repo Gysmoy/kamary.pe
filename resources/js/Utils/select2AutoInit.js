@@ -4,6 +4,11 @@ const getDropdownParent = (select) => {
   return select.closest('.modal, .offcanvas, .swal2-popup') || document.body
 }
 
+const shouldSkipSelect2 = (select) => {
+  return select.classList?.contains('swal2-select')
+    || Boolean(select.closest?.('.swal2-popup, .swal2-container'))
+}
+
 const getPlaceholder = (select) => {
   return select.getAttribute('data-placeholder')
     || select.querySelector('option[value=""]')?.textContent?.trim()
@@ -51,8 +56,10 @@ export const syncSelect2 = (root = document) => {
   if (!$?.fn?.select2 || !root?.querySelectorAll) return
 
   root
-    .querySelectorAll('select:not([data-no-select2]):not([data-select2-managed])')
+    .querySelectorAll('select:not([data-no-select2]):not([data-select2-managed]):not(.swal2-select)')
     .forEach((select) => {
+      if (shouldSkipSelect2(select)) return
+
       const $select = $(select)
 
       if (!$select.data('select2')) {
