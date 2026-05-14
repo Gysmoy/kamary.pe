@@ -28,27 +28,86 @@ class EntryNoteController extends BasicController
 
     private array $itemsPayload = [];
 
-    public function setPaginationInstance(string $model)
+    private function listRelations(bool $isStorage): array
     {
-        $query = $model::select('entry_notes.*')
-            ->with([
+        if ($isStorage) {
+            return [
                 'business:id,name',
                 'branch:id,business_id,name',
                 'warehouse:id,name',
-                'supplier:id,ruc,business_name',
                 'client:id,document_number,full_name',
-                'items:id,entry_note_id,batch_code,lot,expiration_date,storage_condition,manufacturer_id,article_id,warehouse_id,stock,cost_unit,location,requested_quantity,received_quantity,quantity,total,status',
-                'items.article:id,code,name,laboratory_id,active_principle_id,unit_id',
-                'items.article.laboratory:id,name',
-                'items.article.activePrinciple:id,name',
-                'items.article.unit:id,name,symbol',
-                'items.article.storageLots:id,article_id,lot,expiration_date,storage_condition,manufacturer_id,status',
-                'items.article.storageLots.manufacturer:id,name,code',
-                'items.warehouse:id,name',
-                'items.manufacturer:id,name,code',
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
-            ])
+            ];
+        }
+
+        return $this->detailRelations();
+    }
+
+    private function detailRelations(): array
+    {
+        return [
+            'business:id,name',
+            'branch:id,business_id,name',
+            'warehouse:id,name',
+            'supplier:id,ruc,business_name',
+            'client:id,document_number,full_name',
+            'items:id,entry_note_id,batch_code,lot,expiration_date,storage_condition,manufacturer_id,article_id,warehouse_id,stock,cost_unit,location,requested_quantity,received_quantity,quantity,total,status',
+            'items.article:id,code,name,laboratory_id,active_principle_id,unit_id',
+            'items.article.laboratory:id,name',
+            'items.article.activePrinciple:id,name',
+            'items.article.unit:id,name,symbol',
+            'items.article.storageLots:id,article_id,lot,expiration_date,storage_condition,manufacturer_id,status',
+            'items.article.storageLots.manufacturer:id,name,code',
+            'items.warehouse:id,name',
+            'items.manufacturer:id,name,code',
+            'creator:id,name,lastname,username,fullname',
+            'updater:id,name,lastname,username,fullname',
+        ];
+    }
+
+    private function storageListColumns(): array
+    {
+        return [
+            'entry_notes.id',
+            'entry_notes.code',
+            'entry_notes.business_id',
+            'entry_notes.business_branch_id',
+            'entry_notes.warehouse_id',
+            'entry_notes.client_id',
+            'entry_notes.entry_date',
+            'entry_notes.document_type',
+            'entry_notes.document_series',
+            'entry_notes.document_sequence',
+            'entry_notes.status',
+            'entry_notes.entry_status',
+            'entry_notes.created_by',
+            'entry_notes.updated_by',
+            'entry_notes.created_at',
+            'entry_notes.updated_at',
+        ];
+    }
+
+    public function get(Request $request, string $id)
+    {
+        $response = Response::simpleTryCatch(function () use ($id) {
+            $entryNote = $this->model::with($this->detailRelations())->find($id);
+            if (!$entryNote) throw new \Exception('El registro que buscas no existe');
+            return $entryNote;
+        });
+        return response($response->toArray(), $response->status);
+    }
+
+    public function setPaginationInstance(string $model)
+    {
+        $isStorage = $this->isStorageRequest(request());
+        $query = $model::select($isStorage ? $this->storageListColumns() : ['entry_notes.*'])
+            ->with($this->listRelations($isStorage))
+            ->leftJoin('businesses as business', 'business.id', '=', 'entry_notes.business_id')
+            ->leftJoin('business_branches as branch', 'branch.id', '=', 'entry_notes.business_branch_id')
+            ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'entry_notes.warehouse_id')
+            ->leftJoin('suppliers as supplier', 'supplier.id', '=', 'entry_notes.supplier_id')
+            ->leftJoin('clients as client', 'client.id', '=', 'entry_notes.client_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'entry_notes.created_by')
             ->leftJoin('users as updater', 'updater.id', '=', 'entry_notes.updated_by');
 

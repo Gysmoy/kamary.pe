@@ -186,6 +186,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/entry-notes/{id}', [AdminEntryNoteController::class, 'delete']);
         Route::get('/entry-notes/businesses/{id}/branches', [AdminEntryNoteController::class, 'branches']);
         Route::get('/entry-notes/current-stock', [AdminEntryNoteController::class, 'currentStock']);
+        Route::get('/entry-notes/{id}', [AdminEntryNoteController::class, 'get']);
 
         Route::post('/exit-notes', [AdminExitNoteController::class, 'save']);
         Route::post('/exit-notes/paginate', [AdminExitNoteController::class, 'paginate']);
@@ -385,6 +386,7 @@ Route::middleware('auth')->group(function () {
             Route::delete('/entry-notes/{id}', [AdminStorageEntryNoteController::class, 'delete']);
             Route::get('/entry-notes/businesses/{id}/branches', [AdminStorageEntryNoteController::class, 'branches']);
             Route::get('/entry-notes/current-stock', [AdminStorageEntryNoteController::class, 'currentStock']);
+            Route::get('/entry-notes/{id}', [AdminStorageEntryNoteController::class, 'get']);
 
             Route::post('/exit-notes', [AdminStorageExitNoteController::class, 'save']);
             Route::post('/exit-notes/paginate', [AdminStorageExitNoteController::class, 'paginate']);

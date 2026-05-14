@@ -124,6 +124,7 @@ const EntryNotes = () => {
   const [storageFilterStartDate, setStorageFilterStartDate] = useState('')
   const [storageFilterEndDate, setStorageFilterEndDate] = useState('')
   const [storageGridFilter, setStorageGridFilter] = useState(null)
+  const [isViewing, setIsViewing] = useState(false)
   const [items, setItems] = useState([emptyItem()])
   const [createBatchTargetUid, setCreateBatchTargetUid] = useState('')
   const [createBatchArticleId, setCreateBatchArticleId] = useState('')
@@ -231,8 +232,16 @@ const EntryNotes = () => {
     }
   }
 
-  const onModalOpen = async (data = null) => {
+  const loadEntryNoteDetail = async (data) => {
+    if (!data?.id) return data
+    return await entryNotesRest.get(data.id) ?? data
+  }
+
+  const onModalOpen = async (data = null, options = {}) => {
+    data = await loadEntryNoteDetail(data)
+
     setIsEditing(!!data?.id)
+    setIsViewing(Boolean(options.viewOnly))
 
     if (idRef.current) idRef.current.value = data?.id ?? ''
     if (documentTypeRef.current) documentTypeRef.current.value = data?.document_type ?? (storageContext ? 'Guia Remision' : 'Boleta')
@@ -692,8 +701,15 @@ const EntryNotes = () => {
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
-  const openStorageDetailPdf = (data) => openMagistralesRecordPdf(buildMagistralesRows.storageEntryNote(data))
-  const openStorageActaPdf = (data) => openMagistralesRecordPdf(buildMagistralesRows.storageEntryNoteActa(data))
+  const openStorageDetailPdf = async (data) => {
+    const detail = await loadEntryNoteDetail(data)
+    openMagistralesRecordPdf(buildMagistralesRows.storageEntryNote(detail))
+  }
+
+  const openStorageActaPdf = async (data) => {
+    const detail = await loadEntryNoteDetail(data)
+    openMagistralesRecordPdf(buildMagistralesRows.storageEntryNoteActa(detail))
+  }
 
   const storageExportRows = () => {
     const grid = $(gridRef.current).dxDataGrid('instance')
@@ -786,6 +802,34 @@ const EntryNotes = () => {
         container.append(actions)
         const appendAction = (options) => actions.append(DxButton(options))
         const status = data?.entry_status ?? 'pending'
+        if (status === 'approved') {
+          appendAction({
+            className: 'btn btn-xs btn-soft-warning',
+            title: 'Ver nota de entrada',
+            icon: 'mdi mdi-menu',
+            onClick: () => onModalOpen(data, { viewOnly: true })
+          })
+          appendAction({
+            className: 'btn btn-xs btn-soft-info',
+            title: 'Vista previa de nota de entrada',
+            icon: 'mdi mdi-eye',
+            onClick: () => openStorageDetailPdf(data)
+          })
+          appendAction({
+            className: 'btn btn-xs btn-soft-danger',
+            title: 'Imprimir acta de nota de entrada',
+            icon: 'mdi mdi-file-pdf-box',
+            onClick: () => openStorageActaPdf(data)
+          })
+          appendAction({
+            className: 'btn btn-xs btn-soft-info',
+            title: 'Imprimir detalle de nota de entrada',
+            icon: 'mdi mdi-file-document-outline',
+            onClick: () => openStorageDetailPdf(data)
+          })
+          return
+        }
+
         if (status !== 'cancelled') {
           appendAction({
             className: 'btn btn-xs btn-soft-success',
@@ -826,7 +870,10 @@ const EntryNotes = () => {
       dataField: 'code',
       caption: 'Codigo',
       minWidth: 110,
-      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code ?? data?.id, () => onModalOpen(data), 'Editar nota de entrada')
+      cellTemplate: (container, { data }) => {
+        const isApproved = data?.entry_status === 'approved'
+        renderGridEditLink(container, data?.code ?? data?.id, () => onModalOpen(data, { viewOnly: isApproved }), isApproved ? 'Ver nota de entrada' : 'Editar nota de entrada')
+      }
     },
     {
       dataField: 'client.full_name',
@@ -1013,9 +1060,15 @@ const EntryNotes = () => {
       columns={storageContext ? storageColumns : standardColumns}
     />
 
-    <Modal modalRef={modalRef} title={storageContext ? 'Registrar nota de entrada' : (isEditing ? 'Editar nota de entrada' : 'Agregar nota de entrada')} onSubmit={onModalSubmit} size='full-width'>
+    <Modal
+      modalRef={modalRef}
+      title={isViewing ? 'Ver nota de entrada' : (storageContext ? 'Registrar nota de entrada' : (isEditing ? 'Editar nota de entrada' : 'Agregar nota de entrada'))}
+      onSubmit={onModalSubmit}
+      size='full-width'
+      hideButtonSubmit={isViewing}
+    >
       {storageContext ? (
-        <div className='row' id='entry-note-form-container'>
+        <fieldset className='row' id='entry-note-form-container' disabled={isViewing}>
           <input ref={idRef} type='hidden' />
 
           <SelectAPIFormGroup
@@ -1166,9 +1219,9 @@ const EntryNotes = () => {
               </table>
             </div>
           </div>
-        </div>
+        </fieldset>
       ) : (
-      <div className='row' id='entry-note-form-container'>
+      <fieldset className='row' id='entry-note-form-container' disabled={isViewing}>
         <input ref={idRef} type='hidden' />
 
         <SelectAPIFormGroup
@@ -1322,7 +1375,7 @@ const EntryNotes = () => {
             </table>
           </div>
         </div>
-      </div>
+      </fieldset>
       )}
     </Modal>
 
