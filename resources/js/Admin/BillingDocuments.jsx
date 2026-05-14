@@ -318,19 +318,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       return
     }
 
-    const { isConfirmed } = await Swal.fire({
-      title: 'Facturar prefactura',
-      text: `Se asignara serie y numero a ${row.code}.`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Facturar',
-      cancelButtonText: 'Cancelar'
-    })
-    if (!isConfirmed) return
-
-    const result = await billingDocumentsRest.prepareVoucher(row.id)
-    if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    openBulkModal(row)
   }
 
   const onSyncStatus = async (row) => {
@@ -506,10 +494,16 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     setModalReportFilters(reportFilters())
     $(reportModalRef.current).modal('show')
   }
-  const openBulkModal = () => {
-    setBulkFilters({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false })
-    setBulkRows([])
-    setBulkSelected([])
+  const openBulkModal = (row = null) => {
+    const rowClientId = row?.client_id ?? row?.client?.id ?? ''
+    setBulkFilters({
+      clientId: row ? `${rowClientId}` : '',
+      documentType: row?.document_type ?? 'Factura',
+      currency: row?.currency ?? 'PEN',
+      detraction: Boolean(row?.metadata?.detraction_enabled),
+    })
+    setBulkRows(row ? [row] : [])
+    setBulkSelected(row?.id ? [row.id] : [])
     $(bulkModalRef.current).modal('show')
   }
   const storageFilterValue = useMemo(
@@ -550,9 +544,11 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       await showBlockedAction('Seleccion requerida', 'Selecciona al menos una prefactura.')
       return
     }
+    const selectedRows = bulkRows.filter(row => bulkSelected.includes(row.id))
+    const selectedLabel = selectedRows.length === 1 ? selectedRows[0]?.code : `${bulkSelected.length} prefacturas seleccionadas`
     const { isConfirmed } = await Swal.fire({
-      title: 'Facturar en bloque',
-      text: `Se prepararan ${bulkSelected.length} prefacturas seleccionadas.`,
+      title: selectedRows.length === 1 ? 'Facturar prefactura' : 'Facturar en bloque',
+      text: `Se asignara serie y numero a ${selectedLabel}.`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Facturar',
@@ -561,7 +557,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     if (!isConfirmed) return
     for (const id of bulkSelected) {
       const result = await billingDocumentsRest.prepareVoucher(id)
-      if (!result) break
+      if (!result) return
     }
     $(bulkModalRef.current).modal('hide')
     refreshGrid()
