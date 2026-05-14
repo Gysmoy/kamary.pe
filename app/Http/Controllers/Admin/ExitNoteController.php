@@ -143,7 +143,6 @@ class ExitNoteController extends BasicController
                 }
 
                 if ($isStorage && $lot === '') throw new \Exception('Cada linea de salida debe tener lote');
-                if ($isStorage && !$expirationDate) throw new \Exception('Cada linea de salida debe tener fecha de vencimiento');
 
                 $hasStorageKey = $isStorage || ($lot !== '' && $expirationDate) || $location !== '';
                 $availableStock = $hasStorageKey

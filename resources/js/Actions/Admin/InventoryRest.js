@@ -144,6 +144,29 @@ class InventoryRest extends BasicRest {
       return null
     }
   }
+
+  applyStorageInventory = async (id) => {
+    try {
+      const { status, result } = await Fetch(`/api/admin/storage/inventory/${id}/apply`, {
+        method: 'POST',
+        body: JSON.stringify({})
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo aplicar el inventario')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
 }
 
 export default InventoryRest

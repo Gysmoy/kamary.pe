@@ -335,6 +335,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/inventory/preview', [AdminStorageInventoryController::class, 'preview']);
             Route::post('/inventory', [AdminStorageInventoryController::class, 'save']);
             Route::post('/inventory/paginate', [AdminStorageInventoryController::class, 'paginate']);
+            Route::post('/inventory/{id}/apply', [AdminStorageInventoryController::class, 'apply']);
             Route::get('/inventory/{id}', [AdminStorageInventoryController::class, 'get']);
             Route::get('/inventory/{id}/format', [AdminStorageInventoryController::class, 'format']);
             Route::post('/inventory/{id}/import', [AdminStorageInventoryController::class, 'import']);

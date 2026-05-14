@@ -38,7 +38,19 @@ const mapStoredItem = (item) => ({
   temperature_range: item.temperature_range ?? '',
   system_stock: Number(item.system_stock ?? 0),
   real_stock: Number(item.real_stock ?? 0),
+  difference: Number(item.difference ?? (Number(item.real_stock ?? 0) - Number(item.system_stock ?? 0))),
 })
+
+const inventoryStatusBadge = (status) => {
+  const normalized = status || 'En espera'
+  const className = {
+    Aplicado: 'badge-soft-success',
+    'Sin diferencias': 'badge-soft-info',
+    'Con diferencias': 'badge-soft-danger',
+    'En espera': 'badge-soft-warning',
+  }[normalized] ?? 'badge-soft-secondary'
+  return `<span class="badge ${className}">${normalized}</span>`
+}
 
 const StandardInventory = ({ moduleTitle = 'Inventario' }) => {
   const gridRef = useRef()
@@ -208,6 +220,8 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       row.real_stock,
     ].some(value => `${value ?? ''}`.toLowerCase().includes(term)))
   }, [rows, tableSearch])
+  const hasSelectedDifferences = rows.some(row => Math.abs(Number(row.difference || 0)) > 0.0001)
+  const selectedCountApplied = selectedCount?.inventory_status === 'Aplicado'
   const tablePageCount = Math.max(1, Math.ceil(filteredRows.length / tablePageSize))
   const currentTablePage = Math.min(tablePage, tablePageCount)
   const paginatedRows = filteredRows.slice((currentTablePage - 1) * tablePageSize, currentTablePage * tablePageSize)
@@ -286,6 +300,25 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
     const formData = new FormData()
     formData.append('format_file', file)
     const result = await inventoryRest.importStorageFormat(selectedCount.id, formData)
+    if (!result) return
+    setSelectedCount(result)
+    setRows((result.items ?? []).map(mapStoredItem))
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
+  const applyInventory = async () => {
+    if (!selectedCount?.id) return
+    const { isConfirmed } = await Swal.fire({
+      title: 'Aplicar inventario',
+      text: 'Se crearan ajustes de entrada o salida para que el stock quede igual al conteo real.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, aplicar',
+      cancelButtonText: 'Cancelar'
+    })
+    if (!isConfirmed) return
+
+    const result = await inventoryRest.applyStorageInventory(selectedCount.id)
     if (!result) return
     setSelectedCount(result)
     setRows((result.items ?? []).map(mapStoredItem))
@@ -373,7 +406,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           dataField: 'inventory_status',
           caption: 'Estado',
           width: 115,
-          cellTemplate: (container, { data }) => container.html(`<span class="badge badge-soft-warning">${data.inventory_status ?? 'En espera'}</span>`)
+          cellTemplate: (container, { data }) => container.html(inventoryStatusBadge(data.inventory_status))
         },
       ]}
     />
@@ -382,7 +415,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       modalRef={modalRef}
       title={<div className='d-flex align-items-center gap-2 text-white fw-bold fs-6 text-uppercase'>
         <i className='mdi mdi-format-list-bulleted'></i>
-        Registrar pedidos
+        Registrar inventario
       </div>}
       size='xl'
       hideFooter
@@ -415,6 +448,10 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           <i className='mdi mdi-close me-1'></i>
           Cerrar
         </button>
+        {selectedCount?.id && !selectedCountApplied && hasSelectedDifferences && <button type='button' className='btn btn-success' onClick={applyInventory}>
+          <i className='mdi mdi-check-circle-outline me-1'></i>
+          Aplicar inventario
+        </button>}
       </div>
       <hr className='my-4' />
 
@@ -464,7 +501,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         <button type='button' className='btn btn-outline-success px-5 py-2' disabled={!selectedCount?.id} onClick={downloadFormat}>
           Descargar Formato
         </button>
-        <button type='button' className='btn btn-outline-success px-5 py-2' disabled={!selectedCount?.id} onClick={() => fileRef.current?.click()}>
+        <button type='button' className='btn btn-outline-success px-5 py-2' disabled={!selectedCount?.id || selectedCountApplied} onClick={() => fileRef.current?.click()}>
           Subir Formato
         </button>
       </div>
@@ -500,10 +537,11 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
               <th style={{ minWidth: 130 }}>TEMPERATURA</th>
               <th style={{ minWidth: 130 }}>STOCK SISTEMA</th>
               <th style={{ minWidth: 120 }}>STOCK REAL</th>
+              <th style={{ minWidth: 120 }}>DIFERENCIA</th>
             </tr>
           </thead>
           <tbody>
-            {filteredRows.length === 0 && <tr><td colSpan='10' className='text-center py-4'>No existen elementos</td></tr>}
+            {filteredRows.length === 0 && <tr><td colSpan='11' className='text-center py-4'>No existen elementos</td></tr>}
             {paginatedRows.map((row, index) => (
               <tr key={`storage-inventory-detail-${row.id ?? index}`}>
                 <td>{row.id ?? index + 1}</td>
@@ -516,6 +554,9 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
                 <td>{row.temperature_range || '-'}</td>
                 <td>{formatQty(row.system_stock)}</td>
                 <td>{formatQty(row.real_stock)}</td>
+                <td className={Number(row.difference || 0) === 0 ? '' : (Number(row.difference || 0) > 0 ? 'text-success fw-semibold' : 'text-danger fw-semibold')}>
+                  {formatQty(row.difference)}
+                </td>
               </tr>
             ))}
           </tbody>

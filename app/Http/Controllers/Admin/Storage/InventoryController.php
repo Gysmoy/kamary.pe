@@ -5,9 +5,14 @@ namespace App\Http\Controllers\Admin\Storage;
 use App\Http\Controllers\BasicController;
 use App\Models\Client;
 use App\Models\ClientStorageTariff;
+use App\Models\EntryNote;
+use App\Models\EntryNoteItem;
+use App\Models\ExitNote;
+use App\Models\ExitNoteItem;
 use App\Models\StorageInventoryCount;
 use App\Models\StorageInventoryCountItem;
 use App\Models\Warehouse;
+use App\Services\StockService;
 use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -287,12 +292,100 @@ class InventoryController extends BasicController
             }
             fclose($handle);
 
-            $count->update(['updated_by' => Auth::id()]);
+            $hasDifferences = StorageInventoryCountItem::where('storage_inventory_count_id', $count->id)
+                ->whereNotNull('status')
+                ->whereRaw('ABS(COALESCE(difference, 0)) > 0.0001')
+                ->exists();
+
+            $count->update([
+                'inventory_status' => $hasDifferences ? 'Con diferencias' : 'Sin diferencias',
+                'updated_by' => Auth::id(),
+            ]);
             DB::commit();
 
             $response->status = 200;
             $response->message = "Formato procesado. Items actualizados: {$updated}";
             $response->data = $count->fresh(['items']);
+        } catch (\Throwable $th) {
+            if (DB::transactionLevel() > 0) DB::rollBack();
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function apply(Request $request, string $id): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+
+        try {
+            DB::beginTransaction();
+
+            $count = StorageInventoryCount::with([
+                'items' => fn($query) => $query->whereNotNull('status')->orderBy('id'),
+                'warehouse.branch.business',
+                'client:id,full_name,document_number',
+            ])->lockForUpdate()->findOrFail($id);
+
+            if (!$count->status) throw new \Exception('El inventario esta eliminado');
+            if ($count->inventory_status === 'Aplicado') throw new \Exception('Este inventario ya fue aplicado');
+
+            $warehouse = $count->warehouse;
+            if (!$warehouse || !$warehouse->business_branch_id) throw new \Exception('El inventario no tiene almacen valido');
+
+            $business = $warehouse->branch?->business;
+            if (!$business || $business->business_key !== BusinessScope::KAMARY_MEDICALS) {
+                throw new \Exception('El inventario no pertenece al grupo de almacenamiento');
+            }
+
+            $positiveRows = [];
+            $negativeRows = [];
+            foreach ($count->items as $item) {
+                $difference = round((float)$item->difference, 3);
+                if (abs($difference) <= 0.0001) continue;
+                if (!$item->article_id || !$item->warehouse_id) {
+                    throw new \Exception("El item {$item->id} no tiene articulo o almacen valido");
+                }
+                if ($difference > 0) $positiveRows[] = $item;
+                else $negativeRows[] = $item;
+            }
+
+            if (count($positiveRows) === 0 && count($negativeRows) === 0) {
+                throw new \Exception('No hay diferencias de inventario para aplicar');
+            }
+
+            $createdEntryNote = null;
+            if (count($positiveRows) > 0) {
+                $createdEntryNote = $this->createInventoryEntryAdjustment($count, $positiveRows, $business->id, $warehouse->business_branch_id);
+            }
+
+            $createdExitNote = null;
+            if (count($negativeRows) > 0) {
+                $createdExitNote = $this->createInventoryExitAdjustment($count, $negativeRows, $business->id, $warehouse->business_branch_id);
+            }
+
+            $count->update([
+                'inventory_status' => 'Aplicado',
+                'updated_by' => Auth::id(),
+            ]);
+
+            DB::commit();
+
+            $messages = [];
+            if ($createdEntryNote) $messages[] = "entrada {$createdEntryNote->code}";
+            if ($createdExitNote) $messages[] = "salida #{$createdExitNote->id}";
+
+            $response->status = 200;
+            $response->message = 'Inventario aplicado correctamente' . (count($messages) ? ' (' . implode(', ', $messages) . ')' : '');
+            $response->data = $count->fresh([
+                'branch:id,name,business_id',
+                'warehouse:id,name,business_branch_id',
+                'client:id,document_type,document_number,full_name',
+                'items',
+                'creator:id,name,lastname,username,fullname',
+                'updater:id,name,lastname,username,fullname',
+            ]);
         } catch (\Throwable $th) {
             if (DB::transactionLevel() > 0) DB::rollBack();
             $response->status = 400;
@@ -501,6 +594,121 @@ class InventoryController extends BasicController
         }
 
         return 'AI' . str_pad((string)$next, 5, '0', STR_PAD_LEFT);
+    }
+
+    private function createInventoryEntryAdjustment(StorageInventoryCount $count, array $items, int $businessId, int $branchId): EntryNote
+    {
+        $today = now()->toDateString();
+        $userId = Auth::id();
+
+        $entryNote = EntryNote::create([
+            'business_id' => $businessId,
+            'business_branch_id' => $branchId,
+            'warehouse_id' => $count->warehouse_id,
+            'client_id' => $count->client_id,
+            'entry_date' => $today,
+            'document_type' => 'Ajuste inventario',
+            'document_series' => 'AJI',
+            'document_sequence' => $count->code,
+            'document_date' => $today,
+            'driver_name' => 'Ajuste inventario',
+            'driver_license' => 'N/A',
+            'vehicle_plate' => 'N/A',
+            'currency' => 'PEN',
+            'observations' => "Ajuste positivo generado desde inventario {$count->code}",
+            'status' => true,
+            'entry_status' => 'approved',
+            'created_by' => $userId,
+            'updated_by' => $userId,
+        ]);
+
+        $entryNote->code = 'NE' . str_pad((string)$entryNote->id, 5, '0', STR_PAD_LEFT);
+        $entryNote->save();
+
+        foreach ($items as $item) {
+            $quantity = round((float)$item->difference, 3);
+            EntryNoteItem::create([
+                'entry_note_id' => $entryNote->id,
+                'batch_code' => $item->lot ?: null,
+                'lot' => $item->lot ?: null,
+                'expiration_date' => $item->expiration_date?->format('Y-m-d'),
+                'article_id' => $item->article_id,
+                'warehouse_id' => $item->warehouse_id,
+                'stock' => (float)$item->system_stock,
+                'cost_unit' => 0,
+                'location' => $item->location ?: null,
+                'requested_quantity' => $quantity,
+                'received_quantity' => $quantity,
+                'quantity' => $quantity,
+                'total' => 0,
+                'status' => true,
+            ]);
+        }
+
+        return $entryNote;
+    }
+
+    private function createInventoryExitAdjustment(StorageInventoryCount $count, array $items, int $businessId, int $branchId): ExitNote
+    {
+        $userId = Auth::id();
+        $exitNote = ExitNote::create([
+            'business_id' => $businessId,
+            'business_branch_id' => $branchId,
+            'warehouse_id' => $count->warehouse_id,
+            'client_name' => $count->client?->full_name ?: null,
+            'motives' => ["Ajuste negativo generado desde inventario {$count->code}"],
+            'observations' => "Ajuste negativo generado desde inventario {$count->code}",
+            'status' => true,
+            'created_by' => $userId,
+            'updated_by' => $userId,
+        ]);
+
+        $reservedStock = [];
+        foreach ($items as $item) {
+            $quantity = abs(round((float)$item->difference, 3));
+            $lot = trim((string)($item->lot ?? ''));
+            $location = trim((string)($item->location ?? ''));
+            $expirationDate = $item->expiration_date?->format('Y-m-d');
+
+            $availableStock = app(StockService::class)->getAvailableStockByStorageKey(
+                (int)$item->article_id,
+                (int)$item->warehouse_id,
+                $lot,
+                $expirationDate,
+                $location,
+                (int)$exitNote->id,
+                $businessId
+            );
+            $stockKey = implode('|', [
+                $item->article_id,
+                $item->warehouse_id,
+                mb_strtolower($lot),
+                $expirationDate ?: '',
+                mb_strtolower($location),
+            ]);
+            $alreadyReserved = (float)($reservedStock[$stockKey] ?? 0);
+            $remainingStock = round($availableStock - $alreadyReserved, 3);
+            if ($quantity > $remainingStock + 0.0001) {
+                throw new \Exception("Stock insuficiente para aplicar inventario. Item {$item->id}, lote {$lot}. Disponible: {$remainingStock}");
+            }
+            $reservedStock[$stockKey] = round($alreadyReserved + $quantity, 3);
+
+            ExitNoteItem::create([
+                'exit_note_id' => $exitNote->id,
+                'batch_code' => $lot ?: null,
+                'article_id' => $item->article_id,
+                'warehouse_id' => $item->warehouse_id,
+                'stock' => $availableStock,
+                'expiration_date' => $expirationDate,
+                'location' => $location ?: null,
+                'destination_location' => null,
+                'quantity' => $quantity,
+                'total' => $quantity,
+                'status' => true,
+            ]);
+        }
+
+        return $exitNote;
     }
 
     private function toNullableInt($value): ?int
