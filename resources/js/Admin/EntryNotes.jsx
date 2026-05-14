@@ -159,6 +159,17 @@ const EntryNotes = () => {
   }, [storageContext])
 
   useEffect(() => {
+    if (!storageContext) return
+    const updateGridDimensions = () => {
+      try {
+        $(gridRef.current).dxDataGrid('instance')?.updateDimensions()
+      } catch (error) { }
+    }
+    const timers = [0, 250, 600].map(delay => setTimeout(updateGridDimensions, delay))
+    return () => timers.forEach(timer => clearTimeout(timer))
+  }, [storageContext])
+
+  useEffect(() => {
     items.forEach(item => {
       const ref = getBatchRef(item.uid)
       if (!ref.current || !item.batch_id || !item.batch_label) return
@@ -759,44 +770,62 @@ const EntryNotes = () => {
   const storageColumns = [
     {
       caption: 'Acciones',
-      width: 150,
+      width: 240,
+      minWidth: 240,
       cellTemplate: (container, { data }) => {
-        container.css('text-overflow', 'unset')
+        container.css({
+          textOverflow: 'unset',
+          overflow: 'visible',
+          whiteSpace: 'nowrap'
+        })
+        const actions = $('<div>').css({
+          display: 'flex',
+          alignItems: 'center',
+          flexWrap: 'nowrap'
+        })
+        container.append(actions)
+        const appendAction = ({ disabled = false, ...options }) => {
+          const button = DxButton(options)
+          if (disabled) button.dxButton('instance').option('disabled', true)
+          actions.append(button)
+        }
         const status = data?.entry_status ?? 'pending'
-        if (status !== 'approved' && status !== 'cancelled') {
-          container.append(DxButton({
+        if (status !== 'cancelled') {
+          const canApprove = status !== 'approved'
+          appendAction({
             className: 'btn btn-xs btn-soft-success',
-            title: 'Aprobar nota de entrada',
+            title: canApprove ? 'Aprobar nota de entrada' : 'Nota de entrada aprobada',
             icon: 'mdi mdi-check',
-            onClick: () => onEntryStatusChange(data, 'approved')
-          }))
+            disabled: !canApprove,
+            onClick: () => canApprove && onEntryStatusChange(data, 'approved')
+          })
         }
         if (status !== 'cancelled') {
-          container.append(DxButton({
-            className: 'btn btn-xs btn-soft-primary ms-1',
+          appendAction({
+            className: 'btn btn-xs btn-soft-primary',
             title: 'Editar nota de entrada',
             icon: 'mdi mdi-pencil',
             onClick: () => onModalOpen(data)
-          }))
-          container.append(DxButton({
-            className: 'btn btn-xs btn-soft-danger ms-1',
+          })
+          appendAction({
+            className: 'btn btn-xs btn-soft-danger',
             title: 'Anular nota de entrada',
             icon: 'mdi mdi-close',
             onClick: () => onEntryStatusChange(data, 'cancelled')
-          }))
+          })
         }
-        container.append(DxButton({
-          className: 'btn btn-xs btn-soft-danger ms-1',
+        appendAction({
+          className: 'btn btn-xs btn-soft-danger',
           title: 'Imprimir acta de nota de entrada',
           icon: 'mdi mdi-file-pdf-box',
           onClick: () => openStorageActaPdf(data)
-        }))
-        container.append(DxButton({
-          className: 'btn btn-xs btn-soft-info ms-1',
+        })
+        appendAction({
+          className: 'btn btn-xs btn-soft-info',
           title: 'Detalle de nota de entrada',
           icon: 'mdi mdi-file-document-outline',
           onClick: () => openStorageDetailPdf(data)
-        }))
+        })
       },
       allowFiltering: false,
       allowExporting: false
