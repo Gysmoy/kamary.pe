@@ -238,6 +238,26 @@ class BillingDocumentController extends BasicController
         }
     }
 
+    public function prepareVoucher(Request $request, string $id): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+        DB::beginTransaction();
+        try {
+            $document = BillingDocument::findOrFail($id);
+            $updated = app(BillingDocumentService::class)->prepareVoucher($document);
+            DB::commit();
+            $response->status = 200;
+            $response->message = 'Comprobante preparado';
+            $response->data = $updated;
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
     public function cancel(Request $request, string $id): HttpResponse|ResponseFactory
     {
         $response = new Response();

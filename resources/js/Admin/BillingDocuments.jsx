@@ -312,6 +312,27 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
+  const onPrepareVoucher = async (row) => {
+    if (row?.fiscal_readiness?.can_issue === false) {
+      await openReadinessModal(row, 'El comprobante no esta listo para preparar')
+      return
+    }
+
+    const { isConfirmed } = await Swal.fire({
+      title: 'Facturar prefactura',
+      text: `Se asignara serie y numero a ${row.code}.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Facturar',
+      cancelButtonText: 'Cancelar'
+    })
+    if (!isConfirmed) return
+
+    const result = await billingDocumentsRest.prepareVoucher(row.id)
+    if (!result) return
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
   const onSyncStatus = async (row) => {
     if (!canSyncDocument(row)) {
       await showBlockedAction('Sync no disponible', 'El comprobante aun no tiene datos remotos para sincronizar.')
@@ -531,7 +552,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     }
     const { isConfirmed } = await Swal.fire({
       title: 'Facturar en bloque',
-      text: `Se emitiran ${bulkSelected.length} prefacturas seleccionadas.`,
+      text: `Se prepararan ${bulkSelected.length} prefacturas seleccionadas.`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Facturar',
@@ -539,7 +560,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     })
     if (!isConfirmed) return
     for (const id of bulkSelected) {
-      const result = await billingDocumentsRest.issue(id)
+      const result = await billingDocumentsRest.prepareVoucher(id)
       if (!result) break
     }
     $(bulkModalRef.current).modal('hide')
@@ -633,7 +654,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
           className: `btn btn-xs ${isPrepared ? 'btn-outline-success' : 'btn-outline-primary'}`,
           title: isPrepared ? 'Imprimir comprobante' : 'Facturar',
           icon: isPrepared ? 'mdi mdi-file-document-outline' : 'mdi mdi-file-send-outline',
-          onClick: () => isPrepared ? onPrintPreparedVoucher(data) : onIssue(data)
+          onClick: () => isPrepared ? onPrintPreparedVoucher(data) : onPrepareVoucher(data)
         }))
         return
       }

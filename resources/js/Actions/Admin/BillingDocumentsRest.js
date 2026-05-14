@@ -76,6 +76,20 @@ class BillingDocumentsRest extends BasicRest {
 
   downloadUrl = (id, type) => `/api/${this.path}/${id}/download/${type}`
 
+  prepareVoucher = async (id) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${id}/prepare-voucher`, {
+        method: 'POST'
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo preparar el comprobante')
+      toast.success('Correcto', { description: result.message, duration: 3000, richColors: true })
+      return result
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
+      return null
+    }
+  }
+
   issue = async (id) => {
     try {
       const { status, result } = await Fetch(`/api/${this.path}/${id}/issue`, {

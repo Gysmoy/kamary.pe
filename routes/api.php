@@ -420,6 +420,7 @@ Route::middleware('auth')->group(function () {
             Route::patch('/billing-control/{field}', [AdminStorageBillingControlController::class, 'boolean']);
             Route::delete('/billing-control/{id}', [AdminStorageBillingControlController::class, 'delete']);
             Route::get('/billing-control/{id}/connector-payload', [AdminStorageBillingControlController::class, 'connectorPayload']);
+            Route::post('/billing-control/{id}/prepare-voucher', [AdminStorageBillingControlController::class, 'prepareVoucher']);
             Route::post('/billing-control/{id}/issue', [AdminStorageBillingControlController::class, 'issue']);
             Route::post('/billing-control/{id}/cancel', [AdminStorageBillingControlController::class, 'cancel']);
             Route::post('/billing-control/{id}/credit-note', [AdminStorageBillingControlController::class, 'creditNote']);
@@ -546,6 +547,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/billing-documents/{field}', [AdminBillingDocumentController::class, 'boolean']);
         Route::delete('/billing-documents/{id}', [AdminBillingDocumentController::class, 'delete']);
         Route::get('/billing-documents/{id}/connector-payload', [AdminBillingDocumentController::class, 'connectorPayload']);
+        Route::post('/billing-documents/{id}/prepare-voucher', [AdminBillingDocumentController::class, 'prepareVoucher']);
         Route::post('/billing-documents/{id}/issue', [AdminBillingDocumentController::class, 'issue']);
         Route::post('/billing-documents/{id}/cancel', [AdminBillingDocumentController::class, 'cancel']);
         Route::post('/billing-documents/{id}/credit-note', [AdminBillingDocumentController::class, 'creditNote']);

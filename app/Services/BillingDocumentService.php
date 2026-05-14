@@ -422,6 +422,45 @@ class BillingDocumentService
         );
     }
 
+    public function prepareVoucher(BillingDocument $document): BillingDocument
+    {
+        if (!$document->status) throw new \Exception('El comprobante esta inactivo');
+        if ($document->local_status !== 'pending') throw new \Exception('Solo puedes preparar comprobantes pendientes');
+
+        $document = $this->prepareIfNeeded($document);
+        $updates = [];
+
+        if (!$document->series) {
+            $document->loadMissing('branch');
+            $updates['series'] = $this->resolveSeries($document->document_type, $document->branch);
+        }
+
+        if (!$document->sequence) {
+            $sequenceDocument = $updates ? tap($document->replicate(), function ($replica) use ($document, $updates) {
+                $replica->id = $document->id;
+                $replica->exists = true;
+                $replica->fill($updates);
+            }) : $document;
+            $updates['sequence'] = $this->nextSequence($sequenceDocument);
+        }
+
+        if ($updates) {
+            $updates['updated_by'] = Auth::id();
+            $document->update($updates);
+            $document = $document->fresh(['items', 'client', 'eventualClient', 'business', 'branch', 'serviceOrder', 'commercialOrder', 'referenceDocument']);
+            $this->refreshConnectorPayload($document);
+        }
+
+        $fresh = $document->fresh();
+        $this->registerEvent($fresh, 'prepared_voucher', [
+            'local_status' => $fresh->local_status,
+            'external_status' => $fresh->external_status,
+            'message' => 'Comprobante preparado con serie y secuencia',
+        ]);
+
+        return $fresh->fresh(['business', 'branch', 'warehouse', 'client', 'eventualClient', 'commercialOrder', 'serviceOrder', 'referenceDocument', 'items', 'events', 'creator', 'updater']);
+    }
+
     public function cancelDocument(BillingDocument $document, ?string $reason = null): BillingDocument
     {
         if (!$document->status) throw new \Exception('El comprobante esta inactivo');
