@@ -1,5 +1,6 @@
 import React, { createRef, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
@@ -752,6 +753,18 @@ const EntryNotes = () => {
     URL.revokeObjectURL(link.href)
   }
 
+  const downloadStorageExcel = () => {
+    const rows = storageExportRows()
+    const matrix = [
+      storageExportColumns.map(([title]) => title),
+      ...rows.map(row => storageExportColumns.map(([, getter]) => getter(row))),
+    ]
+    const worksheet = XLSX.utils.aoa_to_sheet(matrix)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Notas de entrada')
+    XLSX.writeFile(workbook, 'notas-entrada.xlsx')
+  }
+
   const downloadStoragePdf = () => {
     const JsPDF = window.jspdf?.jsPDF || window.jsPDF
     if (!JsPDF) {
@@ -1019,22 +1032,23 @@ const EntryNotes = () => {
       rest={entryNotesRest}
       toolBar={(container) => {
         if (storageContext) {
-          container.unshift({
-            widget: 'dxButton', location: 'before',
-            options: { text: 'Imprimir', onClick: printStorageGrid }
-          });
-          container.unshift({
-            widget: 'dxButton', location: 'before',
-            options: { text: 'PDF', onClick: downloadStoragePdf }
-          });
-          container.unshift({
-            widget: 'dxButton', location: 'before',
-            options: { text: 'Excel', onClick: downloadStorageCsv }
-          });
-          container.unshift({
-            widget: 'dxButton', location: 'before',
-            options: { text: 'Copiar', onClick: copyStorageGrid }
-          });
+          [
+            { text: 'Imprimir', onClick: printStorageGrid },
+            { text: 'PDF', onClick: downloadStoragePdf },
+            { text: 'Excel', onClick: downloadStorageExcel },
+            { text: 'CSV', onClick: downloadStorageCsv },
+            { text: 'Copiar', onClick: copyStorageGrid },
+          ].forEach(item => {
+            container.unshift({
+              widget: 'dxButton',
+              location: 'before',
+              options: {
+                text: item.text,
+                stylingMode: 'outlined',
+                onClick: item.onClick
+              }
+            });
+          })
         }
         container.unshift({
           widget: 'dxButton', location: 'after',

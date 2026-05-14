@@ -669,12 +669,13 @@
     ]
   },
   "resources/js/Admin/EntryNotes.jsx": {
-    "file": "assets/EntryNotes-7wXgObw-.js",
+    "file": "assets/EntryNotes-C4nacQHo.js",
     "name": "EntryNotes",
     "src": "resources/js/Admin/EntryNotes.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-DzmYTmbr.js",
+      "_xlsx-CKN5doRT.js",
       "_Base-B52FG9I8.js",
       "_Table-Aq4oioSi.js",
       "_Modal-DGAB1eIb.js",
