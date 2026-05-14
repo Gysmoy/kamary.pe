@@ -384,11 +384,19 @@ const StorageKardex = () => {
       skip: (kardexPage - 1) * kardexPageSize,
       take: kardexPageSize,
       requireTotalCount: true,
+      section: 'kardex',
+      client_id: clientId || '',
+      warehouse_id: warehouseId || '',
+      stock_mode: stockMode || 'with_stock',
+      business_id: '',
+      business_branch_id: '',
+      laboratory_id: '',
+      article_id: '',
       sort: kardexSort ? [kardexSort] : undefined,
       ...(filter ? { filter } : {}),
       ...overrides,
     }
-  }, [buildKardexSearchFilter, kardexPage, kardexPageSize, kardexSort])
+  }, [buildKardexSearchFilter, clientId, kardexPage, kardexPageSize, kardexSort, stockMode, warehouseId])
 
   const loadStorageKardexRows = useCallback(async () => {
     if (activeTab !== 'kardex') return

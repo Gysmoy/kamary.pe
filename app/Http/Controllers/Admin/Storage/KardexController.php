@@ -550,6 +550,7 @@ class KardexController extends BasicController
                 entry_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(entry_item.location, ''), '') as location,
                 entry_item.quantity as quantity,
+                entry_note.client_id as client_id,
                 COALESCE(entry_note.updated_at, entry_note.created_at) as movement_at
             ");
 
@@ -568,6 +569,7 @@ class KardexController extends BasicController
                 receipt_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(receipt_item.location, ''), '') as location,
                 receipt_item.quantity as quantity,
+                NULL as client_id,
                 COALESCE(receipt.confirmed_at, receipt.updated_at, receipt.created_at) as movement_at
             ");
 
@@ -581,6 +583,7 @@ class KardexController extends BasicController
                 incoming.expiration_date,
                 incoming.location,
                 COALESCE(SUM(incoming.quantity), 0) as qty_in,
+                MIN(incoming.client_id) as client_id,
                 MAX(incoming.movement_at) as last_movement_at
             ')
             ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location');
@@ -612,7 +615,7 @@ class KardexController extends BasicController
                     ->whereRaw("storage_location.code = stock.location")
                     ->whereNotNull('storage_location.status');
             })
-            ->leftJoin('clients as client', 'client.id', '=', 'storage_location.client_id')
+            ->leftJoin('clients as client', 'client.id', '=', 'stock.client_id')
             ->leftJoinSub($outgoingTotals, 'outgoing', function ($join) {
                 $join->on('outgoing.article_id', '=', 'stock.article_id')
                     ->on('outgoing.warehouse_id', '=', 'stock.warehouse_id')
@@ -621,7 +624,7 @@ class KardexController extends BasicController
                     ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')");
             })
             ->when($warehouseId, fn($query) => $query->where('stock.warehouse_id', $warehouseId))
-            ->when($clientId, fn($query) => $query->where('storage_location.client_id', $clientId))
+            ->when($clientId, fn($query) => $query->where('stock.client_id', $clientId))
             ->selectRaw("
                 stock.source_key as id,
                 stock.source_key,
@@ -634,7 +637,7 @@ class KardexController extends BasicController
                 COALESCE(stock.location, '') as location,
                 COALESCE(warehouse.name, '') as warehouse_name,
                 storage_location.temperature_range,
-                storage_location.client_id,
+                stock.client_id,
                 client.full_name as client_name,
                 COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0) as system_stock,
                 CASE
