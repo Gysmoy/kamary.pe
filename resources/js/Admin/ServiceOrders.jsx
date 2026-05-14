@@ -521,8 +521,8 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     $(modalRef.current).modal('hide')
   }
 
-  const onDelete = async (id) => {
-    const { isConfirmed } = await Swal.fire({ title: 'Eliminar orden de servicio', text: 'Se dara de baja la orden.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
+  const onCancel = async (id) => {
+    const { isConfirmed } = await Swal.fire({ title: 'Anular orden de servicio', text: 'Se dara de baja la orden de servicio.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, anular', cancelButtonText: 'Cancelar' })
     if (!isConfirmed) return
     const result = await serviceOrdersRest.delete(id)
     if (!result) return
@@ -539,21 +539,21 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
 
   const actionColumn = {
     caption: 'Acciones',
-    width: isStorageOrderList ? 105 : 170,
+    width: isStorageOrderList ? 92 : 170,
     allowFiltering: false,
     allowExporting: false,
     cellTemplate: (container, { data }) => {
       container.css('text-overflow', 'unset')
       container.append(DxButton({
         className: isStorageOrderList ? 'btn btn-xs btn-soft-warning' : 'btn btn-xs btn-soft-primary',
-        title: 'Editar',
-        icon: isStorageOrderList ? 'mdi mdi-format-list-bulleted' : 'mdi mdi-pencil',
+        title: 'Editar orden de servicio',
+        icon: 'mdi mdi-pencil',
         onClick: () => onModalOpen(data)
       }))
       if (!isStorageOrderList) {
         container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.serviceOrder(data)) }))
       }
-      container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: isStorageOrderList ? 'mdi mdi-close' : 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
+      container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Anular orden de servicio', icon: isStorageOrderList ? 'mdi mdi-close' : 'mdi mdi-delete', onClick: () => onCancel(data.id) }))
     }
   }
 
