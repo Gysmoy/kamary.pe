@@ -43,6 +43,7 @@ class GeneralServiceController extends BaseServiceCatalogController
             ->leftJoin('users as creator', 'creator.id', '=', 'services.created_by')
             ->selectRaw("
                 services.*,
+                services.created_at as registered_at,
                 COALESCE(NULLIF(creator.fullname, ''), NULLIF(TRIM(CONCAT(COALESCE(creator.name, ''), ' ', COALESCE(creator.lastname, ''))), ''), creator.username, '') as creator_label
             ");
 
