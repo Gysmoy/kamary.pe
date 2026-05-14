@@ -114,6 +114,7 @@ const ExitNotes = () => {
   const branchRef = useRef()
   const warehouseRef = useRef()
   const clientNameRef = useRef()
+  const storageClientRef = useRef()
   const observationsRef = useRef()
   const motiveInputRef = useRef()
   const motiveSelectRef = useRef()
@@ -296,14 +297,20 @@ const ExitNotes = () => {
 
   const onModalSubmit = async (e) => {
     e.preventDefault()
-    const selectedClient = storageClients.find(client => `${client.id}` === `${selectedClientId}`)
+    const currentClientId = storageContext
+      ? `${$(storageClientRef.current).val() || storageClientRef.current?.value || selectedClientId || ''}`
+      : ''
+    const selectedClient = storageClients.find(client => `${client.id}` === currentClientId)
+    const selectedClientText = storageContext
+      ? (selectedClient ? clientLabel(selectedClient) : storageClientRef.current?.selectedOptions?.[0]?.textContent?.trim() || '')
+      : ''
     const request = {
       id: idRef.current.value || undefined,
       business_id: selectedBusinessId || null,
       business_branch_id: selectedBranchId || null,
       warehouse_id: selectedWarehouseId || null,
-      client_id: storageContext ? selectedClientId || null : undefined,
-      client_name: storageContext ? clientLabel(selectedClient) : (clientNameRef.current.value ?? '').trim(),
+      client_id: storageContext ? currentClientId || null : undefined,
+      client_name: storageContext ? selectedClientText : (clientNameRef.current.value ?? '').trim(),
       exit_date: storageContext ? exitDateRef.current?.value || null : undefined,
       document_type: storageContext ? (documentTypeRef.current?.value ?? '').trim() : undefined,
       document_series: storageContext ? (documentSeriesRef.current?.value ?? '').trim() : undefined,
@@ -871,7 +878,7 @@ const ExitNotes = () => {
             <div className='row g-3'>
               <div className='col-md-3'>
                 <label>Cliente</label>
-                <select className='form-select' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required>
+                <select ref={storageClientRef} className='form-select' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required>
                   <option value=''>Seleccione Cliente</option>
                   {storageClients.map(client => <option key={`exit-client-${client.id}`} value={client.id}>{clientLabel(client)}</option>)}
                 </select>
