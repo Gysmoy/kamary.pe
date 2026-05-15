@@ -385,6 +385,88 @@ const renderStorageEntryNoteDetailPdf = (doc, document) => {
   doc.text('Responsable del cliente', pageWidth - margin - 18 - (signatureWidth / 2), signatureY + 14, { align: 'center' })
 }
 
+const renderStorageExitNotePdf = (doc, document) => {
+  const data = document.source ?? {}
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 52
+  const rightX = pageWidth - margin - 190
+  let y = 82
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(15)
+  doc.text(`F-54 NOTA DE SALIDA: ${asText(document.code)}`, pageWidth / 2, y, { align: 'center' })
+
+  doc.setFontSize(9)
+  y += 36
+  const clientHeight = addInlineField(
+    doc,
+    'CLIENTE :',
+    data?.client_name || [nested(data, 'client.document_number'), nested(data, 'client.full_name')].filter(Boolean).join(' - '),
+    margin,
+    y,
+    pageWidth - (margin * 2),
+    62
+  )
+  y += clientHeight + 6
+
+  addInlineField(doc, `${documentTypeLabel(data?.document_type)} :`, documentLabel(data, ' - '), margin, y, 270, 94)
+  addInlineField(doc, 'FECHA DOCUMENTO :', asDate(data?.document_date), rightX, y, 190, 110)
+  y += 18
+  addInlineField(doc, 'ALMACEN :', nested(data, 'warehouse.name'), margin, y, 270, 62)
+  addInlineField(doc, 'UBICACION :', [...new Set((data?.items ?? []).map(item => item?.destination_location).filter(Boolean))].join(', '), rightX, y, 190, 70)
+  y += 18
+  addInlineField(doc, 'F. DESPACHO :', asDate(data?.exit_date), margin, y, 270, 82)
+  y += 18
+  addInlineField(doc, 'HORA INICIO :', '', margin, y, 180, 78)
+  addInlineField(doc, 'HORA TERMINO :', '', margin + 180, y, 190, 92)
+  y += 26
+
+  const rows = (data?.items ?? []).map(item => [
+    nested(item, 'article.name'),
+    item?.lot || item?.batch_code,
+    asDate(item?.expiration_date),
+    item?.location,
+    asQuantity(item?.quantity ?? item?.total),
+  ])
+
+  doc.autoTable({
+    startY: y,
+    head: [['Descripcion', 'Lote/Serie', 'F. Vencim.', 'Ubic.', 'Cantidad']],
+    body: rows.length ? rows : [['Sin detalle', '', '', '', '']],
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 5, overflow: 'linebreak', lineColor: [220, 224, 230], lineWidth: 0.3 },
+    headStyles: { fillColor: [255, 255, 255], textColor: [45, 55, 72], fontStyle: 'bold', lineColor: [220, 224, 230], lineWidth: 0.3 },
+    bodyStyles: { textColor: [45, 55, 72] },
+    columnStyles: {
+      0: { cellWidth: 210 },
+      1: { cellWidth: 75 },
+      2: { cellWidth: 75 },
+      3: { cellWidth: 65 },
+      4: { cellWidth: 60, halign: 'right' },
+    },
+    margin: { left: margin, right: margin },
+  })
+
+  y = doc.lastAutoTable.finalY + 28
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.text('OBSERVACIONES :', margin, y)
+  doc.setFont('helvetica', 'normal')
+  const observations = asClientText(data?.observations, '')
+  if (observations) doc.text(doc.splitTextToSize(observations, pageWidth - (margin * 2) - 100), margin + 95, y)
+
+  const signatureY = Math.max(y + 74, pageHeight - 142)
+  const signatureWidth = 155
+  doc.setDrawColor(70, 70, 70)
+  doc.line(margin + 18, signatureY, margin + 18 + signatureWidth, signatureY)
+  doc.line(pageWidth - margin - 18 - signatureWidth, signatureY, pageWidth - margin - 18, signatureY)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(9)
+  doc.text('Jefe de Almacen', margin + 18 + (signatureWidth / 2), signatureY + 14, { align: 'center' })
+  doc.text('Responsable del cliente', pageWidth - margin - 18 - (signatureWidth / 2), signatureY + 14, { align: 'center' })
+}
+
 export const buildMagistralesRows = {
   purchaseOrder: (data) => ({
     title: data?.module_scope === 'magistrales' ? 'Orden de compra magistral' : 'Orden de compra',
@@ -942,9 +1024,11 @@ export const buildMagistralesRows = {
     observations: data?.observations,
   }),
   storageExitNote: (data) => ({
+    layout: 'storage-exit-note',
     title: 'Nota de salida de almacenamiento',
     code: data?.code || data?.id,
     filename: `nota-salida-almacenamiento-${data?.code || data?.id}`,
+    source: data,
     meta: [
       ['Empresa', nested(data, 'business.name')],
       ['Sede', nested(data, 'branch.name')],
@@ -1007,6 +1091,11 @@ export const openMagistralesRecordPdf = (document) => {
     }
     if (document.layout === 'storage-entry-note-acta') {
       renderStorageEntryNoteActaPdf(doc, document, now)
+      showPdfInModal(doc, document)
+      return
+    }
+    if (document.layout === 'storage-exit-note') {
+      renderStorageExitNotePdf(doc, document)
       showPdfInModal(doc, document)
       return
     }
