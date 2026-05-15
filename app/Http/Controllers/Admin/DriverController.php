@@ -49,7 +49,6 @@ class DriverController extends BasicController
         if (!$id) {
             $body['code'] = $this->nextCode();
             $body['created_by'] = Auth::id();
-            $body['status'] = true;
         }
 
         $body['business_id'] = $businessId;
@@ -60,9 +59,17 @@ class DriverController extends BasicController
         $body['phone'] = trim((string) ($body['phone'] ?? '')) ?: null;
         $body['email'] = trim((string) ($body['email'] ?? '')) ?: null;
         $body['observations'] = trim((string) ($body['observations'] ?? '')) ?: null;
+        $body['status'] = $this->toBoolean($body['status'] ?? true);
         $body['updated_by'] = Auth::id();
 
         return $body;
+    }
+
+    private function toBoolean($value): bool
+    {
+        if (is_bool($value)) return $value;
+        $text = strtolower(trim((string) $value));
+        return in_array($text, ['1', 'true', 'activo', 'active', 'si'], true);
     }
 
     private function toNullableInt($value): ?int
