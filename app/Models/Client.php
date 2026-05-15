@@ -13,6 +13,7 @@ class Client extends Model
         'document_type',
         'document_number',
         'client_kind',
+        'module_scope',
         'full_name',
         'is_platform',
         'has_storage_service',

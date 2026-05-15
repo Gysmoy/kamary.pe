@@ -6,6 +6,11 @@ use Illuminate\Http\Request;
 
 class ServiceClientController extends ClientController
 {
+    protected function clientModuleScope(): ?string
+    {
+        return 'services';
+    }
+
     public function setReactViewProperties(Request $request)
     {
         return array_merge(parent::setReactViewProperties($request), [
@@ -21,6 +26,8 @@ class ServiceClientController extends ClientController
     {
         $request->merge([
             'client_kind' => 'regular',
+            'module_scope' => 'services',
+            'has_storage_service' => false,
         ]);
 
         return parent::beforeSave($request);

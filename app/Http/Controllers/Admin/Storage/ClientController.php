@@ -9,6 +9,11 @@ use Illuminate\Support\Facades\Schema;
 
 class ClientController extends BaseClientController
 {
+    protected function clientModuleScope(): ?string
+    {
+        return 'storage';
+    }
+
     public function setReactViewProperties(Request $request)
     {
         return array_merge(parent::setReactViewProperties($request), [
@@ -25,6 +30,7 @@ class ClientController extends BaseClientController
     {
         $request->merge([
             'client_kind' => 'regular',
+            'module_scope' => 'storage',
             'has_storage_service' => true,
         ]);
 

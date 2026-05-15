@@ -27,7 +27,7 @@ class ServiceOrdersRest extends BasicRest {
 
   getBranchesByBusiness = async (businessId) => businessId ? (await this.simpleGet(`/api/${this.path}/businesses/${businessId}/branches`)) ?? [] : []
   getBusinesses = async () => await loadAll('/api/admin/businesses/paginate')
-  getClients = async () => await loadAll(isStoragePath() ? '/api/admin/storage/clients/paginate' : '/api/admin/clients/paginate')
+  getClients = async () => await loadAll(isStoragePath() ? '/api/admin/storage/clients/paginate' : '/api/admin/services-client/paginate')
   getServices = async () => await loadAll(
     isStoragePath() ? '/api/admin/storage/general-service/paginate' : '/api/admin/services/paginate',
     isStorageServiceOrdersPath() ? { storage_service_types: true } : {}

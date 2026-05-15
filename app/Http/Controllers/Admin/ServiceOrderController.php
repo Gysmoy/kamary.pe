@@ -43,6 +43,11 @@ class ServiceOrderController extends BasicController
         return 'OS';
     }
 
+    protected function clientModuleScopeForOrder(): string
+    {
+        return $this->orderType() === 'service' ? 'services' : 'storage';
+    }
+
     public function setPaginationInstance(string $model)
     {
         $query = $model::select('service_orders.*')
@@ -97,6 +102,12 @@ class ServiceOrderController extends BasicController
         $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
         $client = Client::findOrFail($clientId);
         if ($client->client_kind !== 'regular') throw new \Exception('La orden de servicio debe trabajar con cliente regular');
+        if (
+            Schema::hasColumn('clients', 'module_scope')
+            && ($client->module_scope ?? null) !== $this->clientModuleScopeForOrder()
+        ) {
+            throw new \Exception('El cliente no pertenece a este modulo');
+        }
 
         $branch = BusinessScope::requireBranchForBusiness($business, $branchId);
         $branchId = (int) $branch->id;

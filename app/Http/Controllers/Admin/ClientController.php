@@ -49,6 +49,10 @@ class ClientController extends BasicController
 
         try {
             $instance = $this->buildUnifiedPaginationQuery();
+            $clientModuleScope = $this->clientModuleScope();
+            if ($clientModuleScope !== null && Schema::hasColumn('clients', 'module_scope')) {
+                $instance->where('module_scope', $clientModuleScope);
+            }
 
             if ($request->group != null) {
                 [$grouping] = $request->group;
@@ -109,6 +113,7 @@ class ClientController extends BasicController
 
     private function buildUnifiedPaginationQuery()
     {
+        $moduleScopeSelect = $this->clientColumnSelect('module_scope', 'NULL');
         $fiscalAddressSelect = $this->clientColumnSelect('fiscal_address', 'clients.full_address');
         $zoneCodeSelect = $this->clientColumnSelect('zone_code');
         $domicileSelect = $this->clientColumnSelect('domicile');
@@ -154,6 +159,7 @@ class ClientController extends BasicController
                 clients.id AS entity_id,
                 'client' AS data_source,
                 CASE WHEN clients.client_kind = 'eventual' THEN 'eventual' ELSE 'regular' END AS client_kind,
+                {$moduleScopeSelect} AS module_scope,
                 clients.document_type,
                 clients.document_number,
                 clients.full_name,
@@ -216,6 +222,7 @@ class ClientController extends BasicController
                 eventual_clients.id AS entity_id,
                 'eventual_client' AS data_source,
                 'eventual' AS client_kind,
+                NULL AS module_scope,
                 eventual_clients.document_type,
                 eventual_clients.document_number,
                 NULL AS full_name,
@@ -274,6 +281,11 @@ class ClientController extends BasicController
         return Schema::hasColumn('clients', $column) ? "clients.{$column}" : $fallback;
     }
 
+    protected function clientModuleScope(): ?string
+    {
+        return null;
+    }
+
     public function beforeSave(Request $request)
     {
         $body = $request->all();
@@ -283,6 +295,9 @@ class ClientController extends BasicController
         $documentType = strtolower(trim((string)($body['document_type'] ?? '')));
         $documentNumber = preg_replace('/\D+/', '', (string)($body['document_number'] ?? ''));
         $clientKind = strtolower(trim((string)($body['client_kind'] ?? 'regular')));
+        $moduleScope = Schema::hasColumn('clients', 'module_scope')
+            ? (trim((string)($body['module_scope'] ?? ($this->clientModuleScope() ?? 'commercial'))) ?: 'commercial')
+            : null;
 
         if (!in_array($documentType, ['dni', 'ce', 'ruc'], true)) {
             throw new \Exception('Tipo de documento invalido');
@@ -308,6 +323,7 @@ class ClientController extends BasicController
 
         $exists = Client::where('document_type', $documentType)
             ->where('document_number', $documentNumber)
+            ->when($moduleScope !== null, fn($query) => $query->where('module_scope', $moduleScope))
             ->when($id, fn($query) => $query->where('id', '!=', $id))
             ->exists();
         if ($exists) {
@@ -326,6 +342,11 @@ class ClientController extends BasicController
         $body['document_type'] = $documentType;
         $body['document_number'] = $documentNumber;
         $body['client_kind'] = $clientKind;
+        if ($moduleScope !== null) {
+            $body['module_scope'] = $moduleScope;
+        } else {
+            unset($body['module_scope']);
+        }
         $body['full_name'] = $fullName !== '' ? $fullName : null;
         $body['is_platform'] = $this->toBoolean($body['is_platform'] ?? false);
         $body['has_storage_service'] = $this->toBoolean($body['has_storage_service'] ?? false);
@@ -428,6 +449,10 @@ class ClientController extends BasicController
 
             $existing = Client::where('document_type', $documentType)
                 ->where('document_number', $documentNumber)
+                ->when(
+                    Schema::hasColumn('clients', 'module_scope') && $this->clientModuleScope() !== null,
+                    fn($query) => $query->where('module_scope', $this->clientModuleScope())
+                )
                 ->whereNotNull('status')
                 ->first();
             if ($existing) {
