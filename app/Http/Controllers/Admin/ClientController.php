@@ -109,6 +109,25 @@ class ClientController extends BasicController
 
     private function buildUnifiedPaginationQuery()
     {
+        $fiscalAddressSelect = $this->clientColumnSelect('fiscal_address', 'clients.full_address');
+        $zoneCodeSelect = $this->clientColumnSelect('zone_code');
+        $domicileSelect = $this->clientColumnSelect('domicile');
+        $domicileConditionSelect = $this->clientColumnSelect('domicile_condition');
+        $interiorSelect = $this->clientColumnSelect('interior');
+        $kilometerSelect = $this->clientColumnSelect('kilometer');
+        $blockSelect = $this->clientColumnSelect('block');
+        $lotSelect = $this->clientColumnSelect('lot');
+        $streetNameSelect = $this->clientColumnSelect('street_name');
+        $streetTypeSelect = $this->clientColumnSelect('street_type');
+        $addressNumberSelect = $this->clientColumnSelect('address_number');
+        $zoneTypeSelect = $this->clientColumnSelect('zone_type');
+        $apartmentSelect = $this->clientColumnSelect('apartment');
+        $departmentSelect = $this->clientColumnSelect('department');
+        $provinceSelect = $this->clientColumnSelect('province');
+        $districtSelect = $this->clientColumnSelect('district');
+        $taxpayerStatusSelect = $this->clientColumnSelect('taxpayer_status');
+        $taxLastUpdatedAtSelect = $this->clientColumnSelect('tax_last_updated_at');
+
         $regularOrders = DB::table('commercial_orders')
             ->selectRaw('client_id AS customer_id, COUNT(*) AS purchase_count, MAX(issue_date) AS last_purchase_at, COALESCE(SUM(total), 0) AS purchase_total')
             ->whereNotNull('client_id')
@@ -155,6 +174,24 @@ class ClientController extends BasicController
                 clients.short_code,
                 clients.ubigeo,
                 clients.full_address,
+                {$fiscalAddressSelect} AS fiscal_address,
+                {$zoneCodeSelect} AS zone_code,
+                {$domicileSelect} AS domicile,
+                {$domicileConditionSelect} AS domicile_condition,
+                {$interiorSelect} AS interior,
+                {$kilometerSelect} AS kilometer,
+                {$blockSelect} AS block,
+                {$lotSelect} AS lot,
+                {$streetNameSelect} AS street_name,
+                {$streetTypeSelect} AS street_type,
+                {$addressNumberSelect} AS address_number,
+                {$zoneTypeSelect} AS zone_type,
+                {$apartmentSelect} AS apartment,
+                {$departmentSelect} AS department,
+                {$provinceSelect} AS province,
+                {$districtSelect} AS district,
+                {$taxpayerStatusSelect} AS taxpayer_status,
+                {$taxLastUpdatedAtSelect} AS tax_last_updated_at,
                 clients.full_address AS address,
                 clients.primary_contact AS contact_name,
                 NULL AS notes,
@@ -199,6 +236,24 @@ class ClientController extends BasicController
                 NULL AS short_code,
                 NULL AS ubigeo,
                 eventual_clients.address AS full_address,
+                eventual_clients.address AS fiscal_address,
+                NULL AS zone_code,
+                NULL AS domicile,
+                NULL AS domicile_condition,
+                NULL AS interior,
+                NULL AS kilometer,
+                NULL AS block,
+                NULL AS lot,
+                NULL AS street_name,
+                NULL AS street_type,
+                NULL AS address_number,
+                NULL AS zone_type,
+                NULL AS apartment,
+                NULL AS department,
+                NULL AS province,
+                NULL AS district,
+                NULL AS taxpayer_status,
+                NULL AS tax_last_updated_at,
                 eventual_clients.address,
                 eventual_clients.contact_name,
                 eventual_clients.notes,
@@ -212,6 +267,11 @@ class ClientController extends BasicController
             SQL);
 
         return DB::query()->fromSub($regularQuery->unionAll($eventualQuery), 'customer_index');
+    }
+
+    private function clientColumnSelect(string $column, string $fallback = 'NULL'): string
+    {
+        return Schema::hasColumn('clients', $column) ? "clients.{$column}" : $fallback;
     }
 
     public function beforeSave(Request $request)
@@ -285,7 +345,34 @@ class ClientController extends BasicController
         $body['phone_prefix'] = trim((string)($body['phone_prefix'] ?? '')) ?: null;
         $body['short_code'] = trim((string)($body['short_code'] ?? '')) ?: null;
         $body['ubigeo'] = trim((string)($body['ubigeo'] ?? '')) ?: null;
-        $body['full_address'] = trim((string)($body['full_address'] ?? '')) ?: null;
+        $body['full_address'] = trim((string)($body['full_address'] ?? ($body['fiscal_address'] ?? ''))) ?: null;
+
+        foreach ([
+            'fiscal_address',
+            'zone_code',
+            'domicile',
+            'domicile_condition',
+            'interior',
+            'kilometer',
+            'block',
+            'lot',
+            'street_name',
+            'street_type',
+            'address_number',
+            'zone_type',
+            'apartment',
+            'department',
+            'province',
+            'district',
+            'taxpayer_status',
+            'tax_last_updated_at',
+        ] as $taxField) {
+            if (Schema::hasColumn('clients', $taxField)) {
+                $body[$taxField] = trim((string)($body[$taxField] ?? '')) ?: null;
+            } else {
+                unset($body[$taxField]);
+            }
+        }
 
         return $body;
     }
@@ -386,6 +473,9 @@ class ClientController extends BasicController
             $address = trim((string)($person['full_address'] ?? $person['address'] ?? '')) ?: null;
             $email = trim((string)($person['email'] ?? '')) ?: null;
             $phone = trim((string)($person['phone'] ?? '')) ?: null;
+            $department = trim((string)($person['department'] ?? $person['departamento'] ?? '')) ?: null;
+            $province = trim((string)($person['province'] ?? $person['provincia'] ?? '')) ?: null;
+            $district = trim((string)($person['district'] ?? $person['distrito'] ?? '')) ?: null;
 
             $response->status = 200;
             $response->message = 'Operacion correcta';
@@ -396,6 +486,24 @@ class ClientController extends BasicController
                     'document_number' => $documentNumber,
                     'full_name' => $fullName,
                     'full_address' => $address,
+                    'fiscal_address' => trim((string)($person['fiscal_address'] ?? $person['direccion_fiscal'] ?? '')) ?: $address,
+                    'zone_code' => trim((string)($person['zone_code'] ?? $person['codigo_zona'] ?? '')) ?: null,
+                    'domicile' => trim((string)($person['domicile'] ?? $person['domicilio'] ?? '')) ?: null,
+                    'domicile_condition' => trim((string)($person['domicile_condition'] ?? $person['condicion_domicilio'] ?? '')) ?: null,
+                    'interior' => trim((string)($person['interior'] ?? '')) ?: null,
+                    'kilometer' => trim((string)($person['kilometer'] ?? $person['kilometro'] ?? '')) ?: null,
+                    'block' => trim((string)($person['block'] ?? $person['manzana'] ?? '')) ?: null,
+                    'lot' => trim((string)($person['lot'] ?? $person['lote'] ?? '')) ?: null,
+                    'street_name' => trim((string)($person['street_name'] ?? $person['nombre_via'] ?? '')) ?: null,
+                    'street_type' => trim((string)($person['street_type'] ?? $person['tipo_via'] ?? '')) ?: null,
+                    'address_number' => trim((string)($person['address_number'] ?? $person['numero'] ?? '')) ?: null,
+                    'zone_type' => trim((string)($person['zone_type'] ?? $person['tipo_zona'] ?? '')) ?: null,
+                    'apartment' => trim((string)($person['apartment'] ?? $person['dpto'] ?? '')) ?: null,
+                    'department' => $department,
+                    'province' => $province,
+                    'district' => $district,
+                    'taxpayer_status' => trim((string)($person['taxpayer_status'] ?? $person['estado_contribuyente'] ?? '')) ?: null,
+                    'tax_last_updated_at' => trim((string)($person['tax_last_updated_at'] ?? $person['ultima_actualizacion'] ?? '')) ?: null,
                     'email' => $email,
                     'phone' => $phone,
                 ]

@@ -43,6 +43,10 @@ const getRefValue = (ref) => ref?.current?.value ?? ''
 const normalizePrefix = (value) => (value ?? '').toString().replace(/\D+/g, '')
 const normalizeDigits = (value) => (value ?? '').toString().replace(/\D+/g, '')
 const booleanLabel = (value) => value ? 'Si' : 'No'
+const renderStatusBadge = (container, value) => {
+  const active = value === true || value === 1 || value === '1'
+  container.html(`<span class="badge ${active ? 'bg-soft-success text-success border border-success' : 'bg-soft-secondary text-secondary border border-secondary'}">${active ? 'Activo' : 'Inactivo'}</span>`)
+}
 const splitEmailList = (value) => (value ?? '').toString().split(/[,\n;]+/).map(email => email.trim()).filter(Boolean)
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 const uniqueEmailList = (emails = []) => {
@@ -275,6 +279,26 @@ const Clients = ({
   const addressRef = useRef()
   const notesRef = useRef()
   const statusRef = useRef()
+  const documentLookupRef = useRef()
+  const fiscalAddressRef = useRef()
+  const zoneCodeRef = useRef()
+  const domicileRef = useRef()
+  const domicileConditionRef = useRef()
+  const interiorRef = useRef()
+  const kilometerRef = useRef()
+  const blockRef = useRef()
+  const lotRef = useRef()
+  const streetNameRef = useRef()
+  const streetTypeRef = useRef()
+  const addressNumberRef = useRef()
+  const zoneTypeRef = useRef()
+  const apartmentRef = useRef()
+  const departmentRef = useRef()
+  const provinceRef = useRef()
+  const districtRef = useRef()
+  const serviceUbigeoRef = useRef()
+  const taxpayerStatusRef = useRef()
+  const taxLastUpdatedAtRef = useRef()
   const userIdRef = useRef()
   const userNameRef = useRef()
   const userLastNameFatherRef = useRef()
@@ -339,8 +363,9 @@ const Clients = ({
     setRefValue(idRef, '')
     setRefValue(dataSourceRef, nextKind === 'eventual' ? 'eventual_client' : 'client')
     setRefValue(clientKindRef, nextKind)
-    setRefValue(documentTypeRef, 'dni')
+    setRefValue(documentTypeRef, serviceContext ? 'ruc' : 'dni')
     setRefValue(documentNumberRef, '')
+    setRefValue(documentLookupRef, '')
     setRefValue(fullNameRef, '')
     setPlatformValue('0')
     setStorageServiceValue(storageContext ? '1' : '0')
@@ -360,11 +385,42 @@ const Clients = ({
     setRefValue(shortCodeRef, '')
     setUbigeoLocation(EMPTY_UBIGEO_SELECTION)
     setRefValue(addressRef, '')
+    setRefValue(fiscalAddressRef, '')
+    setRefValue(zoneCodeRef, '')
+    setRefValue(domicileRef, '')
+    setRefValue(domicileConditionRef, '')
+    setRefValue(interiorRef, '')
+    setRefValue(kilometerRef, '')
+    setRefValue(blockRef, '')
+    setRefValue(lotRef, '')
+    setRefValue(streetNameRef, '')
+    setRefValue(streetTypeRef, '')
+    setRefValue(addressNumberRef, '')
+    setRefValue(zoneTypeRef, '')
+    setRefValue(apartmentRef, '')
+    setRefValue(departmentRef, '')
+    setRefValue(provinceRef, '')
+    setRefValue(districtRef, '')
+    setRefValue(serviceUbigeoRef, '')
+    setRefValue(taxpayerStatusRef, '')
+    setRefValue(taxLastUpdatedAtRef, '')
     setRefValue(notesRef, '')
     setRefValue(statusRef, '1')
   }
 
   const applyApiClientData = (client = {}, kind = clientKind) => {
+    const clientDocumentType = client.document_type ?? documentType
+    const clientDocumentNumber = client.document_number ?? getRefValue(documentLookupRef) ?? ''
+
+    if (clientDocumentType) {
+      setDocumentType(clientDocumentType)
+      setRefValue(documentTypeRef, clientDocumentType)
+    }
+    if (clientDocumentNumber) {
+      setRefValue(documentNumberRef, clientDocumentNumber)
+      setRefValue(documentLookupRef, clientDocumentNumber)
+    }
+
     if (kind === 'eventual') {
       if (client.business_name || client.full_name) setRefValue(fullNameRef, client.business_name ?? client.full_name)
       if (client.address || client.full_address) setRefValue(addressRef, client.address ?? client.full_address)
@@ -382,6 +438,26 @@ const Clients = ({
       setRefValue(phoneRef, client.phone)
       if (kind !== 'eventual') setRefValue(primaryContactPhoneRef, client.phone)
     }
+
+    setRefValue(fiscalAddressRef, client.fiscal_address ?? client.full_address ?? client.address ?? '')
+    setRefValue(zoneCodeRef, client.zone_code ?? client.codigo_zona ?? '')
+    setRefValue(domicileRef, client.domicile ?? client.domicilio ?? '')
+    setRefValue(domicileConditionRef, client.domicile_condition ?? client.condicion_domicilio ?? '')
+    setRefValue(interiorRef, client.interior ?? '')
+    setRefValue(kilometerRef, client.kilometer ?? client.kilometro ?? '')
+    setRefValue(blockRef, client.block ?? client.manzana ?? '')
+    setRefValue(lotRef, client.lot ?? client.lote ?? '')
+    setRefValue(streetNameRef, client.street_name ?? client.nombre_via ?? '')
+    setRefValue(streetTypeRef, client.street_type ?? client.tipo_via ?? '')
+    setRefValue(addressNumberRef, client.address_number ?? client.numero ?? '')
+    setRefValue(zoneTypeRef, client.zone_type ?? client.tipo_zona ?? '')
+    setRefValue(apartmentRef, client.apartment ?? client.dpto ?? '')
+    setRefValue(departmentRef, client.department ?? client.departamento ?? '')
+    setRefValue(provinceRef, client.province ?? client.provincia ?? '')
+    setRefValue(districtRef, client.district ?? client.distrito ?? '')
+    setRefValue(serviceUbigeoRef, client.ubigeo ?? '')
+    setRefValue(taxpayerStatusRef, client.taxpayer_status ?? client.estado_contribuyente ?? '')
+    setRefValue(taxLastUpdatedAtRef, client.tax_last_updated_at ?? client.ultima_actualizacion ?? '')
   }
 
   const lookupDocument = async (type, number, kind = clientKind) => {
@@ -431,6 +507,21 @@ const Clients = ({
     }, 450)
   }
 
+  const onServiceDocumentSearch = async () => {
+    const normalized = normalizeDigits(getRefValue(documentLookupRef))
+    if (!normalized) return
+
+    const nextType = normalized.length === 11 ? 'ruc' : 'dni'
+    const maxLength = nextType === 'ruc' ? 11 : 8
+    const nextNumber = normalized.slice(0, maxLength)
+    setDocumentType(nextType)
+    setRefValue(documentTypeRef, nextType)
+    setRefValue(documentNumberRef, nextNumber)
+    setRefValue(documentLookupRef, nextNumber)
+    setLastLookedDocumentKey('')
+    await lookupDocument(nextType, nextNumber, 'regular')
+  }
+
   const populateModalData = (data) => {
     const nextKind = data.client_kind ?? defaultClientKind
     setRefValue(idRef, data.entity_id ?? data.id)
@@ -439,6 +530,7 @@ const Clients = ({
     setClientKind(nextKind)
     setRefValue(documentTypeRef, data.document_type ?? 'dni')
     setRefValue(documentNumberRef, data.document_number ?? '')
+    setRefValue(documentLookupRef, data.document_number ?? '')
     setRefValue(fullNameRef, data.full_name ?? data.business_name ?? data.display_name ?? '')
     const nextPlatformValue = data.is_platform ? '1' : '0'
     const nextStorageValue = storageContext ? '1' : (data.has_storage_service ? '1' : '0')
@@ -464,6 +556,25 @@ const Clients = ({
       ubigeo: data.ubigeo ?? '',
     })
     setRefValue(addressRef, data.full_address ?? data.address ?? '')
+    setRefValue(fiscalAddressRef, data.fiscal_address ?? data.full_address ?? data.address ?? '')
+    setRefValue(zoneCodeRef, data.zone_code ?? '')
+    setRefValue(domicileRef, data.domicile ?? '')
+    setRefValue(domicileConditionRef, data.domicile_condition ?? '')
+    setRefValue(interiorRef, data.interior ?? '')
+    setRefValue(kilometerRef, data.kilometer ?? '')
+    setRefValue(blockRef, data.block ?? '')
+    setRefValue(lotRef, data.lot ?? '')
+    setRefValue(streetNameRef, data.street_name ?? '')
+    setRefValue(streetTypeRef, data.street_type ?? '')
+    setRefValue(addressNumberRef, data.address_number ?? '')
+    setRefValue(zoneTypeRef, data.zone_type ?? '')
+    setRefValue(apartmentRef, data.apartment ?? '')
+    setRefValue(departmentRef, data.department ?? '')
+    setRefValue(provinceRef, data.province ?? '')
+    setRefValue(districtRef, data.district ?? '')
+    setRefValue(serviceUbigeoRef, data.ubigeo ?? '')
+    setRefValue(taxpayerStatusRef, data.taxpayer_status ?? '')
+    setRefValue(taxLastUpdatedAtRef, data.tax_last_updated_at ?? '')
     setRefValue(notesRef, data.notes ?? '')
     setRefValue(statusRef, data.status === false || data.status === 0 ? '0' : '1')
   }
@@ -488,7 +599,7 @@ const Clients = ({
         populateModalData(data)
       }
     } else {
-      setDocumentType('dni')
+      setDocumentType(serviceContext ? 'ruc' : 'dni')
       pendingModalDataRef.current = null
     }
 
@@ -542,8 +653,26 @@ const Clients = ({
       phone: getRefValue(phoneRef).trim(),
       phone_prefix: normalizePrefix(getRefValue(phonePrefixRef)) || '51',
       short_code: getRefValue(shortCodeRef).trim(),
-      ubigeo: storageContext ? '' : (ubigeoLocation.ubigeo?.trim?.() ?? ''),
-      full_address: getRefValue(addressRef).trim(),
+      ubigeo: serviceContext ? getRefValue(serviceUbigeoRef).trim() : (storageContext ? '' : (ubigeoLocation.ubigeo?.trim?.() ?? '')),
+      full_address: serviceContext ? getRefValue(fiscalAddressRef).trim() : getRefValue(addressRef).trim(),
+      fiscal_address: serviceContext ? getRefValue(fiscalAddressRef).trim() : undefined,
+      zone_code: serviceContext ? getRefValue(zoneCodeRef).trim() : undefined,
+      domicile: serviceContext ? getRefValue(domicileRef).trim() : undefined,
+      domicile_condition: serviceContext ? getRefValue(domicileConditionRef).trim() : undefined,
+      interior: serviceContext ? getRefValue(interiorRef).trim() : undefined,
+      kilometer: serviceContext ? getRefValue(kilometerRef).trim() : undefined,
+      block: serviceContext ? getRefValue(blockRef).trim() : undefined,
+      lot: serviceContext ? getRefValue(lotRef).trim() : undefined,
+      street_name: serviceContext ? getRefValue(streetNameRef).trim() : undefined,
+      street_type: serviceContext ? getRefValue(streetTypeRef).trim() : undefined,
+      address_number: serviceContext ? getRefValue(addressNumberRef).trim() : undefined,
+      zone_type: serviceContext ? getRefValue(zoneTypeRef).trim() : undefined,
+      apartment: serviceContext ? getRefValue(apartmentRef).trim() : undefined,
+      department: serviceContext ? getRefValue(departmentRef).trim() : undefined,
+      province: serviceContext ? getRefValue(provinceRef).trim() : undefined,
+      district: serviceContext ? getRefValue(districtRef).trim() : undefined,
+      taxpayer_status: serviceContext ? getRefValue(taxpayerStatusRef).trim() : undefined,
+      tax_last_updated_at: serviceContext ? getRefValue(taxLastUpdatedAtRef).trim() : undefined,
       notes: getRefValue(notesRef).trim(),
       status: getRefValue(statusRef) || undefined,
     }
@@ -946,10 +1075,10 @@ const Clients = ({
       gridRef={gridRef}
       title={<div className='d-flex flex-wrap align-items-center justify-content-between gap-3'>
         <div>
-          <h4 className='mb-1'>Lista de {sectionTitle}</h4>
-          <small className='text-muted'>{storageContext ? 'Clientes con servicio de almacenamiento.' : (serviceContext ? 'Clientes asociados a servicios y contratos.' : 'Modulo unificado para clientes regulares y eventuales.')}</small>
+          <h4 className='mb-1'>{serviceContext ? 'Clientes' : `Lista de ${sectionTitle}`}</h4>
+          {!serviceContext && <small className='text-muted'>{storageContext ? 'Clientes con servicio de almacenamiento.' : 'Modulo unificado para clientes regulares y eventuales.'}</small>}
         </div>
-        {!storageContext && <div className='d-flex flex-wrap align-items-center gap-2'>
+        {!storageContext && !serviceContext && <div className='d-flex flex-wrap align-items-center gap-2'>
           {QUICK_FILTERS.map(filter => (
             <button
               key={filter.key}
@@ -985,8 +1114,60 @@ const Clients = ({
           }
         })
       }}
-      pageSize={25}
-      columns={[
+      pageSize={serviceContext ? 10 : 25}
+      columns={serviceContext ? [
+        {
+          dataField: 'entity_id',
+          caption: 'ID',
+          width: 80,
+          cellTemplate: (container, { data }) => container.text(String(data?.entity_id ?? '').padStart(3, '0'))
+        },
+        {
+          caption: 'ACCIONES',
+          width: 120,
+          allowFiltering: false,
+          allowExporting: false,
+          cellTemplate: (container, { data }) => {
+            container.css('text-overflow', 'unset')
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-info',
+              title: 'Editar cliente',
+              icon: 'mdi mdi-pencil',
+              onClick: () => onModalOpen(data)
+            }))
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-danger',
+              title: 'Eliminar cliente',
+              icon: 'mdi mdi-delete',
+              onClick: () => onDeleteClicked(data)
+            }))
+          }
+        },
+        { dataField: 'document_number', caption: 'RUC', width: 140 },
+        {
+          dataField: 'display_name',
+          caption: 'RAZON SOCIAL',
+          minWidth: 260,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.display_name ?? data?.full_name, () => onModalOpen(data), 'Editar cliente')
+        },
+        { dataField: 'fiscal_address', caption: 'DIRECCION FISCAL', minWidth: 260, calculateCellValue: (data) => data.fiscal_address ?? data.full_address ?? '' },
+        { dataField: 'short_code', caption: 'CODIGO CORTO', width: 140 },
+        {
+          dataField: 'contract_due_days',
+          caption: 'DIAS VCTO. CONTRATO',
+          width: 165,
+          cellTemplate: (container, { data }) => {
+            if (data.contract_due_days) container.addClass('bg-success text-white')
+            container.text(data.contract_due_days ?? '')
+          }
+        },
+        {
+          dataField: 'status',
+          caption: 'ESTADO',
+          width: 110,
+          cellTemplate: (container, { data }) => renderStatusBadge(container, data.status)
+        },
+      ] : [
         {
           caption: 'Acciones',
           width: storageContext ? 220 : 120,
@@ -1117,16 +1298,68 @@ const Clients = ({
       ]}
     />
 
-    <Modal modalRef={modalRef} title={storageContext ? 'Formulario cliente' : (isEditing ? `Editar cliente ${kindLabel}` : `Agregar cliente ${kindLabel}`)} onSubmit={onModalSubmit} size={storageContext ? 'xl' : 'lg'} btnSubmitText={storageContext ? 'Registrar cliente' : 'Guardar'}>
+    <Modal modalRef={modalRef} title={serviceContext ? 'Cliente' : (storageContext ? 'Formulario cliente' : (isEditing ? `Editar cliente ${kindLabel}` : `Agregar cliente ${kindLabel}`))} onSubmit={onModalSubmit} size={storageContext || serviceContext ? 'xl' : 'lg'} btnSubmitText={serviceContext ? 'Registrar' : (storageContext ? 'Registrar cliente' : 'Guardar')}>
       <div className='row'>
         <input ref={idRef} type='hidden' />
         <input ref={dataSourceRef} type='hidden' />
+        {serviceContext && <>
+          <input ref={clientKindRef} type='hidden' />
+          <input ref={documentTypeRef} type='hidden' />
+          <input ref={phonePrefixRef} type='hidden' />
+          <div className='col-12 mb-3'>
+            <div className='row justify-content-center'>
+              <div className='col-md-6'>
+                <label className='form-label'>RUC o DNI</label>
+                <div className='input-group'>
+                  <input ref={documentLookupRef} className='form-control' onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      onServiceDocumentSearch()
+                    }
+                  }} />
+                  <button type='button' className='btn btn-outline-primary' title='Buscar documento' onClick={onServiceDocumentSearch}>
+                    <i className='mdi mdi-magnify'></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className='col-md-6 mb-3'><label className='form-label'>RUC</label><input ref={documentNumberRef} className='form-control' required /></div>
+          <div className='col-md-6 mb-3'><label className='form-label'>Razon social</label><input ref={fullNameRef} className='form-control' required /></div>
+          <div className='col-md-9 mb-3'><label className='form-label'>Direccion fiscal</label><input ref={fiscalAddressRef} className='form-control' /></div>
+          <div className='col-md-3 mb-3'><label className='form-label'>Codigo de Zona</label><input ref={zoneCodeRef} className='form-control' /></div>
+          <div className='col-md-9 mb-3'><label className='form-label'>Domicilio</label><input ref={domicileRef} className='form-control' /></div>
+          <div className='col-md-3 mb-3'><label className='form-label'>Condicion de Domicilio</label><input ref={domicileConditionRef} className='form-control' /></div>
+          <div className='col-md-2 mb-3'><label className='form-label'>Interior</label><input ref={interiorRef} className='form-control' /></div>
+          <div className='col-md-2 mb-3'><label className='form-label'>Kilometro</label><input ref={kilometerRef} className='form-control' /></div>
+          <div className='col-md-2 mb-3'><label className='form-label'>Manzana</label><input ref={blockRef} className='form-control' /></div>
+          <div className='col-md-2 mb-3'><label className='form-label'>Lote</label><input ref={lotRef} className='form-control' /></div>
+          <div className='col-md-2 mb-3'><label className='form-label'>Nombre de Via</label><input ref={streetNameRef} className='form-control' /></div>
+          <div className='col-md-2 mb-3'><label className='form-label'>Tipo de Via</label><input ref={streetTypeRef} className='form-control' /></div>
+          <div className='col-md-2 mb-3'><label className='form-label'>Numero</label><input ref={addressNumberRef} className='form-control' /></div>
+          <div className='col-md-2 mb-3'><label className='form-label'>Tipo de Zona</label><input ref={zoneTypeRef} className='form-control' /></div>
+          <div className='col-md-2 mb-3'><label className='form-label'>Dpto</label><input ref={apartmentRef} className='form-control' /></div>
+          <div className='col-md-2 mb-3'><label className='form-label'>Ubigeo</label><input ref={serviceUbigeoRef} className='form-control' /></div>
+          <div className='col-md-4 mb-3'><label className='form-label'>Ultima Actualizacion</label><input ref={taxLastUpdatedAtRef} className='form-control' /></div>
+          <div className='col-md-4 mb-3'><label className='form-label'>Departamento</label><input ref={departmentRef} className='form-control' /></div>
+          <div className='col-md-4 mb-3'><label className='form-label'>Provincia</label><input ref={provinceRef} className='form-control' /></div>
+          <div className='col-md-4 mb-3'><label className='form-label'>Distrito</label><input ref={districtRef} className='form-control' /></div>
+          <div className='col-md-4 mb-3'><label className='form-label'>Estado del Contribuyente</label><input ref={taxpayerStatusRef} className='form-control' /></div>
+          <div className='col-md-4 mb-3'><label className='form-label'>Codigo corto</label><input ref={shortCodeRef} className='form-control' /></div>
+          <div className='col-md-4 mb-3'>
+            <label className='form-label'>Estado</label>
+            <select ref={statusRef} className='form-control'>
+              <option value='1'>Activo</option>
+              <option value='0'>Inactivo</option>
+            </select>
+          </div>
+        </>}
         {storageContext && <>
           <input ref={clientKindRef} type='hidden' />
           <input ref={phonePrefixRef} type='hidden' />
         </>}
 
-        {!storageContext && <SelectFormGroup
+        {!storageContext && !serviceContext && <SelectFormGroup
             eRef={clientKindRef}
             label='Tipo de cliente'
             col='col-md-4'
@@ -1140,7 +1373,7 @@ const Clients = ({
             <option value='eventual'>Eventual</option>
           </SelectFormGroup>}
 
-        <SelectFormGroup
+        {!serviceContext && <SelectFormGroup
           eRef={documentTypeRef}
           label={storageContext ? 'Tipo de Documento' : 'Tipo Doc.'}
           col={storageContext ? 'col-md-2' : 'col-md-4'}
@@ -1153,11 +1386,11 @@ const Clients = ({
           <option value='dni'>DNI</option>
           <option value='ce'>{storageContext ? 'CARNE DE EXTRANJERIA' : 'CE'}</option>
           <option value='ruc'>RUC</option>
-        </SelectFormGroup>
+        </SelectFormGroup>}
 
-        <InputFormGroup
+        {!serviceContext && <InputFormGroup
           eRef={documentNumberRef}
-          label={`${storageContext ? 'N° Documento' : 'Documento'}${isSearchingDocument ? ' (consultando...)' : ''}`}
+          label={`${storageContext ? 'Nro Documento' : 'Documento'}${isSearchingDocument ? ' (consultando...)' : ''}`}
           col={storageContext ? 'col-md-4' : 'col-md-4'}
           required
           disabled={isEditing}
@@ -1167,15 +1400,15 @@ const Clients = ({
             if (e.ctrlKey || e.metaKey) return
             if (!/[0-9]|Backspace|Delete|ArrowLeft|ArrowRight|Tab/.test(e.key)) e.preventDefault()
           }}
-        />
+        />}
 
-        <InputFormGroup eRef={fullNameRef} label={storageContext ? 'Razón Social' : displayNameLabel} col={storageContext ? 'col-md-6' : 'col-12'} required disabled={isIdentityBlocked} />
+        {!serviceContext && <InputFormGroup eRef={fullNameRef} label={storageContext ? 'Razon Social' : displayNameLabel} col={storageContext ? 'col-md-6' : 'col-12'} required disabled={isIdentityBlocked} />}
         {storageContext && <>
-          <InputFormGroup eRef={shortCodeRef} label='Código corto' col='col-md-6' />
-          <InputFormGroup eRef={addressRef} label='Dirección' col='col-md-6' />
+          <InputFormGroup eRef={shortCodeRef} label='Codigo corto' col='col-md-6' />
+          <InputFormGroup eRef={addressRef} label='Direccion' col='col-md-6' />
           <EmailTagsInput
             ref={emailRef}
-            label='Emails para Envío de Comprobantes'
+            label='Emails para Envio de Comprobantes'
             placeholder='Para:'
             specification='Puedes separar varios correos con coma o punto y coma.'
             col='col-md-6'
@@ -1194,7 +1427,7 @@ const Clients = ({
             <option value='1'>Activo</option>
           </SelectFormGroup>
         </>}
-        {!storageContext && !isEventual && (
+        {!storageContext && !serviceContext && !isEventual && (
           <UbigeoCascade
             value={ubigeoLocation}
             onChange={setUbigeoLocation}
@@ -1204,9 +1437,9 @@ const Clients = ({
             districtCol='col-md-4'
           />
         )}
-        {!storageContext && <TextareaFormGroup eRef={addressRef} label='Direccion completa' col='col-12' rows={2} />}
+        {!storageContext && !serviceContext && <TextareaFormGroup eRef={addressRef} label='Direccion completa' col='col-12' rows={2} />}
 
-        {!storageContext && !isEventual && (
+        {!storageContext && !serviceContext && !isEventual && (
           <>
             <SelectFormGroup eRef={isPlatformRef} label='Es plataforma' col='col-md-4' value={platformValue} onChange={(e) => setPlatformValue(e.target.value)} effectWith={[platformValue]}>
               <option value='0'>No</option>
@@ -1222,13 +1455,13 @@ const Clients = ({
           </>
         )}
 
-        {!storageContext && <InputFormGroup eRef={emailRef} label='Correo principal' col={isEventual ? 'col-md-6' : 'col-md-6'} type='email' />}
-        {!storageContext && !isEventual && <InputFormGroup eRef={billingEmailRef} label='Correo facturacion' col='col-md-6' type='email' />}
+        {!storageContext && !serviceContext && <InputFormGroup eRef={emailRef} label='Correo principal' col={isEventual ? 'col-md-6' : 'col-md-6'} type='email' />}
+        {!storageContext && !serviceContext && !isEventual && <InputFormGroup eRef={billingEmailRef} label='Correo facturacion' col='col-md-6' type='email' />}
 
-        {!storageContext && <InputFormGroup eRef={primaryContactRef} label='Contacto principal' col={isEventual ? 'col-md-6' : 'col-md-6'} />}
-        {!storageContext && !isEventual && <InputFormGroup eRef={primaryContactPhoneRef} label='Telefono contacto' col='col-md-6' />}
+        {!storageContext && !serviceContext && <InputFormGroup eRef={primaryContactRef} label='Contacto principal' col={isEventual ? 'col-md-6' : 'col-md-6'} />}
+        {!storageContext && !serviceContext && !isEventual && <InputFormGroup eRef={primaryContactPhoneRef} label='Telefono contacto' col='col-md-6' />}
 
-        {!storageContext && <SelectFormGroup
+        {!storageContext && !serviceContext && <SelectFormGroup
           eRef={phonePrefixRef}
           label='Prefijo celular'
           col='col-md-4'
@@ -1243,17 +1476,17 @@ const Clients = ({
             </option>
           ))}
         </SelectFormGroup>}
-        {!storageContext && <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-4' />}
-        {!storageContext && !isEventual && <InputFormGroup eRef={shortCodeRef} label='Codigo corto' col='col-md-4' />}
+        {!storageContext && !serviceContext && <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-4' />}
+        {!storageContext && !serviceContext && !isEventual && <InputFormGroup eRef={shortCodeRef} label='Codigo corto' col='col-md-4' />}
 
-        {!storageContext && !isEventual && (
+        {!storageContext && !serviceContext && !isEventual && (
           <>
             <InputFormGroup eRef={commercialChannelRef} label='Canal comercial' col='col-md-6' />
             <InputFormGroup eRef={segmentRef} label='Segmento' col='col-md-6' />
           </>
         )}
 
-        {isEventual && (
+        {!serviceContext && isEventual && (
           <div className='col-12'>
             <label className='form-label'>Notas</label>
             <textarea ref={notesRef} className='form-control' rows='3'></textarea>

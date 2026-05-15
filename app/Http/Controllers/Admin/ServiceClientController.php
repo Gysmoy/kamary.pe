@@ -9,7 +9,7 @@ class ServiceClientController extends ClientController
     public function setReactViewProperties(Request $request)
     {
         return array_merge(parent::setReactViewProperties($request), [
-            'sectionTitle' => 'Clientes de servicios',
+            'sectionTitle' => 'Clientes',
             'requiredPermission' => 'services-client',
             'defaultClientKind' => 'regular',
             'initialQuickFilter' => 'regular',
