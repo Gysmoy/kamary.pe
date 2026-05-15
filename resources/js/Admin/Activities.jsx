@@ -39,6 +39,10 @@ const parseCustomerValue = (value) => {
   if (value.startsWith('eventual-')) return ['eventual', value.slice('eventual-'.length)]
   return ['', '']
 }
+const stripCustomerPrefix = (value, prefix) => {
+  const text = `${value ?? ''}`.trim()
+  return text.startsWith(`${prefix}-`) ? text.slice(prefix.length + 1) : text
+}
 const formatAuditUser = (user) => {
   if (!user) return ''
   return [user.name, user.lastname].filter(Boolean).join(' ').trim() || user.fullname || ''
@@ -283,8 +287,8 @@ const Activities = () => {
       warehouse_id: selectedWarehouseId || null,
       commercial_order_id: selectedOrderId || null,
       dispatch_id: selectedDispatchId || null,
-      client_id: selectedClientId || null,
-      eventual_client_id: selectedEventualClientId || null,
+      client_id: stripCustomerPrefix(selectedClientId, 'client') || null,
+      eventual_client_id: stripCustomerPrefix(selectedEventualClientId, 'eventual') || null,
       driver_id: selectedDriverId || null,
       vehicle_id: selectedVehicleId || null,
       zone_id: selectedZoneId || null,

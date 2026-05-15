@@ -78,8 +78,8 @@ class ActivityController extends BasicController
         $warehouseId = $this->toNullableInt($body['warehouse_id'] ?? null);
         $commercialOrderId = $this->toNullableInt($body['commercial_order_id'] ?? null);
         $dispatchId = $this->toNullableInt($body['dispatch_id'] ?? null);
-        $clientId = $this->toNullableInt($body['client_id'] ?? null);
-        $eventualClientId = $this->toNullableInt($body['eventual_client_id'] ?? null);
+        $clientId = $this->toNullableCustomerInt($body['client_id'] ?? null, 'client');
+        $eventualClientId = $this->toNullableCustomerInt($body['eventual_client_id'] ?? null, 'eventual');
         $driverId = $this->toNullableInt($body['driver_id'] ?? null);
         $vehicleId = $this->toNullableInt($body['vehicle_id'] ?? null);
         $zoneId = $this->toNullableInt($body['zone_id'] ?? null);
@@ -310,6 +310,18 @@ class ActivityController extends BasicController
         if ($text === '') return null;
         if (!ctype_digit(ltrim($text, '+'))) throw new \Exception("Valor entero invalido: {$value}");
         return (int) $text;
+    }
+
+    private function toNullableCustomerInt($value, string $prefix): ?int
+    {
+        if ($value === null) return null;
+        $text = trim((string) $value);
+        if ($text === '') return null;
+        $prefixed = "{$prefix}-";
+        if (str_starts_with($text, $prefixed)) {
+            $text = substr($text, strlen($prefixed));
+        }
+        return $this->toNullableInt($text);
     }
 
     private function toFloat($value): float
