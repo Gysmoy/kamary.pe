@@ -366,8 +366,8 @@ const Activities = () => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
       }}
       columns={[
-        { caption: 'Acciones', width: 135, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
-          container.css('text-overflow', 'unset')
+        { caption: 'Acciones', width: 165, minWidth: 165, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
+          container.css({ 'text-overflow': 'unset', overflow: 'visible', 'white-space': 'nowrap' })
           container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
           container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.activity(data)) }))
           container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
