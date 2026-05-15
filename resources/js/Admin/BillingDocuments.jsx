@@ -11,6 +11,7 @@ import {
   billingDocumentStatusOptions,
   getBillingDocumentStatusLabel,
   getSourceTypeLabel,
+  toLookup,
 } from '../Utils/statusLabels';
 import { scopedPermission } from '../Utils/permissionScope';
 
@@ -42,6 +43,14 @@ const formatMoney = (value) => Number(value ?? 0).toLocaleString('es-PE', { mini
 const formatDate = (value) => value?.toString?.().slice?.(0, 10) ?? ''
 const currencyLabel = (value) => `${value ?? ''}`.toUpperCase() === 'USD' ? 'Dolares' : 'Soles'
 const emptyBulkFilters = () => ({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false, detractionPercent: 12 })
+const billingControlStatusOptions = [
+  { value: 'pending', label: 'Pendiente' },
+  { value: 'sent', label: 'Facturado' },
+  { value: 'accepted', label: 'Facturado' },
+  { value: 'observed', label: 'Facturado' },
+  { value: 'rejected', label: 'Facturado' },
+  { value: 'cancelled', label: 'Anulado' },
+]
 const toNumber = (value, fallback = 0) => {
   const number = Number(value)
   return Number.isFinite(number) ? number : fallback
@@ -654,10 +663,12 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const storageStatusBadge = (row) => {
     if (row?.local_status === 'pending') {
       return hasPreparedVoucher(row)
-        ? { label: 'En Preparacion', className: 'badge bg-info text-dark' }
-        : { label: 'En espera', className: 'badge bg-soft-warning text-warning border border-warning' }
+        ? { label: 'Facturado', className: 'badge bg-soft-success text-success border border-success' }
+        : { label: 'Pendiente', className: 'badge bg-soft-warning text-warning border border-warning' }
     }
-    if (row?.local_status === 'accepted') return { label: 'Emitida', className: 'badge bg-soft-success text-success border border-success' }
+    if (['sent', 'accepted', 'observed', 'rejected'].includes(row?.local_status)) {
+      return { label: 'Facturado', className: 'badge bg-soft-success text-success border border-success' }
+    }
     if (row?.local_status === 'cancelled') return { label: 'Anulada', className: 'badge bg-soft-danger text-danger border border-danger' }
     return { label: getBillingDocumentStatusLabel(row?.local_status), className: 'badge bg-soft-secondary text-secondary' }
   }
@@ -699,6 +710,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
         dataField: 'local_status',
         caption: 'E. Facturacion',
         width: 130,
+        lookup: toLookup(billingControlStatusOptions),
         cellTemplate: (container, { data }) => {
           const badge = storageStatusBadge(data)
           container.append($('<span>').addClass(badge.className).text(badge.label))
