@@ -32,8 +32,9 @@ const emptyItem = (withDefaults = false) => ({
 })
 const defaultOriginAddress = 'CAL.YEN ESCOBEDO GARRO NRO. 830 URB. LA VINA LIMA - LIMA - SAN LUIS'
 
-const clientLabel = (row) => [row?.document_number, row?.full_name].filter(Boolean).join(' - ') || row?.full_name || ''
-const eventualClientLabel = (row) => [row?.document_number, row?.business_name].filter(Boolean).join(' - ') || row?.business_name || ''
+const cleanCustomerText = (value) => `${value ?? ''}`.trim().toLowerCase()
+const clientLabel = (row) => [row?.document_number, row?.full_name || row?.display_name].filter(Boolean).join(' - ') || row?.full_name || row?.display_name || ''
+const eventualClientLabel = (row) => [row?.document_number, row?.business_name || row?.display_name].filter(Boolean).join(' - ') || row?.business_name || row?.display_name || ''
 const parseCustomerValue = (value) => {
   if (value.startsWith('client-')) return ['client', value.slice('client-'.length)]
   if (value.startsWith('eventual-')) return ['eventual', value.slice('eventual-'.length)]
@@ -43,10 +44,70 @@ const stripCustomerPrefix = (value, prefix) => {
   const text = `${value ?? ''}`.trim()
   return text.startsWith(`${prefix}-`) ? text.slice(prefix.length + 1) : text
 }
-const normalizeCustomerRows = (rows, prefix) => (rows ?? []).map(row => ({
-  ...row,
-  id: stripCustomerPrefix(row?.entity_id ?? row?.id, prefix),
-}))
+const normalizeClientRows = (rows) => (rows ?? [])
+  .filter(row => row?.client_kind !== 'eventual' && !`${row?.id ?? ''}`.startsWith('eventual-'))
+  .map(row => ({
+    ...row,
+    id: stripCustomerPrefix(row?.entity_id ?? row?.id, 'client'),
+    full_name: row?.full_name || row?.display_name || '',
+  }))
+const normalizeEventualClientRows = (rows) => (rows ?? [])
+  .filter(row => row?.client_kind === 'eventual' || `${row?.id ?? ''}`.startsWith('eventual-') || row?.business_name)
+  .map(row => ({
+    ...row,
+    id: stripCustomerPrefix(row?.entity_id ?? row?.id, 'eventual'),
+    business_name: row?.business_name || row?.display_name || '',
+  }))
+const mergeCustomerRows = (...groups) => {
+  const rows = new Map()
+  groups.flat().forEach(row => {
+    if (!row?.id) return
+    rows.set(`${row.id}`, row)
+  })
+  return Array.from(rows.values())
+}
+const resolveCustomerSelection = (data, clientRows, eventualRows) => {
+  const clientId = stripCustomerPrefix(data?.client_id ?? data?.client?.id, 'client')
+  if (clientId) return { clientId, eventualClientId: '' }
+
+  const eventualClientId = stripCustomerPrefix(data?.eventual_client_id ?? data?.eventualClient?.id ?? data?.eventual_client?.id, 'eventual')
+  if (eventualClientId) return { clientId: '', eventualClientId }
+
+  const documentNumber = cleanCustomerText(data?.document_number)
+  const customerName = cleanCustomerText(data?.customer_name)
+  const regular = clientRows.find(row =>
+    (documentNumber && cleanCustomerText(row?.document_number) === documentNumber)
+    || (customerName && cleanCustomerText(row?.full_name || row?.display_name) === customerName)
+  )
+  if (regular) return { clientId: `${regular.id}`, eventualClientId: '' }
+
+  const eventual = eventualRows.find(row =>
+    (documentNumber && cleanCustomerText(row?.document_number) === documentNumber)
+    || (customerName && cleanCustomerText(row?.business_name || row?.display_name) === customerName)
+  )
+  if (eventual) return { clientId: '', eventualClientId: `${eventual.id}` }
+
+  return { clientId: '', eventualClientId: '' }
+}
+const selectedCustomerFallback = (data, selection) => {
+  if (selection.clientId) {
+    return {
+      id: selection.clientId,
+      document_number: data?.document_number ?? data?.client?.document_number ?? '',
+      full_name: data?.customer_name ?? data?.client?.full_name ?? '',
+      display_name: data?.customer_name ?? data?.client?.full_name ?? '',
+    }
+  }
+  if (selection.eventualClientId) {
+    return {
+      id: selection.eventualClientId,
+      document_number: data?.document_number ?? data?.eventualClient?.document_number ?? data?.eventual_client?.document_number ?? '',
+      business_name: data?.customer_name ?? data?.eventualClient?.business_name ?? data?.eventual_client?.business_name ?? '',
+      display_name: data?.customer_name ?? data?.eventualClient?.business_name ?? data?.eventual_client?.business_name ?? '',
+    }
+  }
+  return null
+}
 const formatAuditUser = (user) => {
   if (!user) return ''
   return [user.name, user.lastname].filter(Boolean).join(' ').trim() || user.fullname || ''
@@ -133,8 +194,11 @@ const Activities = () => {
     setDrivers(driverRows ?? [])
     setVehicles(vehicleRows ?? [])
     setZones(zoneRows ?? [])
-    setClients(normalizeCustomerRows(clientRows, 'client'))
-    setEventualClients(normalizeCustomerRows(eventualRows, 'eventual'))
+    setClients(normalizeClientRows(clientRows))
+    setEventualClients(mergeCustomerRows(
+      normalizeEventualClientRows(clientRows),
+      normalizeEventualClientRows(eventualRows),
+    ))
     setArticles(articleRows ?? [])
   }
 
@@ -144,6 +208,25 @@ const Activities = () => {
     const data = await activitiesRest.getBranchesByBusiness(businessId)
     setBranches(data ?? [])
     setSelectedBranchId(preferred ? `${preferred}` : '')
+  }
+
+  const ensureCustomerCatalogs = async () => {
+    if (clients.length || eventualClients.length) {
+      return { clientRows: clients, eventualRows: eventualClients }
+    }
+
+    const [clientRows, eventualRows] = await Promise.all([
+      activitiesRest.getClients(),
+      activitiesRest.getEventualClients(),
+    ])
+    const nextClients = normalizeClientRows(clientRows)
+    const nextEventualClients = mergeCustomerRows(
+      normalizeEventualClientRows(clientRows),
+      normalizeEventualClientRows(eventualRows),
+    )
+    setClients(nextClients)
+    setEventualClients(nextEventualClients)
+    return { clientRows: nextClients, eventualRows: nextEventualClients }
   }
 
   const hydrateOrder = (order) => {
@@ -247,8 +330,17 @@ const Activities = () => {
     setSelectedWarehouseId(data?.warehouse_id ? `${data.warehouse_id}` : '')
     setSelectedOrderId(data?.commercial_order_id ? `${data.commercial_order_id}` : '')
     setSelectedDispatchId(data?.dispatch_id ? `${data.dispatch_id}` : '')
-    setSelectedClientId(data?.client_id ? `${data.client_id}` : '')
-    setSelectedEventualClientId(data?.eventual_client_id ? `${data.eventual_client_id}` : '')
+    const { clientRows, eventualRows } = await ensureCustomerCatalogs()
+    const customerSelection = resolveCustomerSelection(data, clientRows, eventualRows)
+    const fallbackCustomer = selectedCustomerFallback(data, customerSelection)
+    if (customerSelection.clientId && fallbackCustomer && !clientRows.some(row => `${row.id}` === `${customerSelection.clientId}`)) {
+      setClients(prev => mergeCustomerRows(prev, [fallbackCustomer]))
+    }
+    if (customerSelection.eventualClientId && fallbackCustomer && !eventualRows.some(row => `${row.id}` === `${customerSelection.eventualClientId}`)) {
+      setEventualClients(prev => mergeCustomerRows(prev, [fallbackCustomer]))
+    }
+    setSelectedClientId(customerSelection.clientId)
+    setSelectedEventualClientId(customerSelection.eventualClientId)
     setSelectedDriverId(data?.driver_id ? `${data.driver_id}` : '')
     setSelectedVehicleId(data?.vehicle_id ? `${data.vehicle_id}` : '')
     setSelectedZoneId(data?.zone_id ? `${data.zone_id}` : '')
