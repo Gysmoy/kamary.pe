@@ -34,6 +34,11 @@ const defaultOriginAddress = 'CAL.YEN ESCOBEDO GARRO NRO. 830 URB. LA VINA LIMA 
 
 const clientLabel = (row) => [row?.document_number, row?.full_name].filter(Boolean).join(' - ') || row?.full_name || ''
 const eventualClientLabel = (row) => [row?.document_number, row?.business_name].filter(Boolean).join(' - ') || row?.business_name || ''
+const parseCustomerValue = (value) => {
+  if (value.startsWith('client-')) return ['client', value.slice('client-'.length)]
+  if (value.startsWith('eventual-')) return ['eventual', value.slice('eventual-'.length)]
+  return ['', '']
+}
 const formatAuditUser = (user) => {
   if (!user) return ''
   return [user.name, user.lastname].filter(Boolean).join(' ').trim() || user.fullname || ''
@@ -186,7 +191,7 @@ const Activities = () => {
       return
     }
 
-    const [type, id] = value.split('-')
+    const [type, id] = parseCustomerValue(value)
     if (type === 'client') {
       const client = clients.find(row => `${row.id}` === `${id}`)
       setSelectedClientId(id)
