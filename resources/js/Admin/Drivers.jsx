@@ -71,7 +71,7 @@ const Drivers = () => {
         } },
         { dataField: 'id', caption: 'ID', width: 70 },
         { dataField: 'document_type', caption: 'Tipo documento', width: 130 },
-        { dataField: 'document_number', caption: 'N° documento', width: 140 },
+        { dataField: 'document_number', caption: 'Nro documento', width: 140 },
         { dataField: 'full_name', caption: 'Nombres completos', minWidth: 260 },
         { dataField: 'license_number', caption: 'Licencia de conducir', width: 170 },
         { dataField: 'status', caption: 'Estado', width: 110, cellTemplate: (container, { value }) => statusBadge(container, value) },
@@ -82,7 +82,7 @@ const Drivers = () => {
       <div className='row'>
         <input ref={idRef} hidden />
         <input ref={businessRef} hidden />
-        <div className='col-md-2 mb-3'>
+        <div className='col-md-4 mb-3'>
           <label className='form-label'>Tipo documento</label>
           <select ref={documentTypeRef} className='form-control'>
             <option value=''>Seleccione</option>
@@ -91,11 +91,11 @@ const Drivers = () => {
             <option value='RUC'>RUC</option>
           </select>
         </div>
-        <div className='col-md-2 mb-3'><label className='form-label'>N° documento</label><input ref={documentNumberRef} className='form-control' /></div>
-        <div className='col-md-2 mb-3'><label className='form-label'>Nombres</label><input ref={firstNameRef} className='form-control' required /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Apellidos</label><input ref={lastNameRef} className='form-control' /></div>
-        <div className='col-md-2 mb-3'><label className='form-label'>N° Licencia</label><input ref={licenseRef} className='form-control' /></div>
-        <div className='col-md-1 mb-3'>
+        <div className='col-md-4 mb-3'><label className='form-label'>Nro documento</label><input ref={documentNumberRef} className='form-control' /></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Nombres</label><input ref={firstNameRef} className='form-control' required /></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Apellidos</label><input ref={lastNameRef} className='form-control' /></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Nro licencia</label><input ref={licenseRef} className='form-control' /></div>
+        <div className='col-md-4 mb-3'>
           <label className='form-label'>Estado</label>
           <select ref={statusRef} className='form-control'>
             <option value='1'>Activo</option>
