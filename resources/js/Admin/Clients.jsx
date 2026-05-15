@@ -1116,6 +1116,7 @@ const Clients = ({
       }}
       pageSize={serviceContext ? 10 : 25}
       columns={serviceContext ? [
+        { dataField: 'client_kind', visible: false, showInColumnChooser: false },
         {
           dataField: 'entity_id',
           caption: 'ID',
