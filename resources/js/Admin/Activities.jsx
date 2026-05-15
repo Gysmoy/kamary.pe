@@ -383,6 +383,10 @@ const Activities = () => {
         <input ref={idRef} hidden />
         <input ref={codeRef} type='hidden' />
         <input ref={activityStatusRef} type='hidden' />
+        <input ref={manifestCodeRef} type='hidden' />
+        <input ref={destinationReferenceRef} type='hidden' />
+        <input ref={dispatchContactNameRef} type='hidden' />
+        <input ref={dispatchContactPhoneRef} type='hidden' />
 
         <div className='activity-toolbar'>
           <button type='submit' className='btn btn-outline-primary me-2'><i className='mdi mdi-plus me-1'></i> Guardar</button>
