@@ -16,7 +16,20 @@ import {
 } from '../Utils/statusLabels';
 
 const activitiesRest = new ActivitiesRest()
-const emptyItem = () => ({ uid: crypto.randomUUID(), commercial_order_item_id: '', article_id: '', item_code: '', description: '', quantity: 1, delivered_quantity: 0 })
+const defaultActivityItem = {
+  item_code: '001',
+  description: 'SERVICIO DE RECOJO Y ENTREGA DE PAQUETES',
+  quantity: 1,
+}
+const emptyItem = (withDefaults = false) => ({
+  uid: crypto.randomUUID(),
+  commercial_order_item_id: '',
+  article_id: '',
+  item_code: withDefaults ? defaultActivityItem.item_code : '',
+  description: withDefaults ? defaultActivityItem.description : '',
+  quantity: withDefaults ? defaultActivityItem.quantity : 1,
+  delivered_quantity: 0,
+})
 const defaultOriginAddress = 'CAL.YEN ESCOBEDO GARRO NRO. 830 URB. LA VINA LIMA - LIMA - SAN LUIS'
 
 const clientLabel = (row) => [row?.document_number, row?.full_name].filter(Boolean).join(' - ') || row?.full_name || ''
@@ -70,7 +83,7 @@ const Activities = () => {
   const [selectedDriverId, setSelectedDriverId] = useState('')
   const [selectedVehicleId, setSelectedVehicleId] = useState('')
   const [selectedZoneId, setSelectedZoneId] = useState('')
-  const [items, setItems] = useState([emptyItem()])
+  const [items, setItems] = useState([emptyItem(true)])
   const [mapPreview, setMapPreview] = useState({ lat: '', lng: '', address: defaultOriginAddress })
 
   const orderMap = useMemo(() => Object.fromEntries(orders.map(row => [`${row.id}`, row])), [orders])
@@ -228,7 +241,7 @@ const Activities = () => {
     setSelectedZoneId(data?.zone_id ? `${data.zone_id}` : '')
     await loadBranches(defaultBusinessId, data?.business_branch_id ?? '')
     const detailRows = (data?.items ?? []).map(row => ({ uid: crypto.randomUUID(), commercial_order_item_id: `${row.commercial_order_item_id ?? ''}`, article_id: `${row.article_id ?? ''}`, item_code: row.item_code ?? '', description: row.description ?? '', quantity: Number(row.quantity || 0), delivered_quantity: Number(row.delivered_quantity || 0) }))
-    setItems(detailRows.length ? detailRows : [emptyItem()])
+    setItems(detailRows.length ? detailRows : [emptyItem(!data)])
     setMapPreview({
       lat: data?.map_lat ?? '',
       lng: data?.map_lng ?? '',
