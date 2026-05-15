@@ -56,9 +56,11 @@ class DriverController extends BasicController
         $body['document_type'] = trim((string) ($body['document_type'] ?? '')) ?: null;
         $body['document_number'] = trim((string) ($body['document_number'] ?? '')) ?: null;
         $body['license_number'] = trim((string) ($body['license_number'] ?? '')) ?: null;
-        $body['phone'] = trim((string) ($body['phone'] ?? '')) ?: null;
-        $body['email'] = trim((string) ($body['email'] ?? '')) ?: null;
-        $body['observations'] = trim((string) ($body['observations'] ?? '')) ?: null;
+        foreach (['phone', 'email', 'observations'] as $optionalField) {
+            if (array_key_exists($optionalField, $body)) {
+                $body[$optionalField] = trim((string) $body[$optionalField]) ?: null;
+            }
+        }
         $body['status'] = $this->toBoolean($body['status'] ?? true);
         $body['updated_by'] = Auth::id();
 

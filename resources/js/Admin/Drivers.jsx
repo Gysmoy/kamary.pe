@@ -25,9 +25,6 @@ const Drivers = () => {
   const documentNumberRef = useRef()
   const licenseRef = useRef()
   const statusRef = useRef()
-  const phoneRef = useRef()
-  const emailRef = useRef()
-  const observationsRef = useRef()
 
   const onModalOpen = (data = null) => {
     idRef.current.value = data?.id ?? ''
@@ -38,9 +35,6 @@ const Drivers = () => {
     documentNumberRef.current.value = data?.document_number ?? ''
     licenseRef.current.value = data?.license_number ?? ''
     statusRef.current.value = data?.status === false || data?.status === 0 || data?.status === '0' ? '0' : '1'
-    phoneRef.current.value = data?.phone ?? ''
-    emailRef.current.value = data?.email ?? ''
-    observationsRef.current.value = data?.observations ?? ''
     $(modalRef.current).modal('show')
   }
 
@@ -54,9 +48,6 @@ const Drivers = () => {
       document_number: documentNumberRef.current.value.trim(),
       license_number: licenseRef.current.value.trim(),
       status: statusRef.current.value === '1',
-      phone: phoneRef.current.value.trim(),
-      email: emailRef.current.value.trim(),
-      observations: observationsRef.current.value.trim(),
     })
     if (!result) return
     $(gridRef.current).dxDataGrid('instance').refresh()
@@ -66,9 +57,9 @@ const Drivers = () => {
   return <>
     <Table
       gridRef={gridRef}
-      title='Conductores registrados'
+      title={<h4 className='header-title mb-0'>Conductores registrados</h4>}
       rest={driversRest}
-      pageSize={25}
+      pageSize={10}
       toolBar={(items) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
@@ -91,7 +82,7 @@ const Drivers = () => {
       <div className='row'>
         <input ref={idRef} hidden />
         <input ref={businessRef} hidden />
-        <div className='col-md-3 mb-3'>
+        <div className='col-md-2 mb-3'>
           <label className='form-label'>Tipo documento</label>
           <select ref={documentTypeRef} className='form-control'>
             <option value=''>Seleccione</option>
@@ -101,19 +92,16 @@ const Drivers = () => {
           </select>
         </div>
         <div className='col-md-2 mb-3'><label className='form-label'>N° documento</label><input ref={documentNumberRef} className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Nombres</label><input ref={firstNameRef} className='form-control' required /></div>
+        <div className='col-md-2 mb-3'><label className='form-label'>Nombres</label><input ref={firstNameRef} className='form-control' required /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Apellidos</label><input ref={lastNameRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>N° Licencia</label><input ref={licenseRef} className='form-control' /></div>
-        <div className='col-md-2 mb-3'>
+        <div className='col-md-1 mb-3'>
           <label className='form-label'>Estado</label>
           <select ref={statusRef} className='form-control'>
             <option value='1'>Activo</option>
             <option value='0'>Inactivo</option>
           </select>
         </div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Telefono</label><input ref={phoneRef} className='form-control' /></div>
-        <div className='col-12 mb-3'><label className='form-label'>Correo</label><input ref={emailRef} type='email' className='form-control' /></div>
-        <div className='col-12'><label className='form-label'>Observaciones</label><textarea ref={observationsRef} className='form-control' rows='3' /></div>
       </div>
     </Modal>
   </>
