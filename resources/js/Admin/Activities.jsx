@@ -43,6 +43,10 @@ const stripCustomerPrefix = (value, prefix) => {
   const text = `${value ?? ''}`.trim()
   return text.startsWith(`${prefix}-`) ? text.slice(prefix.length + 1) : text
 }
+const normalizeCustomerRows = (rows, prefix) => (rows ?? []).map(row => ({
+  ...row,
+  id: stripCustomerPrefix(row?.entity_id ?? row?.id, prefix),
+}))
 const formatAuditUser = (user) => {
   if (!user) return ''
   return [user.name, user.lastname].filter(Boolean).join(' ').trim() || user.fullname || ''
@@ -129,8 +133,8 @@ const Activities = () => {
     setDrivers(driverRows ?? [])
     setVehicles(vehicleRows ?? [])
     setZones(zoneRows ?? [])
-    setClients(clientRows ?? [])
-    setEventualClients(eventualRows ?? [])
+    setClients(normalizeCustomerRows(clientRows, 'client'))
+    setEventualClients(normalizeCustomerRows(eventualRows, 'eventual'))
     setArticles(articleRows ?? [])
   }
 
