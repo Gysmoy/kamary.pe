@@ -177,11 +177,12 @@
       "_CreateReactScript-DzmYTmbr.js"
     ]
   },
-  "_UbigeoCascade-CrLA_iuY.js": {
-    "file": "assets/UbigeoCascade-CrLA_iuY.js",
+  "_UbigeoCascade-wgsRlwjT.js": {
+    "file": "assets/UbigeoCascade-wgsRlwjT.js",
     "name": "UbigeoCascade",
     "imports": [
       "_CreateReactScript-DzmYTmbr.js",
+      "_ubigeoInei-D0FnAslC.js",
       "_SelectFormGroup-vMKC1mo0.js"
     ]
   },
@@ -240,6 +241,10 @@
     "imports": [
       "_CreateReactScript-DzmYTmbr.js"
     ]
+  },
+  "_ubigeoInei-D0FnAslC.js": {
+    "file": "assets/ubigeoInei-D0FnAslC.js",
+    "name": "ubigeoInei"
   },
   "node_modules/xlsx/xlsx.mjs": {
     "file": "assets/xlsx-D_0l8YDs.js",
@@ -398,7 +403,7 @@
     ]
   },
   "resources/js/Admin/BillingSettings.jsx": {
-    "file": "assets/BillingSettings-DCkjEmDu.js",
+    "file": "assets/BillingSettings-Bz-NbnKb.js",
     "name": "BillingSettings",
     "src": "resources/js/Admin/BillingSettings.jsx",
     "isEntry": true,
@@ -410,7 +415,8 @@
       "_DxButton-CsjWvhyj.js",
       "_SwitchFormGroup-Du5E2Od8.js",
       "_InputFormGroup-BaTI7jeX.js",
-      "_UbigeoCascade-CrLA_iuY.js",
+      "_UbigeoCascade-wgsRlwjT.js",
+      "_ubigeoInei-D0FnAslC.js",
       "_BusinessesRest-aRZetq0u.js",
       "_permissionScope-etO_1UXy.js",
       "_BasicRest-DlKnEI0V.js",
@@ -491,7 +497,7 @@
     ]
   },
   "resources/js/Admin/ClientDistributionNetworks.jsx": {
-    "file": "assets/ClientDistributionNetworks-CYGm_WGp.js",
+    "file": "assets/ClientDistributionNetworks-ww9UvyCE.js",
     "name": "ClientDistributionNetworks",
     "src": "resources/js/Admin/ClientDistributionNetworks.jsx",
     "isEntry": true,
@@ -506,14 +512,15 @@
       "_DxButton-CsjWvhyj.js",
       "_SwitchFormGroup-Du5E2Od8.js",
       "_BasicRest-DlKnEI0V.js",
-      "_UbigeoCascade-CrLA_iuY.js",
+      "_UbigeoCascade-wgsRlwjT.js",
+      "_ubigeoInei-D0FnAslC.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_tippy-react.esm-CRfsvkfB.js",
       "_SelectFormGroup-vMKC1mo0.js"
     ]
   },
   "resources/js/Admin/Clients.jsx": {
-    "file": "assets/Clients-a9AWvBvv.js",
+    "file": "assets/Clients-Cgfv0kPG.js",
     "name": "Clients",
     "src": "resources/js/Admin/Clients.jsx",
     "isEntry": true,
@@ -528,10 +535,11 @@
       "_InputFormGroup-BaTI7jeX.js",
       "_SelectFormGroup-vMKC1mo0.js",
       "_TextareaFormGroup-Ch5h0VfH.js",
-      "_UbigeoCascade-CrLA_iuY.js",
+      "_UbigeoCascade-wgsRlwjT.js",
       "_BasicRest-DlKnEI0V.js",
       "_permissionScope-etO_1UXy.js",
       "_UsersRest-DerhUa0w.js",
+      "_ubigeoInei-D0FnAslC.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_tippy-react.esm-CRfsvkfB.js"
     ]
@@ -621,7 +629,7 @@
     ]
   },
   "resources/js/Admin/DeliveryPoints.jsx": {
-    "file": "assets/DeliveryPoints-9MrDZpMC.js",
+    "file": "assets/DeliveryPoints-DNPpHLs4.js",
     "name": "DeliveryPoints",
     "src": "resources/js/Admin/DeliveryPoints.jsx",
     "isEntry": true,
@@ -635,7 +643,8 @@
       "_BasicRest-DlKnEI0V.js",
       "_buildSchedule-QAY4ZbMf.js",
       "_SetSelectValue-BPVluBFl.js",
-      "_UbigeoCascade-CrLA_iuY.js",
+      "_UbigeoCascade-wgsRlwjT.js",
+      "_ubigeoInei-D0FnAslC.js",
       "_tippy-react.esm-CRfsvkfB.js",
       "_SelectFormGroup-vMKC1mo0.js"
     ]
@@ -1476,7 +1485,7 @@
     ]
   },
   "resources/js/Admin/SampleOrders.jsx": {
-    "file": "assets/SampleOrders-9X5WaArM.js",
+    "file": "assets/SampleOrders-D231gxqL.js",
     "name": "SampleOrders",
     "src": "resources/js/Admin/SampleOrders.jsx",
     "isEntry": true,
@@ -1488,7 +1497,8 @@
       "_DxButton-CsjWvhyj.js",
       "_BasicRest-DlKnEI0V.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-u2rK0s4i.js"
+      "_magistralesRecordPdf-u2rK0s4i.js",
+      "_ubigeoInei-D0FnAslC.js"
     ]
   },
   "resources/js/Admin/SendingHistory.jsx": {
@@ -1804,7 +1814,7 @@
     ]
   },
   "resources/js/Admin/VehicleZones.jsx": {
-    "file": "assets/VehicleZones-Co2Ijowv.js",
+    "file": "assets/VehicleZones-kL5N-7jy.js",
     "name": "VehicleZones",
     "src": "resources/js/Admin/VehicleZones.jsx",
     "isEntry": true,
@@ -1815,7 +1825,8 @@
       "_Modal-DGAB1eIb.js",
       "_DxButton-CsjWvhyj.js",
       "_BasicRest-DlKnEI0V.js",
-      "_UbigeoCascade-CrLA_iuY.js",
+      "_UbigeoCascade-wgsRlwjT.js",
+      "_ubigeoInei-D0FnAslC.js",
       "_SelectFormGroup-vMKC1mo0.js",
       "_tippy-react.esm-CRfsvkfB.js"
     ]

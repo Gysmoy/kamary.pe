@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import SampleOrdersRest from '../Actions/Admin/SampleOrdersRest';
 import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
+import { getUbigeoCatalog } from '../Utils/ubigeoInei';
 
 const sampleOrdersRest = new SampleOrdersRest()
 
@@ -27,10 +28,10 @@ const emailStatusOptions = [
   { value: 'failed', label: 'Fallido', className: 'bg-danger-subtle text-danger border border-danger' },
 ]
 
-const requestReasonOptions = ['CAPACITACIONES', 'REPOSICION', 'PROMOCION', 'MUESTRA MEDICA']
-const salesChannelOptions = ['B2B', 'DIRECTOS']
+const requestReasonOptions = ['CAPACITACIONES', 'NUEVO CLIENTE', 'PRUEBA PILOTO', 'CODIFICACION NUEVO SKU', 'EVENTOS', 'REPOSICION', 'PROMOCION', 'MUESTRA MEDICA']
+const salesChannelOptions = ['B2B', 'DIRECTOS', 'E COMERCE', 'RETAIL', 'TRADICIONAL', 'TRADE', 'MKT', 'COMMERCIAL EXCELLENCE']
 const salesSubchannelOptions = ['LIMA 1', 'LIMA 2', 'PROVINCIAS']
-const businessLineOptions = ['GASTRONOMIA', 'FARMACIA', 'RETAIL', 'CLINICA']
+const businessLineOptions = ['EDUCACION', 'GASTRONOMIA', 'HOTELERIA', 'INDUSTRIAS', 'OFICINAS', 'BELLEZA', 'BTL', 'PROVEEDOR JABONES', 'MUESTRAS', 'REPOSICION', 'INSTITUCION', 'FARMACIA', 'RETAIL', 'CLINICA']
 const businessSublineOptions = ['BARES RESTAURANTES', 'BOTICAS', 'CADENAS', 'INDEPENDIENTE']
 const serviceTypeOptions = ['NEXT DAY', 'SAME DAY', 'PROGRAMADO']
 
@@ -106,6 +107,17 @@ const makeSelectOptions = (rows, formatter, valueResolver = row => row.id) => ro
   row,
 }))
 
+const flattenUbigeoOptions = (catalog) => {
+  const rows = []
+  catalog?.recordByCode?.forEach?.((item) => {
+    const label = [item.department, item.province, item.district].filter(Boolean).join(' | ')
+    if (!item.code || !label) return
+    rows.push({ value: item.code, label })
+  })
+
+  return rows.sort((left, right) => left.label.localeCompare(right.label, 'es'))
+}
+
 const formatClient = (client) => {
   const document = normalizeText(client.document_number ?? client.ruc ?? client.doc_cliente ?? client.document)
   const name = normalizeText(client.display_name ?? client.full_name ?? client.name ?? client.razon_social ?? client.business_name ?? client.client_name)
@@ -141,7 +153,7 @@ const SampleSelect = ({ label, value, options = [], onChange, placeholder = 'Sel
   <div className='sample-field'>
     <label className='form-label'>{label}</label>
     <div className='sample-input-group'>
-      <select className='form-control' value={value ?? ''} onChange={e => onChange(e.target.value)} disabled={disabled}>
+      <select className='form-select' data-placeholder={placeholder} value={value ?? ''} onChange={e => onChange(e.target.value)} disabled={disabled}>
         <option value=''>{placeholder}</option>
         {options.map(option => <option key={`${label}-${option.value ?? option}`} value={option.value ?? option}>{option.label ?? option}</option>)}
       </select>
@@ -160,13 +172,6 @@ const SampleInput = ({ label, value, onChange, type = 'text', placeholder = '', 
   </div>
 )
 
-const ModalToolbar = ({ primaryText = 'Registrar', onClose }) => (
-  <div className='sample-modal-toolbar'>
-    <button type='submit' className='btn btn-sm btn-outline-primary fw-semibold'><i className='mdi mdi-plus me-1'></i>{primaryText}</button>
-    <button type='button' className='btn btn-sm btn-light fw-semibold ms-2' onClick={onClose}><i className='mdi mdi-close me-1'></i>Cerrar</button>
-  </div>
-)
-
 const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
@@ -179,6 +184,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const [clients, setClients] = useState([])
   const [users, setUsers] = useState([])
   const [articles, setArticles] = useState([])
+  const [ubigeoOptions, setUbigeoOptions] = useState([])
   const [articleQuery, setArticleQuery] = useState('')
   const [articlePageSize, setArticlePageSize] = useState(20)
   const [trackingOrder, setTrackingOrder] = useState(null)
@@ -194,6 +200,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       setUsers((userRows ?? []).filter(row => row.status !== null))
       setArticles((articleRows ?? []).filter(row => row.status !== null))
     })
+
+    getUbigeoCatalog()
+      .then(catalog => setUbigeoOptions(flattenUbigeoOptions(catalog)))
+      .catch(() => setUbigeoOptions([]))
   }, [])
 
   const clientOptions = useMemo(() => makeSelectOptions(clients, formatClient, row => row.entity_id ?? row.id), [clients])
@@ -217,6 +227,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   }, [articles, articleQuery, articlePageSize])
 
   const itemTotal = useMemo(() => items.reduce((sum, item) => sum + Number(item.quantity || 0), 0), [items])
+  const selectedUbigeoOptions = useMemo(() => {
+    if (!form.ubigeo || ubigeoOptions.some(option => option.value === form.ubigeo)) return ubigeoOptions
+    return [{ value: form.ubigeo, label: form.ubigeo }, ...ubigeoOptions]
+  }, [form.ubigeo, ubigeoOptions])
 
   const setField = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
   const closeMainModal = () => $(modalRef.current).modal('hide')
@@ -406,12 +420,6 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       .sample-action-card { width: min(405px, 100%); min-height: 58px; border-radius: 6px; border: 0; color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-weight: 700; }
       .sample-action-card.primary { background: #23244f; }
       .sample-action-card.secondary { background: #23244f; }
-      .sample-modal .modal-dialog { max-width: calc(100vw - 24px); width: calc(100vw - 24px); }
-      .sample-modal .modal-content { border-radius: 6px; overflow: hidden; }
-      .sample-modal .modal-header { background: #23244f; color: #fff; min-height: 38px; padding: 8px 14px; }
-      .sample-modal .btn-close { filter: invert(1); opacity: .9; }
-      .sample-modal .modal-body { max-height: calc(100vh - 70px); overflow: auto; padding: 22px 24px; }
-      .sample-modal-toolbar { display: flex; justify-content: center; align-items: center; border-bottom: 1px solid #edf0f4; padding-bottom: 18px; margin-bottom: 22px; }
       .sample-form-title { text-align: center; font-size: 22px; font-weight: 700; color: #565c68; margin-bottom: 26px; }
       .sample-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 22px; }
       .sample-grid .span-2 { grid-column: span 2; }
@@ -428,7 +436,6 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       .sample-items-scroll { width: 100%; overflow-x: auto; }
       .sample-grid-actions { display: flex; gap: 6px; flex-wrap: nowrap; min-width: 238px; }
       .sample-grid-actions .btn { width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
-      .sample-tracking-modal .modal-dialog { max-width: 640px; }
       @media (max-width: 991px) {
         .sample-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .sample-grid .span-2, .sample-grid .span-4 { grid-column: span 2; }
@@ -540,15 +547,13 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
     <Modal
       modalRef={modalRef}
-      title={<span><i className='mdi mdi-menu me-2'></i>REGISTRAR PEDIDO MUESTRA</span>}
+      title={form.id ? 'Editar pedido muestra' : 'Registrar pedido muestra'}
       size='full-width'
-      hideFooter
-      contentClass='sample-modal'
-      headerClass='sample-modal-header'
-      bodyClass='sample-modal-body'
+      btnCancelText='Cerrar'
+      btnSubmitText={form.id ? 'Guardar' : 'Registrar'}
+      bodyStyle={{ maxHeight: 'calc(100vh - 210px)', overflow: 'auto' }}
       onSubmit={onSave}
     >
-      <ModalToolbar primaryText={form.id ? 'Guardar' : 'Registrar'} onClose={closeMainModal} />
       <div className='sample-form-title'>Pedido N&deg;</div>
 
       <div className='sample-grid'>
@@ -562,7 +567,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         <SampleSelect label='Giro' value={form.business_line} onChange={value => setField('business_line', value)} options={businessLineOptions} addButton />
         <SampleSelect label='Sub Giro' value={form.business_subline} onChange={value => setField('business_subline', value)} options={businessSublineOptions} addButton />
 
-        <SampleInput label='Ubigeo' value={form.ubigeo} onChange={value => setField('ubigeo', value)} placeholder='Seleccione Ubigeo' />
+        <SampleSelect label='Ubigeo' value={form.ubigeo} onChange={value => setField('ubigeo', value)} options={selectedUbigeoOptions} placeholder='Seleccione Ubigeo' />
         <SampleInput label='Direccion de entrega' value={form.delivery_address} onChange={value => setField('delivery_address', value)} placeholder='Introduce una ubicacion' />
         <SampleInput label='Referencia' value={form.delivery_reference} onChange={value => setField('delivery_reference', value)} />
         <SampleSelect label='Tipo servicio' value={form.service_type} onChange={value => setField('service_type', value)} options={serviceTypeOptions} addButton />
@@ -629,11 +634,11 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
     <Modal
       modalRef={articleModalRef}
-      title={<span><i className='mdi mdi-menu me-2'></i>BUSCAR ARTICULOS</span>}
+      title='Buscar articulos'
       size='full-width'
-      hideFooter
-      contentClass='sample-modal'
-      headerClass='sample-modal-header'
+      hideButtonSubmit
+      btnCancelText='Cerrar'
+      bodyStyle={{ maxHeight: 'calc(100vh - 210px)', overflow: 'auto' }}
       onSubmit={(e) => e.preventDefault()}
     >
       <div className='mb-3 fw-semibold'><i className='mdi mdi-menu me-2'></i>INGRESAR DATOS</div>
@@ -645,7 +650,6 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       </div>
       <div className='text-center my-3'>
         <button type='button' className='btn btn-sm btn-outline-primary fw-semibold' onClick={() => setArticlePageSize(20)}><i className='mdi mdi-magnify me-1'></i>Buscar</button>
-        <button type='button' className='btn btn-sm btn-light fw-semibold ms-2' onClick={() => $(articleModalRef.current).modal('hide')}><i className='mdi mdi-close me-1'></i>Regresar</button>
       </div>
       <hr />
       <div className='d-flex align-items-center justify-content-between mb-2'>
@@ -698,10 +702,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
     <Modal
       modalRef={trackingModalRef}
-      title={<span><i className='mdi mdi-plus-circle-outline me-2'></i>TRACKING DEL PEDIDO</span>}
-      hideFooter
-      contentClass='sample-modal sample-tracking-modal'
-      headerClass='sample-modal-header'
+      title='Tracking del pedido'
+      size='lg'
+      hideButtonSubmit
+      btnCancelText='Cerrar'
       onSubmit={(e) => e.preventDefault()}
     >
       <table className='sample-table'>
@@ -720,9 +724,6 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           ))}
         </tbody>
       </table>
-      <div className='text-center mt-3'>
-        <button type='button' className='btn btn-light' onClick={() => $(trackingModalRef.current).modal('hide')}><i className='mdi mdi-close me-1'></i>Cerrar</button>
-      </div>
     </Modal>
 
     <Modal
