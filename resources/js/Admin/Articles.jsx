@@ -1104,12 +1104,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     <fieldset className='magistrales-article-form' disabled={isViewing}>
       <div className='magistrales-section'>
         <div className='magistrales-section-title'>
-          <i className='mdi mdi-plus-circle-outline me-1'></i> DATOS DEL ARTICULO
+          <i className='mdi mdi-package-variant-closed me-1'></i> Datos del artículo
         </div>
         <div className='row g-3 magistrales-section-body'>
-          <InputFormGroup eRef={codeRef} label='Codigo' col='col-md-2' readOnly placeholder='Se genera al guardar' />
-          <InputFormGroup eRef={nameRef} label='Descripcion' col='col-md-4' required />
-          <InputFormGroup eRef={compositionRef} label='Composicion' col='col-md-4' />
+          <InputFormGroup eRef={codeRef} label='Código' col='col-md-2' readOnly placeholder='Se genera al guardar' />
+          <InputFormGroup eRef={nameRef} label='Descripción' col='col-md-4' required />
+          <InputFormGroup eRef={compositionRef} label='Composición' col='col-md-4' />
           <div className='form-group col-md-2 mb-2'>
             <label className='form-label'>Estado</label>
             <select ref={statusRef} className='form-control' defaultValue='1'>
@@ -1125,35 +1125,35 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
         <div className='col-lg-6'>
           <div className='magistrales-section h-100'>
             <div className='magistrales-section-title'>
-              <i className='mdi mdi-plus-circle-outline me-1'></i> CLASIFICACION
+              <i className='mdi mdi-shape-outline me-1'></i> Clasificación
             </div>
             <div className='row g-3 magistrales-section-body'>
               <SelectAPIFormGroup
                 eRef={magistralCategoryRef}
-                label='Categoria'
+                label='Categoría'
                 col='col-md-4'
                 searchAPI='/api/admin/magistrales/categories/paginate'
                 searchBy='description'
                 dropdownParent='#article-form-container'
               />
-              <InputFormGroup eRef={subCategoryRef} label='Sub Categoria' col='col-md-4' />
+              <InputFormGroup eRef={subCategoryRef} label='Subcategoría' col='col-md-4' />
               <SelectAPIFormGroup
                 eRef={magistralFormatRef}
-                label='Presentacion'
+                label='Presentación'
                 col='col-md-4'
                 searchAPI='/api/admin/magistrales/formats/paginate'
                 searchBy='description'
                 dropdownParent='#article-form-container'
               />
               <div className='form-group col-md-3 mb-2'>
-                <label className='form-label'>Tipo de articulo</label>
+                <label className='form-label'>Tipo de artículo</label>
                 <input ref={articleTypeRef} className='form-control' list='magistral-article-type-options' placeholder='SELECCIONE' />
                 <datalist id='magistral-article-type-options'>
                   {magistralArticleTypeOptions.map(option => <option key={`magistral-type-${option}`} value={option} />)}
                 </datalist>
               </div>
               <div className='form-group col-md-3 mb-2'>
-                <label className='form-label'>Via Administracion</label>
+                <label className='form-label'>Vía administración</label>
                 <input ref={administrationRouteRef} className='form-control' list='magistral-route-options' placeholder='Seleccione' />
                 <datalist id='magistral-route-options'>
                   {magistralAdministrationRouteOptions.map(option => <option key={`magistral-route-${option}`} value={option} />)}
@@ -1177,11 +1177,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
         <div className='col-lg-6'>
           <div className='magistrales-section h-100'>
             <div className='magistrales-section-title'>
-              <i className='mdi mdi-plus-circle-outline me-1'></i> DATOS DE CONTROL
+              <i className='mdi mdi-tune-variant me-1'></i> Datos de control
             </div>
             <div className='row g-3 magistrales-section-body'>
-              <InputFormGroup eRef={stockMinRef} label='Stock Minimo' col='col-md-3' type='number' min='0' step='0.001' />
-              <InputFormGroup eRef={stockMaxRef} label='Stock Maximo' col='col-md-3' type='number' min='0' step='0.001' />
+              <InputFormGroup eRef={stockMinRef} label='Stock mínimo' col='col-md-3' type='number' min='0' step='0.001' />
+              <InputFormGroup eRef={stockMaxRef} label='Stock máximo' col='col-md-3' type='number' min='0' step='0.001' />
               <div className='form-group col-md-3 mb-2'>
                 <label className='form-label'>Afecto a IGV</label>
                 <select ref={igvRuleRef} className='form-control' defaultValue='0'>
@@ -1222,8 +1222,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       </div>
 
       <div className='mt-3'>
-        <button type='button' className='btn btn-sm btn-outline-primary' onClick={onPresentationAdded}>
-          <i className='mdi mdi-plus-circle-outline me-1'></i> INSERTAR EQUIVALENCIA
+        <button type='button' className='btn btn-sm btn-soft-primary' onClick={onPresentationAdded}>
+          <i className='mdi mdi-plus-circle-outline me-1'></i> Insertar equivalencia
         </button>
       </div>
 
@@ -1371,18 +1371,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
           max-width: calc(100vw - 48px);
         }
 
-        .magistrales-article-modal .modal-header {
-          background: #24264f;
-          color: #fff;
-          padding-bottom: 0.55rem;
-          padding-top: 0.55rem;
-        }
-
         .magistrales-article-modal .modal-title {
-          font-size: 0.85rem;
-          font-weight: 700;
+          color: #313a46;
+          font-size: 1rem;
+          font-weight: 600;
           letter-spacing: 0;
-          text-transform: uppercase;
         }
 
         .magistrales-article-modal .modal-body {
@@ -1390,24 +1383,27 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
         }
 
         .magistrales-article-modal .modal-footer {
-          justify-content: center;
+          justify-content: flex-end;
         }
 
         .magistrales-section {
+          background: #fff;
           border: 1px solid #d8dee8;
+          border-radius: 0.375rem;
+          overflow: hidden;
         }
 
         .magistrales-section-title {
-          background: #24264f;
-          color: #fff;
-          font-size: 0.82rem;
-          font-weight: 700;
-          padding: 0.7rem 1rem;
-          text-transform: uppercase;
+          background: #f8f9fa;
+          border-bottom: 1px solid #e6e9ef;
+          color: #313a46;
+          font-size: 0.92rem;
+          font-weight: 600;
+          padding: 0.75rem 1rem;
         }
 
         .magistrales-section-body {
-          padding: 1rem;
+          padding: 1rem 1rem 1.1rem;
         }
 
         .magistrales-equivalence-wrap {
@@ -1572,14 +1568,13 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
 
     <Modal
       modalRef={modalRef}
-      title={isMagistrales ? <h4 className='modal-title'><i className='mdi mdi-plus-circle-outline me-1'></i> ARTICULO</h4> : (isStorageProduct ? 'ARTICULO' : (isViewing ? 'Mostrar articulo' : (isEditing ? 'Editar articulo' : 'Agregar articulo')))}
+      title={isMagistrales ? (isViewing ? 'Mostrar artículo magistral' : (isEditing ? 'Editar artículo magistral' : 'Agregar artículo magistral')) : (isStorageProduct ? 'ARTICULO' : (isViewing ? 'Mostrar articulo' : (isEditing ? 'Editar articulo' : 'Agregar articulo')))}
       onSubmit={onModalSubmit}
       size='xl'
       dialogClass={isMagistrales ? 'magistrales-article-dialog' : ''}
       contentClass={isMagistrales ? 'magistrales-article-modal' : ''}
-      closeButtonClass={isMagistrales ? 'btn-close-white' : ''}
       hideButtonSubmit={isViewing}
-      btnSubmitText={isMagistrales ? 'Guardar Articulo' : 'Registrar'}
+      btnSubmitText={isMagistrales ? 'Guardar artículo' : 'Registrar'}
     >
       <div className='row' id='article-form-container'>
         <input ref={idRef} type='hidden' />
