@@ -1,5 +1,5 @@
 import BasicRest from "../BasicRest";
-import { Fetch } from "sode-extend-react";
+import { Cookies, Fetch } from "sode-extend-react";
 import { toast } from "sonner";
 
 const loadAll = async (path) => {
@@ -22,6 +22,43 @@ class SampleOrdersRest extends BasicRest {
   getClients = async () => await loadAll('/api/admin/clients/paginate')
   getUsers = async () => await loadAll('/api/admin/users/paginate')
   getArticles = async () => await loadAll('/api/admin/articles/paginate')
+
+  saveEvidence = async (id, request) => {
+    try {
+      const res = await fetch(`/api/${this.path}/${id}/evidence`, {
+        method: 'POST',
+        headers: {
+          'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN')),
+        },
+        body: request,
+      })
+
+      const text = await res.text()
+      let result = {}
+      try {
+        result = text ? JSON.parse(text) : {}
+      } catch {
+        result = { message: text }
+      }
+
+      if (!res.ok) throw new Error(result?.message || 'No se pudo registrar la evidencia')
+
+      toast.success('Correcto', {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      })
+
+      return result
+    } catch (error) {
+      toast.error('Error', {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      })
+      return null
+    }
+  }
 }
 
 export default SampleOrdersRest

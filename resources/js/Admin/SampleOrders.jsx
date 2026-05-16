@@ -99,6 +99,13 @@ const getStatusOption = (options, value, normalizer = value => value) => options
 const asDateText = (value) => normalizeText(value).slice(0, 10)
 const asDateTimeText = (value) => normalizeText(value).replace('T', ' ').slice(0, 19)
 const formatNumber = (value, digits = 2) => Number(value || 0).toFixed(digits)
+const isEvidenceImage = (value) => {
+  const url = normalizeText(value)
+  return url.startsWith('blob:')
+    || url.startsWith('data:image/')
+    || /\.(png|jpe?g|webp|gif|bmp|svg)(\?.*)?$/i.test(url)
+    || url.includes('/sample-orders/evidence-media/')
+}
 
 const renderBadge = (container, label, className) => {
   $(container).empty().append($('<span/>', {
@@ -226,6 +233,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const articleModalRef = useRef()
   const trackingModalRef = useRef()
   const evidenceModalRef = useRef()
+  const evidenceFileRef = useRef()
 
   const [form, setForm] = useState(emptyForm())
   const [items, setItems] = useState([emptyItem()])
@@ -237,6 +245,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const [articlePageSize, setArticlePageSize] = useState(20)
   const [trackingOrder, setTrackingOrder] = useState(null)
   const [evidenceOrder, setEvidenceOrder] = useState(null)
+  const [evidenceFile, setEvidenceFile] = useState(null)
+  const [evidencePreview, setEvidencePreview] = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -253,6 +263,12 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       .then(catalog => setUbigeoOptions(flattenUbigeoOptions(catalog)))
       .catch(() => setUbigeoOptions([]))
   }, [])
+
+  useEffect(() => {
+    return () => {
+      if (evidencePreview?.startsWith('blob:')) URL.revokeObjectURL(evidencePreview)
+    }
+  }, [evidencePreview])
 
   const clientOptions = useMemo(() => makeSelectOptions(clients, formatClient, row => row.entity_id ?? row.id), [clients])
   const userOptions = useMemo(() => makeSelectOptions(users, formatUser), [users])
@@ -359,24 +375,39 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const saveEvidence = async (e) => {
     e.preventDefault()
     if (!evidenceOrder?.id) return
-    const result = await sampleOrdersRest.save({
-      ...evidenceOrder,
-      evidence_url: form.evidence_url,
-      evidence_notes: form.evidence_notes,
-    })
+    const request = new FormData()
+    request.append('evidence_url', form.evidence_url ?? '')
+    request.append('evidence_notes', form.evidence_notes ?? '')
+    if (evidenceFile) request.append('evidence_file', evidenceFile)
+
+    const result = await sampleOrdersRest.saveEvidence(evidenceOrder.id, request)
     if (!result) return
+    setEvidenceFile(null)
+    setEvidencePreview('')
+    if (evidenceFileRef.current) evidenceFileRef.current.value = ''
     $(evidenceModalRef.current).modal('hide')
     refreshGrid()
   }
 
   const openEvidence = (data) => {
     setEvidenceOrder(data)
+    setEvidenceFile(null)
+    setEvidencePreview(isEvidenceImage(data.evidence_url) ? data.evidence_url : '')
+    setTimeout(() => {
+      if (evidenceFileRef.current) evidenceFileRef.current.value = ''
+    }, 0)
     setForm(prev => ({
       ...prev,
       evidence_url: data.evidence_url ?? '',
       evidence_notes: data.evidence_notes ?? '',
     }))
     $(evidenceModalRef.current).modal('show')
+  }
+
+  const onEvidenceFileChange = (e) => {
+    const file = e.target.files?.[0] ?? null
+    setEvidenceFile(file)
+    setEvidencePreview(file ? URL.createObjectURL(file) : (isEvidenceImage(form.evidence_url) ? form.evidence_url : ''))
   }
 
   const openTracking = (data) => {
@@ -789,20 +820,40 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
     <Modal
       modalRef={evidenceModalRef}
-      title='Evidencia del pedido'
+      title='Evidencias'
       size='lg'
-      btnSubmitText='Guardar evidencia'
+      btnSubmitText='Registrar'
       onSubmit={saveEvidence}
     >
       <div className='mb-3'>
-        <label className='form-label'>URL o referencia de evidencia</label>
-        <input className='form-control' value={form.evidence_url ?? ''} onChange={e => setField('evidence_url', e.target.value)} />
+        <label className='form-label'>Evidencia</label>
+        <input
+          ref={evidenceFileRef}
+          className='form-control'
+          type='file'
+          accept='image/png,image/jpeg,image/webp,image/gif'
+          onChange={onEvidenceFileChange}
+        />
       </div>
       <div className='mb-3'>
-        <label className='form-label'>Notas de evidencia</label>
+        <label className='form-label'>Observaciones</label>
         <textarea className='form-control' rows='4' value={form.evidence_notes ?? ''} onChange={e => setField('evidence_notes', e.target.value)} />
       </div>
-      {form.evidence_url && <a href={form.evidence_url} target='_blank' rel='noreferrer'>Abrir evidencia</a>}
+      <div className='border rounded p-3'>
+        <h5 className='mb-3'>Evidencia Pedido</h5>
+        {evidencePreview ? (
+          <img
+            src={evidencePreview}
+            alt='Evidencia del pedido'
+            className='img-fluid rounded border bg-light'
+            style={{ maxHeight: 360, width: '100%', objectFit: 'contain' }}
+          />
+        ) : form.evidence_url ? (
+          <a href={form.evidence_url} target='_blank' rel='noreferrer'>Abrir evidencia registrada</a>
+        ) : (
+          <div className='text-muted py-4 text-center'>Sin evidencia registrada</div>
+        )}
+      </div>
     </Modal>
   </>
 }

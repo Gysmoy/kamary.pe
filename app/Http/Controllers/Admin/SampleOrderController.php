@@ -6,6 +6,8 @@ use App\Http\Controllers\BasicController;
 use App\Models\SampleOrder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class SampleOrderController extends BasicController
 {
@@ -93,6 +95,61 @@ class SampleOrderController extends BasicController
         $body['items'] = $this->normalizeItems($body['items'] ?? []);
 
         return $body;
+    }
+
+    public function evidence(Request $request, string $id)
+    {
+        $response = new \SoDe\Extend\Response();
+
+        try {
+            $order = SampleOrder::query()->whereKey($id)->whereNotNull('status')->firstOrFail();
+            $evidenceUrl = trim((string)($request->input('evidence_url') ?? $order->evidence_url ?? '')) ?: null;
+
+            if ($request->hasFile('evidence_file')) {
+                $file = $request->file('evidence_file');
+                $maxBytes = 8 * 1024 * 1024;
+                if ($file->getSize() > $maxBytes) {
+                    throw new \Exception('La imagen no debe superar 8MB');
+                }
+
+                $extension = strtolower($file->getClientOriginalExtension());
+                $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+                if (!in_array($extension, $allowedExtensions, true)) {
+                    throw new \Exception('Solo se permiten imagenes JPG, PNG, WEBP o GIF');
+                }
+
+                $filename = Str::uuid()->toString() . ".{$extension}";
+                Storage::putFileAs('images/sample_order_evidence', $file, $filename);
+                $evidenceUrl = "/api/admin/sample-orders/evidence-media/{$filename}";
+            }
+
+            $order->update([
+                'evidence_url' => $evidenceUrl,
+                'evidence_notes' => trim((string)($request->input('evidence_notes') ?? '')) ?: null,
+                'updated_by' => Auth::id(),
+            ]);
+
+            $response->status = 200;
+            $response->message = 'Evidencia registrada correctamente';
+            $response->data = $order->fresh();
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function evidenceMedia(Request $request, string $filename)
+    {
+        abort_if(str_contains($filename, '..') || str_contains($filename, '/') || str_contains($filename, '\\'), 404);
+        $path = "images/sample_order_evidence/{$filename}";
+        abort_unless(Storage::exists($path), 404);
+
+        return response(Storage::get($path), 200, [
+            'Content-Type' => Storage::mimeType($path) ?: 'application/octet-stream',
+            'Cache-Control' => 'private, max-age=3600',
+        ]);
     }
 
     private function nextOrderNumber(): string

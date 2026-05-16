@@ -503,6 +503,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/services-client/{id}', [AdminServiceClientController::class, 'delete']);
         Route::get('/services-client/document/{type}/{number}', [AdminServiceClientController::class, 'lookupByDocument']);
 
+        Route::post('/sample-orders/{id}/evidence', [AdminSampleOrderController::class, 'evidence']);
+        Route::get('/sample-orders/evidence-media/{filename}', [AdminSampleOrderController::class, 'evidenceMedia'])->where('filename', '.*');
         Route::post('/sample-orders', [AdminSampleOrderController::class, 'save']);
         Route::post('/sample-orders/paginate', [AdminSampleOrderController::class, 'paginate']);
         Route::patch('/sample-orders/status', [AdminSampleOrderController::class, 'status']);
