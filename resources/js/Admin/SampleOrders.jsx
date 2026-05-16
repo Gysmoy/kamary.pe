@@ -86,6 +86,12 @@ const emptyForm = () => ({
 })
 
 const normalizeText = (value) => (value ?? '').toString().trim()
+const normalizeSearchText = (value) => normalizeText(value)
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, ' ')
+  .trim()
 const normalizeOrderStatus = (value) => ({ processing: 'preparing', completed: 'delivered' }[value] ?? value)
 const normalizeEmailStatus = (value) => ({ sent: 'delivered' }[value] ?? value)
 const getOptionLabel = (options, value, normalizer = value => value) => options.find(option => option.value === normalizer(value))?.label ?? value ?? ''
@@ -147,6 +153,43 @@ const articleToItem = (article) => {
     laboratory: article.laboratory?.name ?? '',
     active_principle: article.activePrinciple?.name ?? article.active_principle?.name ?? '',
   }
+}
+
+const articleSearchValues = (article) => [
+  article.code,
+  article.default_lot,
+  article.name,
+  article.category,
+  article.category?.name,
+  article.category?.description,
+  article.sub_category,
+  article.magistralCategory?.description,
+  article.magistralCategory?.code,
+  article.magistralFormat?.description,
+  article.article_type,
+  article.unit?.name,
+  article.unit?.symbol,
+  article.laboratory?.name,
+  article.activePrinciple?.name,
+  article.active_principle?.name,
+].map(normalizeSearchText).filter(Boolean)
+
+const articleSearchScore = (article, terms) => {
+  if (terms.length === 0) return 0
+
+  const primaryValues = [
+    article.code,
+    article.default_lot,
+    article.name,
+  ].map(normalizeSearchText).filter(Boolean)
+  const allValues = articleSearchValues(article)
+
+  if (primaryValues.some(value => terms.every(term => value === term))) return 0
+  if (primaryValues.some(value => terms.every(term => value.startsWith(term)))) return 1
+  if (terms.every(term => primaryValues.some(value => value.includes(term)))) return 2
+  if (terms.every(term => allValues.some(value => value.includes(term)))) return 3
+
+  return 99
 }
 
 const articleItemKey = (item) => [
@@ -214,18 +257,13 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const clientOptions = useMemo(() => makeSelectOptions(clients, formatClient, row => row.entity_id ?? row.id), [clients])
   const userOptions = useMemo(() => makeSelectOptions(users, formatUser), [users])
   const articleRows = useMemo(() => {
-    const query = articleQuery.trim().toLowerCase()
-    const rows = query
-      ? articles.filter(article => [
-        article.code,
-        article.default_lot,
-        article.name,
-        article.unit?.name,
-        article.unit?.symbol,
-        article.laboratory?.name,
-        article.activePrinciple?.name,
-        article.active_principle?.name,
-      ].some(value => normalizeText(value).toLowerCase().includes(query)))
+    const terms = normalizeSearchText(articleQuery).split(' ').filter(Boolean)
+    const rows = terms.length
+      ? articles
+        .map(article => ({ article, score: articleSearchScore(article, terms) }))
+        .filter(row => row.score < 99)
+        .sort((left, right) => left.score - right.score || normalizeText(left.article.name).localeCompare(normalizeText(right.article.name), 'es'))
+        .map(row => row.article)
       : articles
 
     return rows.slice(0, articlePageSize)
