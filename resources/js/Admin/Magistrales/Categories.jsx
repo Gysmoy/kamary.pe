@@ -4,14 +4,16 @@ import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../../Utils/CreateReactScript';
 import Table from '../../Components/Adminto/Table';
 import Modal from '../../Components/Adminto/Modal';
-import ReactAppend from '../../Utils/ReactAppend';
 import DxButton from '../../Components/dx/DxButton';
-import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import CategoriesRest from '../../Actions/Admin/Magistrales/CategoriesRest';
-import renderGridEditLink from '../../Utils/renderGridEditLink';
 
 const categoriesRest = new CategoriesRest()
+
+const isActive = (value) => value === true || value === 1 || value === '1'
+const renderStatusBadge = (value) => isActive(value)
+  ? '<span class="badge bg-success">Activo</span>'
+  : '<span class="badge bg-secondary">Inactivo</span>'
 
 const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
   const gridRef = useRef()
@@ -23,7 +25,6 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
   const saleMaterialRef = useRef()
   const statusRef = useRef()
   const subcategoryModalRef = useRef()
-  const subcategoryFormModalRef = useRef()
   const subcategoryIdRef = useRef()
   const subcategoryDescriptionRef = useRef()
   const subcategoryStatusRef = useRef()
@@ -63,21 +64,23 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
     $(modalRef.current).modal('hide')
   }
 
-  const onStatusChange = async ({ id, status }) => {
-    const result = await categoriesRest.status({ id, status })
-    if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
-  }
-
   const refreshSubcategories = async (category = selectedCategory) => {
     if (!category?.id) return
     const rows = await categoriesRest.getSubcategories(category.id)
     setSubcategories(rows ?? [])
   }
 
+  const resetSubcategoryForm = () => {
+    setIsSubcategoryEditing(false)
+    if (subcategoryIdRef.current) subcategoryIdRef.current.value = ''
+    if (subcategoryDescriptionRef.current) subcategoryDescriptionRef.current.value = ''
+    if (subcategoryStatusRef.current) subcategoryStatusRef.current.value = '1'
+  }
+
   const onSubcategoryModalOpen = async (category) => {
     setSelectedCategory(category)
     setSubcategories([])
+    resetSubcategoryForm()
     $(subcategoryModalRef.current).modal('show')
     await refreshSubcategories(category)
   }
@@ -86,8 +89,7 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
     setIsSubcategoryEditing(!!data?.id)
     subcategoryIdRef.current.value = data?.id ?? ''
     subcategoryDescriptionRef.current.value = data?.description ?? ''
-    subcategoryStatusRef.current.checked = data?.status !== false && data?.status !== 0
-    $(subcategoryFormModalRef.current).modal('show')
+    subcategoryStatusRef.current.value = isActive(data?.status ?? 1) ? '1' : '0'
   }
 
   const onSubcategorySave = async (e) => {
@@ -97,18 +99,11 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
     const result = await categoriesRest.saveSubcategory(selectedCategory.id, {
       id: subcategoryIdRef.current.value || undefined,
       description: subcategoryDescriptionRef.current.value.trim(),
-      status: subcategoryStatusRef.current.checked,
+      status: subcategoryStatusRef.current.value === '1',
     })
     if (!result) return
     await refreshSubcategories()
-    $(subcategoryFormModalRef.current).modal('hide')
-  }
-
-  const onSubcategoryStatusChange = async (subcategory) => {
-    if (!selectedCategory?.id) return
-    const result = await categoriesRest.statusSubcategory(selectedCategory.id, subcategory)
-    if (!result) return
-    await refreshSubcategories()
+    resetSubcategoryForm()
   }
 
   const onSubcategoryDelete = async (subcategory) => {
@@ -118,6 +113,22 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
     const result = await categoriesRest.deleteSubcategory(selectedCategory.id, subcategory.id)
     if (!result) return
     await refreshSubcategories()
+    if (subcategoryIdRef.current?.value == subcategory.id) resetSubcategoryForm()
+  }
+
+  const onCategoryDelete = async (category) => {
+    const { isConfirmed } = await Swal.fire({
+      title: 'Eliminar categoria',
+      text: 'Se eliminara la categoria magistral seleccionada.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar',
+    })
+    if (!isConfirmed) return
+    const result = await categoriesRest.delete(category.id)
+    if (!result) return
+    $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
   return <>
@@ -133,13 +144,14 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
       columns={[
         {
           caption: 'Acciones',
-          width: 130,
+          width: 150,
           allowFiltering: false,
           allowExporting: false,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
             container.append(DxButton({ className: 'btn btn-xs btn-soft-info', title: 'Detalles/Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
             container.append(DxButton({ className: 'btn btn-xs btn-soft-primary ms-1', title: 'Subcategoria', icon: 'mdi mdi-format-list-bulleted', onClick: () => onSubcategoryModalOpen(data) }))
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-close', onClick: () => onCategoryDelete(data) }))
           }
         },
         { dataField: 'id', caption: 'ID', width: 90 },
@@ -147,20 +159,23 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
           dataField: 'description',
           caption: 'Descripcion',
           minWidth: 220,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.description, () => onModalOpen(data), 'Editar categoria')
         },
         { dataField: 'code', caption: 'Codigo', width: 130 },
         { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 160 },
-        { dataField: 'sale_material', caption: 'Material para venta', dataType: 'boolean', width: 150 },
+        {
+          dataField: 'sale_material',
+          caption: 'Material para venta',
+          width: 170,
+          cellTemplate: (container, { data }) => container.text(data?.sale_material ? 'SI' : 'NO')
+        },
         {
           dataField: 'status',
           caption: 'Estado',
-          dataType: 'boolean',
           width: 95,
           cellTemplate: (container, { data }) => {
             $(container).empty()
             if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onStatusChange(data)} />)
+            container.html(renderStatusBadge(data.status))
           }
         },
       ]}
@@ -177,10 +192,27 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
       </div>
     </Modal>
 
-    <Modal modalRef={subcategoryModalRef} title={`Subcategorias${selectedCategory?.description ? ` - ${selectedCategory.description}` : ''}`} size='lg' hideButtonSubmit>
-      <div className='d-flex justify-content-end mb-2'>
-        <button type='button' className='btn btn-sm btn-primary' onClick={() => onSubcategoryFormOpen()}>Nuevo</button>
+    <Modal modalRef={subcategoryModalRef} title='Subcategoria' size='xl' hideButtonSubmit onSubmit={onSubcategorySave}>
+      <input ref={subcategoryIdRef} hidden />
+      <div className='row align-items-end mb-3'>
+        <div className='col-md-6 mb-2'>
+          <label className='form-label'>Descripcion</label>
+          <input ref={subcategoryDescriptionRef} className='form-control' required />
+        </div>
+        <div className='col-md-4 mb-2'>
+          <label className='form-label'>Estado</label>
+          <select ref={subcategoryStatusRef} className='form-control' defaultValue='1'>
+            <option value='1'>Activo</option>
+            <option value='0'>Inactivo</option>
+          </select>
+        </div>
+        <div className='col-md-2 mb-2 d-flex gap-2'>
+          <button type='submit' className='btn btn-primary w-100'>{isSubcategoryEditing ? 'Actualizar' : 'Registrar'}</button>
+          {isSubcategoryEditing && <button type='button' className='btn btn-light' onClick={resetSubcategoryForm}>Limpiar</button>}
+        </div>
       </div>
+      <hr />
+      <h4 className='mb-3'>Subcategorias registradas</h4>
       <div className='table-responsive border rounded'>
         <table className='table table-sm table-striped mb-0'>
           <thead>
@@ -211,19 +243,11 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
                 <td>{subcategory.id}</td>
                 <td>{subcategory.description}</td>
                 <td>{subcategory.articles_count ?? 0}</td>
-                <td><SwitchFormGroup checked={subcategory.status == 1} onChange={() => onSubcategoryStatusChange(subcategory)} /></td>
+                <td dangerouslySetInnerHTML={{ __html: renderStatusBadge(subcategory.status) }} />
               </tr>
             ))}
           </tbody>
         </table>
-      </div>
-    </Modal>
-
-    <Modal modalRef={subcategoryFormModalRef} title={isSubcategoryEditing ? 'Editar subcategoria' : 'Nueva subcategoria'} size='md' onSubmit={onSubcategorySave} btnSubmitText='Registrar' zIndex={1065}>
-      <div className='row'>
-        <input ref={subcategoryIdRef} hidden />
-        <div className='col-12 mb-3'><label className='form-label'>Descripcion</label><input ref={subcategoryDescriptionRef} className='form-control' required /></div>
-        <div className='col-12 mb-3 form-check'><input ref={subcategoryStatusRef} type='checkbox' className='form-check-input' id='magSubcategoryStatus' /><label className='form-check-label' htmlFor='magSubcategoryStatus'>Estado</label></div>
       </div>
     </Modal>
   </>

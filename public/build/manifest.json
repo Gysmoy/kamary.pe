@@ -1000,7 +1000,7 @@
     ]
   },
   "resources/js/Admin/Magistrales/Categories.jsx": {
-    "file": "assets/Categories-lRyODSa1.js",
+    "file": "assets/Categories-Ch3kVfVX.js",
     "name": "Categories",
     "src": "resources/js/Admin/Magistrales/Categories.jsx",
     "isEntry": true,
@@ -1009,12 +1009,8 @@
       "_Base-BFIC9n1T.js",
       "_Table-CO65K1hT.js",
       "_Modal-DGAB1eIb.js",
-      "_ReactAppend-Yyrr3AXW.js",
       "_DxButton-CsjWvhyj.js",
-      "_SwitchFormGroup-Du5E2Od8.js",
-      "_BasicRest-DlKnEI0V.js",
-      "_renderGridEditLink-D8NGEeKJ.js",
-      "_tippy-react.esm-CRfsvkfB.js"
+      "_BasicRest-DlKnEI0V.js"
     ]
   },
   "resources/js/Admin/Magistrales/Dashboard.jsx": {
