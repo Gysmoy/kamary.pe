@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
@@ -234,11 +234,15 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     loadInitialData()
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!isServiceOrderContext) return
     serviceOrdersRest.deleted = activeServiceTab === 'deleted'
+    setServiceSummary({ penTotal: 0, penBilled: 0, usdTotal: 0, usdBilled: 0 })
     const instance = gridRef.current ? $(gridRef.current).dxDataGrid('instance') : null
-    if (instance) instance.refresh()
+    if (instance) {
+      instance.pageIndex(0)
+      instance.getDataSource().reload()
+    }
   }, [activeServiceTab])
 
   const applyServiceFilters = () => {
@@ -786,7 +790,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           <div className='col-12 col-lg-6'>
             <label className='form-label'>Cliente</label>
             <select className='form-select' value={serviceFilterClientId} onChange={(e) => setServiceFilterClientId(e.target.value)}>
-              <option value=''>Todos</option>
+              <option value=''>{activeServiceTab === 'deleted' ? 'Seleccione' : 'Todos'}</option>
               {clients.map(row => <option key={`service-order-filter-client-${row.id}`} value={row.entity_id ?? row.id}>{row.document_number ? `${row.document_number} - ` : ''}{row.full_name}</option>)}
             </select>
           </div>
@@ -805,18 +809,20 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           )}
         </div>
       </div>
-      <div className='service-order-summary'>
-        <div>
-          <span>Importe Total</span>
-          <strong className='text-success'>S/ {money(serviceSummary.penTotal)}</strong>
-          <strong className='text-success'>$ {money(serviceSummary.usdTotal)}</strong>
+      {activeServiceTab === 'services' && (
+        <div className='service-order-list-summary'>
+          <div>
+            <span>Importe Total</span>
+            <strong className='text-success'>S/ {money(serviceSummary.penTotal)}</strong>
+            <strong className='text-success'>$ {money(serviceSummary.usdTotal)}</strong>
+          </div>
+          <div>
+            <span>Total Facturado</span>
+            <strong className='text-warning'>S/ {money(serviceSummary.penBilled)}</strong>
+            <strong className='text-warning'>$ {money(serviceSummary.usdBilled)}</strong>
+          </div>
         </div>
-        <div>
-          <span>Total Facturado</span>
-          <strong className='text-warning'>S/ {money(serviceSummary.penBilled)}</strong>
-          <strong className='text-warning'>$ {money(serviceSummary.usdBilled)}</strong>
-        </div>
-      </div>
+      )}
     </div>
   ) : moduleTitle
 
@@ -906,7 +912,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
             border-radius: 0;
             font-size: 12px;
           }
-          .service-order-summary {
+          .service-order-list-summary {
             min-height: 108px;
             border: 1px solid #e6e9ef;
             display: flex;
@@ -915,19 +921,19 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
             gap: 0;
             margin-bottom: 14px;
           }
-          .service-order-summary > div {
+          .service-order-list-summary > div {
             min-width: 96px;
             padding: 8px 16px;
             text-align: center;
             border-right: 1px solid #d7dce5;
           }
-          .service-order-summary > div:last-child { border-right: 0; }
-          .service-order-summary span {
+          .service-order-list-summary > div:last-child { border-right: 0; }
+          .service-order-list-summary span {
             display: block;
             font-size: 12px;
             margin-bottom: 14px;
           }
-          .service-order-summary strong {
+          .service-order-list-summary strong {
             display: block;
             font-size: 13px;
             line-height: 1.8;
@@ -951,6 +957,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       </>
     )}
     <Table
+      key={isServiceOrderContext ? `service-order-${activeServiceTab}` : `service-order-${serviceOrderType}`}
       gridRef={gridRef}
       title={serviceTableHeader}
       rest={serviceOrdersRest}
