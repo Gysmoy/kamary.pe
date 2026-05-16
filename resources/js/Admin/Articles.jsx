@@ -73,13 +73,14 @@ const parseFileRows = async (file) => {
   return rows
 }
 
-const emptyPresentation = () => ({
+const emptyPresentation = (overrides = {}) => ({
   uid: crypto.randomUUID(),
   name: '',
   units: 1,
   price: 0,
   purchase_price_national: 0,
   purchase_price_foreign: 0,
+  ...overrides,
 })
 
 const emptyStorageLot = () => ({
@@ -117,8 +118,61 @@ const getMagistralStatusValue = (data) => {
   return data?.status === false || data?.status === 0 ? 'de_baja' : 'vigente'
 }
 
-const magistralArticleTypeOptions = ['INSUMO', 'ENVASES', 'PRODUCTO']
-const magistralAdministrationRouteOptions = ['TOPICO', 'ORAL', 'N/A']
+const magistralArticleTypeOptions = ['INSUMOS', 'ENVASES', 'PRODUCTO TERMINADO']
+const magistralAdministrationRouteOptions = [
+  'N/A',
+  'TOPICO',
+  'ORAL',
+  'ENDOVENOSO',
+  'VAGINAL',
+  'INTRAMUSCULAR',
+  'INTRAMUSCULAR/INTRAARTICULAR',
+  'INTRAUTERINO',
+  'SUBDÉRMICA',
+  'INTRAVENOSO',
+  'ORAL-TOPICO',
+]
+
+const normalizeMagistralArticleType = (value) => {
+  const rawValue = (value ?? '').toString().trim()
+  const normalized = rawValue
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+
+  if (!normalized) return ''
+  if (normalized.includes('INSUMO')) return 'INSUMOS'
+  if (normalized.includes('ENVASE')) return 'ENVASES'
+  if (normalized.includes('PRODUCTO')) return 'PRODUCTO TERMINADO'
+  return rawValue.toUpperCase()
+}
+
+const magistralEquivalenceDefaultsByType = {
+  INSUMOS: [
+    { units: 1, name: 'Kg' },
+    { units: 1000, name: 'g' },
+    { units: 1000000, name: 'mg' },
+    { units: 1000000000, name: 'mcg' },
+  ],
+  ENVASES: [
+    { units: 1, name: 'U' },
+    { units: 1000, name: 'MLL' },
+  ],
+  'PRODUCTO TERMINADO': [
+    { units: 1, name: 'U' },
+  ],
+}
+
+const getMagistralEquivalenceDefaults = (articleType) => {
+  const normalizedType = normalizeMagistralArticleType(articleType)
+  return (magistralEquivalenceDefaultsByType[normalizedType] ?? [])
+    .map(row => emptyPresentation({
+      ...row,
+      price: '',
+      purchase_price_national: '',
+      purchase_price_foreign: '',
+    }))
+}
 
 const storageConditionOptions = [
   '-15°C a -25°C',
@@ -306,7 +360,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     codeRef.current.value = data?.code ?? ''
     nameRef.current.value = data?.name ?? ''
     if (compositionRef.current) compositionRef.current.value = data?.composition ?? ''
-    if (articleTypeRef.current) articleTypeRef.current.value = data?.article_type ?? ''
+    const normalizedArticleType = normalizeMagistralArticleType(data?.article_type ?? '')
+    if (articleTypeRef.current) articleTypeRef.current.value = normalizedArticleType
     if (administrationRouteRef.current) administrationRouteRef.current.value = data?.administration_route ?? ''
     if (subCategoryRef.current) subCategoryRef.current.value = data?.sub_category ?? ''
     if (healthRegistrationRef.current) healthRegistrationRef.current.value = data?.health_registration ?? ''
@@ -405,7 +460,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       purchase_price_national: presentation.purchase_price_national ?? data?.purchase_price_national ?? 0,
       purchase_price_foreign: presentation.purchase_price_foreign ?? data?.purchase_price_foreign ?? 0,
     }))
-    setPresentations(presentationRows.length ? presentationRows : (isMagistrales ? [] : [emptyPresentation()]))
+    setPresentations(presentationRows.length ? presentationRows : (isMagistrales ? getMagistralEquivalenceDefaults(normalizedArticleType) : [emptyPresentation()]))
 
     $(modalRef.current).modal('show')
     await loadUnits(data?.unit_id ?? null, data?.equivalence_unit_id ?? null)
@@ -425,7 +480,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       code: codeRef.current.value.trim(),
       name: nameRef.current.value.trim(),
       composition: compositionRef.current?.value?.trim() ?? '',
-      article_type: articleTypeRef.current?.value?.trim() ?? '',
+      article_type: isMagistrales ? normalizeMagistralArticleType(articleTypeRef.current?.value) : (articleTypeRef.current?.value?.trim() ?? ''),
       administration_route: administrationRouteRef.current?.value?.trim() ?? '',
       magistral_category_id: magistralCategoryRef.current?.value || null,
       sub_category: subCategoryRef.current?.value?.trim() ?? '',
@@ -691,6 +746,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
 
   const onPresentationUpdated = (uid, field, value) => {
     setPresentations(prev => prev.map(item => item.uid === uid ? { ...item, [field]: value } : item))
+  }
+
+  const onMagistralArticleTypeChanged = (value) => {
+    const normalizedType = normalizeMagistralArticleType(value)
+    if (articleTypeRef.current) articleTypeRef.current.value = normalizedType
+    setPresentations(getMagistralEquivalenceDefaults(normalizedType))
   }
 
   const onPresentationAdded = () => {
@@ -1169,17 +1230,26 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
               />
               <div className='form-group col-md-3 mb-2'>
                 <label className='form-label'>Tipo de artículo</label>
-                <input ref={articleTypeRef} className='form-control' list='magistral-article-type-options' placeholder='SELECCIONE' />
-                <datalist id='magistral-article-type-options'>
-                  {magistralArticleTypeOptions.map(option => <option key={`magistral-type-${option}`} value={option} />)}
-                </datalist>
+                <select
+                  ref={articleTypeRef}
+                  className='form-control'
+                  defaultValue=''
+                  onChange={(e) => onMagistralArticleTypeChanged(e.target.value)}
+                >
+                  <option value=''>Seleccione</option>
+                  {magistralArticleTypeOptions.map(option => (
+                    <option key={`magistral-type-${option}`} value={option}>{option}</option>
+                  ))}
+                </select>
               </div>
               <div className='form-group col-md-3 mb-2'>
                 <label className='form-label'>Vía administración</label>
-                <input ref={administrationRouteRef} className='form-control' list='magistral-route-options' placeholder='Seleccione' />
-                <datalist id='magistral-route-options'>
-                  {magistralAdministrationRouteOptions.map(option => <option key={`magistral-route-${option}`} value={option} />)}
-                </datalist>
+                <select ref={administrationRouteRef} className='form-control' defaultValue=''>
+                  <option value=''>Seleccione</option>
+                  {magistralAdministrationRouteOptions.map(option => (
+                    <option key={`magistral-route-${option}`} value={option}>{option}</option>
+                  ))}
+                </select>
               </div>
               <SelectAPIFormGroup
                 eRef={laboratoryRef}

@@ -350,6 +350,7 @@ class ArticleController extends BasicController
         }
 
         if ($this->moduleScope === 'magistrales') {
+            $body['article_type'] = $this->normalizeMagistralArticleType($body['article_type'] ?? null);
             if ($code === '') {
                 $code = $this->nextMagistralArticleCode($body['article_type'] ?? null, $id);
             }
@@ -725,6 +726,19 @@ class ArticleController extends BasicController
         $allowed = ['vigente', 'vencido', 'de_baja', 'agotado'];
 
         return in_array($normalized, $allowed, true) ? $normalized : 'vigente';
+    }
+
+    private function normalizeMagistralArticleType($value): string
+    {
+        $rawValue = trim((string)$value);
+        $normalized = mb_strtolower($rawValue);
+
+        if ($normalized === '') return '';
+        if (str_contains($normalized, 'insumo')) return 'INSUMOS';
+        if (str_contains($normalized, 'envase')) return 'ENVASES';
+        if (str_contains($normalized, 'producto')) return 'PRODUCTO TERMINADO';
+
+        return mb_strtoupper($rawValue);
     }
 
     private function normalizeText($value): string
