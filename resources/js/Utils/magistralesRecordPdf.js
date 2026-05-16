@@ -197,7 +197,75 @@ const drawKamaryLogoMark = (doc, x, y) => {
   doc.setTextColor(0, 0, 0)
 }
 
-const renderSampleReferralGuidePdf = (doc, document) => {
+const pdfImageCache = new Map()
+
+const resolveBrowserUrl = (source) => {
+  if (!source) return ''
+  try {
+    return new URL(source, window.location.href).href
+  } catch {
+    return source
+  }
+}
+
+const findPageLogoSource = () => (
+  document.querySelector('.sidenav-menu .logo .logo-lg img[src*="logo"]')?.currentSrc
+  || document.querySelector('.sidenav-menu .logo .logo-lg img[src*="logo"]')?.src
+  || document.querySelector('img[src*="/assets/img/logo"]')?.currentSrc
+  || document.querySelector('img[src*="/assets/img/logo"]')?.src
+  || '/assets/img/logo.svg'
+)
+
+const loadImageAsPngDataUrl = (source) => {
+  const url = resolveBrowserUrl(source)
+  if (pdfImageCache.has(url)) return pdfImageCache.get(url)
+
+  const promise = new Promise((resolve, reject) => {
+    const image = new Image()
+    image.crossOrigin = 'anonymous'
+    image.onload = () => {
+      try {
+        const naturalWidth = Math.max(1, image.naturalWidth || 600)
+        const naturalHeight = Math.max(1, image.naturalHeight || 120)
+        const ratio = naturalWidth / naturalHeight
+        const width = Math.min(1200, naturalWidth)
+        const height = Math.max(1, Math.round(width / ratio))
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const context = canvas.getContext('2d')
+        context.drawImage(image, 0, 0, width, height)
+        resolve(canvas.toDataURL('image/png'))
+      } catch (error) {
+        reject(error)
+      }
+    }
+    image.onerror = reject
+    image.src = url
+  })
+
+  pdfImageCache.set(url, promise)
+  return promise
+}
+
+const drawPageLogo = async (doc, x, y, width, height) => {
+  const sources = [findPageLogoSource(), '/assets/img/logo.svg', '/images/logo.png']
+    .filter((source, index, list) => source && list.indexOf(source) === index)
+
+  for (const source of sources) {
+    try {
+      const dataUrl = await loadImageAsPngDataUrl(source)
+      doc.addImage(dataUrl, 'PNG', x, y, width, height)
+      return
+    } catch {
+      // Try the next source before falling back to a simple text mark.
+    }
+  }
+
+  drawKamaryLogoMark(doc, x, y - 10)
+}
+
+const renderSampleReferralGuidePdf = async (doc, document) => {
   const data = document.source ?? {}
   const pageWidth = doc.internal.pageSize.getWidth()
   const pageHeight = doc.internal.pageSize.getHeight()
@@ -216,14 +284,14 @@ const renderSampleReferralGuidePdf = (doc, document) => {
   const items = Array.isArray(data?.items) ? data.items : []
   let y = 52
 
-  drawKamaryLogoMark(doc, margin + 6, y - 16)
+  await drawPageLogo(doc, margin + 6, y - 15, 92, 19)
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(12)
-  doc.text(companyName, margin + 88, y)
+  doc.text(companyName, margin + 116, y)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7)
-  doc.text(companyAddress.split('\n'), margin + 88, y + 16)
+  doc.text(companyAddress.split('\n'), margin + 116, y + 16)
 
   doc.setDrawColor(0, 0, 0)
   doc.setLineWidth(0.8)
@@ -1245,7 +1313,7 @@ export const buildMagistralesRows = {
   }),
 }
 
-export const openMagistralesRecordPdf = (document) => {
+export const openMagistralesRecordPdf = async (document) => {
   try {
     const doc = ensurePdf(document.orientation ?? 'portrait')
     const now = new Date().toLocaleString('es-PE')
@@ -1265,7 +1333,7 @@ export const openMagistralesRecordPdf = (document) => {
       return
     }
     if (document.layout === 'sample-referral-guide') {
-      renderSampleReferralGuidePdf(doc, document)
+      await renderSampleReferralGuidePdf(doc, document)
       showPdfInModal(doc, document)
       return
     }
