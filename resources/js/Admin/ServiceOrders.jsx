@@ -1640,42 +1640,31 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     ) : (
     <Modal
       modalRef={modalRef}
-      title={<span className='service-order-modal-title'><i className='mdi mdi-menu me-1'></i> ORDEN DE SERVICIO</span>}
-      size='full-width'
-      dialogClass='service-order-modal-dialog modal-dialog-scrollable'
-      contentClass='service-order-modal-content'
-      headerClass='service-order-modal-header'
-      closeButtonClass='btn-close-white'
-      bodyClass='service-order-modal-body'
-      hideFooter
+      title={isEditing ? 'Editar orden de servicio' : 'Registrar orden de servicio'}
+      size='xl'
+      bodyClass='service-order-form-modal-body'
+      btnCancelText='Cerrar'
+      btnSubmitText='Guardar'
       onSubmit={onSave}
     >
       <style>{`
-        .service-order-modal-dialog { width: calc(100vw - 28px); max-width: calc(100vw - 28px); margin: 8px auto; align-items: flex-start; }
-        .service-order-modal-content { border: 0; border-radius: 0; min-height: calc(100vh - 36px); }
-        .service-order-modal-header { background: #202146; color: #fff; min-height: 36px; padding: 7px 14px; border-bottom: 0; }
-        .service-order-modal-header .btn-close { transform: scale(.72); opacity: .85; }
-        .service-order-modal-title { font-size: 11px; font-weight: 700; }
-        .service-order-modal-body { padding: 0 26px 26px; color: #26324d; }
-        .service-order-modal-actions { display: flex; justify-content: center; gap: 16px; padding: 22px 0 14px; border-bottom: 1px solid #e9ecef; }
-        .service-order-modal-actions .btn { border-radius: 0; font-size: 12px; font-weight: 700; padding: 6px 18px; line-height: 1; }
-        .service-order-modal-actions .btn-primary-outline { color: #11184a; background: #fff; border: 1px solid #11184a; }
-        .service-order-modal-actions .btn-muted { color: #8f949a; background: #f0f0f0; border: 1px solid #f0f0f0; }
-        .service-order-form-title { text-align: center; font-size: 22px; font-weight: 600; color: #555b66; margin: 32px 0 20px; }
-        .service-order-modal-body .form-label { color: #26324d; font-size: 12px; margin-bottom: 5px; }
-        .service-order-modal-body .form-control, .service-order-modal-body .form-select { border-radius: 0; min-height: 26px; padding: 3px 10px; font-size: 12px; }
-        .service-order-modal-body .form-control:disabled, .service-order-modal-body .form-select:disabled { background-color: #f5f5f5; color: #7d8490; }
-        .service-order-form-separator { border-top: 1px solid #e9ecef; margin: 28px 0 16px; }
-        .service-order-add-item { border: 1px solid #11184a; color: #11184a; background: #fff; border-radius: 0; font-size: 11px; font-weight: 700; padding: 7px 13px; }
-        .service-order-items-table { width: 100%; border-collapse: collapse; font-size: 12px; color: #26324d; margin-top: 14px; }
-        .service-order-items-table th, .service-order-items-table td { border: 1px solid #e4e8ee; padding: 8px; vertical-align: middle; }
-        .service-order-items-table th { font-size: 10px; text-transform: uppercase; font-weight: 700; background: #fff; }
-        .service-order-items-table .form-control, .service-order-items-table .form-select { min-height: 28px; }
-        .service-order-totals-row { display: grid; grid-template-columns: 1fr 140px 120px; justify-content: end; align-items: center; gap: 12px; margin: 10px 0 22px; }
-        .service-order-total-label { text-align: right; font-weight: 700; font-size: 12px; }
-        .service-order-detraction { display: flex; gap: 18px; align-items: center; margin: 18px 0; font-size: 12px; }
-        .service-order-detraction label { margin: 0; }
-        @media (max-width: 767.98px) { .service-order-modal-body { padding: 0 16px 20px; } .service-order-totals-row { grid-template-columns: 1fr; } .service-order-total-label { text-align: left; } }
+        .service-order-form-modal-body .form-label { color: #374151; font-weight: 600; }
+        .service-order-form-section-title { color: #313a46; font-size: 0.9rem; font-weight: 700; margin: 0; }
+        .service-order-items-wrapper { border: 1px solid #e6ebf1; border-radius: 6px; overflow: auto; }
+        .service-order-items-table { min-width: 1120px; }
+        .service-order-items-table th { color: #4b5563; font-size: .72rem; text-transform: uppercase; white-space: nowrap; }
+        .service-order-items-table td { vertical-align: middle; }
+        .service-order-items-table .form-control,
+        .service-order-items-table .form-select { min-height: 34px; }
+        .service-order-summary { max-width: 360px; margin-left: auto; }
+        .service-order-summary-row { display: grid; grid-template-columns: 130px 1fr; align-items: center; gap: .75rem; margin-bottom: .5rem; }
+        .service-order-summary-label { font-weight: 700; text-align: right; color: #313a46; }
+        .service-order-detraction-options { display: flex; gap: 1rem; align-items: center; min-height: 38px; }
+        @media (max-width: 767.98px) {
+          .service-order-summary { max-width: none; }
+          .service-order-summary-row { grid-template-columns: 1fr; gap: .25rem; }
+          .service-order-summary-label { text-align: left; }
+        }
       `}</style>
 
       <input ref={idRef} hidden />
@@ -1691,14 +1680,10 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       <input ref={taxAmountRef} type='hidden' />
       <textarea ref={observationsRef} hidden />
 
-      <div className='service-order-modal-actions'>
-        <button type='submit' className='btn btn-primary-outline'><i className='mdi mdi-plus me-1'></i> Guardar</button>
-        <button type='button' className='btn btn-muted' data-bs-dismiss='modal'><i className='mdi mdi-close me-1'></i> Cerrar</button>
-      </div>
-
-      <h3 className='service-order-form-title'>Orden de Servicio N&deg;</h3>
-
-      <div className='row g-4 align-items-end'>
+      <div className='row g-3'>
+        <div className='col-12'>
+          <h5 className='service-order-form-section-title'>Datos de la orden</h5>
+        </div>
         <div className='col-12 col-lg-6'>
           <label className='form-label'>Cliente</label>
           <select ref={clientSelectRef} className='form-select' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required>
@@ -1711,11 +1696,11 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           </select>
         </div>
         <div className='col-12 col-lg-3'>
-          <label className='form-label'>Contrato:</label>
+          <label className='form-label'>Contrato</label>
           <input ref={contractLabelRef} className='form-control' placeholder='Seleccionar' />
         </div>
         <div className='col-12 col-lg-3'>
-          <label className='form-label'>Ciclo Facturaci&oacute;n:</label>
+          <label className='form-label'>Ciclo de facturaci&oacute;n</label>
           <select ref={billingCycleRef} className='form-select' required>
             <option value='Unico'>Unico</option>
             <option value='Mensual'>Mensual</option>
@@ -1723,14 +1708,14 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           </select>
         </div>
         <div className='col-12 col-md-6 col-lg-3'>
-          <label className='form-label'>Moneda:</label>
+          <label className='form-label'>Moneda</label>
           <select ref={currencyRef} className='form-select' onChange={(e) => onCurrencyChange(e.target.value)} required>
             <option value='PEN'>S/ | Soles</option>
             <option value='USD'>$ | Dolares</option>
           </select>
         </div>
         <div className='col-12 col-md-6 col-lg-3'>
-          <label className='form-label'>Comprobante:</label>
+          <label className='form-label'>Comprobante</label>
           <select ref={expectedDocumentTypeRef} className='form-select' required>
             <option value=''>Seleccione</option>
             <option value='Factura'>Factura</option>
@@ -1740,13 +1725,19 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         </div>
       </div>
 
-      <div className='service-order-form-separator'></div>
+      <hr className='my-4' />
 
-      <div className='table-responsive'>
-        <table className='service-order-items-table'>
-          <thead>
+      <div className='d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2'>
+        <h5 className='service-order-form-section-title'>Detalle de servicios</h5>
+        <button type='button' className='btn btn-sm btn-primary' onClick={() => setItems(prev => [...prev, emptyItem()])}>
+          <i className='mdi mdi-plus me-1'></i> Agregar item
+        </button>
+      </div>
+
+      <div className='service-order-items-wrapper'>
+        <table className='table table-sm table-bordered align-middle service-order-items-table mb-0'>
+          <thead className='table-light'>
             <tr>
-              <th style={{ width: 120 }}><button type='button' className='service-order-add-item' onClick={() => setItems(prev => [...prev, emptyItem()])}>AGREGAR ITEM</button></th>
               <th style={{ width: 48 }}>#</th>
               <th>Servicio</th>
               <th style={{ width: 170 }}>Alcance</th>
@@ -1759,7 +1750,6 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           <tbody>
             {items.map((row, index) => (
               <tr key={`service-order-item-row-${row.uid}`}>
-                <td></td>
                 <td>{index + 1}</td>
                 <td>
                   <select className='form-select' value={row.service_id} onChange={(e) => onItemChange(row.uid, 'service_id', e.target.value)} required>
@@ -1780,28 +1770,46 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         </table>
       </div>
 
-      <div className='service-order-totals-row'>
-        <div></div><div className='service-order-total-label'>Gravadas: {serviceCurrencySymbol}</div><input className='form-control text-end' value={serviceOrderSubtotal.toFixed(2)} disabled />
-        <div></div><div className='service-order-total-label'>I.G.V.: {serviceCurrencySymbol}</div><input className='form-control text-end' value={serviceOrderTaxAmount.toFixed(2)} disabled />
-        <div></div><div className='service-order-total-label'>Total: {serviceCurrencySymbol}</div><input className='form-control text-end' value={serviceOrderGrandTotal.toFixed(2)} disabled />
+      <div className='service-order-summary mt-3'>
+        <div className='service-order-summary-row'>
+          <span className='service-order-summary-label'>Gravadas: {serviceCurrencySymbol}</span>
+          <input className='form-control text-end' value={serviceOrderSubtotal.toFixed(2)} disabled />
+        </div>
+        <div className='service-order-summary-row'>
+          <span className='service-order-summary-label'>I.G.V.: {serviceCurrencySymbol}</span>
+          <input className='form-control text-end' value={serviceOrderTaxAmount.toFixed(2)} disabled />
+        </div>
+        <div className='service-order-summary-row'>
+          <span className='service-order-summary-label'>Total: {serviceCurrencySymbol}</span>
+          <input className='form-control text-end' value={serviceOrderGrandTotal.toFixed(2)} disabled />
+        </div>
       </div>
 
-      <div className='service-order-detraction'>
-        <span>Detracci&oacute;n:</span>
-        <label><input type='radio' name='service-order-detraction' checked={!detractionEnabled} onChange={() => setDetractionEnabled(false)} /> No</label>
-        <label><input type='radio' name='service-order-detraction' checked={detractionEnabled} onChange={() => setDetractionEnabled(true)} /> Si</label>
-      </div>
+      <hr className='my-4' />
 
-      <div className='row g-4 align-items-end'>
+      <div className='row g-3 align-items-end'>
+        <div className='col-12 col-lg-4'>
+          <label className='form-label'>Detracci&oacute;n</label>
+          <div className='service-order-detraction-options'>
+            <div className='form-check'>
+              <input className='form-check-input' id='service-order-detraction-no' type='radio' name='service-order-detraction' checked={!detractionEnabled} onChange={() => setDetractionEnabled(false)} />
+              <label className='form-check-label' htmlFor='service-order-detraction-no'>No</label>
+            </div>
+            <div className='form-check'>
+              <input className='form-check-input' id='service-order-detraction-yes' type='radio' name='service-order-detraction' checked={detractionEnabled} onChange={() => setDetractionEnabled(true)} />
+              <label className='form-check-label' htmlFor='service-order-detraction-yes'>Si</label>
+            </div>
+          </div>
+        </div>
         <div className='col-12 col-lg-6'>
-          <label className='form-label'>Forma de Pago:</label>
+          <label className='form-label'>Forma de pago</label>
           <select ref={paymentConditionRef} className='form-select'>
             <option value='Contado'>Contado</option>
             <option value='Credito'>Credito</option>
           </select>
         </div>
-        <div className='col-12 col-lg-6'>
-          <label className='form-label'>D&iacute;a Facturaci&oacute;n:</label>
+        <div className='col-12 col-lg-2'>
+          <label className='form-label'>D&iacute;a facturaci&oacute;n</label>
           <select ref={billingDayRef} className='form-select'>
             <option value=''>Seleccionar</option>
             {Array.from({ length: 31 }, (_, index) => index + 1).map(day => <option key={`service-order-billing-day-${day}`} value={day}>{day}</option>)}
