@@ -203,6 +203,12 @@ class ArticlesRest extends BasicRest {
     }
   }
 
+  getMagistralSubcategories = async (categoryId) => {
+    if (!categoryId) return []
+    const result = await this.simpleGet(`/api/admin/magistrales/categories/${categoryId}/subcategories`)
+    return result ?? []
+  }
+
   getStockByWarehouse = async (articleId) => {
     if (!articleId) return null
     try {

@@ -10,6 +10,7 @@ use App\Models\Client;
 use App\Models\Laboratory;
 use App\Models\MagistralCategory;
 use App\Models\MagistralFormat;
+use App\Models\MagistralSubcategory;
 use App\Models\StorageProductLot;
 use App\Models\Unit;
 use App\Models\Warehouse;
@@ -312,6 +313,7 @@ class ArticleController extends BasicController
         $activePrincipleId = $body['active_principle_id'] ?? null;
         $unitId = $body['unit_id'] ?? null;
         $magistralCategoryId = $this->toNullableInt($body['magistral_category_id'] ?? null);
+        $requestedSubCategory = trim((string)($body['sub_category'] ?? ''));
         $magistralFormatId = $this->toNullableInt($body['magistral_format_id'] ?? null);
         $equivalenceUnitId = $this->toNullableInt($body['equivalence_unit_id'] ?? null);
 
@@ -392,6 +394,19 @@ class ArticleController extends BasicController
             MagistralCategory::whereIn('description', MagistralCategory::ALLOWED_DESCRIPTIONS)
                 ->findOrFail($magistralCategoryId);
         }
+        if ($this->moduleScope === 'magistrales' && $requestedSubCategory !== '') {
+            if (!$magistralCategoryId) {
+                throw new \Exception('La categoria es obligatoria para seleccionar subcategoria');
+            }
+
+            $validSubcategory = MagistralSubcategory::where('magistral_category_id', $magistralCategoryId)
+                ->whereNotNull('status')
+                ->whereRaw('LOWER(TRIM(description)) = ?', [mb_strtolower($requestedSubCategory)])
+                ->exists();
+            if (!$validSubcategory) {
+                throw new \Exception('La subcategoria no pertenece a la categoria seleccionada');
+            }
+        }
         if ($magistralFormatId) MagistralFormat::findOrFail($magistralFormatId);
 
         $principle = ActivePrinciple::findOrFail($activePrincipleId);
@@ -416,7 +431,7 @@ class ArticleController extends BasicController
         $body['article_type'] = trim((string)($body['article_type'] ?? '')) ?: null;
         $body['administration_route'] = trim((string)($body['administration_route'] ?? '')) ?: null;
         $body['magistral_category_id'] = $magistralCategoryId;
-        $body['sub_category'] = trim((string)($body['sub_category'] ?? '')) ?: null;
+        $body['sub_category'] = $requestedSubCategory ?: null;
         $body['magistral_format_id'] = $magistralFormatId;
         $body['health_registration'] = trim((string)($body['health_registration'] ?? '')) ?: null;
         $body['default_lot'] = trim((string)($body['default_lot'] ?? '')) ?: null;

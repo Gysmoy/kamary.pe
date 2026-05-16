@@ -280,6 +280,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const newManufacturerNameRef = useRef()
   const newManufacturerCountryRef = useRef()
   const newManufacturerStatusRef = useRef()
+  const suppressMagistralCategoryChangeRef = useRef(false)
+  const subcategoryLoadSequenceRef = useRef(0)
 
   const [isEditing, setIsEditing] = useState(false)
   const [isViewing, setIsViewing] = useState(false)
@@ -291,6 +293,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const [selectedUnitId, setSelectedUnitId] = useState('')
   const [selectedEquivalenceUnitId, setSelectedEquivalenceUnitId] = useState('')
   const [selectedStorageClientId, setSelectedStorageClientId] = useState('')
+  const [selectedMagistralCategoryId, setSelectedMagistralCategoryId] = useState('')
+  const [selectedSubCategory, setSelectedSubCategory] = useState('')
+  const [magistralSubcategories, setMagistralSubcategories] = useState([])
+  const [isLoadingSubcategories, setIsLoadingSubcategories] = useState(false)
   const [manufacturerTargetLotUid, setManufacturerTargetLotUid] = useState('')
   const [storageClients, setStorageClients] = useState([])
   const [storageManufacturers, setStorageManufacturers] = useState([])
@@ -347,6 +353,40 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     setSelectedPrincipleId('')
   }
 
+  const findSubcategoryDescription = (rows, value) => {
+    const normalizedValue = normalizeHeader(value)
+    if (!normalizedValue) return ''
+    return rows.find(item => normalizeHeader(item?.description) === normalizedValue)?.description ?? ''
+  }
+
+  const loadMagistralSubcategories = async (categoryId, preferredSubCategory = '') => {
+    const normalizedCategoryId = categoryId ? `${categoryId}` : ''
+    const loadSequence = ++subcategoryLoadSequenceRef.current
+
+    setSelectedMagistralCategoryId(normalizedCategoryId)
+    setMagistralSubcategories([])
+    setSelectedSubCategory('')
+
+    if (!normalizedCategoryId) {
+      setIsLoadingSubcategories(false)
+      return
+    }
+
+    setIsLoadingSubcategories(true)
+    const rows = await articlesRest.getMagistralSubcategories(normalizedCategoryId)
+    if (loadSequence !== subcategoryLoadSequenceRef.current) return
+
+    const activeRows = (rows ?? []).filter(item => item.status !== null)
+    setMagistralSubcategories(activeRows)
+    setSelectedSubCategory(findSubcategoryDescription(activeRows, preferredSubCategory))
+    setIsLoadingSubcategories(false)
+  }
+
+  const onMagistralCategoryChanged = async (e) => {
+    if (suppressMagistralCategoryChangeRef.current) return
+    await loadMagistralSubcategories(e.target.value)
+  }
+
   const loadStorageProductOptions = async () => {
     const [clients, manufacturers] = await Promise.all([
       articlesRest.getStorageClients(),
@@ -374,7 +414,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     const normalizedArticleType = normalizeMagistralArticleType(data?.article_type ?? '')
     if (articleTypeRef.current) articleTypeRef.current.value = normalizedArticleType
     if (administrationRouteRef.current) administrationRouteRef.current.value = data?.administration_route ?? ''
-    if (subCategoryRef.current) subCategoryRef.current.value = data?.sub_category ?? ''
     if (healthRegistrationRef.current) healthRegistrationRef.current.value = data?.health_registration ?? ''
     if (volumeRef.current) volumeRef.current.value = data?.volume ?? ''
     if (marginRuleRef.current) marginRuleRef.current.checked = !!data?.margin_rule
@@ -424,13 +463,18 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     if (purchasePriceForeignRef.current) purchasePriceForeignRef.current.value = data?.purchase_price_foreign ?? ''
     if (notesRef.current) notesRef.current.value = data?.notes ?? ''
 
+    const selectedCategoryIsAllowed = data?.magistral_category_id && data?.magistralCategory?.description && isAllowedMagistralCategory(data.magistralCategory.description)
+    const preferredMagistralCategoryId = selectedCategoryIsAllowed ? data.magistral_category_id : null
     if (magistralCategoryRef.current) {
-      if (data?.magistral_category_id && data?.magistralCategory?.description && isAllowedMagistralCategory(data.magistralCategory.description)) {
+      suppressMagistralCategoryChangeRef.current = true
+      if (preferredMagistralCategoryId) {
         SetSelectValue(magistralCategoryRef.current, data.magistral_category_id, data.magistralCategory.description)
       } else {
         $(magistralCategoryRef.current).empty().trigger('change')
       }
+      suppressMagistralCategoryChangeRef.current = false
     }
+    loadMagistralSubcategories(preferredMagistralCategoryId, data?.sub_category ?? '')
 
     if (magistralFormatRef.current) {
       if (data?.magistral_format_id && data?.magistralFormat?.description) {
@@ -494,7 +538,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       article_type: isMagistrales ? normalizeMagistralArticleType(articleTypeRef.current?.value) : (articleTypeRef.current?.value?.trim() ?? ''),
       administration_route: administrationRouteRef.current?.value?.trim() ?? '',
       magistral_category_id: magistralCategoryRef.current?.value || null,
-      sub_category: subCategoryRef.current?.value?.trim() ?? '',
+      sub_category: (subCategoryRef.current?.value || selectedSubCategory || '').trim(),
       magistral_format_id: magistralFormatRef.current?.value || null,
       health_registration: healthRegistrationRef.current?.value?.trim() ?? '',
       laboratory_id: selectedLaboratoryId || null,
@@ -1229,8 +1273,25 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
                 searchAPI='/api/admin/magistrales/categories/paginate'
                 searchBy='description'
                 dropdownParent='#article-form-container'
+                onChange={onMagistralCategoryChanged}
               />
-              <InputFormGroup eRef={subCategoryRef} label='Subcategoría' col='col-md-4' />
+              <SelectFormGroup
+                eRef={subCategoryRef}
+                label='Subcategoría'
+                col='col-md-4'
+                dropdownParent='#article-form-container'
+                value={selectedSubCategory}
+                disabled={!selectedMagistralCategoryId || isLoadingSubcategories || magistralSubcategories.length === 0}
+                effectWith={[selectedMagistralCategoryId, isLoadingSubcategories, magistralSubcategories.map(item => `${item.id}:${item.description}`).join('|')]}
+                onChange={(e) => setSelectedSubCategory(e.target.value)}
+              >
+                <option value=''>
+                  {!selectedMagistralCategoryId ? 'Seleccione una categoría' : (isLoadingSubcategories ? 'Cargando...' : (magistralSubcategories.length ? 'Seleccione' : 'Sin subcategorías'))}
+                </option>
+                {magistralSubcategories.map(subcategory => (
+                  <option key={`magistral-subcategory-${subcategory.id}`} value={subcategory.description}>{subcategory.description}</option>
+                ))}
+              </SelectFormGroup>
               <SelectAPIFormGroup
                 eRef={magistralFormatRef}
                 label='Presentación'
@@ -1829,8 +1890,25 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
             searchAPI='/api/admin/magistrales/categories/paginate'
             searchBy='description'
             dropdownParent='#article-form-container'
+            onChange={onMagistralCategoryChanged}
           />
-          <InputFormGroup eRef={subCategoryRef} label='Sub categoria' col='col-md-3' />
+          <SelectFormGroup
+            eRef={subCategoryRef}
+            label='Sub categoria'
+            col='col-md-3'
+            dropdownParent='#article-form-container'
+            value={selectedSubCategory}
+            disabled={!selectedMagistralCategoryId || isLoadingSubcategories || magistralSubcategories.length === 0}
+            effectWith={[selectedMagistralCategoryId, isLoadingSubcategories, magistralSubcategories.map(item => `${item.id}:${item.description}`).join('|')]}
+            onChange={(e) => setSelectedSubCategory(e.target.value)}
+          >
+            <option value=''>
+              {!selectedMagistralCategoryId ? 'Seleccione una categoria' : (isLoadingSubcategories ? 'Cargando...' : (magistralSubcategories.length ? 'Seleccione' : 'Sin subcategorias'))}
+            </option>
+            {magistralSubcategories.map(subcategory => (
+              <option key={`magistral-subcategory-legacy-${subcategory.id}`} value={subcategory.description}>{subcategory.description}</option>
+            ))}
+          </SelectFormGroup>
           <SelectAPIFormGroup
             eRef={magistralFormatRef}
             label='Presentacion'
