@@ -9,7 +9,6 @@ use App\Models\ArticlePresentation;
 use App\Models\Client;
 use App\Models\Laboratory;
 use App\Models\MagistralCategory;
-use App\Models\MagistralFormat;
 use App\Models\MagistralSubcategory;
 use App\Models\StorageProductLot;
 use App\Models\Unit;
@@ -44,7 +43,6 @@ class ArticleController extends BasicController
                 'unit:id,name,symbol',
                 'equivalenceUnit:id,name,symbol',
                 'magistralCategory:id,code,description',
-                'magistralFormat:id,description,quantity',
                 'presentations:id,article_id,name,units,price,purchase_price_national,purchase_price_foreign,sort_order,status',
                 'storageLots:id,article_id,lot,expiration_date,storage_condition,manufacturer_id,status',
                 'storageLots.manufacturer:id,name,code',
@@ -314,7 +312,7 @@ class ArticleController extends BasicController
         $unitId = $body['unit_id'] ?? null;
         $magistralCategoryId = $this->toNullableInt($body['magistral_category_id'] ?? null);
         $requestedSubCategory = trim((string)($body['sub_category'] ?? ''));
-        $magistralFormatId = $this->toNullableInt($body['magistral_format_id'] ?? null);
+        $magistralPresentation = $this->canonicalMagistralPresentation($body['magistral_presentation'] ?? null);
         $equivalenceUnitId = $this->toNullableInt($body['equivalence_unit_id'] ?? null);
 
         $this->presentationsPayload = is_array($request->presentations) ? $request->presentations : [];
@@ -364,6 +362,9 @@ class ArticleController extends BasicController
             if ($laboratoryId && !$activePrincipleId) {
                 $activePrincipleId = $this->ensureDefaultActivePrinciple((int)$laboratoryId);
             }
+            if (!empty($body['magistral_presentation']) && !$magistralPresentation) {
+                throw new \Exception('La presentacion seleccionada no es valida');
+            }
         } else {
             unset($body['magistral_status']);
         }
@@ -407,7 +408,6 @@ class ArticleController extends BasicController
                 throw new \Exception('La subcategoria no pertenece a la categoria seleccionada');
             }
         }
-        if ($magistralFormatId) MagistralFormat::findOrFail($magistralFormatId);
 
         $principle = ActivePrinciple::findOrFail($activePrincipleId);
         if ((int)$principle->laboratory_id !== (int)$laboratoryId) {
@@ -432,7 +432,8 @@ class ArticleController extends BasicController
         $body['administration_route'] = trim((string)($body['administration_route'] ?? '')) ?: null;
         $body['magistral_category_id'] = $magistralCategoryId;
         $body['sub_category'] = $requestedSubCategory ?: null;
-        $body['magistral_format_id'] = $magistralFormatId;
+        $body['magistral_presentation'] = $magistralPresentation;
+        $body['magistral_format_id'] = null;
         $body['health_registration'] = trim((string)($body['health_registration'] ?? '')) ?: null;
         $body['default_lot'] = trim((string)($body['default_lot'] ?? '')) ?: null;
         $body['default_expiration_date'] = $this->normalizeDate($body['default_expiration_date'] ?? null);
@@ -501,6 +502,7 @@ class ArticleController extends BasicController
             'administration_route',
             'magistral_category_id',
             'sub_category',
+            'magistral_presentation',
             'magistral_format_id',
             'health_registration',
             'default_lot',
@@ -757,6 +759,20 @@ class ArticleController extends BasicController
         if (str_contains($normalized, 'producto')) return 'PRODUCTO TERMINADO';
 
         return mb_strtoupper($rawValue);
+    }
+
+    private function canonicalMagistralPresentation($value): ?string
+    {
+        $normalized = $this->normalizeText($value);
+        if ($normalized === '') return null;
+
+        foreach (Article::MAGISTRAL_PRESENTATION_OPTIONS as $presentation) {
+            if ($this->normalizeText($presentation) === $normalized) {
+                return $presentation;
+            }
+        }
+
+        return null;
     }
 
     private function normalizeText($value): string

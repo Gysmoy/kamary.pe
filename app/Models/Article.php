@@ -9,6 +9,19 @@ class Article extends Model
 {
     use HasFactory;
 
+    public const MAGISTRAL_PRESENTATION_OPTIONS = [
+        'BOLSA',
+        'CAJA',
+        'CREMA',
+        'FRASCO',
+        'LIQUIDO',
+        'POLVO',
+        'POTE',
+        'ROLLO',
+        'TUBO',
+        'UNIDAD',
+    ];
+
     protected $fillable = [
         'code',
         'module_scope',
@@ -19,6 +32,7 @@ class Article extends Model
         'administration_route',
         'magistral_category_id',
         'sub_category',
+        'magistral_presentation',
         'magistral_format_id',
         'health_registration',
         'laboratory_id',

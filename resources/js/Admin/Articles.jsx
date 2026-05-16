@@ -169,9 +169,41 @@ const allowedMagistralCategoryLabels = [
   'ANDROLOGIA',
 ]
 
+const magistralPresentationOptions = [
+  'BOLSA',
+  'CAJA',
+  'CREMA',
+  'FRASCO',
+  'LIQUIDO',
+  'POLVO',
+  'POTE',
+  'ROLLO',
+  'TUBO',
+  'UNIDAD',
+]
+
 const isAllowedMagistralCategory = (value) => {
   const normalized = normalizeHeader(value)
   return allowedMagistralCategoryLabels.some(label => normalizeHeader(label) === normalized)
+}
+
+const getMagistralPresentationValue = (value) => {
+  const normalized = normalizeHeader(value)
+  if (!normalized) return ''
+
+  const direct = magistralPresentationOptions.find(option => normalizeHeader(option) === normalized)
+  if (direct) return direct
+
+  const aliases = {
+    CREMA: ['crema'],
+    LIQUIDO: ['liquido', 'jarabe', 'solucion', 'suspension', 'gotas'],
+    POTE: ['pote'],
+    TUBO: ['tubo'],
+    UNIDAD: ['unidad', 'und'],
+  }
+
+  return Object.entries(aliases)
+    .find(([, needles]) => needles.some(needle => normalized.includes(needle)))?.[0] ?? ''
 }
 
 const getMagistralEquivalenceDefaults = (articleType) => {
@@ -247,7 +279,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const administrationRouteRef = useRef()
   const magistralCategoryRef = useRef()
   const subCategoryRef = useRef()
-  const magistralFormatRef = useRef()
+  const magistralPresentationRef = useRef()
   const healthRegistrationRef = useRef()
   const laboratoryRef = useRef()
   const principleRef = useRef()
@@ -295,6 +327,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const [selectedStorageClientId, setSelectedStorageClientId] = useState('')
   const [selectedMagistralCategoryId, setSelectedMagistralCategoryId] = useState('')
   const [selectedSubCategory, setSelectedSubCategory] = useState('')
+  const [selectedMagistralPresentation, setSelectedMagistralPresentation] = useState('')
   const [magistralSubcategories, setMagistralSubcategories] = useState([])
   const [isLoadingSubcategories, setIsLoadingSubcategories] = useState(false)
   const [manufacturerTargetLotUid, setManufacturerTargetLotUid] = useState('')
@@ -475,14 +508,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       suppressMagistralCategoryChangeRef.current = false
     }
     loadMagistralSubcategories(preferredMagistralCategoryId, data?.sub_category ?? '')
-
-    if (magistralFormatRef.current) {
-      if (data?.magistral_format_id && data?.magistralFormat?.description) {
-        SetSelectValue(magistralFormatRef.current, data.magistral_format_id, data.magistralFormat.description)
-      } else {
-        $(magistralFormatRef.current).empty().trigger('change')
-      }
-    }
+    setSelectedMagistralPresentation(getMagistralPresentationValue(data?.magistral_presentation ?? data?.magistralFormat?.description ?? ''))
 
     if (isStorageProduct) {
       setSelectedStorageClientId(data?.client_id ? `${data.client_id}` : '')
@@ -539,7 +565,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       administration_route: administrationRouteRef.current?.value?.trim() ?? '',
       magistral_category_id: magistralCategoryRef.current?.value || null,
       sub_category: (subCategoryRef.current?.value || selectedSubCategory || '').trim(),
-      magistral_format_id: magistralFormatRef.current?.value || null,
+      magistral_presentation: selectedMagistralPresentation || magistralPresentationRef.current?.value || null,
       health_registration: healthRegistrationRef.current?.value?.trim() ?? '',
       laboratory_id: selectedLaboratoryId || null,
       active_principle_id: selectedPrincipleId || null,
@@ -1170,7 +1196,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       cellTemplate: (container, { data }) => container.text(data?.code ?? '')
     },
     { dataField: 'article_type', caption: 'Tipo', width: '120px' },
-    { dataField: 'magistralFormat.description', caption: 'Presentacion', width: '150px' },
+    { dataField: 'magistral_presentation', caption: 'Presentacion', width: '150px' },
     { dataField: 'administration_route', caption: 'Via adm.', width: '120px' },
     { dataField: 'name', caption: 'Articulo', minWidth: 200 },
     { dataField: 'laboratory.name', caption: 'Laboratorio', width: '150px' },
@@ -1292,14 +1318,19 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
                   <option key={`magistral-subcategory-${subcategory.id}`} value={subcategory.description}>{subcategory.description}</option>
                 ))}
               </SelectFormGroup>
-              <SelectAPIFormGroup
-                eRef={magistralFormatRef}
+              <SelectFormGroup
+                eRef={magistralPresentationRef}
                 label='Presentación'
                 col='col-md-4'
-                searchAPI='/api/admin/magistrales/formats/paginate'
-                searchBy='description'
                 dropdownParent='#article-form-container'
-              />
+                value={selectedMagistralPresentation}
+                onChange={(e) => setSelectedMagistralPresentation(e.target.value)}
+              >
+                <option value=''>Seleccione</option>
+                {magistralPresentationOptions.map(option => (
+                  <option key={`magistral-presentation-${option}`} value={option}>{option}</option>
+                ))}
+              </SelectFormGroup>
               <div className='form-group col-md-3 mb-2'>
                 <label className='form-label'>Tipo de artículo</label>
                 <select
@@ -1909,14 +1940,19 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
               <option key={`magistral-subcategory-legacy-${subcategory.id}`} value={subcategory.description}>{subcategory.description}</option>
             ))}
           </SelectFormGroup>
-          <SelectAPIFormGroup
-            eRef={magistralFormatRef}
+          <SelectFormGroup
+            eRef={magistralPresentationRef}
             label='Presentacion'
             col='col-md-3'
-            searchAPI='/api/admin/magistrales/formats/paginate'
-            searchBy='description'
             dropdownParent='#article-form-container'
-          />
+            value={selectedMagistralPresentation}
+            onChange={(e) => setSelectedMagistralPresentation(e.target.value)}
+          >
+            <option value=''>Seleccione</option>
+            {magistralPresentationOptions.map(option => (
+              <option key={`magistral-presentation-legacy-${option}`} value={option}>{option}</option>
+            ))}
+          </SelectFormGroup>
           <InputFormGroup eRef={unitsPerArticleRef} label='Unidades por caja' col='col-md-3' type='number' min='1' required />
           <InputFormGroup eRef={articleTypeRef} label='Tipo de articulo' col='col-md-3' />
           <InputFormGroup eRef={administrationRouteRef} label='Via administracion' col='col-md-3' />

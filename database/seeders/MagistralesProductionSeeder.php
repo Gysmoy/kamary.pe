@@ -61,7 +61,7 @@ class MagistralesProductionSeeder extends Seeder
             $formats = $this->ensureFormats();
             $suppliers = $this->ensureSuppliers();
             $responsibles = $this->ensureResponsibles();
-            $articles = $this->ensureArticles($units, $laboratories, $principles, $categories, $subcategories, $formats);
+            $articles = $this->ensureArticles($units, $laboratories, $principles, $categories, $subcategories);
             $formulas = $this->ensureFormulas($articles);
             $purchaseOrders = $this->ensurePurchaseOrders($business, $branch, $warehouse, $suppliers, $articles);
             $this->ensureIncomes($business, $warehouse, $suppliers, $purchaseOrders, $articles);
@@ -355,12 +355,12 @@ class MagistralesProductionSeeder extends Seeder
             ->get();
     }
 
-    private function ensureArticles(Collection $units, Collection $laboratories, Collection $principles, Collection $categories, Collection $subcategories, Collection $formats): Collection
+    private function ensureArticles(Collection $units, Collection $laboratories, Collection $principles, Collection $categories, Collection $subcategories): Collection
     {
         for ($i = 1; $i <= 10; $i++) {
             $category = $categories->get(($i - 1) % max(1, $categories->count()));
             $subcategory = $subcategories->get(($i - 1) % max(1, $subcategories->count()));
-            $format = $formats->get(($i - 1) % max(1, $formats->count()));
+            $presentation = Article::MAGISTRAL_PRESENTATION_OPTIONS[($i - 1) % count(Article::MAGISTRAL_PRESENTATION_OPTIONS)];
             $laboratory = $laboratories->get(($i - 1) % max(1, $laboratories->count()));
             $principle = $principles->where('laboratory_id', $laboratory?->id)->first() ?: $principles->first();
             $unit = $units->get(($i - 1) % max(1, $units->count()));
@@ -377,7 +377,8 @@ class MagistralesProductionSeeder extends Seeder
                     'administration_route' => $i % 2 === 0 ? 'Topica' : 'Oral',
                     'magistral_category_id' => $category?->id,
                     'sub_category' => $subcategory?->description,
-                    'magistral_format_id' => $format?->id,
+                    'magistral_presentation' => $presentation,
+                    'magistral_format_id' => null,
                     'health_registration' => 'NSO-MAG-' . str_pad((string)$i, 4, '0', STR_PAD_LEFT),
                     'laboratory_id' => $laboratory?->id,
                     'active_principle_id' => $principle?->id,

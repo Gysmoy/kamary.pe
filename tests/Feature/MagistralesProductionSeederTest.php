@@ -47,6 +47,7 @@ class MagistralesProductionSeederTest extends TestCase
         $this->assertSame(10, Supplier::where('module_scope', 'magistrales')->where('ruc', 'like', '99000%')->count());
         $this->assertSame(10, MagistralResponsible::where('document_number', 'like', 'MAGRESP%')->count());
         $this->assertSame(10, Article::where('module_scope', 'magistrales')->where('code', 'like', 'MAG-ART-%')->count());
+        $this->assertSame(10, Article::where('module_scope', 'magistrales')->whereIn('magistral_presentation', Article::MAGISTRAL_PRESENTATION_OPTIONS)->count());
         $this->assertSame(10, MagistralFormula::whereHas('article', fn($query) => $query->where('code', 'like', 'MAG-ART-%'))->count());
         $this->assertSame(20, MagistralFormulaItem::whereHas('formula.article', fn($query) => $query->where('code', 'like', 'MAG-ART-%'))->count());
         $this->assertSame(10, PurchaseOrder::where('module_scope', 'magistrales')->where('code', 'like', 'MAG-OC-%')->count());
