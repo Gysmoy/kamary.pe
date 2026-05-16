@@ -41,8 +41,8 @@ class MagistralesProductionSeederTest extends TestCase
         $this->assertSame(10, Unit::where('module_scope', 'magistrales')->where('symbol', 'like', 'MAG%')->count());
         $this->assertSame(10, Laboratory::where('code', 'like', 'MAGLAB-%')->count());
         $this->assertSame(10, ActivePrinciple::where('name', 'like', 'Principio Activo Magistral %')->count());
-        $this->assertSame(10, MagistralCategory::where('code', 'like', 'MAG-CAT-%')->count());
-        $this->assertSame(10, MagistralSubcategory::where('description', 'like', 'Subcategoria Magistral %')->count());
+        $this->assertSame(6, MagistralCategory::where('code', 'like', 'MAG-CAT-%')->whereIn('description', MagistralCategory::ALLOWED_DESCRIPTIONS)->count());
+        $this->assertSame(6, MagistralSubcategory::where('description', 'like', 'Subcategoria Magistral %')->count());
         $this->assertSame(10, MagistralFormat::whereIn('description', $this->formatDescriptions())->count());
         $this->assertSame(10, Supplier::where('module_scope', 'magistrales')->where('ruc', 'like', '99000%')->count());
         $this->assertSame(10, MagistralResponsible::where('document_number', 'like', 'MAGRESP%')->count());
@@ -79,7 +79,7 @@ class MagistralesProductionSeederTest extends TestCase
     private function seededCounts(): array
     {
         return [
-            'categories' => MagistralCategory::where('code', 'like', 'MAG-CAT-%')->count(),
+            'categories' => MagistralCategory::where('code', 'like', 'MAG-CAT-%')->whereIn('description', MagistralCategory::ALLOWED_DESCRIPTIONS)->count(),
             'formats' => MagistralFormat::whereIn('description', $this->formatDescriptions())->count(),
             'articles' => Article::where('module_scope', 'magistrales')->where('code', 'like', 'MAG-ART-%')->count(),
             'formulas' => MagistralFormula::whereHas('article', fn($query) => $query->where('code', 'like', 'MAG-ART-%'))->count(),

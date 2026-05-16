@@ -388,7 +388,10 @@ class ArticleController extends BasicController
         Laboratory::findOrFail($laboratoryId);
         Unit::findOrFail($unitId);
         if ($equivalenceUnitId) Unit::findOrFail($equivalenceUnitId);
-        if ($magistralCategoryId) MagistralCategory::findOrFail($magistralCategoryId);
+        if ($magistralCategoryId) {
+            MagistralCategory::whereIn('description', MagistralCategory::ALLOWED_DESCRIPTIONS)
+                ->findOrFail($magistralCategoryId);
+        }
         if ($magistralFormatId) MagistralFormat::findOrFail($magistralFormatId);
 
         $principle = ActivePrinciple::findOrFail($activePrincipleId);

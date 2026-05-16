@@ -163,6 +163,20 @@ const magistralEquivalenceDefaultsByType = {
   ],
 }
 
+const allowedMagistralCategoryLabels = [
+  'Capsulas',
+  'Cosmetica',
+  'Dermatologia',
+  'Dolor',
+  'Gastroenterologia',
+  'Pediatria',
+]
+
+const isAllowedMagistralCategory = (value) => {
+  const normalized = normalizeHeader(value)
+  return allowedMagistralCategoryLabels.some(label => normalizeHeader(label) === normalized)
+}
+
 const getMagistralEquivalenceDefaults = (articleType) => {
   const normalizedType = normalizeMagistralArticleType(articleType)
   return (magistralEquivalenceDefaultsByType[normalizedType] ?? [])
@@ -414,7 +428,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     if (notesRef.current) notesRef.current.value = data?.notes ?? ''
 
     if (magistralCategoryRef.current) {
-      if (data?.magistral_category_id && data?.magistralCategory?.description) {
+      if (data?.magistral_category_id && data?.magistralCategory?.description && isAllowedMagistralCategory(data.magistralCategory.description)) {
         SetSelectValue(magistralCategoryRef.current, data.magistral_category_id, data.magistralCategory.description)
       } else {
         $(magistralCategoryRef.current).empty().trigger('change')

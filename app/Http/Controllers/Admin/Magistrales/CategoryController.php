@@ -37,7 +37,8 @@ class CategoryController extends BasicController
             ])
             ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'magistral_categories.warehouse_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'magistral_categories.created_by')
-            ->leftJoin('users as updater', 'updater.id', '=', 'magistral_categories.updated_by');
+            ->leftJoin('users as updater', 'updater.id', '=', 'magistral_categories.updated_by')
+            ->whereIn('magistral_categories.description', MagistralCategory::ALLOWED_DESCRIPTIONS);
     }
 
     public function beforeSave(Request $request)
@@ -49,6 +50,10 @@ class CategoryController extends BasicController
 
         if ($code === '') throw new \Exception('El codigo es obligatorio');
         if ($description === '') throw new \Exception('La descripcion es obligatoria');
+        $description = $this->canonicalAllowedDescription($description);
+        if (!$description) {
+            throw new \Exception('Solo se permiten estas categorias: ' . implode(', ', MagistralCategory::ALLOWED_DESCRIPTIONS));
+        }
 
         $exists = MagistralCategory::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
             ->when($id, fn($query) => $query->where('id', '!=', $id))
@@ -217,5 +222,18 @@ class CategoryController extends BasicController
         if (is_bool($value)) return $value;
         if (is_numeric($value)) return (int)$value !== 0;
         return in_array(mb_strtolower(trim((string)$value)), ['1', 'true', 'si', 'yes', 'on'], true);
+    }
+
+    private function canonicalAllowedDescription(string $description): ?string
+    {
+        $normalized = mb_strtolower(trim($description));
+
+        foreach (MagistralCategory::ALLOWED_DESCRIPTIONS as $allowed) {
+            if (mb_strtolower($allowed) === $normalized) {
+                return $allowed;
+            }
+        }
+
+        return null;
     }
 }
