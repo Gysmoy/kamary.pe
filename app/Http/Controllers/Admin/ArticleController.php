@@ -81,6 +81,7 @@ class ArticleController extends BasicController
             $mapping = $request->mapping ?? [];
             $userId = Auth::id();
             $hasArticleModuleScope = Schema::hasColumn('articles', 'module_scope');
+            $hasMagistralStatus = Schema::hasColumn('articles', 'magistral_status');
 
             if (!is_array($rows) || count($rows) === 0) {
                 throw new \Exception('No hay registros para importar');
@@ -169,8 +170,14 @@ class ArticleController extends BasicController
                 if ($unitName === '') $unitName = 'UNIDAD';
 
                 $status = true;
+                $magistralStatus = 'vigente';
                 if ($statusKey && array_key_exists($statusKey, $row)) {
-                    $status = $this->toBoolean($row[$statusKey]);
+                    if ($this->moduleScope === 'magistrales') {
+                        $magistralStatus = $this->normalizeMagistralStatus($row[$statusKey]);
+                        $status = $magistralStatus !== 'de_baja';
+                    } else {
+                        $status = $this->toBoolean($row[$statusKey]);
+                    }
                 }
 
                 $normalizedLabName = $this->normalizeText($laboratoryName);
@@ -238,6 +245,9 @@ class ArticleController extends BasicController
                         'updated_by' => $userId,
                     ];
                     if ($hasArticleModuleScope) $updateData['module_scope'] = $this->moduleScope;
+                    if ($hasMagistralStatus && $this->moduleScope === 'magistrales') {
+                        $updateData['magistral_status'] = $magistralStatus;
+                    }
 
                     Article::where('id', $articleId)->update($updateData);
                     $this->ensureDefaultPresentation($articleId);
@@ -260,6 +270,9 @@ class ArticleController extends BasicController
                         'updated_by' => $userId,
                     ];
                     if ($hasArticleModuleScope) $createData['module_scope'] = $this->moduleScope;
+                    if ($hasMagistralStatus && $this->moduleScope === 'magistrales') {
+                        $createData['magistral_status'] = $magistralStatus;
+                    }
 
                     $newArticle = Article::create($createData);
                     $articleByCode[$normalizedCode] = $newArticle->id;
@@ -340,12 +353,16 @@ class ArticleController extends BasicController
             if ($code === '') {
                 $code = $this->nextMagistralArticleCode($body['article_type'] ?? null, $id);
             }
+            $body['magistral_status'] = $this->normalizeMagistralStatus($body['magistral_status'] ?? $body['status'] ?? null);
+            $body['status'] = $body['magistral_status'] !== 'de_baja';
             if (!$unitId) {
                 $unitId = $this->ensureDefaultMagistralUnit();
             }
             if ($laboratoryId && !$activePrincipleId) {
                 $activePrincipleId = $this->ensureDefaultActivePrinciple((int)$laboratoryId);
             }
+        } else {
+            unset($body['magistral_status']);
         }
 
         if ($code === '') throw new \Exception('El codigo de articulo es obligatorio');
@@ -459,6 +476,7 @@ class ArticleController extends BasicController
         foreach ([
             'module_scope',
             'client_id',
+            'magistral_status',
             'composition',
             'article_type',
             'administration_route',
@@ -694,6 +712,19 @@ class ArticleController extends BasicController
 
         $normalized = mb_strtolower(trim((string)$value));
         return in_array($normalized, ['1', 'true', 'si', 'yes', 'y', 'activo', 'activa', 'on'], true);
+    }
+
+    private function normalizeMagistralStatus($value): string
+    {
+        if (is_bool($value)) return $value ? 'vigente' : 'de_baja';
+        if (is_numeric($value)) return (int)$value === 0 ? 'de_baja' : 'vigente';
+
+        $normalized = str_replace([' ', '-'], '_', mb_strtolower(trim((string)$value)));
+        if (in_array($normalized, ['activo', 'activa', 'si', 'yes', 'true', 'on'], true)) return 'vigente';
+        if (in_array($normalized, ['anulado', 'anulada', 'inactivo', 'inactiva', 'baja', 'no', 'false', 'off'], true)) return 'de_baja';
+        $allowed = ['vigente', 'vencido', 'de_baja', 'agotado'];
+
+        return in_array($normalized, $allowed, true) ? $normalized : 'vigente';
     }
 
     private function normalizeText($value): string

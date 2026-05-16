@@ -26,6 +26,7 @@ class Article extends Model
         'unit_id',
         'volume',
         'status',
+        'magistral_status',
         'margin_rule',
         'igv_rule',
         'units_per_article',

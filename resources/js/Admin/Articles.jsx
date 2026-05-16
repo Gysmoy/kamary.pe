@@ -97,9 +97,25 @@ const yesNoOptions = [
 ]
 
 const magistralStatusOptions = [
-  { value: '1', label: 'VIGENTE' },
-  { value: '0', label: 'ANULADO' },
+  { value: 'vigente', label: 'VIGENTE' },
+  { value: 'vencido', label: 'VENCIDO' },
+  { value: 'de_baja', label: 'DE BAJA' },
+  { value: 'agotado', label: 'AGOTADO' },
 ]
+
+const magistralStatusMeta = {
+  vigente: { label: 'VIGENTE', className: 'bg-success' },
+  vencido: { label: 'VENCIDO', className: 'bg-warning text-dark' },
+  de_baja: { label: 'DE BAJA', className: 'bg-secondary' },
+  agotado: { label: 'AGOTADO', className: 'bg-info' },
+}
+
+const getMagistralStatusValue = (data) => {
+  const rawValue = data?.magistral_status ?? data?.magistralStatus
+  const normalized = rawValue?.toString?.().trim().toLowerCase().replaceAll(' ', '_').replaceAll('-', '_')
+  if (normalized && magistralStatusMeta[normalized]) return normalized
+  return data?.status === false || data?.status === 0 ? 'de_baja' : 'vigente'
+}
 
 const magistralArticleTypeOptions = ['INSUMO', 'ENVASES', 'PRODUCTO']
 const magistralAdministrationRouteOptions = ['TOPICO', 'ORAL', 'N/A']
@@ -325,7 +341,9 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       }
     }
     if (statusRef.current) {
-      if (isStorageProduct || isMagistrales) {
+      if (isMagistrales) {
+        statusRef.current.value = getMagistralStatusValue(data)
+      } else if (isStorageProduct) {
         statusRef.current.value = data?.status === false || data?.status === 0 ? '0' : '1'
       } else {
         statusRef.current.checked = data?.status !== false && data?.status !== 0
@@ -420,7 +438,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       margin_rule: marginRuleRef.current?.checked ?? false,
       igv_rule: isMagistrales ? igvRuleRef.current?.value === '1' : (igvRuleRef.current?.checked ?? false),
       units_per_article: unitsPerArticleRef.current?.value || 1,
-      ...(isMagistrales ? { status: statusRef.current?.value !== '0' } : {}),
+      ...(isMagistrales ? {
+        magistral_status: statusRef.current?.value || 'vigente',
+        status: statusRef.current?.value !== 'de_baja',
+      } : {}),
       ...(isStorageProduct ? {
         client_id: selectedStorageClientId || null,
         status: statusRef.current?.value === '0' ? false : true,
@@ -902,13 +923,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   }
 
   const magistralStatusColumn = {
-    dataField: 'status',
+    dataField: 'magistral_status',
     caption: 'Estado',
-    width: '110px',
+    width: '120px',
+    calculateCellValue: (data) => magistralStatusMeta[getMagistralStatusValue(data)]?.label ?? 'VIGENTE',
     cellTemplate: (container, { data }) => {
-      const active = data?.status !== false && data?.status !== 0 && data?.status !== null
-      ReactAppend(container, <span className={`badge ${active ? 'bg-success' : 'bg-secondary'}`}>
-        {active ? 'VIGENTE' : 'ANULADO'}
+      const meta = magistralStatusMeta[getMagistralStatusValue(data)] ?? magistralStatusMeta.vigente
+      ReactAppend(container, <span className={`badge ${meta.className}`}>
+        {meta.label}
       </span>)
     }
   }
@@ -1112,7 +1134,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
           <InputFormGroup eRef={compositionRef} label='Composición' col='col-md-4' />
           <div className='form-group col-md-2 mb-2'>
             <label className='form-label'>Estado</label>
-            <select ref={statusRef} className='form-control' defaultValue='1'>
+            <select ref={statusRef} className='form-control' defaultValue='vigente'>
               {magistralStatusOptions.map(option => (
                 <option key={`magistral-status-${option.value}`} value={option.value}>{option.label}</option>
               ))}
