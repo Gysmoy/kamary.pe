@@ -481,6 +481,26 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     }))
   }
 
+  const showSaveSuccess = (result) => {
+    Swal.fire({
+      icon: 'success',
+      title: 'Correcto',
+      text: result?.message || 'Orden de servicio guardada correctamente.',
+      timer: 1800,
+      showConfirmButton: false,
+    })
+  }
+
+  const saveServiceOrder = async (request) => {
+    const previousShowSavedMessage = serviceOrdersRest.showSavedMessage
+    serviceOrdersRest.showSavedMessage = false
+    try {
+      return await serviceOrdersRest.save(request)
+    } finally {
+      serviceOrdersRest.showSavedMessage = previousShowSavedMessage
+    }
+  }
+
   const onSave = async (e) => {
     e.preventDefault()
     if (isStorageService) {
@@ -549,10 +569,11 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           }
         }),
       }
-      const result = await serviceOrdersRest.save(request)
+      const result = await saveServiceOrder(request)
       if (!result) return
       $(gridRef.current).dxDataGrid('instance').refresh()
       $(modalRef.current).modal('hide')
+      showSaveSuccess(result)
       return
     }
     const businessId = currentSelectValue(businessSelectRef, selectedBusinessId)
@@ -614,10 +635,11 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       observations: observationsRef.current.value.trim(),
       items: itemPayload
     }
-    const result = await serviceOrdersRest.save(request)
+    const result = await saveServiceOrder(request)
     if (!result) return
     $(gridRef.current).dxDataGrid('instance').refresh()
     $(modalRef.current).modal('hide')
+    showSaveSuccess(result)
   }
 
   const onCancel = async (id) => {
