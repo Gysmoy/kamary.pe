@@ -149,6 +149,11 @@ const articleToItem = (article) => {
   }
 }
 
+const articleItemKey = (item) => [
+  item.article_id || item.code || item.name,
+  item.lot_code || item.name,
+].map(normalizeText).join('|')
+
 const SampleSelect = ({ label, value, options = [], onChange, placeholder = 'Seleccione', addButton = false, disabled = false }) => (
   <div className='sample-field'>
     <label className='form-label'>{label}</label>
@@ -227,6 +232,11 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   }, [articles, articleQuery, articlePageSize])
 
   const itemTotal = useMemo(() => items.reduce((sum, item) => sum + Number(item.quantity || 0), 0), [items])
+  const selectedArticleKeys = useMemo(() => new Set(
+    items
+      .filter(item => normalizeText(item.article_id) || normalizeText(item.code) || normalizeText(item.name))
+      .map(articleItemKey)
+  ), [items])
   const selectedUbigeoOptions = useMemo(() => {
     if (!form.ubigeo || ubigeoOptions.some(option => option.value === form.ubigeo)) return ubigeoOptions
     return [{ value: form.ubigeo, label: form.ubigeo }, ...ubigeoOptions]
@@ -297,13 +307,15 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const removeItem = (uid) => setItems(prev => prev.length > 1 ? prev.filter(item => item.uid !== uid) : [emptyItem()])
   const updateItem = (uid, field, value) => setItems(prev => prev.map(item => item.uid === uid ? { ...item, [field]: value } : item))
   const addArticleItem = (article) => {
+    const nextItem = articleToItem(article)
+    const nextKey = articleItemKey(nextItem)
+
     setItems(prev => {
-      const nextItem = articleToItem(article)
+      if (prev.some(item => articleItemKey(item) === nextKey && (item.article_id || item.code || item.name))) return prev
       const emptyIndex = prev.findIndex(item => !item.article_id && !item.code && !item.name)
       if (emptyIndex === -1) return [...prev, nextItem]
       return prev.map((item, index) => index === emptyIndex ? nextItem : item)
     })
-    $(articleModalRef.current).modal('hide')
   }
 
   const saveEvidence = async (e) => {
@@ -637,7 +649,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       title='Buscar articulos'
       size='full-width'
       hideButtonSubmit
-      btnCancelText='Cerrar'
+      btnCancelText='Regresar'
       bodyStyle={{ maxHeight: 'calc(100vh - 210px)', overflow: 'auto' }}
       onSubmit={(e) => e.preventDefault()}
     >
@@ -681,8 +693,19 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
             {articleRows.length === 0 && <tr><td colSpan='10' className='text-center text-muted py-3'>No existen elementos</td></tr>}
             {articleRows.map(article => {
               const item = articleToItem(article)
+              const isSelected = selectedArticleKeys.has(articleItemKey(item))
               return <tr key={`sample-article-${article.id}`}>
-                <td><button type='button' className='btn btn-sm btn-outline-primary' onClick={() => addArticleItem(article)}><i className='mdi mdi-check'></i></button></td>
+                <td>
+                  <button
+                    type='button'
+                    className={`btn btn-sm ${isSelected ? 'btn-success' : 'btn-outline-primary'}`}
+                    disabled={isSelected}
+                    title={isSelected ? 'Articulo seleccionado' : 'Seleccionar articulo'}
+                    onClick={() => addArticleItem(article)}
+                  >
+                    <i className={`mdi ${isSelected ? 'mdi-check-all' : 'mdi-check'}`}></i>
+                  </button>
+                </td>
                 <td>{formatNumber(item.stock, 0)}</td>
                 <td>{item.warehouse}</td>
                 <td>{item.code}</td>
