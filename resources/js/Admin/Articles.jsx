@@ -313,7 +313,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const statusRef = useRef()
   const costPriceRef = useRef()
   const salePriceRef = useRef()
-  const equivalenceExchangeRateRef = useRef()
   const equivalenceQuantityRef = useRef()
   const equivalenceUnitRef = useRef()
   const salePriceNationalRef = useRef()
@@ -503,7 +502,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     }
     if (costPriceRef.current) costPriceRef.current.value = data?.cost_price ?? ''
     if (salePriceRef.current) salePriceRef.current.value = data?.sale_price ?? ''
-    if (equivalenceExchangeRateRef.current) equivalenceExchangeRateRef.current.value = data?.equivalence_exchange_rate ?? ''
     if (equivalenceQuantityRef.current) equivalenceQuantityRef.current.value = data?.equivalence_quantity ?? ''
     if (salePriceNationalRef.current) salePriceNationalRef.current.value = data?.sale_price_national ?? ''
     if (purchasePriceNationalRef.current) purchasePriceNationalRef.current.value = data?.purchase_price_national ?? ''
@@ -618,7 +616,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       stock_has_lot: isMagistrales ? stockHasLotRef.current?.value === '1' : (stockHasLotRef.current?.checked ?? false),
       cost_price: costPriceRef.current?.value ?? '',
       sale_price: salePriceRef.current?.value ?? '',
-      equivalence_exchange_rate: equivalenceExchangeRateRef.current?.value ?? '',
+      equivalence_exchange_rate: null,
       equivalence_quantity: equivalenceQuantityRef.current?.value ?? '',
       equivalence_unit_id: selectedEquivalenceUnitId || null,
       sale_price_national: isMagistrales ? (firstPresentation.price === '' ? 0 : (firstPresentation.price ?? 0)) : (salePriceNationalRef.current?.value ?? ''),
@@ -1436,7 +1434,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
               </div>
               <InputFormGroup eRef={costPriceRef} label='Precio Costo' col='col-md-3' type='number' min='0' step='0.01' />
               <InputFormGroup eRef={salePriceRef} label='Precio Venta' col='col-md-3' type='number' min='0' step='0.01' />
-              <InputFormGroup eRef={equivalenceExchangeRateRef} label='Tipo de cambio' col='col-md-3' type='number' min='0' step='0.0001' />
             </div>
           </div>
         </div>
@@ -2088,7 +2085,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
               <input ref={stockHasLotRef} className='form-check-input' type='checkbox' />
             </div>
           </div>
-          <InputFormGroup eRef={equivalenceExchangeRateRef} label='Tipo de cambio' col='col-md-3' type='number' min='0' step='0.0001' />
           <InputFormGroup eRef={equivalenceQuantityRef} label='Cantidad equivalente' col='col-md-3' type='number' min='0' step='0.001' />
           <SelectFormGroup
             eRef={equivalenceUnitRef}
