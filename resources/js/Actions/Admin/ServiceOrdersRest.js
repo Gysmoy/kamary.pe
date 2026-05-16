@@ -26,7 +26,10 @@ class ServiceOrdersRest extends BasicRest {
     : 'admin/service-orders'
   deleted = false
 
-  paginate = async (params) => await super.paginate({ ...params, deleted: this.deleted })
+  async paginate(params) {
+    return await super.paginate({ ...params, deleted: this.deleted })
+  }
+
   getBranchesByBusiness = async (businessId) => businessId ? (await this.simpleGet(`/api/${this.path}/businesses/${businessId}/branches`)) ?? [] : []
   getBusinesses = async () => await loadAll('/api/admin/businesses/paginate')
   getClients = async () => await loadAll(isStoragePath() ? '/api/admin/storage/clients/paginate' : '/api/admin/services-client/paginate')
