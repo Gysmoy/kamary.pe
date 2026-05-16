@@ -1686,8 +1686,8 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       <input ref={scheduledAtRef} type='hidden' />
       <input ref={firstDueDateRef} type='hidden' />
       <input ref={installmentsRef} type='hidden' defaultValue='1' />
-      <select ref={orderStatusRef} hidden>{serviceOrderStatusOptions.map((option) => <option key={`service-order-hidden-status-${option.value}`} value={option.value}>{option.label}</option>)}</select>
-      <select ref={billingStatusRef} hidden><option value='pending'>Pendiente</option><option value='billed'>Facturado</option></select>
+      <input ref={orderStatusRef} type='hidden' defaultValue='draft' />
+      <input ref={billingStatusRef} type='hidden' defaultValue='pending' />
       <input ref={taxAmountRef} type='hidden' />
       <textarea ref={observationsRef} hidden />
 
