@@ -10,8 +10,6 @@ import ServiceOrdersRest from '../Actions/Admin/ServiceOrdersRest';
 import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
-  billingStatusOptions,
-  getPaymentStatusLabel,
   getServiceOrderStatusLabel,
   serviceOrderStatusOptions,
   toLookup,
@@ -19,7 +17,18 @@ import {
 
 const serviceOrdersRest = new ServiceOrdersRest()
 const formatGridUser = (user) => user?.fullname || [user?.name, user?.lastname].filter(Boolean).join(' ') || user?.username || ''
-const emptyItem = () => ({ uid: crypto.randomUUID(), service_id: '', description: '', quantity: 1, unit_price: 0, detraction_percent: 0, commission_percent: 0, total: 0 })
+const emptyItem = () => ({
+  uid: crypto.randomUUID(),
+  service_id: '',
+  scope: '',
+  gloss: '',
+  description: '',
+  quantity: 1,
+  unit_price: 0,
+  detraction_percent: 0,
+  commission_percent: 0,
+  total: 0,
+})
 const normalizeStorageText = (value = '') => value.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '')
 const storageServiceTypeNames = ['Servicio de almacenamiento', 'Servicio de almacenamiento - Adicional']
 const currencyOptions = [
@@ -121,8 +130,10 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const expectedDocumentTypeRef = useRef()
   const currencyRef = useRef()
   const billingCycleRef = useRef()
+  const contractLabelRef = useRef()
   const paymentConditionRef = useRef()
   const installmentsRef = useRef()
+  const billingDayRef = useRef()
   const orderStatusRef = useRef()
   const billingStatusRef = useRef()
   const taxAmountRef = useRef()
@@ -141,6 +152,14 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const [selectedBranchId, setSelectedBranchId] = useState('')
   const [selectedClientId, setSelectedClientId] = useState('')
   const [selectedStorageServiceId, setSelectedStorageServiceId] = useState('')
+  const [selectedCurrencyCode, setSelectedCurrencyCode] = useState('PEN')
+  const [detractionEnabled, setDetractionEnabled] = useState(false)
+  const [activeServiceTab, setActiveServiceTab] = useState('services')
+  const [serviceFilterClientId, setServiceFilterClientId] = useState('')
+  const [serviceFilterStart, setServiceFilterStart] = useState('')
+  const [serviceFilterEnd, setServiceFilterEnd] = useState('')
+  const [serviceGridFilter, setServiceGridFilter] = useState(null)
+  const [serviceSummary, setServiceSummary] = useState({ penTotal: 0, penBilled: 0, usdTotal: 0, usdBilled: 0 })
   const [items, setItems] = useState([emptyItem()])
   const [storageWarehouses, setStorageWarehouses] = useState([])
   const [storageLocations, setStorageLocations] = useState([])
@@ -152,6 +171,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const isStorageGeneral = serviceOrderType === 'storage_general'
   const isStorageService = serviceOrderType === 'storage_service'
   const isStorageOrderList = isStorageGeneral || isStorageService
+  const isServiceOrderContext = !isStorageOrderList
   const storageServiceTypeOptions = services.filter(service => storageServiceTypeNames.some(name => normalizeStorageText(name) === normalizeStorageText(service.name)))
   const serviceMap = Object.fromEntries(services.map(row => [`${row.id}`, row]))
 
@@ -200,7 +220,9 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
 
       if (isStorageService) {
         setStorageBlocks(emptyStorageBlocks(storageCatalog.warehouseRows))
+      }
 
+      if (isStorageService || isServiceOrderContext) {
         const defaultBusiness = activeBusinesses[0]
         if (defaultBusiness) {
           setSelectedBusinessId(`${defaultBusiness.id}`)
@@ -211,6 +233,47 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     }
     loadInitialData()
   }, [])
+
+  useEffect(() => {
+    if (!isServiceOrderContext) return
+    serviceOrdersRest.deleted = activeServiceTab === 'deleted'
+    const instance = gridRef.current ? $(gridRef.current).dxDataGrid('instance') : null
+    if (instance) instance.refresh()
+  }, [activeServiceTab])
+
+  const applyServiceFilters = () => {
+    const filter = []
+    if (serviceFilterClientId) filter.push(['client_id', '=', Number(serviceFilterClientId)])
+    if (serviceFilterStart) filter.push(['created_at', '>=', `${serviceFilterStart} 00:00:00`])
+    if (serviceFilterEnd) filter.push(['created_at', '<=', `${serviceFilterEnd} 23:59:59`])
+
+    setServiceGridFilter(filter.length ? filter.reduce((carry, row) => carry.length ? [...carry, 'and', row] : row, []) : null)
+  }
+
+  const resetServiceFilters = () => {
+    setServiceFilterClientId('')
+    setServiceFilterStart('')
+    setServiceFilterEnd('')
+    setServiceGridFilter(null)
+  }
+
+  const onServiceGridRefresh = (result) => {
+    const rows = result?.data ?? []
+    const summary = rows.reduce((carry, row) => {
+      const currency = `${row.currency ?? 'PEN'}`.toUpperCase()
+      const total = Number(row.total || 0)
+      const billed = row.billing_status === 'billed' || row.order_status === 'invoiced' ? total : Number(row.paid_amount || 0)
+      if (currency === 'USD') {
+        carry.usdTotal += total
+        carry.usdBilled += billed
+      } else {
+        carry.penTotal += total
+        carry.penBilled += billed
+      }
+      return carry
+    }, { penTotal: 0, penBilled: 0, usdTotal: 0, usdBilled: 0 })
+    setServiceSummary(summary)
+  }
 
   const loadBranches = async (businessId, preferred = '') => {
     const data = await serviceOrdersRest.getBranchesByBusiness(businessId)
@@ -347,20 +410,36 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     scheduledAtRef.current.value = toInputDate(data?.scheduled_at)
     firstDueDateRef.current.value = toInputDate(data?.first_due_date)
     expectedDocumentTypeRef.current.value = data?.expected_document_type ?? (isStorageOrderList ? '' : 'Factura')
-    currencyRef.current.value = data?.currency ?? (isStorageOrderList ? '' : 'PEN')
-    billingCycleRef.current.value = data?.billing_cycle ?? ''
+    const nextCurrency = data?.currency ?? (isStorageOrderList ? '' : 'PEN')
+    currencyRef.current.value = nextCurrency
+    setSelectedCurrencyCode(nextCurrency || 'PEN')
+    billingCycleRef.current.value = data?.billing_cycle ?? (isServiceOrderContext ? 'Unico' : '')
+    if (contractLabelRef.current) contractLabelRef.current.value = data?.contract_label ?? ''
     paymentConditionRef.current.value = data?.payment_condition ?? 'Contado'
     installmentsRef.current.value = Number(data?.installments ?? 1)
+    if (billingDayRef.current) billingDayRef.current.value = data?.billing_day ?? ''
     orderStatusRef.current.value = data?.order_status ?? (isStorageGeneral ? 'approved' : 'draft')
     billingStatusRef.current.value = data?.billing_status ?? 'pending'
     taxAmountRef.current.value = Number(data?.tax_amount ?? 0)
     observationsRef.current.value = data?.observations ?? ''
+    setDetractionEnabled(Boolean(data?.detraction_enabled ?? (data?.items ?? []).some(row => Number(row.detraction_percent || 0) > 0)))
     const nextBusinessId = data?.business_id ? `${data.business_id}` : (selectedBusinessId || (businesses[0]?.id ? `${businesses[0].id}` : ''))
     setSelectedBusinessId(nextBusinessId)
     setSelectedClientId(data?.client_id ? `${data.client_id}` : '')
     const branchRows = await loadBranches(nextBusinessId, data?.business_branch_id ?? selectedBranchId)
     if (!data?.business_branch_id && !selectedBranchId && branchRows[0]?.id) setSelectedBranchId(`${branchRows[0].id}`)
-    const itemRows = (data?.items ?? []).map(row => ({ uid: crypto.randomUUID(), service_id: `${row.service_id}`, description: row.description ?? '', quantity: Number(row.quantity || 0), unit_price: Number(row.unit_price || 0), detraction_percent: Number(row.detraction_percent || 0), commission_percent: Number(row.commission_percent || 0), total: Number(row.total || 0) }))
+    const itemRows = (data?.items ?? []).map(row => ({
+      uid: crypto.randomUUID(),
+      service_id: `${row.service_id}`,
+      scope: row.scope ?? row.service?.category ?? '',
+      gloss: row.gloss ?? row.description ?? row.service?.name ?? '',
+      description: row.description ?? '',
+      quantity: Number(row.quantity || 0),
+      unit_price: Number(row.unit_price || 0),
+      detraction_percent: Number(row.detraction_percent || 0),
+      commission_percent: Number(row.commission_percent || 0),
+      total: Number(row.total || 0),
+    }))
     setSelectedStorageServiceId(itemRows[0]?.service_id ?? '')
     let warehouseRows = storageWarehouses
     let locationRows = storageLocations
@@ -380,14 +459,18 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       const next = { ...row, [field]: value }
       if (field === 'service_id') {
         const service = serviceMap[value]
-        next.description = next.description || service?.name || ''
+        next.scope = next.scope || service?.category || ''
+        next.gloss = next.gloss || service?.name || ''
+        next.description = next.gloss || next.description || service?.name || ''
         next.unit_price = Number(currencyRef.current?.value === 'USD' ? service?.unit_price_usd : service?.unit_price_pen) || 0
       }
+      if (field === 'gloss') next.description = value
       return recalc(next)
     }))
   }
 
   const onCurrencyChange = (value) => {
+    setSelectedCurrencyCode(value || 'PEN')
     setItems(prev => prev.map(row => {
       if (!row.service_id) return row
       const service = serviceMap[row.service_id]
@@ -479,10 +562,12 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       .filter(row => row.service_id)
       .map(row => ({
         service_id: row.service_id,
-        description: row.description,
+        scope: row.scope,
+        gloss: row.gloss,
+        description: row.gloss || row.description,
         quantity: row.quantity,
         unit_price: row.unit_price,
-        detraction_percent: row.detraction_percent,
+        detraction_percent: isServiceOrderContext && detractionEnabled ? (row.detraction_percent || 12) : row.detraction_percent,
         commission_percent: row.commission_percent,
         total: row.total,
       }))
@@ -495,23 +580,37 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         Swal.fire('Formulario incompleto', 'Agrega al menos un servicio general.', 'warning')
         return
       }
+    } else if (isServiceOrderContext) {
+      if (!businessId || !branchId || !clientId || !expectedDocumentTypeRef.current.value || !currencyRef.current.value || !billingCycleRef.current.value) {
+        Swal.fire('Formulario incompleto', 'Completa cliente, comprobante, moneda y ciclo de facturacion.', 'warning')
+        return
+      }
+      if (!itemPayload.length) {
+        Swal.fire('Formulario incompleto', 'Agrega al menos un item de servicio.', 'warning')
+        return
+      }
     }
+    const serviceSubtotal = itemPayload.reduce((sum, row) => sum + Number(row.total || 0), 0)
+    const serviceTaxAmount = isServiceOrderContext ? Number((serviceSubtotal * 0.18).toFixed(2)) : Number(taxAmountRef.current.value || 0)
     const request = {
       id: idRef.current.value || undefined,
       business_id: businessId || null,
       business_branch_id: branchId || null,
       client_id: clientId || null,
+      contract_label: contractLabelRef.current?.value?.trim?.() || null,
       expected_document_type: expectedDocumentTypeRef.current.value,
       currency: currencyRef.current.value,
       billing_cycle: billingCycleRef.current.value.trim(),
       payment_condition: paymentConditionRef.current.value,
       installments: installmentsRef.current.value,
+      billing_day: billingDayRef.current?.value || null,
+      detraction_enabled: isServiceOrderContext ? detractionEnabled : false,
       issue_date: issueDateRef.current.value,
       scheduled_at: scheduledAtRef.current.value || null,
       first_due_date: firstDueDateRef.current.value || null,
       order_status: orderStatusRef.current.value,
       billing_status: billingStatusRef.current.value,
-      tax_amount: taxAmountRef.current.value,
+      tax_amount: serviceTaxAmount,
       observations: observationsRef.current.value.trim(),
       items: itemPayload
     }
@@ -537,9 +636,26 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     container.append(badge)
   }
 
+  const renderServiceBillingStatus = (container, { data }) => {
+    const billed = data?.billing_status === 'billed' || data?.order_status === 'invoiced'
+    const badge = document.createElement('span')
+    badge.className = `badge ${billed ? 'bg-soft-success text-success' : 'bg-soft-warning text-warning'}`
+    badge.textContent = billed ? 'Facturado' : 'Pendiente'
+    container.append(badge)
+  }
+
+  const serviceItemsText = (data) => (data.items ?? [])
+    .map(row => row.gloss || row.description || row.service?.name)
+    .filter(Boolean)
+    .join(' | ')
+
+  const billedTotal = (data) => (data?.billing_status === 'billed' || data?.order_status === 'invoiced')
+    ? Number(data?.total || 0)
+    : 0
+
   const actionColumn = {
     caption: 'Acciones',
-    width: isStorageOrderList ? 92 : 170,
+    width: isStorageOrderList ? 92 : 150,
     allowFiltering: false,
     allowExporting: false,
     cellTemplate: (container, { data }) => {
@@ -558,49 +674,59 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   }
 
   const defaultServiceOrderColumns = [
-    { dataField: 'id', caption: 'ID', width: 70 },
+    { dataField: 'row_number', caption: '#', width: 56, allowFiltering: false, calculateCellValue: (data) => data.id },
+    actionColumn,
+    {
+      dataField: 'billing_status',
+      caption: 'Estado',
+      width: 130,
+      lookup: toLookup([
+        { value: 'pending', label: 'Pendiente' },
+        { value: 'billed', label: 'Facturado' },
+      ]),
+      cellTemplate: renderServiceBillingStatus,
+    },
     {
       dataField: 'code',
-      caption: 'Codigo',
-      width: 120,
+      caption: 'Orden Servicio',
+      width: 150,
       cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar orden de servicio')
     },
-    { dataField: 'issue_date', caption: 'Fecha', dataType: 'date', width: 110 },
-    { dataField: 'scheduled_at', caption: 'Programada', dataType: 'date', width: 115 },
-    { dataField: 'business.name', caption: 'Empresa', minWidth: 140 },
-    { dataField: 'branch.name', caption: 'Sede', minWidth: 130 },
+    { dataField: 'billing_cycle', caption: 'Ciclo Facturación', width: 155 },
+    { dataField: 'client.document_number', caption: 'Doc. Cliente', width: 140 },
     { dataField: 'client.full_name', caption: 'Cliente', minWidth: 200 },
-    { dataField: 'billing_cycle', caption: 'Ciclo', minWidth: 130 },
-    { dataField: 'expected_document_type', caption: 'Comp.', width: 100 },
-    { dataField: 'currency', caption: 'Moneda', width: 90 },
-    { dataField: 'subtotal', caption: 'Subtotal', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-    { dataField: 'tax_amount', caption: 'Impuesto', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-    { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
     {
-      caption: 'Detalle',
+      dataField: 'services_text',
+      caption: 'Servicios',
       minWidth: 260,
-      allowFiltering: false,
-      calculateCellValue: (data) => (data.items ?? [])
-        .map(row => `${Number(row.quantity || 0).toFixed(3)} ${row.service?.billing_unit ?? ''} ${row.description ?? row.service?.name ?? ''}`.trim())
-        .join(' | ')
+      calculateCellValue: serviceItemsText,
     },
     {
-      dataField: 'accounts_receivable_code',
-      caption: 'CXC',
-      width: 130,
-      calculateCellValue: (data) => data.accounts_receivable?.code ?? data.accountsReceivable?.code ?? '-'
+      dataField: 'total_prefactures',
+      caption: 'Total Prefacturas',
+      width: 150,
+      dataType: 'number',
+      format: { type: 'fixedPoint', precision: 2 },
+      calculateCellValue: (data) => Number(data.total || 0),
     },
     {
-      dataField: 'payment_status',
-      caption: 'Cobranza',
-      width: 110,
-      calculateCellValue: (data) => getPaymentStatusLabel(data.accounts_receivable?.payment_status ?? data.accountsReceivable?.payment_status ?? data.payment_status ?? '-')
+      dataField: 'total',
+      caption: 'Total Servicio',
+      width: 145,
+      dataType: 'number',
+      format: { type: 'fixedPoint', precision: 2 },
     },
-    { dataField: 'order_status', caption: 'Estado', width: 110, lookup: toLookup(serviceOrderStatusOptions) },
-    { dataField: 'billing_status', caption: 'Facturacion', width: 110, lookup: toLookup(billingStatusOptions) },
-    { dataField: 'creator.fullname', caption: 'Creado por', minWidth: 140, visible: false },
-    { dataField: 'updater.fullname', caption: 'Actualizado por', minWidth: 140, visible: false },
-    actionColumn
+    {
+      dataField: 'total_billed',
+      caption: 'Total Facturado',
+      width: 150,
+      dataType: 'number',
+      format: { type: 'fixedPoint', precision: 2 },
+      calculateCellValue: billedTotal,
+    },
+    { dataField: 'contract_label', caption: 'Contrato', width: 150 },
+    { dataField: 'creator.fullname', caption: 'Usuario Registro', minWidth: 150, calculateCellValue: (data) => formatGridUser(data.creator) },
+    { dataField: 'created_at', caption: 'Fecha Registro', dataType: 'datetime', width: 170, format: 'yyyy-MM-dd HH:mm:ss' },
   ]
 
   const storageServiceOrderColumns = [
@@ -622,16 +748,198 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
 
   const serviceOrderColumns = isStorageOrderList ? storageServiceOrderColumns : defaultServiceOrderColumns
   const generalOrderTotal = items.reduce((sum, row) => sum + Number(row.total || 0), 0)
+  const serviceOrderSubtotal = items.reduce((sum, row) => sum + Number(row.total || 0), 0)
+  const serviceOrderTaxAmount = Number((serviceOrderSubtotal * 0.18).toFixed(2))
+  const serviceOrderGrandTotal = Number((serviceOrderSubtotal + serviceOrderTaxAmount).toFixed(2))
+  const serviceCurrencySymbol = selectedCurrencyCode === 'USD' ? '$' : 'S/'
+  const money = (value) => Number(value || 0).toFixed(5)
+  const serviceTableHeader = isServiceOrderContext ? (
+    <div className='service-order-list-panel'>
+      <div className='service-order-tabs'>
+        <button type='button' className={activeServiceTab === 'services' ? 'active' : ''} onClick={() => setActiveServiceTab('services')}>Servicios</button>
+        <button type='button' className={activeServiceTab === 'deleted' ? 'active' : ''} onClick={() => setActiveServiceTab('deleted')}>OS Eliminadas</button>
+      </div>
+      <div className='service-order-filter-panel'>
+        <div className='row g-3 align-items-end'>
+          <div className='col-12 col-lg-6'>
+            <label className='form-label'>Cliente</label>
+            <select className='form-select' value={serviceFilterClientId} onChange={(e) => setServiceFilterClientId(e.target.value)}>
+              <option value=''>Todos</option>
+              {clients.map(row => <option key={`service-order-filter-client-${row.id}`} value={row.entity_id ?? row.id}>{row.document_number ? `${row.document_number} - ` : ''}{row.full_name}</option>)}
+            </select>
+          </div>
+          <div className='col-12 col-lg-6'>
+            <label className='form-label'>Fecha Registro (Inicio - Fin):</label>
+            <div className='service-order-date-range'>
+              <input type='date' className='form-control' value={serviceFilterStart} onChange={(e) => setServiceFilterStart(e.target.value)} />
+              <input type='date' className='form-control' value={serviceFilterEnd} onChange={(e) => setServiceFilterEnd(e.target.value)} />
+            </div>
+          </div>
+        </div>
+        <div className='service-order-filter-actions'>
+          <button type='button' className='btn service-order-outline-btn' onClick={applyServiceFilters}><i className='mdi mdi-filter me-1'></i> Filtrar</button>
+          {(serviceFilterClientId || serviceFilterStart || serviceFilterEnd || serviceGridFilter) && (
+            <button type='button' className='btn service-order-muted-btn' onClick={resetServiceFilters}>Limpiar</button>
+          )}
+        </div>
+      </div>
+      <div className='service-order-summary'>
+        <div>
+          <span>Importe Total</span>
+          <strong className='text-success'>S/ {money(serviceSummary.penTotal)}</strong>
+          <strong className='text-success'>$ {money(serviceSummary.usdTotal)}</strong>
+        </div>
+        <div>
+          <span>Total Facturado</span>
+          <strong className='text-warning'>S/ {money(serviceSummary.penBilled)}</strong>
+          <strong className='text-warning'>$ {money(serviceSummary.usdBilled)}</strong>
+        </div>
+      </div>
+    </div>
+  ) : moduleTitle
 
   return <>
+    {isServiceOrderContext && (
+      <>
+        <style>{`
+          .service-order-action-row {
+            display: grid;
+            grid-template-columns: minmax(240px, 1fr) minmax(240px, 1fr);
+            gap: 22px;
+            max-width: 1128px;
+            margin-bottom: 22px;
+          }
+          .service-order-action-tile {
+            border: 0;
+            border-radius: 0;
+            min-height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            color: #fff;
+            font-weight: 500;
+            text-align: left;
+          }
+          .service-order-action-tile.primary { background: #202146; }
+          .service-order-action-tile.warning { background: #f5b955; }
+          .service-order-list-panel { color: #33394a; }
+          .service-order-tabs {
+            display: flex;
+            gap: 22px;
+            border-bottom: 1px solid #e9ecef;
+            margin: -8px -8px 16px;
+            padding: 0 8px;
+          }
+          .service-order-tabs button {
+            border: 0;
+            background: transparent;
+            color: #9aa1ac;
+            padding: 12px 0 10px;
+            font-size: 13px;
+          }
+          .service-order-tabs button.active {
+            color: #26324d;
+            border-bottom: 2px solid #d93025;
+          }
+          .service-order-filter-panel {
+            border: 1px solid #e6e9ef;
+            padding: 16px 12px 18px;
+            margin-bottom: 16px;
+          }
+          .service-order-filter-panel .form-label {
+            font-size: 12px;
+            color: #26324d;
+          }
+          .service-order-filter-panel .form-control,
+          .service-order-filter-panel .form-select {
+            min-height: 28px;
+            border-radius: 0;
+            font-size: 12px;
+            padding: 4px 9px;
+          }
+          .service-order-date-range {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+          }
+          .service-order-filter-actions {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 18px;
+          }
+          .service-order-outline-btn {
+            border: 1px solid #11184a;
+            color: #11184a;
+            background: #fff;
+            border-radius: 0;
+            font-size: 12px;
+            font-weight: 600;
+          }
+          .service-order-muted-btn {
+            border: 1px solid #f0f0f0;
+            color: #777f8c;
+            background: #f0f0f0;
+            border-radius: 0;
+            font-size: 12px;
+          }
+          .service-order-summary {
+            min-height: 108px;
+            border: 1px solid #e6e9ef;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0;
+            margin-bottom: 14px;
+          }
+          .service-order-summary > div {
+            min-width: 96px;
+            padding: 8px 16px;
+            text-align: center;
+            border-right: 1px solid #d7dce5;
+          }
+          .service-order-summary > div:last-child { border-right: 0; }
+          .service-order-summary span {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 14px;
+          }
+          .service-order-summary strong {
+            display: block;
+            font-size: 13px;
+            line-height: 1.8;
+            font-weight: 500;
+          }
+          @media (max-width: 767.98px) {
+            .service-order-action-row { grid-template-columns: 1fr; }
+            .service-order-date-range { grid-template-columns: 1fr; }
+          }
+        `}</style>
+        <div className='service-order-action-row'>
+          <button type='button' className='service-order-action-tile primary' onClick={() => onModalOpen()}>
+            <span><i className='mdi mdi-plus-circle-outline me-1'></i> Registrar Orden de Servicio</span>
+            <i className='mdi mdi-calendar-month-outline fs-4'></i>
+          </button>
+          <button type='button' className='service-order-action-tile warning' onClick={() => Swal.fire('Procesar actividades pendientes', 'Este proceso quedo listo como acceso del modulo. Falta conectar una regla automatica de actividades cuando se defina el flujo operativo.', 'info')}>
+            <span><i className='mdi mdi-plus-circle-outline me-1'></i> Procesar Actividades Pendientes</span>
+            <i className='mdi mdi-calendar-month-outline fs-4'></i>
+          </button>
+        </div>
+      </>
+    )}
     <Table
       gridRef={gridRef}
-      title={moduleTitle}
+      title={serviceTableHeader}
       rest={serviceOrdersRest}
       pageSize={25}
+      filterValue={isServiceOrderContext ? serviceGridFilter : null}
+      onRefresh={isServiceOrderContext ? onServiceGridRefresh : undefined}
       toolBar={(itemsBar) => {
         itemsBar.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
-        itemsBar.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
+        if (!isServiceOrderContext) {
+          itemsBar.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
+        }
       }}
       columns={serviceOrderColumns}
     />
@@ -1330,41 +1638,175 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         </div>
       </Modal>
     ) : (
-    <Modal modalRef={modalRef} title={isEditing ? `Editar ${isStorageGeneral ? 'orden de servicio general' : 'orden de servicio'}` : `Agregar ${isStorageGeneral ? 'orden de servicio general' : 'orden de servicio'}`} size='xl' onSubmit={onSave}>
-      <div className='row'>
-        <input ref={idRef} hidden />
-        <div className='col-md-3 mb-3'><label className='form-label'>Código</label><input ref={codeRef} className='form-control' disabled /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Empresa</label><select ref={businessSelectRef} className='form-control' value={selectedBusinessId} onChange={async (e) => { setSelectedBusinessId(e.target.value); await loadBranches(e.target.value, ''); }} required><option value=''>Seleccione</option>{businesses.map(row => <option key={`service-order-business-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Sede</label><select ref={branchSelectRef} className='form-control' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)}><option value=''>Seleccione</option>{branches.map(row => <option key={`service-order-branch-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Cliente</label><select ref={clientSelectRef} className='form-control' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required><option value=''>Seleccione</option>{clients.map(row => <option key={`service-order-client-${row.id}`} value={row.entity_id ?? row.id}>{row.full_name}</option>)}</select></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Fecha</label><input ref={issueDateRef} type='date' className='form-control' required /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Programada</label><input ref={scheduledAtRef} type='date' className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Primera cuota</label><input ref={firstDueDateRef} type='date' className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Ciclo</label><input ref={billingCycleRef} className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Comprobante</label><select ref={expectedDocumentTypeRef} className='form-control'><option value='Factura'>Factura</option><option value='Boleta'>Boleta</option></select></div>
-        <div className='col-md-2 mb-3'><label className='form-label'>Moneda</label><select ref={currencyRef} className='form-control'><option value='PEN'>PEN</option><option value='USD'>USD</option></select></div>
-        <div className='col-md-2 mb-3'><label className='form-label'>Pago</label><select ref={paymentConditionRef} className='form-control'><option value='Contado'>Contado</option><option value='Credito'>Crédito</option></select></div>
-        <div className='col-md-2 mb-3'><label className='form-label'>Cuotas</label><input ref={installmentsRef} type='number' min='1' className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Estado</label><select ref={orderStatusRef} className='form-control'>{serviceOrderStatusOptions.map((option) => <option key={`service-order-status-${option.value}`} value={option.value}>{option.label}</option>)}</select></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Facturación</label><select ref={billingStatusRef} className='form-control'>{billingStatusOptions.map((option) => <option key={`service-order-billing-status-${option.value}`} value={option.value}>{option.label}</option>)}</select></div>
-        <div className='col-md-2 mb-3'><label className='form-label'>Impuesto</label><input ref={taxAmountRef} type='number' step='0.01' className='form-control' /></div>
-        <div className='col-12 mb-3'>
-          <label className='form-label'>Servicios</label>
-          <div className='border rounded p-2'>
-            {items.map(row => <div key={row.uid} className='row align-items-end mb-2'>
-              <div className='col-md-4'><label className='form-label'>Servicio</label><select className='form-control' value={row.service_id} onChange={(e) => onItemChange(row.uid, 'service_id', e.target.value)}><option value=''>Seleccione</option>{services.map(service => <option key={`service-order-item-${service.id}`} value={service.id}>{service.code} - {service.name}</option>)}</select></div>
-              <div className='col-md-3'><label className='form-label'>Descripción</label><input className='form-control' value={row.description} onChange={(e) => onItemChange(row.uid, 'description', e.target.value)} /></div>
-              <div className='col-md-1'><label className='form-label'>Cant.</label><input type='number' step='0.001' className='form-control' value={row.quantity} onChange={(e) => onItemChange(row.uid, 'quantity', e.target.value)} /></div>
-              <div className='col-md-1'><label className='form-label'>PU</label><input type='number' step='0.01' className='form-control' value={row.unit_price} onChange={(e) => onItemChange(row.uid, 'unit_price', e.target.value)} /></div>
-              <div className='col-md-1'><label className='form-label'>Det.</label><input type='number' step='0.01' className='form-control' value={row.detraction_percent} onChange={(e) => onItemChange(row.uid, 'detraction_percent', e.target.value)} /></div>
-              <div className='col-md-1'><label className='form-label'>Com.</label><input type='number' step='0.01' className='form-control' value={row.commission_percent} onChange={(e) => onItemChange(row.uid, 'commission_percent', e.target.value)} /></div>
-              <div className='col-md-1'><label className='form-label'>Total</label><input className='form-control' value={Number(row.total || 0).toFixed(2)} disabled /></div>
-              <div className='col-md-1'><button type='button' className='btn btn-outline-danger w-100' onClick={() => setItems(prev => prev.length === 1 ? [emptyItem()] : prev.filter(item => item.uid !== row.uid))}>-</button></div>
-            </div>)}
-            <button type='button' className='btn btn-sm btn-outline-primary' onClick={() => setItems(prev => [...prev, emptyItem()])}>Agregar servicio</button>
-          </div>
+    <Modal
+      modalRef={modalRef}
+      title={<span className='service-order-modal-title'><i className='mdi mdi-menu me-1'></i> ORDEN DE SERVICIO</span>}
+      size='full-width'
+      dialogClass='service-order-modal-dialog modal-dialog-scrollable'
+      contentClass='service-order-modal-content'
+      headerClass='service-order-modal-header'
+      closeButtonClass='btn-close-white'
+      bodyClass='service-order-modal-body'
+      hideFooter
+      onSubmit={onSave}
+    >
+      <style>{`
+        .service-order-modal-dialog { width: calc(100vw - 28px); max-width: calc(100vw - 28px); margin: 8px auto; align-items: flex-start; }
+        .service-order-modal-content { border: 0; border-radius: 0; min-height: calc(100vh - 36px); }
+        .service-order-modal-header { background: #202146; color: #fff; min-height: 36px; padding: 7px 14px; border-bottom: 0; }
+        .service-order-modal-header .btn-close { transform: scale(.72); opacity: .85; }
+        .service-order-modal-title { font-size: 11px; font-weight: 700; }
+        .service-order-modal-body { padding: 0 26px 26px; color: #26324d; }
+        .service-order-modal-actions { display: flex; justify-content: center; gap: 16px; padding: 22px 0 14px; border-bottom: 1px solid #e9ecef; }
+        .service-order-modal-actions .btn { border-radius: 0; font-size: 12px; font-weight: 700; padding: 6px 18px; line-height: 1; }
+        .service-order-modal-actions .btn-primary-outline { color: #11184a; background: #fff; border: 1px solid #11184a; }
+        .service-order-modal-actions .btn-muted { color: #8f949a; background: #f0f0f0; border: 1px solid #f0f0f0; }
+        .service-order-form-title { text-align: center; font-size: 22px; font-weight: 600; color: #555b66; margin: 32px 0 20px; }
+        .service-order-modal-body .form-label { color: #26324d; font-size: 12px; margin-bottom: 5px; }
+        .service-order-modal-body .form-control, .service-order-modal-body .form-select { border-radius: 0; min-height: 26px; padding: 3px 10px; font-size: 12px; }
+        .service-order-modal-body .form-control:disabled, .service-order-modal-body .form-select:disabled { background-color: #f5f5f5; color: #7d8490; }
+        .service-order-form-separator { border-top: 1px solid #e9ecef; margin: 28px 0 16px; }
+        .service-order-add-item { border: 1px solid #11184a; color: #11184a; background: #fff; border-radius: 0; font-size: 11px; font-weight: 700; padding: 7px 13px; }
+        .service-order-items-table { width: 100%; border-collapse: collapse; font-size: 12px; color: #26324d; margin-top: 14px; }
+        .service-order-items-table th, .service-order-items-table td { border: 1px solid #e4e8ee; padding: 8px; vertical-align: middle; }
+        .service-order-items-table th { font-size: 10px; text-transform: uppercase; font-weight: 700; background: #fff; }
+        .service-order-items-table .form-control, .service-order-items-table .form-select { min-height: 28px; }
+        .service-order-totals-row { display: grid; grid-template-columns: 1fr 140px 120px; justify-content: end; align-items: center; gap: 12px; margin: 10px 0 22px; }
+        .service-order-total-label { text-align: right; font-weight: 700; font-size: 12px; }
+        .service-order-detraction { display: flex; gap: 18px; align-items: center; margin: 18px 0; font-size: 12px; }
+        .service-order-detraction label { margin: 0; }
+        @media (max-width: 767.98px) { .service-order-modal-body { padding: 0 16px 20px; } .service-order-totals-row { grid-template-columns: 1fr; } .service-order-total-label { text-align: left; } }
+      `}</style>
+
+      <input ref={idRef} hidden />
+      <input ref={codeRef} hidden readOnly />
+      <input ref={businessSelectRef} type='hidden' value={selectedBusinessId} readOnly />
+      <input ref={branchSelectRef} type='hidden' value={selectedBranchId} readOnly />
+      <input ref={issueDateRef} type='hidden' />
+      <input ref={scheduledAtRef} type='hidden' />
+      <input ref={firstDueDateRef} type='hidden' />
+      <input ref={installmentsRef} type='hidden' defaultValue='1' />
+      <select ref={orderStatusRef} hidden>{serviceOrderStatusOptions.map((option) => <option key={`service-order-hidden-status-${option.value}`} value={option.value}>{option.label}</option>)}</select>
+      <select ref={billingStatusRef} hidden><option value='pending'>Pendiente</option><option value='billed'>Facturado</option></select>
+      <input ref={taxAmountRef} type='hidden' />
+      <textarea ref={observationsRef} hidden />
+
+      <div className='service-order-modal-actions'>
+        <button type='submit' className='btn btn-primary-outline'><i className='mdi mdi-plus me-1'></i> Guardar</button>
+        <button type='button' className='btn btn-muted' data-bs-dismiss='modal'><i className='mdi mdi-close me-1'></i> Cerrar</button>
+      </div>
+
+      <h3 className='service-order-form-title'>Orden de Servicio N&deg;</h3>
+
+      <div className='row g-4 align-items-end'>
+        <div className='col-12 col-lg-6'>
+          <label className='form-label'>Cliente</label>
+          <select ref={clientSelectRef} className='form-select' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required>
+            <option value=''>Seleccione</option>
+            {clients.map(row => (
+              <option key={`service-order-client-${row.id}`} value={row.entity_id ?? row.id}>
+                {row.document_number ? `${row.document_number} - ` : ''}{row.display_name ?? row.full_name}
+              </option>
+            ))}
+          </select>
         </div>
-        <div className='col-12 mb-1'><label className='form-label'>Observaciones</label><textarea ref={observationsRef} className='form-control' rows='3' /></div>
+        <div className='col-12 col-lg-3'>
+          <label className='form-label'>Contrato:</label>
+          <input ref={contractLabelRef} className='form-control' placeholder='Seleccionar' />
+        </div>
+        <div className='col-12 col-lg-3'>
+          <label className='form-label'>Ciclo Facturaci&oacute;n:</label>
+          <select ref={billingCycleRef} className='form-select' required>
+            <option value='Unico'>Unico</option>
+            <option value='Mensual'>Mensual</option>
+            <option value='Eventual'>Eventual</option>
+          </select>
+        </div>
+        <div className='col-12 col-md-6 col-lg-3'>
+          <label className='form-label'>Moneda:</label>
+          <select ref={currencyRef} className='form-select' onChange={(e) => onCurrencyChange(e.target.value)} required>
+            <option value='PEN'>S/ | Soles</option>
+            <option value='USD'>$ | Dolares</option>
+          </select>
+        </div>
+        <div className='col-12 col-md-6 col-lg-3'>
+          <label className='form-label'>Comprobante:</label>
+          <select ref={expectedDocumentTypeRef} className='form-select' required>
+            <option value=''>Seleccione</option>
+            <option value='Factura'>Factura</option>
+            <option value='Boleta'>Boleta</option>
+            <option value='Nota de pedido'>Nota de pedido</option>
+          </select>
+        </div>
+      </div>
+
+      <div className='service-order-form-separator'></div>
+
+      <div className='table-responsive'>
+        <table className='service-order-items-table'>
+          <thead>
+            <tr>
+              <th style={{ width: 120 }}><button type='button' className='service-order-add-item' onClick={() => setItems(prev => [...prev, emptyItem()])}>AGREGAR ITEM</button></th>
+              <th style={{ width: 48 }}>#</th>
+              <th>Servicio</th>
+              <th style={{ width: 170 }}>Alcance</th>
+              <th>Glosa</th>
+              <th style={{ width: 135 }}>P. Unit.<br />(Sin IGV)</th>
+              <th style={{ width: 130 }}>Subtotal</th>
+              <th style={{ width: 42 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((row, index) => (
+              <tr key={`service-order-item-row-${row.uid}`}>
+                <td></td>
+                <td>{index + 1}</td>
+                <td>
+                  <select className='form-select' value={row.service_id} onChange={(e) => onItemChange(row.uid, 'service_id', e.target.value)} required>
+                    <option value=''>Seleccione servicio</option>
+                    {services.map(service => (
+                      <option key={`service-order-item-${service.id}`} value={service.id}>{service.code ? `${service.code} - ` : ''}{service.name}</option>
+                    ))}
+                  </select>
+                </td>
+                <td><input className='form-control' value={row.scope} onChange={(e) => onItemChange(row.uid, 'scope', e.target.value)} /></td>
+                <td><input className='form-control' value={row.gloss} onChange={(e) => onItemChange(row.uid, 'gloss', e.target.value)} /></td>
+                <td><input type='number' step='0.01' min='0' className='form-control text-end' value={row.unit_price} onChange={(e) => onItemChange(row.uid, 'unit_price', e.target.value)} /></td>
+                <td><input className='form-control text-end' value={Number(row.total || 0).toFixed(2)} disabled /></td>
+                <td><button type='button' className='btn btn-outline-danger btn-sm' onClick={() => setItems(prev => prev.length === 1 ? [emptyItem()] : prev.filter(item => item.uid !== row.uid))}><i className='mdi mdi-close'></i></button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className='service-order-totals-row'>
+        <div></div><div className='service-order-total-label'>Gravadas: {serviceCurrencySymbol}</div><input className='form-control text-end' value={serviceOrderSubtotal.toFixed(2)} disabled />
+        <div></div><div className='service-order-total-label'>I.G.V.: {serviceCurrencySymbol}</div><input className='form-control text-end' value={serviceOrderTaxAmount.toFixed(2)} disabled />
+        <div></div><div className='service-order-total-label'>Total: {serviceCurrencySymbol}</div><input className='form-control text-end' value={serviceOrderGrandTotal.toFixed(2)} disabled />
+      </div>
+
+      <div className='service-order-detraction'>
+        <span>Detracci&oacute;n:</span>
+        <label><input type='radio' name='service-order-detraction' checked={!detractionEnabled} onChange={() => setDetractionEnabled(false)} /> No</label>
+        <label><input type='radio' name='service-order-detraction' checked={detractionEnabled} onChange={() => setDetractionEnabled(true)} /> Si</label>
+      </div>
+
+      <div className='row g-4 align-items-end'>
+        <div className='col-12 col-lg-6'>
+          <label className='form-label'>Forma de Pago:</label>
+          <select ref={paymentConditionRef} className='form-select'>
+            <option value='Contado'>Contado</option>
+            <option value='Credito'>Credito</option>
+          </select>
+        </div>
+        <div className='col-12 col-lg-6'>
+          <label className='form-label'>D&iacute;a Facturaci&oacute;n:</label>
+          <select ref={billingDayRef} className='form-select'>
+            <option value=''>Seleccionar</option>
+            {Array.from({ length: 31 }, (_, index) => index + 1).map(day => <option key={`service-order-billing-day-${day}`} value={day}>{day}</option>)}
+          </select>
+        </div>
       </div>
     </Modal>
     )}

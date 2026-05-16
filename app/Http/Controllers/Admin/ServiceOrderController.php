@@ -22,6 +22,7 @@ class ServiceOrderController extends BasicController
     public $model = ServiceOrder::class;
     public $reactView = 'Admin/ServiceOrders';
     public $prefix4filter = 'service_orders';
+    public $ignoreStatusFilter = true;
 
     private array $itemsPayload = [];
 
@@ -29,6 +30,7 @@ class ServiceOrderController extends BasicController
     {
         return [
             'requiredPermission' => 'services-service-order',
+            'moduleTitle' => 'Orden de Servicio',
             'serviceOrderType' => $this->orderType(),
         ];
     }
@@ -54,7 +56,7 @@ class ServiceOrderController extends BasicController
             ->with([
                 'business:id,name', 'branch:id,business_id,name', 'client:id,full_name,document_number', 'seller:id,name,lastname,username,fullname',
                 'accountsReceivable:id,service_order_id,code,total,paid_amount,balance_amount,payment_status,status',
-                'items:id,service_order_id,service_id,description,quantity,unit_price,detraction_percent,commission_percent,total,status',
+                'items:id,service_order_id,service_id,scope,gloss,description,quantity,unit_price,detraction_percent,commission_percent,total,status',
                 'items.service:id,code,name,category,subcategory,billing_unit',
                 'creator:id,name,lastname,username,fullname', 'updater:id,name,lastname,username,fullname',
             ])
@@ -63,6 +65,12 @@ class ServiceOrderController extends BasicController
 
         if (Schema::hasColumn('service_orders', 'order_type')) {
             $query->where('service_orders.order_type', $this->orderType());
+        }
+
+        if (request()->boolean('deleted')) {
+            $query->whereNull('service_orders.status');
+        } else {
+            $query->whereNotNull('service_orders.status');
         }
 
         $scopeKey = BusinessScope::scopedKeyForRequest(request());
@@ -140,8 +148,27 @@ class ServiceOrderController extends BasicController
         $body['expected_document_type'] = trim((string) ($body['expected_document_type'] ?? 'Factura')) ?: 'Factura';
         $body['currency'] = strtoupper(trim((string) ($body['currency'] ?? 'PEN')));
         $body['billing_cycle'] = trim((string) ($body['billing_cycle'] ?? '')) ?: null;
+        if (Schema::hasColumn('service_orders', 'contract_label')) {
+            $body['contract_label'] = trim((string) ($body['contract_label'] ?? '')) ?: null;
+        } else {
+            unset($body['contract_label']);
+        }
         $body['payment_condition'] = $this->normalizePaymentCondition($body['payment_condition'] ?? 'Contado');
         $body['installments'] = max(1, $this->toNullableInt($body['installments'] ?? null) ?? 1);
+        if (Schema::hasColumn('service_orders', 'billing_day')) {
+            $billingDay = $this->toNullableInt($body['billing_day'] ?? null);
+            if ($billingDay !== null && ($billingDay < 1 || $billingDay > 31)) {
+                throw new \Exception('El dia de facturacion debe estar entre 1 y 31');
+            }
+            $body['billing_day'] = $billingDay;
+        } else {
+            unset($body['billing_day']);
+        }
+        if (Schema::hasColumn('service_orders', 'detraction_enabled')) {
+            $body['detraction_enabled'] = $this->toBoolean($body['detraction_enabled'] ?? false);
+        } else {
+            unset($body['detraction_enabled']);
+        }
         $body['issue_date'] = $issueDate;
         $body['scheduled_at'] = $this->normalizeDate($body['scheduled_at'] ?? null);
         $body['first_due_date'] = $this->normalizeDate($body['first_due_date'] ?? null);
@@ -186,17 +213,25 @@ class ServiceOrderController extends BasicController
                     (int) $parsedStorageSchedule['months']
                 );
 
-                $serviceOrderItem = ServiceOrderItem::create([
+                $itemData = [
                     'service_order_id' => $jpa->id,
                     'service_id' => $service->id,
-                    'description' => trim((string) ($item['description'] ?? '')) ?: $service->name,
+                    'description' => trim((string) ($item['description'] ?? $item['gloss'] ?? '')) ?: $service->name,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'detraction_percent' => $detraction,
                     'commission_percent' => $commission,
                     'total' => $total,
                     'status' => true,
-                ]);
+                ];
+                if (Schema::hasColumn('service_order_items', 'scope')) {
+                    $itemData['scope'] = trim((string) ($item['scope'] ?? '')) ?: null;
+                }
+                if (Schema::hasColumn('service_order_items', 'gloss')) {
+                    $itemData['gloss'] = trim((string) ($item['gloss'] ?? '')) ?: null;
+                }
+
+                $serviceOrderItem = ServiceOrderItem::create($itemData);
                 $subtotal += $this->orderType() === 'storage_service'
                     ? $total * max(1, count($billingDates))
                     : $total;
@@ -552,6 +587,13 @@ class ServiceOrderController extends BasicController
         if ($text === '') return 0;
         if (!is_numeric($text)) throw new \Exception("Valor numerico invalido: {$value}");
         return round((float) $text, $precision);
+    }
+
+    private function toBoolean($value): bool
+    {
+        if (is_bool($value)) return $value;
+        if (is_numeric($value)) return (bool) ((int) $value);
+        return in_array(mb_strtolower(trim((string) $value)), ['1', 'true', 'si', 'sí', 'yes', 'on'], true);
     }
 
     private function normalizeDate($value): ?string

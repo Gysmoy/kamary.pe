@@ -13,7 +13,8 @@ class ServiceOrder extends Model
 
     protected $fillable = [
         'code', 'order_type', 'business_id', 'business_branch_id', 'client_id', 'seller_id',
-        'expected_document_type', 'currency', 'billing_cycle', 'payment_condition', 'installments',
+        'expected_document_type', 'currency', 'billing_cycle', 'contract_label', 'payment_condition', 'installments',
+        'billing_day', 'detraction_enabled',
         'issue_date', 'scheduled_at', 'first_due_date', 'order_status', 'billing_status',
         'subtotal', 'tax_amount', 'total', 'paid_amount', 'balance_amount', 'payment_status', 'billed_at',
         'observations', 'status', 'created_by', 'updated_by',
@@ -21,6 +22,8 @@ class ServiceOrder extends Model
 
     protected $casts = [
         'installments' => 'integer',
+        'billing_day' => 'integer',
+        'detraction_enabled' => 'boolean',
         'issue_date' => 'date',
         'scheduled_at' => 'date',
         'first_due_date' => 'date',

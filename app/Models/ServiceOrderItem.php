@@ -12,7 +12,7 @@ class ServiceOrderItem extends Model
     protected $table = 'service_order_items';
 
     protected $fillable = [
-        'service_order_id', 'service_id', 'description', 'quantity', 'unit_price',
+        'service_order_id', 'service_id', 'scope', 'gloss', 'description', 'quantity', 'unit_price',
         'detraction_percent', 'commission_percent', 'total', 'status',
     ];
 
