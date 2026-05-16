@@ -2,6 +2,7 @@ import Tippy from "@tippyjs/react";
 import React, { useEffect, useRef } from "react"
 import { Cookies, JSON } from "sode-extend-react"
 import select2SpanishLanguage from "../../../Utils/select2SpanishLanguage"
+import { select2DropdownParentFor } from "../../../Utils/select2DropdownParent"
 
 const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = false, dropdownParent, searchAPI, searchBy, selectBy = 'id', multiple = false, filter = null, onChange = () => { },
   templateResult,
@@ -23,7 +24,7 @@ const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = fa
     if ($select.data('select2')) $select.select2('destroy')
 
     $select.select2({
-      dropdownParent: dropdownParent ? $(dropdownParent) : $(`#${containerId}`),
+      dropdownParent: select2DropdownParentFor(eRef.current, dropdownParent, `#${containerId}`),
       minimumInputLength: 0,
       minimumResultsForSearch: 0,
       language: select2SpanishLanguage,

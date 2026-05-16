@@ -1291,7 +1291,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const articleColumns = isMagistrales ? magistralesColumns : (isStorageProduct ? storageProductColumns : standardColumns)
 
   const renderMagistralesArticleForm = () => (
-    <fieldset className='magistrales-article-form' disabled={isViewing}>
+    <fieldset className='magistrales-article-form' data-select2-local-dropdown disabled={isViewing}>
       <div className='magistrales-section'>
         <div className='magistrales-section-title'>
           <i className='mdi mdi-package-variant-closed me-1'></i> Datos del artículo
@@ -1611,7 +1611,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
           background: #fff;
           border: 1px solid #d8dee8;
           border-radius: 0.375rem;
-          overflow: hidden;
+          overflow: visible;
         }
 
         .magistrales-section-title {
@@ -1625,6 +1625,18 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
 
         .magistrales-section-body {
           padding: 1rem 1rem 1.1rem;
+        }
+
+        .magistrales-article-form .form-group {
+          position: relative;
+        }
+
+        .magistrales-article-form .select2-container {
+          width: 100% !important;
+        }
+
+        .magistrales-article-form .select2-dropdown {
+          z-index: 1060;
         }
 
         .magistrales-equivalence-wrap {

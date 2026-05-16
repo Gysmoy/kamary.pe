@@ -1,6 +1,7 @@
 import Tippy from "@tippyjs/react"
 import React, { useEffect, useRef, useState } from "react"
 import select2SpanishLanguage from "../../../Utils/select2SpanishLanguage"
+import { select2DropdownParentFor } from "../../../Utils/select2DropdownParent"
 
 const SelectFormGroup = ({ id, col, className, label, specification, eRef, value, required = false, children, dropdownParent, noMargin = false, multiple = false, disabled = false, onChange = () => { }, style,
   templateResult,
@@ -28,7 +29,7 @@ const SelectFormGroup = ({ id, col, className, label, specification, eRef, value
     if ($select.data('select2')) $select.select2('destroy')
 
     $select.select2({
-      dropdownParent: dropdownParent ? $(dropdownParent) : $(`#${containerId}`),
+      dropdownParent: select2DropdownParentFor(eRef.current, dropdownParent, `#${containerId}`),
       templateResult,
       templateSelection,
       minimumInputLength,

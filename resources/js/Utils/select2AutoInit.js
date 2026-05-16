@@ -1,10 +1,7 @@
 import select2SpanishLanguage from './select2SpanishLanguage'
+import { select2DropdownParentFor } from './select2DropdownParent'
 
 const getJQuery = () => window.jQuery || window.$
-
-const getDropdownParent = (select) => {
-  return select.closest('.modal, .offcanvas, .swal2-popup') || document.body
-}
 
 const shouldSkipSelect2 = (select) => {
   return select.classList?.contains('swal2-select')
@@ -69,7 +66,7 @@ export const syncSelect2 = (root = document) => {
 
         $select.select2({
           width: '100%',
-          dropdownParent: $(getDropdownParent(select)),
+          dropdownParent: select2DropdownParentFor(select),
           placeholder: getPlaceholder(select),
           allowClear: !select.required && !select.multiple && hasEmptyOption,
           minimumResultsForSearch: 0,
