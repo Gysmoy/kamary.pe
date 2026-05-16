@@ -9,11 +9,11 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasColumn('articles', 'magistral_status')) return;
-
-        Schema::table('articles', function (Blueprint $table) {
-            $table->string('magistral_status', 30)->nullable()->after('status');
-        });
+        if (!Schema::hasColumn('articles', 'magistral_status')) {
+            Schema::table('articles', function (Blueprint $table) {
+                $table->string('magistral_status', 30)->nullable()->after('status');
+            });
+        }
 
         DB::table('articles')
             ->where('module_scope', 'magistrales')
