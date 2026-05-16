@@ -484,8 +484,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       .sample-table th { color: #27314c; font-weight: 700; text-transform: uppercase; font-size: 11px; }
       .sample-table input { width: 100%; border: 1px solid #d5dbe5; border-radius: 3px; min-height: 32px; padding: 4px 8px; }
       .sample-items-scroll { width: 100%; overflow-x: auto; }
-      .sample-grid-actions { display: flex; gap: 6px; flex-wrap: nowrap; min-width: 238px; }
-      .sample-grid-actions .btn { width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+      .sample-grid-actions { display: inline-flex; gap: 6px; flex-wrap: nowrap; align-items: center; width: max-content; max-width: 100%; }
+      .sample-grid-actions .btn { flex: 0 0 34px; width: 34px; height: 34px; margin-right: 0 !important; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
       @media (max-width: 991px) {
         .sample-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .sample-grid .span-2, .sample-grid .span-4 { grid-column: span 2; }
@@ -526,15 +526,15 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         },
         {
           caption: 'Acciones',
-          width: 250,
-          minWidth: 250,
+          width: 315,
+          minWidth: 315,
           fixed: true,
           fixedPosition: 'left',
           allowFiltering: false,
           allowSorting: false,
           allowExporting: false,
           cellTemplate: (container, { data }) => {
-            container.css('overflow', 'visible')
+            container.css({ overflow: 'hidden', whiteSpace: 'nowrap' })
             const currentStatus = normalizeOrderStatus(data.order_status)
             const actions = $('<div/>', { class: 'sample-grid-actions' })
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-warning tippy-here', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openModal(data) }))
