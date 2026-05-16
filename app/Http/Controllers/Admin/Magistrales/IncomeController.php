@@ -26,7 +26,7 @@ class IncomeController extends BasicController
     public function setReactViewProperties(Request $request)
     {
         return [
-            'moduleTitle' => 'Magistrales - Ingresos',
+            'moduleTitle' => 'Magistrales - Nota de Entrada',
             'requiredPermission' => 'magistrales-incomes',
         ];
     }

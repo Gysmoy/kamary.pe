@@ -9,7 +9,7 @@ const MAGISTRALES_SCOPE_MAP = {
   'accounts-payable': 'magistrales-procurement',
   inventory: 'magistrales-warehouse',
   kardex: 'magistrales-warehouse',
-  'entry-note': 'magistrales-warehouse',
+  'entry-note': 'magistrales-incomes',
   'exit-note': 'magistrales-warehouse',
   'services-billing': 'magistrales-billing',
 }

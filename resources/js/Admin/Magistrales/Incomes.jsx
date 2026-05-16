@@ -36,7 +36,7 @@ const formatDocumentGuide = (data) => {
 const itemSubtotal = (item) => Number(item.quantity || 0) * Number(item.price_with_igv || 0)
 const itemBaseTotal = (item) => Number(item.quantity || 0) * Number(item.price_without_igv || 0)
 
-const Incomes = ({ moduleTitle = 'Magistrales - Ingresos' }) => {
+const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
@@ -174,7 +174,7 @@ const Incomes = ({ moduleTitle = 'Magistrales - Ingresos' }) => {
   }
 
   const onDelete = async (id) => {
-    const { isConfirmed } = await Swal.fire({ title: 'Eliminar ingreso', text: 'Se dara de baja el ingreso magistral.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
+    const { isConfirmed } = await Swal.fire({ title: 'Eliminar nota de entrada', text: 'Se dara de baja la nota de entrada magistral.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
     if (!isConfirmed) return
     const result = await incomesRest.delete(id)
     if (!result) return
@@ -215,7 +215,7 @@ const Incomes = ({ moduleTitle = 'Magistrales - Ingresos' }) => {
           dataField: 'code',
           caption: 'Codigo',
           width: 150,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar ingreso magistral')
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar nota de entrada magistral')
         },
         { dataField: 'document_guide', caption: 'Nro comp. / Guia R.', minWidth: 170, calculateCellValue: formatDocumentGuide },
         { dataField: 'business.name', caption: 'Empresa', minWidth: 180 },
@@ -249,7 +249,7 @@ const Incomes = ({ moduleTitle = 'Magistrales - Ingresos' }) => {
       ]}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar ingreso magistral' : 'Registrar ingresos'} size='xl' onSubmit={onSave}>
+    <Modal modalRef={modalRef} title={isEditing ? 'Editar nota de entrada magistral' : 'Registrar nota de entrada magistral'} size='xl' onSubmit={onSave}>
       <div className='row'>
         <input ref={idRef} hidden />
         <div className='col-md-3 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' disabled={!isEditing} /></div>
@@ -277,7 +277,7 @@ const Incomes = ({ moduleTitle = 'Magistrales - Ingresos' }) => {
 
         <div className='col-12 mt-2'>
           <div className='d-flex justify-content-between align-items-center mb-2'>
-            <h6 className='mb-0'>Detalle de ingreso</h6>
+            <h6 className='mb-0'>Detalle de nota de entrada</h6>
             <button type='button' className='btn btn-sm btn-soft-primary' onClick={() => setItems(prev => [...prev, emptyItem()])}><i className='mdi mdi-plus me-1'></i> Insertar articulo</button>
           </div>
           <div className='table-responsive border rounded'>
@@ -330,5 +330,5 @@ const Incomes = ({ moduleTitle = 'Magistrales - Ingresos' }) => {
 CreateReactScript((el, properties) => {
   const requiredPermission = properties.requiredPermission ?? 'magistrales-incomes'
   if (!properties.can(requiredPermission) && !properties.hasRole('Admin')) location.href = '/admin/'
-  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Magistrales - Ingresos'}><Incomes {...properties} /></BaseAdminto>)
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Magistrales - Nota de entrada'}><Incomes {...properties} /></BaseAdminto>)
 })

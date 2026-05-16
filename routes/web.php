@@ -179,7 +179,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales/articles', [AdminMagistralesArticleController::class, 'reactView']);
         Route::get('/magistrales-articles', [AdminMagistralesArticleController::class, 'reactView']);
         Route::get('/magistrales/batches', [AdminBatchController::class, 'reactView']);
-        Route::get('/magistrales/entry-note', [AdminEntryNoteController::class, 'reactView']);
+        Route::get('/magistrales/entry-note', [AdminMagistralesIncomeController::class, 'reactView']);
         Route::get('/magistrales/exit-note', [AdminExitNoteController::class, 'reactView']);
         Route::get('/magistrales/purchase-orders', [AdminMagistralesPurchaseOrderController::class, 'reactView']);
         Route::get('/magistrales/purchase-receipts', [AdminPurchaseReceiptController::class, 'reactView']);
@@ -226,5 +226,4 @@ Route::middleware('auth')->group(function () {
 Route::get('/mailing/new-formula', fn() => view('mailing.new-formula'));
 Route::get('/repository/{uuid}', [AdminRepositoryController::class, 'media'])->withoutMiddleware('throttle');
 Route::get('/graph/sales/{type}/{filter}', [AdminHomeController::class, 'getSales']);
-
 

@@ -262,6 +262,10 @@ Route::middleware('auth')->group(function () {
             Route::post('/incomes/paginate', [AdminMagistralesIncomeController::class, 'paginate']);
             Route::patch('/incomes/status', [AdminMagistralesIncomeController::class, 'status']);
             Route::delete('/incomes/{id}', [AdminMagistralesIncomeController::class, 'delete']);
+            Route::post('/entry-notes', [AdminMagistralesIncomeController::class, 'save']);
+            Route::post('/entry-notes/paginate', [AdminMagistralesIncomeController::class, 'paginate']);
+            Route::patch('/entry-notes/status', [AdminMagistralesIncomeController::class, 'status']);
+            Route::delete('/entry-notes/{id}', [AdminMagistralesIncomeController::class, 'delete']);
 
             Route::post('/laboratories', [AdminMagistralesLaboratoryController::class, 'save']);
             Route::post('/laboratories/paginate', [AdminMagistralesLaboratoryController::class, 'paginate']);

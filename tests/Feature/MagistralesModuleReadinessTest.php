@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Admin\Magistrales\IncomeController as MagistralesIncomeController;
 use App\Models\Article;
 use App\Models\MagistralCategory;
 use App\Models\MagistralLaboratory;
@@ -12,6 +13,7 @@ use App\Support\ModulePermissions;
 use Database\Seeders\ModulePermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
@@ -105,6 +107,16 @@ class MagistralesModuleReadinessTest extends TestCase
                 ->assertOk()
                 ->assertJsonPath('status', 200);
         }
+    }
+
+    public function test_magistrales_entry_note_routes_use_magistrales_income_controller(): void
+    {
+        $router = app('router')->getRoutes();
+        $webRoute = $router->match(Request::create('/admin/magistrales/entry-note', 'GET'));
+        $apiRoute = $router->match(Request::create('/api/admin/magistrales/entry-notes/paginate', 'POST'));
+
+        $this->assertSame(MagistralesIncomeController::class . '@reactView', $webRoute->getActionName());
+        $this->assertSame(MagistralesIncomeController::class . '@paginate', $apiRoute->getActionName());
     }
 
     public function test_all_magistrales_permissions_exist_in_database(): void

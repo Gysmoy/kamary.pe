@@ -17,7 +17,7 @@ const loadAll = async (path) => {
 }
 
 class IncomesRest extends BasicRest {
-  path = 'admin/magistrales/incomes'
+  path = 'admin/magistrales/entry-notes'
 
   getBusinesses = async () => await loadAll('/api/admin/businesses/paginate')
   getWarehouses = async () => await loadAll('/api/admin/warehouses/paginate')
