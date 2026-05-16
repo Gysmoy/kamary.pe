@@ -10,6 +10,8 @@ class ArticlesRest extends BasicRest {
 
   laboratoriesPath = () => isMagistralesPath() ? 'admin/magistrales/laboratories' : 'admin/laboratories'
 
+  laboratoriesSearchBy = () => isMagistralesPath() ? 'description' : 'name'
+
   laboratoriesPaginateApi = () => `/api/${this.laboratoriesPath()}/paginate`
 
   unitsPath = () => isMagistralesPath()
@@ -153,11 +155,13 @@ class ArticlesRest extends BasicRest {
 
   getPrinciplesByLaboratory = async (laboratoryId) => {
     if (!laboratoryId) return []
+    if (isMagistralesPath()) return []
     const result = await this.simpleGet(`/api/${this.path}/laboratories/${laboratoryId}/principles`)
     return result ?? []
   }
 
   createPrinciple = async (laboratoryId, request) => {
+    if (isMagistralesPath()) return null
     try {
       const { status, result } = await Fetch(`/api/${this.laboratoriesPath()}/${laboratoryId}/principles`, {
         method: 'POST',

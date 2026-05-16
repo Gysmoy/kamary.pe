@@ -36,6 +36,7 @@ class Article extends Model
         'magistral_format_id',
         'health_registration',
         'laboratory_id',
+        'magistral_laboratory_id',
         'active_principle_id',
         'unit_id',
         'volume',
@@ -88,6 +89,11 @@ class Article extends Model
     public function laboratory()
     {
         return $this->belongsTo(Laboratory::class);
+    }
+
+    public function magistralLaboratory()
+    {
+        return $this->belongsTo(MagistralLaboratory::class, 'magistral_laboratory_id');
     }
 
     public function client()

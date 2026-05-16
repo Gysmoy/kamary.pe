@@ -2,11 +2,9 @@
 
 namespace Database\Seeders;
 
-use App\Models\ActivePrinciple;
 use App\Models\Article;
 use App\Models\Business;
 use App\Models\BusinessBranch;
-use App\Models\Laboratory;
 use App\Models\MagistralCategory;
 use App\Models\MagistralFormat;
 use App\Models\MagistralFormula;
@@ -16,6 +14,7 @@ use App\Models\MagistralIncome;
 use App\Models\MagistralIncomeItem;
 use App\Models\MagistralInventoryCount;
 use App\Models\MagistralInventoryCountItem;
+use App\Models\MagistralLaboratory;
 use App\Models\MagistralOutput;
 use App\Models\MagistralOutputItem;
 use App\Models\MagistralProductionOrder;
@@ -55,13 +54,12 @@ class MagistralesProductionSeeder extends Seeder
             $warehouse = $this->ensureWarehouse($branch);
             $units = $this->ensureUnits();
             $laboratories = $this->ensureLaboratories();
-            $principles = $this->ensureActivePrinciples($laboratories);
             $categories = $this->ensureCategories($warehouse);
             $subcategories = $this->ensureSubcategories($categories);
             $formats = $this->ensureFormats();
             $suppliers = $this->ensureSuppliers();
             $responsibles = $this->ensureResponsibles();
-            $articles = $this->ensureArticles($units, $laboratories, $principles, $categories, $subcategories);
+            $articles = $this->ensureArticles($units, $laboratories, $categories, $subcategories);
             $formulas = $this->ensureFormulas($articles);
             $purchaseOrders = $this->ensurePurchaseOrders($business, $branch, $warehouse, $suppliers, $articles);
             $this->ensureIncomes($business, $warehouse, $suppliers, $purchaseOrders, $articles);
@@ -167,10 +165,10 @@ class MagistralesProductionSeeder extends Seeder
     private function ensureLaboratories(): Collection
     {
         for ($i = 1; $i <= 10; $i++) {
-            Laboratory::query()->updateOrCreate(
+            MagistralLaboratory::query()->updateOrCreate(
                 ['code' => 'MAGLAB-' . str_pad((string)$i, 3, '0', STR_PAD_LEFT)],
                 [
-                    'name' => 'Laboratorio Magistral ' . $i,
+                    'description' => 'Laboratorio Magistral ' . $i,
                     'status' => true,
                     'created_by' => $this->userId,
                     'updated_by' => $this->userId,
@@ -178,31 +176,9 @@ class MagistralesProductionSeeder extends Seeder
             );
         }
 
-        return Laboratory::query()
+        return MagistralLaboratory::query()
             ->where('code', 'like', 'MAGLAB-%')
             ->orderBy('code')
-            ->get();
-    }
-
-    private function ensureActivePrinciples(Collection $laboratories): Collection
-    {
-        foreach ($laboratories->values() as $index => $laboratory) {
-            ActivePrinciple::query()->updateOrCreate(
-                [
-                    'laboratory_id' => $laboratory->id,
-                    'name' => 'Principio Activo Magistral ' . ($index + 1),
-                ],
-                [
-                    'status' => true,
-                    'created_by' => $this->userId,
-                    'updated_by' => $this->userId,
-                ]
-            );
-        }
-
-        return ActivePrinciple::query()
-            ->whereIn('laboratory_id', $laboratories->pluck('id'))
-            ->orderBy('id')
             ->get();
     }
 
@@ -355,14 +331,13 @@ class MagistralesProductionSeeder extends Seeder
             ->get();
     }
 
-    private function ensureArticles(Collection $units, Collection $laboratories, Collection $principles, Collection $categories, Collection $subcategories): Collection
+    private function ensureArticles(Collection $units, Collection $laboratories, Collection $categories, Collection $subcategories): Collection
     {
         for ($i = 1; $i <= 10; $i++) {
             $category = $categories->get(($i - 1) % max(1, $categories->count()));
             $subcategory = $subcategories->get(($i - 1) % max(1, $subcategories->count()));
             $presentation = Article::MAGISTRAL_PRESENTATION_OPTIONS[($i - 1) % count(Article::MAGISTRAL_PRESENTATION_OPTIONS)];
             $laboratory = $laboratories->get(($i - 1) % max(1, $laboratories->count()));
-            $principle = $principles->where('laboratory_id', $laboratory?->id)->first() ?: $principles->first();
             $unit = $units->get(($i - 1) % max(1, $units->count()));
 
             Article::query()->updateOrCreate(
@@ -380,8 +355,9 @@ class MagistralesProductionSeeder extends Seeder
                     'magistral_presentation' => $presentation,
                     'magistral_format_id' => null,
                     'health_registration' => 'NSO-MAG-' . str_pad((string)$i, 4, '0', STR_PAD_LEFT),
-                    'laboratory_id' => $laboratory?->id,
-                    'active_principle_id' => $principle?->id,
+                    'laboratory_id' => null,
+                    'magistral_laboratory_id' => $laboratory?->id,
+                    'active_principle_id' => null,
                     'unit_id' => $unit?->id,
                     'volume' => 1,
                     'margin_rule' => false,

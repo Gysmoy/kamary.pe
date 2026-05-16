@@ -9,6 +9,7 @@ use App\Models\ArticlePresentation;
 use App\Models\Client;
 use App\Models\Laboratory;
 use App\Models\MagistralCategory;
+use App\Models\MagistralLaboratory;
 use App\Models\MagistralSubcategory;
 use App\Models\StorageProductLot;
 use App\Models\Unit;
@@ -38,6 +39,7 @@ class ArticleController extends BasicController
             ->distinct()
             ->with([
                 'laboratory:id,name,code',
+                'magistralLaboratory:id,description,code',
                 'activePrinciple:id,laboratory_id,name',
                 'client:id,full_name,document_number',
                 'unit:id,name,symbol',
@@ -50,11 +52,19 @@ class ArticleController extends BasicController
                 'updater:id,name,lastname,username,fullname',
             ])
             ->join('units as unit', 'unit.id', '=', 'articles.unit_id')
-            ->join('active_principles as active_principle', 'active_principle.id', '=', 'articles.active_principle_id')
-            ->join('laboratories as laboratory', 'laboratory.id', '=', 'articles.laboratory_id')
             ->leftJoin('clients as client', 'client.id', '=', 'articles.client_id')
             ->join('users as creator', 'creator.id', '=', 'articles.created_by')
             ->join('users as updater', 'updater.id', '=', 'articles.updated_by');
+
+        if ($this->moduleScope === 'magistrales') {
+            $query
+                ->leftJoin('active_principles as active_principle', 'active_principle.id', '=', 'articles.active_principle_id')
+                ->leftJoin('magistral_laboratories as magistral_laboratory', 'magistral_laboratory.id', '=', 'articles.magistral_laboratory_id');
+        } else {
+            $query
+                ->join('active_principles as active_principle', 'active_principle.id', '=', 'articles.active_principle_id')
+                ->join('laboratories as laboratory', 'laboratory.id', '=', 'articles.laboratory_id');
+        }
 
         if (Schema::hasColumn('articles', 'module_scope')) {
             $query->where(function ($scope) {
@@ -113,7 +123,13 @@ class ArticleController extends BasicController
                 if ($normalizedCode !== '') $articleByCode[$normalizedCode] = $item->id;
             }
 
-            $existingLabs = Laboratory::whereNotNull('name')->get(['id', 'name', 'code']);
+            $existingLabs = $this->moduleScope === 'magistrales'
+                ? MagistralLaboratory::query()
+                    ->whereNotNull('description')
+                    ->get(['id', 'description as name', 'code'])
+                : Laboratory::query()
+                    ->whereNotNull('name')
+                    ->get(['id', 'name', 'code']);
             $labByName = [];
             $labCodeTaken = [];
             foreach ($existingLabs as $lab) {
@@ -133,7 +149,9 @@ class ArticleController extends BasicController
                 if ($normalizedSymbol !== '') $unitBySymbol[$normalizedSymbol] = $unit->id;
             }
 
-            $existingPrinciples = ActivePrinciple::all(['id', 'laboratory_id', 'name']);
+            $existingPrinciples = $this->moduleScope === 'magistrales'
+                ? collect()
+                : ActivePrinciple::all(['id', 'laboratory_id', 'name']);
             $principleByLabAndName = [];
             foreach ($existingPrinciples as $principle) {
                 $normalizedName = $this->normalizeText($principle->name);
@@ -183,31 +201,42 @@ class ArticleController extends BasicController
                 $laboratoryId = $labByName[$normalizedLabName] ?? null;
                 if (!$laboratoryId) {
                     $newLabCode = $this->generateLaboratoryCode($laboratoryName, $labCodeTaken);
-                    $newLab = Laboratory::create([
-                        'name' => $laboratoryName,
-                        'code' => $newLabCode,
-                        'status' => true,
-                        'created_by' => $userId,
-                        'updated_by' => $userId,
-                    ]);
+                    $newLab = $this->moduleScope === 'magistrales'
+                        ? MagistralLaboratory::create([
+                            'description' => $laboratoryName,
+                            'code' => $newLabCode,
+                            'status' => true,
+                            'created_by' => $userId,
+                            'updated_by' => $userId,
+                        ])
+                        : Laboratory::create([
+                            'name' => $laboratoryName,
+                            'code' => $newLabCode,
+                            'status' => true,
+                            'created_by' => $userId,
+                            'updated_by' => $userId,
+                        ]);
                     $laboratoryId = $newLab->id;
                     $labByName[$normalizedLabName] = $laboratoryId;
                     $labCodeTaken[$this->normalizeText($newLabCode)] = true;
                 }
 
-                $normalizedPrincipleName = $this->normalizeText($principleName);
-                $principleLookup = $laboratoryId . ':' . $normalizedPrincipleName;
-                $activePrincipleId = $principleByLabAndName[$principleLookup] ?? null;
-                if (!$activePrincipleId) {
-                    $newPrinciple = ActivePrinciple::create([
-                        'laboratory_id' => $laboratoryId,
-                        'name' => $principleName,
-                        'status' => true,
-                        'created_by' => $userId,
-                        'updated_by' => $userId,
-                    ]);
-                    $activePrincipleId = $newPrinciple->id;
-                    $principleByLabAndName[$principleLookup] = $activePrincipleId;
+                $activePrincipleId = null;
+                if ($this->moduleScope !== 'magistrales') {
+                    $normalizedPrincipleName = $this->normalizeText($principleName);
+                    $principleLookup = $laboratoryId . ':' . $normalizedPrincipleName;
+                    $activePrincipleId = $principleByLabAndName[$principleLookup] ?? null;
+                    if (!$activePrincipleId) {
+                        $newPrinciple = ActivePrinciple::create([
+                            'laboratory_id' => $laboratoryId,
+                            'name' => $principleName,
+                            'status' => true,
+                            'created_by' => $userId,
+                            'updated_by' => $userId,
+                        ]);
+                        $activePrincipleId = $newPrinciple->id;
+                        $principleByLabAndName[$principleLookup] = $activePrincipleId;
+                    }
                 }
 
                 $normalizedUnitName = $this->normalizeText($unitName);
@@ -237,12 +266,18 @@ class ArticleController extends BasicController
                     $updateData = [
                         'code' => $code,
                         'name' => $name,
-                        'laboratory_id' => $laboratoryId,
-                        'active_principle_id' => $activePrincipleId,
                         'unit_id' => $unitId,
                         'status' => $status,
                         'updated_by' => $userId,
                     ];
+                    if ($this->moduleScope === 'magistrales') {
+                        $updateData['magistral_laboratory_id'] = $laboratoryId;
+                        $updateData['laboratory_id'] = null;
+                        $updateData['active_principle_id'] = null;
+                    } else {
+                        $updateData['laboratory_id'] = $laboratoryId;
+                        $updateData['active_principle_id'] = $activePrincipleId;
+                    }
                     if ($hasArticleModuleScope) $updateData['module_scope'] = $this->moduleScope;
                     if ($hasMagistralStatus && $this->moduleScope === 'magistrales') {
                         $updateData['magistral_status'] = $magistralStatus;
@@ -255,8 +290,6 @@ class ArticleController extends BasicController
                     $createData = [
                         'code' => $code,
                         'name' => $name,
-                        'laboratory_id' => $laboratoryId,
-                        'active_principle_id' => $activePrincipleId,
                         'unit_id' => $unitId,
                         'volume' => null,
                         'status' => $status,
@@ -271,6 +304,14 @@ class ArticleController extends BasicController
                     if ($hasArticleModuleScope) $createData['module_scope'] = $this->moduleScope;
                     if ($hasMagistralStatus && $this->moduleScope === 'magistrales') {
                         $createData['magistral_status'] = $magistralStatus;
+                    }
+                    if ($this->moduleScope === 'magistrales') {
+                        $createData['magistral_laboratory_id'] = $laboratoryId;
+                        $createData['laboratory_id'] = null;
+                        $createData['active_principle_id'] = null;
+                    } else {
+                        $createData['laboratory_id'] = $laboratoryId;
+                        $createData['active_principle_id'] = $activePrincipleId;
                     }
 
                     $newArticle = Article::create($createData);
@@ -308,6 +349,9 @@ class ArticleController extends BasicController
         $code = trim((string)($body['code'] ?? ''));
         $name = trim((string)($body['name'] ?? ''));
         $laboratoryId = $body['laboratory_id'] ?? null;
+        $magistralLaboratoryId = $this->moduleScope === 'magistrales'
+            ? $this->toNullableInt($body['magistral_laboratory_id'] ?? $body['laboratory_id'] ?? null)
+            : null;
         $activePrincipleId = $body['active_principle_id'] ?? null;
         $unitId = $body['unit_id'] ?? null;
         $magistralCategoryId = $this->toNullableInt($body['magistral_category_id'] ?? null);
@@ -359,9 +403,8 @@ class ArticleController extends BasicController
             if (!$unitId) {
                 $unitId = $this->ensureDefaultMagistralUnit();
             }
-            if ($laboratoryId && !$activePrincipleId) {
-                $activePrincipleId = $this->ensureDefaultActivePrinciple((int)$laboratoryId);
-            }
+            $laboratoryId = null;
+            $activePrincipleId = null;
             if (!empty($body['magistral_presentation']) && !$magistralPresentation) {
                 throw new \Exception('La presentacion seleccionada no es valida');
             }
@@ -371,8 +414,12 @@ class ArticleController extends BasicController
 
         if ($code === '') throw new \Exception('El codigo de articulo es obligatorio');
         if ($name === '') throw new \Exception('El nombre del articulo es obligatorio');
-        if (!$laboratoryId) throw new \Exception('El laboratorio es obligatorio');
-        if (!$activePrincipleId) throw new \Exception('El principio activo es obligatorio');
+        if ($this->moduleScope === 'magistrales') {
+            if (!$magistralLaboratoryId) throw new \Exception('El laboratorio magistral es obligatorio');
+        } else {
+            if (!$laboratoryId) throw new \Exception('El laboratorio es obligatorio');
+            if (!$activePrincipleId) throw new \Exception('El principio activo es obligatorio');
+        }
         if (!$unitId) throw new \Exception('La unidad de medida es obligatoria');
 
         $existsCode = Article::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
@@ -388,7 +435,11 @@ class ArticleController extends BasicController
             ->exists();
         if ($existsCode) throw new \Exception('El codigo de articulo ya existe');
 
-        Laboratory::findOrFail($laboratoryId);
+        if ($this->moduleScope === 'magistrales') {
+            MagistralLaboratory::findOrFail($magistralLaboratoryId);
+        } else {
+            Laboratory::findOrFail($laboratoryId);
+        }
         Unit::findOrFail($unitId);
         if ($equivalenceUnitId) Unit::findOrFail($equivalenceUnitId);
         if ($magistralCategoryId) {
@@ -409,9 +460,11 @@ class ArticleController extends BasicController
             }
         }
 
-        $principle = ActivePrinciple::findOrFail($activePrincipleId);
-        if ((int)$principle->laboratory_id !== (int)$laboratoryId) {
-            throw new \Exception('El principio activo no pertenece al laboratorio seleccionado');
+        if ($this->moduleScope !== 'magistrales') {
+            $principle = ActivePrinciple::findOrFail($activePrincipleId);
+            if ((int)$principle->laboratory_id !== (int)$laboratoryId) {
+                throw new \Exception('El principio activo no pertenece al laboratorio seleccionado');
+            }
         }
 
         if (!isset($body['id']) || !$body['id']) {
@@ -489,8 +542,14 @@ class ArticleController extends BasicController
             }
         }
 
-        $body['laboratory_id'] = $laboratoryId;
-        $body['active_principle_id'] = $activePrincipleId;
+        if ($this->moduleScope === 'magistrales') {
+            $body['magistral_laboratory_id'] = $magistralLaboratoryId;
+            $body['laboratory_id'] = null;
+            $body['active_principle_id'] = null;
+        } else {
+            $body['laboratory_id'] = $laboratoryId;
+            $body['active_principle_id'] = $activePrincipleId;
+        }
         unset($body['presentations'], $body['storage_lots']);
 
         foreach ([
@@ -504,6 +563,7 @@ class ArticleController extends BasicController
             'sub_category',
             'magistral_presentation',
             'magistral_format_id',
+            'magistral_laboratory_id',
             'health_registration',
             'default_lot',
             'default_expiration_date',
@@ -642,6 +702,13 @@ class ArticleController extends BasicController
     {
         $response = new Response();
         try {
+            if ($this->moduleScope === 'magistrales') {
+                $response->status = 200;
+                $response->message = 'Operacion correcta';
+                $response->data = [];
+                return response($response->toArray(), $response->status);
+            }
+
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = ActivePrinciple::where('laboratory_id', $laboratoryId)

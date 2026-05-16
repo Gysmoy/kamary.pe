@@ -1066,7 +1066,7 @@ export const buildMagistralesRows = {
     columns: ['Articulo', 'Laboratorio', 'Categoria', 'Subcategoria', 'Precio fijo', 'Margen %', 'Cant. min.'],
     rows: (data?.items ?? []).map(item => [
       nested(item, 'article.name') || '-',
-      nested(item, 'laboratory.name') || '-',
+      nested(item, 'magistral_laboratory.description') || nested(item, 'magistralLaboratory.description') || nested(item, 'laboratory.name') || '-',
       item?.category,
       item?.subcategory,
       item?.fixed_price ? asMoney(item.fixed_price, data?.currency || 'PEN') : '-',
@@ -1294,7 +1294,7 @@ export const buildMagistralesRows = {
     rows: (data?.items ?? []).map(item => [
       item?.batch_code,
       nested(item, 'article.name'),
-      nested(item, 'article.laboratory.name'),
+      nested(item, 'article.magistral_laboratory.description') || nested(item, 'article.magistralLaboratory.description') || nested(item, 'article.laboratory.name'),
       nested(item, 'article.unit.symbol') || nested(item, 'article.unit.name'),
       asNumber(item?.stock),
       asNumber(item?.quantity),

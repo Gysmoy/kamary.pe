@@ -206,6 +206,20 @@ const getMagistralPresentationValue = (value) => {
     .find(([, needles]) => needles.some(needle => normalized.includes(needle)))?.[0] ?? ''
 }
 
+const getMagistralLaboratory = (data) => data?.magistralLaboratory ?? data?.magistral_laboratory ?? null
+
+const getArticleLaboratoryId = (data, isMagistrales) => {
+  if (!data) return ''
+  if (isMagistrales) return data?.magistral_laboratory_id ? `${data.magistral_laboratory_id}` : ''
+  return data?.laboratory_id ? `${data.laboratory_id}` : ''
+}
+
+const getArticleLaboratoryLabel = (data, isMagistrales) => {
+  if (!data) return ''
+  if (isMagistrales) return getMagistralLaboratory(data)?.description ?? ''
+  return data?.laboratory?.name ?? ''
+}
+
 const getMagistralEquivalenceDefaults = (articleType) => {
   const normalizedType = normalizeMagistralArticleType(articleType)
   return (magistralEquivalenceDefaultsByType[normalizedType] ?? [])
@@ -524,10 +538,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     } else {
       setSelectedStorageClientId('')
       setStorageLots([emptyStorageLot()])
-      const laboratoryId = data?.laboratory_id ? `${data.laboratory_id}` : ''
+      const laboratoryId = getArticleLaboratoryId(data, isMagistrales)
+      const laboratoryLabel = getArticleLaboratoryLabel(data, isMagistrales)
       setSelectedLaboratoryId(laboratoryId)
-      if (data?.laboratory_id && data?.laboratory?.name) {
-        SetSelectValue(laboratoryRef.current, data.laboratory_id, data.laboratory.name)
+      if (laboratoryId && laboratoryLabel) {
+        SetSelectValue(laboratoryRef.current, laboratoryId, laboratoryLabel)
       } else {
         $(laboratoryRef.current).empty().trigger('change')
       }
@@ -547,6 +562,9 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     await loadUnits(data?.unit_id ?? null, data?.equivalence_unit_id ?? null)
     if (isStorageProduct) {
       await loadStorageProductOptions()
+    } else if (isMagistrales) {
+      setPrinciples([])
+      setSelectedPrincipleId('')
     } else {
       await loadPrinciples(data?.laboratory_id ?? null, data?.active_principle_id ?? null)
     }
@@ -567,8 +585,9 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       sub_category: (subCategoryRef.current?.value || selectedSubCategory || '').trim(),
       magistral_presentation: selectedMagistralPresentation || magistralPresentationRef.current?.value || null,
       health_registration: healthRegistrationRef.current?.value?.trim() ?? '',
-      laboratory_id: selectedLaboratoryId || null,
-      active_principle_id: selectedPrincipleId || null,
+      laboratory_id: isMagistrales ? null : (selectedLaboratoryId || null),
+      magistral_laboratory_id: isMagistrales ? (selectedLaboratoryId || null) : null,
+      active_principle_id: isMagistrales ? null : (selectedPrincipleId || null),
       unit_id: selectedUnitId || null,
       volume: volumeRef.current?.value ?? '',
       margin_rule: marginRuleRef.current?.checked ?? false,
@@ -776,10 +795,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const onLaboratoryChanged = async (e) => {
     const laboratoryId = e.target.value || ''
     setSelectedLaboratoryId(laboratoryId)
+    if (isMagistrales) return
     await loadPrinciples(laboratoryId, null)
   }
 
   const onOpenCreatePrincipleModal = () => {
+    if (isMagistrales) return
     if (!selectedLaboratoryId) {
       Swal.fire({
         icon: 'warning',
@@ -1199,7 +1220,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     { dataField: 'magistral_presentation', caption: 'Presentacion', width: '150px' },
     { dataField: 'administration_route', caption: 'Via adm.', width: '120px' },
     { dataField: 'name', caption: 'Articulo', minWidth: 200 },
-    { dataField: 'laboratory.name', caption: 'Laboratorio', width: '150px' },
+    {
+      dataField: 'magistral_laboratory.description',
+      caption: 'Laboratorio',
+      width: '150px',
+      cellTemplate: (container, { data }) => container.text(getArticleLaboratoryLabel(data, true))
+    },
     magistralIgvColumn,
     { dataField: 'default_expiration_date', caption: 'F. venc.', width: '110px', dataType: 'date' },
     { dataField: 'default_lot', caption: 'Lote', width: '110px' },
@@ -1360,7 +1386,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
                 col='col-md-3'
                 required
                 searchAPI={articlesRest.laboratoriesPaginateApi()}
-                searchBy='name'
+                searchBy={articlesRest.laboratoriesSearchBy()}
                 dropdownParent='#article-form-container'
                 onChange={onLaboratoryChanged}
               />
@@ -1964,14 +1990,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
           col='col-md-4'
           required
           searchAPI={articlesRest.laboratoriesPaginateApi()}
-          searchBy='name'
+          searchBy={articlesRest.laboratoriesSearchBy()}
           dropdownParent='#article-form-container'
           onChange={onLaboratoryChanged}
         />
 
         {isMagistrales && <InputFormGroup eRef={healthRegistrationRef} label='R. sanitario' col='col-md-4' />}
 
-        <SelectFormGroup
+        {!isMagistrales && <SelectFormGroup
           eRef={principleRef}
           label={<span>Principio activo <button type='button' className='btn btn-link p-0 ms-2' onClick={onOpenCreatePrincipleModal}>Agregar</button></span>}
           col='col-md-4'
@@ -1985,7 +2011,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
           {principles.map(principle => (
             <option key={`principle-${principle.id}`} value={principle.id}>{principle.name}</option>
           ))}
-        </SelectFormGroup>
+        </SelectFormGroup>}
 
         <SelectFormGroup
           eRef={unitRef}

@@ -70,12 +70,13 @@ class KardexRest extends BasicRest {
   getLaboratories = async () => {
     try {
       const laboratoriesPath = isMagistralesPath() ? 'admin/magistrales/laboratories' : 'admin/laboratories'
+      const labelField = isMagistralesPath() ? 'description' : 'name'
       const { status, result } = await Fetch(`/api/${laboratoriesPath}/paginate`, {
         method: 'POST',
         body: JSON.stringify({
           isLoadingAll: true,
           take: 500,
-          sort: [{ selector: 'name', desc: false }]
+          sort: [{ selector: labelField, desc: false }]
         })
       })
       if (!status) throw new Error(result?.message || 'No se pudieron cargar laboratorios')

@@ -264,16 +264,10 @@ Route::middleware('auth')->group(function () {
             Route::delete('/incomes/{id}', [AdminMagistralesIncomeController::class, 'delete']);
 
             Route::post('/laboratories', [AdminMagistralesLaboratoryController::class, 'save']);
-            Route::post('/laboratories/import', [AdminMagistralesLaboratoryController::class, 'import']);
             Route::post('/laboratories/paginate', [AdminMagistralesLaboratoryController::class, 'paginate']);
             Route::patch('/laboratories/status', [AdminMagistralesLaboratoryController::class, 'status']);
             Route::patch('/laboratories/{field}', [AdminMagistralesLaboratoryController::class, 'boolean']);
             Route::delete('/laboratories/{id}', [AdminMagistralesLaboratoryController::class, 'delete']);
-            Route::get('/laboratories/{id}/principles', [AdminMagistralesLaboratoryController::class, 'principles']);
-            Route::post('/laboratories/{id}/principles', [AdminMagistralesLaboratoryController::class, 'savePrinciple']);
-            Route::post('/laboratories/{id}/principles/import', [AdminMagistralesLaboratoryController::class, 'importPrinciples']);
-            Route::patch('/laboratories/{id}/principles/{principleId}/{field}', [AdminMagistralesLaboratoryController::class, 'principleBoolean']);
-            Route::delete('/laboratories/{id}/principles/{principleId}', [AdminMagistralesLaboratoryController::class, 'deletePrinciple']);
 
             Route::post('/units', [AdminMagistralesUnitController::class, 'save']);
             Route::post('/units/import', [AdminMagistralesUnitController::class, 'import']);

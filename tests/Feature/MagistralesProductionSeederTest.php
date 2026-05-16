@@ -2,9 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\ActivePrinciple;
 use App\Models\Article;
-use App\Models\Laboratory;
 use App\Models\MagistralCategory;
 use App\Models\MagistralFormat;
 use App\Models\MagistralFormula;
@@ -13,6 +11,7 @@ use App\Models\MagistralIncome;
 use App\Models\MagistralIncomeItem;
 use App\Models\MagistralInventoryCount;
 use App\Models\MagistralInventoryCountItem;
+use App\Models\MagistralLaboratory;
 use App\Models\MagistralOutput;
 use App\Models\MagistralOutputItem;
 use App\Models\MagistralProductionOrder;
@@ -39,8 +38,7 @@ class MagistralesProductionSeederTest extends TestCase
         $this->seed(MagistralesProductionSeeder::class);
 
         $this->assertSame(10, Unit::where('module_scope', 'magistrales')->where('symbol', 'like', 'MAG%')->count());
-        $this->assertSame(10, Laboratory::where('code', 'like', 'MAGLAB-%')->count());
-        $this->assertSame(10, ActivePrinciple::where('name', 'like', 'Principio Activo Magistral %')->count());
+        $this->assertSame(10, MagistralLaboratory::where('code', 'like', 'MAGLAB-%')->count());
         $this->assertSame(3, MagistralCategory::where('code', 'like', 'MAG-CAT-%')->whereIn('description', MagistralCategory::ALLOWED_DESCRIPTIONS)->count());
         $this->assertSame(3, MagistralSubcategory::where('description', 'like', 'Subcategoria Magistral %')->count());
         $this->assertSame(10, MagistralFormat::whereIn('description', $this->formatDescriptions())->count());
@@ -48,6 +46,7 @@ class MagistralesProductionSeederTest extends TestCase
         $this->assertSame(10, MagistralResponsible::where('document_number', 'like', 'MAGRESP%')->count());
         $this->assertSame(10, Article::where('module_scope', 'magistrales')->where('code', 'like', 'MAG-ART-%')->count());
         $this->assertSame(10, Article::where('module_scope', 'magistrales')->whereIn('magistral_presentation', Article::MAGISTRAL_PRESENTATION_OPTIONS)->count());
+        $this->assertSame(10, Article::where('module_scope', 'magistrales')->whereNotNull('magistral_laboratory_id')->whereNull('laboratory_id')->whereNull('active_principle_id')->count());
         $this->assertSame(10, MagistralFormula::whereHas('article', fn($query) => $query->where('code', 'like', 'MAG-ART-%'))->count());
         $this->assertSame(20, MagistralFormulaItem::whereHas('formula.article', fn($query) => $query->where('code', 'like', 'MAG-ART-%'))->count());
         $this->assertSame(10, PurchaseOrder::where('module_scope', 'magistrales')->where('code', 'like', 'MAG-OC-%')->count());
