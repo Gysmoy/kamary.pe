@@ -162,6 +162,191 @@ const addInlineField = (doc, label, value, x, y, width, labelWidth = 72) => {
   return Math.max(12, lines.length * 10)
 }
 
+const drawGuideBox = (doc, x, y, width, height, title, rows = []) => {
+  doc.setDrawColor(0, 0, 0)
+  doc.setLineWidth(0.7)
+  doc.rect(x, y, width, height)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.text(title, x + 6, y + 12)
+
+  let currentY = y + 23
+  rows.forEach(([label, value, labelWidth = 54]) => {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(6.8)
+    doc.text(label, x + 6, currentY)
+    doc.setFont('helvetica', 'normal')
+    const text = doc.splitTextToSize(`: ${asClientText(value, '')}`, Math.max(22, width - labelWidth - 12))
+    doc.text(text, x + labelWidth, currentY)
+    currentY += Math.max(9, text.length * 8)
+  })
+}
+
+const drawKamaryLogoMark = (doc, x, y) => {
+  doc.setFillColor(245, 247, 250)
+  doc.rect(x, y, 52, 42, 'F')
+  doc.setDrawColor(220, 225, 232)
+  doc.rect(x, y, 52, 42)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(210, 28, 38)
+  doc.text('GRUPO', x + 26, y + 18, { align: 'center' })
+  doc.setTextColor(23, 94, 172)
+  doc.text('KAMARY', x + 26, y + 29, { align: 'center' })
+  doc.setTextColor(0, 0, 0)
+}
+
+const renderSampleReferralGuidePdf = (doc, document) => {
+  const data = document.source ?? {}
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 48
+  const contentWidth = pageWidth - (margin * 2)
+  const halfGap = 10
+  const halfWidth = (contentWidth - halfGap) / 2
+  const companyRuc = data?.business_ruc || '20601542600'
+  const companyName = data?.business_name || 'KAMARY PERU SAC'
+  const companyAddress = data?.business_address || 'CAL.YEN ESCOBEDO GARRO NRO. 830\nURB. LA VINA LIMA - LIMA - SAN LUIS'
+  const guideNumber = asText(data?.referral_guide || data?.order_number || data?.id)
+  const issueDate = asDate(data?.created_at || data?.requested_at || new Date().toISOString())
+  const transferDate = asDate(data?.delivered_at || data?.requested_at)
+  const destinationAddress = asText(data?.delivery_address, '')
+  const customerDocument = asText(data?.document_number || data?.contact_document, '')
+  const items = Array.isArray(data?.items) ? data.items : []
+  let y = 52
+
+  drawKamaryLogoMark(doc, margin + 6, y - 16)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.text(companyName, margin + 88, y)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7)
+  doc.text(companyAddress.split('\n'), margin + 88, y + 16)
+
+  doc.setDrawColor(0, 0, 0)
+  doc.setLineWidth(0.8)
+  doc.rect(pageWidth - margin - 152, y - 12, 152, 68)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.text(`RUC ${companyRuc}`, pageWidth - margin - 76, y, { align: 'center' })
+  doc.setFontSize(10.5)
+  doc.text(['GUIA DE REMISION', 'REMITENTE', guideNumber], pageWidth - margin - 76, y + 18, { align: 'center' })
+
+  y += 92
+  drawGuideBox(doc, margin, y, halfWidth, 31, 'FECHA DE EMISION', [
+    ['FECHA', issueDate, 54],
+  ])
+  drawGuideBox(doc, margin + halfWidth + halfGap, y, halfWidth, 31, 'FECHA DE TRASLADO', [
+    ['DIRECCION', transferDate, 58],
+  ])
+
+  y += 60
+  drawGuideBox(doc, margin, y, halfWidth, 42, 'PUNTO DE PARTIDA', [
+    ['DIRECCION', companyAddress.replace(/\n/g, ' '), 58],
+  ])
+  drawGuideBox(doc, margin + halfWidth + halfGap, y, halfWidth, 42, 'PUNTO DE LLEGADA', [
+    ['DIRECCION', destinationAddress, 58],
+  ])
+
+  y += 62
+  drawGuideBox(doc, margin, y, halfWidth, 51, 'DESTINATARIO', [
+    ['Sr(es)', data?.client_name, 58],
+    ['R.U.C.', customerDocument, 58],
+  ])
+  drawGuideBox(doc, margin + halfWidth + halfGap, y, halfWidth, 51, 'UNIDAD DE TRANSPORTE / CONDUCTOR', [
+    ['PLACA', data?.vehicle_plate, 68],
+    ['CONDUCTOR', data?.driver_name, 68],
+    ['DOCUMENTO', data?.driver_document || data?.driver_license, 68],
+  ])
+
+  y += 74
+  const detailRows = items.length
+    ? items.map((item, index) => [
+      `${index + 1}`,
+      joinText(item?.code, item?.name),
+      asText(item?.unit, ''),
+      asText(item?.lot_code || item?.lot, ''),
+      asDate(item?.expiration_date),
+      asQuantity(item?.quantity),
+    ])
+    : [['1', 'Sin detalle', '', '', '', '']]
+
+  doc.autoTable({
+    startY: y,
+    head: [['ITEM', 'PRODUCTO', 'MEDIDA', 'LOTE', 'F. V.', 'CANT.']],
+    body: detailRows,
+    theme: 'grid',
+    styles: {
+      fontSize: 7,
+      cellPadding: { top: 7, right: 4, bottom: 7, left: 4 },
+      textColor: [0, 0, 0],
+      lineColor: [0, 0, 0],
+      lineWidth: 0.3,
+      overflow: 'linebreak',
+    },
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      fontStyle: 'bold',
+      halign: 'center',
+      lineColor: [0, 0, 0],
+      lineWidth: 0.3,
+    },
+    columnStyles: {
+      0: { cellWidth: 40, halign: 'center' },
+      1: { cellWidth: 245 },
+      2: { cellWidth: 62, halign: 'center' },
+      3: { cellWidth: 58, halign: 'center' },
+      4: { cellWidth: 58, halign: 'center' },
+      5: { cellWidth: 42, halign: 'center' },
+    },
+    margin: { left: margin, right: margin },
+  })
+
+  y = doc.lastAutoTable.finalY + 30
+  if (y + 172 > pageHeight - 20) {
+    doc.addPage()
+    y = 48
+  }
+
+  drawGuideBox(doc, margin, y, halfWidth, 42, 'TRANSPORTISTA', [
+    ['NOMBRE', companyName, 62],
+    ['DOCUMENTO', companyRuc, 62],
+  ])
+  drawGuideBox(doc, margin + halfWidth + halfGap, y, halfWidth, 42, 'MOTIVO DEL TRASLADO', [
+    ['MOTIVO', data?.request_reason || 'VENTA', 62],
+  ])
+
+  y += 62
+  doc.rect(margin, y, contentWidth, 64)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.text('DNI Contacto:', margin + 6, y + 14)
+  doc.text('Contacto Destino:', margin + 166, y + 14)
+  doc.text('Celular Contacto:', margin + 368, y + 14)
+  doc.setFont('helvetica', 'normal')
+  doc.text(asText(data?.contact_document, ''), margin + 62, y + 14)
+  doc.text(doc.splitTextToSize(asText(data?.contact_name, ''), 120), margin + 245, y + 14)
+  doc.text(asText(data?.contact_phone, ''), margin + 452, y + 14)
+  doc.setFont('helvetica', 'bold')
+  doc.text('Ref. direccion', margin + 6, y + 40)
+  doc.text('entrega:', margin + 6, y + 50)
+  doc.text('Observaciones:', margin + 6, y + 60)
+  doc.setFont('helvetica', 'normal')
+  doc.text(doc.splitTextToSize(asText(data?.delivery_reference, ''), contentWidth - 108), margin + 74, y + 40)
+  doc.text(doc.splitTextToSize(asText(data?.observations, ''), contentWidth - 108), margin + 90, y + 60)
+
+  y += 86
+  const signWidth = 243
+  doc.rect(pageWidth - margin - signWidth, y, signWidth, 51)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.text(companyName, pageWidth - margin - (signWidth / 2), y + 18, { align: 'center' })
+  doc.text('CONFORMIDAD DEL CLIENTE', pageWidth - margin - (signWidth / 2), y + 42, { align: 'center' })
+}
+
 const renderStorageEntryNoteActaPdf = (doc, document, now) => {
   const data = document.source ?? {}
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -1052,31 +1237,11 @@ export const buildMagistralesRows = {
     observations: data?.observations,
   }),
   sampleOrder: (data) => ({
-    title: 'Pedido de muestra',
-    code: data?.order_number || data?.id,
-    filename: `pedido-muestra-${data?.order_number || data?.id}`,
-    meta: [
-      ['Estado pedido', asClientText(data?.order_status)],
-      ['Estado email', asClientText(data?.email_status)],
-      ['Guia remision', data?.referral_guide],
-      ['Peso bruto total', data?.total_gross_weight ? asNumber(data.total_gross_weight) : ''],
-      ['Canal', data?.channel],
-      ['Documento', [data?.document_type, data?.document_number].filter(Boolean).join(' ')],
-      ['Cliente', data?.client_name],
-      ['Pedido completo', data?.order_complete ? 'Si' : 'No'],
-      ['Fecha solicitada', asDate(data?.requested_at)],
-      ['Fecha entrega', asDate(data?.delivered_at)],
-      ['Supervisor', data?.supervisor_name],
-    ],
-    columns: ['Campo', 'Valor'],
-    rows: [
-      ['Nro pedido', asText(data?.order_number)],
-      ['Guia remision', asText(data?.referral_guide)],
-      ['Cliente', asText(data?.client_name)],
-      ['Canal', asText(data?.channel)],
-      ['Documento', asText([data?.document_type, data?.document_number].filter(Boolean).join(' '))],
-    ],
-    observations: data?.cancellation_reason || data?.observations,
+    layout: 'sample-referral-guide',
+    title: 'Guia Remision',
+    code: data?.referral_guide || data?.order_number || data?.id,
+    filename: `guia-remision-${data?.referral_guide || data?.order_number || data?.id}`,
+    source: data,
   }),
 }
 
@@ -1096,6 +1261,11 @@ export const openMagistralesRecordPdf = (document) => {
     }
     if (document.layout === 'storage-exit-note') {
       renderStorageExitNotePdf(doc, document)
+      showPdfInModal(doc, document)
+      return
+    }
+    if (document.layout === 'sample-referral-guide') {
+      renderSampleReferralGuidePdf(doc, document)
       showPdfInModal(doc, document)
       return
     }

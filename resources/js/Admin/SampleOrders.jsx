@@ -544,7 +544,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'En ruta', icon: 'mdi mdi-truck-fast-outline', onClick: () => changeOrderStatus(data, 'in_route', 'Marcar pedido en ruta') }))
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-info tippy-here', title: 'Ver evidencia', icon: 'mdi mdi-eye', onClick: () => openEvidence(data) }))
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-dark tippy-here', title: 'Tracking pedido', icon: 'mdi mdi-map-marker-path', onClick: () => openTracking(data) }))
-            actions.append(DxButton({ className: 'btn btn-xs btn-outline-danger tippy-here', title: 'Imprimir guia', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.sampleOrder(data)) }))
+            actions.append(DxButton({ className: 'btn btn-xs btn-outline-danger tippy-here', title: 'Imprimir guia de remision', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.sampleOrder(data)) }))
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-danger tippy-here', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data) }))
             container.empty().append(actions)
           }
