@@ -6,6 +6,7 @@ use App\Http\Controllers\BasicController;
 use App\Models\ServiceCatalog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class ServiceCatalogController extends BasicController
@@ -29,7 +30,15 @@ class ServiceCatalogController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        $query = $model::select('services.*');
+        $query = $model::query()
+            ->from('services')
+            ->leftJoin('users as creator', 'creator.id', '=', 'services.created_by')
+            ->select([
+                'services.*',
+                DB::raw("COALESCE(NULLIF(creator.fullname, ''), NULLIF(CONCAT(COALESCE(creator.name, ''), ' ', COALESCE(creator.lastname, '')), ' '), creator.username, '') as creator_label"),
+                'services.created_at as registered_at',
+            ]);
+
         if (Schema::hasColumn('services', 'service_scope')) {
             $query->where('services.service_scope', $this->serviceScope());
         }
