@@ -44,7 +44,7 @@ class ArticleController extends BasicController
                 'equivalenceUnit:id,name,symbol',
                 'magistralCategory:id,code,description',
                 'magistralFormat:id,description,quantity',
-                'presentations:id,article_id,name,units,price,sort_order,status',
+                'presentations:id,article_id,name,units,price,purchase_price_national,purchase_price_foreign,sort_order,status',
                 'storageLots:id,article_id,lot,expiration_date,storage_condition,manufacturer_id,status',
                 'storageLots.manufacturer:id,name,code',
                 'creator:id,name,lastname,username,fullname',
@@ -336,6 +336,18 @@ class ArticleController extends BasicController
             unset($body['client_id'], $body['storage_lots']);
         }
 
+        if ($this->moduleScope === 'magistrales') {
+            if ($code === '') {
+                $code = $this->nextMagistralArticleCode($body['article_type'] ?? null, $id);
+            }
+            if (!$unitId) {
+                $unitId = $this->ensureDefaultMagistralUnit();
+            }
+            if ($laboratoryId && !$activePrincipleId) {
+                $activePrincipleId = $this->ensureDefaultActivePrinciple((int)$laboratoryId);
+            }
+        }
+
         if ($code === '') throw new \Exception('El codigo de articulo es obligatorio');
         if ($name === '') throw new \Exception('El nombre del articulo es obligatorio');
         if (!$laboratoryId) throw new \Exception('El laboratorio es obligatorio');
@@ -510,20 +522,30 @@ class ArticleController extends BasicController
                 $name = trim((string)($presentation['name'] ?? ''));
                 $units = $this->toNullableDecimal($presentation['units'] ?? null);
                 $price = $this->toNullableDecimal($presentation['price'] ?? null);
+                $purchasePriceNational = $this->toNullableDecimal($presentation['purchase_price_national'] ?? null);
+                $purchasePriceForeign = $this->toNullableDecimal($presentation['purchase_price_foreign'] ?? null);
 
                 if ($name === '' && is_null($units) && is_null($price)) continue;
                 if ($name === '') throw new \Exception('Cada presentacion debe tener nombre');
                 if (is_null($units) || $units <= 0) throw new \Exception("La presentacion {$name} debe tener unidades mayores a 0");
                 if (is_null($price) || $price < 0) throw new \Exception("La presentacion {$name} debe tener un precio valido");
 
-                ArticlePresentation::create([
+                $presentationData = [
                     'article_id' => $jpa->id,
                     'name' => $name,
                     'units' => $units,
                     'price' => $price,
                     'sort_order' => $index,
                     'status' => true,
-                ]);
+                ];
+                if (Schema::hasColumn('article_presentations', 'purchase_price_national')) {
+                    $presentationData['purchase_price_national'] = $purchasePriceNational;
+                }
+                if (Schema::hasColumn('article_presentations', 'purchase_price_foreign')) {
+                    $presentationData['purchase_price_foreign'] = $purchasePriceForeign;
+                }
+
+                ArticlePresentation::create($presentationData);
                 $inserted++;
             }
 
@@ -798,6 +820,58 @@ class ArticleController extends BasicController
         );
 
         return (int)$principle->id;
+    }
+
+    private function ensureDefaultMagistralUnit(): int
+    {
+        $userId = Auth::id();
+        $data = [
+            'name' => 'Unidad Magistral',
+            'status' => true,
+            'created_by' => $userId,
+            'updated_by' => $userId,
+        ];
+        if (Schema::hasColumn('units', 'module_scope')) {
+            $data['module_scope'] = 'magistrales';
+        }
+
+        $unit = Unit::firstOrCreate(['symbol' => 'MAG-GEN'], $data);
+
+        return (int)$unit->id;
+    }
+
+    private function nextMagistralArticleCode($articleType = null, $currentId = null): string
+    {
+        $type = $this->normalizeText($articleType);
+        $prefix = 'MAG';
+        if (str_contains($type, 'insumo')) {
+            $prefix = 'INS';
+        } elseif (str_contains($type, 'envase')) {
+            $prefix = 'ENV';
+        }
+
+        $codes = Article::query()
+            ->where('module_scope', $this->moduleScope)
+            ->where('code', 'like', "{$prefix}-%")
+            ->pluck('code');
+
+        $next = 1;
+        foreach ($codes as $existingCode) {
+            if (preg_match('/^' . preg_quote($prefix, '/') . '-(\d+)$/i', (string)$existingCode, $matches)) {
+                $next = max($next, ((int)$matches[1]) + 1);
+            }
+        }
+
+        do {
+            $code = "{$prefix}-{$next}";
+            $exists = Article::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
+                ->where('module_scope', $this->moduleScope)
+                ->when($currentId, fn($query) => $query->where('id', '!=', $currentId))
+                ->exists();
+            $next++;
+        } while ($exists);
+
+        return $code;
     }
 
     private function nextStorageArticleCode($currentId = null): string

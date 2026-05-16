@@ -78,6 +78,8 @@ const emptyPresentation = () => ({
   name: '',
   units: 1,
   price: 0,
+  purchase_price_national: 0,
+  purchase_price_foreign: 0,
 })
 
 const emptyStorageLot = () => ({
@@ -88,6 +90,19 @@ const emptyStorageLot = () => ({
   manufacturer_id: '',
   status: true,
 })
+
+const yesNoOptions = [
+  { value: '1', label: 'SI' },
+  { value: '0', label: 'NO' },
+]
+
+const magistralStatusOptions = [
+  { value: '1', label: 'VIGENTE' },
+  { value: '0', label: 'ANULADO' },
+]
+
+const magistralArticleTypeOptions = ['INSUMO', 'ENVASES', 'PRODUCTO']
+const magistralAdministrationRouteOptions = ['TOPICO', 'ORAL', 'N/A']
 
 const storageConditionOptions = [
   '-15°C a -25°C',
@@ -281,7 +296,13 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     if (healthRegistrationRef.current) healthRegistrationRef.current.value = data?.health_registration ?? ''
     if (volumeRef.current) volumeRef.current.value = data?.volume ?? ''
     if (marginRuleRef.current) marginRuleRef.current.checked = !!data?.margin_rule
-    if (igvRuleRef.current) igvRuleRef.current.checked = !!data?.igv_rule
+    if (igvRuleRef.current) {
+      if (isMagistrales) {
+        igvRuleRef.current.value = data?.igv_rule ? '1' : '0'
+      } else {
+        igvRuleRef.current.checked = !!data?.igv_rule
+      }
+    }
     if (unitsPerArticleRef.current) unitsPerArticleRef.current.value = data?.units_per_article ?? 1
     if (unitWeightRef.current) unitWeightRef.current.value = data?.unit_weight ?? ''
     if (defaultLotRef.current) defaultLotRef.current.value = data?.default_lot ?? ''
@@ -289,10 +310,22 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     if (stockMinRef.current) stockMinRef.current.value = data?.stock_min ?? ''
     if (stockMaxRef.current) stockMaxRef.current.value = data?.stock_max ?? ''
     if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
-    if (stockHasExpirationRef.current) stockHasExpirationRef.current.checked = !!data?.stock_has_expiration
-    if (stockHasLotRef.current) stockHasLotRef.current.checked = !!data?.stock_has_lot
+    if (stockHasExpirationRef.current) {
+      if (isMagistrales) {
+        stockHasExpirationRef.current.value = data?.stock_has_expiration ? '1' : '0'
+      } else {
+        stockHasExpirationRef.current.checked = !!data?.stock_has_expiration
+      }
+    }
+    if (stockHasLotRef.current) {
+      if (isMagistrales) {
+        stockHasLotRef.current.value = data?.stock_has_lot ? '1' : '0'
+      } else {
+        stockHasLotRef.current.checked = !!data?.stock_has_lot
+      }
+    }
     if (statusRef.current) {
-      if (isStorageProduct) {
+      if (isStorageProduct || isMagistrales) {
         statusRef.current.value = data?.status === false || data?.status === 0 ? '0' : '1'
       } else {
         statusRef.current.checked = data?.status !== false && data?.status !== 0
@@ -351,8 +384,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       name: presentation.name ?? '',
       units: presentation.units ?? 1,
       price: presentation.price ?? 0,
+      purchase_price_national: presentation.purchase_price_national ?? data?.purchase_price_national ?? 0,
+      purchase_price_foreign: presentation.purchase_price_foreign ?? data?.purchase_price_foreign ?? 0,
     }))
-    setPresentations(presentationRows.length ? presentationRows : [emptyPresentation()])
+    setPresentations(presentationRows.length ? presentationRows : (isMagistrales ? [] : [emptyPresentation()]))
 
     $(modalRef.current).modal('show')
     await loadUnits(data?.unit_id ?? null, data?.equivalence_unit_id ?? null)
@@ -365,6 +400,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
 
   const onModalSubmit = async (e) => {
     e.preventDefault()
+    const firstPresentation = presentations[0] ?? {}
 
     const request = {
       id: idRef.current.value || undefined,
@@ -382,9 +418,9 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       unit_id: selectedUnitId || null,
       volume: volumeRef.current?.value ?? '',
       margin_rule: marginRuleRef.current?.checked ?? false,
-      igv_rule: igvRuleRef.current?.checked ?? false,
+      igv_rule: isMagistrales ? igvRuleRef.current?.value === '1' : (igvRuleRef.current?.checked ?? false),
       units_per_article: unitsPerArticleRef.current?.value || 1,
-      ...(isMagistrales ? { status: statusRef.current?.checked ?? true } : {}),
+      ...(isMagistrales ? { status: statusRef.current?.value !== '0' } : {}),
       ...(isStorageProduct ? {
         client_id: selectedStorageClientId || null,
         status: statusRef.current?.value === '0' ? false : true,
@@ -402,21 +438,23 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       stock_min: stockMinRef.current?.value ?? '',
       stock_max: stockMaxRef.current?.value ?? '',
       currency: currencyRef.current?.value ?? '',
-      stock_has_expiration: stockHasExpirationRef.current?.checked ?? false,
-      stock_has_lot: stockHasLotRef.current?.checked ?? false,
+      stock_has_expiration: isMagistrales ? stockHasExpirationRef.current?.value === '1' : (stockHasExpirationRef.current?.checked ?? false),
+      stock_has_lot: isMagistrales ? stockHasLotRef.current?.value === '1' : (stockHasLotRef.current?.checked ?? false),
       cost_price: costPriceRef.current?.value ?? '',
       sale_price: salePriceRef.current?.value ?? '',
       equivalence_exchange_rate: equivalenceExchangeRateRef.current?.value ?? '',
       equivalence_quantity: equivalenceQuantityRef.current?.value ?? '',
       equivalence_unit_id: selectedEquivalenceUnitId || null,
-      sale_price_national: salePriceNationalRef.current?.value ?? '',
-      purchase_price_national: purchasePriceNationalRef.current?.value ?? '',
-      purchase_price_foreign: purchasePriceForeignRef.current?.value ?? '',
+      sale_price_national: isMagistrales ? (firstPresentation.price ?? '') : (salePriceNationalRef.current?.value ?? ''),
+      purchase_price_national: isMagistrales ? (firstPresentation.purchase_price_national ?? '') : (purchasePriceNationalRef.current?.value ?? ''),
+      purchase_price_foreign: isMagistrales ? (firstPresentation.purchase_price_foreign ?? '') : (purchasePriceForeignRef.current?.value ?? ''),
       notes: notesRef.current?.value?.trim() ?? '',
       presentations: isStorageProduct ? [] : presentations.map(item => ({
         name: (item.name ?? '').toString().trim(),
         units: item.units,
         price: item.price,
+        purchase_price_national: item.purchase_price_national ?? '',
+        purchase_price_foreign: item.purchase_price_foreign ?? '',
       }))
     }
 
@@ -856,9 +894,28 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     }
   }
 
+  const magistralIgvColumn = {
+    dataField: 'igv_rule',
+    caption: 'Afecto IGV',
+    width: '110px',
+    cellTemplate: (container, { data }) => container.text(data?.igv_rule ? 'SI' : 'NO')
+  }
+
+  const magistralStatusColumn = {
+    dataField: 'status',
+    caption: 'Estado',
+    width: '110px',
+    cellTemplate: (container, { data }) => {
+      const active = data?.status !== false && data?.status !== 0 && data?.status !== null
+      ReactAppend(container, <span className={`badge ${active ? 'bg-success' : 'bg-secondary'}`}>
+        {active ? 'VIGENTE' : 'ANULADO'}
+      </span>)
+    }
+  }
+
   const actionsColumn = {
     caption: 'Acciones',
-    width: '120px',
+    width: isMagistrales ? '95px' : '120px',
     cellTemplate: (container, { data }) => {
       container.css('text-overflow', 'unset')
       if (isMagistrales) {
@@ -968,34 +1025,21 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
 
   const magistralesColumns = [
     actionsColumn,
-    { dataField: 'id', caption: 'ID', visible: false },
     {
       dataField: 'code',
       caption: 'Codigo',
       width: '130px',
-      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar articulo')
+      cellTemplate: (container, { data }) => container.text(data?.code ?? '')
     },
     { dataField: 'article_type', caption: 'Tipo', width: '120px' },
     { dataField: 'magistralFormat.description', caption: 'Presentacion', width: '150px' },
     { dataField: 'administration_route', caption: 'Via adm.', width: '120px' },
     { dataField: 'name', caption: 'Articulo', minWidth: 200 },
     { dataField: 'laboratory.name', caption: 'Laboratorio', width: '150px' },
-    igvColumn,
+    magistralIgvColumn,
     { dataField: 'default_expiration_date', caption: 'F. venc.', width: '110px', dataType: 'date' },
     { dataField: 'default_lot', caption: 'Lote', width: '110px' },
-    statusColumn,
-    { dataField: 'magistralCategory.description', caption: 'Categoria', visible: false },
-    { dataField: 'sub_category', caption: 'Sub categoria', visible: false },
-    { dataField: 'health_registration', caption: 'R. sanitario', visible: false },
-    { dataField: 'activePrinciple.name', caption: 'Principio activo', visible: false },
-    { ...unitColumn, visible: false },
-    { dataField: 'stock_min', caption: 'Min.', visible: false },
-    { dataField: 'stock_max', caption: 'Max.', visible: false },
-    { dataField: 'currency', caption: 'Moneda', visible: false },
-    { dataField: 'cost_price', caption: 'Costo', visible: false },
-    { dataField: 'sale_price', caption: 'P. venta', visible: false },
-    { ...presentationsColumn, visible: false },
-    ...auditColumns,
+    magistralStatusColumn,
   ]
 
   const standardColumns = [
@@ -1056,6 +1100,211 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
 
   const articleColumns = isMagistrales ? magistralesColumns : (isStorageProduct ? storageProductColumns : standardColumns)
 
+  const renderMagistralesArticleForm = () => (
+    <fieldset className='magistrales-article-form' disabled={isViewing}>
+      <div className='magistrales-section'>
+        <div className='magistrales-section-title'>
+          <i className='mdi mdi-plus-circle-outline me-1'></i> DATOS DEL ARTICULO
+        </div>
+        <div className='row g-3 magistrales-section-body'>
+          <InputFormGroup eRef={codeRef} label='Codigo' col='col-md-2' readOnly placeholder='Se genera al guardar' />
+          <InputFormGroup eRef={nameRef} label='Descripcion' col='col-md-4' required />
+          <InputFormGroup eRef={compositionRef} label='Composicion' col='col-md-4' />
+          <div className='form-group col-md-2 mb-2'>
+            <label className='form-label'>Estado</label>
+            <select ref={statusRef} className='form-control' defaultValue='1'>
+              {magistralStatusOptions.map(option => (
+                <option key={`magistral-status-${option.value}`} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className='row g-3 mt-1'>
+        <div className='col-lg-6'>
+          <div className='magistrales-section h-100'>
+            <div className='magistrales-section-title'>
+              <i className='mdi mdi-plus-circle-outline me-1'></i> CLASIFICACION
+            </div>
+            <div className='row g-3 magistrales-section-body'>
+              <SelectAPIFormGroup
+                eRef={magistralCategoryRef}
+                label='Categoria'
+                col='col-md-4'
+                searchAPI='/api/admin/magistrales/categories/paginate'
+                searchBy='description'
+                dropdownParent='#article-form-container'
+              />
+              <InputFormGroup eRef={subCategoryRef} label='Sub Categoria' col='col-md-4' />
+              <SelectAPIFormGroup
+                eRef={magistralFormatRef}
+                label='Presentacion'
+                col='col-md-4'
+                searchAPI='/api/admin/magistrales/formats/paginate'
+                searchBy='description'
+                dropdownParent='#article-form-container'
+              />
+              <div className='form-group col-md-3 mb-2'>
+                <label className='form-label'>Tipo de articulo</label>
+                <input ref={articleTypeRef} className='form-control' list='magistral-article-type-options' placeholder='SELECCIONE' />
+                <datalist id='magistral-article-type-options'>
+                  {magistralArticleTypeOptions.map(option => <option key={`magistral-type-${option}`} value={option} />)}
+                </datalist>
+              </div>
+              <div className='form-group col-md-3 mb-2'>
+                <label className='form-label'>Via Administracion</label>
+                <input ref={administrationRouteRef} className='form-control' list='magistral-route-options' placeholder='Seleccione' />
+                <datalist id='magistral-route-options'>
+                  {magistralAdministrationRouteOptions.map(option => <option key={`magistral-route-${option}`} value={option} />)}
+                </datalist>
+              </div>
+              <SelectAPIFormGroup
+                eRef={laboratoryRef}
+                label='Laboratorio'
+                col='col-md-3'
+                required
+                searchAPI={articlesRest.laboratoriesPaginateApi()}
+                searchBy='name'
+                dropdownParent='#article-form-container'
+                onChange={onLaboratoryChanged}
+              />
+              <InputFormGroup eRef={healthRegistrationRef} label='R. Sanitario' col='col-md-3' />
+            </div>
+          </div>
+        </div>
+
+        <div className='col-lg-6'>
+          <div className='magistrales-section h-100'>
+            <div className='magistrales-section-title'>
+              <i className='mdi mdi-plus-circle-outline me-1'></i> DATOS DE CONTROL
+            </div>
+            <div className='row g-3 magistrales-section-body'>
+              <InputFormGroup eRef={stockMinRef} label='Stock Minimo' col='col-md-3' type='number' min='0' step='0.001' />
+              <InputFormGroup eRef={stockMaxRef} label='Stock Maximo' col='col-md-3' type='number' min='0' step='0.001' />
+              <div className='form-group col-md-3 mb-2'>
+                <label className='form-label'>Afecto a IGV</label>
+                <select ref={igvRuleRef} className='form-control' defaultValue='0'>
+                  {yesNoOptions.map(option => (
+                    <option key={`magistral-igv-${option.value}`} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className='form-group col-md-3 mb-2'>
+                <label className='form-label'>Moneda</label>
+                <select ref={currencyRef} className='form-control' defaultValue='PEN'>
+                  <option value='PEN'>Soles</option>
+                  <option value='USD'>Dolares</option>
+                </select>
+              </div>
+              <div className='form-group col-md-3 mb-2'>
+                <label className='form-label'>Stock con Vencim.</label>
+                <select ref={stockHasExpirationRef} className='form-control' defaultValue='0'>
+                  {yesNoOptions.map(option => (
+                    <option key={`magistral-exp-${option.value}`} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className='form-group col-md-3 mb-2'>
+                <label className='form-label'>Stock con Lote</label>
+                <select ref={stockHasLotRef} className='form-control' defaultValue='0'>
+                  {yesNoOptions.map(option => (
+                    <option key={`magistral-lot-${option.value}`} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <InputFormGroup eRef={costPriceRef} label='Precio Costo' col='col-md-3' type='number' min='0' step='0.01' />
+              <InputFormGroup eRef={salePriceRef} label='Precio Venta' col='col-md-3' type='number' min='0' step='0.01' />
+              <InputFormGroup eRef={equivalenceExchangeRateRef} label='Tipo de cambio' col='col-md-3' type='number' min='0' step='0.0001' />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className='mt-3'>
+        <button type='button' className='btn btn-sm btn-outline-primary' onClick={onPresentationAdded}>
+          <i className='mdi mdi-plus-circle-outline me-1'></i> INSERTAR EQUIVALENCIA
+        </button>
+      </div>
+
+      <div className='magistrales-equivalence-wrap mt-3'>
+        <div className='table-responsive'>
+          <table className='table table-sm table-bordered mb-0 align-middle'>
+            <thead>
+              <tr>
+                <th>CANTIDAD EQUIVALENTE</th>
+                <th>UNIDAD EQUIVALENTE</th>
+                <th>P. VENTA (M.N)</th>
+                <th>P. COMPRA (M.N)</th>
+                <th>P. COMPRA (M.E)</th>
+                <th style={{ width: 60 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {presentations.map((presentation) => (
+                <tr key={presentation.uid}>
+                  <td>
+                    <input
+                      className='form-control form-control-sm'
+                      type='number'
+                      min='0.001'
+                      step='0.001'
+                      value={presentation.units}
+                      onChange={(e) => onPresentationUpdated(presentation.uid, 'units', e.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className='form-control form-control-sm'
+                      value={presentation.name}
+                      onChange={(e) => onPresentationUpdated(presentation.uid, 'name', e.target.value)}
+                      placeholder='Seleccione unidad equivalente'
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className='form-control form-control-sm'
+                      type='number'
+                      min='0'
+                      step='0.01'
+                      value={presentation.price}
+                      onChange={(e) => onPresentationUpdated(presentation.uid, 'price', e.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className='form-control form-control-sm'
+                      type='number'
+                      min='0'
+                      step='0.01'
+                      value={presentation.purchase_price_national}
+                      onChange={(e) => onPresentationUpdated(presentation.uid, 'purchase_price_national', e.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className='form-control form-control-sm'
+                      type='number'
+                      min='0'
+                      step='0.01'
+                      value={presentation.purchase_price_foreign}
+                      onChange={(e) => onPresentationUpdated(presentation.uid, 'purchase_price_foreign', e.target.value)}
+                    />
+                  </td>
+                  <td className='text-center'>
+                    <button type='button' className='btn btn-xs btn-soft-danger' onClick={() => onPresentationRemoved(presentation.uid)}>
+                      <i className='mdi mdi-close'></i>
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </fieldset>
+  )
+
   return (<>
     {isStorageProduct && (
       <style>{`
@@ -1112,6 +1361,70 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
         @media (max-width: 767.98px) {
           .storage-manufacturer-form-grid {
             grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+    )}
+    {isMagistrales && (
+      <style>{`
+        .magistrales-article-dialog {
+          max-width: calc(100vw - 48px);
+        }
+
+        .magistrales-article-modal .modal-header {
+          background: #24264f;
+          color: #fff;
+          padding-bottom: 0.55rem;
+          padding-top: 0.55rem;
+        }
+
+        .magistrales-article-modal .modal-title {
+          font-size: 0.85rem;
+          font-weight: 700;
+          letter-spacing: 0;
+          text-transform: uppercase;
+        }
+
+        .magistrales-article-modal .modal-body {
+          padding: 1.25rem;
+        }
+
+        .magistrales-article-modal .modal-footer {
+          justify-content: center;
+        }
+
+        .magistrales-section {
+          border: 1px solid #d8dee8;
+        }
+
+        .magistrales-section-title {
+          background: #24264f;
+          color: #fff;
+          font-size: 0.82rem;
+          font-weight: 700;
+          padding: 0.7rem 1rem;
+          text-transform: uppercase;
+        }
+
+        .magistrales-section-body {
+          padding: 1rem;
+        }
+
+        .magistrales-equivalence-wrap {
+          border-top: 1px solid #e6e9ef;
+          padding-top: 1rem;
+        }
+
+        .magistrales-equivalence-wrap th {
+          color: #30364d;
+          font-size: 0.78rem;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        @media (max-width: 991.98px) {
+          .magistrales-article-dialog {
+            max-width: calc(100vw - 16px);
           }
         }
       `}</style>
@@ -1259,11 +1572,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
 
     <Modal
       modalRef={modalRef}
-      title={isStorageProduct ? 'ARTICULO' : (isViewing ? 'Mostrar articulo' : (isEditing ? 'Editar articulo' : 'Agregar articulo'))}
+      title={isMagistrales ? <h4 className='modal-title'><i className='mdi mdi-plus-circle-outline me-1'></i> ARTICULO</h4> : (isStorageProduct ? 'ARTICULO' : (isViewing ? 'Mostrar articulo' : (isEditing ? 'Editar articulo' : 'Agregar articulo')))}
       onSubmit={onModalSubmit}
       size='xl'
+      dialogClass={isMagistrales ? 'magistrales-article-dialog' : ''}
+      contentClass={isMagistrales ? 'magistrales-article-modal' : ''}
+      closeButtonClass={isMagistrales ? 'btn-close-white' : ''}
       hideButtonSubmit={isViewing}
-      btnSubmitText='Registrar'
+      btnSubmitText={isMagistrales ? 'Guardar Articulo' : 'Registrar'}
     >
       <div className='row' id='article-form-container'>
         <input ref={idRef} type='hidden' />
@@ -1393,6 +1709,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
             </div>
           </div>
         </fieldset>
+        ) : isMagistrales ? (
+          renderMagistralesArticleForm()
         ) : (
         <fieldset className='row p-0 m-0' disabled={isViewing}>
         <InputFormGroup eRef={codeRef} label={isMagistrales ? 'Codigo' : 'Codigo de articulo'} col='col-md-4' required />

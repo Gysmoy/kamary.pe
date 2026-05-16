@@ -14,6 +14,8 @@ class ArticlePresentation extends Model
         'name',
         'units',
         'price',
+        'purchase_price_national',
+        'purchase_price_foreign',
         'sort_order',
         'status',
     ];
@@ -21,6 +23,8 @@ class ArticlePresentation extends Model
     protected $casts = [
         'units' => 'float',
         'price' => 'float',
+        'purchase_price_national' => 'float',
+        'purchase_price_foreign' => 'float',
         'status' => 'boolean',
     ];
 
