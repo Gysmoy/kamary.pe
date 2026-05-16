@@ -353,7 +353,7 @@ class ArticleController extends BasicController
             ? $this->toNullableInt($body['magistral_laboratory_id'] ?? $body['laboratory_id'] ?? null)
             : null;
         $activePrincipleId = $body['active_principle_id'] ?? null;
-        $unitId = $body['unit_id'] ?? null;
+        $unitId = $this->toNullableInt($body['unit_id'] ?? null);
         $magistralCategoryId = $this->toNullableInt($body['magistral_category_id'] ?? null);
         $requestedSubCategory = trim((string)($body['sub_category'] ?? ''));
         $magistralPresentation = $this->canonicalMagistralPresentation($body['magistral_presentation'] ?? null);
@@ -400,9 +400,7 @@ class ArticleController extends BasicController
             }
             $body['magistral_status'] = $this->normalizeMagistralStatus($body['magistral_status'] ?? $body['status'] ?? null);
             $body['status'] = $body['magistral_status'] !== 'de_baja';
-            if (!$unitId) {
-                $unitId = $this->ensureDefaultMagistralUnit();
-            }
+            $unitId = $unitId ?: $this->resolveMagistralUnitFromPresentations();
             $laboratoryId = null;
             $activePrincipleId = null;
             if (!empty($body['magistral_presentation']) && !$magistralPresentation) {
@@ -480,6 +478,7 @@ class ArticleController extends BasicController
         $body['code'] = $code;
         $body['module_scope'] = $this->moduleScope;
         $body['name'] = $name;
+        $body['unit_id'] = $unitId;
         $body['composition'] = trim((string)($body['composition'] ?? '')) ?: null;
         $body['article_type'] = trim((string)($body['article_type'] ?? '')) ?: null;
         $body['administration_route'] = trim((string)($body['administration_route'] ?? '')) ?: null;
@@ -966,6 +965,61 @@ class ArticleController extends BasicController
         );
 
         return (int)$principle->id;
+    }
+
+    private function resolveMagistralUnitFromPresentations(): int
+    {
+        foreach ($this->presentationsPayload as $presentation) {
+            if (!is_array($presentation)) continue;
+
+            $label = trim((string)($presentation['name'] ?? ''));
+            if ($label !== '') {
+                return $this->findOrCreateMagistralUnit($label);
+            }
+        }
+
+        return $this->ensureDefaultMagistralUnit();
+    }
+
+    private function findOrCreateMagistralUnit(string $label): int
+    {
+        $normalized = $this->normalizeText($label);
+        $matcher = function ($query) use ($normalized) {
+            $query->whereRaw('LOWER(TRIM(symbol)) = ?', [$normalized])
+                ->orWhereRaw('LOWER(TRIM(name)) = ?', [$normalized]);
+        };
+
+        if (Schema::hasColumn('units', 'module_scope')) {
+            $unit = Unit::where('module_scope', 'magistrales')
+                ->where($matcher)
+                ->first();
+            if ($unit) return (int)$unit->id;
+
+            $unit = Unit::where(function ($scope) {
+                    $scope->where('module_scope', 'standard')
+                        ->orWhereNull('module_scope');
+                })
+                ->where($matcher)
+                ->first();
+            if ($unit) return (int)$unit->id;
+        } else {
+            $unit = Unit::where($matcher)->first();
+            if ($unit) return (int)$unit->id;
+        }
+
+        $userId = Auth::id();
+        $data = [
+            'name' => $label,
+            'symbol' => mb_strtoupper($label),
+            'status' => true,
+            'created_by' => $userId,
+            'updated_by' => $userId,
+        ];
+        if (Schema::hasColumn('units', 'module_scope')) {
+            $data['module_scope'] = 'magistrales';
+        }
+
+        return (int)Unit::create($data)->id;
     }
 
     private function ensureDefaultMagistralUnit(): int

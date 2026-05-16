@@ -2,6 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Article;
+use App\Models\MagistralCategory;
+use App\Models\MagistralLaboratory;
+use App\Models\MagistralSubcategory;
+use App\Models\Unit;
 use App\Models\User;
 use App\Support\ModulePermissions;
 use Database\Seeders\ModulePermissionsSeeder;
@@ -88,6 +93,10 @@ class MagistralesModuleReadinessTest extends TestCase
         $this->actingAs($this->adminUser());
 
         foreach (ModulePermissions::magistralesModules() as $module) {
+            if (!$module['api']) {
+                continue;
+            }
+
             $this->postJson($module['api'], [
                 'isLoadingAll' => true,
                 'take' => 1,
@@ -108,5 +117,77 @@ class MagistralesModuleReadinessTest extends TestCase
                 "No existe el permiso {$module['permission']}"
             );
         }
+    }
+
+    public function test_magistrales_article_save_derives_unit_from_first_equivalence(): void
+    {
+        $user = $this->adminUser();
+        $this->actingAs($user);
+
+        $laboratory = MagistralLaboratory::create([
+            'description' => 'MAGISTRAL',
+            'code' => 'MAG-QA',
+            'status' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+        $category = MagistralCategory::create([
+            'code' => 'INS',
+            'description' => 'INSUMOS',
+            'status' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+        MagistralSubcategory::create([
+            'magistral_category_id' => $category->id,
+            'description' => 'POLVO',
+            'status' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $response = $this->postJson('/api/admin/magistrales/articles', [
+            'name' => 'ACIDO ASCORBICO',
+            'article_type' => 'INSUMOS',
+            'administration_route' => 'N/A',
+            'magistral_category_id' => $category->id,
+            'sub_category' => 'POLVO',
+            'magistral_presentation' => 'POLVO',
+            'magistral_laboratory_id' => $laboratory->id,
+            'igv_rule' => true,
+            'stock_min' => 100,
+            'stock_max' => 1000,
+            'currency' => 'PEN',
+            'stock_has_expiration' => true,
+            'stock_has_lot' => true,
+            'cost_price' => 200,
+            'sale_price' => 0,
+            'presentations' => [
+                [
+                    'units' => 1,
+                    'name' => 'Kg',
+                    'price' => 0,
+                    'purchase_price_national' => 200,
+                    'purchase_price_foreign' => 0,
+                ],
+                [
+                    'units' => 1000,
+                    'name' => 'g',
+                    'price' => 0,
+                    'purchase_price_national' => 0.2,
+                    'purchase_price_foreign' => 0,
+                ],
+            ],
+        ]);
+
+        $response->assertOk()->assertJsonPath('status', 200);
+
+        $unit = Unit::where('module_scope', 'magistrales')->where('symbol', 'KG')->first();
+        $this->assertNotNull($unit);
+
+        $article = Article::where('module_scope', 'magistrales')->where('name', 'ACIDO ASCORBICO')->firstOrFail();
+        $this->assertSame($unit->id, $article->unit_id);
+        $this->assertSame('INS-1', $article->code);
+        $this->assertCount(2, $article->presentations);
     }
 }
