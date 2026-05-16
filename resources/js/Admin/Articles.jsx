@@ -164,12 +164,9 @@ const magistralEquivalenceDefaultsByType = {
 }
 
 const allowedMagistralCategoryLabels = [
-  'Capsulas',
-  'Cosmetica',
-  'Dermatologia',
-  'Dolor',
-  'Gastroenterologia',
-  'Pediatria',
+  'GINECOLOGIA',
+  'INSUMOS',
+  'ANDROLOGIA',
 ]
 
 const isAllowedMagistralCategory = (value) => {

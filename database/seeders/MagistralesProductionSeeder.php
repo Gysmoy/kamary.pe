@@ -209,9 +209,10 @@ class MagistralesProductionSeeder extends Seeder
     private function ensureCategories(Warehouse $warehouse): Collection
     {
         $names = MagistralCategory::ALLOWED_DESCRIPTIONS;
+        $activeIds = [];
 
         foreach ($names as $index => $name) {
-            MagistralCategory::query()->updateOrCreate(
+            $category = MagistralCategory::query()->updateOrCreate(
                 ['code' => 'MAG-CAT-' . str_pad((string)($index + 1), 3, '0', STR_PAD_LEFT)],
                 [
                     'description' => $name,
@@ -222,19 +223,19 @@ class MagistralesProductionSeeder extends Seeder
                     'updated_by' => $this->userId,
                 ]
             );
+            $activeIds[] = $category->id;
         }
 
         MagistralCategory::query()
             ->where('code', 'like', 'MAG-CAT-%')
-            ->whereNotIn('description', $names)
+            ->whereNotIn('id', $activeIds)
             ->update([
                 'status' => null,
                 'updated_by' => $this->userId,
             ]);
 
         return MagistralCategory::query()
-            ->where('code', 'like', 'MAG-CAT-%')
-            ->whereIn('description', $names)
+            ->whereIn('id', $activeIds)
             ->orderBy('code')
             ->get();
     }

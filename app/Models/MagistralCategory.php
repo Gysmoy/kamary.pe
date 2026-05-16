@@ -10,12 +10,9 @@ class MagistralCategory extends Model
     use HasFactory;
 
     public const ALLOWED_DESCRIPTIONS = [
-        'Capsulas',
-        'Cosmetica',
-        'Dermatologia',
-        'Dolor',
-        'Gastroenterologia',
-        'Pediatria',
+        'GINECOLOGIA',
+        'INSUMOS',
+        'ANDROLOGIA',
     ];
 
     protected $table = 'magistral_categories';
