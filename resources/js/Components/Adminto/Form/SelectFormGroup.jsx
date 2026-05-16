@@ -1,5 +1,6 @@
 import Tippy from "@tippyjs/react"
 import React, { useEffect, useRef, useState } from "react"
+import select2SpanishLanguage from "../../../Utils/select2SpanishLanguage"
 
 const SelectFormGroup = ({ id, col, className, label, specification, eRef, value, required = false, children, dropdownParent, noMargin = false, multiple = false, disabled = false, onChange = () => { }, style,
   templateResult,
@@ -32,6 +33,7 @@ const SelectFormGroup = ({ id, col, className, label, specification, eRef, value
       templateSelection,
       minimumInputLength,
       minimumResultsForSearch: minimumResultsForSearch ?? 0,
+      language: select2SpanishLanguage,
       tags
     })
 

@@ -1,3 +1,5 @@
+import select2SpanishLanguage from './select2SpanishLanguage'
+
 const getJQuery = () => window.jQuery || window.$
 
 const getDropdownParent = (select) => {
@@ -71,14 +73,7 @@ export const syncSelect2 = (root = document) => {
           placeholder: getPlaceholder(select),
           allowClear: !select.required && !select.multiple && hasEmptyOption,
           minimumResultsForSearch: 0,
-          language: {
-            errorLoading: () => 'No se pudieron cargar los resultados',
-            inputTooLong: ({ input, maximum }) => `Elimine ${input.length - maximum} caracter(es)`,
-            inputTooShort: ({ minimum }) => `Ingrese ${minimum} o mas caracteres`,
-            loadingMore: () => 'Cargando mas resultados...',
-            noResults: () => 'Sin resultados',
-            searching: () => 'Buscando...'
-          }
+          language: select2SpanishLanguage
         })
 
         $select.on(

@@ -1,6 +1,7 @@
 import Tippy from "@tippyjs/react";
 import React, { useEffect, useRef } from "react"
 import { Cookies, JSON } from "sode-extend-react"
+import select2SpanishLanguage from "../../../Utils/select2SpanishLanguage"
 
 const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = false, dropdownParent, searchAPI, searchBy, selectBy = 'id', multiple = false, filter = null, onChange = () => { },
   templateResult,
@@ -25,6 +26,7 @@ const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = fa
       dropdownParent: dropdownParent ? $(dropdownParent) : $(`#${containerId}`),
       minimumInputLength: 0,
       minimumResultsForSearch: 0,
+      language: select2SpanishLanguage,
       tags,
       ajax: {
         url: searchAPI,
