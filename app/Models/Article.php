@@ -65,9 +65,9 @@ class Article extends Model
         'sale_price' => 'float',
         'equivalence_exchange_rate' => 'float',
         'equivalence_quantity' => 'float',
-        'sale_price_national' => 'float',
-        'purchase_price_national' => 'float',
-        'purchase_price_foreign' => 'float',
+        'sale_price_national' => 'decimal:4',
+        'purchase_price_national' => 'decimal:4',
+        'purchase_price_foreign' => 'decimal:4',
         'default_expiration_date' => 'date',
     ];
 

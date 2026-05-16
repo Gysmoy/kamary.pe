@@ -168,9 +168,9 @@ const getMagistralEquivalenceDefaults = (articleType) => {
   return (magistralEquivalenceDefaultsByType[normalizedType] ?? [])
     .map(row => emptyPresentation({
       ...row,
-      price: '',
-      purchase_price_national: '',
-      purchase_price_foreign: '',
+      price: 0,
+      purchase_price_national: 0,
+      purchase_price_foreign: 0,
     }))
 }
 
@@ -521,16 +521,16 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       equivalence_exchange_rate: equivalenceExchangeRateRef.current?.value ?? '',
       equivalence_quantity: equivalenceQuantityRef.current?.value ?? '',
       equivalence_unit_id: selectedEquivalenceUnitId || null,
-      sale_price_national: isMagistrales ? (firstPresentation.price ?? '') : (salePriceNationalRef.current?.value ?? ''),
-      purchase_price_national: isMagistrales ? (firstPresentation.purchase_price_national ?? '') : (purchasePriceNationalRef.current?.value ?? ''),
-      purchase_price_foreign: isMagistrales ? (firstPresentation.purchase_price_foreign ?? '') : (purchasePriceForeignRef.current?.value ?? ''),
+      sale_price_national: isMagistrales ? (firstPresentation.price === '' ? 0 : (firstPresentation.price ?? 0)) : (salePriceNationalRef.current?.value ?? ''),
+      purchase_price_national: isMagistrales ? (firstPresentation.purchase_price_national === '' ? 0 : (firstPresentation.purchase_price_national ?? 0)) : (purchasePriceNationalRef.current?.value ?? ''),
+      purchase_price_foreign: isMagistrales ? (firstPresentation.purchase_price_foreign === '' ? 0 : (firstPresentation.purchase_price_foreign ?? 0)) : (purchasePriceForeignRef.current?.value ?? ''),
       notes: notesRef.current?.value?.trim() ?? '',
       presentations: isStorageProduct ? [] : presentations.map(item => ({
         name: (item.name ?? '').toString().trim(),
         units: item.units,
-        price: item.price,
-        purchase_price_national: item.purchase_price_national ?? '',
-        purchase_price_foreign: item.purchase_price_foreign ?? '',
+        price: item.price === '' ? 0 : (item.price ?? 0),
+        purchase_price_national: item.purchase_price_national === '' ? 0 : (item.purchase_price_national ?? 0),
+        purchase_price_foreign: item.purchase_price_foreign === '' ? 0 : (item.purchase_price_foreign ?? 0),
       }))
     }
 
@@ -1358,7 +1358,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
                       className='form-control form-control-sm'
                       type='number'
                       min='0'
-                      step='0.01'
+                      step='0.0001'
                       value={presentation.price}
                       onChange={(e) => onPresentationUpdated(presentation.uid, 'price', e.target.value)}
                     />
@@ -1368,7 +1368,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
                       className='form-control form-control-sm'
                       type='number'
                       min='0'
-                      step='0.01'
+                      step='0.0001'
                       value={presentation.purchase_price_national}
                       onChange={(e) => onPresentationUpdated(presentation.uid, 'purchase_price_national', e.target.value)}
                     />
@@ -1378,7 +1378,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
                       className='form-control form-control-sm'
                       type='number'
                       min='0'
-                      step='0.01'
+                      step='0.0001'
                       value={presentation.purchase_price_foreign}
                       onChange={(e) => onPresentationUpdated(presentation.uid, 'purchase_price_foreign', e.target.value)}
                     />

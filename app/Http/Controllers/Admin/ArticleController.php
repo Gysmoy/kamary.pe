@@ -540,9 +540,9 @@ class ArticleController extends BasicController
 
                 $name = trim((string)($presentation['name'] ?? ''));
                 $units = $this->toNullableDecimal($presentation['units'] ?? null);
-                $price = $this->toNullableDecimal($presentation['price'] ?? null);
-                $purchasePriceNational = $this->toNullableDecimal($presentation['purchase_price_national'] ?? null);
-                $purchasePriceForeign = $this->toNullableDecimal($presentation['purchase_price_foreign'] ?? null);
+                $price = $this->toNullableDecimal($presentation['price'] ?? null) ?? 0;
+                $purchasePriceNational = $this->toNullableDecimal($presentation['purchase_price_national'] ?? null) ?? 0;
+                $purchasePriceForeign = $this->toNullableDecimal($presentation['purchase_price_foreign'] ?? null) ?? 0;
 
                 if ($name === '' && is_null($units) && is_null($price)) continue;
                 if ($name === '') throw new \Exception('Cada presentacion debe tener nombre');

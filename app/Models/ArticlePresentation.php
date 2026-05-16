@@ -21,10 +21,10 @@ class ArticlePresentation extends Model
     ];
 
     protected $casts = [
-        'units' => 'float',
-        'price' => 'float',
-        'purchase_price_national' => 'float',
-        'purchase_price_foreign' => 'float',
+        'units' => 'decimal:6',
+        'price' => 'decimal:4',
+        'purchase_price_national' => 'decimal:4',
+        'purchase_price_foreign' => 'decimal:4',
         'status' => 'boolean',
     ];
 
