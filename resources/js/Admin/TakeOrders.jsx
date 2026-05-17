@@ -808,8 +808,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 
           <div className='col-12 mb-2'>
             <label className='form-label'>Dirección</label>
-            <div className='input-group'>
-              <select className='form-control' value={selectedDeliveryAddressId} onChange={onDeliveryAddressChanged}>
+            <div className='input-group flex-nowrap'>
+              <select className='form-control' style={{ minWidth: 0, width: '1%' }} value={selectedDeliveryAddressId} onChange={onDeliveryAddressChanged}>
                 <option value=''>Seleccione</option>
                 {deliveryAddresses.map(address => (
                   <option key={`take-order-address-${address.id}`} value={address.id}>
@@ -817,9 +817,11 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
                   </option>
                 ))}
               </select>
-              <button type='button' className='btn btn-info text-white' title='Abrir mapa' onClick={openMap}>
-                <i className='mdi mdi-map-marker'></i>
-              </button>
+              <div className='input-group-append'>
+                <button type='button' className='btn btn-info text-white h-100 px-3' title='Abrir mapa' onClick={openMap}>
+                  <i className='mdi mdi-map-marker'></i>
+                </button>
+              </div>
             </div>
           </div>
 
