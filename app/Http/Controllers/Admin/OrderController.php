@@ -30,10 +30,10 @@ class OrderController extends BasicController
     {
         $query = $model::select('orders.*')
             ->with([
-                'business:id,name',
-                'branch:id,business_id,name',
+                'business:id,name,tax_number,trade_name,description',
+                'branch:id,business_id,name,ubigeo,address,telephone,email',
                 'warehouse:id,name',
-                'client:id,document_type,document_number,full_name',
+                'client:id,document_type,document_number,full_name,full_address,phone,primary_contact,primary_contact_phone,email,contract_due_days',
                 'items:id,order_id,article_id,presentation_id,warehouse_id,stock,price_unit,presentation_units,quantity,total,status',
                 'items.article:id,code,name,laboratory_id,active_principle_id,unit_id',
                 'items.article.laboratory:id,name',

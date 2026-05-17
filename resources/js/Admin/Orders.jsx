@@ -15,6 +15,7 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import Global from '../Utils/Global';
 import OrdersRest from '../Actions/Admin/OrdersRest';
+import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 
 const ordersRest = new OrdersRest()
 
@@ -435,7 +436,7 @@ const Orders = () => {
       }}
       pageSize={25}
       columns={[
-        { dataField: 'id', caption: 'ID', width: 80 },
+        { dataField: 'code', caption: 'Codigo', width: 105 },
         { dataField: 'business.name', caption: 'Empresa', minWidth: 140 },
         { dataField: 'branch.name', caption: 'Sede', minWidth: 130 },
         { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 130 },
@@ -487,7 +488,7 @@ const Orders = () => {
         },
         {
           caption: 'Acciones',
-          width: '120px',
+          width: '150px',
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
             container.append(DxButton({
@@ -497,7 +498,13 @@ const Orders = () => {
               onClick: () => onModalOpen(data)
             }))
             container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
+              className: 'btn btn-xs btn-soft-danger ms-1',
+              title: 'Imprimir pedido',
+              icon: 'mdi mdi-file-pdf-box',
+              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.order(data))
+            }))
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-danger ms-1',
               title: 'Eliminar pedido',
               icon: 'mdi mdi-delete',
               onClick: () => onDeleteClicked(data.id)

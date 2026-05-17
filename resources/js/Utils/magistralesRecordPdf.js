@@ -265,6 +265,259 @@ const drawPageLogo = async (doc, x, y, width, height) => {
   drawKamaryLogoMark(doc, x, y - 10)
 }
 
+const orderDocumentCode = (data) => data?.code || (data?.id ? `P${String(data.id).padStart(6, '0')}` : '')
+
+const orderCurrencyName = (currency) => ({
+  PEN: 'SOLES',
+  USD: 'DOLARES',
+  EUR: 'EUROS',
+}[`${currency || 'PEN'}`.toUpperCase()] || `${currency || 'PEN'}`.toUpperCase())
+
+const orderCurrencyDisplay = (currency) => ({
+  PEN: 'Soles',
+  USD: 'Dolares',
+  EUR: 'Euros',
+}[`${currency || 'PEN'}`.toUpperCase()] || `${currency || 'PEN'}`.toUpperCase())
+
+const orderCurrencySymbol = (currency) => ({
+  PEN: 'S/.',
+  USD: 'US$',
+  EUR: 'EUR',
+}[`${currency || 'PEN'}`.toUpperCase()] || `${currency || 'PEN'}`.toUpperCase())
+
+const orderMoney = (value, currency = 'PEN', withSymbol = false) => {
+  const amount = Number(value || 0).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+  return withSymbol ? `${orderCurrencySymbol(currency)} ${amount}` : amount
+}
+
+const addDaysToDate = (value, days = 5) => {
+  const dateText = asDate(value)
+  if (!dateText || dateText === '-') return '-'
+  const [year, month, day] = dateText.split('-').map(part => Number(part))
+  if (!year || !month || !day) return dateText
+  const date = new Date(year, month - 1, day)
+  date.setDate(date.getDate() + Number(days || 0))
+  const pad = (part) => String(part).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+const spanishBelowThousand = (number) => {
+  const units = ['', 'UNO', 'DOS', 'TRES', 'CUATRO', 'CINCO', 'SEIS', 'SIETE', 'OCHO', 'NUEVE', 'DIEZ', 'ONCE', 'DOCE', 'TRECE', 'CATORCE', 'QUINCE', 'DIECISEIS', 'DIECISIETE', 'DIECIOCHO', 'DIECINUEVE']
+  const tens = ['', '', 'VEINTE', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA']
+  const hundreds = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS']
+  const n = Number(number || 0)
+  if (n === 0) return ''
+  if (n === 100) return 'CIEN'
+  if (n < 20) return units[n]
+  if (n < 30) return n === 20 ? 'VEINTE' : `VEINTI${units[n - 20]}`
+  if (n < 100) {
+    const unit = n % 10
+    return unit ? `${tens[Math.floor(n / 10)]} Y ${units[unit]}` : tens[n / 10]
+  }
+  const rest = n % 100
+  return rest ? `${hundreds[Math.floor(n / 100)]} ${spanishBelowThousand(rest)}` : hundreds[n / 100]
+}
+
+const spanishInteger = (value) => {
+  const n = Math.floor(Math.abs(Number(value || 0)))
+  if (n === 0) return 'CERO'
+  if (n < 1000) return spanishBelowThousand(n)
+  if (n < 1000000) {
+    const thousands = Math.floor(n / 1000)
+    const rest = n % 1000
+    const thousandText = thousands === 1 ? 'MIL' : `${spanishInteger(thousands)} MIL`
+    return rest ? `${thousandText} ${spanishBelowThousand(rest)}` : thousandText
+  }
+  if (n < 1000000000) {
+    const millions = Math.floor(n / 1000000)
+    const rest = n % 1000000
+    const millionText = millions === 1 ? 'UN MILLON' : `${spanishInteger(millions)} MILLONES`
+    return rest ? `${millionText} ${spanishInteger(rest)}` : millionText
+  }
+  return `${n}`
+}
+
+const amountInWords = (value, currency = 'PEN') => {
+  const amount = Math.abs(Number(value || 0))
+  const integer = Math.floor(amount)
+  const cents = Math.round((amount - integer) * 100)
+  return `${spanishInteger(integer)} CON ${String(cents).padStart(2, '0')}/100 ${orderCurrencyName(currency)}`
+}
+
+const renderOrderQuotationPdf = (doc, document) => {
+  const data = document.source ?? {}
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 42
+  const contentWidth = pageWidth - (margin * 2)
+  const currency = data?.currency || 'PEN'
+  const code = orderDocumentCode(data)
+  const companyName = asText(nested(data, 'business.trade_name') || nested(data, 'business.name'), 'KAMARY PERU SAC').toUpperCase()
+  const companyRuc = asText(nested(data, 'business.tax_number'), '20601542600')
+  const companyAddress = asText(
+    nested(data, 'branch.address') || nested(data, 'business.description'),
+    'CAL.YEN ESCOBEDO GARRO NRO. 830\nURB. LA VINA LIMA - LIMA - SAN LUIS'
+  )
+  const clientName = asText(nested(data, 'client.full_name'), 'CLIENTE')
+  const clientAddress = asText(data?.delivery_address || nested(data, 'client.full_address'), '')
+  const issueDate = asDate(data?.issue_date || data?.created_at || new Date().toISOString())
+  const dueDate = asDate(data?.due_date || data?.valid_until || addDaysToDate(issueDate, nested(data, 'client.contract_due_days') || 5))
+  const subtotal = Number(data?.subtotal ?? (data?.items ?? []).reduce((sum, item) => sum + Number(item?.total || 0), 0))
+  const discount = Number(data?.discount_amount || 0)
+  const total = Number(data?.total ?? Math.max(0, subtotal - discount))
+  const taxable = total > 0 ? (total / 1.18) : 0
+  const tax = total - taxable
+  let y = 48
+
+  doc.setTextColor(0, 0, 0)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.text(companyName, margin, y)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7.8)
+  doc.text(doc.splitTextToSize(companyAddress, 250), margin, y + 14)
+  doc.setFont('helvetica', 'bold')
+  doc.text(`RUC ${companyRuc}`, margin, y + 46)
+
+  const boxWidth = 148
+  doc.setDrawColor(35, 35, 70)
+  doc.setLineWidth(0.7)
+  doc.rect(pageWidth - margin - boxWidth, y - 8, boxWidth, 60)
+  doc.setFontSize(11)
+  doc.text('COTIZACION', pageWidth - margin - (boxWidth / 2), y + 13, { align: 'center' })
+  doc.setFontSize(12)
+  doc.text(code, pageWidth - margin - (boxWidth / 2), y + 36, { align: 'center' })
+
+  y += 86
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.text('DATOS DEL CLIENTE', margin, y)
+  y += 16
+
+  const leftX = margin
+  const rightX = margin + 285
+  const fieldLine = (label, value, x, currentY, labelWidth = 82, width = 190) => {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7.7)
+    doc.text(`${label}  :`, x, currentY)
+    doc.setFont('helvetica', 'normal')
+    const lines = doc.splitTextToSize(asText(value, ''), width)
+    doc.text(lines, x + labelWidth, currentY)
+    return Math.max(12, lines.length * 9)
+  }
+
+  const line1 = Math.max(
+    fieldLine('DOCUMENTO', nested(data, 'client.document_number'), leftX, y),
+    fieldLine('FECHA EMISION', issueDate, rightX, y, 96, 118)
+  )
+  y += line1
+  const line2 = Math.max(
+    fieldLine('DENOMINACION', clientName, leftX, y),
+    fieldLine('MONEDA', orderCurrencyDisplay(currency), rightX, y, 96, 118)
+  )
+  y += line2
+  const line3 = Math.max(
+    fieldLine('DIRECCION', clientAddress, leftX, y),
+    fieldLine('F. VENCIMIENTO', dueDate, rightX, y, 96, 118)
+  )
+  y += line3
+  const line4 = Math.max(
+    fieldLine('TELEFONO', nested(data, 'client.phone') || nested(data, 'client.primary_contact_phone'), leftX, y),
+    fieldLine('FORMA DE PAGO', data?.payment_condition || data?.payment_method || data?.payment_type, rightX, y, 96, 118)
+  )
+  y += line4 + 14
+
+  const itemRows = (data?.items ?? []).map(item => [
+    joinText(nested(item, 'article.code'), nested(item, 'article.name')) || nested(item, 'article.name') || 'Articulo',
+    nested(item, 'article.unit.symbol') || nested(item, 'article.unit.name') || '-',
+    item?.lot || item?.batch_code || '-',
+    asDate(item?.expiration_date),
+    asQuantity(item?.quantity),
+    orderMoney(item?.price_unit, currency),
+    orderMoney(item?.total, currency),
+  ])
+
+  doc.autoTable({
+    startY: y,
+    head: [['PRODUCTO', 'MEDIDA', 'LOTE', 'F.V.', 'CANT.', 'PRECIO', 'IMPORTE']],
+    body: itemRows.length ? itemRows : [['Sin detalle', '', '', '', '', '', '']],
+    theme: 'grid',
+    styles: {
+      fontSize: 7,
+      cellPadding: { top: 5, right: 4, bottom: 5, left: 4 },
+      textColor: [0, 0, 0],
+      lineColor: [220, 220, 220],
+      lineWidth: 0.35,
+      overflow: 'linebreak',
+    },
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [65, 65, 65],
+      fontStyle: 'bold',
+      lineColor: [220, 220, 220],
+      lineWidth: 0.35,
+      halign: 'center',
+    },
+    columnStyles: {
+      0: { cellWidth: 214 },
+      1: { cellWidth: 57, halign: 'center' },
+      2: { cellWidth: 43, halign: 'center' },
+      3: { cellWidth: 43, halign: 'center' },
+      4: { cellWidth: 43, halign: 'right' },
+      5: { cellWidth: 58, halign: 'right' },
+      6: { cellWidth: contentWidth - 458, halign: 'right' },
+    },
+    margin: { left: margin, right: margin },
+  })
+
+  y = doc.lastAutoTable.finalY + 10
+  if (y + 132 > pageHeight - 40) {
+    doc.addPage()
+    y = 48
+  }
+
+  const totalsRows = [
+    ...(discount > 0 ? [['SUBTOTAL', orderMoney(subtotal, currency, true)], ['DESCUENTO', orderMoney(discount, currency, true)]] : []),
+    ['GRAVADA', orderMoney(taxable, currency, true)],
+    ['IGV 18.00 %', orderMoney(tax, currency, true)],
+    ['TOTAL', orderMoney(total, currency, true)],
+  ]
+
+  doc.autoTable({
+    startY: y,
+    body: totalsRows,
+    theme: 'plain',
+    styles: { fontSize: 8.2, cellPadding: 2.5, textColor: [0, 0, 0] },
+    columnStyles: {
+      0: { halign: 'right', fontStyle: 'bold', cellWidth: 84 },
+      1: { halign: 'right', cellWidth: 88 },
+    },
+    margin: { left: pageWidth - margin - 172, right: margin },
+  })
+
+  y = doc.lastAutoTable.finalY + 20
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8.2)
+  const amountText = `IMPORTE EN LETRAS: ${amountInWords(total, currency)}`
+  doc.text(doc.splitTextToSize(amountText, contentWidth), margin, y)
+  y += Math.max(14, doc.splitTextToSize(amountText, contentWidth).length * 10)
+
+  const observations = [
+    data?.observations,
+    data?.purchase_order ? `Orden de compra: ${data.purchase_order}` : '',
+    data?.guide_number ? `Guia: ${data.guide_number}` : '',
+    data?.dispatch_guide ? `Guia remision: ${data.dispatch_guide}` : '',
+  ].filter(Boolean).join(' | ')
+
+  doc.setFont('helvetica', 'bold')
+  doc.text('OBSERVACIONES:', margin, y)
+  doc.setFont('helvetica', 'normal')
+  doc.text(doc.splitTextToSize(asText(observations, ''), contentWidth - 82), margin + 82, y)
+}
+
 const renderSampleReferralGuidePdf = async (doc, document) => {
   const data = document.source ?? {}
   const pageWidth = doc.internal.pageSize.getWidth()
@@ -1045,6 +1298,13 @@ export const buildMagistralesRows = {
     ],
     observations: [data?.delivery_address, data?.delivery_reference, data?.observations].filter(Boolean).join('\n'),
   }),
+  order: (data) => ({
+    layout: 'order-quotation',
+    title: 'Cotizacion',
+    code: orderDocumentCode(data),
+    filename: `pedido-${orderDocumentCode(data) || data?.id}`,
+    source: data,
+  }),
   priceList: (data) => ({
     title: 'Tarifario',
     code: data?.code,
@@ -1334,6 +1594,11 @@ export const openMagistralesRecordPdf = async (document) => {
     }
     if (document.layout === 'sample-referral-guide') {
       await renderSampleReferralGuidePdf(doc, document)
+      showPdfInModal(doc, document)
+      return
+    }
+    if (document.layout === 'order-quotation') {
+      renderOrderQuotationPdf(doc, document)
       showPdfInModal(doc, document)
       return
     }
