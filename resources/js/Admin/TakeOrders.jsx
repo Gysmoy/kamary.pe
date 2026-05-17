@@ -86,6 +86,15 @@ const mapItemTotals = (item) => {
 
 const uniqueOptions = (values) => [...new Set(values.filter(value => value !== null && value !== undefined && `${value}`.trim() !== '').map(value => `${value}`.trim()))]
 
+const documentTypeFromClient = (client) => {
+  const documentType = `${client?.document_type ?? ''}`.trim().toLowerCase()
+  if (documentType === 'ruc') return 'Factura'
+  if (['dni', 'ce', 'carnet extranjeria', 'carnet de extranjeria'].includes(documentType)) return 'Boleta'
+  return 'Factura'
+}
+
+const paymentConditionFromClient = (client) => Number(client?.contract_due_days || 0) > 0 ? 'Credito' : 'Contado'
+
 const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
@@ -248,6 +257,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
       setDeliveryAddresses([])
       setSelectedCommercialChannel('')
       setSelectedSegment('')
+      if (documentTypeRef.current) documentTypeRef.current.value = ''
+      if (paymentConditionRef.current) paymentConditionRef.current.value = ''
       clearAddressSnapshot()
       return
     }
@@ -259,8 +270,10 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     const defaultNetworkId = preferredNetworkId || active.find(item => item.is_default)?.id || active[0]?.id
     const selectedNetwork = active.find(item => `${item.id}` === `${defaultNetworkId}`)
     setSelectedNetworkId(defaultNetworkId ? `${defaultNetworkId}` : '')
-    setSelectedCommercialChannel(selectedNetwork?.commercial_channel ?? fallbackClient?.commercial_channel ?? '')
-    setSelectedSegment(selectedNetwork?.segment ?? fallbackClient?.segment ?? '')
+    setSelectedCommercialChannel(fallbackClient?.commercial_channel ?? selectedNetwork?.commercial_channel ?? '')
+    setSelectedSegment(fallbackClient?.segment ?? selectedNetwork?.segment ?? '')
+    if (documentTypeRef.current) documentTypeRef.current.value = documentTypeFromClient(fallbackClient)
+    if (paymentConditionRef.current) paymentConditionRef.current.value = paymentConditionFromClient(fallbackClient)
     await loadDeliveryAddresses(defaultNetworkId, preferredAddressId, active, fallbackClient)
   }
 
@@ -420,7 +433,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     document_type: documentTypeRef.current?.value || 'Factura',
     currency: 'PEN',
     payment_condition: paymentConditionRef.current?.value || '',
-    payment_method: paymentConditionRef.current?.value || '',
+    payment_method: paymentConditionRef.current?.value ? 'Transferencia' : '',
     issue_date: new Date().toISOString().slice(0, 10),
     promised_delivery_at: promisedDateRef.current?.value || null,
     order_status: bill ? 'billed' : 'confirmed',
@@ -485,8 +498,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     const networkId = e.target.value || ''
     setSelectedNetworkId(networkId)
     const network = networks.find(item => `${item.id}` === `${networkId}`)
-    setSelectedCommercialChannel(network?.commercial_channel ?? selectedCommercialChannel)
-    setSelectedSegment(network?.segment ?? selectedSegment)
+    setSelectedCommercialChannel(clientSnapshot?.commercial_channel ?? network?.commercial_channel ?? '')
+    setSelectedSegment(clientSnapshot?.segment ?? network?.segment ?? '')
     await loadDeliveryAddresses(networkId, null, networks, clientSnapshot)
   }
 
@@ -754,14 +767,14 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 
           <div className='col-md-6 mb-2'>
             <label className='form-label'>{profile.channelLabel}</label>
-            <select className='form-control' value={selectedCommercialChannel} onChange={(e) => setSelectedCommercialChannel(e.target.value)}>
+            <select className='form-control' value={selectedCommercialChannel} disabled onChange={(e) => setSelectedCommercialChannel(e.target.value)}>
               <option value=''>Seleccione</option>
               {channelOptions.map(option => <option key={`channel-${option}`} value={option}>{option}</option>)}
             </select>
           </div>
           <div className='col-md-6 mb-2'>
             <label className='form-label'>{profile.segmentLabel}</label>
-            <select className='form-control' value={selectedSegment} onChange={(e) => setSelectedSegment(e.target.value)}>
+            <select className='form-control' value={selectedSegment} disabled onChange={(e) => setSelectedSegment(e.target.value)}>
               <option value=''>Seleccione</option>
               {segmentOptions.map(option => <option key={`segment-${option}`} value={option}>{option}</option>)}
             </select>
@@ -773,7 +786,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
           </div>
           <div className='col-md-6 mb-2'>
             <label className='form-label'>Tipo comprobante</label>
-            <select ref={documentTypeRef} className='form-control'>
+            <select ref={documentTypeRef} className='form-control' disabled>
               <option value=''>Seleccione</option>
               <option value='Factura'>Factura</option>
               <option value='Boleta'>Boleta</option>
@@ -782,10 +795,10 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
           </div>
           <div className='col-md-6 mb-2'>
             <label className='form-label'>Tipo pago</label>
-            <select ref={paymentConditionRef} className='form-control'>
+            <select ref={paymentConditionRef} className='form-control' disabled>
               <option value=''>Seleccione</option>
-              <option value='Contado'>Contado</option>
-              <option value='Credito'>Crédito</option>
+              <option value='Contado'>TRANSFERENCIA [CONTADO]</option>
+              <option value='Credito'>TRANSFERENCIA [CREDITO]</option>
             </select>
           </div>
           <div className='col-md-6 mb-2'>
@@ -812,7 +825,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 
           <div className='col-12 mb-2'>
             <label className='form-label'>Ubigeo</label>
-            <select ref={ubigeoRef} className='form-control' defaultValue=''>
+            <select ref={ubigeoRef} className='form-control' defaultValue='' disabled>
               <option value=''>Seleccione</option>
               {deliveryAddresses.map(address => address.ubigeo && (
                 <option key={`take-order-ubigeo-${address.id}`} value={address.ubigeo}>{address.ubigeo}</option>
@@ -823,7 +836,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 
           <div className='col-12 mb-2'>
             <label className='form-label'>Referencia</label>
-            <input ref={deliveryReferenceRef} className='form-control' readOnly />
+            <input ref={deliveryReferenceRef} className='form-control' disabled readOnly />
           </div>
           <div className='col-md-6 mb-2'>
             <label className='form-label'>Nombre contacto</label>
