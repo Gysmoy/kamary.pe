@@ -45,6 +45,7 @@ use App\Http\Controllers\Admin\BusinessController as AdminBusinessController;
 use App\Http\Controllers\Admin\ClientDistributionNetworkController as AdminClientDistributionNetworkController;
 use App\Http\Controllers\Admin\ClientController as AdminClientController;
 use App\Http\Controllers\Admin\CommercialOrderController as AdminCommercialOrderController;
+use App\Http\Controllers\Admin\TakeOrderController as AdminTakeOrderController;
 use App\Http\Controllers\Admin\DispatchController as AdminDispatchController;
 use App\Http\Controllers\Admin\DailySummaryController as AdminDailySummaryController;
 use App\Http\Controllers\Admin\DriverController as AdminDriverController;
@@ -102,6 +103,8 @@ Route::get('/confirmation/{token}', [AuthController::class, 'loginView'])->name(
 Route::get('/unsubscribe', [MailingController::class, 'reactView'])->name('Unsubscribe.jsx');
 
 Route::middleware('auth')->group(function () {
+    Route::get('/comercial/tomapedido', [AdminTakeOrderController::class, 'reactView']);
+
     // Admin routes
     Route::prefix('admin')->group(function () {
         Route::get('/', fn() => redirect()->to('/admin/home'));
@@ -139,6 +142,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/accounts-receivable', [AdminAccountsReceivableController::class, 'reactView']);
         Route::get('/commercial-orders', [AdminCommercialOrderController::class, 'reactView']);
         Route::get('/commercial-orders/multivende', [AdminCommercialOrderController::class, 'reactView']);
+        Route::get('/comercial/tomapedido', [AdminTakeOrderController::class, 'reactView']);
+        Route::get('/take-orders', [AdminTakeOrderController::class, 'reactView']);
         Route::get('/orders', [AdminOrderController::class, 'reactView']);
         Route::get('/pricing', [AdminPriceListController::class, 'reactView']);
         Route::get('/reports/sales', [AdminSalesReportController::class, 'reactView']);

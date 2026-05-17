@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\BusinessController as AdminBusinessController;
 use App\Http\Controllers\Admin\ClientDistributionNetworkController as AdminClientDistributionNetworkController;
 use App\Http\Controllers\Admin\ClientController as AdminClientController;
 use App\Http\Controllers\Admin\CommercialOrderController as AdminCommercialOrderController;
+use App\Http\Controllers\Admin\TakeOrderController as AdminTakeOrderController;
 use App\Http\Controllers\Admin\DispatchController as AdminDispatchController;
 use App\Http\Controllers\Admin\DailySummaryController as AdminDailySummaryController;
 use App\Http\Controllers\Admin\DriverController as AdminDriverController;
@@ -485,6 +486,16 @@ Route::middleware('auth')->group(function () {
         Route::get('/commercial-orders/clients/{id}/distribution-networks', [AdminCommercialOrderController::class, 'distributionNetworks']);
         Route::get('/commercial-orders/distribution-networks/{id}/addresses', [AdminCommercialOrderController::class, 'deliveryAddresses']);
         Route::get('/commercial-orders/pricing/resolve', [AdminCommercialOrderController::class, 'resolvePrice']);
+
+        Route::post('/take-orders', [AdminTakeOrderController::class, 'save']);
+        Route::post('/take-orders/paginate', [AdminTakeOrderController::class, 'paginate']);
+        Route::patch('/take-orders/status', [AdminTakeOrderController::class, 'status']);
+        Route::patch('/take-orders/{field}', [AdminTakeOrderController::class, 'boolean']);
+        Route::delete('/take-orders/{id}', [AdminTakeOrderController::class, 'delete']);
+        Route::get('/take-orders/businesses/{id}/branches', [AdminTakeOrderController::class, 'branches']);
+        Route::get('/take-orders/clients/{id}/distribution-networks', [AdminTakeOrderController::class, 'distributionNetworks']);
+        Route::get('/take-orders/distribution-networks/{id}/addresses', [AdminTakeOrderController::class, 'deliveryAddresses']);
+        Route::get('/take-orders/pricing/resolve', [AdminTakeOrderController::class, 'resolvePrice']);
 
         Route::post('/accounts-receivable/paginate', [AdminAccountsReceivableController::class, 'paginate']);
         Route::post('/accounts-receivable/{id}/payments', [AdminAccountsReceivableController::class, 'registerPayment']);
