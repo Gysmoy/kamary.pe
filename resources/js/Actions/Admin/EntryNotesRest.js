@@ -90,15 +90,20 @@ class EntryNotesRest extends BasicRest {
     }
   }
 
-  getArticles = async () => {
+  getArticles = async (clientId = null) => {
     try {
+      const normalizedClientId = Number(clientId || 0)
+      const request = {
+        isLoadingAll: true,
+        take: 1000,
+        sort: [{ selector: 'name', desc: false }]
+      }
+      if (isStoragePath()) {
+        request.filter = ['client_id', '=', normalizedClientId || 0]
+      }
       const { status, result } = await Fetch(`/api/${isStoragePath() ? 'admin/storage/articles' : 'admin/articles'}/paginate`, {
         method: 'POST',
-        body: JSON.stringify({
-          isLoadingAll: true,
-          take: 1000,
-          sort: [{ selector: 'name', desc: false }]
-        })
+        body: JSON.stringify(request)
       })
       if (!status) throw new Error(result?.message || 'No se pudieron cargar articulos')
       return result.data ?? []
@@ -138,7 +143,7 @@ class EntryNotesRest extends BasicRest {
   getArticleById = async (articleId) => {
     if (!articleId) return null
     try {
-      const { status, result } = await Fetch('/api/admin/articles/paginate', {
+      const { status, result } = await Fetch(`/api/${isStoragePath() ? 'admin/storage/articles' : 'admin/articles'}/paginate`, {
         method: 'POST',
         body: JSON.stringify({
           take: 1,

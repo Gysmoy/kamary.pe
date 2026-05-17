@@ -109,6 +109,7 @@ const EntryNotes = () => {
   const createBatchLotRef = useRef()
   const createBatchExpirationRef = useRef()
   const storageClientRef = useRef()
+  const selectedStorageClientIdRef = useRef('')
   const providerDistributorRef = useRef()
   const entryDateRef = useRef()
   const documentDateRef = useRef()
@@ -127,6 +128,7 @@ const EntryNotes = () => {
   const [selectedBranchId, setSelectedBranchId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
   const [selectedSupplierId, setSelectedSupplierId] = useState('')
+  const [selectedStorageClientId, setSelectedStorageClientId] = useState('')
   const [branches, setBranches] = useState([])
   const [warehouses, setWarehouses] = useState([])
   const [storageOptions, setStorageOptions] = useState({ businesses: [], branches: [], warehouses: [], locations: [], clients: [] })
@@ -228,6 +230,28 @@ const EntryNotes = () => {
     setSelectedBranchId('')
   }
 
+  const resetStorageProductSelection = () => {
+    setItems([])
+    setLotSearchRows([])
+    setLotSearchSelectedIds([])
+    setLotSearchFilter('')
+    setLotSearchPage(1)
+  }
+
+  const setCurrentStorageClientId = (clientId, { resetProducts = false } = {}) => {
+    const normalized = `${clientId || ''}`
+    const changed = selectedStorageClientIdRef.current !== normalized
+    selectedStorageClientIdRef.current = normalized
+    setSelectedStorageClientId(normalized)
+    if (resetProducts && changed) resetStorageProductSelection()
+  }
+
+  const currentStorageClientId = () => storageClientRef.current?.value || selectedStorageClientIdRef.current || selectedStorageClientId || ''
+
+  const onStorageClientChanged = (e) => {
+    setCurrentStorageClientId(e.target.value || '', { resetProducts: true })
+  }
+
   const getWarehouseName = (warehouseId) => {
     if (!warehouseId) return ''
     return warehouses.find(warehouse => `${warehouse.id}` === `${warehouseId}`)?.name ?? ''
@@ -293,6 +317,7 @@ const EntryNotes = () => {
     setSelectedBusinessId(businessId)
     setSelectedWarehouseId(warehouseId)
     setSelectedSupplierId(supplierId)
+    setCurrentStorageClientId(clientId)
 
     if (!storageContext && businessId && data?.business?.name) {
       SetSelectValue(businessRef.current, businessId, data.business.name)
@@ -647,6 +672,10 @@ const EntryNotes = () => {
       await Swal.fire({ icon: 'warning', title: 'Empresa requerida', text: 'Selecciona la empresa antes de crear un lote' })
       return
     }
+    if (storageContext && !currentStorageClientId()) {
+      await Swal.fire({ icon: 'warning', title: 'Cliente requerido', text: 'Selecciona el cliente antes de crear un lote' })
+      return
+    }
 
     const currentItem = items.find(item => item.uid === uid)
     setCreateBatchTargetUid(uid)
@@ -709,6 +738,10 @@ const EntryNotes = () => {
   }
 
   const openLotSearchModal = async () => {
+    if (!currentStorageClientId()) {
+      await Swal.fire({ icon: 'warning', title: 'Cliente requerido', text: 'Selecciona el cliente antes de insertar productos.' })
+      return
+    }
     if (!selectedWarehouseId) {
       await Swal.fire({ icon: 'warning', title: 'Almacen requerido', text: 'Selecciona el almacen antes de insertar productos.' })
       return
@@ -727,6 +760,11 @@ const EntryNotes = () => {
 
   const searchStorageLots = async () => {
     const warehouseId = lotSearchWarehouseId || selectedWarehouseId
+    const clientId = currentStorageClientId()
+    if (!clientId) {
+      await Swal.fire({ icon: 'warning', title: 'Cliente requerido', text: 'Selecciona el cliente para buscar sus productos.' })
+      return
+    }
     if (!warehouseId) {
       await Swal.fire({ icon: 'warning', title: 'Almacen requerido', text: 'Selecciona el almacen para buscar lotes.' })
       return
@@ -734,7 +772,7 @@ const EntryNotes = () => {
 
     setLotSearchLoading(true)
     try {
-      const articles = await entryNotesRest.getArticles()
+      const articles = await entryNotesRest.getArticles(clientId)
       const needle = normalizeSearchText(lotSearchTerm)
       const rows = []
 
@@ -1188,6 +1226,9 @@ const EntryNotes = () => {
   const lotSearchPageRows = lotSearchFilteredRows.slice(lotSearchStart, lotSearchStart + lotSearchPageSize)
   const allLotSearchPageSelected = lotSearchPageRows.length > 0 && lotSearchPageRows.every(row => lotSearchSelectedIds.includes(row.id))
   const storageEntryQuantityTotal = items.reduce((total, item) => total + Number(item.received_quantity || item.quantity || 0), 0)
+  const storageArticleClientFilter = storageContext
+    ? ['client_id', '=', Number(currentStorageClientId() || 0)]
+    : null
 
   const toggleLotSearchPage = (checked) => {
     const pageIds = lotSearchPageRows.map(row => row.id)
@@ -1290,6 +1331,7 @@ const EntryNotes = () => {
             searchAPI='/api/admin/storage/clients/paginate'
             searchBy='full_name'
             dropdownParent='#entry-note-form-container'
+            onChange={onStorageClientChanged}
           />
           <InputFormGroup eRef={providerDistributorRef} label='Proveedor/Distribuidor' col='col-md-6' />
 
@@ -1733,8 +1775,9 @@ const EntryNotes = () => {
           label='Articulo'
           col='col-12'
           required
-          searchAPI='/api/admin/articles/paginate'
+          searchAPI={storageContext ? '/api/admin/storage/articles/paginate' : '/api/admin/articles/paginate'}
           searchBy='name'
+          filter={storageArticleClientFilter ?? undefined}
           dropdownParent='#entry-note-create-batch-container'
           onChange={(e) => setCreateBatchArticleId(e.target.value || '')}
         />

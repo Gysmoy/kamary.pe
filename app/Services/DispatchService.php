@@ -7,6 +7,7 @@ use App\Models\Dispatch;
 use App\Models\DispatchAssignment;
 use App\Models\ExitNote;
 use App\Models\ExitNoteItem;
+use App\Services\Integrations\ExternalOrderEventService;
 use Illuminate\Support\Facades\Auth;
 
 class DispatchService
@@ -141,7 +142,10 @@ class DispatchService
                 $nextStatus = 'dispatched';
             }
 
-            $order->update(['dispatch_status' => $nextStatus]);
+            if ($order->dispatch_status !== $nextStatus) {
+                $order->update(['dispatch_status' => $nextStatus]);
+                app(ExternalOrderEventService::class)->recordOrderStatus($order->fresh(), 'dispatch_status_changed');
+            }
         }
     }
 }

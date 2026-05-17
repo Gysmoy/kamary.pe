@@ -37,6 +37,12 @@ class CommercialOrderController extends BasicController
     {
         return [
             'requiredPermission' => 'orders',
+            'externalSource' => $request->is('admin/commercial-orders/multivende')
+                ? config('integrations.ecomsur.external_source', 'ecomsur_oms')
+                : null,
+            'pageTitle' => $request->is('admin/commercial-orders/multivende')
+                ? 'Pedidos Multivende'
+                : 'Pedidos comerciales',
         ];
     }
 
@@ -54,7 +60,7 @@ class CommercialOrderController extends BasicController
                 'seller:id,name,lastname,username,fullname',
                 'priceList:id,code',
                 'accountsReceivable:id,source_id,code,total,paid_amount,balance_amount,payment_status,status',
-                'items:id,commercial_order_id,article_id,presentation_id,warehouse_id,price_list_item_id,stock_available,cost_unit,price_unit,presentation_units,quantity,total,price_source,status',
+                'items:id,commercial_order_id,article_id,presentation_id,warehouse_id,price_list_item_id,external_item_number,external_sku,stock_available,cost_unit,price_unit,presentation_units,quantity,total,price_source,status',
                 'items.article:id,code,name,laboratory_id,active_principle_id,unit_id',
                 'items.article.laboratory:id,name',
                 'items.article.activePrinciple:id,name',

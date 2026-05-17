@@ -138,6 +138,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/client-distribution', [AdminClientDistributionNetworkController::class, 'reactView']);
         Route::get('/accounts-receivable', [AdminAccountsReceivableController::class, 'reactView']);
         Route::get('/commercial-orders', [AdminCommercialOrderController::class, 'reactView']);
+        Route::get('/commercial-orders/multivende', [AdminCommercialOrderController::class, 'reactView']);
         Route::get('/orders', [AdminOrderController::class, 'reactView']);
         Route::get('/pricing', [AdminPriceListController::class, 'reactView']);
         Route::get('/reports/sales', [AdminSalesReportController::class, 'reactView']);
@@ -226,4 +227,3 @@ Route::middleware('auth')->group(function () {
 Route::get('/mailing/new-formula', fn() => view('mailing.new-formula'));
 Route::get('/repository/{uuid}', [AdminRepositoryController::class, 'media'])->withoutMiddleware('throttle');
 Route::get('/graph/sales/{type}/{filter}', [AdminHomeController::class, 'getSales']);
-

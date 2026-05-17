@@ -73,6 +73,8 @@ use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\UnitController as AdminUnitController;
 use App\Http\Controllers\Admin\WarehouseController as AdminWarehouseController;
+use App\Http\Controllers\Integrations\EcomsurController;
+use App\Http\Controllers\Integrations\MultivendeWebhookController;
 
 // Public
 use App\Http\Controllers\AuthController;
@@ -90,6 +92,12 @@ use App\Http\Controllers\LoginController;
 */
 
 Route::post('/login', [LoginController::class, 'login']);
+
+Route::prefix('integrations')->group(function () {
+    Route::post('/ecomsur/logistic-orders', [EcomsurController::class, 'logisticOrders']);
+    Route::post('/ecomsur/stock', [EcomsurController::class, 'stock']);
+    Route::post('/multivende/webhook', MultivendeWebhookController::class);
+});
 
 Route::middleware('auth')->group(function () {
     Route::delete('logout', [AuthController::class, 'destroy'])->name('logout');

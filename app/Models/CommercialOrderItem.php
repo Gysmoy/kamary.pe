@@ -17,6 +17,9 @@ class CommercialOrderItem extends Model
         'presentation_id',
         'warehouse_id',
         'price_list_item_id',
+        'external_item_number',
+        'external_sku',
+        'external_payload',
         'stock_available',
         'cost_unit',
         'price_unit',
@@ -34,6 +37,8 @@ class CommercialOrderItem extends Model
         'presentation_units' => 'float',
         'quantity' => 'float',
         'total' => 'float',
+        'external_item_number' => 'integer',
+        'external_payload' => 'array',
         'status' => 'boolean',
     ];
 

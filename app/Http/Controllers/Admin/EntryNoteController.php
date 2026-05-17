@@ -169,6 +169,7 @@ class EntryNoteController extends BasicController
             if (!collect($this->itemsPayload)->contains(fn($item) => is_array($item) && !empty($item['article_id']))) {
                 throw new \Exception('Debes agregar al menos una linea en la nota de entrada');
             }
+            $this->assertStorageArticlesBelongToClient($clientId, $this->itemsPayload);
             $this->assertStorageLocationsAvailable((object)[
                 'id' => (int)($body['id'] ?? 0),
                 'business_id' => $business->id,
@@ -479,6 +480,47 @@ class EntryNoteController extends BasicController
 
             if (count($occupancyRows) > 0) {
                 throw new \Exception($this->occupiedLocationMessage((string)$locationRow->code, $occupancyRows));
+            }
+        }
+    }
+
+    private function assertStorageArticlesBelongToClient(int $clientId, iterable $items): void
+    {
+        if ($clientId <= 0) {
+            throw new \Exception('El cliente es obligatorio');
+        }
+
+        $articleIds = collect($items)
+            ->map(fn($item) => (int)($this->itemValue($item, 'article_id') ?: 0))
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($articleIds->isEmpty()) {
+            return;
+        }
+
+        $articles = Article::query()
+            ->whereIn('id', $articleIds)
+            ->get(['id', 'code', 'name', 'client_id'])
+            ->keyBy('id');
+
+        foreach ($items as $idx => $item) {
+            $articleId = (int)($this->itemValue($item, 'article_id') ?: 0);
+            if ($articleId <= 0) {
+                continue;
+            }
+
+            $article = $articles->get($articleId);
+            $lineNumber = is_numeric($idx) ? ((int)$idx + 1) : 0;
+            $lineLabel = $lineNumber > 0 ? " en la linea {$lineNumber}" : '';
+            if (!$article) {
+                throw new \Exception("El articulo seleccionado{$lineLabel} no existe");
+            }
+
+            if ((int)($article->client_id ?? 0) !== $clientId) {
+                $articleName = trim(implode(' - ', array_filter([$article->code, $article->name]))) ?: "ID {$articleId}";
+                throw new \Exception("El articulo {$articleName}{$lineLabel} no pertenece al cliente seleccionado");
             }
         }
     }

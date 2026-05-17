@@ -64,7 +64,7 @@ const mapItemTotals = (item) => {
   }
 }
 
-const CommercialOrders = ({ requiredPermission = 'orders' }) => {
+const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null, pageTitle = 'Pedidos comerciales' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
 
@@ -557,8 +557,9 @@ const CommercialOrders = ({ requiredPermission = 'orders' }) => {
   return (<>
     <Table
       gridRef={gridRef}
-      title='Pedidos comerciales'
+      title={pageTitle}
       rest={commercialOrdersRest}
+      filterValue={externalSource ? ['external_source', '=', externalSource] : null}
       toolBar={(container) => {
         container.unshift({
           widget: 'dxButton', location: 'after',
@@ -587,6 +588,11 @@ const CommercialOrders = ({ requiredPermission = 'orders' }) => {
           width: 130,
           cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar pedido')
         },
+        { dataField: 'external_order_id', caption: 'Pedido VTEX', width: 150, visible: !!externalSource },
+        { dataField: 'external_ecommerce', caption: 'Ecommerce', width: 140, visible: !!externalSource },
+        { dataField: 'external_channel', caption: 'Canal', width: 130, visible: !!externalSource },
+        { dataField: 'external_subservice', caption: 'Subservicio', width: 130, visible: !!externalSource },
+        { dataField: 'external_sync_status', caption: 'Sync', width: 110, visible: !!externalSource },
         { dataField: 'issue_date', caption: 'F. emision', width: 110, dataType: 'date' },
         { dataField: 'promised_delivery_at', caption: 'F. entrega', width: 110, dataType: 'date' },
         { dataField: 'business.name', caption: 'Empresa', minWidth: 140 },
@@ -947,7 +953,7 @@ const CommercialOrders = ({ requiredPermission = 'orders' }) => {
 
 CreateReactScript((el, properties) => {
   if (!properties.can('orders') && !properties.hasRole('Admin')) location.href = '/admin/';
-  createRoot(el).render(<BaseAdminto {...properties} title='Pedidos comerciales'>
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.pageTitle || 'Pedidos comerciales'}>
     <CommercialOrders {...properties} />
   </BaseAdminto>);
 })
