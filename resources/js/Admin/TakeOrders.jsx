@@ -4,26 +4,39 @@ import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
 import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
 import DxButton from '../Components/dx/DxButton';
-import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
-import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
+import Global from '../Utils/Global';
 import TakeOrdersRestClient from '../Actions/Admin/TakeOrdersRest';
 import renderGridEditLink from '../Utils/renderGridEditLink';
 import { openTakeOrderPdf } from '../Utils/takeOrderPdf';
 import {
-  billingStatusOptions,
   commercialOrderStatusOptions,
   dispatchStatusOptions,
-  paymentStatusOptions,
   toLookup,
 } from '../Utils/statusLabels';
 
 const takeOrdersRest = new TakeOrdersRestClient()
+
+const defaultMapPoint = { lat: -12.046374, lng: -77.042793 }
+
+const orderProfiles = {
+  micro: {
+    key: 'micro',
+    title: 'SOFTYS | SOFTYS MICRO',
+    channelLabel: 'Giro',
+    segmentLabel: 'Sub giro',
+  },
+  mediana: {
+    key: 'mediana',
+    title: 'SOFTYS | SOFTYS MEDIANA',
+    channelLabel: 'Segmento',
+    segmentLabel: 'Sub segmento',
+  },
+}
 
 const emptyItem = () => ({
   uid: crypto.randomUUID(),
@@ -55,6 +68,13 @@ const formatAuditUser = (user) => {
   return ''
 }
 
+const formatCustomer = (data) => (
+  data?.client?.full_name
+  ?? data?.eventual_client?.business_name
+  ?? data?.eventualClient?.business_name
+  ?? '-'
+)
+
 const mapItemTotals = (item) => {
   const quantity = Number(item.quantity || 0)
   const price = Number(item.price_unit || 0)
@@ -64,29 +84,19 @@ const mapItemTotals = (item) => {
   }
 }
 
-const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }) => {
+const uniqueOptions = (values) => [...new Set(values.filter(value => value !== null && value !== undefined && `${value}`.trim() !== '').map(value => `${value}`.trim()))]
+
+const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
 
   const idRef = useRef()
   const codeRef = useRef()
-  const businessRef = useRef()
-  const branchRef = useRef()
-  const warehouseRef = useRef()
   const clientRef = useRef()
-  const eventualClientRef = useRef()
-  const issueDateRef = useRef()
-  const promisedDateRef = useRef()
+  const priceListRef = useRef()
   const documentTypeRef = useRef()
-  const currencyRef = useRef()
   const paymentConditionRef = useRef()
-  const paymentMethodRef = useRef()
-  const installmentsRef = useRef()
-  const firstDueDateRef = useRef()
-  const orderStatusRef = useRef()
-  const dispatchStatusRef = useRef()
-  const billingStatusRef = useRef()
-  const taxAmountRef = useRef()
+  const promisedDateRef = useRef()
   const deliveryAddressRef = useRef()
   const deliveryReferenceRef = useRef()
   const ubigeoRef = useRef()
@@ -96,20 +106,39 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
   const referralGuideRef = useRef()
   const observationsRef = useRef()
   const articleRefs = useRef({})
+  const hydratingRef = useRef(false)
 
   const [isEditing, setIsEditing] = useState(false)
+  const [activeProfile, setActiveProfile] = useState('micro')
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
   const [selectedClientId, setSelectedClientId] = useState('')
-  const [selectedEventualClientId, setSelectedEventualClientId] = useState('')
   const [selectedNetworkId, setSelectedNetworkId] = useState('')
   const [selectedDeliveryAddressId, setSelectedDeliveryAddressId] = useState('')
-  const [branches, setBranches] = useState([])
+  const [selectedPriceListId, setSelectedPriceListId] = useState('')
+  const [selectedCommercialChannel, setSelectedCommercialChannel] = useState('')
+  const [selectedSegment, setSelectedSegment] = useState('')
+  const [clientSnapshot, setClientSnapshot] = useState(null)
   const [networks, setNetworks] = useState([])
   const [deliveryAddresses, setDeliveryAddresses] = useState([])
-  const [items, setItems] = useState([emptyItem()])
-  const [taxAmount, setTaxAmount] = useState(0)
+  const [items, setItems] = useState([])
+  const [mapPoint, setMapPoint] = useState(defaultMapPoint)
+
+  const profile = orderProfiles[activeProfile] ?? orderProfiles.micro
+  const subtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
+
+  const channelOptions = useMemo(() => uniqueOptions([
+    clientSnapshot?.commercial_channel,
+    ...networks.map(network => network.commercial_channel),
+    selectedCommercialChannel,
+  ]), [clientSnapshot, networks, selectedCommercialChannel])
+
+  const segmentOptions = useMemo(() => uniqueOptions([
+    clientSnapshot?.segment,
+    ...networks.map(network => network.segment),
+    selectedSegment,
+  ]), [clientSnapshot, networks, selectedSegment])
 
   const getArticleRef = (uid) => {
     if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
@@ -126,50 +155,71 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
     })
   }, [items])
 
-  const loadBranches = async (businessId, preferredId = null) => {
+  const resolveDefaults = async (data = null) => {
+    let businessId = data?.business_id ? `${data.business_id}` : selectedBusinessId
+    let warehouseId = data?.warehouse_id ? `${data.warehouse_id}` : selectedWarehouseId
+    let branchId = data?.business_branch_id ? `${data.business_branch_id}` : selectedBranchId
+
     if (!businessId) {
-      setBranches([])
-      setSelectedBranchId('')
-      return
+      const business = await takeOrdersRest.getDefaultBusiness()
+      businessId = business?.id ? `${business.id}` : ''
     }
-    const data = await takeOrdersRest.getBranchesByBusiness(businessId)
-    const active = (data ?? []).filter(item => item.status !== null)
-    setBranches(active)
-    if (preferredId && active.some(item => `${item.id}` === `${preferredId}`)) {
-      setSelectedBranchId(`${preferredId}`)
-      return
+
+    if (!warehouseId) {
+      const warehouse = await takeOrdersRest.getDefaultWarehouse()
+      warehouseId = warehouse?.id ? `${warehouse.id}` : ''
+      if (!branchId && warehouse?.business_branch_id) branchId = `${warehouse.business_branch_id}`
     }
-    setSelectedBranchId('')
+
+    setSelectedBusinessId(businessId)
+    setSelectedWarehouseId(warehouseId)
+    setSelectedBranchId(branchId || '')
+
+    return { businessId, warehouseId, branchId: branchId || '' }
   }
 
-  const loadNetworks = async (clientId, preferredId = null) => {
-    if (!clientId) {
-      setNetworks([])
-      setSelectedNetworkId('')
-      setDeliveryAddresses([])
-      setSelectedDeliveryAddressId('')
-      return
-    }
-    const data = await takeOrdersRest.getDistributionNetworks(clientId)
-    const active = (data ?? []).filter(item => item.status !== null)
-    setNetworks(active)
-    const defaultId = preferredId || active.find(item => item.is_default)?.id
-    if (defaultId && active.some(item => `${item.id}` === `${defaultId}`)) {
-      setSelectedNetworkId(`${defaultId}`)
-      await loadDeliveryAddresses(defaultId, null, active)
-      return
-    }
-    setSelectedNetworkId('')
-    setDeliveryAddresses([])
+  const clearAddressSnapshot = () => {
     setSelectedDeliveryAddressId('')
+    if (deliveryAddressRef.current) deliveryAddressRef.current.value = ''
+    if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = ''
+    if (ubigeoRef.current) ubigeoRef.current.value = ''
+    if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = ''
+    if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = ''
+    setMapPoint(defaultMapPoint)
   }
 
-  const loadDeliveryAddresses = async (networkId, preferredId = null, currentNetworks = null) => {
+  const applyDeliveryAddressSnapshot = (address, fallbackClient = null) => {
+    if (!address && !fallbackClient) {
+      clearAddressSnapshot()
+      return
+    }
+
+    if (deliveryAddressRef.current) deliveryAddressRef.current.value = address?.address ?? fallbackClient?.full_address ?? ''
+    if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = address?.reference ?? ''
+    if (ubigeoRef.current) ubigeoRef.current.value = address?.ubigeo ?? fallbackClient?.ubigeo ?? ''
+    if (dispatchContactNameRef.current) {
+      dispatchContactNameRef.current.value = address?.contact_name ?? fallbackClient?.primary_contact ?? ''
+    }
+    if (dispatchContactPhoneRef.current) {
+      dispatchContactPhoneRef.current.value = address?.contact_phone ?? fallbackClient?.primary_contact_phone ?? fallbackClient?.phone ?? ''
+    }
+
+    const lat = Number(address?.latitude ?? defaultMapPoint.lat)
+    const lng = Number(address?.longitude ?? defaultMapPoint.lng)
+    setMapPoint({
+      lat: Number.isFinite(lat) ? lat : defaultMapPoint.lat,
+      lng: Number.isFinite(lng) ? lng : defaultMapPoint.lng,
+    })
+  }
+
+  const loadDeliveryAddresses = async (networkId, preferredId = null, currentNetworks = null, fallbackClient = null) => {
     if (!networkId) {
       setDeliveryAddresses([])
       setSelectedDeliveryAddressId('')
+      applyDeliveryAddressSnapshot(null, fallbackClient)
       return
     }
+
     let data = []
     const hydratedNetwork = (currentNetworks ?? networks).find(item => `${item.id}` === `${networkId}`)
     if ((hydratedNetwork?.addresses?.length ?? 0) > 0) {
@@ -177,24 +227,41 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
     } else {
       data = await takeOrdersRest.getDeliveryAddresses(networkId)
     }
+
     const active = (data ?? []).filter(item => item.status !== null)
     setDeliveryAddresses(active)
-    const defaultId = preferredId || active.find(item => item.is_default)?.id
+    const defaultId = preferredId || active.find(item => item.is_default)?.id || active[0]?.id
     if (defaultId && active.some(item => `${item.id}` === `${defaultId}`)) {
       setSelectedDeliveryAddressId(`${defaultId}`)
-      applyDeliveryAddressSnapshot(active.find(item => `${item.id}` === `${defaultId}`))
+      applyDeliveryAddressSnapshot(active.find(item => `${item.id}` === `${defaultId}`), fallbackClient)
       return
     }
+
     setSelectedDeliveryAddressId('')
+    applyDeliveryAddressSnapshot(null, fallbackClient)
   }
 
-  const applyDeliveryAddressSnapshot = (address) => {
-    if (!address) return
-    if (deliveryAddressRef.current) deliveryAddressRef.current.value = address.address ?? ''
-    if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = address.reference ?? ''
-    if (ubigeoRef.current) ubigeoRef.current.value = address.ubigeo ?? ''
-    if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = address.contact_name ?? ''
-    if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = address.contact_phone ?? ''
+  const loadClientContext = async (clientId, preferredNetworkId = null, preferredAddressId = null, fallbackClient = null) => {
+    if (!clientId) {
+      setNetworks([])
+      setSelectedNetworkId('')
+      setDeliveryAddresses([])
+      setSelectedCommercialChannel('')
+      setSelectedSegment('')
+      clearAddressSnapshot()
+      return
+    }
+
+    const data = await takeOrdersRest.getDistributionNetworks(clientId)
+    const active = (data ?? []).filter(item => item.status !== null)
+    setNetworks(active)
+
+    const defaultNetworkId = preferredNetworkId || active.find(item => item.is_default)?.id || active[0]?.id
+    const selectedNetwork = active.find(item => `${item.id}` === `${defaultNetworkId}`)
+    setSelectedNetworkId(defaultNetworkId ? `${defaultNetworkId}` : '')
+    setSelectedCommercialChannel(selectedNetwork?.commercial_channel ?? fallbackClient?.commercial_channel ?? '')
+    setSelectedSegment(selectedNetwork?.segment ?? fallbackClient?.segment ?? '')
+    await loadDeliveryAddresses(defaultNetworkId, preferredAddressId, active, fallbackClient)
   }
 
   const repriceItem = async (item, overrides = {}) => {
@@ -210,18 +277,17 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
       business_id: selectedBusinessId || null,
       business_branch_id: selectedBranchId || null,
       warehouse_id: selectedWarehouseId || null,
+      price_list_id: selectedPriceListId || null,
       client_id: selectedClientId || null,
-      eventual_client_id: selectedEventualClientId || null,
       client_distribution_network_id: selectedNetworkId || null,
-      issue_date: issueDateRef.current?.value || null,
-      commercial_channel: (networks.find(row => `${row.id}` === `${selectedNetworkId}`)?.commercial_channel) || null,
-      segment: (networks.find(row => `${row.id}` === `${selectedNetworkId}`)?.segment) || null,
+      issue_date: new Date().toISOString().slice(0, 10),
+      commercial_channel: selectedCommercialChannel || null,
+      segment: selectedSegment || null,
     })
   }
 
-  const repriceAllItems = async (nextItems = null) => {
-    const currentItems = nextItems ?? items
-    for (const currentItem of currentItems) {
+  const repriceAllItems = async () => {
+    for (const currentItem of items) {
       if (!currentItem.article_id) continue
       const resolution = await repriceItem(currentItem)
       if (!resolution) continue
@@ -238,64 +304,52 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
     }
   }
 
-  const clearCustomerSelections = (type) => {
-    if (type === 'regular') {
-      setSelectedEventualClientId('')
-      $(eventualClientRef.current).empty().trigger('change')
-    } else if (type === 'eventual') {
-      setSelectedClientId('')
-      setNetworks([])
-      setSelectedNetworkId('')
-      setDeliveryAddresses([])
-      setSelectedDeliveryAddressId('')
-      $(clientRef.current).empty().trigger('change')
-    }
-  }
+  useEffect(() => {
+    if (!items.some(item => item.article_id)) return
+    repriceAllItems()
+  }, [selectedPriceListId, selectedCommercialChannel, selectedSegment])
 
-  const onModalOpen = async (data = null) => {
+  const onModalOpen = async (data = null, profileKey = 'micro') => {
     setIsEditing(!!data?.id)
+    setActiveProfile(data?.order_profile ?? profileKey)
 
     if (idRef.current) idRef.current.value = data?.id ?? ''
     if (codeRef.current) codeRef.current.value = data?.code ?? 'Se genera al guardar'
-    if (issueDateRef.current) issueDateRef.current.value = data?.issue_date ? data.issue_date.toString().slice(0, 10) : new Date().toISOString().slice(0, 10)
-    if (promisedDateRef.current) promisedDateRef.current.value = data?.promised_delivery_at ? data.promised_delivery_at.toString().slice(0, 10) : ''
     if (documentTypeRef.current) documentTypeRef.current.value = data?.document_type ?? 'Factura'
-    if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
-    if (paymentConditionRef.current) paymentConditionRef.current.value = data?.payment_condition ?? 'Contado'
-    if (paymentMethodRef.current) paymentMethodRef.current.value = data?.payment_method ?? 'Transferencia'
-    if (installmentsRef.current) installmentsRef.current.value = data?.installments ?? 1
-    if (firstDueDateRef.current) firstDueDateRef.current.value = data?.first_due_date ? data.first_due_date.toString().slice(0, 10) : ''
-    if (orderStatusRef.current) orderStatusRef.current.value = data?.order_status ?? 'draft'
-    if (dispatchStatusRef.current) dispatchStatusRef.current.value = data?.dispatch_status ?? 'pending'
-    if (billingStatusRef.current) billingStatusRef.current.value = data?.billing_status ?? 'pending'
-    setTaxAmount(Number(data?.tax_amount ?? 0))
-    if (taxAmountRef.current) taxAmountRef.current.value = Number(data?.tax_amount ?? 0)
-    if (deliveryAddressRef.current) deliveryAddressRef.current.value = data?.delivery_address ?? ''
-    if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = data?.delivery_reference ?? ''
-    if (ubigeoRef.current) ubigeoRef.current.value = data?.ubigeo ?? ''
-    if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = data?.dispatch_contact_name ?? ''
-    if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = data?.dispatch_contact_phone ?? ''
+    if (paymentConditionRef.current) paymentConditionRef.current.value = data?.payment_condition ?? ''
+    if (promisedDateRef.current) promisedDateRef.current.value = data?.promised_delivery_at ? data.promised_delivery_at.toString().slice(0, 10) : ''
     if (purchaseOrderRef.current) purchaseOrderRef.current.value = data?.purchase_order ?? ''
     if (referralGuideRef.current) referralGuideRef.current.value = data?.referral_guide ?? ''
     if (observationsRef.current) observationsRef.current.value = data?.observations ?? ''
 
-    const businessId = data?.business_id ? `${data.business_id}` : ''
-    const warehouseId = data?.warehouse_id ? `${data.warehouse_id}` : ''
+    const defaults = await resolveDefaults(data)
     const clientId = data?.client_id ? `${data.client_id}` : ''
-    const eventualClientId = data?.eventual_client_id ? `${data.eventual_client_id}` : ''
-    setSelectedBusinessId(businessId)
-    setSelectedWarehouseId(warehouseId)
-    setSelectedClientId(clientId)
-    setSelectedEventualClientId(eventualClientId)
+    const networkId = data?.client_distribution_network_id ? `${data.client_distribution_network_id}` : ''
+    const addressId = data?.client_delivery_address_id ? `${data.client_delivery_address_id}` : ''
+    const priceListId = data?.price_list_id ? `${data.price_list_id}` : ''
 
-    if (businessId && data?.business?.name) SetSelectValue(businessRef.current, businessId, data.business.name)
-    else $(businessRef.current).empty().trigger('change')
-    if (warehouseId && data?.warehouse?.name) SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
-    else $(warehouseRef.current).empty().trigger('change')
-    if (clientId && data?.client?.full_name) SetSelectValue(clientRef.current, clientId, `${data.client.document_number ?? ''} - ${data.client.full_name}`.trim())
-    else $(clientRef.current).empty().trigger('change')
-    if (eventualClientId && data?.eventual_client?.business_name) SetSelectValue(eventualClientRef.current, eventualClientId, `${data.eventual_client.document_number ?? ''} - ${data.eventual_client.business_name}`.trim())
-    else $(eventualClientRef.current).empty().trigger('change')
+    setSelectedClientId(clientId)
+    setSelectedNetworkId(networkId)
+    setSelectedDeliveryAddressId(addressId)
+    setSelectedPriceListId(priceListId)
+    setClientSnapshot(data?.client ?? null)
+    setSelectedCommercialChannel(data?.commercial_channel ?? data?.client?.commercial_channel ?? '')
+    setSelectedSegment(data?.segment ?? data?.client?.segment ?? '')
+
+    hydratingRef.current = true
+    if (clientId && data?.client?.full_name) {
+      SetSelectValue(clientRef.current, clientId, `${data.client.document_number ?? ''} - ${data.client.full_name}`.trim())
+      setClientSnapshot(data.client)
+    } else {
+      SetSelectValue(clientRef.current, null)
+    }
+
+    if (priceListId && data?.price_list?.code) {
+      SetSelectValue(priceListRef.current, priceListId, data.price_list.code)
+    } else {
+      SetSelectValue(priceListRef.current, null)
+    }
+    hydratingRef.current = false
 
     const detail = (data?.items ?? []).map(row => {
       const article = row.article ?? null
@@ -312,7 +366,7 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
         article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? '',
         presentations: presentations.map(p => ({
           id: `${p.id}`,
-          name: p.name ?? 'Presentacion',
+          name: p.name ?? 'Presentación',
           units: Number(p.units || 1),
           price: Number(p.price || 0),
         })),
@@ -326,136 +380,126 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
         price_list_code: row?.price_list_item?.price_list?.code || data?.price_list?.code || '',
       })
     })
-    const loadedItems = detail.length ? detail : [emptyItem()]
-    setItems(loadedItems)
+    setItems(detail)
+
+    applyDeliveryAddressSnapshot(data?.delivery_address ? {
+      address: data.delivery_address,
+      reference: data.delivery_reference,
+      ubigeo: data.ubigeo,
+      latitude: data.map_lat,
+      longitude: data.map_lng,
+      contact_name: data.dispatch_contact_name,
+      contact_phone: data.dispatch_contact_phone,
+    } : null, data?.client ?? null)
 
     $(modalRef.current).modal('show')
-    await loadBranches(data?.business_id ?? null, data?.business_branch_id ?? null)
+
     if (clientId) {
-      await loadNetworks(clientId, data?.client_distribution_network_id ?? null)
-      if (data?.client_distribution_network_id) {
-        await loadDeliveryAddresses(data.client_distribution_network_id, data?.client_delivery_address_id ?? null)
-      }
+      await loadClientContext(clientId, networkId, addressId, data?.client ?? null)
     } else {
       setNetworks([])
-      setSelectedNetworkId('')
       setDeliveryAddresses([])
-      setSelectedDeliveryAddressId('')
+      clearAddressSnapshot()
     }
+
+    setSelectedBusinessId(defaults.businessId)
+    setSelectedWarehouseId(defaults.warehouseId)
+    setSelectedBranchId(defaults.branchId)
   }
 
-  const onModalSubmit = async (e) => {
-    e.preventDefault()
-
-    const request = {
-      id: idRef.current?.value || undefined,
-      business_id: selectedBusinessId || null,
-      business_branch_id: selectedBranchId || null,
+  const buildRequest = (bill = false) => ({
+    id: idRef.current?.value || undefined,
+    order_profile: activeProfile,
+    business_id: selectedBusinessId || null,
+    business_branch_id: selectedBranchId || null,
+    warehouse_id: selectedWarehouseId || null,
+    client_id: selectedClientId || null,
+    client_distribution_network_id: selectedNetworkId || null,
+    client_delivery_address_id: selectedDeliveryAddressId || null,
+    price_list_id: selectedPriceListId || null,
+    document_type: documentTypeRef.current?.value || 'Factura',
+    currency: 'PEN',
+    payment_condition: paymentConditionRef.current?.value || '',
+    payment_method: paymentConditionRef.current?.value || '',
+    issue_date: new Date().toISOString().slice(0, 10),
+    promised_delivery_at: promisedDateRef.current?.value || null,
+    order_status: bill ? 'billed' : 'confirmed',
+    dispatch_status: 'pending',
+    billing_status: bill ? 'billed' : 'pending',
+    payment_status: 'pending',
+    commercial_channel: selectedCommercialChannel || '',
+    segment: selectedSegment || '',
+    delivery_address: deliveryAddressRef.current?.value?.trim() || '',
+    delivery_reference: deliveryReferenceRef.current?.value?.trim() || '',
+    ubigeo: ubigeoRef.current?.value?.trim() || '',
+    map_lat: mapPoint.lat,
+    map_lng: mapPoint.lng,
+    dispatch_contact_name: dispatchContactNameRef.current?.value?.trim() || '',
+    dispatch_contact_phone: dispatchContactPhoneRef.current?.value?.trim() || '',
+    purchase_order: purchaseOrderRef.current?.value?.trim() || '',
+    referral_guide: referralGuideRef.current?.value?.trim() || '',
+    observations: observationsRef.current?.value?.trim() || '',
+    tax_amount: 0,
+    items: items.map(item => ({
+      article_id: item.article_id || null,
+      presentation_id: item.presentation_id || null,
       warehouse_id: selectedWarehouseId || null,
-      client_id: selectedClientId || null,
-      eventual_client_id: selectedEventualClientId || null,
-      client_distribution_network_id: selectedNetworkId || null,
-      client_delivery_address_id: selectedDeliveryAddressId || null,
-      document_type: documentTypeRef.current?.value || 'Factura',
-      currency: currencyRef.current?.value || 'PEN',
-      payment_condition: paymentConditionRef.current?.value || 'Contado',
-      payment_method: paymentMethodRef.current?.value || '',
-      issue_date: issueDateRef.current?.value || '',
-      promised_delivery_at: promisedDateRef.current?.value || null,
-      installments: installmentsRef.current?.value || 1,
-      first_due_date: firstDueDateRef.current?.value || null,
-      order_status: orderStatusRef.current?.value || 'draft',
-      dispatch_status: dispatchStatusRef.current?.value || 'pending',
-      billing_status: billingStatusRef.current?.value || 'pending',
-      tax_amount: Number(taxAmountRef.current?.value || 0),
-      delivery_address: deliveryAddressRef.current?.value?.trim() || '',
-      delivery_reference: deliveryReferenceRef.current?.value?.trim() || '',
-      ubigeo: ubigeoRef.current?.value?.trim() || '',
-      dispatch_contact_name: dispatchContactNameRef.current?.value?.trim() || '',
-      dispatch_contact_phone: dispatchContactPhoneRef.current?.value?.trim() || '',
-      purchase_order: purchaseOrderRef.current?.value?.trim() || '',
-      referral_guide: referralGuideRef.current?.value?.trim() || '',
-      observations: observationsRef.current?.value?.trim() || '',
-      items: items.map(item => ({
-        article_id: item.article_id || null,
-        presentation_id: item.presentation_id || null,
-        warehouse_id: selectedWarehouseId || null,
-        stock_available: item.stock_available,
-        presentation_units: item.presentation_units,
-        price_unit: item.price_unit,
-        quantity: item.quantity,
-        total: item.total,
-        status: true,
-      })),
-    }
+      stock_available: item.stock_available,
+      presentation_units: item.presentation_units,
+      price_unit: item.price_unit,
+      quantity: item.quantity,
+      total: item.total,
+      status: true,
+    })),
+  })
 
-    const result = await takeOrdersRest.save(request)
+  const saveOrder = async (bill = false) => {
+    const result = await takeOrdersRest.save(buildRequest(bill))
     if (!result) return
-
     $(gridRef.current).dxDataGrid('instance').refresh()
     $(modalRef.current).modal('hide')
   }
 
-  const onBusinessChanged = async (e) => {
-    const businessId = e.target.value || ''
-    setSelectedBusinessId(businessId)
-    await loadBranches(businessId, null)
-  }
-
-  const onWarehouseChanged = async (e) => {
-    const warehouseId = e.target.value || ''
-    setSelectedWarehouseId(warehouseId)
-    await repriceAllItems()
+  const onModalSubmit = async (e) => {
+    e.preventDefault()
+    await saveOrder(false)
   }
 
   const onClientChanged = async (e) => {
+    if (hydratingRef.current) return
     const clientId = e.target.value || ''
+    const selected = $(e.target).select2('data')?.[0]?.data ?? null
     setSelectedClientId(clientId)
-    clearCustomerSelections('regular')
-    await loadNetworks(clientId, null)
-    await repriceAllItems()
-  }
+    setClientSnapshot(selected)
 
-  const onEventualClientChanged = async (e) => {
-    const eventualClientId = e.target.value || ''
-    setSelectedEventualClientId(eventualClientId)
-    clearCustomerSelections('eventual')
+    if (!clientId) {
+      await loadClientContext('', null, null, null)
+      return
+    }
+
+    await loadClientContext(clientId, null, null, selected)
     await repriceAllItems()
   }
 
   const onNetworkChanged = async (e) => {
     const networkId = e.target.value || ''
     setSelectedNetworkId(networkId)
-    await loadDeliveryAddresses(networkId, null)
-    await repriceAllItems()
+    const network = networks.find(item => `${item.id}` === `${networkId}`)
+    setSelectedCommercialChannel(network?.commercial_channel ?? selectedCommercialChannel)
+    setSelectedSegment(network?.segment ?? selectedSegment)
+    await loadDeliveryAddresses(networkId, null, networks, clientSnapshot)
   }
 
   const onDeliveryAddressChanged = (e) => {
     const addressId = e.target.value || ''
     setSelectedDeliveryAddressId(addressId)
     const selected = deliveryAddresses.find(item => `${item.id}` === `${addressId}`)
-    if (selected) applyDeliveryAddressSnapshot(selected)
+    applyDeliveryAddressSnapshot(selected, clientSnapshot)
   }
 
-  const onBooleanChange = async ({ id, field, value }) => {
-    const result = await takeOrdersRest.boolean({ id, field, value })
-    if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
-  }
-
-  const onDeleteClicked = async (id) => {
-    const { isConfirmed } = await Swal.fire({
-      title: 'Eliminar toma pedido',
-      text: 'Estas seguro de eliminar este toma pedido? Esta accion no se puede revertir',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Si, eliminar',
-      cancelButtonText: 'Cancelar'
-    })
-    if (!isConfirmed) return
-    const result = await takeOrdersRest.delete(id)
-    if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+  const onPriceListChanged = async (e) => {
+    if (hydratingRef.current) return
+    setSelectedPriceListId(e.target.value || '')
   }
 
   const onItemArticleChanged = async (uid, e) => {
@@ -483,7 +527,7 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
       article_principle: hydrated?.activePrinciple?.name ?? hydrated?.active_principle?.name ?? '',
       presentations: presentations.map(p => ({
         id: `${p.id}`,
-        name: p.name ?? 'Presentacion',
+        name: p.name ?? 'Presentación',
         units: Number(p.units || 1),
         price: Number(p.price || 0),
       })),
@@ -494,19 +538,10 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
 
     setItems(prev => prev.map(item => item.uid === uid ? mapItemTotals({ ...item, ...draftItem }) : item))
 
-    const resolution = await takeOrdersRest.resolvePrice({
+    const resolution = await repriceItem({ ...draftItem, uid }, {
       article_id: articleId,
       presentation_id: defaultPresentation ? `${defaultPresentation.id}` : null,
       quantity: 1,
-      business_id: selectedBusinessId || null,
-      business_branch_id: selectedBranchId || null,
-      warehouse_id: selectedWarehouseId || null,
-      client_id: selectedClientId || null,
-      eventual_client_id: selectedEventualClientId || null,
-      client_distribution_network_id: selectedNetworkId || null,
-      issue_date: issueDateRef.current?.value || null,
-      commercial_channel: (networks.find(row => `${row.id}` === `${selectedNetworkId}`)?.commercial_channel) || null,
-      segment: (networks.find(row => `${row.id}` === `${selectedNetworkId}`)?.segment) || null,
     })
 
     if (!resolution) return
@@ -527,20 +562,15 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
     const nextState = mapItemTotals({ ...currentItem, [field]: value })
     setItems(prev => prev.map(item => item.uid === uid ? nextState : item))
 
-    if (!['quantity', 'presentation_id'].includes(field)) return
+    if (field !== 'quantity') return
 
-    const presentation = nextState.presentations.find(row => `${row.id}` === `${field === 'presentation_id' ? value : nextState.presentation_id}`)
-    const resolution = await repriceItem(nextState, {
-      quantity: field === 'quantity' ? value : nextState.quantity,
-      presentation_id: field === 'presentation_id' ? value : nextState.presentation_id,
-    })
+    const resolution = await repriceItem(nextState, { quantity: value })
     if (!resolution) return
 
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
       return mapItemTotals({
         ...item,
-        presentation_units: Number(presentation?.units || item.presentation_units || 1),
         stock_available: Number(resolution.stock_available || 0),
         price_unit: Number(resolution.price_unit || 0),
         price_source: resolution.source || 'fallback',
@@ -550,20 +580,58 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
   }
 
   const onItemAdded = () => setItems(prev => [...prev, emptyItem()])
-  const onItemRemoved = (uid) => {
-    setItems(prev => {
-      const next = prev.filter(item => item.uid !== uid)
-      return next.length ? next : [emptyItem()]
+  const onItemRemoved = (uid) => setItems(prev => prev.filter(item => item.uid !== uid))
+
+  const onDeleteClicked = async (id) => {
+    const { isConfirmed } = await Swal.fire({
+      title: 'Eliminar toma pedido',
+      text: '¿Estás seguro de eliminar este toma pedido? Esta acción no se puede revertir',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
     })
+    if (!isConfirmed) return
+    const result = await takeOrdersRest.delete(id)
+    if (!result) return
+    $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
-  const subtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
-  const grandTotal = useMemo(() => subtotal + Number(taxAmount || 0), [subtotal, taxAmount])
+  const openMap = () => {
+    const address = deliveryAddressRef.current?.value?.trim()
+    const query = address || `${mapPoint.lat},${mapPoint.lng}`
+    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank')
+  }
+
+  const mapSrc = Global.GMAPS_API_KEY
+    ? `https://www.google.com/maps/embed/v1/place?key=${Global.GMAPS_API_KEY}&q=${mapPoint.lat},${mapPoint.lng}&zoom=13`
+    : ''
 
   return (<>
+    <div className='row mb-3'>
+      {Object.values(orderProfiles).map((item) => (
+        <div className='col-md-4 mb-3' key={`take-order-card-${item.key}`}>
+          <button
+            type='button'
+            className='w-100 text-start border-0 text-white p-3'
+            style={{ background: '#242653', minHeight: 86 }}
+            onClick={() => onModalOpen(null, item.key)}
+          >
+            <div className='d-flex justify-content-between align-items-start'>
+              <div>
+                <div style={{ fontSize: 21 }}>Crear pedido</div>
+                <div style={{ fontSize: 22, lineHeight: 1.25 }}>{item.title}</div>
+              </div>
+              <i className='mdi mdi-file-document-outline' style={{ fontSize: 34 }}></i>
+            </div>
+          </button>
+        </div>
+      ))}
+    </div>
+
     <Table
       gridRef={gridRef}
-      title={pageTitle}
+      title='Lista de Toma pedido'
       rest={takeOrdersRest}
       toolBar={(container) => {
         container.unshift({
@@ -574,92 +642,14 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
             onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
           }
         });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar toma pedido',
-            onClick: () => onModalOpen(null)
-          }
-        });
       }}
       pageSize={25}
       columns={[
-        { dataField: 'id', caption: 'ID', width: 80 },
-        {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: 130,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar pedido')
-        },
-        { dataField: 'issue_date', caption: 'F. emision', width: 110, dataType: 'date' },
-        { dataField: 'promised_delivery_at', caption: 'F. entrega', width: 110, dataType: 'date' },
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 140 },
-        { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 120 },
-        {
-          dataField: 'customer',
-          caption: 'Cliente',
-          minWidth: 240,
-          calculateCellValue: (data) => data.client?.full_name ?? data.eventual_client?.business_name ?? '-'
-        },
-        {
-          dataField: 'distribution_network_name',
-          caption: 'Red',
-          minWidth: 160,
-          calculateCellValue: (data) => data.distribution_network?.name ?? data.distributionNetwork?.name ?? '-'
-        },
-        { dataField: 'order_status', caption: 'Estado pedido', width: 110, lookup: toLookup(commercialOrderStatusOptions) },
-        { dataField: 'dispatch_status', caption: 'Despacho', width: 110, lookup: toLookup(dispatchStatusOptions) },
-        { dataField: 'billing_status', caption: 'Facturacion', width: 110, lookup: toLookup(billingStatusOptions) },
-        { dataField: 'payment_status', caption: 'Cobranza', width: 110, lookup: toLookup(paymentStatusOptions) },
-        { dataField: 'currency', caption: 'Moneda', width: 90 },
-        { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        {
-          dataField: 'items.id',
-          caption: 'Detalle',
-          minWidth: 280,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => {
-            const lines = (data?.items ?? []).map(item => `${item?.article?.name || 'Articulo'} | Cant. ${Number(item?.quantity || 0).toFixed(2)} | ${data.currency} ${Number(item?.total || 0).toFixed(2)}`)
-            ReactAppend(container, <div>
-              {lines.length === 0 && <small className='text-muted'>Sin detalle</small>}
-              {lines.map((line, idx) => <div key={`take-order-${data.id}-${idx}`}><small>{line}</small></div>)}
-            </div>)
-          }
-        },
-        {
-          dataField: 'creator.fullname',
-          caption: 'Creado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
-        },
-        {
-          dataField: 'updater.fullname',
-          caption: 'Actualizado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
-        },
-        {
-          dataField: 'status',
-          caption: 'Activo',
-          dataType: 'boolean',
-          width: 95,
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-              id: data.id,
-              field: 'status',
-              value: !data.status
-            })} />)
-          }
-        },
         {
           caption: 'Acciones',
-          width: 190,
+          width: 120,
           fixed: true,
-          fixedPosition: 'right',
+          fixedPosition: 'left',
           allowFiltering: false,
           allowExporting: false,
           cellTemplate: (container, { data }) => {
@@ -667,8 +657,8 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
             container.append(DxButton({
               className: 'btn btn-xs btn-soft-primary',
               title: 'Editar pedido',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
+              icon: 'mdi mdi-menu',
+              onClick: () => onModalOpen(data, data?.order_profile ?? 'micro')
             }))
             container.append(DxButton({
               className: 'btn btn-xs btn-soft-danger ms-1',
@@ -683,270 +673,316 @@ const TakeOrders = ({ requiredPermission = 'orders', pageTitle = 'Toma pedido' }
               onClick: () => onDeleteClicked(data.id)
             }))
           }
-        }
+        },
+        { dataField: 'order_status', caption: 'Estado', width: 120, lookup: toLookup(commercialOrderStatusOptions) },
+        {
+          dataField: 'code',
+          caption: 'Código',
+          width: 120,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data, data?.order_profile ?? 'micro'), 'Editar pedido')
+        },
+        {
+          dataField: 'referral_guide',
+          caption: 'Comprobante',
+          width: 130,
+          calculateCellValue: (data) => data.referral_guide || '-'
+        },
+        { dataField: 'document_type', caption: 'Tipo comprobante', width: 145 },
+        {
+          dataField: 'customer',
+          caption: 'Cliente',
+          minWidth: 250,
+          calculateCellValue: formatCustomer
+        },
+        { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+        { dataField: 'payment_condition', caption: 'Tipo de pago', width: 140 },
+        {
+          dataField: 'creator.fullname',
+          caption: 'Usuario',
+          width: 150,
+          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
+        },
+        { dataField: 'created_at', caption: 'Fecha registro', width: 150, dataType: 'datetime' },
+        {
+          dataField: 'updater.fullname',
+          caption: 'Usuario registro',
+          width: 160,
+          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
+        },
+        { dataField: 'business.name', caption: 'Empresa', minWidth: 160 },
+        { dataField: 'dispatch_status', caption: 'Despacho', width: 120, lookup: toLookup(dispatchStatusOptions), visible: false },
       ]}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar toma pedido' : 'Agregar toma pedido'} size='xl' onSubmit={onModalSubmit}>
-      <div id='take-orders-form-container' className='row'>
+    <Modal
+      modalRef={modalRef}
+      title={<span><i className='mdi mdi-menu me-2'></i>REGISTRAR PEDIDO</span>}
+      size='lg'
+      hideFooter
+      headerClass='text-white'
+      closeButtonClass='btn-close-white'
+      contentClass='take-order-register-modal'
+      onSubmit={onModalSubmit}
+    >
+      <div id='take-orders-form-container' className='px-2 pb-2'>
+        <style>{`
+          .take-order-register-modal .modal-header {
+            background: #242653;
+          }
+          .take-order-register-modal .form-label {
+            color: #8f8f8f;
+            font-weight: 700;
+            font-size: 15px;
+          }
+        `}</style>
         <input ref={idRef} type='hidden' />
-        <div className='col-md-3'>
-          <label className='form-label'>Codigo</label>
-          <input ref={codeRef} className='form-control' readOnly />
-        </div>
-        <div className='col-md-3'>
-          <SelectAPIFormGroup eRef={businessRef} label='Empresa' required searchAPI='/api/admin/businesses/paginate' searchBy='name' dropdownParent='#take-orders-form-container' onChange={onBusinessChanged} />
-        </div>
-        <div className='col-md-3'>
-          <SelectFormGroup eRef={branchRef} label='Sede' dropdownParent='#take-orders-form-container' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value || '')}>
-            <option value=''>Sin sede</option>
-            {branches.map(branch => <option key={`take-order-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
-          </SelectFormGroup>
-        </div>
-        <div className='col-md-3'>
-          <SelectAPIFormGroup eRef={warehouseRef} label='Almacen' required searchAPI='/api/admin/warehouses/paginate' searchBy='name' dropdownParent='#take-orders-form-container' onChange={onWarehouseChanged} />
+        <input ref={codeRef} type='hidden' />
+        <input ref={deliveryAddressRef} type='hidden' />
+
+        <div className='text-center mb-3'>
+          <h3 className='fw-bold mb-3' style={{ color: '#666' }}>{profile.title}</h3>
+          <hr />
+          <h4 className='fw-bold mb-2' style={{ color: '#666' }}>Buscar cliente</h4>
         </div>
 
-        <div className='col-md-3'>
-          <label className='form-label'>Fecha emision</label>
-          <input ref={issueDateRef} type='date' className='form-control' required />
-        </div>
-        <div className='col-md-3'>
-          <label className='form-label'>Entrega prometida</label>
-          <input ref={promisedDateRef} type='date' className='form-control' />
-        </div>
-        <div className='col-md-2'>
-          <label className='form-label'>Doc. venta</label>
-          <select ref={documentTypeRef} className='form-control'>
-            <option value='Factura'>Factura</option>
-            <option value='Boleta'>Boleta</option>
-            <option value='Ticket'>Ticket</option>
-          </select>
-        </div>
-        <div className='col-md-2'>
-          <label className='form-label'>Moneda</label>
-          <select ref={currencyRef} className='form-control'>
-            <option value='PEN'>PEN</option>
-            <option value='USD'>USD</option>
-            <option value='EUR'>EUR</option>
-          </select>
-        </div>
-        <div className='col-md-2'>
-          <label className='form-label'>Pago</label>
-          <select ref={paymentConditionRef} className='form-control'>
-            <option value='Contado'>Contado</option>
-            <option value='Credito'>Credito</option>
-          </select>
-        </div>
-
-        <div className='col-md-6'>
-          <SelectAPIFormGroup eRef={clientRef} label='Cliente regular' searchAPI='/api/admin/clients/paginate' searchBy='full_name' dropdownParent='#take-orders-form-container' onChange={onClientChanged} />
-        </div>
-        <div className='col-md-6'>
-          <SelectAPIFormGroup eRef={eventualClientRef} label='Cliente eventual' searchAPI='/api/admin/eventual-clients/paginate' searchBy='business_name' dropdownParent='#take-orders-form-container' onChange={onEventualClientChanged} />
-        </div>
-
-        <div className='col-md-4'>
-          <label className='form-label'>Red / Nodo</label>
-          <select className='form-control' value={selectedNetworkId} onChange={onNetworkChanged}>
-            <option value=''>Sin red</option>
-            {networks.map(network => (
-              <option key={`take-order-network-${network.id}`} value={network.id}>
-                {`${network.code ?? ''} ${network.name ?? ''}`.trim()}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className='col-md-4'>
-          <label className='form-label'>Direccion de entrega</label>
-          <select className='form-control' value={selectedDeliveryAddressId} onChange={onDeliveryAddressChanged}>
-            <option value=''>Sin direccion ligada</option>
-            {deliveryAddresses.map(address => (
-              <option key={`take-order-address-${address.id}`} value={address.id}>
-                {`${address.code ?? ''} ${address.name ?? ''}`.trim()}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className='col-md-4'>
-          <label className='form-label'>Metodo de pago</label>
-          <input ref={paymentMethodRef} className='form-control' placeholder='Transferencia, Yape, Efectivo...' />
-        </div>
-
-        <div className='col-md-2'>
-          <label className='form-label'>Cuotas</label>
-          <input ref={installmentsRef} type='number' min='1' step='1' defaultValue='1' className='form-control' />
-        </div>
-        <div className='col-md-2'>
-          <label className='form-label'>Primera cuota</label>
-          <input ref={firstDueDateRef} type='date' className='form-control' />
-        </div>
-        <div className='col-md-3'>
-          <label className='form-label'>Estado pedido</label>
-          <select ref={orderStatusRef} className='form-control'>
-            {commercialOrderStatusOptions.map((option) => (
-              <option key={`take-order-status-${option.value}`} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className='col-md-2'>
-          <label className='form-label'>Despacho</label>
-          <select ref={dispatchStatusRef} className='form-control'>
-            {dispatchStatusOptions
-              .filter((option) => ['pending', 'preparing', 'dispatched', 'delivered', 'cancelled'].includes(option.value))
-              .map((option) => (
-                <option key={`take-order-dispatch-status-${option.value}`} value={option.value}>{option.label}</option>
-              ))}
-          </select>
-        </div>
-        <div className='col-md-3'>
-          <label className='form-label'>Facturacion</label>
-          <select ref={billingStatusRef} className='form-control'>
-            {billingStatusOptions.map((option) => (
-              <option key={`take-order-billing-status-${option.value}`} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className='col-md-8'>
-          <TextareaFormGroup eRef={deliveryAddressRef} label='Direccion de entrega' rows={2} />
-        </div>
-        <div className='col-md-4'>
-          <TextareaFormGroup eRef={deliveryReferenceRef} label='Referencia entrega' rows={2} />
-        </div>
-        <div className='col-md-3'>
-          <label className='form-label'>Ubigeo</label>
-          <input ref={ubigeoRef} className='form-control' />
-        </div>
-        <div className='col-md-4'>
-          <label className='form-label'>Contacto despacho</label>
-          <input ref={dispatchContactNameRef} className='form-control' />
-        </div>
-        <div className='col-md-3'>
-          <label className='form-label'>Telefono despacho</label>
-          <input ref={dispatchContactPhoneRef} className='form-control' />
-        </div>
-        <div className='col-md-2'>
-          <label className='form-label'>Impuesto</label>
-          <input ref={taxAmountRef} type='number' step='0.01' className='form-control' value={taxAmount} onChange={(e) => setTaxAmount(Number(e.target.value || 0))} />
-        </div>
-        <div className='col-md-6'>
-          <label className='form-label'>Orden de compra</label>
-          <input ref={purchaseOrderRef} className='form-control' />
-        </div>
-        <div className='col-md-6'>
-          <label className='form-label'>Guia remision</label>
-          <input ref={referralGuideRef} className='form-control' />
-        </div>
-
-        <div className='col-12 mt-3 d-flex justify-content-between align-items-center'>
-          <h5 className='mb-0'>Detalle del pedido</h5>
-          <button type='button' className='btn btn-sm btn-outline-primary' onClick={onItemAdded}>
-            Agregar item
-          </button>
-        </div>
-
-        <div className='col-12 mt-2'>
-          <div className='table-responsive border rounded'>
-            <table className='table table-sm align-middle mb-0'>
-              <thead>
-                <tr>
-                  <th style={{ minWidth: 260 }}>Articulo</th>
-                  <th style={{ minWidth: 120 }}>Presentacion</th>
-                  <th>Stock</th>
-                  <th>Precio</th>
-                  <th>Cantidad</th>
-                  <th>Total</th>
-                  <th>Origen precio</th>
-                  <th style={{ width: 70 }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.uid}>
-                    <td>
-                      <SelectAPIFormGroup
-                        eRef={getArticleRef(item.uid)}
-                        searchAPI='/api/admin/articles/paginate'
-                        searchBy='name'
-                        dropdownParent='#take-orders-form-container'
-                        onChange={(e) => onItemArticleChanged(item.uid, e)}
-                      />
-                      <small className='text-muted d-block mt-1'>
-                        {[item.article_laboratory, item.article_principle, item.article_unit].filter(Boolean).join(' | ') || 'Sin datos'}
-                      </small>
-                    </td>
-                    <td>
-                      <select
-                        className='form-control'
-                        value={item.presentation_id}
-                        onChange={(e) => onItemFieldChanged(item.uid, 'presentation_id', e.target.value)}
-                      >
-                        <option value=''>Sin presentacion</option>
-                        {item.presentations.map(presentation => (
-                          <option key={`take-order-presentation-${item.uid}-${presentation.id}`} value={presentation.id}>
-                            {`${presentation.name} (${presentation.units})`}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td>{Number(item.stock_available || 0).toFixed(2)}</td>
-                    <td>
-                      <input
-                        type='number'
-                        step='0.01'
-                        min='0'
-                        className='form-control'
-                        value={item.price_unit}
-                        onChange={(e) => onItemFieldChanged(item.uid, 'price_unit', Number(e.target.value || 0))}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type='number'
-                        step='0.01'
-                        min='0.01'
-                        className='form-control'
-                        value={item.quantity}
-                        onChange={(e) => onItemFieldChanged(item.uid, 'quantity', Number(e.target.value || 0))}
-                      />
-                    </td>
-                    <td>{Number(item.total || 0).toFixed(2)}</td>
-                    <td>
-                      <small className='text-muted d-block'>{item.price_source || '-'}</small>
-                      <small className='text-muted d-block'>{item.price_list_code || '-'}</small>
-                    </td>
-                    <td className='text-end'>
-                      <button type='button' className='btn btn-sm btn-outline-danger' onClick={() => onItemRemoved(item.uid)}>
-                        <i className='mdi mdi-close'></i>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th colSpan='5' className='text-end'>Subtotal</th>
-                  <th>{subtotal.toFixed(2)}</th>
-                  <th colSpan='2'></th>
-                </tr>
-                <tr>
-                  <th colSpan='5' className='text-end'>Impuesto</th>
-                  <th>{Number(taxAmount || 0).toFixed(2)}</th>
-                  <th colSpan='2'></th>
-                </tr>
-                <tr>
-                  <th colSpan='5' className='text-end'>Total</th>
-                  <th>{grandTotal.toFixed(2)}</th>
-                  <th colSpan='2'></th>
-                </tr>
-              </tfoot>
-            </table>
+        <div className='row'>
+          <div className='col-12 mb-2'>
+            <div className='input-group'>
+              <div className='flex-grow-1'>
+                <SelectAPIFormGroup
+                  eRef={clientRef}
+                  label=''
+                  searchAPI='/api/admin/clients/paginate'
+                  searchBy='full_name'
+                  selectBy='entity_id'
+                  dropdownParent='#take-orders-form-container'
+                  filter={['client_kind', '=', 'regular']}
+                  onChange={onClientChanged}
+                />
+              </div>
+              <button type='button' className='btn btn-outline-info mb-2' title='Agregar cliente' onClick={() => window.open('/admin/clients', '_blank')}>
+                <i className='mdi mdi-account-plus'></i>
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className='col-12 mt-3'>
-          <TextareaFormGroup eRef={observationsRef} label='Observaciones' rows={3} />
+          <div className='col-md-6 mb-2'>
+            <label className='form-label'>{profile.channelLabel}</label>
+            <select className='form-control' value={selectedCommercialChannel} onChange={(e) => setSelectedCommercialChannel(e.target.value)}>
+              <option value=''>Seleccione</option>
+              {channelOptions.map(option => <option key={`channel-${option}`} value={option}>{option}</option>)}
+            </select>
+          </div>
+          <div className='col-md-6 mb-2'>
+            <label className='form-label'>{profile.segmentLabel}</label>
+            <select className='form-control' value={selectedSegment} onChange={(e) => setSelectedSegment(e.target.value)}>
+              <option value=''>Seleccione</option>
+              {segmentOptions.map(option => <option key={`segment-${option}`} value={option}>{option}</option>)}
+            </select>
+          </div>
+
+          <div className='col-md-6 mb-2'>
+            <label className='form-label'>Celular</label>
+            <input className='form-control' value={clientSnapshot?.phone ?? ''} disabled readOnly />
+          </div>
+          <div className='col-md-6 mb-2'>
+            <label className='form-label'>Tipo comprobante</label>
+            <select ref={documentTypeRef} className='form-control'>
+              <option value=''>Seleccione</option>
+              <option value='Factura'>Factura</option>
+              <option value='Boleta'>Boleta</option>
+              <option value='Ticket'>Ticket</option>
+            </select>
+          </div>
+          <div className='col-md-6 mb-2'>
+            <label className='form-label'>Tipo pago</label>
+            <select ref={paymentConditionRef} className='form-control'>
+              <option value=''>Seleccione</option>
+              <option value='Contado'>Contado</option>
+              <option value='Credito'>Crédito</option>
+            </select>
+          </div>
+          <div className='col-md-6 mb-2'>
+            <label className='form-label'>Fecha entrega <i className='mdi mdi-information text-muted'></i></label>
+            <input ref={promisedDateRef} type='date' className='form-control' placeholder='Fecha de documento' />
+          </div>
+
+          <div className='col-12 mb-2'>
+            <label className='form-label'>Dirección</label>
+            <div className='input-group'>
+              <select className='form-control' value={selectedDeliveryAddressId} onChange={onDeliveryAddressChanged}>
+                <option value=''>Seleccione</option>
+                {deliveryAddresses.map(address => (
+                  <option key={`take-order-address-${address.id}`} value={address.id}>
+                    {`${address.code ?? ''} ${address.name ?? address.address ?? ''}`.trim()}
+                  </option>
+                ))}
+              </select>
+              <button type='button' className='btn btn-outline-info' title='Abrir mapa' onClick={openMap}>
+                <i className='mdi mdi-map-marker'></i>
+              </button>
+            </div>
+          </div>
+
+          <div className='col-12 mb-2'>
+            <label className='form-label'>Ubigeo</label>
+            <select ref={ubigeoRef} className='form-control' defaultValue=''>
+              <option value=''>Seleccione</option>
+              {deliveryAddresses.map(address => address.ubigeo && (
+                <option key={`take-order-ubigeo-${address.id}`} value={address.ubigeo}>{address.ubigeo}</option>
+              ))}
+              {clientSnapshot?.ubigeo && <option value={clientSnapshot.ubigeo}>{clientSnapshot.ubigeo}</option>}
+            </select>
+          </div>
+
+          <div className='col-12 mb-2'>
+            <label className='form-label'>Referencia</label>
+            <input ref={deliveryReferenceRef} className='form-control' readOnly />
+          </div>
+          <div className='col-md-6 mb-2'>
+            <label className='form-label'>Nombre contacto</label>
+            <input ref={dispatchContactNameRef} className='form-control' placeholder='Nombre de contacto' />
+          </div>
+          <div className='col-md-6 mb-2'>
+            <label className='form-label'>Celular contacto</label>
+            <input ref={dispatchContactPhoneRef} className='form-control' placeholder='Celular de contacto' />
+          </div>
+
+          <div className='col-12 mb-3'>
+            {mapSrc ? (
+              <iframe
+                src={mapSrc}
+                className='w-100 border-0'
+                style={{ height: 330 }}
+                allowFullScreen=''
+                loading='lazy'
+                referrerPolicy='no-referrer-when-downgrade'
+              ></iframe>
+            ) : (
+              <div className='border rounded p-3 small text-muted'>Configura GMAPS_API_KEY para habilitar el mapa.</div>
+            )}
+          </div>
+
+          <div className='col-md-6 mb-2'>
+            <label className='form-label'>Orden de compra</label>
+            <input ref={purchaseOrderRef} className='form-control' />
+          </div>
+          <div className='col-md-6 mb-2'>
+            <label className='form-label'>Guía remisión</label>
+            <input ref={referralGuideRef} className='form-control' />
+          </div>
+          <div className='col-12 mb-3'>
+            <TextareaFormGroup eRef={observationsRef} label='Observación' rows={3} />
+          </div>
+
+          <div className='col-12 text-center mb-2'>
+            <label className='form-label d-block fw-bold'>Tarifario</label>
+            <SelectAPIFormGroup
+              eRef={priceListRef}
+              label=''
+              searchAPI='/api/admin/price-lists/paginate'
+              searchBy='code'
+              dropdownParent='#take-orders-form-container'
+              filter={['status', '=', true]}
+              onChange={onPriceListChanged}
+            />
+          </div>
+
+          <div className='col-12 text-center mb-3'>
+            <button type='button' className='btn btn-outline-primary' onClick={onItemAdded}>
+              <i className='mdi mdi-plus-circle me-1'></i>INSERTAR ARTÍCULO
+            </button>
+          </div>
+
+          <div className='col-12'>
+            <div className='table-responsive border'>
+              <table className='table table-sm mb-0 text-center align-middle'>
+                <thead>
+                  <tr>
+                    <th colSpan='5'>ARTÍCULO</th>
+                  </tr>
+                  <tr>
+                    <th style={{ minWidth: 260 }}>Artículo</th>
+                    <th style={{ width: 130 }}>Precio</th>
+                    <th style={{ width: 140 }}>Cantidad</th>
+                    <th style={{ width: 140 }}>Subtotal</th>
+                    <th style={{ width: 48 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.length === 0 && (
+                    <tr>
+                      <td colSpan='5' className='text-muted py-3'>Sin artículos</td>
+                    </tr>
+                  )}
+                  {items.map((item) => (
+                    <tr key={item.uid}>
+                      <td>
+                        <SelectAPIFormGroup
+                          eRef={getArticleRef(item.uid)}
+                          label=''
+                          searchAPI='/api/admin/articles/paginate'
+                          searchBy='name'
+                          dropdownParent='#take-orders-form-container'
+                          onChange={(e) => onItemArticleChanged(item.uid, e)}
+                        />
+                        <small className='text-muted d-block text-start'>
+                          {[item.article_laboratory, item.article_principle, item.article_unit].filter(Boolean).join(' | ')}
+                        </small>
+                      </td>
+                      <td>
+                        <input
+                          type='number'
+                          step='0.01'
+                          min='0'
+                          className='form-control'
+                          value={item.price_unit}
+                          onChange={(e) => onItemFieldChanged(item.uid, 'price_unit', Number(e.target.value || 0))}
+                        />
+                      </td>
+                      <td>
+                        <input
+                          type='number'
+                          step='0.01'
+                          min='0.01'
+                          className='form-control'
+                          value={item.quantity}
+                          onChange={(e) => onItemFieldChanged(item.uid, 'quantity', Number(e.target.value || 0))}
+                        />
+                      </td>
+                      <td>{Number(item.total || 0).toFixed(2)}</td>
+                      <td>
+                        <button type='button' className='btn btn-sm btn-outline-danger' onClick={() => onItemRemoved(item.uid)}>
+                          <i className='mdi mdi-close'></i>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th colSpan='3' className='text-end fst-italic'>Total</th>
+                    <th>
+                      <input className='form-control text-end' value={subtotal.toFixed(2)} readOnly />
+                    </th>
+                    <th></th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <div className='col-12 d-flex justify-content-center gap-3 mt-4'>
+            <button type='button' className='btn btn-outline-primary' onClick={() => saveOrder(false)}>
+              <i className='mdi mdi-plus me-1'></i>Registrar
+            </button>
+            <button type='button' className='btn btn-outline-primary' onClick={() => saveOrder(true)}>
+              <i className='mdi mdi-plus me-1'></i>Registrar y Facturar
+            </button>
+            <button type='button' className='btn btn-light' data-bs-dismiss='modal'>
+              <i className='mdi mdi-close me-1'></i>Cerrar
+            </button>
+          </div>
         </div>
       </div>
     </Modal>

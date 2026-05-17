@@ -11,6 +11,7 @@ class TakeOrder extends Model
 
     protected $fillable = [
         'code',
+        'order_profile',
         'business_id',
         'business_branch_id',
         'warehouse_id',
@@ -37,6 +38,8 @@ class TakeOrder extends Model
         'delivery_address',
         'delivery_reference',
         'ubigeo',
+        'map_lat',
+        'map_lng',
         'dispatch_contact_name',
         'dispatch_contact_phone',
         'purchase_order',
@@ -60,6 +63,8 @@ class TakeOrder extends Model
         'subtotal' => 'float',
         'tax_amount' => 'float',
         'total' => 'float',
+        'map_lat' => 'float',
+        'map_lng' => 'float',
         'status' => 'boolean',
     ];
 

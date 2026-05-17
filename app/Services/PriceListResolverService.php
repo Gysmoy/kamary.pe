@@ -55,10 +55,12 @@ class PriceListResolverService
         $businessId = (int)($context['business_id'] ?? 0);
         $branchId = isset($context['business_branch_id']) && $context['business_branch_id'] !== '' ? (int)$context['business_branch_id'] : null;
         $warehouseId = isset($context['warehouse_id']) && $context['warehouse_id'] !== '' ? (int)$context['warehouse_id'] : null;
+        $priceListId = $this->nullableInt($context['price_list_id'] ?? null);
 
         return PriceList::with('items')
             ->where('business_id', $businessId)
             ->where('status', 1)
+            ->when($priceListId, fn($query) => $query->where('id', $priceListId))
             ->where(function ($query) use ($branchId) {
                 $query->whereNull('business_branch_id');
                 if ($branchId) {

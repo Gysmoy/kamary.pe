@@ -5,6 +5,52 @@ import { toast } from "sonner";
 class TakeOrdersRest extends BasicRest {
   path = 'admin/take-orders'
 
+  getDefaultBusiness = async () => {
+    try {
+      const { status, result } = await Fetch('/api/admin/businesses/paginate', {
+        method: 'POST',
+        body: JSON.stringify({
+          take: 1,
+          skip: 0,
+          sort: [{ selector: 'name', desc: false }],
+          filter: ['status', '=', true],
+        })
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo obtener la empresa')
+      return (result?.data ?? [])[0] ?? null
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
+  getDefaultWarehouse = async () => {
+    try {
+      const { status, result } = await Fetch('/api/admin/warehouses/paginate', {
+        method: 'POST',
+        body: JSON.stringify({
+          take: 1,
+          skip: 0,
+          sort: [{ selector: 'name', desc: false }],
+          filter: ['status', '=', true],
+        })
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo obtener el almacén')
+      return (result?.data ?? [])[0] ?? null
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
   getBranchesByBusiness = async (businessId) => {
     if (!businessId) return []
     const result = await this.simpleGet(`/api/${this.path}/businesses/${businessId}/branches`)

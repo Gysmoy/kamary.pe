@@ -1732,7 +1732,7 @@
     ]
   },
   "resources/js/Admin/TakeOrders.jsx": {
-    "file": "assets/TakeOrders-DRUV82AI.js",
+    "file": "assets/TakeOrders-DFfs2sPJ.js",
     "name": "TakeOrders",
     "src": "resources/js/Admin/TakeOrders.jsx",
     "isEntry": true,
@@ -1741,11 +1741,8 @@
       "_Base-DEwdOZPm.js",
       "_Table-CO65K1hT.js",
       "_Modal-DGAB1eIb.js",
-      "_ReactAppend-Yyrr3AXW.js",
       "_DxButton-CsjWvhyj.js",
-      "_SwitchFormGroup-Du5E2Od8.js",
       "_SetSelectValue-1d2JUzKZ.js",
-      "_SelectFormGroup-LFdaZvDn.js",
       "_TextareaFormGroup-Ch5h0VfH.js",
       "_BasicRest-DlKnEI0V.js",
       "_renderGridEditLink-D8NGEeKJ.js",

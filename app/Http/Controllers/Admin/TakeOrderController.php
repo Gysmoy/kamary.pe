@@ -47,10 +47,10 @@ class TakeOrderController extends BasicController
                 'business:id,name,tax_number,trade_name,description',
                 'branch:id,business_id,name,ubigeo,address,telephone,email',
                 'warehouse:id,name',
-                'client:id,document_type,document_number,full_name,full_address,phone,primary_contact,primary_contact_phone,email,contract_due_days',
+                'client:id,document_type,document_number,full_name,full_address,phone,primary_contact,primary_contact_phone,email,contract_due_days,commercial_channel,segment,ubigeo',
                 'eventualClient:id,document_type,document_number,business_name,address,phone,email',
                 'distributionNetwork:id,client_id,code,name,commercial_channel,segment',
-                'deliveryAddress:id,client_distribution_network_id,client_id,code,name,address,reference,ubigeo,contact_name,contact_phone',
+                'deliveryAddress:id,client_distribution_network_id,client_id,code,name,address,reference,ubigeo,latitude,longitude,contact_name,contact_phone',
                 'seller:id,name,lastname,username,fullname',
                 'priceList:id,code',
                 'items:id,take_order_id,article_id,presentation_id,warehouse_id,price_list_item_id,stock_available,cost_unit,price_unit,presentation_units,quantity,total,price_source,status',
@@ -90,12 +90,13 @@ class TakeOrderController extends BasicController
         $networkId = $this->toNullableInt($body['client_distribution_network_id'] ?? null);
         $deliveryAddressId = $this->toNullableInt($body['client_delivery_address_id'] ?? null);
         $sellerId = $this->toNullableInt($body['seller_id'] ?? null) ?? $userId;
+        $priceListId = $this->toNullableInt($body['price_list_id'] ?? null);
         $issueDate = $this->normalizeDate($body['issue_date'] ?? now()->toDateString());
         $promisedDate = $this->normalizeDate($body['promised_delivery_at'] ?? null);
         $firstDueDate = $this->normalizeDate($body['first_due_date'] ?? null);
 
         if (!$businessId) throw new \Exception('La empresa es obligatoria');
-        if (!$warehouseId) throw new \Exception('El almacen es obligatorio');
+        if (!$warehouseId) throw new \Exception('El almacén es obligatorio');
         if (!$issueDate) throw new \Exception('La fecha de emision es obligatoria');
         if (!$clientId && !$eventualClientId) throw new \Exception('Debes seleccionar un cliente regular o eventual');
         if ($clientId && $eventualClientId) throw new \Exception('No puedes mezclar cliente regular y eventual en el mismo pedido');
@@ -191,6 +192,8 @@ class TakeOrderController extends BasicController
         $body['client_distribution_network_id'] = $networkId;
         $body['client_delivery_address_id'] = $deliveryAddressId;
         $body['seller_id'] = $sellerId;
+        $body['price_list_id'] = $priceListId;
+        $body['order_profile'] = $this->normalizeOrderProfile($body['order_profile'] ?? 'micro');
         $body['document_type'] = trim((string)($body['document_type'] ?? 'Factura')) ?: 'Factura';
         $body['currency'] = $this->normalizeCurrency($body['currency'] ?? 'PEN');
         $body['payment_condition'] = $this->normalizePaymentCondition($body['payment_condition'] ?? 'Contado');
@@ -207,6 +210,8 @@ class TakeOrderController extends BasicController
         $body['delivery_address'] = trim((string)($body['delivery_address'] ?? ($deliveryAddress->address ?? ''))) ?: null;
         $body['delivery_reference'] = trim((string)($body['delivery_reference'] ?? ($deliveryAddress->reference ?? ''))) ?: null;
         $body['ubigeo'] = trim((string)($body['ubigeo'] ?? ($deliveryAddress->ubigeo ?? ''))) ?: null;
+        $body['map_lat'] = $this->toNullableDecimal($body['map_lat'] ?? ($deliveryAddress->latitude ?? null));
+        $body['map_lng'] = $this->toNullableDecimal($body['map_lng'] ?? ($deliveryAddress->longitude ?? null));
         $body['dispatch_contact_name'] = trim((string)($body['dispatch_contact_name'] ?? ($deliveryAddress->contact_name ?? ''))) ?: null;
         $body['dispatch_contact_phone'] = trim((string)($body['dispatch_contact_phone'] ?? ($deliveryAddress->contact_phone ?? ''))) ?: null;
         $body['purchase_order'] = trim((string)($body['purchase_order'] ?? '')) ?: null;
@@ -270,6 +275,7 @@ class TakeOrderController extends BasicController
                     'business_id' => $jpa->business_id,
                     'business_branch_id' => $jpa->business_branch_id,
                     'warehouse_id' => $warehouseId,
+                    'price_list_id' => $jpa->price_list_id,
                     'client_id' => $jpa->client_id,
                     'eventual_client_id' => $jpa->eventual_client_id,
                     'client_distribution_network_id' => $jpa->client_distribution_network_id,
@@ -325,7 +331,7 @@ class TakeOrderController extends BasicController
             $matchedPriceListIds = array_values(array_unique($matchedPriceListIds));
 
             $jpa->update([
-                'price_list_id' => count($matchedPriceListIds) === 1 ? $matchedPriceListIds[0] : null,
+                'price_list_id' => $jpa->price_list_id ?: (count($matchedPriceListIds) === 1 ? $matchedPriceListIds[0] : null),
                 'subtotal' => $subtotal,
                 'tax_amount' => $taxAmount,
                 'total' => $total,
@@ -407,13 +413,14 @@ class TakeOrderController extends BasicController
             $quantity = $this->toNullableDecimal($request->query('quantity')) ?? 1;
 
             if (!$articleId) throw new \Exception('El articulo es obligatorio');
-            if (!$warehouseId) throw new \Exception('El almacen es obligatorio');
+            if (!$warehouseId) throw new \Exception('El almacén es obligatorio');
 
             $article = Article::with(['presentations:id,article_id,name,units,price,status'])->findOrFail($articleId);
             $resolution = app(PriceListResolverService::class)->resolve([
                 'business_id' => $this->toNullableInt($request->query('business_id')),
                 'business_branch_id' => $this->toNullableInt($request->query('business_branch_id')),
                 'warehouse_id' => $warehouseId,
+                'price_list_id' => $this->toNullableInt($request->query('price_list_id')),
                 'client_id' => $this->toNullableInt($request->query('client_id')),
                 'eventual_client_id' => $this->toNullableInt($request->query('eventual_client_id')),
                 'client_distribution_network_id' => $this->toNullableInt($request->query('client_distribution_network_id')),
@@ -564,6 +571,12 @@ class TakeOrderController extends BasicController
         $allowed = ['draft', 'confirmed', 'preparing', 'dispatched', 'billed', 'closed', 'cancelled'];
         $normalized = mb_strtolower(trim((string)$value));
         return in_array($normalized, $allowed, true) ? $normalized : 'draft';
+    }
+
+    private function normalizeOrderProfile($value): string
+    {
+        $normalized = mb_strtolower(trim((string)$value));
+        return in_array($normalized, ['micro', 'mediana'], true) ? $normalized : 'micro';
     }
 
     private function normalizeDispatchStatus($value): string
