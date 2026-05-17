@@ -613,16 +613,15 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
         <div className='col-md-4 mb-3' key={`take-order-card-${item.key}`}>
           <button
             type='button'
-            className='w-100 text-start border-0 text-white p-3'
-            style={{ background: '#242653', minHeight: 86 }}
+            className='btn btn-primary w-100 text-start py-3'
             onClick={() => onModalOpen(null, item.key)}
           >
             <div className='d-flex justify-content-between align-items-start'>
               <div>
-                <div style={{ fontSize: 21 }}>Crear pedido</div>
-                <div style={{ fontSize: 22, lineHeight: 1.25 }}>{item.title}</div>
+                <div className='fw-semibold'>Crear pedido</div>
+                <div className='fs-4 lh-sm'>{item.title}</div>
               </div>
-              <i className='mdi mdi-file-document-outline' style={{ fontSize: 34 }}></i>
+              <i className='mdi mdi-file-document-outline fs-2'></i>
             </div>
           </button>
         </div>
@@ -716,33 +715,20 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 
     <Modal
       modalRef={modalRef}
-      title={<span><i className='mdi mdi-menu me-2'></i>REGISTRAR PEDIDO</span>}
+      title={<h4 className='modal-title'><i className='mdi mdi-menu me-2'></i>REGISTRAR PEDIDO</h4>}
       size='lg'
       hideFooter
-      headerClass='text-white'
-      closeButtonClass='btn-close-white'
-      contentClass='take-order-register-modal'
       onSubmit={onModalSubmit}
     >
       <div id='take-orders-form-container' className='px-2 pb-2'>
-        <style>{`
-          .take-order-register-modal .modal-header {
-            background: #242653;
-          }
-          .take-order-register-modal .form-label {
-            color: #8f8f8f;
-            font-weight: 700;
-            font-size: 15px;
-          }
-        `}</style>
         <input ref={idRef} type='hidden' />
         <input ref={codeRef} type='hidden' />
         <input ref={deliveryAddressRef} type='hidden' />
 
         <div className='text-center mb-3'>
-          <h3 className='fw-bold mb-3' style={{ color: '#666' }}>{profile.title}</h3>
+          <h3 className='fw-semibold mb-3'>{profile.title}</h3>
           <hr />
-          <h4 className='fw-bold mb-2' style={{ color: '#666' }}>Buscar cliente</h4>
+          <h4 className='fw-semibold mb-2'>Buscar cliente</h4>
         </div>
 
         <div className='row'>
@@ -760,7 +746,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
                   onChange={onClientChanged}
                 />
               </div>
-              <button type='button' className='btn btn-outline-info mb-2' title='Agregar cliente' onClick={() => window.open('/admin/clients', '_blank')}>
+              <button type='button' className='btn btn-info text-white mb-2' title='Agregar cliente' onClick={() => window.open('/admin/clients', '_blank')}>
                 <i className='mdi mdi-account-plus'></i>
               </button>
             </div>
@@ -818,7 +804,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
                   </option>
                 ))}
               </select>
-              <button type='button' className='btn btn-outline-info' title='Abrir mapa' onClick={openMap}>
+              <button type='button' className='btn btn-info text-white' title='Abrir mapa' onClick={openMap}>
                 <i className='mdi mdi-map-marker'></i>
               </button>
             </div>
@@ -889,7 +875,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
           </div>
 
           <div className='col-12 text-center mb-3'>
-            <button type='button' className='btn btn-outline-primary' onClick={onItemAdded}>
+            <button type='button' className='btn btn-primary' onClick={onItemAdded}>
               <i className='mdi mdi-plus-circle me-1'></i>INSERTAR ARTÍCULO
             </button>
           </div>
@@ -973,10 +959,10 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
           </div>
 
           <div className='col-12 d-flex justify-content-center gap-3 mt-4'>
-            <button type='button' className='btn btn-outline-primary' onClick={() => saveOrder(false)}>
+            <button type='button' className='btn btn-primary' onClick={() => saveOrder(false)}>
               <i className='mdi mdi-plus me-1'></i>Registrar
             </button>
-            <button type='button' className='btn btn-outline-primary' onClick={() => saveOrder(true)}>
+            <button type='button' className='btn btn-primary' onClick={() => saveOrder(true)}>
               <i className='mdi mdi-plus me-1'></i>Registrar y Facturar
             </button>
             <button type='button' className='btn btn-light' data-bs-dismiss='modal'>
