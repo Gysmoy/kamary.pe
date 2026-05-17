@@ -9,10 +9,6 @@ class Order extends Model
 {
     use HasFactory;
 
-    protected $appends = [
-        'code',
-    ];
-
     protected $fillable = [
         'business_id',
         'business_branch_id',
@@ -45,11 +41,6 @@ class Order extends Model
         'total' => 'float',
         'status' => 'boolean',
     ];
-
-    public function getCodeAttribute(): string
-    {
-        return 'P' . str_pad((string)$this->id, 6, '0', STR_PAD_LEFT);
-    }
 
     public function business()
     {

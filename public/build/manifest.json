@@ -217,8 +217,8 @@
     "file": "assets/index-BKNjMPK8.js",
     "name": "index"
   },
-  "_magistralesRecordPdf-B3mREUuN.js": {
-    "file": "assets/magistralesRecordPdf-B3mREUuN.js",
+  "_magistralesRecordPdf-oohxZ2rf.js": {
+    "file": "assets/magistralesRecordPdf-oohxZ2rf.js",
     "name": "magistralesRecordPdf",
     "imports": [
       "_CreateReactScript-CW2oXtCg.js",
@@ -275,7 +275,7 @@
     ]
   },
   "resources/js/Admin/AccountsPayable.jsx": {
-    "file": "assets/AccountsPayable-qk3TZEb7.js",
+    "file": "assets/AccountsPayable-BY1TXCwj.js",
     "name": "AccountsPayable",
     "src": "resources/js/Admin/AccountsPayable.jsx",
     "isEntry": true,
@@ -288,11 +288,11 @@
       "_BasicRest-Bx25TxBQ.js",
       "_permissionScope-BUDcDFo2.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js"
+      "_magistralesRecordPdf-oohxZ2rf.js"
     ]
   },
   "resources/js/Admin/AccountsReceivable.jsx": {
-    "file": "assets/AccountsReceivable-hfAt5ejP.js",
+    "file": "assets/AccountsReceivable-BR1aA0nr.js",
     "name": "AccountsReceivable",
     "src": "resources/js/Admin/AccountsReceivable.jsx",
     "isEntry": true,
@@ -304,11 +304,11 @@
       "_DxButton-CsjWvhyj.js",
       "_BasicRest-Bx25TxBQ.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js"
+      "_magistralesRecordPdf-oohxZ2rf.js"
     ]
   },
   "resources/js/Admin/Activities.jsx": {
-    "file": "assets/Activities-CLmZyLrH.js",
+    "file": "assets/Activities-r4i6INzr.js",
     "name": "Activities",
     "src": "resources/js/Admin/Activities.jsx",
     "isEntry": true,
@@ -320,7 +320,7 @@
       "_DxButton-CsjWvhyj.js",
       "_BasicRest-Bx25TxBQ.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js"
+      "_magistralesRecordPdf-oohxZ2rf.js"
     ]
   },
   "resources/js/Admin/Ads.jsx": {
@@ -577,7 +577,7 @@
     ]
   },
   "resources/js/Admin/CommercialOrders.jsx": {
-    "file": "assets/CommercialOrders-DeOLz6Pj.js",
+    "file": "assets/CommercialOrders-Cs288T__.js",
     "name": "CommercialOrders",
     "src": "resources/js/Admin/CommercialOrders.jsx",
     "isEntry": true,
@@ -594,7 +594,7 @@
       "_TextareaFormGroup-Bxo0TFCV.js",
       "_BasicRest-Bx25TxBQ.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
   },
@@ -652,7 +652,7 @@
     ]
   },
   "resources/js/Admin/Dispatches.jsx": {
-    "file": "assets/Dispatches-C9F1PAFm.js",
+    "file": "assets/Dispatches-DMXEvTBz.js",
     "name": "Dispatches",
     "src": "resources/js/Admin/Dispatches.jsx",
     "isEntry": true,
@@ -664,7 +664,7 @@
       "_DxButton-CsjWvhyj.js",
       "_BasicRest-Bx25TxBQ.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js"
+      "_magistralesRecordPdf-oohxZ2rf.js"
     ]
   },
   "resources/js/Admin/Drivers.jsx": {
@@ -682,7 +682,7 @@
     ]
   },
   "resources/js/Admin/EntryNotes.jsx": {
-    "file": "assets/EntryNotes-Bv0FROR2.js",
+    "file": "assets/EntryNotes-D250L68H.js",
     "name": "EntryNotes",
     "src": "resources/js/Admin/EntryNotes.jsx",
     "isEntry": true,
@@ -702,7 +702,7 @@
       "_BasicRest-Bx25TxBQ.js",
       "_permissionScope-BUDcDFo2.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
   },
@@ -727,7 +727,7 @@
     ]
   },
   "resources/js/Admin/ExitNotes.jsx": {
-    "file": "assets/ExitNotes-DI8rOeNf.js",
+    "file": "assets/ExitNotes-DPtxoLl2.js",
     "name": "ExitNotes",
     "src": "resources/js/Admin/ExitNotes.jsx",
     "isEntry": true,
@@ -746,7 +746,7 @@
       "_BasicRest-Bx25TxBQ.js",
       "_permissionScope-BUDcDFo2.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
   },
@@ -1054,7 +1054,7 @@
     ]
   },
   "resources/js/Admin/Magistrales/Formulas.jsx": {
-    "file": "assets/Formulas-D6cR6z6Q.js",
+    "file": "assets/Formulas-Bva7QhZK.js",
     "name": "Formulas",
     "src": "resources/js/Admin/Magistrales/Formulas.jsx",
     "isEntry": true,
@@ -1068,12 +1068,12 @@
       "_SwitchFormGroup-haLqaJVc.js",
       "_BasicRest-Bx25TxBQ.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
   },
   "resources/js/Admin/Magistrales/Incomes.jsx": {
-    "file": "assets/Incomes-2KN1Ezzf.js",
+    "file": "assets/Incomes-DtjXlDMK.js",
     "name": "Incomes",
     "src": "resources/js/Admin/Magistrales/Incomes.jsx",
     "isEntry": true,
@@ -1087,12 +1087,12 @@
       "_SwitchFormGroup-haLqaJVc.js",
       "_BasicRest-Bx25TxBQ.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
   },
   "resources/js/Admin/Magistrales/Inventory.jsx": {
-    "file": "assets/Inventory-D1BendtL.js",
+    "file": "assets/Inventory-BYQ8HGR5.js",
     "name": "Inventory",
     "src": "resources/js/Admin/Magistrales/Inventory.jsx",
     "isEntry": true,
@@ -1106,7 +1106,7 @@
       "_SwitchFormGroup-haLqaJVc.js",
       "_Stage4Rest-Ca54N_-l.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_BasicRest-Bx25TxBQ.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
@@ -1127,7 +1127,7 @@
     ]
   },
   "resources/js/Admin/Magistrales/Outputs.jsx": {
-    "file": "assets/Outputs-MjJ6mjgg.js",
+    "file": "assets/Outputs-JzZ4W6l_.js",
     "name": "Outputs",
     "src": "resources/js/Admin/Magistrales/Outputs.jsx",
     "isEntry": true,
@@ -1141,13 +1141,13 @@
       "_SwitchFormGroup-haLqaJVc.js",
       "_Stage4Rest-Ca54N_-l.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_BasicRest-Bx25TxBQ.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
   },
   "resources/js/Admin/Magistrales/ProductionOrders.jsx": {
-    "file": "assets/ProductionOrders-CqDsJkxD.js",
+    "file": "assets/ProductionOrders-DFoIq0CS.js",
     "name": "ProductionOrders",
     "src": "resources/js/Admin/Magistrales/ProductionOrders.jsx",
     "isEntry": true,
@@ -1161,7 +1161,7 @@
       "_SwitchFormGroup-haLqaJVc.js",
       "_Stage4Rest-Ca54N_-l.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_BasicRest-Bx25TxBQ.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
@@ -1186,7 +1186,7 @@
     ]
   },
   "resources/js/Admin/Magistrales/Sales.jsx": {
-    "file": "assets/Sales-DS2ckd0J.js",
+    "file": "assets/Sales-VaD1HgwD.js",
     "name": "Sales",
     "src": "resources/js/Admin/Magistrales/Sales.jsx",
     "isEntry": true,
@@ -1200,7 +1200,7 @@
       "_SwitchFormGroup-haLqaJVc.js",
       "_Stage4Rest-Ca54N_-l.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_BasicRest-Bx25TxBQ.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
@@ -1243,7 +1243,7 @@
     ]
   },
   "resources/js/Admin/Orders.jsx": {
-    "file": "assets/Orders-D5hqlWmU.js",
+    "file": "assets/Orders-b0az3z2h.js",
     "name": "Orders",
     "src": "resources/js/Admin/Orders.jsx",
     "isEntry": true,
@@ -1260,7 +1260,6 @@
       "_SetSelectValue-CLbYIPT9.js",
       "_SelectFormGroup-Do4cc5Ol.js",
       "_BasicRest-Bx25TxBQ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
   },
@@ -1321,7 +1320,7 @@
     ]
   },
   "resources/js/Admin/PriceLists.jsx": {
-    "file": "assets/PriceLists-1-HbLMeX.js",
+    "file": "assets/PriceLists-a7f9XAmN.js",
     "name": "PriceLists",
     "src": "resources/js/Admin/PriceLists.jsx",
     "isEntry": true,
@@ -1338,7 +1337,7 @@
       "_SelectFormGroup-Do4cc5Ol.js",
       "_BasicRest-Bx25TxBQ.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
   },
@@ -1357,7 +1356,7 @@
     ]
   },
   "resources/js/Admin/PurchaseOrders.jsx": {
-    "file": "assets/PurchaseOrders-TIN8BJAq.js",
+    "file": "assets/PurchaseOrders-DHLOKhJx.js",
     "name": "PurchaseOrders",
     "src": "resources/js/Admin/PurchaseOrders.jsx",
     "isEntry": true,
@@ -1376,12 +1375,12 @@
       "_BasicRest-Bx25TxBQ.js",
       "_permissionScope-BUDcDFo2.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
   },
   "resources/js/Admin/PurchaseReceipts.jsx": {
-    "file": "assets/PurchaseReceipts-C4hF193A.js",
+    "file": "assets/PurchaseReceipts-CdDLuNyx.js",
     "name": "PurchaseReceipts",
     "src": "resources/js/Admin/PurchaseReceipts.jsx",
     "isEntry": true,
@@ -1400,7 +1399,7 @@
       "_BasicRest-Bx25TxBQ.js",
       "_permissionScope-BUDcDFo2.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_tippy-react.esm-DDH_mYtd.js"
     ]
   },
@@ -1503,7 +1502,7 @@
     ]
   },
   "resources/js/Admin/SampleOrders.jsx": {
-    "file": "assets/SampleOrders-ChKqDPE5.js",
+    "file": "assets/SampleOrders-DAALTcC6.js",
     "name": "SampleOrders",
     "src": "resources/js/Admin/SampleOrders.jsx",
     "isEntry": true,
@@ -1515,7 +1514,7 @@
       "_DxButton-CsjWvhyj.js",
       "_BasicRest-Bx25TxBQ.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js",
+      "_magistralesRecordPdf-oohxZ2rf.js",
       "_ubigeoInei-D0FnAslC.js"
     ]
   },
@@ -1567,7 +1566,7 @@
     ]
   },
   "resources/js/Admin/ServiceOrders.jsx": {
-    "file": "assets/ServiceOrders-Dktl1Zo6.js",
+    "file": "assets/ServiceOrders-DttfYqet.js",
     "name": "ServiceOrders",
     "src": "resources/js/Admin/ServiceOrders.jsx",
     "isEntry": true,
@@ -1580,7 +1579,7 @@
       "_BasicRest-Bx25TxBQ.js",
       "_permissionScope-BUDcDFo2.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_magistralesRecordPdf-B3mREUuN.js"
+      "_magistralesRecordPdf-oohxZ2rf.js"
     ]
   },
   "resources/js/Admin/Sliders.jsx": {
