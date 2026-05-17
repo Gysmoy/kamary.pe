@@ -50,11 +50,11 @@ class CommercialOrderController extends BasicController
     {
         $query = $model::select('commercial_orders.*')
             ->with([
-                'business:id,name',
-                'branch:id,business_id,name',
+                'business:id,name,tax_number,trade_name,description',
+                'branch:id,business_id,name,ubigeo,address,telephone,email',
                 'warehouse:id,name',
-                'client:id,document_type,document_number,full_name',
-                'eventualClient:id,document_type,document_number,business_name',
+                'client:id,document_type,document_number,full_name,full_address,phone,primary_contact,primary_contact_phone,email,contract_due_days',
+                'eventualClient:id,document_type,document_number,business_name,address,phone,email',
                 'distributionNetwork:id,client_id,code,name,commercial_channel,segment',
                 'deliveryAddress:id,client_distribution_network_id,client_id,code,name,address,reference,ubigeo,contact_name,contact_phone',
                 'seller:id,name,lastname,username,fullname',

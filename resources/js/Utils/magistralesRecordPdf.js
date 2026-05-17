@@ -361,15 +361,29 @@ const renderOrderQuotationPdf = (doc, document) => {
     nested(data, 'branch.address') || nested(data, 'business.description'),
     'CAL.YEN ESCOBEDO GARRO NRO. 830\nURB. LA VINA LIMA - LIMA - SAN LUIS'
   )
-  const clientName = asText(nested(data, 'client.full_name'), 'CLIENTE')
-  const clientAddress = asText(data?.delivery_address || nested(data, 'client.full_address'), '')
+  const clientDocument = nested(data, 'client.document_number') || nested(data, 'eventual_client.document_number') || nested(data, 'eventualClient.document_number')
+  const clientName = asText(customerName(data), 'CLIENTE')
+  const clientAddress = asText(
+    data?.delivery_address
+      || nested(data, 'delivery_address.address')
+      || nested(data, 'deliveryAddress.address')
+      || nested(data, 'client.full_address')
+      || nested(data, 'eventual_client.address')
+      || nested(data, 'eventualClient.address'),
+    ''
+  )
+  const clientPhone = nested(data, 'client.phone')
+    || nested(data, 'client.primary_contact_phone')
+    || nested(data, 'eventual_client.phone')
+    || nested(data, 'eventualClient.phone')
+    || data?.dispatch_contact_phone
   const issueDate = asDate(data?.issue_date || data?.created_at || new Date().toISOString())
-  const dueDate = asDate(data?.due_date || data?.valid_until || addDaysToDate(issueDate, nested(data, 'client.contract_due_days') || 5))
+  const dueDate = asDate(data?.due_date || data?.valid_until || data?.first_due_date || addDaysToDate(issueDate, nested(data, 'client.contract_due_days') || 5))
   const subtotal = Number(data?.subtotal ?? (data?.items ?? []).reduce((sum, item) => sum + Number(item?.total || 0), 0))
   const discount = Number(data?.discount_amount || 0)
   const total = Number(data?.total ?? Math.max(0, subtotal - discount))
-  const taxable = total > 0 ? (total / 1.18) : 0
-  const tax = total - taxable
+  const tax = Number(data?.tax_amount ?? (total > 0 ? total - (total / 1.18) : 0))
+  const taxable = Math.max(0, total - tax)
   let y = 48
 
   doc.setTextColor(0, 0, 0)
@@ -410,7 +424,7 @@ const renderOrderQuotationPdf = (doc, document) => {
   }
 
   const line1 = Math.max(
-    fieldLine('DOCUMENTO', nested(data, 'client.document_number'), leftX, y),
+    fieldLine('DOCUMENTO', clientDocument, leftX, y),
     fieldLine('FECHA EMISION', issueDate, rightX, y, 96, 118)
   )
   y += line1
@@ -425,8 +439,8 @@ const renderOrderQuotationPdf = (doc, document) => {
   )
   y += line3
   const line4 = Math.max(
-    fieldLine('TELEFONO', nested(data, 'client.phone') || nested(data, 'client.primary_contact_phone'), leftX, y),
-    fieldLine('FORMA DE PAGO', data?.payment_condition || data?.payment_method || data?.payment_type, rightX, y, 96, 118)
+    fieldLine('TELEFONO', clientPhone, leftX, y),
+    fieldLine('FORMA DE PAGO', data?.payment_condition || data?.payment_method || data?.payment_type || data?.external_payment_type, rightX, y, 96, 118)
   )
   y += line4 + 14
 
@@ -1261,9 +1275,11 @@ export const buildMagistralesRows = {
     observations: data?.observations,
   }),
   commercialOrder: (data) => ({
+    layout: 'order-quotation',
     title: 'Pedido comercial',
     code: data?.code,
     filename: `pedido-comercial-${data?.code || data?.id}`,
+    source: data,
     meta: [
       ['Empresa', nested(data, 'business.name')],
       ['Sede', nested(data, 'branch.name')],
