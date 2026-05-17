@@ -35,6 +35,7 @@ class ModulePermissions
             'clients' => 'Comercial - Cliente',
             'eventual-clients' => 'Comercial - Clientes Eventual',
             'accounts-receivable' => 'Comercial - Cuenta por Cobrar',
+            'take-orders' => 'Comercial - Toma pedido',
             'orders' => 'Comercial - Pedido',
             'pricing' => 'Comercial - Tarifario',
             'client-distribution' => 'Comercial - Red de Distribucion',

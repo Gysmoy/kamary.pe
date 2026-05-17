@@ -49,6 +49,7 @@ const QUICK_FLAGS = {
     'eventual-clients',
     'client-distribution',
     'pricing',
+    'take-orders',
     'orders',
     'accounts-receivable',
     'services-billing',
@@ -102,7 +103,7 @@ const PERMISSION_GROUPS = [
   {
     key: 'comercial',
     title: 'Comercial',
-    permissions: ['clients', 'eventual-clients', 'accounts-receivable', 'orders', 'pricing', 'client-distribution']
+    permissions: ['clients', 'eventual-clients', 'accounts-receivable', 'take-orders', 'orders', 'pricing', 'client-distribution']
   },
   {
     key: 'almacenamiento',
