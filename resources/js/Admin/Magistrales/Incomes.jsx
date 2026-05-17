@@ -201,6 +201,61 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada' }) => {
   }
 
   return <>
+    <style>{`
+      .mag-income-dialog {
+        max-width: min(1600px, calc(100vw - 32px));
+      }
+
+      .mag-income-modal .modal-body {
+        max-height: calc(100vh - 150px);
+        overflow-y: auto;
+      }
+
+      .mag-income-detail-scroll {
+        overflow-x: auto;
+      }
+
+      .mag-income-detail-table {
+        min-width: 1480px;
+        table-layout: fixed;
+      }
+
+      .mag-income-detail-table th {
+        color: #313a46;
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: none;
+        white-space: nowrap;
+      }
+
+      .mag-income-detail-table td {
+        vertical-align: middle;
+      }
+
+      .mag-income-detail-table .form-control,
+      .mag-income-detail-table .form-select {
+        min-width: 0;
+        width: 100%;
+      }
+
+      .mag-income-col-article { width: 250px; }
+      .mag-income-col-description { width: 260px; }
+      .mag-income-col-quantity { width: 105px; }
+      .mag-income-col-presentation { width: 155px; }
+      .mag-income-col-expiration { width: 170px; }
+      .mag-income-col-lot { width: 130px; }
+      .mag-income-col-price { width: 125px; }
+      .mag-income-col-subtotal { width: 120px; }
+      .mag-income-col-actions { width: 70px; }
+
+      @media (max-width: 991.98px) {
+        .mag-income-dialog {
+          max-width: calc(100vw - 12px);
+          margin-left: auto;
+          margin-right: auto;
+        }
+      }
+    `}</style>
     <Table
       gridRef={gridRef}
       title={moduleTitle}
@@ -249,7 +304,14 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada' }) => {
       ]}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar nota de entrada magistral' : 'Registrar nota de entrada magistral'} size='xl' onSubmit={onSave}>
+    <Modal
+      modalRef={modalRef}
+      title={isEditing ? 'Editar nota de entrada magistral' : 'Registrar nota de entrada magistral'}
+      size='xl'
+      dialogClass='mag-income-dialog'
+      contentClass='mag-income-modal'
+      onSubmit={onSave}
+    >
       <div className='row'>
         <input ref={idRef} hidden />
         <div className='col-md-3 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' disabled={!isEditing} /></div>
@@ -280,20 +342,32 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada' }) => {
             <h6 className='mb-0'>Detalle de nota de entrada</h6>
             <button type='button' className='btn btn-sm btn-soft-primary' onClick={() => setItems(prev => [...prev, emptyItem()])}><i className='mdi mdi-plus me-1'></i> Insertar articulo</button>
           </div>
-          <div className='table-responsive border rounded'>
-            <table className='table table-sm table-striped mb-0'>
+          <div className='table-responsive border rounded mag-income-detail-scroll'>
+            <table className='table table-sm table-striped mb-0 mag-income-detail-table'>
+              <colgroup>
+                <col className='mag-income-col-article' />
+                <col className='mag-income-col-description' />
+                <col className='mag-income-col-quantity' />
+                <col className='mag-income-col-presentation' />
+                <col className='mag-income-col-expiration' />
+                <col className='mag-income-col-lot' />
+                <col className='mag-income-col-price' />
+                <col className='mag-income-col-price' />
+                <col className='mag-income-col-subtotal' />
+                <col className='mag-income-col-actions' />
+              </colgroup>
               <thead>
                 <tr>
-                  <th style={{ minWidth: 180 }}>Ingreso</th>
-                  <th style={{ minWidth: 220 }}>Descripcion</th>
-                  <th style={{ width: 100 }}>Cantidad</th>
-                  <th style={{ minWidth: 130 }}>Presentacion</th>
-                  <th style={{ width: 140 }}>F. vencimiento</th>
-                  <th style={{ width: 120 }}>Lote</th>
-                  <th style={{ width: 110 }}>P. sin IGV</th>
-                  <th style={{ width: 110 }}>P. con IGV</th>
-                  <th style={{ width: 110 }}>Subtotal</th>
-                  <th style={{ width: 80 }}></th>
+                  <th>Ingreso</th>
+                  <th>Descripcion</th>
+                  <th>Cantidad</th>
+                  <th>Presentacion</th>
+                  <th>F. vencimiento</th>
+                  <th>Lote</th>
+                  <th>P. sin IGV</th>
+                  <th>P. con IGV</th>
+                  <th>Subtotal</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
