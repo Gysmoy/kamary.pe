@@ -43,7 +43,7 @@ const AuthModal = ({ isOpen, setIsOpen, onClose, recaptchaSiteKey, session, setS
         const result = await AuthRest.login(request)
 
         if (!result) return setLoading(false)
-        setSession(result.data)
+        setSession(result.data?.user ?? result.data)
         setIsOpen(false)
     }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\ModulePermissions;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,7 +19,7 @@ class LoginController extends BasicController
     public function setReactViewProperties(Request $request)
     {
         if (Auth::check()) {
-            return redirect('/admin/home');
+            return redirect(ModulePermissions::homePathForUser(Auth::user()));
         }
         return [];
     }
@@ -77,7 +78,10 @@ class LoginController extends BasicController
 
             $request->session()->regenerate();
 
-            return Auth::user();
+            return [
+                'user' => Auth::user(),
+                'redirect_url' => ModulePermissions::homePathForUser(Auth::user()),
+            ];
         });
         return response($response->toArray(), $response->status);
     }

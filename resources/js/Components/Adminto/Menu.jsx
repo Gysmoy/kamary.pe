@@ -8,7 +8,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
   const mainRole = LaravelSession.roles?.[0] ?? { name: 'User' }
 
   const canAccess = (permission) => {
-    return can(permission) || hasRole('Admin')
+    return can(permission) || hasRole('Admin') || hasRole('Root')
   }
 
   const canAccessAny = (...permissions) => {
@@ -102,7 +102,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
         </div>
 
         <ul className='side-nav'>
-          <MenuItem href='/admin/home' icon='ti ti-home'>Inicio</MenuItem>
+          {canAccess('dashboard') && <MenuItem href='/admin/home' icon='ti ti-home'>Inicio</MenuItem>}
 
           {canAccessAny('businesses', 'users', 'roles') && (
             <MenuItemContainer title='Sistemas' icon='ti ti-settings-cog'>
@@ -221,7 +221,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
             'magistrales-sales',
           ) && (
             <MenuItemContainer title='Magistrales' icon='ti ti-flask-2'>
-              <MenuItem href='/admin/magistrales/dashboard' icon='ti ti-dashboard'>Dashboard</MenuItem>
+              {canAccess('magistrales-dashboard') && <MenuItem href='/admin/magistrales/dashboard' icon='ti ti-dashboard'>Dashboard</MenuItem>}
               {canAccessAny('magistrales-articles', 'magistrales-products') && <MenuItem href='/admin/magistrales/articles' icon='ti ti-box'>Artículos</MenuItem>}
               {canAccessAny('magistrales-category', 'magistrales-products') && <MenuItem href='/admin/magistrales-category' icon='ti ti-category'>Categoría</MenuItem>}
               {canAccessAny('magistrales-formats', 'magistrales-products') && <MenuItem href='/admin/magistrales-formats' icon='ti ti-forms'>Formatos</MenuItem>}

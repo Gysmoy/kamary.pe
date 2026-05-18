@@ -991,7 +991,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('orders') && !properties.hasRole('Admin')) location.href = '/admin/';
+  if (!properties.can('take-orders') && !properties.hasRole('Admin')) location.href = '/admin/';
   createRoot(el).render(<BaseAdminto {...properties} title={properties.pageTitle || 'Toma pedido'}>
     <TakeOrders {...properties} />
   </BaseAdminto>);

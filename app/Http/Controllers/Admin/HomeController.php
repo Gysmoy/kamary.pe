@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
+use App\Support\ModulePermissions;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,10 @@ class HomeController extends BasicController
 
     public function setReactViewProperties(Request $request)
     {
+        if (!ModulePermissions::userCan($request->user(), 'dashboard')) {
+            return redirect(ModulePermissions::homePathForUser($request->user()));
+        }
+
         $periodStart = now()->startOfMonth()->toDateString();
         $periodEnd = now()->toDateString();
         $rotationStart = now()->subDays(89)->toDateString();

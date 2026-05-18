@@ -53,7 +53,7 @@ const Login = ({ token, APP_DOMAIN, APP_PROTOCOL }) => {
     if (!result) return setLoading(false)
 
     if (GET.service) location.href = `${APP_PROTOCOL}://${GET.service}.${APP_DOMAIN}/home`;
-    else location.href = '/admin/home';
+    else location.href = result.data?.redirect_url ?? result.redirect_url ?? '/admin/';
   }
 
   return (

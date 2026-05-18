@@ -79,6 +79,7 @@ use App\Http\Controllers\Admin\WarehouseController as AdminWarehouseController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\MailingController;
+use App\Support\ModulePermissions;
 
 /*
 |--------------------------------------------------------------------------
@@ -92,7 +93,7 @@ use App\Http\Controllers\MailingController;
 */
 
 // Public routes
-Route::get('/', fn() => auth()->check() ? redirect()->to('/admin/home') : redirect()->to('/login'));
+Route::get('/', fn() => auth()->check() ? redirect()->to(ModulePermissions::homePathForUser(auth()->user())) : redirect()->to('/login'));
 
 // Authentication Routes
 Route::get('/login', [LoginController::class, 'reactView'])->name('Login.jsx');
@@ -107,7 +108,7 @@ Route::middleware('auth')->group(function () {
 
     // Admin routes
     Route::prefix('admin')->group(function () {
-        Route::get('/', fn() => redirect()->to('/admin/home'));
+        Route::get('/', fn() => redirect()->to(ModulePermissions::homePathForUser(auth()->user())));
         Route::get('/home', [AdminHomeController::class, 'reactView']);
 
         // Almacén

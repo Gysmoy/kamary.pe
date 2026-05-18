@@ -24,13 +24,14 @@ const CreateReactScript = (render) => {
 
       const can = (page, ...keys) => {
         const keys2validate = []
-        if (Array.isArray(page)) {
-          for (const p of page) {
-            keys2validate.push(...keys.map(x => `${p}.${x}`))
-          }
-        } else {
-          keys2validate.push(...keys.map(x => `${page}.${x}`))
+        const pages = Array.isArray(page) ? page : [page]
+
+        for (const p of pages) {
+          if (!p) continue
+          if (keys.length) keys2validate.push(...keys.map(x => `${p}.${x}`))
+          else keys2validate.push(p)
         }
+
         if (properties?.session?.permissions?.find(x => keys2validate.includes(x.name) || x.name == 'general.root')) return true
         const roles = properties?.session?.roles ?? []
         for (const rol of roles) {

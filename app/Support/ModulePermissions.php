@@ -2,9 +2,11 @@
 
 namespace App\Support;
 
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Spatie\Permission\Exceptions\PermissionDoesNotExist;
 use Spatie\Permission\PermissionRegistrar;
 
 class ModulePermissions
@@ -12,6 +14,8 @@ class ModulePermissions
     public static function permissions(): array
     {
         return [
+            'dashboard' => 'Dashboard',
+
             'users' => 'Usuarios',
             'roles' => 'Roles',
             'businesses' => 'Empresas',
@@ -85,6 +89,104 @@ class ModulePermissions
             'magistrales-unit' => 'Magistrales - Unidad',
             'magistrales-sales' => 'Magistrales - Ventas',
         ];
+    }
+
+    public static function webModules(): array
+    {
+        return [
+            ['permission' => 'dashboard', 'web' => '/admin/home', 'label' => 'Dashboard'],
+
+            ['permission' => 'businesses', 'web' => '/admin/businesses', 'label' => 'Empresas'],
+            ['permission' => 'users', 'web' => '/admin/users', 'label' => 'Usuarios'],
+            ['permission' => 'roles', 'web' => '/admin/roles', 'label' => 'Roles y permisos'],
+
+            ['permission' => 'articles', 'web' => '/admin/articles', 'label' => 'Articulos'],
+            ['permission' => 'inventory', 'web' => '/admin/inventory', 'label' => 'Inventario'],
+            ['permission' => 'kardex', 'web' => '/admin/kardex', 'label' => 'Kardex'],
+            ['permission' => 'laboratories', 'web' => '/admin/laboratories', 'label' => 'Laboratorios'],
+            ['permission' => 'batches', 'web' => '/admin/batches', 'label' => 'Lotes'],
+            ['permission' => 'entry-note', 'web' => '/admin/entry-note', 'label' => 'Nota de Entrada'],
+            ['permission' => 'exit-note', 'web' => '/admin/exit-note', 'label' => 'Nota de Salida'],
+            ['permission' => 'suppliers', 'web' => '/admin/suppliers', 'label' => 'Proveedores'],
+            ['permission' => 'units-of-measure', 'web' => '/admin/units', 'label' => 'Und. de medida'],
+
+            ['permission' => 'purchase-orders', 'web' => '/admin/purchase-orders', 'label' => 'O. Compra'],
+            ['permission' => 'purchase-receipts', 'web' => '/admin/purchase-receipts', 'label' => 'Recepcion de compra'],
+            ['permission' => 'accounts-payable', 'web' => '/admin/accounts-payable', 'label' => 'Cuentas por pagar'],
+            ['permission' => 'expenses', 'web' => '/admin/expenses', 'label' => 'Gasto'],
+            ['permission' => 'daily-summary', 'web' => '/admin/daily-summary', 'label' => 'Resumen diario'],
+
+            ['permission' => 'clients', 'web' => '/admin/clients', 'label' => 'Cliente'],
+            ['permission' => 'eventual-clients', 'web' => '/admin/eventual-clients', 'label' => 'Clientes Eventual'],
+            ['permission' => 'client-distribution', 'web' => '/admin/client-distribution', 'label' => 'Red de distribucion'],
+            ['permission' => 'accounts-receivable', 'web' => '/admin/accounts-receivable', 'label' => 'Cuenta por Cobrar'],
+            ['permission' => 'take-orders', 'web' => '/admin/comercial/tomapedido', 'label' => 'Toma pedido'],
+            ['permission' => 'orders', 'web' => '/admin/commercial-orders', 'label' => 'Pedido'],
+            ['permission' => 'pricing', 'web' => '/admin/pricing', 'label' => 'Tarifario'],
+
+            ['permission' => 'storage-inventory', 'web' => '/admin/storage-inventory', 'label' => 'Inventario almacenamiento'],
+            ['permission' => 'storage-clients', 'web' => '/admin/storage-clients', 'label' => 'Clientes almacenamiento'],
+            ['permission' => 'storage-service-orders', 'web' => '/admin/storage-service-orders', 'label' => 'O. Servicio almacenamiento'],
+            ['permission' => 'storage-units', 'web' => '/admin/storage-units', 'label' => 'Und. de medida almacenamiento'],
+            ['permission' => 'storage-products', 'web' => '/admin/storage-products', 'label' => 'Creacion del producto'],
+            ['permission' => 'storage-entry-note', 'web' => '/admin/storage-entry-note', 'label' => 'Nota de entrada almacenamiento'],
+            ['permission' => 'storage-exit-note', 'web' => '/admin/storage-exit-note', 'label' => 'Nota de salida almacenamiento'],
+            ['permission' => 'storage-kardex', 'web' => '/admin/storage-kardex', 'label' => 'Kardex almacenamiento'],
+            ['permission' => 'storage-general-service', 'web' => '/admin/storage-general-service', 'label' => 'Servicio General'],
+            ['permission' => 'storage-billing-control', 'web' => '/admin/storage-billing-control', 'label' => 'Control de Facturacion'],
+            ['permission' => 'storage-general-service-orders', 'web' => '/admin/storage-general-service-orders', 'label' => 'O. Servicio General'],
+
+            ['permission' => 'activity', 'web' => '/admin/activity', 'label' => 'Actividad'],
+            ['permission' => 'driver', 'web' => '/admin/driver', 'label' => 'Conductor'],
+            ['permission' => 'dispatch', 'web' => '/admin/dispatch', 'label' => 'Despacho'],
+            ['permission' => 'vehicle-zone', 'web' => '/admin/vehicle-zone', 'label' => 'Vehiculo / Zona'],
+
+            ['permission' => 'services-client', 'web' => '/admin/services-client', 'label' => 'Cliente servicios'],
+            ['permission' => 'services-billing', 'web' => '/admin/services-billing', 'label' => 'Facturacion servicios'],
+            ['permission' => 'services-service-order', 'web' => '/admin/services-service-order', 'label' => 'Orden de servicio'],
+            ['permission' => 'services-services', 'web' => '/admin/services-services', 'label' => 'Servicios'],
+
+            ['permission' => 'sample-orders', 'web' => '/admin/sample-orders', 'label' => 'Pedido muestras'],
+
+            ['permission' => 'magistrales-dashboard', 'web' => '/admin/magistrales/dashboard', 'label' => 'Dashboard Magistrales'],
+            ['permission' => 'magistrales-products', 'web' => '/admin/magistrales/articles', 'label' => 'Productos Magistrales'],
+            ['permission' => 'magistrales-procurement', 'web' => '/admin/magistrales/entry-note', 'label' => 'Proveedores y Compras Magistrales'],
+            ['permission' => 'magistrales-warehouse', 'web' => '/admin/magistrales/inventory', 'label' => 'Almacen Magistrales'],
+            ['permission' => 'magistrales-billing', 'web' => '/admin/magistrales-sales', 'label' => 'Facturacion Magistrales'],
+            ...self::magistralesModules(),
+        ];
+    }
+
+    public static function userCan(?User $user, string $permission): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->hasAnyRole(['Admin', 'Root'])) {
+            return true;
+        }
+
+        try {
+            return $user->can($permission);
+        } catch (PermissionDoesNotExist $exception) {
+            return false;
+        }
+    }
+
+    public static function homePathForUser(?User $user): string
+    {
+        if (!$user) {
+            return '/login';
+        }
+
+        foreach (self::webModules() as $module) {
+            if (self::userCan($user, $module['permission'])) {
+                return $module['web'];
+            }
+        }
+
+        return '/admin/account';
     }
 
     public static function magistralesModules(): array
