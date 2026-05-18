@@ -84,6 +84,11 @@ const mapItemTotals = (item) => {
   }
 }
 
+const shouldResolveQuantity = (value) => {
+  const normalized = `${value ?? ''}`
+  return normalized !== '' && !normalized.endsWith('.') && Number(normalized) > 0
+}
+
 const uniqueOptions = (values) => [...new Set(values.filter(value => value !== null && value !== undefined && `${value}`.trim() !== '').map(value => `${value}`.trim()))]
 
 const documentTypeFromClient = (client) => {
@@ -457,11 +462,11 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
       article_id: item.article_id || null,
       presentation_id: item.presentation_id || null,
       warehouse_id: selectedWarehouseId || null,
-      stock_available: item.stock_available,
-      presentation_units: item.presentation_units,
-      price_unit: item.price_unit,
-      quantity: item.quantity,
-      total: item.total,
+      stock_available: Number(item.stock_available || 0),
+      presentation_units: Number(item.presentation_units || 0),
+      price_unit: Number(item.price_unit || 0),
+      quantity: Number(item.quantity || 0),
+      total: Number(item.total || 0),
       status: true,
     })),
   })
@@ -575,7 +580,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     const nextState = mapItemTotals({ ...currentItem, [field]: value })
     setItems(prev => prev.map(item => item.uid === uid ? nextState : item))
 
-    if (field !== 'quantity') return
+    if (field !== 'quantity' || !shouldResolveQuantity(value)) return
 
     const resolution = await repriceItem(nextState, { quantity: value })
     if (!resolution) return
@@ -937,8 +942,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
                           step='0.01'
                           min='0'
                           className='form-control'
-                          value={item.price_unit}
-                          onChange={(e) => onItemFieldChanged(item.uid, 'price_unit', Number(e.target.value || 0))}
+                          value={item.price_unit ?? ''}
+                          onChange={(e) => onItemFieldChanged(item.uid, 'price_unit', e.target.value)}
                         />
                       </td>
                       <td>
@@ -947,8 +952,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
                           step='0.01'
                           min='0.01'
                           className='form-control'
-                          value={item.quantity}
-                          onChange={(e) => onItemFieldChanged(item.uid, 'quantity', Number(e.target.value || 0))}
+                          value={item.quantity ?? ''}
+                          onChange={(e) => onItemFieldChanged(item.uid, 'quantity', e.target.value)}
                         />
                       </td>
                       <td>{Number(item.total || 0).toFixed(2)}</td>
