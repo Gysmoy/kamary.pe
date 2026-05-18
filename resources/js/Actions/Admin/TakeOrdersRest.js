@@ -57,6 +57,30 @@ class TakeOrdersRest extends BasicRest {
     return result ?? []
   }
 
+  getWarehousesByBranch = async (branchId) => {
+    if (!branchId) return []
+    try {
+      const { status, result } = await Fetch('/api/admin/warehouses/paginate', {
+        method: 'POST',
+        body: JSON.stringify({
+          take: 100,
+          skip: 0,
+          sort: [{ selector: 'name', desc: false }],
+          filter: [['business_branch_id', '=', Number(branchId)], 'and', ['status', '=', true]],
+        })
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo obtener los almacenes')
+      return result?.data ?? []
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return []
+    }
+  }
+
   getDistributionNetworks = async (clientId) => {
     if (!clientId) return []
     const result = await this.simpleGet(`/api/${this.path}/clients/${clientId}/distribution-networks`)

@@ -107,6 +107,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const idRef = useRef()
   const codeRef = useRef()
   const clientRef = useRef()
+  const warehouseRef = useRef()
   const priceListRef = useRef()
   const documentTypeRef = useRef()
   const paymentConditionRef = useRef()
@@ -134,6 +135,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const [selectedCommercialChannel, setSelectedCommercialChannel] = useState('')
   const [selectedSegment, setSelectedSegment] = useState('')
   const [clientSnapshot, setClientSnapshot] = useState(null)
+  const [warehouses, setWarehouses] = useState([])
   const [networks, setNetworks] = useState([])
   const [deliveryAddresses, setDeliveryAddresses] = useState([])
   const [items, setItems] = useState([])
@@ -169,6 +171,37 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     })
   }, [items])
 
+  const warehouseLabel = (warehouse) => {
+    if (!warehouse) return ''
+    const branchName = warehouse?.branch?.name ?? ''
+    const warehouseName = warehouse?.name ?? ''
+    return branchName ? `${branchName} - ${warehouseName}` : warehouseName
+  }
+
+  const loadWarehouses = async (branchId, preferredId = null) => {
+    if (!branchId) {
+      setWarehouses([])
+      setSelectedWarehouseId('')
+      if (warehouseRef.current) SetSelectValue(warehouseRef.current, null)
+      return { warehouseId: '', warehouse: null }
+    }
+
+    const rows = await takeOrdersRest.getWarehousesByBranch(branchId)
+    setWarehouses(rows)
+
+    const preferredWarehouse = rows.find(row => `${row.id}` === `${preferredId}`)
+    const nextWarehouse = preferredWarehouse ?? rows[0] ?? null
+    const nextWarehouseId = nextWarehouse?.id ? `${nextWarehouse.id}` : ''
+    setSelectedWarehouseId(nextWarehouseId)
+
+    if (warehouseRef.current) {
+      if (nextWarehouse) SetSelectValue(warehouseRef.current, nextWarehouseId, warehouseLabel(nextWarehouse))
+      else SetSelectValue(warehouseRef.current, null)
+    }
+
+    return { warehouseId: nextWarehouseId, warehouse: nextWarehouse }
+  }
+
   const resolveDefaults = async (data = null) => {
     let businessId = data?.business_id ? `${data.business_id}` : selectedBusinessId
     let warehouseId = data?.warehouse_id ? `${data.warehouse_id}` : selectedWarehouseId
@@ -179,17 +212,23 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
       businessId = business?.id ? `${business.id}` : ''
     }
 
-    if (!warehouseId) {
-      const warehouse = await takeOrdersRest.getDefaultWarehouse()
-      warehouseId = warehouse?.id ? `${warehouse.id}` : ''
-      if (!branchId && warehouse?.business_branch_id) branchId = `${warehouse.business_branch_id}`
+    if (!branchId && businessId) {
+      const branches = await takeOrdersRest.getBranchesByBusiness(businessId)
+      const activeBranches = (branches ?? []).filter(row => row.status !== null)
+      branchId = activeBranches[0]?.id ? `${activeBranches[0].id}` : ''
     }
 
     setSelectedBusinessId(businessId)
-    setSelectedWarehouseId(warehouseId)
     setSelectedBranchId(branchId || '')
 
-    return { businessId, warehouseId, branchId: branchId || '' }
+    const warehouseState = await loadWarehouses(branchId || '', warehouseId || null)
+
+    return {
+      businessId,
+      branchId: branchId || '',
+      warehouseId: warehouseState.warehouseId,
+      warehouse: warehouseState.warehouse,
+    }
   }
 
   const clearAddressSnapshot = () => {
@@ -286,7 +325,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     const articleId = overrides.article_id ?? item.article_id
     const quantity = Number(overrides.quantity ?? item.quantity ?? 0)
     const presentationId = overrides.presentation_id ?? item.presentation_id
-    if (!articleId || !selectedWarehouseId || quantity <= 0) return null
+    const warehouseId = overrides.warehouse_id ?? selectedWarehouseId
+    if (!articleId || !warehouseId || quantity <= 0) return null
 
     return await takeOrdersRest.resolvePrice({
       article_id: articleId,
@@ -294,7 +334,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
       quantity,
       business_id: selectedBusinessId || null,
       business_branch_id: selectedBranchId || null,
-      warehouse_id: selectedWarehouseId || null,
+      warehouse_id: warehouseId || null,
       price_list_id: selectedPriceListId || null,
       client_id: selectedClientId || null,
       client_distribution_network_id: selectedNetworkId || null,
@@ -304,10 +344,10 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     })
   }
 
-  const repriceAllItems = async () => {
+  const repriceAllItems = async (warehouseIdOverride = null) => {
     for (const currentItem of items) {
       if (!currentItem.article_id) continue
-      const resolution = await repriceItem(currentItem)
+      const resolution = await repriceItem(currentItem, warehouseIdOverride ? { warehouse_id: warehouseIdOverride } : {})
       if (!resolution) continue
       setItems(prev => prev.map(item => {
         if (item.uid !== currentItem.uid) return item
@@ -330,6 +370,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const onModalOpen = async (data = null, profileKey = 'micro') => {
     setIsEditing(!!data?.id)
     setActiveProfile(data?.order_profile ?? profileKey)
+    hydratingRef.current = true
 
     if (idRef.current) idRef.current.value = data?.id ?? ''
     if (codeRef.current) codeRef.current.value = data?.code ?? 'Se genera al guardar'
@@ -354,7 +395,6 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     setSelectedCommercialChannel(data?.commercial_channel ?? data?.client?.commercial_channel ?? '')
     setSelectedSegment(data?.segment ?? data?.client?.segment ?? '')
 
-    hydratingRef.current = true
     if (clientId && data?.client?.full_name) {
       SetSelectValue(clientRef.current, clientId, `${data.client.document_number ?? ''} - ${data.client.full_name}`.trim())
       setClientSnapshot(data.client)
@@ -366,6 +406,14 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
       SetSelectValue(priceListRef.current, priceListId, data.price_list.code)
     } else {
       SetSelectValue(priceListRef.current, null)
+    }
+    if (defaults.warehouseId && warehouseRef.current) {
+      const warehouseLabelText = defaults.warehouse?.name
+        ? warehouseLabel(defaults.warehouse)
+        : (data?.warehouse?.name ?? defaults.warehouseId)
+      SetSelectValue(warehouseRef.current, defaults.warehouseId, warehouseLabelText)
+    } else if (warehouseRef.current) {
+      SetSelectValue(warehouseRef.current, null)
     }
     hydratingRef.current = false
 
@@ -472,6 +520,16 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   })
 
   const saveOrder = async (bill = false) => {
+    const invalidStockItem = items.find(item => item.article_id && Number(item.quantity || 0) > Number(item.stock_available || 0))
+    if (invalidStockItem) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Stock insuficiente',
+        text: `${invalidStockItem.article_label || 'El articulo seleccionado'} solo tiene ${Number(invalidStockItem.stock_available || 0).toFixed(2)} disponible en el almacen elegido.`,
+      })
+      return
+    }
+
     const result = await takeOrdersRest.save(buildRequest(bill))
     if (!result) return
     $(gridRef.current).dxDataGrid('instance').refresh()
@@ -517,7 +575,32 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 
   const onPriceListChanged = async (e) => {
     if (hydratingRef.current) return
-    setSelectedPriceListId(e.target.value || '')
+    const priceListId = e.target.value || ''
+    const selected = $(e.target).select2('data')?.[0]?.data ?? null
+    setSelectedPriceListId(priceListId)
+
+    if (selected?.business_branch_id) setSelectedBranchId(`${selected.business_branch_id}`)
+    if (selected?.warehouse_id) {
+      const warehouseId = `${selected.warehouse_id}`
+      setSelectedWarehouseId(warehouseId)
+      if (warehouseRef.current) {
+        SetSelectValue(warehouseRef.current, warehouseId, warehouseLabel(selected.warehouse ?? selected))
+      }
+      await repriceAllItems(warehouseId)
+      return
+    }
+
+    await repriceAllItems()
+  }
+
+  const onWarehouseChanged = async (e) => {
+    if (hydratingRef.current) return
+    const warehouseId = e.target.value || ''
+    const selected = $(e.target).select2('data')?.[0]?.data ?? null
+
+    setSelectedWarehouseId(warehouseId)
+    if (selected?.business_branch_id) setSelectedBranchId(`${selected.business_branch_id}`)
+    await repriceAllItems(warehouseId)
   }
 
   const onItemArticleChanged = async (uid, e) => {
@@ -878,6 +961,18 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
             <TextareaFormGroup eRef={observationsRef} label='Observación' rows={3} />
           </div>
 
+          <div className='col-md-6 mb-3'>
+            <SelectAPIFormGroup
+              eRef={warehouseRef}
+              label='Almacén'
+              searchAPI='/api/admin/warehouses/paginate'
+              searchBy='name'
+              dropdownParent='#take-orders-form-container'
+              filter={selectedBranchId ? [['business_branch_id', '=', Number(selectedBranchId)], 'and', ['status', '=', true]] : ['status', '=', true]}
+              onChange={onWarehouseChanged}
+            />
+          </div>
+
           <div className='col-12 text-center mb-2'>
             <label className='form-label d-block fw-bold'>Tarifario</label>
             <SelectAPIFormGroup
@@ -906,6 +1001,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
                   </tr>
                   <tr>
                     <th style={{ minWidth: 260 }}>Artículo</th>
+                    <th style={{ width: 120 }}>Stock</th>
                     <th style={{ width: 130 }}>Precio</th>
                     <th style={{ width: 140 }}>Cantidad</th>
                     <th style={{ width: 140 }}>Subtotal</th>
@@ -933,6 +1029,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
                           {[item.article_laboratory, item.article_principle, item.article_unit].filter(Boolean).join(' | ')}
                         </small>
                       </td>
+                      <td>{Number(item.stock_available || 0).toFixed(2)}</td>
                       <td>
                         <input
                           type='number'
@@ -964,7 +1061,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <th colSpan='3' className='text-end fst-italic'>Total</th>
+                    <th colSpan='4' className='text-end fst-italic'>Total</th>
                     <th>
                       <input className='form-control text-end' value={subtotal.toFixed(2)} readOnly />
                     </th>
