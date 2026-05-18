@@ -621,9 +621,10 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`, '_blank')
   }
 
+  const mapQuery = deliveryAddressRef.current?.value?.trim() || `${mapPoint.lat},${mapPoint.lng}` || 'Lima Peru'
   const mapSrc = Global.GMAPS_API_KEY
-    ? `https://www.google.com/maps/embed/v1/place?key=${Global.GMAPS_API_KEY}&q=${mapPoint.lat},${mapPoint.lng}&zoom=13`
-    : ''
+    ? `https://www.google.com/maps/embed/v1/place?key=${Global.GMAPS_API_KEY}&q=${encodeURIComponent(mapQuery)}&zoom=13`
+    : `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=13&output=embed`
 
   return (<>
     <div className='row mb-3'>
@@ -855,18 +856,14 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
           </div>
 
           <div className='col-12 mb-3'>
-            {mapSrc ? (
-              <iframe
-                src={mapSrc}
-                className='w-100 border-0'
-                style={{ height: 330 }}
-                allowFullScreen=''
-                loading='lazy'
-                referrerPolicy='no-referrer-when-downgrade'
-              ></iframe>
-            ) : (
-              <div className='border rounded p-3 small text-muted'>Configura GMAPS_API_KEY para habilitar el mapa.</div>
-            )}
+            <iframe
+              src={mapSrc}
+              className='w-100 border-0'
+              style={{ height: 330 }}
+              allowFullScreen=''
+              loading='lazy'
+              referrerPolicy='no-referrer-when-downgrade'
+            ></iframe>
           </div>
 
           <div className='col-md-6 mb-2'>
