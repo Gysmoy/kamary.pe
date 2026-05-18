@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Classes\dxResponse;
 use App\Http\Controllers\BasicController;
 use App\Models\Article;
 use App\Models\ArticlePresentation;
 use App\Models\Client;
 use App\Models\ClientDeliveryAddress;
 use App\Models\ClientDistributionNetwork;
+use App\Models\dxDataGrid;
 use App\Models\TakeOrder;
 use App\Models\TakeOrderItem;
 use App\Models\EventualClient;
@@ -238,6 +240,19 @@ class TakeOrderController extends BasicController
             $subtotal = 0;
             $matchedPriceListIds = [];
             $business = BusinessScope::findFixedBusiness($jpa->business_id);
+            $articleContext = $this->articleContextFromArray([
+                'business_id' => $jpa->business_id,
+                'business_branch_id' => $jpa->business_branch_id,
+                'warehouse_id' => $jpa->warehouse_id,
+                'price_list_id' => $jpa->price_list_id,
+                'client_id' => $jpa->client_id,
+                'eventual_client_id' => $jpa->eventual_client_id,
+                'client_distribution_network_id' => $jpa->client_distribution_network_id,
+                'issue_date' => $jpa->issue_date instanceof Carbon ? $jpa->issue_date->format('Y-m-d') : $jpa->issue_date,
+                'commercial_channel' => $jpa->commercial_channel,
+                'segment' => $jpa->segment,
+            ]);
+            $allowedArticleRules = $this->allowedArticleRules($articleContext);
 
             foreach ($this->itemsPayload as $item) {
                 if (!is_array($item)) continue;
@@ -246,6 +261,9 @@ class TakeOrderController extends BasicController
                 if (!$articleId) throw new \Exception('Cada linea debe tener articulo');
 
                 $article = Article::with(['presentations:id,article_id,name,units,price,status'])->findOrFail($articleId);
+                if (!$this->articleAllowedForContext($article, $articleContext, $allowedArticleRules)) {
+                    throw new \Exception("El articulo {$article->name} no está habilitado para el cliente seleccionado");
+                }
                 $presentationId = $this->toNullableInt($item['presentation_id'] ?? null);
                 $presentationUnits = $this->toNullableDecimal($item['presentation_units'] ?? null) ?? 1;
 
@@ -416,6 +434,10 @@ class TakeOrderController extends BasicController
             if (!$warehouseId) throw new \Exception('El almacén es obligatorio');
 
             $article = Article::with(['presentations:id,article_id,name,units,price,status'])->findOrFail($articleId);
+            $articleContext = $this->articleContextFromRequest($request);
+            if (!$this->articleAllowedForContext($article, $articleContext)) {
+                throw new \Exception('El articulo no esta habilitado para el cliente seleccionado');
+            }
             $resolution = app(PriceListResolverService::class)->resolve([
                 'business_id' => $this->toNullableInt($request->query('business_id')),
                 'business_branch_id' => $this->toNullableInt($request->query('business_branch_id')),
@@ -434,6 +456,67 @@ class TakeOrderController extends BasicController
             $response->data = array_merge($resolution, [
                 'stock_available' => $this->getAvailableStockByWarehouse($articleId, $warehouseId),
             ]);
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function articles(Request $request): HttpResponse|ResponseFactory
+    {
+        $response = new dxResponse();
+        try {
+            $context = $this->articleContextFromRequest($request);
+            if (!$context['client_id'] && !$context['eventual_client_id']) {
+                $response->status = 200;
+                $response->message = 'Operacion correcta';
+                return response($response->toArray(), $response->status);
+            }
+
+            $query = Article::query()
+                ->select('articles.*')
+                ->with([
+                    'laboratory:id,name,code',
+                    'activePrinciple:id,laboratory_id,name',
+                    'client:id,full_name,document_number',
+                    'unit:id,name,symbol',
+                    'presentations:id,article_id,name,units,price,sort_order,status',
+                ])
+                ->where(function ($scope) {
+                    $scope->where('articles.module_scope', 'standard')
+                        ->orWhereNull('articles.module_scope');
+                })
+                ->whereNotNull('articles.status');
+
+            $this->applyAllowedArticleScope($query, $context);
+
+            if ($request->filter) {
+                $query->where(function ($filterQuery) use ($request) {
+                    dxDataGrid::filter($filterQuery, $request->filter ?? [], false, 'articles');
+                });
+            }
+
+            if ($request->sort != null) {
+                foreach ($request->sort as $sorting) {
+                    $selector = $sorting['selector'] ?? 'name';
+                    if (!in_array($selector, ['id', 'code', 'name'], true)) $selector = 'name';
+                    $query->orderBy("articles.{$selector}", !empty($sorting['desc']) ? 'DESC' : 'ASC');
+                }
+            } else {
+                $query->orderBy('articles.name');
+            }
+
+            $response->totalCount = $request->requireTotalCount
+                ? (clone $query)->count('articles.id')
+                : 0;
+            $response->data = $query
+                ->skip($request->skip ?? 0)
+                ->take($request->take ?? 10)
+                ->get();
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
         } catch (\Throwable $th) {
             $response->status = 400;
             $response->message = $th->getMessage();
@@ -519,6 +602,108 @@ class TakeOrderController extends BasicController
     private function loadTakeOrder(int $id): TakeOrder
     {
         return $this->setPaginationInstance($this->model)->findOrFail($id);
+    }
+
+    private function articleContextFromRequest(Request $request): array
+    {
+        return $this->articleContextFromArray([
+            'business_id' => $request->query('business_id', $request->input('business_id')),
+            'business_branch_id' => $request->query('business_branch_id', $request->input('business_branch_id')),
+            'warehouse_id' => $request->query('warehouse_id', $request->input('warehouse_id')),
+            'price_list_id' => $request->query('price_list_id', $request->input('price_list_id')),
+            'client_id' => $request->query('client_id', $request->input('client_id')),
+            'eventual_client_id' => $request->query('eventual_client_id', $request->input('eventual_client_id')),
+            'client_distribution_network_id' => $request->query('client_distribution_network_id', $request->input('client_distribution_network_id')),
+            'issue_date' => $request->query('issue_date', $request->input('issue_date')),
+            'commercial_channel' => $request->query('commercial_channel', $request->input('commercial_channel')),
+            'segment' => $request->query('segment', $request->input('segment')),
+        ]);
+    }
+
+    private function articleContextFromArray(array $payload): array
+    {
+        return [
+            'business_id' => $this->toNullableInt($payload['business_id'] ?? null),
+            'business_branch_id' => $this->toNullableInt($payload['business_branch_id'] ?? null),
+            'warehouse_id' => $this->toNullableInt($payload['warehouse_id'] ?? null),
+            'price_list_id' => $this->toNullableInt($payload['price_list_id'] ?? null),
+            'client_id' => $this->toNullableInt($payload['client_id'] ?? null),
+            'eventual_client_id' => $this->toNullableInt($payload['eventual_client_id'] ?? null),
+            'client_distribution_network_id' => $this->toNullableInt($payload['client_distribution_network_id'] ?? null),
+            'issue_date' => $this->normalizeDate($payload['issue_date'] ?? null) ?? now()->toDateString(),
+            'commercial_channel' => trim((string)($payload['commercial_channel'] ?? '')) ?: null,
+            'segment' => trim((string)($payload['segment'] ?? '')) ?: null,
+        ];
+    }
+
+    private function allowedArticleRules(array $context): array
+    {
+        $priceLists = app(PriceListResolverService::class)->matchingPriceListsForContext($context);
+        $articleIds = [];
+        $laboratoryIds = [];
+
+        foreach ($priceLists as $priceList) {
+            foreach ($priceList->items as $item) {
+                if ($item->status === null || $item->status === false || (int)$item->status === 0) continue;
+                if ($item->article_id) $articleIds[] = (int)$item->article_id;
+                if ($item->laboratory_id) $laboratoryIds[] = (int)$item->laboratory_id;
+            }
+        }
+
+        return [
+            'article_ids' => array_values(array_unique($articleIds)),
+            'laboratory_ids' => array_values(array_unique($laboratoryIds)),
+        ];
+    }
+
+    private function applyAllowedArticleScope($query, array $context): void
+    {
+        $clientId = $context['client_id'] ?? null;
+        $eventualClientId = $context['eventual_client_id'] ?? null;
+        $rules = $this->allowedArticleRules($context);
+        $articleIds = $rules['article_ids'];
+        $laboratoryIds = $rules['laboratory_ids'];
+
+        if (!$clientId && !$eventualClientId) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        if ($clientId) {
+            $query->where(function ($clientScope) use ($clientId) {
+                $clientScope->whereNull('articles.client_id')
+                    ->orWhere('articles.client_id', $clientId);
+            });
+        } else {
+            $query->whereNull('articles.client_id');
+        }
+
+        $query->where(function ($allowedScope) use ($clientId, $articleIds, $laboratoryIds) {
+            $allowedScope->whereRaw('1 = 0');
+            if ($clientId) $allowedScope->orWhere('articles.client_id', $clientId);
+            if (count($articleIds) > 0) $allowedScope->orWhereIn('articles.id', $articleIds);
+            if (count($laboratoryIds) > 0) $allowedScope->orWhereIn('articles.laboratory_id', $laboratoryIds);
+        });
+    }
+
+    private function articleAllowedForContext(Article $article, array $context, ?array $rules = null): bool
+    {
+        $clientId = $context['client_id'] ?? null;
+        $eventualClientId = $context['eventual_client_id'] ?? null;
+        if (!$clientId && !$eventualClientId) return false;
+
+        if ($clientId && !is_null($article->client_id) && (int)$article->client_id === (int)$clientId) {
+            return true;
+        }
+
+        if ($clientId && !is_null($article->client_id) && (int)$article->client_id !== (int)$clientId) {
+            return false;
+        }
+
+        $rules ??= $this->allowedArticleRules($context);
+
+        return in_array((int)$article->id, $rules['article_ids'], true)
+            || in_array((int)$article->laboratory_id, $rules['laboratory_ids'], true);
     }
 
     private function getAvailableStockByWarehouse(int $articleId, int $warehouseId): float

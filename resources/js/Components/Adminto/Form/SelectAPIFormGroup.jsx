@@ -4,7 +4,7 @@ import { Cookies, JSON } from "sode-extend-react"
 import select2SpanishLanguage from "../../../Utils/select2SpanishLanguage"
 import { select2DropdownParentFor } from "../../../Utils/select2DropdownParent"
 
-const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = false, dropdownParent, searchAPI, searchBy, selectBy = 'id', multiple = false, filter = null, onChange = () => { },
+const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = false, disabled = false, dropdownParent, searchAPI, searchBy, selectBy = 'id', multiple = false, filter = null, onChange = () => { },
   templateResult,
   templateSelection,
   tags
@@ -81,13 +81,15 @@ const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = fa
       templateSelection
     })
 
+    $select.prop('disabled', !!disabled)
+
     $select.off('change.selectAPIFormGroup').on('change.selectAPIFormGroup', (e) => onChangeRef.current(e))
 
     return () => {
       $select.off('change.selectAPIFormGroup')
       if ($select.data('select2')) $select.select2('destroy')
     }
-  }, [dropdownParent, filter, searchAPI, searchBy, selectBy, multiple, tags])
+  }, [dropdownParent, filter, searchAPI, searchBy, selectBy, multiple, tags, disabled])
 
   return <div id={containerId} className={`form-group ${col} mb-2`}>
     <label htmlFor={selectId} className="form-label">
@@ -102,7 +104,7 @@ const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = fa
         </>
       }
     </label>
-    <select ref={eRef} id={selectId} data-select2-managed="component" required={required} className='form-control' style={{ width: '100%' }} multiple={multiple}></select>
+    <select ref={eRef} id={selectId} data-select2-managed="component" required={required} disabled={disabled} className='form-control' style={{ width: '100%' }} multiple={multiple}></select>
   </div>
 }
 

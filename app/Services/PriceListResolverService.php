@@ -11,6 +11,11 @@ use Illuminate\Support\Facades\DB;
 
 class PriceListResolverService
 {
+    public function matchingPriceListsForContext(array $context): Collection
+    {
+        return $this->matchingPriceLists($context);
+    }
+
     public function resolve(array $context, Article $article, float $quantity, ?int $presentationId = null): array
     {
         $presentation = $presentationId

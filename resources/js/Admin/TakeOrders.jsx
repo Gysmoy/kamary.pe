@@ -135,7 +135,6 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const [selectedCommercialChannel, setSelectedCommercialChannel] = useState('')
   const [selectedSegment, setSelectedSegment] = useState('')
   const [clientSnapshot, setClientSnapshot] = useState(null)
-  const [warehouses, setWarehouses] = useState([])
   const [networks, setNetworks] = useState([])
   const [deliveryAddresses, setDeliveryAddresses] = useState([])
   const [items, setItems] = useState([])
@@ -155,6 +154,29 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     ...networks.map(network => network.segment),
     selectedSegment,
   ]), [clientSnapshot, networks, selectedSegment])
+
+  const articleSearchAPI = useMemo(() => {
+    const search = new URLSearchParams()
+    if (selectedBusinessId) search.append('business_id', selectedBusinessId)
+    if (selectedBranchId) search.append('business_branch_id', selectedBranchId)
+    if (selectedWarehouseId) search.append('warehouse_id', selectedWarehouseId)
+    if (selectedClientId) search.append('client_id', selectedClientId)
+    if (selectedNetworkId) search.append('client_distribution_network_id', selectedNetworkId)
+    if (selectedPriceListId) search.append('price_list_id', selectedPriceListId)
+    if (selectedCommercialChannel) search.append('commercial_channel', selectedCommercialChannel)
+    if (selectedSegment) search.append('segment', selectedSegment)
+    search.append('issue_date', new Date().toISOString().slice(0, 10))
+    return `/api/admin/take-orders/articles?${search.toString()}`
+  }, [
+    selectedBusinessId,
+    selectedBranchId,
+    selectedWarehouseId,
+    selectedClientId,
+    selectedNetworkId,
+    selectedPriceListId,
+    selectedCommercialChannel,
+    selectedSegment,
+  ])
 
   const getArticleRef = (uid) => {
     if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
@@ -180,14 +202,12 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 
   const loadWarehouses = async (branchId, preferredId = null) => {
     if (!branchId) {
-      setWarehouses([])
       setSelectedWarehouseId('')
       if (warehouseRef.current) SetSelectValue(warehouseRef.current, null)
       return { warehouseId: '', warehouse: null }
     }
 
     const rows = await takeOrdersRest.getWarehousesByBranch(branchId)
-    setWarehouses(rows)
 
     const preferredWarehouse = rows.find(row => `${row.id}` === `${preferredId}`)
     const nextWarehouse = preferredWarehouse ?? rows[0] ?? null
@@ -545,8 +565,15 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     if (hydratingRef.current) return
     const clientId = e.target.value || ''
     const selected = $(e.target).select2('data')?.[0]?.data ?? null
+    const clientChanged = `${selectedClientId || ''}` !== `${clientId}`
+
     setSelectedClientId(clientId)
     setClientSnapshot(selected)
+    if (clientChanged) {
+      setItems([emptyItem()])
+      setSelectedPriceListId('')
+      SetSelectValue(priceListRef.current, null)
+    }
 
     if (!clientId) {
       await loadClientContext('', null, null, null)
@@ -564,6 +591,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     setSelectedCommercialChannel(clientSnapshot?.commercial_channel ?? network?.commercial_channel ?? '')
     setSelectedSegment(clientSnapshot?.segment ?? network?.segment ?? '')
     await loadDeliveryAddresses(networkId, null, networks, clientSnapshot)
+    await repriceAllItems()
   }
 
   const onDeliveryAddressChanged = (e) => {
@@ -604,6 +632,10 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   }
 
   const onItemArticleChanged = async (uid, e) => {
+    if (!selectedClientId) {
+      SetSelectValue(e.target, null)
+      return
+    }
     const selected = $(e.target).select2('data')?.[0]
     const article = selected?.data ?? null
     const articleId = e.target.value || ''
@@ -680,7 +712,17 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     }))
   }
 
-  const onItemAdded = () => setItems(prev => [...prev, emptyItem()])
+  const onItemAdded = async () => {
+    if (!selectedClientId) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Cliente obligatorio',
+        text: 'Debes seleccionar un cliente antes de agregar articulos',
+      })
+      return
+    }
+    setItems(prev => [...prev, emptyItem()])
+  }
   const onItemRemoved = (uid) => setItems(prev => prev.filter(item => item.uid !== uid))
 
   const onDeleteClicked = async (id) => {
@@ -987,7 +1029,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
           </div>
 
           <div className='col-12 text-center mb-3'>
-            <button type='button' className='btn btn-primary' onClick={onItemAdded}>
+            <button type='button' className='btn btn-primary' onClick={onItemAdded} disabled={!selectedClientId}>
               <i className='mdi mdi-plus-circle me-1'></i>INSERTAR ARTÍCULO
             </button>
           </div>
@@ -997,7 +1039,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
               <table className='table table-sm mb-0 text-center align-middle'>
                 <thead>
                   <tr>
-                    <th colSpan='5'>ARTÍCULO</th>
+                    <th colSpan='6'>ARTÍCULO</th>
                   </tr>
                   <tr>
                     <th style={{ minWidth: 260 }}>Artículo</th>
@@ -1011,7 +1053,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
                 <tbody>
                   {items.length === 0 && (
                     <tr>
-                      <td colSpan='5' className='text-muted py-3'>Sin artículos</td>
+                      <td colSpan='6' className='text-muted py-3'>Sin artículos</td>
                     </tr>
                   )}
                   {items.map((item) => (
@@ -1020,9 +1062,10 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
                         <SelectAPIFormGroup
                           eRef={getArticleRef(item.uid)}
                           label=''
-                          searchAPI='/api/admin/articles/paginate'
+                          searchAPI={articleSearchAPI}
                           searchBy='name'
                           dropdownParent='#take-orders-form-container'
+                          disabled={!selectedClientId}
                           onChange={(e) => onItemArticleChanged(item.uid, e)}
                         />
                         <small className='text-muted d-block text-start'>

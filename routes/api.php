@@ -496,6 +496,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/take-orders/clients/{id}/distribution-networks', [AdminTakeOrderController::class, 'distributionNetworks']);
         Route::get('/take-orders/distribution-networks/{id}/addresses', [AdminTakeOrderController::class, 'deliveryAddresses']);
         Route::get('/take-orders/pricing/resolve', [AdminTakeOrderController::class, 'resolvePrice']);
+        Route::post('/take-orders/articles', [AdminTakeOrderController::class, 'articles']);
 
         Route::post('/accounts-receivable/paginate', [AdminAccountsReceivableController::class, 'paginate']);
         Route::post('/accounts-receivable/{id}/payments', [AdminAccountsReceivableController::class, 'registerPayment']);
