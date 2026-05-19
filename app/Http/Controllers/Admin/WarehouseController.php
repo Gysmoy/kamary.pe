@@ -17,6 +17,13 @@ class WarehouseController extends BasicController
     public $reactView = 'Admin/Warehouses';
     public $prefix4filter = 'warehouses';
 
+    public function setReactViewProperties(Request $request)
+    {
+        return [
+            'fixedWarehouse' => MagistralesWarehouse::summary(),
+        ];
+    }
+
     public function setPaginationInstance(string $model)
     {
         $query = $model::select('warehouses.*')

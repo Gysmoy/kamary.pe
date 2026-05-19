@@ -29,7 +29,7 @@ const formatAuditUser = (user) => {
   return ''
 }
 
-const Warehouses = () => {
+const Warehouses = ({ fixedWarehouse = null }) => {
   const gridRef = useRef()
   const modalRef = useRef()
 
@@ -44,6 +44,9 @@ const Warehouses = () => {
   const [branches, setBranches] = useState([])
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
+  const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
+
+  const isLockedWarehouse = (warehouse) => `${warehouse?.id ?? ''}` === fixedWarehouseId
 
   useEffect(() => {
     const load = async () => {
@@ -71,6 +74,16 @@ const Warehouses = () => {
   }
 
   const onModalOpen = async (data) => {
+    if (data?.id && isLockedWarehouse(data)) {
+      await Swal.fire({
+        icon: 'info',
+        title: 'Almacén fijo de Magistrales',
+        text: 'Este almacén está protegido y no se puede editar desde esta pantalla.',
+        confirmButtonText: 'Entendido'
+      })
+      return
+    }
+
     if (data?.id) setIsEditing(true)
     else setIsEditing(false)
 
@@ -108,6 +121,16 @@ const Warehouses = () => {
   }
 
   const onDeleteClicked = async (id) => {
+    if (`${id}` === fixedWarehouseId) {
+      await Swal.fire({
+        icon: 'info',
+        title: 'Almacén fijo de Magistrales',
+        text: 'Este almacén está protegido y no se puede eliminar.',
+        confirmButtonText: 'Entendido'
+      })
+      return
+    }
+
     const { isConfirmed } = await Swal.fire({
       title: 'Eliminar almacen',
       text: 'Estas seguro de eliminar este almacen? Esta accion no se puede revertir',
@@ -169,7 +192,19 @@ const Warehouses = () => {
           dataField: 'name',
           caption: 'Nombre',
           minWidth: 220,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.name, () => onModalOpen(data), 'Editar almacen')
+          cellTemplate: (container, { data }) => {
+            const locked = isLockedWarehouse(data)
+            $(container).empty()
+            if (!locked) {
+              renderGridEditLink(container, data?.name, () => onModalOpen(data), 'Editar almacen')
+              return
+            }
+
+            ReactAppend(container, <div>
+              <span className='fw-semibold text-primary'>{data?.name}</span>
+              <div><small className='badge badge-soft-primary mt-1'>Magistrales fijo</small></div>
+            </div>)
+          }
         },
         { dataField: 'description', caption: 'Descripcion', minWidth: 260 },
         {
@@ -196,6 +231,10 @@ const Warehouses = () => {
           cellTemplate: (container, { data }) => {
             $(container).empty()
             if (data.status === null) return
+            if (isLockedWarehouse(data)) {
+              ReactAppend(container, <span className='badge badge-soft-primary'>Protegido</span>)
+              return
+            }
             ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
               id: data.id,
               field: 'status',
@@ -208,6 +247,10 @@ const Warehouses = () => {
           width: '140px',
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
+            if (isLockedWarehouse(data)) {
+              container.append('<span class="text-muted small">Sin acciones</span>')
+              return
+            }
 
             container.append(DxButton({
               className: 'btn btn-xs btn-soft-primary',
