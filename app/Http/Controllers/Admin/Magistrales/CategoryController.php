@@ -13,7 +13,7 @@ use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\Response;
-
+ 
 class CategoryController extends BasicController
 {
     public $model = MagistralCategory::class;
