@@ -14,6 +14,7 @@ class MagistralOutput extends Model
     protected $fillable = [
         'code',
         'origin_warehouse_id',
+        'destination_warehouse_id',
         'destination',
         'reason',
         'observations',
@@ -29,6 +30,7 @@ class MagistralOutput extends Model
     ];
 
     public function originWarehouse() { return $this->belongsTo(Warehouse::class, 'origin_warehouse_id'); }
+    public function destinationWarehouse() { return $this->belongsTo(Warehouse::class, 'destination_warehouse_id'); }
     public function items() { return $this->hasMany(MagistralOutputItem::class, 'magistral_output_id')->with('article:id,code,name,unit_id'); }
     public function creator() { return $this->belongsTo(User::class, 'created_by'); }
     public function updater() { return $this->belongsTo(User::class, 'updated_by'); }

@@ -877,7 +877,7 @@ export const buildMagistralesRows = {
     filename: `salida-${data?.code || data?.id}`,
     meta: [
       ['Almacen origen', nested(data, 'originWarehouse.name')],
-      ['Destino', data?.destination],
+      ['Destino', nested(data, 'destinationWarehouse.branch.name') || nested(data, 'destinationWarehouse.name') ? [nested(data, 'destinationWarehouse.branch.name'), nested(data, 'destinationWarehouse.name')].filter(Boolean).join(' - ') : data?.destination],
       ['Motivo', data?.reason],
       ['Fecha salida', asDate(data?.output_date || data?.created_at)],
       ['Usuario', nested(data, 'creator.fullname') || nested(data, 'creator.username')],

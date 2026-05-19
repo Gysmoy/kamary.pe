@@ -303,6 +303,7 @@ Route::middleware('auth')->group(function () {
 
             Route::post('/outputs', [AdminMagistralesOutputController::class, 'save']);
             Route::post('/outputs/paginate', [AdminMagistralesOutputController::class, 'paginate']);
+            Route::get('/outputs/available-stock', [AdminMagistralesOutputController::class, 'availableStock']);
             Route::patch('/outputs/status', [AdminMagistralesOutputController::class, 'status']);
             Route::patch('/outputs/{field}', [AdminMagistralesOutputController::class, 'boolean']);
             Route::delete('/outputs/{id}', [AdminMagistralesOutputController::class, 'delete']);
