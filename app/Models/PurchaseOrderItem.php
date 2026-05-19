@@ -12,6 +12,10 @@ class PurchaseOrderItem extends Model
     protected $fillable = [
         'purchase_order_id',
         'article_id',
+        'presentation_id',
+        'presentation_label',
+        'presentation_units',
+        'last_price',
         'requested_quantity',
         'received_quantity',
         'price_unit',
@@ -20,6 +24,8 @@ class PurchaseOrderItem extends Model
     ];
 
     protected $casts = [
+        'presentation_units' => 'float',
+        'last_price' => 'float',
         'requested_quantity' => 'float',
         'received_quantity' => 'float',
         'price_unit' => 'float',
@@ -35,6 +41,11 @@ class PurchaseOrderItem extends Model
     public function article()
     {
         return $this->belongsTo(Article::class);
+    }
+
+    public function presentation()
+    {
+        return $this->belongsTo(ArticlePresentation::class, 'presentation_id');
     }
 
     public function receiptItems()

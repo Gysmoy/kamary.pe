@@ -731,21 +731,41 @@ export const buildMagistralesRows = {
       ['Almacen', nested(data, 'warehouse.name')],
       ['Proveedor', nested(data, 'supplier.business_name')],
       ['Comprador', data?.buyer_name],
+      ['Tipo articulo', data?.article_type],
       ['Emision', asDate(data?.issue_date)],
       ['Fecha esperada', asDate(data?.expected_date)],
+      ['Fecha maxima', asDate(data?.max_delivery_date)],
       ['Pago', data?.payment_condition],
+      ['Forma pago', data?.payment_method],
+      ['Documento', data?.document_type],
+      ['Afecto IGV', data?.affects_igv === null || data?.affects_igv === undefined ? '-' : (data?.affects_igv ? 'Si' : 'No')],
       ['Aprobacion', getApprovalStatusLabel(data?.approval_status)],
       ['Estado OC', getPurchaseOrderStatusLabel(data?.order_status)],
       ['Moneda', data?.currency],
+      ['Entrega', data?.delivery_place],
     ],
-    columns: ['Codigo', 'Articulo', 'Solicitada', 'Recibida', 'P. unit.', 'Total'],
+    columns: data?.module_scope === 'magistrales'
+      ? ['Codigo', 'Articulo', 'Presentacion', 'Solicitada', 'Ult. precio', 'P. con IGV', 'Subtotal']
+      : ['Codigo', 'Articulo', 'Solicitada', 'Recibida', 'P. unit.', 'Total'],
     rows: (data?.items ?? []).map(item => [
-      nested(item, 'article.code'),
-      nested(item, 'article.name', 'Articulo'),
-      asNumber(item?.requested_quantity),
-      asNumber(item?.received_quantity),
-      asMoney(item?.price_unit, data?.currency || 'PEN'),
-      asMoney(item?.total, data?.currency || 'PEN'),
+      ...(data?.module_scope === 'magistrales'
+        ? [
+          nested(item, 'article.code'),
+          nested(item, 'article.name', 'Articulo'),
+          item?.presentation_label || nested(item, 'presentation.name'),
+          asNumber(item?.requested_quantity),
+          asMoney(item?.last_price, data?.currency || 'PEN'),
+          asMoney(item?.price_unit, data?.currency || 'PEN'),
+          asMoney(item?.total, data?.currency || 'PEN'),
+        ]
+        : [
+          nested(item, 'article.code'),
+          nested(item, 'article.name', 'Articulo'),
+          asNumber(item?.requested_quantity),
+          asNumber(item?.received_quantity),
+          asMoney(item?.price_unit, data?.currency || 'PEN'),
+          asMoney(item?.total, data?.currency || 'PEN'),
+        ]),
     ]),
     totals: [
       ['Subtotal', asMoney(data?.subtotal, data?.currency || 'PEN')],

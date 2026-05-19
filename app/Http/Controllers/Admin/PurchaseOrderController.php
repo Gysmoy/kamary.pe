@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
 use App\Models\Article;
+use App\Models\ArticlePresentation;
 use App\Models\PurchaseOrder;
 use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
@@ -35,11 +36,13 @@ class PurchaseOrderController extends BasicController
                 'branch:id,business_id,name',
                 'warehouse:id,name',
                 'supplier:id,ruc,business_name',
-                'items:id,purchase_order_id,article_id,requested_quantity,received_quantity,price_unit,total,status',
-                'items.article:id,code,name,laboratory_id,active_principle_id,unit_id',
+                'items:id,purchase_order_id,article_id,presentation_id,presentation_label,presentation_units,last_price,requested_quantity,received_quantity,price_unit,total,status',
+                'items.article:id,code,name,article_type,magistral_presentation,laboratory_id,active_principle_id,unit_id',
                 'items.article.laboratory:id,name',
                 'items.article.activePrinciple:id,name',
                 'items.article.unit:id,name,symbol',
+                'items.article.presentations:id,article_id,name,units,price,purchase_price_national,purchase_price_foreign,sort_order,status',
+                'items.presentation:id,article_id,name,units,purchase_price_national,purchase_price_foreign,price,status',
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ])
@@ -76,8 +79,11 @@ class PurchaseOrderController extends BasicController
         $supplierId = $body['supplier_id'] ?? null;
         $issueDate = $this->normalizeDate($body['issue_date'] ?? now()->toDateString());
         $expectedDate = $this->normalizeDate($body['expected_date'] ?? null);
+        $maxDeliveryDate = $this->normalizeDate($body['max_delivery_date'] ?? null);
         $currency = strtoupper(trim((string)($body['currency'] ?? 'PEN')));
         $paymentCondition = $this->normalizePaymentCondition($body['payment_condition'] ?? 'Contado');
+        $paymentMethod = trim((string)($body['payment_method'] ?? '')) ?: null;
+        $documentType = trim((string)($body['document_type'] ?? '')) ?: null;
         $orderStatus = $this->normalizeOrderStatus($body['order_status'] ?? 'draft');
         $approvalStatus = $this->normalizeApprovalStatus($body['approval_status'] ?? 'pending');
         $buyerName = trim((string)($body['buyer_name'] ?? ''));
@@ -113,8 +119,18 @@ class PurchaseOrderController extends BasicController
         $body['buyer_name'] = $buyerName ?: null;
         $body['issue_date'] = $issueDate;
         $body['expected_date'] = $expectedDate;
+        $body['max_delivery_date'] = $maxDeliveryDate;
+        $body['delivery_place'] = trim((string)($body['delivery_place'] ?? '')) ?: null;
         $body['currency'] = in_array($currency, ['PEN', 'USD', 'EUR']) ? $currency : 'PEN';
         $body['payment_condition'] = $paymentCondition;
+        $body['payment_method'] = $paymentMethod;
+        $body['document_type'] = $documentType;
+        $body['article_type'] = trim((string)($body['article_type'] ?? '')) ?: null;
+        if (Schema::hasColumn('purchase_orders', 'affects_igv')) {
+            $body['affects_igv'] = $this->moduleScope === 'magistrales'
+                ? $this->toBoolean($body['affects_igv'] ?? true)
+                : (array_key_exists('affects_igv', $body) ? $this->toBoolean($body['affects_igv']) : null);
+        }
         $body['order_status'] = $orderStatus;
         $body['approval_status'] = $approvalStatus;
         $body['observations'] = trim((string)($body['observations'] ?? '')) ?: null;
@@ -122,7 +138,7 @@ class PurchaseOrderController extends BasicController
         $body['tax_amount'] = $this->toNullableDecimal($body['tax_amount'] ?? null) ?? 0;
         $body['total'] = $this->toNullableDecimal($body['total'] ?? null) ?? 0;
 
-        foreach (['module_scope', 'buyer_name'] as $column) {
+        foreach (['module_scope', 'buyer_name', 'article_type', 'max_delivery_date', 'delivery_place', 'payment_method', 'document_type', 'affects_igv'] as $column) {
             if (!Schema::hasColumn('purchase_orders', $column)) unset($body[$column]);
         }
 
@@ -134,19 +150,32 @@ class PurchaseOrderController extends BasicController
         DB::beginTransaction();
         try {
             PurchaseOrderItem::where('purchase_order_id', $jpa->id)->delete();
+            $hasPresentationId = Schema::hasColumn('purchase_order_items', 'presentation_id');
+            $hasPresentationLabel = Schema::hasColumn('purchase_order_items', 'presentation_label');
+            $hasPresentationUnits = Schema::hasColumn('purchase_order_items', 'presentation_units');
+            $hasLastPrice = Schema::hasColumn('purchase_order_items', 'last_price');
 
             $inserted = 0;
-            $subtotal = 0;
+            $grossSubtotal = 0;
             foreach ($this->itemsPayload as $item) {
                 if (!is_array($item)) continue;
 
                 $articleId = $item['article_id'] ?? null;
                 if (!$articleId) throw new \Exception('Cada linea debe tener articulo');
                 $article = Article::findOrFail($articleId);
+                $presentation = null;
+                $presentationId = $hasPresentationId ? $this->toNullableInt($item['presentation_id'] ?? null) : null;
+                if ($presentationId) {
+                    $presentation = ArticlePresentation::where('article_id', $article->id)->findOrFail($presentationId);
+                }
 
                 $requestedQuantity = $this->toNullableDecimal($item['requested_quantity'] ?? null) ?? 0;
                 $receivedQuantity = $this->toNullableDecimal($item['received_quantity'] ?? null) ?? 0;
                 $priceUnit = $this->toNullableDecimal($item['price_unit'] ?? null) ?? 0;
+                $presentationUnits = $this->toNullableDecimal($item['presentation_units'] ?? null) ?? (float) ($presentation->units ?? 1);
+                $presentationLabel = trim((string) ($item['presentation_label'] ?? ''))
+                    ?: ($presentation?->name ?: ($article->magistral_presentation ?: ($article->unit?->symbol ?: $article->unit?->name)));
+                $lastPrice = $this->toNullableDecimal($item['last_price'] ?? null);
 
                 if ($requestedQuantity <= 0) {
                     throw new \Exception("La cantidad solicitada debe ser mayor a 0 para {$article->name}");
@@ -163,6 +192,10 @@ class PurchaseOrderController extends BasicController
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $jpa->id,
                     'article_id' => $article->id,
+                    ...($hasPresentationId ? ['presentation_id' => $presentation?->id] : []),
+                    ...($hasPresentationLabel ? ['presentation_label' => $presentationLabel ?: null] : []),
+                    ...($hasPresentationUnits ? ['presentation_units' => $presentationUnits] : []),
+                    ...($hasLastPrice ? ['last_price' => $lastPrice] : []),
                     'requested_quantity' => $requestedQuantity,
                     'received_quantity' => $receivedQuantity,
                     'price_unit' => $priceUnit,
@@ -170,17 +203,33 @@ class PurchaseOrderController extends BasicController
                     'status' => isset($item['status']) ? (bool)$item['status'] : true,
                 ]);
 
-                $subtotal += $lineTotal;
+                $grossSubtotal += $lineTotal;
                 $inserted++;
             }
 
             if ($inserted === 0) throw new \Exception('Debes agregar al menos un item');
 
+            $grossSubtotal = round($grossSubtotal, 2);
             $taxAmount = $this->toNullableDecimal($request->input('tax_amount')) ?? 0;
             $total = $this->toNullableDecimal($request->input('total'));
-            $subtotal = round($subtotal, 2);
-            $taxAmount = round($taxAmount, 2);
-            $total = is_null($total) ? round($subtotal + $taxAmount, 2) : round($total, 2);
+            $subtotal = $grossSubtotal;
+
+            if ($this->moduleScope === 'magistrales' && Schema::hasColumn('purchase_orders', 'affects_igv')) {
+                $affectsIgv = (bool) $jpa->affects_igv;
+                if ($affectsIgv) {
+                    $subtotal = round($grossSubtotal / 1.18, 2);
+                    $taxAmount = round($grossSubtotal - $subtotal, 2);
+                    $total = $grossSubtotal;
+                } else {
+                    $subtotal = $grossSubtotal;
+                    $taxAmount = 0;
+                    $total = $grossSubtotal;
+                }
+            } else {
+                $subtotal = round($subtotal, 2);
+                $taxAmount = round($taxAmount, 2);
+                $total = is_null($total) ? round($subtotal + $taxAmount, 2) : round($total, 2);
+            }
 
             $jpa->update([
                 'subtotal' => $subtotal,
@@ -200,6 +249,8 @@ class PurchaseOrderController extends BasicController
                 'items.article.laboratory',
                 'items.article.activePrinciple',
                 'items.article.unit',
+                'items.article.presentations',
+                'items.presentation',
                 'creator',
                 'updater',
             ]);
@@ -300,6 +351,24 @@ class PurchaseOrderController extends BasicController
         if ($text === '') return null;
         if (!is_numeric($text)) throw new \Exception("Valor numerico invalido: {$value}");
         return (float)$text;
+    }
+
+    private function toNullableInt($value): ?int
+    {
+        if ($value === null) return null;
+        $text = trim((string) $value);
+        if ($text === '') return null;
+        if (!is_numeric($text)) throw new \Exception("Valor entero invalido: {$value}");
+        return (int) $text;
+    }
+
+    private function toBoolean($value): bool
+    {
+        if (is_bool($value)) return $value;
+        if (is_numeric($value)) return (int) $value === 1;
+
+        $normalized = mb_strtolower(trim((string) $value));
+        return in_array($normalized, ['1', 'true', 'si', 'sí', 'yes', 'on'], true);
     }
 
     private function normalizeDate($value): ?string

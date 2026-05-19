@@ -25,6 +25,32 @@ import {
 
 const purchaseOrdersRest = new PurchaseOrdersRest()
 
+const MAGISTRAL_ARTICLE_TYPES = [
+  { value: '', label: 'Seleccione' },
+  { value: 'Insumo', label: 'Insumo' },
+  { value: 'Envase', label: 'Envase' },
+  { value: 'Formula', label: 'Formula' },
+  { value: 'Insumos y Envases', label: 'Insumos y envases' },
+]
+
+const PAYMENT_METHOD_OPTIONS = [
+  'Seleccione',
+  'Deposíto en cuenta',
+  'Transferencia',
+  'Yape',
+  'Plin',
+  'Efectivo',
+  'Tarjeta',
+]
+
+const DOCUMENT_TYPE_OPTIONS = [
+  'Seleccione',
+  'Factura',
+  'Boleta',
+  'Cotizacion',
+  'Proforma',
+]
+
 const formatAuditUser = (user) => {
   if (!user) return ''
   const firstName = (user.name ?? '').toString().trim().split(' ')[0] ?? ''
@@ -35,6 +61,46 @@ const formatAuditUser = (user) => {
   if (full) return full
   if (username) return `@${username}`
   return ''
+}
+
+const defaultPresentationLabel = (article = null) => (
+  article?.magistral_presentation
+  || article?.unit?.symbol
+  || article?.unit?.name
+  || 'UND'
+)
+
+const presentationOptionsFromArticle = (article = null) => {
+  const rows = Array.isArray(article?.presentations) ? article.presentations : []
+  const options = rows
+    .filter(row => row?.status !== false && row?.status !== 0)
+    .map(row => ({
+      id: row.id ? `${row.id}` : '',
+      name: row.name ?? '',
+      units: Number(row.units || 1),
+      purchase_price_national: Number(row.purchase_price_national ?? row.price ?? 0),
+      purchase_price_foreign: Number(row.purchase_price_foreign ?? row.price ?? 0),
+      price: Number(row.price ?? 0),
+    }))
+
+  if (options.length > 0) return options
+
+  return [{
+    id: '',
+    name: defaultPresentationLabel(article),
+    units: 1,
+    purchase_price_national: Number(article?.purchase_price_national || article?.cost_price || 0),
+    purchase_price_foreign: Number(article?.purchase_price_foreign || article?.cost_price || 0),
+    price: Number(article?.cost_price || 0),
+  }]
+}
+
+const resolvePresentationPrice = (presentation, currency = 'PEN') => {
+  if (!presentation) return 0
+  if (currency === 'USD' || currency === 'EUR') {
+    return Number(presentation.purchase_price_foreign ?? presentation.price ?? 0)
+  }
+  return Number(presentation.purchase_price_national ?? presentation.price ?? 0)
 }
 
 const emptyItem = () => ({
@@ -48,10 +114,55 @@ const emptyItem = () => ({
   received_quantity: 0,
   price_unit: 0,
   total: 0,
+  presentation_id: '',
+  presentation_label: '',
+  presentation_units: 1,
+  last_price: 0,
+  presentation_options: [],
+  article_data: null,
 })
 
-const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
+const hydrateItemTotals = (item) => {
+  const quantity = Number(item.requested_quantity || 0)
+  const price = Number(item.price_unit || 0)
+  return {
+    ...item,
+    total: Number.isFinite(quantity * price) ? (quantity * price) : 0,
+  }
+}
+
+const hydrateItemFromArticle = (item, article, currency) => {
+  const presentationOptions = presentationOptionsFromArticle(article)
+  const selectedPresentation = presentationOptions[0] ?? null
+  const lastPrice = resolvePresentationPrice(selectedPresentation, currency)
+  const articleLabel = article
+    ? `${article.code ?? ''} - ${article.name ?? ''}`.trim()
+    : ''
+
+  return hydrateItemTotals({
+    ...item,
+    article_id: article?.id ? `${article.id}` : '',
+    article_label: articleLabel,
+    article_unit: article?.unit?.symbol ?? article?.unit?.name ?? '',
+    article_laboratory: article?.laboratory?.name ?? article?.magistralLaboratory?.description ?? '',
+    article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? '',
+    article_data: article ?? null,
+    presentation_options: presentationOptions,
+    presentation_id: selectedPresentation?.id ?? '',
+    presentation_label: selectedPresentation?.name ?? defaultPresentationLabel(article),
+    presentation_units: Number(selectedPresentation?.units || 1),
+    last_price: Number(lastPrice || 0),
+    price_unit: Number(lastPrice || 0),
+  })
+}
+
+const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedWarehouse = null }) => {
   const isMagistrales = moduleScope === 'magistrales'
+  const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
+  const fixedBusinessId = fixedWarehouse?.business_id ? `${fixedWarehouse.business_id}` : ''
+  const fixedBranchId = fixedWarehouse?.business_branch_id ? `${fixedWarehouse.business_branch_id}` : ''
+  const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
+  const fixedBusinessLabel = fixedWarehouse?.business_name || 'KAMARY PERU SAC'
   const gridRef = useRef()
   const modalRef = useRef()
 
@@ -62,29 +173,45 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
   const warehouseRef = useRef()
   const supplierRef = useRef()
   const buyerNameRef = useRef()
+  const articleTypeRef = useRef()
   const issueDateRef = useRef()
   const expectedDateRef = useRef()
+  const maxDeliveryDateRef = useRef()
   const currencyRef = useRef()
   const paymentConditionRef = useRef()
+  const paymentMethodRef = useRef()
+  const documentTypeRef = useRef()
   const orderStatusRef = useRef()
   const approvalStatusRef = useRef()
   const taxAmountRef = useRef()
   const observationsRef = useRef()
+  const deliveryPlaceRef = useRef()
+  const affectsIgvRef = useRef()
   const articleRefs = useRef({})
 
   const [isEditing, setIsEditing] = useState(false)
-  const [selectedBusinessId, setSelectedBusinessId] = useState('')
-  const [selectedBranchId, setSelectedBranchId] = useState('')
-  const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
+  const [selectedBusinessId, setSelectedBusinessId] = useState(isMagistrales ? fixedBusinessId : '')
+  const [selectedBranchId, setSelectedBranchId] = useState(isMagistrales ? fixedBranchId : '')
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState(isMagistrales ? fixedWarehouseId : '')
   const [selectedSupplierId, setSelectedSupplierId] = useState('')
+  const [selectedArticleType, setSelectedArticleType] = useState('')
   const [branches, setBranches] = useState([])
   const [items, setItems] = useState([emptyItem()])
   const [taxAmount, setTaxAmount] = useState(0)
+  const [currencyCode, setCurrencyCode] = useState('PEN')
+  const [affectsIgv, setAffectsIgv] = useState(true)
 
   const getArticleRef = (uid) => {
     if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
     return articleRefs.current[uid]
   }
+
+  useEffect(() => {
+    if (!isMagistrales) return
+    setSelectedBusinessId(fixedBusinessId)
+    setSelectedBranchId(fixedBranchId)
+    setSelectedWarehouseId(fixedWarehouseId)
+  }, [fixedBranchId, fixedBusinessId, fixedWarehouseId, isMagistrales])
 
   useEffect(() => {
     items.forEach(item => {
@@ -97,9 +224,9 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
   }, [items])
 
   const loadBranches = async (businessId, preferredId = null) => {
-    if (!businessId) {
+    if (!businessId || isMagistrales) {
       setBranches([])
-      setSelectedBranchId('')
+      if (!isMagistrales) setSelectedBranchId('')
       return
     }
     const data = await purchaseOrdersRest.getBranchesByBusiness(businessId)
@@ -112,13 +239,15 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
     setSelectedBranchId('')
   }
 
-  const mapItemTotals = (item) => {
-    const quantity = Number(item.requested_quantity || 0)
-    const price = Number(item.price_unit || 0)
-    return {
+  const refreshLinePricing = (item, nextCurrency) => {
+    const options = item.presentation_options ?? []
+    const selected = options.find(option => `${option.id}` === `${item.presentation_id}`) ?? options[0] ?? null
+    const lastPrice = resolvePresentationPrice(selected, nextCurrency)
+    return hydrateItemTotals({
       ...item,
-      total: Number.isFinite(quantity * price) ? (quantity * price) : 0,
-    }
+      last_price: Number(lastPrice || 0),
+      price_unit: Number(lastPrice || 0),
+    })
   }
 
   const onModalOpen = async (data = null) => {
@@ -128,32 +257,48 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
     setRefValue(codeRef, data?.code ?? 'Se genera al guardar')
     setRefValue(issueDateRef, data?.issue_date ? data.issue_date.toString().slice(0, 10) : new Date().toISOString().slice(0, 10))
     setRefValue(expectedDateRef, data?.expected_date ? data.expected_date.toString().slice(0, 10) : '')
+    setRefValue(maxDeliveryDateRef, data?.max_delivery_date ? data.max_delivery_date.toString().slice(0, 10) : '')
     setRefValue(currencyRef, data?.currency ?? 'PEN')
+    setCurrencyCode(data?.currency ?? 'PEN')
     setRefValue(paymentConditionRef, data?.payment_condition ?? 'Contado')
+    setRefValue(paymentMethodRef, data?.payment_method ?? 'Seleccione')
+    setRefValue(documentTypeRef, data?.document_type ?? 'Seleccione')
     setRefValue(buyerNameRef, data?.buyer_name ?? '')
     setRefValue(orderStatusRef, data?.order_status ?? 'draft')
     setRefValue(approvalStatusRef, data?.approval_status ?? 'pending')
+    setRefValue(deliveryPlaceRef, data?.delivery_place ?? '')
+    setRefValue(articleTypeRef, data?.article_type ?? '')
+    setSelectedArticleType(data?.article_type ?? '')
+    const currentAffectsIgv = typeof data?.affects_igv === 'boolean' ? data.affects_igv : true
+    setAffectsIgv(currentAffectsIgv)
+    setRefValue(affectsIgvRef, currentAffectsIgv ? '1' : '0')
+
     setTaxAmount(Number(data?.tax_amount ?? 0))
     setRefValue(taxAmountRef, Number(data?.tax_amount ?? 0))
     setRefValue(observationsRef, data?.observations ?? '')
 
-    const businessId = data?.business_id ? `${data.business_id}` : ''
-    const warehouseId = data?.warehouse_id ? `${data.warehouse_id}` : ''
+    const businessId = isMagistrales ? fixedBusinessId : (data?.business_id ? `${data.business_id}` : '')
+    const branchId = isMagistrales ? fixedBranchId : (data?.business_branch_id ? `${data.business_branch_id}` : '')
+    const warehouseId = isMagistrales ? fixedWarehouseId : (data?.warehouse_id ? `${data.warehouse_id}` : '')
     const supplierId = data?.supplier_id ? `${data.supplier_id}` : ''
     setSelectedBusinessId(businessId)
+    setSelectedBranchId(branchId)
     setSelectedWarehouseId(warehouseId)
     setSelectedSupplierId(supplierId)
 
-    if (businessId && data?.business?.name) {
-      SetSelectValue(businessRef.current, businessId, data.business.name)
-    } else {
-      $(businessRef.current).empty().trigger('change')
+    if (!isMagistrales) {
+      if (businessId && data?.business?.name) {
+        SetSelectValue(businessRef.current, businessId, data.business.name)
+      } else {
+        $(businessRef.current).empty().trigger('change')
+      }
+      if (warehouseId && data?.warehouse?.name) {
+        SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
+      } else if (warehouseRef.current) {
+        $(warehouseRef.current).empty().trigger('change')
+      }
     }
-    if (warehouseId && data?.warehouse?.name) {
-      SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
-    } else {
-      $(warehouseRef.current).empty().trigger('change')
-    }
+
     if (supplierId && data?.supplier?.business_name) {
       SetSelectValue(supplierRef.current, supplierId, data.supplier.business_name)
     } else {
@@ -162,23 +307,33 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
 
     const detail = (data?.items ?? []).map(row => {
       const article = row.article ?? null
-      return mapItemTotals({
+      const presentationOptions = presentationOptionsFromArticle(article)
+      const selectedPresentation = presentationOptions.find(option => `${option.id}` === `${row.presentation_id ?? ''}`) ?? presentationOptions[0] ?? null
+      return hydrateItemTotals({
         uid: crypto.randomUUID(),
         article_id: row.article_id ? `${row.article_id}` : '',
         article_label: article ? `${article.code ?? ''} - ${article.name ?? ''}`.trim() : '',
         article_unit: article?.unit?.symbol ?? article?.unit?.name ?? '',
-        article_laboratory: article?.laboratory?.name ?? '',
+        article_laboratory: article?.laboratory?.name ?? article?.magistralLaboratory?.description ?? '',
         article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? '',
         requested_quantity: Number(row.requested_quantity || 1),
         received_quantity: Number(row.received_quantity || 0),
         price_unit: Number(row.price_unit || 0),
         total: Number(row.total || 0),
+        presentation_id: row.presentation_id ? `${row.presentation_id}` : (selectedPresentation?.id ?? ''),
+        presentation_label: row.presentation_label ?? selectedPresentation?.name ?? defaultPresentationLabel(article),
+        presentation_units: Number(row.presentation_units ?? selectedPresentation?.units ?? 1),
+        last_price: Number(row.last_price ?? resolvePresentationPrice(selectedPresentation, data?.currency ?? 'PEN')),
+        presentation_options: presentationOptions,
+        article_data: article,
       })
     })
     setItems(detail.length ? detail : [emptyItem()])
 
     $(modalRef.current).modal('show')
-    await loadBranches(data?.business_id ?? null, data?.business_branch_id ?? null)
+    if (!isMagistrales) {
+      await loadBranches(data?.business_id ?? null, data?.business_branch_id ?? null)
+    }
   }
 
   const onModalSubmit = async (e) => {
@@ -186,21 +341,32 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
 
     const request = {
       id: getRefValue(idRef) || undefined,
-      business_id: selectedBusinessId || null,
-      business_branch_id: selectedBranchId || null,
-      warehouse_id: selectedWarehouseId || null,
+      business_id: isMagistrales ? (fixedBusinessId || null) : (selectedBusinessId || null),
+      business_branch_id: isMagistrales ? (fixedBranchId || null) : (selectedBranchId || null),
+      warehouse_id: isMagistrales ? (fixedWarehouseId || null) : (selectedWarehouseId || null),
       supplier_id: selectedSupplierId || null,
       buyer_name: getRefValue(buyerNameRef).trim(),
+      article_type: isMagistrales ? (getRefValue(articleTypeRef).trim() || null) : null,
       issue_date: getRefValue(issueDateRef),
       expected_date: getRefValue(expectedDateRef) || null,
+      max_delivery_date: isMagistrales ? (getRefValue(maxDeliveryDateRef) || null) : null,
+      delivery_place: isMagistrales ? (getRefValue(deliveryPlaceRef).trim() || null) : null,
       currency: getRefValue(currencyRef) || 'PEN',
       payment_condition: getRefValue(paymentConditionRef) || 'Contado',
+      payment_method: isMagistrales ? ((getRefValue(paymentMethodRef) || '').replace('Seleccione', '').trim() || null) : null,
+      document_type: isMagistrales ? ((getRefValue(documentTypeRef) || '').replace('Seleccione', '').trim() || null) : null,
+      affects_igv: isMagistrales ? affectsIgv : null,
       order_status: getRefValue(orderStatusRef) || 'draft',
       approval_status: getRefValue(approvalStatusRef) || 'pending',
-      tax_amount: Number(getRefValue(taxAmountRef) || 0),
+      tax_amount: isMagistrales ? computedTaxAmount : Number(getRefValue(taxAmountRef) || 0),
+      total: grandTotal,
       observations: getRefValue(observationsRef).trim(),
       items: items.map(item => ({
         article_id: item.article_id || null,
+        presentation_id: item.presentation_id || null,
+        presentation_label: item.presentation_label || null,
+        presentation_units: Number(item.presentation_units || 1),
+        last_price: Number(item.last_price || 0),
         requested_quantity: Number(item.requested_quantity || 0),
         received_quantity: Number(item.received_quantity || 0),
         price_unit: Number(item.price_unit || 0),
@@ -246,8 +412,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
   const onItemUpdated = (uid, field, value) => {
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
-      const next = { ...item, [field]: value }
-      return mapItemTotals(next)
+      return hydrateItemTotals({ ...item, [field]: value })
     }))
   }
 
@@ -262,24 +427,31 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
     }
 
     const hydrated = article ?? await purchaseOrdersRest.getArticleById(articleId)
-    const articleLabel = hydrated
-      ? `${hydrated.code ?? ''} - ${hydrated.name ?? ''}`.trim()
-      : (selected?.text ?? articleId)
-
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
-      return mapItemTotals({
+      return hydrateItemFromArticle(item, hydrated, currencyCode)
+    }))
+  }
+
+  const onItemPresentationChanged = (uid, value) => {
+    setItems(prev => prev.map(item => {
+      if (item.uid !== uid) return item
+      const options = item.presentation_options ?? []
+      const selectedPresentation = options.find(option => `${option.id}` === `${value}`) ?? options[0] ?? null
+      const lastPrice = resolvePresentationPrice(selectedPresentation, currencyCode)
+      return hydrateItemTotals({
         ...item,
-        article_id: articleId,
-        article_label: articleLabel,
-        article_unit: hydrated?.unit?.symbol ?? hydrated?.unit?.name ?? '',
-        article_laboratory: hydrated?.laboratory?.name ?? '',
-        article_principle: hydrated?.activePrinciple?.name ?? hydrated?.active_principle?.name ?? '',
+        presentation_id: selectedPresentation?.id ?? '',
+        presentation_label: selectedPresentation?.name ?? item.presentation_label,
+        presentation_units: Number(selectedPresentation?.units ?? item.presentation_units ?? 1),
+        last_price: Number(lastPrice || 0),
+        price_unit: Number(lastPrice || 0),
       })
     }))
   }
 
   const onItemAdded = () => setItems(prev => [...prev, emptyItem()])
+
   const onItemRemoved = (uid) => {
     setItems(prev => {
       const next = prev.filter(item => item.uid !== uid)
@@ -287,8 +459,41 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
     })
   }
 
+  const articleFilter = useMemo(() => {
+    if (!isMagistrales) return null
+    if (!selectedArticleType || selectedArticleType === 'Insumos y Envases') return null
+    return ['article_type', '=', selectedArticleType]
+  }, [isMagistrales, selectedArticleType])
+
   const subtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
-  const grandTotal = useMemo(() => subtotal + Number(taxAmount || 0), [subtotal, taxAmount])
+  const computedTaxAmount = useMemo(() => {
+    if (!isMagistrales) return Number(taxAmount || 0)
+    if (!affectsIgv) return 0
+    const net = subtotal / 1.18
+    return Number((subtotal - net).toFixed(2))
+  }, [affectsIgv, isMagistrales, subtotal, taxAmount])
+  const computedSubtotal = useMemo(() => {
+    if (!isMagistrales) return subtotal
+    if (!affectsIgv) return subtotal
+    return Number((subtotal - computedTaxAmount).toFixed(2))
+  }, [affectsIgv, computedTaxAmount, isMagistrales, subtotal])
+  const grandTotal = useMemo(() => (
+    isMagistrales
+      ? Number(subtotal.toFixed(2))
+      : subtotal + Number(taxAmount || 0)
+  ), [isMagistrales, subtotal, taxAmount])
+
+  const onCurrencyChanged = (e) => {
+    const nextCurrency = e.target.value || 'PEN'
+    setCurrencyCode(nextCurrency)
+    setItems(prev => prev.map(item => refreshLinePricing(item, nextCurrency)))
+  }
+
+  const onAffectsIgvChanged = (e) => {
+    const next = `${e.target.value}` === '1'
+    setAffectsIgv(next)
+    setRefValue(affectsIgvRef, next ? '1' : '0')
+  }
 
   return (<>
     <Table
@@ -324,13 +529,18 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
           cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar orden de compra')
         },
         { dataField: 'issue_date', caption: 'F. emisión', width: 110, dataType: 'date' },
-        { dataField: 'expected_date', caption: 'F. esperada', width: 115, dataType: 'date' },
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 140 },
-        { dataField: 'branch.name', caption: 'Sede', minWidth: 130 },
-        { dataField: 'warehouse.name', caption: 'Almacén', minWidth: 130 },
+        { dataField: 'expected_date', caption: 'F. estimada', width: 115, dataType: 'date' },
+        ...(isMagistrales ? [{ dataField: 'max_delivery_date', caption: 'F. máxima', width: 115, dataType: 'date' }] : []),
+        { dataField: 'business.name', caption: isMagistrales ? 'Comprador' : 'Empresa', minWidth: 160 },
+        ...(!isMagistrales ? [
+          { dataField: 'branch.name', caption: 'Sede', minWidth: 130 },
+          { dataField: 'warehouse.name', caption: 'Almacén', minWidth: 130 },
+        ] : []),
         { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 220 },
-        ...(isMagistrales ? [{ dataField: 'buyer_name', caption: 'Comprador', minWidth: 150 }] : []),
-        { dataField: 'payment_condition', caption: 'Pago', width: 100 },
+        ...(isMagistrales ? [{ dataField: 'article_type', caption: 'Tipo artículo', minWidth: 150 }] : []),
+        { dataField: 'payment_condition', caption: 'Condición', width: 110 },
+        ...(isMagistrales ? [{ dataField: 'payment_method', caption: 'Forma pago', width: 130 }] : []),
+        ...(isMagistrales ? [{ dataField: 'document_type', caption: 'Documento', width: 110 }] : []),
         { dataField: 'approval_status', caption: 'Aprobación', width: 110, lookup: toLookup(approvalStatusOptions) },
         { dataField: 'order_status', caption: 'Estado OC', width: 110, lookup: toLookup(purchaseOrderStatusOptions) },
         { dataField: 'currency', caption: 'Moneda', width: 90 },
@@ -338,10 +548,15 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
         {
           dataField: 'items.id',
           caption: 'Detalle',
-          minWidth: 280,
+          minWidth: isMagistrales ? 340 : 280,
           allowFiltering: false,
           cellTemplate: (container, { data }) => {
-            const lines = (data?.items ?? []).map(item => `${item?.article?.name || 'Artículo'} | Cant. ${Number(item?.requested_quantity || 0).toFixed(2)} | ${data.currency} ${Number(item?.total || 0).toFixed(2)}`)
+            const lines = (data?.items ?? []).map(item => {
+              const articleName = item?.article?.name || 'Artículo'
+              const presentation = item?.presentation_label || item?.presentation?.name || ''
+              const priceLabel = isMagistrales ? ` | P. IGV ${Number(item?.price_unit || 0).toFixed(2)}` : ` | ${data.currency} ${Number(item?.total || 0).toFixed(2)}`
+              return `${articleName}${presentation ? ` | ${presentation}` : ''} | Cant. ${Number(item?.requested_quantity || 0).toFixed(2)}${priceLabel}`
+            })
             ReactAppend(container, <div>
               {lines.length === 0 && <small className='text-muted'>Sin detalle</small>}
               {lines.map((line, idx) => <div key={`purchase-order-${data.id}-${idx}`}><small>{line}</small></div>)}
@@ -408,60 +623,97 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
     <Modal modalRef={modalRef} title={isEditing ? 'Editar orden de compra' : 'Agregar orden de compra'} onSubmit={onModalSubmit} size='full-width'>
       <div className='row' id='purchase-order-form-container'>
         <input ref={idRef} type='hidden' />
+        <input ref={affectsIgvRef} type='hidden' />
 
-        <SelectAPIFormGroup
-          eRef={businessRef}
-          label='Empresa'
-          col='col-md-3'
-          required
-          searchAPI='/api/admin/businesses/paginate'
-          searchBy='name'
-          dropdownParent='#purchase-order-form-container'
-          onChange={onBusinessChanged}
-        />
-        <SelectFormGroup
-          eRef={branchRef}
-          label='Sede'
-          col='col-md-3'
-          dropdownParent='#purchase-order-form-container'
-          value={selectedBranchId}
-          onChange={(e) => setSelectedBranchId(e.target.value)}
-          effectWith={[selectedBranchId, branches.length]}
-        >
-          <option value=''>-- Seleccione sede --</option>
-          {branches.map(branch => <option key={`purchase-order-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
-        </SelectFormGroup>
-        <SelectAPIFormGroup
-          eRef={warehouseRef}
-          label='Almacén'
-          col='col-md-3'
-          required
-          searchAPI='/api/admin/warehouses/paginate'
-          searchBy='name'
-          dropdownParent='#purchase-order-form-container'
-          onChange={(e) => setSelectedWarehouseId(e.target.value || '')}
-        />
+        {isMagistrales ? (
+          <>
+            <div className='col-md-3 mb-2'>
+              <label className='form-label'>Comprador</label>
+              <input className='form-control' value={fixedBusinessLabel} disabled />
+            </div>
+            <div className='col-md-3 mb-2'>
+              <label className='form-label'>Almacén fijo</label>
+              <input className='form-control' value={fixedWarehouseLabel} disabled />
+            </div>
+          </>
+        ) : (
+          <>
+            <SelectAPIFormGroup
+              eRef={businessRef}
+              label='Empresa'
+              col='col-md-3'
+              required
+              searchAPI='/api/admin/businesses/paginate'
+              searchBy='name'
+              dropdownParent='#purchase-order-form-container'
+              onChange={onBusinessChanged}
+            />
+            <SelectFormGroup
+              eRef={branchRef}
+              label='Sede'
+              col='col-md-3'
+              dropdownParent='#purchase-order-form-container'
+              value={selectedBranchId}
+              onChange={(e) => setSelectedBranchId(e.target.value)}
+              effectWith={[selectedBranchId, branches.length]}
+            >
+              <option value=''>-- Seleccione sede --</option>
+              {branches.map(branch => <option key={`purchase-order-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
+            </SelectFormGroup>
+            <SelectAPIFormGroup
+              eRef={warehouseRef}
+              label='Almacén'
+              col='col-md-3'
+              required
+              searchAPI='/api/admin/warehouses/paginate'
+              searchBy='name'
+              dropdownParent='#purchase-order-form-container'
+              onChange={(e) => setSelectedWarehouseId(e.target.value || '')}
+            />
+          </>
+        )}
+
         <SelectAPIFormGroup
           eRef={supplierRef}
           label='Proveedor'
-          col='col-md-3'
+          col={isMagistrales ? 'col-md-6' : 'col-md-3'}
           required
           searchAPI={purchaseOrdersRest.suppliersPaginateApi()}
           searchBy='business_name'
           dropdownParent='#purchase-order-form-container'
           onChange={(e) => setSelectedSupplierId(e.target.value || '')}
         />
-        {isMagistrales && <InputFormGroup eRef={buyerNameRef} label='Comprador' col='col-md-3' />}
+
+        {isMagistrales && (
+          <SelectFormGroup
+            eRef={articleTypeRef}
+            label='Tipo de artículo'
+            col='col-md-3'
+            value={selectedArticleType}
+            onChange={(e) => {
+              setSelectedArticleType(e.target.value)
+              setRefValue(articleTypeRef, e.target.value)
+            }}
+            effectWith={[selectedArticleType]}
+          >
+            {MAGISTRAL_ARTICLE_TYPES.map(option => (
+              <option key={`purchase-order-article-type-${option.value || 'empty'}`} value={option.value}>{option.label}</option>
+            ))}
+          </SelectFormGroup>
+        )}
+
+        {!isMagistrales && <InputFormGroup eRef={buyerNameRef} label='Comprador' col='col-md-3' />}
 
         <div className='form-group col-md-2 mb-2'>
           <label className='form-label'>Código</label>
           <input ref={codeRef} className='form-control' disabled />
         </div>
         <InputFormGroup eRef={issueDateRef} label='Fecha emisión' col='col-md-2' type='date' required />
-        <InputFormGroup eRef={expectedDateRef} label='Fecha esperada' col='col-md-2' type='date' />
+        <InputFormGroup eRef={expectedDateRef} label={isMagistrales ? 'Fecha estimada entrega' : 'Fecha esperada'} col='col-md-2' type='date' />
+        {isMagistrales && <InputFormGroup eRef={maxDeliveryDateRef} label='Fecha máxima entrega' col='col-md-2' type='date' />}
         <div className='form-group col-md-2 mb-2'>
           <label className='form-label'>Moneda</label>
-          <select ref={currencyRef} className='form-control'>
+          <select ref={currencyRef} className='form-control' onChange={onCurrencyChanged}>
             <option value='PEN'>PEN</option>
             <option value='USD'>USD</option>
             <option value='EUR'>EUR</option>
@@ -474,6 +726,29 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
             <option value='Credito'>Crédito</option>
           </select>
         </div>
+        {isMagistrales && (
+          <>
+            <div className='form-group col-md-2 mb-2'>
+              <label className='form-label'>Forma de pago</label>
+              <select ref={paymentMethodRef} className='form-control'>
+                {PAYMENT_METHOD_OPTIONS.map(option => <option key={`purchase-order-payment-method-${option}`} value={option}>{option}</option>)}
+              </select>
+            </div>
+            <div className='form-group col-md-2 mb-2'>
+              <label className='form-label'>Tipo documento</label>
+              <select ref={documentTypeRef} className='form-control'>
+                {DOCUMENT_TYPE_OPTIONS.map(option => <option key={`purchase-order-document-type-${option}`} value={option}>{option}</option>)}
+              </select>
+            </div>
+            <div className='form-group col-md-2 mb-2'>
+              <label className='form-label'>Afecto IGV</label>
+              <select className='form-control' value={affectsIgv ? '1' : '0'} onChange={onAffectsIgvChanged}>
+                <option value='1'>Sí</option>
+                <option value='0'>No</option>
+              </select>
+            </div>
+          </>
+        )}
         <div className='form-group col-md-2 mb-2'>
           <label className='form-label'>Estado OC</label>
           <select ref={orderStatusRef} className='form-control'>
@@ -490,20 +765,23 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
             ))}
           </select>
         </div>
-        <InputFormGroup
-          eRef={taxAmountRef}
-          label='IGV / Impuesto'
-          col='col-md-2'
-          type='number'
-          min='0'
-          step='0.01'
-          value={taxAmount}
-          onChange={(e) => {
-            const value = Number(e.target.value || 0)
-            setTaxAmount(value)
-            setRefValue(taxAmountRef, value)
-          }}
-        />
+        {!isMagistrales && (
+          <InputFormGroup
+            eRef={taxAmountRef}
+            label='IGV / Impuesto'
+            col='col-md-2'
+            type='number'
+            min='0'
+            step='0.01'
+            value={taxAmount}
+            onChange={(e) => {
+              const value = Number(e.target.value || 0)
+              setTaxAmount(value)
+              setRefValue(taxAmountRef, value)
+            }}
+          />
+        )}
+        {isMagistrales && <InputFormGroup eRef={deliveryPlaceRef} label='Lugar de entrega' col='col-md-6' />}
 
         <TextareaFormGroup eRef={observationsRef} label='Observaciones' col='col-12' rows={2} />
 
@@ -519,29 +797,50 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
               <thead>
                 <tr>
                   <th>Artículo</th>
-                  <th>Lab. | Principio</th>
-                  <th>Unidad</th>
-                  <th>Cant. solicitada</th>
-                  <th>P. Unit.</th>
-                  <th>Total</th>
+                  {isMagistrales ? <th>Presentación</th> : <th>Lab. | Principio</th>}
+                  {!isMagistrales && <th>Unidad</th>}
+                  <th>{isMagistrales ? 'Cantidad' : 'Cant. solicitada'}</th>
+                  {isMagistrales && <th>Últ. precio</th>}
+                  <th>{isMagistrales ? 'Precio con IGV' : 'P. Unit.'}</th>
+                  <th>Subtotal</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map(item => (
                   <tr key={item.uid}>
-                    <td style={{ width: '24%' }}>
+                    <td style={{ width: isMagistrales ? '34%' : '24%' }}>
                       <SelectAPIFormGroup
                         eRef={getArticleRef(item.uid)}
                         col='col-12'
                         searchAPI={purchaseOrdersRest.articlesPaginateApi()}
                         searchBy='name'
                         dropdownParent='#purchase-order-form-container'
+                        filter={articleFilter}
                         onChange={(e) => onItemArticleChanged(item.uid, e)}
                       />
                     </td>
-                    <td><small>{`${item.article_laboratory || '-'} | ${item.article_principle || '-'}`}</small></td>
-                    <td><small>{item.article_unit || '-'}</small></td>
+                    {isMagistrales ? (
+                      <td style={{ width: '14%' }}>
+                        <select
+                          className='form-control form-control-sm'
+                          value={item.presentation_id}
+                          onChange={(e) => onItemPresentationChanged(item.uid, e.target.value)}
+                        >
+                          {(item.presentation_options ?? []).map(option => (
+                            <option key={`purchase-order-presentation-${item.uid}-${option.id || option.name}`} value={option.id}>
+                              {option.name}
+                            </option>
+                          ))}
+                          {(item.presentation_options ?? []).length === 0 && <option value=''>{item.presentation_label || 'UND'}</option>}
+                        </select>
+                      </td>
+                    ) : (
+                      <>
+                        <td><small>{`${item.article_laboratory || '-'} | ${item.article_principle || '-'}`}</small></td>
+                        <td><small>{item.article_unit || '-'}</small></td>
+                      </>
+                    )}
                     <td>
                       <input
                         className='form-control form-control-sm'
@@ -552,6 +851,11 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
                         onChange={(e) => onItemUpdated(item.uid, 'requested_quantity', e.target.value)}
                       />
                     </td>
+                    {isMagistrales && (
+                      <td>
+                        <input className='form-control form-control-sm' type='number' value={Number(item.last_price || 0).toFixed(2)} readOnly />
+                      </td>
+                    )}
                     <td>
                       <input
                         className='form-control form-control-sm'
@@ -577,8 +881,8 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope }) => {
           </div>
           <div className='d-flex justify-content-end mt-2'>
             <div className='text-end'>
-              <div><strong>Subtotal:</strong> {Number(subtotal).toFixed(2)}</div>
-              <div><strong>IGV / Impuesto:</strong> {Number(taxAmount || 0).toFixed(2)}</div>
+              <div><strong>Subtotal:</strong> {Number(computedSubtotal).toFixed(2)}</div>
+              <div><strong>IGV / Impuesto:</strong> {Number(computedTaxAmount || 0).toFixed(2)}</div>
               <div><strong>Total:</strong> {Number(grandTotal).toFixed(2)}</div>
             </div>
           </div>

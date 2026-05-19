@@ -15,7 +15,7 @@ const renderStatusBadge = (value) => isActive(value)
   ? '<span class="badge bg-success">Activo</span>'
   : '<span class="badge bg-secondary">Inactivo</span>'
 
-const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
+const Categories = ({ moduleTitle = 'Magistrales - Categoria', fixedWarehouse = null }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
@@ -28,22 +28,19 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
   const subcategoryIdRef = useRef()
   const subcategoryDescriptionRef = useRef()
   const subcategoryStatusRef = useRef()
-  const [warehouses, setWarehouses] = useState([])
   const [isEditing, setIsEditing] = useState(false)
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [subcategories, setSubcategories] = useState([])
   const [isSubcategoryEditing, setIsSubcategoryEditing] = useState(false)
-
-  useEffect(() => {
-    categoriesRest.getWarehouses().then(rows => setWarehouses((rows ?? []).filter(row => row.status !== null)))
-  }, [])
+  const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
+  const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
 
   const onModalOpen = (data = null) => {
     setIsEditing(!!data?.id)
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? ''
     descriptionRef.current.value = data?.description ?? ''
-    warehouseRef.current.value = data?.warehouse_id ?? ''
+    warehouseRef.current.value = data?.warehouse_id ?? fixedWarehouseId
     saleMaterialRef.current.checked = !!data?.sale_material
     statusRef.current.checked = data?.status !== false && data?.status !== 0
     $(modalRef.current).modal('show')
@@ -55,7 +52,7 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
       id: idRef.current.value || undefined,
       code: codeRef.current.value.trim(),
       description: descriptionRef.current.value.trim(),
-      warehouse_id: warehouseRef.current.value || null,
+      warehouse_id: warehouseRef.current.value || fixedWarehouseId || null,
       sale_material: saleMaterialRef.current.checked,
       status: statusRef.current.checked,
     })
@@ -184,9 +181,10 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria' }) => {
     <Modal modalRef={modalRef} title={isEditing ? 'Editar categoria magistral' : 'Agregar categoria magistral'} size='lg' onSubmit={onSave} btnSubmitText='Registrar'>
       <div className='row'>
         <input ref={idRef} hidden />
+        <input ref={warehouseRef} hidden />
         <div className='col-md-8 mb-3'><label className='form-label'>Descripcion</label><input ref={descriptionRef} className='form-control' required /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' required /></div>
-        <div className='col-md-8 mb-3'><label className='form-label'>Almacen</label><select ref={warehouseRef} className='form-control'><option value=''>Seleccione</option>{warehouses.map(row => <option key={`mag-cat-wh-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
+        <div className='col-md-8 mb-3'><label className='form-label'>Almacen fijo</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
         <div className='col-md-4 mb-3 form-check mt-4'><input ref={saleMaterialRef} type='checkbox' className='form-check-input' id='magCategorySaleMaterial' /><label className='form-check-label' htmlFor='magCategorySaleMaterial'>Material para Ventas</label></div>
         <div className='col-md-4 mb-3 form-check mt-2'><input ref={statusRef} type='checkbox' className='form-check-input' id='magCategoryStatus' /><label className='form-check-label' htmlFor='magCategoryStatus'>Estado</label></div>
       </div>

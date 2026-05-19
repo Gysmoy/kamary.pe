@@ -6,6 +6,7 @@ use App\Http\Controllers\BasicController;
 use App\Models\Article;
 use App\Models\MagistralCategory;
 use App\Models\MagistralSubcategory;
+use App\Support\MagistralesWarehouse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -24,6 +25,7 @@ class CategoryController extends BasicController
         return [
             'moduleTitle' => 'Magistrales - Categoria',
             'requiredPermission' => 'magistrales-category',
+            'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }
 
@@ -72,7 +74,7 @@ class CategoryController extends BasicController
         $body['updated_by'] = Auth::id();
         $body['code'] = $code;
         $body['description'] = $description;
-        $body['warehouse_id'] = $this->toNullableInt($body['warehouse_id'] ?? null);
+        $body['warehouse_id'] = MagistralesWarehouse::id();
         $body['sale_material'] = $this->toBoolean($body['sale_material'] ?? false);
 
         return $body;

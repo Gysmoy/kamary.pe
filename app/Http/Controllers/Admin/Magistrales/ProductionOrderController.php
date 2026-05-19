@@ -10,7 +10,7 @@ use App\Models\MagistralFormula;
 use App\Models\MagistralProductionOrder;
 use App\Models\MagistralProductionOrderItem;
 use App\Models\MagistralResponsible;
-use App\Models\Warehouse;
+use App\Support\MagistralesWarehouse;
 use App\Support\MagistralesStock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,6 +32,7 @@ class ProductionOrderController extends BasicController
         return [
             'moduleTitle' => 'Magistrales - O. Produccion',
             'requiredPermission' => 'magistrales-production-order',
+            'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }
 
@@ -72,12 +73,12 @@ class ProductionOrderController extends BasicController
 
         $responsibleId = $this->toNullableInt($body['responsible_id'] ?? null);
         $articleId = $this->toNullableInt($body['article_id'] ?? null);
-        $warehouseId = $this->toNullableInt($body['destination_warehouse_id'] ?? null);
+        $warehouse = MagistralesWarehouse::warehouse();
+        $warehouseId = (int) $warehouse->id;
         $formatId = $this->toNullableInt($body['format_id'] ?? null);
 
         if ($responsibleId) MagistralResponsible::findOrFail($responsibleId);
         if ($articleId) $this->findMagistralArticle($articleId);
-        if ($warehouseId) Warehouse::findOrFail($warehouseId);
         if ($formatId) MagistralFormat::findOrFail($formatId);
 
         $this->parsedItems = $this->parseItems(is_array($request->items) ? $request->items : []);
@@ -104,7 +105,7 @@ class ProductionOrderController extends BasicController
         $body['code'] = $code;
         $body['order_status'] = $orderStatus;
         $body['responsible_id'] = $responsibleId;
-        $body['destination'] = trim((string)($body['destination'] ?? '')) ?: null;
+        $body['destination'] = $warehouse->name;
         $body['destination_warehouse_id'] = $warehouseId;
         $body['article_id'] = $articleId;
         $body['format_id'] = $formatId;

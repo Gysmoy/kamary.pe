@@ -25,7 +25,7 @@ const emptyItem = () => ({
 
 const formatUser = (user) => user?.fullname || [user?.name, user?.lastname].filter(Boolean).join(' ') || user?.username || ''
 
-const Inventory = ({ moduleTitle = 'Magistrales - Inventario' }) => {
+const Inventory = ({ moduleTitle = 'Magistrales - Inventario', fixedWarehouse = null }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
@@ -33,14 +33,14 @@ const Inventory = ({ moduleTitle = 'Magistrales - Inventario' }) => {
   const warehouseRef = useRef()
   const countDateRef = useRef()
   const observationsRef = useRef()
-  const [warehouses, setWarehouses] = useState([])
   const [articles, setArticles] = useState([])
   const [items, setItems] = useState([emptyItem()])
   const [isEditing, setIsEditing] = useState(false)
+  const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
+  const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
 
   useEffect(() => {
-    Promise.all([rest.getWarehouses(), rest.getArticles()]).then(([warehouseRows, articleRows]) => {
-      setWarehouses((warehouseRows ?? []).filter(row => row.status !== null))
+    Promise.all([rest.getArticles()]).then(([articleRows]) => {
       setArticles((articleRows ?? []).filter(row => row.status !== null))
     })
   }, [])
@@ -49,7 +49,7 @@ const Inventory = ({ moduleTitle = 'Magistrales - Inventario' }) => {
     setIsEditing(!!data?.id)
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
-    warehouseRef.current.value = data?.warehouse_id ?? ''
+    warehouseRef.current.value = data?.warehouse_id ?? fixedWarehouseId
     countDateRef.current.value = data?.count_date?.toString?.().slice?.(0, 10) ?? new Date().toISOString().slice(0, 10)
     observationsRef.current.value = data?.observations ?? ''
     const nextItems = (data?.items ?? []).map(item => ({
@@ -121,7 +121,7 @@ const Inventory = ({ moduleTitle = 'Magistrales - Inventario' }) => {
     const result = await rest.save({
       id: idRef.current.value || undefined,
       code: isEditing ? codeRef.current.value.trim() : '',
-      warehouse_id: warehouseRef.current.value || null,
+      warehouse_id: warehouseRef.current.value || fixedWarehouseId || null,
       count_date: countDateRef.current.value || null,
       observations: observationsRef.current.value.trim(),
       items: items.map(item => ({
@@ -196,8 +196,9 @@ const Inventory = ({ moduleTitle = 'Magistrales - Inventario' }) => {
     <Modal modalRef={modalRef} title={isEditing ? 'Editar inventario' : 'Registrar pedidos'} size='xl' onSubmit={save}>
       <div className='row'>
         <input ref={idRef} hidden />
+        <input ref={warehouseRef} hidden />
         <div className='col-md-3 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' disabled={!isEditing} /></div>
-        <div className='col-md-5 mb-3'><label className='form-label'>Almacen</label><select ref={warehouseRef} className='form-control' onChange={refreshAllSystemStock}><option value=''>Seleccione</option>{warehouses.map(row => <option key={`mag-inv-wh-${row.id}`} value={row.id}>{row.branch?.name ? `${row.branch.name} - ` : ''}{row.name}</option>)}</select></div>
+        <div className='col-md-5 mb-3'><label className='form-label'>Almacen fijo</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Fecha inventario</label><input ref={countDateRef} type='date' className='form-control' /></div>
         <div className='col-12 mb-2'><label className='form-label'>Observaciones</label><textarea ref={observationsRef} className='form-control' rows='2' /></div>
 

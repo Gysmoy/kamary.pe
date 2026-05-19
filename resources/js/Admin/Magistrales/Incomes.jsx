@@ -36,7 +36,7 @@ const formatDocumentGuide = (data) => {
 const itemSubtotal = (item) => Number(item.quantity || 0) * Number(item.price_with_igv || 0)
 const itemBaseTotal = (item) => Number(item.quantity || 0) * Number(item.price_without_igv || 0)
 
-const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada' }) => {
+const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada', fixedWarehouse = null }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
@@ -61,21 +61,20 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada' }) => {
   const issueDateRef = useRef()
   const observationsRef = useRef()
   const [businesses, setBusinesses] = useState([])
-  const [warehouses, setWarehouses] = useState([])
   const [suppliers, setSuppliers] = useState([])
   const [articles, setArticles] = useState([])
   const [items, setItems] = useState([emptyItem()])
   const [isEditing, setIsEditing] = useState(false)
+  const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
+  const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
 
   useEffect(() => {
     Promise.all([
       incomesRest.getBusinesses(),
-      incomesRest.getWarehouses(),
       incomesRest.getSuppliers(),
       incomesRest.getArticles(),
-    ]).then(([businessRows, warehouseRows, supplierRows, articleRows]) => {
+    ]).then(([businessRows, supplierRows, articleRows]) => {
       setBusinesses((businessRows ?? []).filter(row => row.status !== null))
-      setWarehouses((warehouseRows ?? []).filter(row => row.status !== null))
       setSuppliers((supplierRows ?? []).filter(row => row.status !== null))
       setArticles((articleRows ?? []).filter(row => row.status !== null))
     })
@@ -103,7 +102,7 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada' }) => {
     guideRucRef.current.value = data?.guide_ruc ?? ''
     guideFilePathRef.current.value = data?.guide_file_path ?? ''
     businessRef.current.value = data?.business_id ?? ''
-    warehouseRef.current.value = data?.warehouse_id ?? ''
+    warehouseRef.current.value = data?.warehouse_id ?? fixedWarehouseId
     supplierRef.current.value = data?.supplier_id ?? ''
     paymentMethodRef.current.value = data?.payment_method ?? ''
     originRef.current.value = data?.origin ?? ''
@@ -143,7 +142,7 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada' }) => {
       guide_ruc: guideRucRef.current.value.trim(),
       guide_file_path: guideFilePathRef.current.value.trim(),
       business_id: businessRef.current.value || null,
-      warehouse_id: warehouseRef.current.value || null,
+      warehouse_id: warehouseRef.current.value || fixedWarehouseId || null,
       supplier_id: supplierRef.current.value || null,
       payment_method: paymentMethodRef.current.value.trim(),
       origin: originRef.current.value.trim(),
@@ -314,9 +313,10 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada' }) => {
     >
       <div className='row'>
         <input ref={idRef} hidden />
+        <input ref={warehouseRef} hidden />
         <div className='col-md-3 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' disabled={!isEditing} /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Orden de compra</label><input ref={purchaseOrderCodeRef} className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Almacen</label><select ref={warehouseRef} className='form-control'><option value=''>Seleccione</option>{warehouses.map(row => <option key={`mag-income-wh-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Almacen fijo</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Empresa</label><select ref={businessRef} className='form-control'><option value=''>Seleccione</option>{businesses.map(row => <option key={`mag-income-business-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Proveedor</label><select ref={supplierRef} className='form-control'><option value=''>Seleccione</option>{suppliers.map(row => <option key={`mag-income-supplier-${row.id}`} value={row.id}>{row.ruc} - {row.business_name}</option>)}</select></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Forma de pago</label><input ref={paymentMethodRef} className='form-control' /></div>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Magistrales;
 
 use App\Http\Classes\dxResponse;
 use App\Http\Controllers\BasicController;
+use App\Support\MagistralesWarehouse;
 use App\Support\MagistralesStock;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -20,6 +21,7 @@ class KardexController extends BasicController
             'moduleTitle' => 'Magistrales - Kardex',
             'requiredPermission' => 'magistrales-kardex',
             'moduleScope' => 'magistrales',
+            'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }
 
@@ -29,7 +31,7 @@ class KardexController extends BasicController
 
         try {
             $articleId = $this->toNullableInt($request->article_id ?? null);
-            $warehouseId = $this->toNullableInt($request->warehouse_id ?? null);
+            $warehouseId = MagistralesWarehouse::id();
 
             $rows = MagistralesStock::valuationRows($articleId, $warehouseId);
 
@@ -75,7 +77,7 @@ class KardexController extends BasicController
             $articleId = $this->toNullableInt($request->article_id ?? null);
             if (!$articleId) throw new \Exception('El articulo es obligatorio');
 
-            $warehouseId = $this->toNullableInt($request->warehouse_id ?? null);
+            $warehouseId = MagistralesWarehouse::id();
 
             $response->status = 200;
             $response->message = 'Operacion correcta';

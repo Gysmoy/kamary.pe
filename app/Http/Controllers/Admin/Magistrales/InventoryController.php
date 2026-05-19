@@ -5,10 +5,9 @@ namespace App\Http\Controllers\Admin\Magistrales;
 use App\Http\Controllers\BasicController;
 use App\Http\Controllers\Admin\Magistrales\Concerns\RunsMagistralSaveInTransaction;
 use App\Models\Article;
-use App\Models\BusinessBranch;
 use App\Models\MagistralInventoryCount;
 use App\Models\MagistralInventoryCountItem;
-use App\Models\Warehouse;
+use App\Support\MagistralesWarehouse;
 use App\Support\MagistralesStock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +30,7 @@ class InventoryController extends BasicController
         return [
             'moduleTitle' => 'Magistrales - Inventario',
             'requiredPermission' => 'magistrales-inventory',
+            'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }
 
@@ -64,15 +64,9 @@ class InventoryController extends BasicController
             ->exists();
         if ($exists) throw new \Exception('Ya existe un inventario magistral con este codigo');
 
-        $warehouseId = $this->toNullableInt($body['warehouse_id'] ?? null);
-        $branchId = $this->toNullableInt($body['business_branch_id'] ?? null);
-
-        if ($warehouseId) {
-            $warehouse = Warehouse::with('branch')->findOrFail($warehouseId);
-            if (!$branchId) $branchId = $warehouse->business_branch_id;
-        }
-
-        if ($branchId) BusinessBranch::findOrFail($branchId);
+        $warehouse = MagistralesWarehouse::warehouse();
+        $warehouseId = (int) $warehouse->id;
+        $branchId = $warehouse->business_branch_id ? (int) $warehouse->business_branch_id : null;
 
         $this->parsedItems = $this->parseItems(is_array($request->items) ? $request->items : [], $warehouseId);
         if (count($this->parsedItems) === 0) {
@@ -135,8 +129,7 @@ class InventoryController extends BasicController
                 ->when(Schema::hasColumn('articles', 'module_scope'), fn($query) => $query->where('module_scope', 'magistrales'))
                 ->findOrFail($articleId);
 
-            $warehouseId = $this->toNullableInt($request->input('warehouse_id'));
-            if ($warehouseId) Warehouse::findOrFail($warehouseId);
+            $warehouseId = MagistralesWarehouse::id();
 
             $lot = trim((string)($request->input('lot') ?? '')) ?: null;
             $expirationDate = $this->normalizeDate($request->input('expiration_date'));

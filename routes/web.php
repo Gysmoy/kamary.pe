@@ -189,7 +189,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales/entry-note', [AdminMagistralesIncomeController::class, 'reactView']);
         Route::get('/magistrales/exit-note', [AdminExitNoteController::class, 'reactView']);
         Route::get('/magistrales/purchase-orders', [AdminMagistralesPurchaseOrderController::class, 'reactView']);
-        Route::get('/magistrales/purchase-receipts', [AdminPurchaseReceiptController::class, 'reactView']);
         Route::get('/magistrales/accounts-payable', [AdminAccountsPayableController::class, 'reactView']);
         Route::get('/magistrales/billing-settings', [AdminBillingSettingsController::class, 'reactView']);
         Route::get('/magistrales/billing-documents', [AdminBillingDocumentController::class, 'reactView']);
@@ -209,7 +208,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales/production-orders', [AdminMagistralesProductionOrderController::class, 'reactView']);
         Route::get('/magistrales-production-order', [AdminMagistralesProductionOrderController::class, 'reactView']);
         Route::get('/magistrales/suppliers', [AdminMagistralesSupplierController::class, 'reactView']);
-        Route::get('/magistrales/warehouses', [AdminWarehouseController::class, 'reactView']);
+        Route::get('/magistrales/warehouses', fn() => redirect('/admin/magistrales/inventory'));
         Route::get('/magistrales-supplier', [AdminMagistralesSupplierController::class, 'reactView']);
         Route::get('/magistrales/responsibles', [AdminMagistralesResponsibleController::class, 'reactView']);
         Route::get('/magistrales-responsible', [AdminMagistralesResponsibleController::class, 'reactView']);

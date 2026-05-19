@@ -170,8 +170,6 @@ const SalesByType = ({ rows = [] }) => {
 const ProfitabilityPanel = ({ data = {} }) => {
   const totals = data.totals || {};
   const productRows = data.productRows || [];
-  const warehouseRows = data.warehouseRows || [];
-  const productWarehouseRows = data.productWarehouseRows || [];
 
   return (
     <div id='magistrales-profitability' className='card'>
@@ -179,7 +177,7 @@ const ProfitabilityPanel = ({ data = {} }) => {
         <SectionHeader
           title='KPI de rentabilidad por producto'
           meta='Precio venta, precio costo, diferencia y porcentaje de rentabilidad.'
-          action={<span className='badge badge-soft-primary'>Total almacenes</span>}
+          action={<span className='badge badge-soft-primary'>Almacen fijo</span>}
         />
         <div className='row mb-3'>
           <div className='col-sm-6 col-xl-3 mb-2'>
@@ -207,7 +205,7 @@ const ProfitabilityPanel = ({ data = {} }) => {
             </div>
           </div>
         </div>
-        <h6 className='mb-2'>Listado por producto - todos los almacenes</h6>
+        <h6 className='mb-2'>Listado por producto</h6>
         {productRows.length === 0 ? <EmptyState /> : (
           <div className='table-responsive mb-4' style={{ maxHeight: 340, overflowY: 'auto' }}>
             <table className='table table-sm align-middle mb-0'>
@@ -241,65 +239,6 @@ const ProfitabilityPanel = ({ data = {} }) => {
             </table>
           </div>
         )}
-        <div className='row'>
-          <div className='col-xl-5 mb-3'>
-            <h6 className='mb-2'>Resumen por almacen</h6>
-            {warehouseRows.length === 0 ? <EmptyState text='Sin ventas por almacen.' /> : (
-              <div className='table-responsive'>
-                <table className='table table-sm align-middle mb-0'>
-                  <thead>
-                    <tr>
-                      <th>Almacen</th>
-                      <th className='text-end'>Venta</th>
-                      <th className='text-end'>Costo</th>
-                      <th className='text-end'>Rentab.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {warehouseRows.map(row => (
-                      <tr key={`mag-profit-warehouse-${row.warehouseId || row.warehouseName}`}>
-                        <td>{row.warehouseName}</td>
-                        <td className='text-end'>{money(row.salesValue)}</td>
-                        <td className='text-end'>{money(row.costValue)}</td>
-                        <td className='text-end'>{pct(row.profitPct)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          <div className='col-xl-7 mb-3'>
-            <h6 className='mb-2'>Detalle producto por almacen</h6>
-            {productWarehouseRows.length === 0 ? <EmptyState text='Sin detalle por almacen.' /> : (
-              <div className='table-responsive' style={{ maxHeight: 280, overflowY: 'auto' }}>
-                <table className='table table-sm align-middle mb-0'>
-                  <thead className='table-light' style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                    <tr>
-                      <th>Almacen</th>
-                      <th>Producto</th>
-                      <th className='text-end'>Diferencia</th>
-                      <th className='text-end'>Rentab.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {productWarehouseRows.map(row => (
-                      <tr key={`mag-profit-warehouse-product-${row.warehouseId || row.warehouseName}-${row.articleId}`}>
-                        <td>{row.warehouseName}</td>
-                        <td>
-                          <strong>{row.articleCode}</strong>
-                          <div className='text-muted small'>{row.articleName}</div>
-                        </td>
-                        <td className='text-end'>{money(row.unitProfitValue)}</td>
-                        <td className='text-end'>{pct(row.profitPct)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -307,6 +246,7 @@ const ProfitabilityPanel = ({ data = {} }) => {
 
 const InventoryPanel = ({ data = {} }) => {
   const rows = data.warehouseRows || [];
+  const warehouseRow = rows[0] || null;
   const max = Math.max(1, ...rows.map(row => Number(row.stockValue || 0)));
 
   return (
@@ -327,16 +267,18 @@ const InventoryPanel = ({ data = {} }) => {
             <strong>{number(data.stockUnits, 3)}</strong>
           </div>
         </div>
-        {rows.length === 0 ? <EmptyState /> : rows.map(row => (
-          <div key={`inventory-warehouse-${row.warehouseName}`} className='mb-3'>
+        {warehouseRow ? (
+          <div className='mb-3'>
             <div className='d-flex justify-content-between mb-1'>
-              <span>{row.warehouseName}</span>
-              <span>{money(row.stockValue)}</span>
+              <span>Almacen fijo</span>
+              <span>{money(warehouseRow.stockValue)}</span>
             </div>
-            <ProgressBar value={(Number(row.stockValue || 0) / max) * 100} color='success' />
-            <small className='text-muted'>{number(row.stockUnits, 3)} unidades | {number(row.articleCount)} articulos</small>
+            <ProgressBar value={(Number(warehouseRow.stockValue || 0) / max) * 100} color='success' />
+            <small className='text-muted'>
+              {warehouseRow.warehouseName} | {number(warehouseRow.stockUnits, 3)} unidades | {number(warehouseRow.articleCount)} articulos
+            </small>
           </div>
-        ))}
+        ) : <EmptyState />}
       </div>
     </div>
   );

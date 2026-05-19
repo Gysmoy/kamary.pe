@@ -25,7 +25,7 @@ const emptyItem = () => ({
   total: 1,
 })
 
-const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion' }) => {
+const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWarehouse = null }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
@@ -41,23 +41,22 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion' }) => {
   const dateRef = useRef()
   const observationsRef = useRef()
   const [responsibles, setResponsibles] = useState([])
-  const [warehouses, setWarehouses] = useState([])
   const [articles, setArticles] = useState([])
   const [formats, setFormats] = useState([])
   const [formulas, setFormulas] = useState([])
   const [items, setItems] = useState([emptyItem()])
   const [isEditing, setIsEditing] = useState(false)
+  const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
+  const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
 
   useEffect(() => {
     Promise.all([
       rest.getResponsibles(),
-      rest.getWarehouses(),
       rest.getArticles(),
       rest.getFormats(),
       rest.getFormulas(),
-    ]).then(([responsibleRows, warehouseRows, articleRows, formatRows, formulaRows]) => {
+    ]).then(([responsibleRows, articleRows, formatRows, formulaRows]) => {
       setResponsibles((responsibleRows ?? []).filter(row => row.status !== null))
-      setWarehouses((warehouseRows ?? []).filter(row => row.status !== null))
       setArticles((articleRows ?? []).filter(row => row.status !== null))
       setFormats((formatRows ?? []).filter(row => row.status !== null))
       setFormulas((formulaRows ?? []).filter(row => row.status !== null))
@@ -70,7 +69,7 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion' }) => {
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
     statusRef.current.value = data?.order_status ?? 'pending'
     responsibleRef.current.value = data?.responsible_id ?? ''
-    warehouseRef.current.value = data?.destination_warehouse_id ?? ''
+    warehouseRef.current.value = data?.destination_warehouse_id ?? fixedWarehouseId
     articleRef.current.value = data?.article_id ?? ''
     formatRef.current.value = data?.format_id ?? ''
     batchQuantityRef.current.value = data?.batch_quantity ?? 0
@@ -113,14 +112,13 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion' }) => {
 
   const save = async (e) => {
     e.preventDefault()
-    const warehouse = warehouses.find(row => `${row.id}` === `${warehouseRef.current.value}`)
     const result = await rest.save({
       id: idRef.current.value || undefined,
       code: isEditing ? codeRef.current.value.trim() : '',
       order_status: statusRef.current.value,
       responsible_id: responsibleRef.current.value || null,
-      destination: warehouse?.name ?? '',
-      destination_warehouse_id: warehouseRef.current.value || null,
+      destination: fixedWarehouse?.name ?? fixedWarehouseLabel,
+      destination_warehouse_id: warehouseRef.current.value || fixedWarehouseId || null,
       article_id: articleRef.current.value || null,
       format_id: formatRef.current.value || null,
       batch_quantity: batchQuantityRef.current.value,
@@ -204,7 +202,8 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion' }) => {
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha entrega</label><input ref={deliveryDateRef} type='date' className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha registro</label><input ref={dateRef} type='date' className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Responsable</label><select ref={responsibleRef} className='form-control'><option value=''>Seleccione</option>{responsibles.map(row => <option key={`mag-po-resp-${row.id}`} value={row.id}>{row.document_number} - {row.name}</option>)}</select></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Almacen destino</label><select ref={warehouseRef} className='form-control'><option value=''>Seleccione</option>{warehouses.map(row => <option key={`mag-po-wh-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
+        <input ref={warehouseRef} hidden />
+        <div className='col-md-4 mb-3'><label className='form-label'>Almacen fijo</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Producto</label><select ref={articleRef} className='form-control'><option value=''>Seleccione</option>{articles.map(row => <option key={`mag-po-article-${row.id}`} value={row.id}>{row.code} - {row.name}</option>)}</select></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Formato</label><select ref={formatRef} className='form-control'><option value=''>Seleccione</option>{formats.map(row => <option key={`mag-po-format-${row.id}`} value={row.id}>{row.description} ({row.quantity})</option>)}</select></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Cantidad tanda</label><input ref={batchQuantityRef} type='number' min='0' step='0.001' className='form-control' /></div>

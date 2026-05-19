@@ -28,6 +28,8 @@ class MagistralesStock
 
     public static function valuationRows(?int $articleId = null, ?int $warehouseId = null): Collection
     {
+        $warehouseId = $warehouseId ?: MagistralesWarehouse::id();
+
         $articles = Article::query()
             ->select('articles.*')
             ->with(['unit:id,name,symbol'])
@@ -40,14 +42,10 @@ class MagistralesStock
         $warehouses = Warehouse::query()
             ->select('warehouses.*')
             ->with('branch:id,name,business_id')
-            ->when($warehouseId, fn($query) => $query->where('id', $warehouseId))
+            ->where('id', $warehouseId)
             ->whereNotNull('status')
             ->orderBy('name')
             ->get();
-
-        if (!$warehouseId && $warehouses->isEmpty()) {
-            $warehouses = collect([(object)['id' => null, 'name' => null, 'branch' => null]]);
-        }
 
         return $articles->flatMap(function ($article) use ($warehouses) {
             return $warehouses->map(function ($warehouse) use ($article) {
@@ -71,14 +69,15 @@ class MagistralesStock
                     'branch_name' => $warehouse?->branch?->name,
                 ];
             });
-        })->filter(fn($row) => $warehouseId || (float)$row['stock'] !== 0 || $row['warehouse_id'])->values();
+        })->filter(fn($row) => (float)$row['stock'] !== 0 || $row['warehouse_id'])->values();
     }
 
     public static function stockByWarehouseRows(int $articleId): Collection
     {
-        return Warehouse::query()
+        $warehouse = Warehouse::query()
             ->select('warehouses.*')
             ->with('branch.business:id,name')
+            ->whereKey(MagistralesWarehouse::id())
             ->whereNotNull('warehouses.status')
             ->orderBy('name')
             ->get()
@@ -95,10 +94,13 @@ class MagistralesStock
                     'stock' => self::stock($articleId, (int)$warehouse->id),
                 ];
             });
+
+        return $warehouse->values();
     }
 
     public static function movementRows(int $articleId, ?int $warehouseId = null): Collection
     {
+        $warehouseId = $warehouseId ?: MagistralesWarehouse::id();
         $rows = collect();
 
         if (Schema::hasTable('magistral_income_items') && Schema::hasTable('magistral_incomes')) {

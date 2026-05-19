@@ -8,7 +8,7 @@ use App\Models\Article;
 use App\Models\Business;
 use App\Models\MagistralSale;
 use App\Models\MagistralSaleItem;
-use App\Models\Warehouse;
+use App\Support\MagistralesWarehouse;
 use App\Support\MagistralesStock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,6 +30,7 @@ class SaleController extends BasicController
         return [
             'moduleTitle' => 'Magistrales - Ventas',
             'requiredPermission' => 'magistrales-sales',
+            'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }
 
@@ -156,18 +157,17 @@ class SaleController extends BasicController
     private function parseItems(array $items, ?int $saleId, bool $isQuote): array
     {
         $parsed = [];
+        $warehouseId = MagistralesWarehouse::id();
 
         foreach ($items as $index => $item) {
             if (!is_array($item)) continue;
 
             $articleId = $this->toNullableInt($item['article_id'] ?? null);
-            $warehouseId = $this->toNullableInt($item['warehouse_id'] ?? null);
             if (!$articleId) continue;
 
             $article = Article::query()
                 ->when(Schema::hasColumn('articles', 'module_scope'), fn($query) => $query->where('module_scope', 'magistrales'))
                 ->findOrFail($articleId);
-            if ($warehouseId) Warehouse::findOrFail($warehouseId);
 
             $quantity = $this->toNullableDecimal($item['quantity'] ?? null) ?? 0;
             $unitPrice = $this->toNullableDecimal($item['unit_price'] ?? null) ?? 0;
@@ -199,10 +199,10 @@ class SaleController extends BasicController
     private function assertStockAvailable(array $items, ?int $saleId): void
     {
         $requested = [];
+        $warehouseId = MagistralesWarehouse::id();
 
         foreach ($items as $item) {
             $articleId = (int)$item['article_id'];
-            $warehouseId = $item['warehouse_id'] ? (int)$item['warehouse_id'] : null;
             $key = $articleId . '|' . ($warehouseId ?? 'all');
             $requested[$key] ??= [
                 'article_id' => $articleId,

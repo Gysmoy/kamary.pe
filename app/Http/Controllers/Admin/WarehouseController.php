@@ -6,6 +6,7 @@ use App\Http\Controllers\BasicController;
 use App\Models\BusinessBranch;
 use App\Models\Warehouse;
 use App\Support\BusinessScope;
+use App\Support\MagistralesWarehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use SoDe\Extend\Response;
@@ -44,6 +45,11 @@ class WarehouseController extends BasicController
     {
         $body = $request->all();
         $userId = Auth::id();
+        $warehouseId = isset($body['id']) && $body['id'] !== '' ? (int) $body['id'] : null;
+
+        if ($warehouseId && MagistralesWarehouse::isFixedWarehouseId($warehouseId)) {
+            throw new \Exception('El almacen fijo de Magistrales no se puede editar');
+        }
 
         $name = trim((string)($body['name'] ?? ''));
         $branchId = $body['business_branch_id'] ?? null;
@@ -79,6 +85,10 @@ class WarehouseController extends BasicController
     {
         $response = new Response();
         try {
+            if (MagistralesWarehouse::isFixedWarehouseId($request->id)) {
+                throw new \Exception('El almacen fijo de Magistrales no se puede editar');
+            }
+
             $data = [];
             $data[$request->field] = $request->value;
             $data['updated_by'] = Auth::id();
@@ -99,6 +109,10 @@ class WarehouseController extends BasicController
     {
         $response = new Response();
         try {
+            if (MagistralesWarehouse::isFixedWarehouseId($request->id)) {
+                throw new \Exception('El almacen fijo de Magistrales no se puede editar');
+            }
+
             $this->model::where($this->identifier, $request->id)->update([
                 'status' => $request->status ? 0 : 1,
                 'updated_by' => Auth::id(),
@@ -112,5 +126,17 @@ class WarehouseController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        if (MagistralesWarehouse::isFixedWarehouseId($id)) {
+            $response = new Response();
+            $response->status = 400;
+            $response->message = 'El almacen fijo de Magistrales no se puede eliminar';
+            return response($response->toArray(), $response->status);
+        }
+
+        return parent::delete($request, $id);
     }
 }

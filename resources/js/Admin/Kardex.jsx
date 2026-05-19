@@ -39,7 +39,7 @@ const refreshGrid = (gridRef) => {
   instance?.refresh()
 }
 
-const StandardKardex = () => {
+const StandardKardex = ({ fixedWarehouse = null }) => {
   const gridRef = useRef()
   const movementModalRef = useRef()
 
@@ -57,6 +57,8 @@ const StandardKardex = () => {
   const [movementRows, setMovementRows] = useState([])
   const [movementTitle, setMovementTitle] = useState('')
   const isMagistrales = isMagistralesPath()
+  const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
+  const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
 
   useEffect(() => {
     const load = async () => {
@@ -64,15 +66,18 @@ const StandardKardex = () => {
         kardexRest.getBusinesses(),
         kardexRest.getLaboratories(),
         kardexRest.getArticles(),
-        isMagistrales ? kardexRest.getWarehouses() : Promise.resolve([]),
+        isMagistrales && !fixedWarehouseId ? kardexRest.getWarehouses() : Promise.resolve([]),
       ])
       setBusinesses((businessesData ?? []).filter(item => item.status !== null))
       setLaboratories((labsData ?? []).filter(item => item.status !== null))
       setArticles((articlesData ?? []).filter(item => item.status !== null))
-      setWarehouses((warehousesData ?? []).filter(item => item.status !== null))
+      setWarehouses(isMagistrales && fixedWarehouseId
+        ? [fixedWarehouse].filter(Boolean)
+        : (warehousesData ?? []).filter(item => item.status !== null))
+      if (isMagistrales && fixedWarehouseId) setWarehouseId(fixedWarehouseId)
     }
     load()
-  }, [])
+  }, [fixedWarehouse, fixedWarehouseId, isMagistrales])
 
   useEffect(() => {
     const loadBranches = async () => {
@@ -230,11 +235,8 @@ const StandardKardex = () => {
                 </select>
               </div>}
               {isMagistrales && <div className='col-md-4'>
-                <label className='form-label'>Almacen</label>
-                <select className='form-control' value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
-                  <option value=''>-- Todos los almacenes --</option>
-                  {warehouses.map(item => <option key={`kardex-wh-${item.id}`} value={item.id}>{item.name}</option>)}
-                </select>
+                <label className='form-label'>Almacen fijo</label>
+                <input className='form-control' value={fixedWarehouseLabel} disabled />
               </div>}
               <div className={isMagistrales ? 'col-md-4' : 'col-md-3'}>
                 <label className='form-label'>Producto</label>

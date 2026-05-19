@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Magistrales;
 
 use App\Http\Controllers\Admin\PurchaseOrderController as BasePurchaseOrderController;
 use App\Support\BusinessScope;
+use App\Support\MagistralesWarehouse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -18,6 +19,7 @@ class PurchaseOrderController extends BasePurchaseOrderController
         return [
             'moduleScope' => 'magistrales',
             'moduleTitle' => 'Magistrales - O. Compra',
+            'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }
 
@@ -57,6 +59,12 @@ class PurchaseOrderController extends BasePurchaseOrderController
 
     private function forceMagistralesScope(Request $request): void
     {
-        $request->merge(['business_scope_key' => BusinessScope::KAMARY_MEDICALS]);
+        $warehouse = MagistralesWarehouse::warehouse();
+        $request->merge([
+            'business_scope_key' => BusinessScope::KAMARY_MEDICALS,
+            'warehouse_id' => $warehouse->id,
+            'business_branch_id' => $warehouse->business_branch_id,
+            'business_id' => $warehouse->branch?->business_id,
+        ]);
     }
 }

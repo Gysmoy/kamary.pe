@@ -29,7 +29,7 @@ const emptyItem = () => ({
 
 const formatUser = (user) => user?.fullname || [user?.name, user?.lastname].filter(Boolean).join(' ') || user?.username || ''
 
-const Outputs = ({ moduleTitle = 'Magistrales - Salidas' }) => {
+const Outputs = ({ moduleTitle = 'Magistrales - Salidas', fixedWarehouse = null }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
@@ -39,14 +39,14 @@ const Outputs = ({ moduleTitle = 'Magistrales - Salidas' }) => {
   const reasonRef = useRef()
   const observationsRef = useRef()
   const dateRef = useRef()
-  const [warehouses, setWarehouses] = useState([])
   const [articles, setArticles] = useState([])
   const [items, setItems] = useState([emptyItem()])
   const [isEditing, setIsEditing] = useState(false)
+  const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
+  const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
 
   useEffect(() => {
-    Promise.all([rest.getWarehouses(), rest.getArticles()]).then(([warehouseRows, articleRows]) => {
-      setWarehouses((warehouseRows ?? []).filter(row => row.status !== null))
+    Promise.all([rest.getArticles()]).then(([articleRows]) => {
       setArticles((articleRows ?? []).filter(row => row.status !== null))
     })
   }, [])
@@ -55,7 +55,7 @@ const Outputs = ({ moduleTitle = 'Magistrales - Salidas' }) => {
     setIsEditing(!!data?.id)
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
-    warehouseRef.current.value = data?.origin_warehouse_id ?? ''
+    warehouseRef.current.value = data?.origin_warehouse_id ?? fixedWarehouseId
     destinationRef.current.value = data?.destination ?? ''
     reasonRef.current.value = data?.reason ?? ''
     observationsRef.current.value = data?.observations ?? ''
@@ -103,7 +103,7 @@ const Outputs = ({ moduleTitle = 'Magistrales - Salidas' }) => {
     const result = await rest.save({
       id: idRef.current.value || undefined,
       code: isEditing ? codeRef.current.value.trim() : '',
-      origin_warehouse_id: warehouseRef.current.value || null,
+      origin_warehouse_id: warehouseRef.current.value || fixedWarehouseId || null,
       destination: destinationRef.current.value.trim(),
       reason: reasonRef.current.value.trim(),
       observations: observationsRef.current.value.trim(),
@@ -184,7 +184,8 @@ const Outputs = ({ moduleTitle = 'Magistrales - Salidas' }) => {
       <div className='row'>
         <input ref={idRef} hidden />
         <div className='col-md-3 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' disabled={!isEditing} /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Almacen origen</label><select ref={warehouseRef} className='form-control'><option value=''>Seleccione</option>{warehouses.map(row => <option key={`mag-output-wh-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
+        <input ref={warehouseRef} hidden />
+        <div className='col-md-4 mb-3'><label className='form-label'>Almacen fijo</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha</label><input ref={dateRef} type='date' className='form-control' /></div>
         <div className='col-md-6 mb-3'><label className='form-label'>Destino</label><input ref={destinationRef} className='form-control' /></div>
         <div className='col-md-6 mb-3'><label className='form-label'>Motivo</label><input ref={reasonRef} className='form-control' /></div>

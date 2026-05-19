@@ -7,7 +7,7 @@ use App\Http\Controllers\Admin\Magistrales\Concerns\RunsMagistralSaveInTransacti
 use App\Models\Article;
 use App\Models\MagistralOutput;
 use App\Models\MagistralOutputItem;
-use App\Models\Warehouse;
+use App\Support\MagistralesWarehouse;
 use App\Support\MagistralesStock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,6 +29,7 @@ class OutputController extends BasicController
         return [
             'moduleTitle' => 'Magistrales - Salidas',
             'requiredPermission' => 'magistrales-outputs',
+            'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }
 
@@ -60,8 +61,8 @@ class OutputController extends BasicController
             ->exists();
         if ($exists) throw new \Exception('Ya existe una salida magistral con este codigo');
 
-        $warehouseId = $this->toNullableInt($body['origin_warehouse_id'] ?? null);
-        if ($warehouseId) Warehouse::findOrFail($warehouseId);
+        $warehouse = MagistralesWarehouse::warehouse();
+        $warehouseId = (int) $warehouse->id;
 
         $this->parsedItems = $this->parseItems(is_array($request->items) ? $request->items : [], $warehouseId, $id ? (int)$id : null);
         if (count($this->parsedItems) === 0) {

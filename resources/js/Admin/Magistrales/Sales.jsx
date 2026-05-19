@@ -15,10 +15,10 @@ import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magi
 const rest = new SalesRest()
 const paymentLabels = { pending: 'Pendiente', paid: 'Pagado', partial: 'Parcial', cancelled: 'Cancelado' }
 
-const emptyItem = () => ({
+const emptyItem = (warehouseId = '') => ({
   uid: crypto.randomUUID(),
   article_id: '',
-  warehouse_id: '',
+  warehouse_id: warehouseId,
   description: '',
   stock: 0,
   quantity: 1,
@@ -30,7 +30,7 @@ const formatUser = (user) => user?.fullname || [user?.name, user?.lastname].filt
 const formatDocument = (row) => [row?.document_type, row?.document_number].filter(Boolean).join(' ')
 const itemSubtotal = (item) => Math.max(0, (Number(item.quantity || 0) * Number(item.unit_price || 0)) - Number(item.discount || 0))
 
-const Sales = ({ moduleTitle = 'Magistrales - Ventas' }) => {
+const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
@@ -47,19 +47,19 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas' }) => {
   const allergyRef = useRef()
   const intoleranceRef = useRef()
   const dateRef = useRef()
+  const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
+  const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
   const [businesses, setBusinesses] = useState([])
-  const [warehouses, setWarehouses] = useState([])
   const [articles, setArticles] = useState([])
-  const [items, setItems] = useState([emptyItem()])
+  const [items, setItems] = useState([emptyItem(fixedWarehouseId)])
   const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
-    Promise.all([rest.getBusinesses(), rest.getWarehouses(), rest.getArticles()]).then(([businessRows, warehouseRows, articleRows]) => {
+    Promise.all([rest.getBusinesses(), rest.getArticles()]).then(([businessRows, articleRows]) => {
       setBusinesses((businessRows ?? []).filter(row => row.status !== null))
-      setWarehouses((warehouseRows ?? []).filter(row => row.status !== null))
       setArticles((articleRows ?? []).filter(row => row.status !== null))
     })
-  }, [])
+  }, [fixedWarehouseId])
 
   const totals = items.reduce((carry, item) => {
     carry.discount += Number(item.discount || 0)
@@ -88,14 +88,14 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas' }) => {
     const nextItems = (data?.items ?? []).map(item => ({
       uid: crypto.randomUUID(),
       article_id: item.article_id ?? '',
-      warehouse_id: item.warehouse_id ?? '',
+      warehouse_id: item.warehouse_id ?? fixedWarehouseId,
       description: item.description ?? item.article?.name ?? '',
       stock: item.stock ?? 0,
       quantity: item.quantity ?? 1,
       unit_price: item.unit_price ?? 0,
       discount: item.discount ?? 0,
     }))
-    setItems(nextItems.length ? nextItems : [emptyItem()])
+    setItems(nextItems.length ? nextItems : [emptyItem(fixedWarehouseId)])
     $(modalRef.current).modal('show')
   }
 
@@ -107,6 +107,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas' }) => {
         const article = articles.find(row => `${row.id}` === `${value}`)
         next.description = article?.name ?? ''
         next.unit_price = article?.sale_price ?? next.unit_price
+        next.warehouse_id = fixedWarehouseId
       }
       return next
     }))
@@ -115,7 +116,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas' }) => {
   const removeItem = (uid) => {
     setItems(prev => {
       const next = prev.filter(item => item.uid !== uid)
-      return next.length ? next : [emptyItem()]
+      return next.length ? next : [emptyItem(fixedWarehouseId)]
     })
   }
 
@@ -139,7 +140,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas' }) => {
       sale_date: dateRef.current.value || null,
       items: items.map(item => ({
         article_id: item.article_id || null,
-        warehouse_id: item.warehouse_id || null,
+        warehouse_id: fixedWarehouseId || item.warehouse_id || null,
         description: (item.description ?? '').toString().trim(),
         stock: item.stock,
         quantity: item.quantity,
@@ -228,14 +229,14 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas' }) => {
         <div className='col-12 mt-2'>
           <div className='d-flex justify-content-between align-items-center mb-2'>
             <h6 className='mb-0'>Detalle de venta</h6>
-            <button type='button' className='btn btn-sm btn-soft-primary' onClick={() => setItems(prev => [...prev, emptyItem()])}><i className='mdi mdi-plus me-1'></i> Insertar articulo</button>
+            <button type='button' className='btn btn-sm btn-soft-primary' onClick={() => setItems(prev => [...prev, emptyItem(fixedWarehouseId)])}><i className='mdi mdi-plus me-1'></i> Insertar articulo</button>
           </div>
           <div className='table-responsive border rounded'>
             <table className='table table-sm table-striped mb-0'>
               <thead>
                 <tr>
                   <th style={{ minWidth: 230 }}>Articulo</th>
-                  <th style={{ minWidth: 150 }}>Almacen</th>
+                  <th style={{ minWidth: 150 }}>Almacen fijo</th>
                   <th style={{ width: 100 }}>Stock</th>
                   <th style={{ width: 110 }}>Cantidad</th>
                   <th style={{ width: 110 }}>Precio</th>
@@ -248,7 +249,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas' }) => {
                 {items.map(item => (
                   <tr key={item.uid}>
                     <td><select className='form-control form-control-sm' value={item.article_id} onChange={(e) => updateItem(item.uid, 'article_id', e.target.value)}><option value=''>Articulo</option>{articles.map(article => <option key={`sale-article-${article.id}`} value={article.id}>{article.code} - {article.name}</option>)}</select></td>
-                    <td><select className='form-control form-control-sm' value={item.warehouse_id} onChange={(e) => updateItem(item.uid, 'warehouse_id', e.target.value)}><option value=''>Almacen</option>{warehouses.map(warehouse => <option key={`sale-wh-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}</select></td>
+                    <td className='align-middle text-muted small'>{fixedWarehouseLabel}</td>
                     <td><input className='form-control form-control-sm' type='number' step='0.001' value={item.stock} onChange={(e) => updateItem(item.uid, 'stock', e.target.value)} /></td>
                     <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => updateItem(item.uid, 'quantity', e.target.value)} /></td>
                     <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.unit_price} onChange={(e) => updateItem(item.uid, 'unit_price', e.target.value)} /></td>
