@@ -100,6 +100,12 @@ const warehouseOptionTemplate = (option) => {
   if (business) container.append($('<small>').addClass('text-muted ms-1').text(`(${business})`))
   return container
 }
+const clearSelectValue = (ref) => {
+  if (!ref?.current) return
+  const select = $(ref.current)
+  select.empty().val(null)
+  select.trigger(select.data('select2') ? 'change.select2' : 'change')
+}
 
 const isTaxableDocumentType = (documentType) => ['Factura', 'Boleta'].includes(normalizeDocumentType(documentType))
 
@@ -434,14 +440,14 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const clearCustomerSelections = (type) => {
     if (type === 'regular') {
       setSelectedEventualClientId('')
-      $(eventualClientRef.current).empty().trigger('change')
+      clearSelectValue(eventualClientRef)
     } else if (type === 'eventual') {
       setSelectedClientId('')
       setNetworks([])
       setSelectedNetworkId('')
       setDeliveryAddresses([])
       setSelectedDeliveryAddressId('')
-      $(clientRef.current).empty().trigger('change')
+      clearSelectValue(clientRef)
     }
   }
 
@@ -478,13 +484,13 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     setSelectedEventualClientId(eventualClientId)
 
     if (businessId && data?.business?.name) SetSelectValue(businessRef.current, businessId, data.business.name)
-    else $(businessRef.current).empty().trigger('change')
+    else clearSelectValue(businessRef)
     if (warehouseId && data?.warehouse?.name) SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
-    else $(warehouseRef.current).empty().trigger('change')
+    else clearSelectValue(warehouseRef)
     if (clientId && data?.client?.full_name) SetSelectValue(clientRef.current, clientId, `${data.client.document_number ?? ''} - ${data.client.full_name}`.trim())
-    else $(clientRef.current).empty().trigger('change')
+    else clearSelectValue(clientRef)
     if (eventualClientId && data?.eventual_client?.business_name) SetSelectValue(eventualClientRef.current, eventualClientId, `${data.eventual_client.document_number ?? ''} - ${data.eventual_client.business_name}`.trim())
-    else $(eventualClientRef.current).empty().trigger('change')
+    else clearSelectValue(eventualClientRef)
 
     const detail = (data?.items ?? []).map(row => {
       const article = row.article ?? null
@@ -588,7 +594,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     const businessId = e.target.value || ''
     setSelectedBusinessId(businessId)
     setSelectedWarehouseId('')
-    if (warehouseRef.current) $(warehouseRef.current).empty().trigger('change')
+    clearSelectValue(warehouseRef)
     await loadBranches(businessId, null)
   }
 
@@ -596,7 +602,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     const branchId = e.target.value || ''
     setSelectedBranchId(branchId)
     setSelectedWarehouseId('')
-    if (warehouseRef.current) $(warehouseRef.current).empty().trigger('change')
+    clearSelectValue(warehouseRef)
   }
 
   const onWarehouseChanged = async (e) => {
