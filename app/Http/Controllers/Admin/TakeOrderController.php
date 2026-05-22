@@ -196,7 +196,7 @@ class TakeOrderController extends BasicController
         $body['seller_id'] = $sellerId;
         $body['price_list_id'] = $priceListId;
         $body['order_profile'] = $this->normalizeOrderProfile($body['order_profile'] ?? 'micro');
-        $body['document_type'] = trim((string)($body['document_type'] ?? 'Factura')) ?: 'Factura';
+        $body['document_type'] = $this->normalizeDocumentType($body['document_type'] ?? 'Factura');
         $body['currency'] = $this->normalizeCurrency($body['currency'] ?? 'PEN');
         $body['payment_condition'] = $this->normalizePaymentCondition($body['payment_condition'] ?? 'Contado');
         $body['payment_method'] = trim((string)($body['payment_method'] ?? '')) ?: null;
@@ -209,13 +209,13 @@ class TakeOrderController extends BasicController
         $body['promised_delivery_at'] = $promisedDate;
         $body['installments'] = max(1, $this->toNullableInt($body['installments'] ?? null) ?? 1);
         $body['first_due_date'] = $firstDueDate;
-        $body['delivery_address'] = trim((string)($body['delivery_address'] ?? ($deliveryAddress->address ?? ''))) ?: null;
-        $body['delivery_reference'] = trim((string)($body['delivery_reference'] ?? ($deliveryAddress->reference ?? ''))) ?: null;
-        $body['ubigeo'] = trim((string)($body['ubigeo'] ?? ($deliveryAddress->ubigeo ?? ''))) ?: null;
+        $body['delivery_address'] = ($this->textValue($body['delivery_address'] ?? null) ?: $this->textValue($deliveryAddress->address ?? '')) ?: null;
+        $body['delivery_reference'] = ($this->textValue($body['delivery_reference'] ?? null) ?: $this->textValue($deliveryAddress->reference ?? '')) ?: null;
+        $body['ubigeo'] = ($this->textValue($body['ubigeo'] ?? null) ?: $this->textValue($deliveryAddress->ubigeo ?? '')) ?: null;
         $body['map_lat'] = $this->toNullableDecimal($body['map_lat'] ?? ($deliveryAddress->latitude ?? null));
         $body['map_lng'] = $this->toNullableDecimal($body['map_lng'] ?? ($deliveryAddress->longitude ?? null));
-        $body['dispatch_contact_name'] = trim((string)($body['dispatch_contact_name'] ?? ($deliveryAddress->contact_name ?? ''))) ?: null;
-        $body['dispatch_contact_phone'] = trim((string)($body['dispatch_contact_phone'] ?? ($deliveryAddress->contact_phone ?? ''))) ?: null;
+        $body['dispatch_contact_name'] = ($this->textValue($body['dispatch_contact_name'] ?? null) ?: $this->textValue($deliveryAddress->contact_name ?? '')) ?: null;
+        $body['dispatch_contact_phone'] = ($this->textValue($body['dispatch_contact_phone'] ?? null) ?: $this->textValue($deliveryAddress->contact_phone ?? '')) ?: null;
         $body['purchase_order'] = trim((string)($body['purchase_order'] ?? '')) ?: null;
         $body['referral_guide'] = trim((string)($body['referral_guide'] ?? '')) ?: null;
         $body['subtotal'] = $this->toNullableDecimal($body['subtotal'] ?? null) ?? 0;
@@ -341,18 +341,15 @@ class TakeOrderController extends BasicController
 
             if ($inserted === 0) throw new \Exception('Debes agregar al menos un item');
 
-            $taxAmount = $this->toNullableDecimal($request->input('tax_amount')) ?? 0;
-            $total = $this->toNullableDecimal($request->input('total'));
             $subtotal = round($subtotal, 2);
-            $taxAmount = round($taxAmount, 2);
-            $total = is_null($total) ? round($subtotal + $taxAmount, 2) : round($total, 2);
+            $totals = $this->deriveFinancialTotals($subtotal, $jpa->document_type);
             $matchedPriceListIds = array_values(array_unique($matchedPriceListIds));
 
             $jpa->update([
                 'price_list_id' => $jpa->price_list_id ?: (count($matchedPriceListIds) === 1 ? $matchedPriceListIds[0] : null),
-                'subtotal' => $subtotal,
-                'tax_amount' => $taxAmount,
-                'total' => $total,
+                'subtotal' => $totals['subtotal'],
+                'tax_amount' => $totals['tax_amount'],
+                'total' => $totals['total'],
             ]);
 
             DB::commit();
@@ -469,9 +466,33 @@ class TakeOrderController extends BasicController
         $response = new dxResponse();
         try {
             $context = $this->articleContextFromRequest($request);
-            if (!$context['client_id'] && !$context['eventual_client_id']) {
+            if ((!$context['client_id'] && !$context['eventual_client_id']) || !$context['warehouse_id']) {
                 $response->status = 200;
                 $response->message = 'Operacion correcta';
+                $response->data = [];
+                $response->totalCount = 0;
+                return response($response->toArray(), $response->status);
+            }
+
+            $search = $this->extractSearchTerm($request->input('filter', []));
+            $stockRows = app(StockService::class)->availableStorageStockRows(
+                (int) $context['warehouse_id'],
+                $search,
+                0,
+                BusinessScope::scopedKeyForRequest($request) ?: BusinessScope::KAMARY_PERU
+            );
+            $articleIds = collect($stockRows)
+                ->pluck('article_id')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            if (empty($articleIds)) {
+                $response->status = 200;
+                $response->message = 'Operacion correcta';
+                $response->data = [];
+                $response->totalCount = 0;
                 return response($response->toArray(), $response->status);
             }
 
@@ -488,7 +509,8 @@ class TakeOrderController extends BasicController
                     $scope->where('articles.module_scope', 'standard')
                         ->orWhereNull('articles.module_scope');
                 })
-                ->whereNotNull('articles.status');
+                ->whereNotNull('articles.status')
+                ->whereIn('articles.id', $articleIds);
 
             $this->applyAllowedArticleScope($query, $context);
 
@@ -751,6 +773,31 @@ class TakeOrderController extends BasicController
         return $normalized === 'credito' ? 'Credito' : 'Contado';
     }
 
+    private function normalizeDocumentType($value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+        return match ($normalized) {
+            'boleta' => 'Boleta',
+            'nota de pedido', 'nota_pedido', 'note_order' => 'Nota de pedido',
+            default => 'Factura',
+        };
+    }
+
+    private function textValue($value): string
+    {
+        if (is_array($value)) {
+            foreach (['address', 'reference', 'ubigeo', 'contact_name', 'contact_phone', 'name', 'description', 'value'] as $key) {
+                if (array_key_exists($key, $value) && !is_array($value[$key]) && trim((string) $value[$key]) !== '') {
+                    return trim((string) $value[$key]);
+                }
+            }
+            return '';
+        }
+
+        $text = trim((string) ($value ?? ''));
+        return $text === '[object Object]' ? '' : $text;
+    }
+
     private function normalizeOrderStatus($value): string
     {
         $allowed = ['draft', 'confirmed', 'preparing', 'dispatched', 'billed', 'closed', 'cancelled'];
@@ -783,6 +830,45 @@ class TakeOrderController extends BasicController
         $allowed = ['pending', 'partial', 'paid'];
         $normalized = mb_strtolower(trim((string)$value));
         return in_array($normalized, $allowed, true) ? $normalized : 'pending';
+    }
+
+    private function deriveFinancialTotals(float $grossAmount, string $documentType): array
+    {
+        $grossAmount = round(max(0, $grossAmount), 2);
+        if (!in_array($this->normalizeDocumentType($documentType), ['Factura', 'Boleta'], true)) {
+            return [
+                'subtotal' => $grossAmount,
+                'tax_amount' => 0.00,
+                'total' => $grossAmount,
+            ];
+        }
+
+        $subtotal = round($grossAmount / 1.18, 2);
+        $taxAmount = round($grossAmount - $subtotal, 2);
+
+        return [
+            'subtotal' => $subtotal,
+            'tax_amount' => $taxAmount,
+            'total' => $grossAmount,
+        ];
+    }
+
+    private function extractSearchTerm($filter): string
+    {
+        if (!is_array($filter)) return '';
+        if (count($filter) === 3 && is_string($filter[0] ?? null) && is_string($filter[1] ?? null)) {
+            [$field, $operator, $value] = $filter;
+            if (in_array($field, ['name', 'code'], true) && in_array($operator, ['contains', 'startswith', '='], true)) {
+                return trim((string) $value);
+            }
+        }
+
+        foreach ($filter as $item) {
+            $term = $this->extractSearchTerm($item);
+            if ($term !== '') return $term;
+        }
+
+        return '';
     }
 
     private function nextCode(): string

@@ -14,6 +14,7 @@ use App\Models\Billing\Summary;
 use App\Models\Billing\Establishment;
 use Mpdf\Config\FontVariables;
 use App\Models\Billing\Dispatch;
+use App\Models\Billing\DispatchVoided;
 use App\Models\Billing\Document;
 use App\Models\Billing\Retention;
 use Mpdf\Config\ConfigVariables;
@@ -148,6 +149,13 @@ class Facturalo
                 }
                 $this->document = Voided::find($document->id);
                 break;
+            case 'dispatch_voided':
+                $document = DispatchVoided::create($this->filterByExistingColumns('dispatch_voided', $inputs));
+                foreach ($inputs['documents'] as $row) {
+                    $document->documents()->create($row);
+                }
+                $this->document = DispatchVoided::find($document->id);
+                break;
             case 'retention':
                 $document = Retention::create($this->filterByExistingColumns('retentions', $inputs));
                 foreach ($inputs['documents'] as $row) {
@@ -165,7 +173,8 @@ class Facturalo
             default:
                 $document = Dispatch::create($this->filterByExistingColumns('dispatches', $inputs));
                 foreach ($inputs['items'] as $row) {
-                    $document->items()->create($this->filterByExistingColumns('document_items', $row));
+                    $table = $this->type === 'dispatch' ? 'dispatch_items' : 'document_items';
+                    $document->items()->create($this->filterByExistingColumns($table, $row));
                 }
                 $this->document = Dispatch::find($document->id);
                 break;
@@ -283,9 +292,12 @@ class Facturalo
     public function updateStateDocuments($state_type_id)
     {
         foreach ($this->document->documents as $doc) {
-            $doc->document->update([
-                'state_type_id' => $state_type_id
-            ]);
+            $related = $this->type === 'dispatch_voided' ? $doc->dispatch : $doc->document;
+            if ($related) {
+                $related->update([
+                    'state_type_id' => $state_type_id
+                ]);
+            }
         }
     }
 
@@ -697,7 +709,7 @@ class Facturalo
     private function senderXmlSigned()
     {
         $this->setDataSoapType();
-        $sender = in_array($this->type, ['summary', 'voided']) ? new SummarySender() : new BillSender();
+        $sender = in_array($this->type, ['summary', 'voided', 'dispatch_voided']) ? new SummarySender() : new BillSender();
         $sender->setClient($this->wsClient);
         $sender->setCodeProvider(new XmlErrorCodeProvider());
 
@@ -1337,6 +1349,9 @@ class Facturalo
                 break;
             case 'voided':
                 $this->document = Voided::find($id);
+                break;
+            case 'dispatch_voided':
+                $this->document = DispatchVoided::find($id);
                 break;
             case 'retention':
                 $this->document = Retention::find($id);

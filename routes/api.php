@@ -11,10 +11,12 @@ use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
 use App\Http\Controllers\Admin\BatchController as AdminBatchController;
 use App\Http\Controllers\Admin\BillingDocumentController as AdminBillingDocumentController;
+use App\Http\Controllers\Admin\BillingSettingsController as AdminBillingSettingsController;
 use App\Http\Controllers\Admin\BusinessController as AdminBusinessController;
 use App\Http\Controllers\Admin\ClientDistributionNetworkController as AdminClientDistributionNetworkController;
 use App\Http\Controllers\Admin\ClientController as AdminClientController;
 use App\Http\Controllers\Admin\CommercialOrderController as AdminCommercialOrderController;
+use App\Http\Controllers\Admin\DeliveryEvidenceController as AdminDeliveryEvidenceController;
 use App\Http\Controllers\Admin\TakeOrderController as AdminTakeOrderController;
 use App\Http\Controllers\Admin\DispatchController as AdminDispatchController;
 use App\Http\Controllers\Admin\DailySummaryController as AdminDailySummaryController;
@@ -31,6 +33,7 @@ use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\PriceListController as AdminPriceListController;
 use App\Http\Controllers\Admin\PurchaseOrderController as AdminPurchaseOrderController;
 use App\Http\Controllers\Admin\PurchaseReceiptController as AdminPurchaseReceiptController;
+use App\Http\Controllers\Admin\ReferralGuideController as AdminReferralGuideController;
 use App\Http\Controllers\Admin\Magistrales\ArticleController as AdminMagistralesArticleController;
 use App\Http\Controllers\Admin\Magistrales\CategoryController as AdminMagistralesCategoryController;
 use App\Http\Controllers\Admin\Magistrales\FormatController as AdminMagistralesFormatController;
@@ -151,6 +154,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/businesses/{id}/fiscal-assets', [AdminBusinessController::class, 'uploadFiscalAssets']);
         Route::delete('/businesses/{id}/fiscal-assets/{type}', [AdminBusinessController::class, 'deleteFiscalAsset'])->where('type', 'logo|certificate');
         Route::post('/businesses/{id}/facturador-sync', [AdminBusinessController::class, 'syncFacturador']);
+        Route::get('/billing-settings/facturador-mode', [AdminBillingSettingsController::class, 'facturadorMode']);
+        Route::patch('/billing-settings/facturador-mode', [AdminBillingSettingsController::class, 'updateFacturadorMode']);
 
         Route::post('/units', [AdminUnitController::class, 'save']);
         Route::post('/units/import', [AdminUnitController::class, 'import']);
@@ -487,6 +492,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/commercial-orders/clients/{id}/distribution-networks', [AdminCommercialOrderController::class, 'distributionNetworks']);
         Route::get('/commercial-orders/distribution-networks/{id}/addresses', [AdminCommercialOrderController::class, 'deliveryAddresses']);
         Route::get('/commercial-orders/pricing/resolve', [AdminCommercialOrderController::class, 'resolvePrice']);
+        Route::post('/commercial-orders/articles', [AdminCommercialOrderController::class, 'articles']);
+        Route::post('/commercial-orders/{id}/delivery-evidence', [AdminDeliveryEvidenceController::class, 'saveForCommercialOrder']);
+        Route::get('/delivery-evidence-media/{filename}', [AdminDeliveryEvidenceController::class, 'media'])->where('filename', '.*');
 
         Route::post('/take-orders', [AdminTakeOrderController::class, 'save']);
         Route::post('/take-orders/paginate', [AdminTakeOrderController::class, 'paginate']);
@@ -536,6 +544,15 @@ Route::middleware('auth')->group(function () {
         Route::patch('/dispatches/{field}', [AdminDispatchController::class, 'boolean']);
         Route::delete('/dispatches/{id}', [AdminDispatchController::class, 'delete']);
         Route::get('/dispatches/businesses/{id}/branches', [AdminDispatchController::class, 'branches']);
+        Route::post('/dispatches/{id}/referral-guides/prepare', [AdminReferralGuideController::class, 'prepareFromDispatch']);
+
+        Route::post('/referral-guides/paginate', [AdminReferralGuideController::class, 'paginate']);
+        Route::patch('/referral-guides/{field}', [AdminReferralGuideController::class, 'boolean']);
+        Route::post('/referral-guides/commercial-orders/{id}/prepare', [AdminReferralGuideController::class, 'prepareFromCommercialOrder']);
+        Route::get('/referral-guides/{id}/connector-payload', [AdminReferralGuideController::class, 'connectorPayload']);
+        Route::get('/referral-guides/{id}/download/{type}', [AdminReferralGuideController::class, 'download'])->where('type', 'pdf|xml|cdr');
+        Route::post('/referral-guides/{id}/issue', [AdminReferralGuideController::class, 'issue']);
+        Route::post('/referral-guides/{id}/cancel', [AdminReferralGuideController::class, 'cancel']);
 
         Route::post('/drivers', [AdminDriverController::class, 'save']);
         Route::post('/drivers/paginate', [AdminDriverController::class, 'paginate']);
@@ -595,6 +612,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/orders/{field}', [AdminOrderController::class, 'boolean']);
         Route::delete('/orders/{id}', [AdminOrderController::class, 'delete']);
         Route::get('/orders/businesses/{id}/branches', [AdminOrderController::class, 'branches']);
+        Route::post('/orders/articles', [AdminOrderController::class, 'articles']);
 
         Route::post('/warehouses', [AdminWarehouseController::class, 'save']);
         Route::post('/warehouses/paginate', [AdminWarehouseController::class, 'paginate']);

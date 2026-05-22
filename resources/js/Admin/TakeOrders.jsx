@@ -98,6 +98,33 @@ const documentTypeFromClient = (client) => {
   return 'Factura'
 }
 
+const deriveDocumentTotals = (grossAmount, documentType) => {
+  const gross = Math.max(0, Number(grossAmount || 0))
+  if (`${documentType ?? ''}`.trim().toLowerCase() === 'nota de pedido') {
+    return {
+      subtotal: Number(gross.toFixed(2)),
+      taxAmount: 0,
+      total: Number(gross.toFixed(2)),
+    }
+  }
+
+  const subtotal = Number((gross / 1.18).toFixed(2))
+  return {
+    subtotal,
+    taxAmount: Number((gross - subtotal).toFixed(2)),
+    total: Number(gross.toFixed(2)),
+  }
+}
+
+const textValue = (value, fallback = '') => {
+  if (value === null || value === undefined) return fallback
+  if (typeof value === 'object') {
+    return value.address ?? value.reference ?? value.name ?? value.description ?? fallback
+  }
+  const text = `${value}`
+  return text === '[object Object]' ? fallback : text
+}
+
 const paymentConditionFromClient = (client) => Number(client?.contract_due_days || 0) > 0 ? 'Credito' : 'Contado'
 
 const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
@@ -134,6 +161,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const [selectedPriceListId, setSelectedPriceListId] = useState('')
   const [selectedCommercialChannel, setSelectedCommercialChannel] = useState('')
   const [selectedSegment, setSelectedSegment] = useState('')
+  const [selectedDocumentType, setSelectedDocumentType] = useState('Factura')
   const [clientSnapshot, setClientSnapshot] = useState(null)
   const [networks, setNetworks] = useState([])
   const [deliveryAddresses, setDeliveryAddresses] = useState([])
@@ -141,7 +169,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const [mapPoint, setMapPoint] = useState(defaultMapPoint)
 
   const profile = orderProfiles[activeProfile] ?? orderProfiles.micro
-  const subtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
+  const grossSubtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
+  const orderTotals = useMemo(() => deriveDocumentTotals(grossSubtotal, selectedDocumentType), [grossSubtotal, selectedDocumentType])
 
   const channelOptions = useMemo(() => uniqueOptions([
     clientSnapshot?.commercial_channel,
@@ -267,14 +296,14 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
       return
     }
 
-    if (deliveryAddressRef.current) deliveryAddressRef.current.value = address?.address ?? fallbackClient?.full_address ?? ''
-    if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = address?.reference ?? ''
-    if (ubigeoRef.current) ubigeoRef.current.value = address?.ubigeo ?? fallbackClient?.ubigeo ?? ''
+    if (deliveryAddressRef.current) deliveryAddressRef.current.value = textValue(address?.address, textValue(fallbackClient?.full_address))
+    if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = textValue(address?.reference)
+    if (ubigeoRef.current) ubigeoRef.current.value = textValue(address?.ubigeo, textValue(fallbackClient?.ubigeo))
     if (dispatchContactNameRef.current) {
-      dispatchContactNameRef.current.value = address?.contact_name ?? fallbackClient?.primary_contact ?? ''
+      dispatchContactNameRef.current.value = textValue(address?.contact_name, textValue(fallbackClient?.primary_contact))
     }
     if (dispatchContactPhoneRef.current) {
-      dispatchContactPhoneRef.current.value = address?.contact_phone ?? fallbackClient?.primary_contact_phone ?? fallbackClient?.phone ?? ''
+      dispatchContactPhoneRef.current.value = textValue(address?.contact_phone, textValue(fallbackClient?.primary_contact_phone, textValue(fallbackClient?.phone)))
     }
 
     const lat = Number(address?.latitude ?? defaultMapPoint.lat)
@@ -322,6 +351,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
       setSelectedCommercialChannel('')
       setSelectedSegment('')
       if (documentTypeRef.current) documentTypeRef.current.value = ''
+      setSelectedDocumentType('')
       if (paymentConditionRef.current) paymentConditionRef.current.value = ''
       clearAddressSnapshot()
       return
@@ -336,7 +366,9 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     setSelectedNetworkId(defaultNetworkId ? `${defaultNetworkId}` : '')
     setSelectedCommercialChannel(fallbackClient?.commercial_channel ?? selectedNetwork?.commercial_channel ?? '')
     setSelectedSegment(fallbackClient?.segment ?? selectedNetwork?.segment ?? '')
-    if (documentTypeRef.current) documentTypeRef.current.value = documentTypeFromClient(fallbackClient)
+    const documentType = documentTypeFromClient(fallbackClient)
+    if (documentTypeRef.current) documentTypeRef.current.value = documentType
+    setSelectedDocumentType(documentType)
     if (paymentConditionRef.current) paymentConditionRef.current.value = paymentConditionFromClient(fallbackClient)
     await loadDeliveryAddresses(defaultNetworkId, preferredAddressId, active, fallbackClient)
   }
@@ -394,7 +426,9 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 
     if (idRef.current) idRef.current.value = data?.id ?? ''
     if (codeRef.current) codeRef.current.value = data?.code ?? 'Se genera al guardar'
-    if (documentTypeRef.current) documentTypeRef.current.value = data?.document_type ?? 'Factura'
+    const documentType = data?.document_type ?? 'Factura'
+    if (documentTypeRef.current) documentTypeRef.current.value = documentType
+    setSelectedDocumentType(documentType)
     if (paymentConditionRef.current) paymentConditionRef.current.value = data?.payment_condition ?? ''
     if (promisedDateRef.current) promisedDateRef.current.value = data?.promised_delivery_at ? data.promised_delivery_at.toString().slice(0, 10) : ''
     if (purchaseOrderRef.current) purchaseOrderRef.current.value = data?.purchase_order ?? ''
@@ -487,6 +521,12 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
       setDeliveryAddresses([])
       clearAddressSnapshot()
     }
+    if (data?.id) {
+      const persistedDocumentType = data?.document_type ?? 'Factura'
+      if (documentTypeRef.current) documentTypeRef.current.value = persistedDocumentType
+      setSelectedDocumentType(persistedDocumentType)
+      if (paymentConditionRef.current) paymentConditionRef.current.value = data?.payment_condition ?? ''
+    }
 
     setSelectedBusinessId(defaults.businessId)
     setSelectedWarehouseId(defaults.warehouseId)
@@ -509,7 +549,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     payment_method: paymentConditionRef.current?.value ? 'Transferencia' : '',
     issue_date: new Date().toISOString().slice(0, 10),
     promised_delivery_at: promisedDateRef.current?.value || null,
-    order_status: bill ? 'billed' : 'confirmed',
+    order_status: bill ? 'billed' : 'pending',
     dispatch_status: 'pending',
     billing_status: bill ? 'billed' : 'pending',
     payment_status: 'pending',
@@ -525,7 +565,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     purchase_order: purchaseOrderRef.current?.value?.trim() || '',
     referral_guide: referralGuideRef.current?.value?.trim() || '',
     observations: observationsRef.current?.value?.trim() || '',
-    tax_amount: 0,
+    tax_amount: orderTotals.taxAmount,
     items: items.map(item => ({
       article_id: item.article_id || null,
       presentation_id: item.presentation_id || null,
@@ -921,7 +961,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
               <option value=''>Seleccione</option>
               <option value='Factura'>Factura</option>
               <option value='Boleta'>Boleta</option>
-              <option value='Ticket'>Ticket</option>
+              <option value='Nota de pedido'>Nota de pedido</option>
             </select>
           </div>
           <div className='col-md-6 mb-2'>
@@ -1104,9 +1144,23 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
                 </tbody>
                 <tfoot>
                   <tr>
+                    <th colSpan='4' className='text-end fst-italic'>Subtotal</th>
+                    <th>
+                      <input className='form-control text-end' value={orderTotals.subtotal.toFixed(2)} readOnly />
+                    </th>
+                    <th></th>
+                  </tr>
+                  <tr>
+                    <th colSpan='4' className='text-end fst-italic'>IGV</th>
+                    <th>
+                      <input className='form-control text-end' value={orderTotals.taxAmount.toFixed(2)} readOnly />
+                    </th>
+                    <th></th>
+                  </tr>
+                  <tr>
                     <th colSpan='4' className='text-end fst-italic'>Total</th>
                     <th>
-                      <input className='form-control text-end' value={subtotal.toFixed(2)} readOnly />
+                      <input className='form-control text-end' value={orderTotals.total.toFixed(2)} readOnly />
                     </th>
                     <th></th>
                   </tr>

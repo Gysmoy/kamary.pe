@@ -135,17 +135,49 @@ class DispatchService
             if ($dispatches->contains(fn($status) => in_array($status, ['delivered', 'closed'], true))) {
                 $nextStatus = 'delivered';
             } elseif ($dispatches->contains('in_route')) {
+                $nextStatus = 'in_route';
+            } elseif ($dispatches->contains('dispatched')) {
                 $nextStatus = 'dispatched';
-            } elseif ($dispatches->contains(fn($status) => in_array($status, ['assigned', 'waiting'], true))) {
+            } elseif ($dispatches->contains(fn($status) => in_array($status, ['pending', 'preparing', 'assigned', 'waiting'], true))) {
                 $nextStatus = 'preparing';
             } elseif ($dispatches->contains('incident')) {
-                $nextStatus = 'dispatched';
+                $nextStatus = 'in_route';
             }
 
+            $payload = ['updated_by' => Auth::id()];
             if ($order->dispatch_status !== $nextStatus) {
-                $order->update(['dispatch_status' => $nextStatus]);
-                app(ExternalOrderEventService::class)->recordOrderStatus($order->fresh(), 'dispatch_status_changed');
+                $payload['dispatch_status'] = $nextStatus;
+            }
+
+            $nextOrderStatus = $this->orderStatusFromDispatchStatus($nextStatus);
+            if ($nextOrderStatus && !in_array($order->order_status, ['billed', 'closed', 'cancelled'], true) && $order->order_status !== $nextOrderStatus) {
+                $payload['order_status'] = $nextOrderStatus;
+            }
+
+            if (count($payload) > 1) {
+                $statusChanged = array_key_exists('dispatch_status', $payload);
+                $orderStatusChanged = array_key_exists('order_status', $payload);
+                $order->update($payload);
+                $freshOrder = $order->fresh();
+                if ($statusChanged) {
+                    app(CommercialOrderTrackingService::class)->recordStatusChange($freshOrder, 'dispatch_status', $nextStatus);
+                }
+                if ($orderStatusChanged) {
+                    app(CommercialOrderTrackingService::class)->recordStatusChange($freshOrder, 'order_status', $nextOrderStatus);
+                }
+                app(ExternalOrderEventService::class)->recordOrderStatus($freshOrder, 'dispatch_status_changed');
             }
         }
+    }
+
+    private function orderStatusFromDispatchStatus(string $dispatchStatus): ?string
+    {
+        return match ($dispatchStatus) {
+            'preparing' => 'preparing',
+            'dispatched' => 'dispatched',
+            'in_route' => 'in_route',
+            'delivered' => 'delivered',
+            default => null,
+        };
     }
 }

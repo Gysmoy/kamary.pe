@@ -48,6 +48,7 @@ use App\Http\Controllers\Admin\CommercialOrderController as AdminCommercialOrder
 use App\Http\Controllers\Admin\TakeOrderController as AdminTakeOrderController;
 use App\Http\Controllers\Admin\DispatchController as AdminDispatchController;
 use App\Http\Controllers\Admin\DailySummaryController as AdminDailySummaryController;
+use App\Http\Controllers\Admin\DriverRouteController as AdminDriverRouteController;
 use App\Http\Controllers\Admin\DriverController as AdminDriverController;
 use App\Http\Controllers\Admin\EntryNoteController as AdminEntryNoteController;
 use App\Http\Controllers\Admin\ExitNoteController as AdminExitNoteController;
@@ -57,6 +58,7 @@ use App\Http\Controllers\Admin\ItemController as AdminItemController;
 use App\Http\Controllers\Admin\KardexController as AdminKardexController;
 use App\Http\Controllers\Admin\AccountsReceivableController as AdminAccountsReceivableController;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Admin\PickingController as AdminPickingController;
 use App\Http\Controllers\Admin\PriceListController as AdminPriceListController;
 use App\Http\Controllers\Admin\SaleController as AdminSaleController;
 use App\Http\Controllers\Admin\SalesReportController as AdminSalesReportController;
@@ -166,6 +168,8 @@ Route::middleware('auth')->group(function () {
         // Despacho
         Route::get('/activity', [AdminActivityController::class, 'reactView']);
         Route::get('/driver', [AdminDriverController::class, 'reactView']);
+        Route::get('/driver-routes', [AdminDriverRouteController::class, 'reactView']);
+        Route::get('/picking', [AdminPickingController::class, 'reactView']);
         Route::get('/dispatch', [AdminDispatchController::class, 'reactView']);
         Route::get('/vehicle-zone', [AdminVehicleZoneController::class, 'reactView']);
 

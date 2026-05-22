@@ -88,6 +88,12 @@ const Orders = () => {
   const [isMapLoaded, setIsMapLoaded] = useState(false)
   const [discountPercent, setDiscountPercent] = useState(1)
 
+  const articleSearchAPI = useMemo(() => {
+    const search = new URLSearchParams()
+    if (selectedWarehouseId) search.append('warehouse_id', selectedWarehouseId)
+    return `/api/admin/orders/articles?${search.toString()}`
+  }, [selectedWarehouseId])
+
   const getArticleRef = (uid) => {
     if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
     return articleRefs.current[uid]
@@ -563,7 +569,7 @@ const Orders = () => {
           <select ref={documentTypeRef} className='form-control'>
             <option value='Factura'>Factura</option>
             <option value='Boleta'>Boleta</option>
-            <option value='Ticket'>Ticket</option>
+            <option value='Nota de pedido'>Nota de pedido</option>
           </select>
         </div>
         <div className='form-group col-md-2 mb-2'>
@@ -664,7 +670,7 @@ const Orders = () => {
                         <SelectAPIFormGroup
                           eRef={getArticleRef(item.uid)}
                           col='col-12'
-                          searchAPI='/api/admin/articles/paginate'
+                          searchAPI={articleSearchAPI}
                           searchBy='name'
                           dropdownParent='#order-form-container'
                           onChange={(e) => onItemArticleChanged(item.uid, e)}

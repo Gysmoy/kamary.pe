@@ -73,6 +73,7 @@ class Functions
         $path = explode('\\', $model);
         switch (array_pop($path)) {
             case 'Voided':
+            case 'DispatchVoided':
                 $prefix = 'RA';
                 break;
             default:

@@ -138,6 +138,8 @@ class ModulePermissions
 
             ['permission' => 'activity', 'web' => '/admin/activity', 'label' => 'Actividad'],
             ['permission' => 'driver', 'web' => '/admin/driver', 'label' => 'Conductor'],
+            ['permission' => 'dispatch', 'web' => '/admin/driver-routes', 'label' => 'Ruta conductor'],
+            ['permission' => 'dispatch', 'web' => '/admin/picking', 'label' => 'Picking'],
             ['permission' => 'dispatch', 'web' => '/admin/dispatch', 'label' => 'Despacho'],
             ['permission' => 'vehicle-zone', 'web' => '/admin/vehicle-zone', 'label' => 'Vehiculo / Zona'],
 

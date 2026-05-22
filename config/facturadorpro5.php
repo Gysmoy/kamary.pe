@@ -11,6 +11,8 @@ return [
     'verify_ssl' => filter_var(env('FACTURADORPRO5_VERIFY_SSL', false), FILTER_VALIDATE_BOOL),
     'login_endpoint' => env('FACTURADORPRO5_AUTH_LOGIN_ENDPOINT', '/api/auth/login'),
     'issue_endpoint' => env('FACTURADORPRO5_ISSUE_ENDPOINT', '/api/documents'),
+    'dispatch_endpoint' => env('FACTURADORPRO5_DISPATCH_ENDPOINT', '/api/dispatches'),
+    'dispatch_cancel_endpoint' => env('FACTURADORPRO5_DISPATCH_CANCEL_ENDPOINT') ?: '/api/dispatches/voided',
     'status_endpoint' => env('FACTURADORPRO5_STATUS_ENDPOINT', '/api/documents/status'),
     'cancel_endpoint' => env('FACTURADORPRO5_CANCEL_ENDPOINT', '/api/voided'),
     'cancel_status_endpoint' => env('FACTURADORPRO5_CANCEL_STATUS_ENDPOINT', '/api/voided/status'),
@@ -23,5 +25,6 @@ return [
         'factura' => env('FACTURADORPRO5_SERIES_FACTURA', 'F001'),
         'boleta' => env('FACTURADORPRO5_SERIES_BOLETA', 'B001'),
         'nota_credito' => env('FACTURADORPRO5_SERIES_NOTA_CREDITO', 'FC01'),
+        'guia' => env('FACTURADORPRO5_SERIES_GUIA', 'T001'),
     ],
 ];

@@ -1,4 +1,4 @@
-import React, { createRef, useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { createRef, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
@@ -13,17 +13,21 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import CommercialOrdersRest from '../Actions/Admin/CommercialOrdersRest';
+import ReferralGuidesRest from '../Actions/Admin/ReferralGuidesRest';
 import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
   billingStatusOptions,
   commercialOrderStatusOptions,
   dispatchStatusOptions,
+  getDispatchStatusLabel,
+  getReferralGuideStatusLabel,
   paymentStatusOptions,
   toLookup,
 } from '../Utils/statusLabels';
 
 const commercialOrdersRest = new CommercialOrdersRest()
+const referralGuidesRest = new ReferralGuidesRest()
 
 const emptyItem = () => ({
   uid: crypto.randomUUID(),
@@ -64,9 +68,140 @@ const mapItemTotals = (item) => {
   }
 }
 
+const normalizeDocumentType = (value) => {
+  const normalized = `${value ?? ''}`.trim().toLowerCase()
+  if (normalized === 'boleta') return 'Boleta'
+  if (['nota de pedido', 'nota_pedido', 'note_order'].includes(normalized)) return 'Nota de pedido'
+  return 'Factura'
+}
+
+const textValue = (value, fallback = '') => {
+  if (value === null || value === undefined) return fallback
+  if (typeof value === 'object') {
+    return value.address ?? value.reference ?? value.name ?? value.description ?? fallback
+  }
+  const text = `${value}`
+  return text === '[object Object]' ? fallback : text
+}
+
+const isTaxableDocumentType = (documentType) => ['Factura', 'Boleta'].includes(normalizeDocumentType(documentType))
+
+const deriveDocumentTotals = (grossAmount, documentType) => {
+  const gross = Number(grossAmount || 0)
+  if (!isTaxableDocumentType(documentType)) {
+    return {
+      subtotal: Number(gross.toFixed(2)),
+      taxAmount: 0,
+      total: Number(gross.toFixed(2)),
+    }
+  }
+
+  const subtotal = Number((gross / 1.18).toFixed(2))
+  return {
+    subtotal,
+    taxAmount: Number((gross - subtotal).toFixed(2)),
+    total: Number(gross.toFixed(2)),
+  }
+}
+
+const dispatchStatusSequence = ['pending', 'preparing', 'dispatched', 'in_route', 'delivered']
+const orderGuides = (order) => order?.referral_guides ?? order?.referralGuides ?? []
+const guideNumber = (guide) => guide?.external_reference || [guide?.series, guide?.sequence].filter(Boolean).join('-') || guide?.code || '-'
+const canIssueGuide = (guide) => guide && !['accepted', 'cancelled'].includes(guide.guide_status)
+const orderEvidences = (order) => order?.delivery_evidences ?? order?.deliveryEvidences ?? []
+const latestEvidence = (order) => orderEvidences(order)[0] ?? null
+const orderTrackingEvents = (order) => order?.tracking_events ?? order?.trackingEvents ?? []
+const isEvidenceImage = (value) => {
+  const url = `${value ?? ''}`.trim()
+  return url.startsWith('blob:')
+    || url.startsWith('data:image/')
+    || /\.(png|jpe?g|webp|gif|bmp|svg)(\?.*)?$/i.test(url)
+    || url.includes('/delivery-evidence-media/')
+}
+const nowDateTimeLocal = () => {
+  const date = new Date()
+  date.setMinutes(date.getMinutes() - date.getTimezoneOffset())
+  return date.toISOString().slice(0, 16)
+}
+
+const getNextDispatchStatus = (value) => {
+  const currentIndex = dispatchStatusSequence.indexOf(`${value ?? ''}`)
+  if (currentIndex < 0 || currentIndex === dispatchStatusSequence.length - 1) return null
+  return dispatchStatusSequence[currentIndex + 1]
+}
+
+const buildTrackingRows = (order) => {
+  if (!order) return []
+  const persistedRows = orderTrackingEvents(order).map((event) => ({
+    date: event.happened_at ?? event.created_at,
+    status: [event.title, event.description].filter(Boolean).join(' - '),
+  }))
+  const rows = [
+    { date: order.created_at, status: 'La orden ingreso en el sistema' },
+  ]
+
+  if (order.approved_at && ['preparing', 'in_route', 'delivered', 'dispatched', 'billed', 'closed'].includes(order.order_status)) {
+    rows.push({ date: order.approved_at, status: 'La orden paso a preparacion' })
+  } else if (order.approved_at && order.order_status === 'confirmed') {
+    rows.push({ date: order.approved_at, status: 'La orden fue confirmada' })
+  } else if (['preparing', 'in_route', 'delivered', 'dispatched', 'billed', 'closed'].includes(order.order_status)) {
+    rows.push({ date: order.updated_at, status: 'La orden paso a preparacion' })
+  }
+
+  const assignments = (order.dispatch_assignments ?? order.dispatchAssignments ?? [])
+    .filter(item => item?.status !== false && item?.status !== 0 && item?.dispatch)
+    .sort((left, right) => new Date(left?.dispatch?.departed_at || left?.dispatch?.scheduled_date || 0) - new Date(right?.dispatch?.departed_at || right?.dispatch?.scheduled_date || 0))
+
+  const firstRoute = assignments.find(item => ['in_route', 'delivered', 'closed'].includes(item?.dispatch?.dispatch_status))
+  if (firstRoute) {
+    rows.push({
+      date: firstRoute.dispatch.departed_at ?? firstRoute.dispatch.updated_at ?? firstRoute.dispatch.created_at,
+      status: `Manifiesto ${firstRoute.dispatch.manifest_code || firstRoute.dispatch.code || ''}`.trim(),
+    })
+    rows.push({
+      date: firstRoute.dispatch.departed_at ?? firstRoute.dispatch.updated_at ?? firstRoute.dispatch.created_at,
+      status: 'El pedido salio en ruta',
+    })
+  } else if (order.dispatch_status === 'in_route') {
+    rows.push({ date: order.updated_at, status: 'El pedido salio en ruta' })
+  }
+
+  if (order.dispatch_status === 'dispatched' || assignments.some(item => item?.dispatch?.dispatch_status === 'dispatched')) {
+    rows.push({ date: order.updated_at, status: 'El pedido paso a despacho' })
+  }
+
+  orderGuides(order).forEach((guide) => {
+    rows.push({
+      date: guide.issue_date ?? guide.created_at ?? order.updated_at,
+      status: `Guia de remision ${guideNumber(guide)} - ${getReferralGuideStatusLabel(guide.guide_status)}`,
+    })
+  })
+
+  const deliveredDispatch = assignments.find(item => ['delivered', 'closed'].includes(item?.dispatch?.dispatch_status))
+  if (deliveredDispatch) {
+    rows.push({
+      date: deliveredDispatch.dispatch.delivered_at ?? deliveredDispatch.dispatch.updated_at ?? deliveredDispatch.dispatch.created_at,
+      status: 'El pedido fue entregado',
+    })
+  } else if (order.dispatch_status === 'delivered') {
+    rows.push({ date: order.updated_at, status: 'El pedido fue entregado' })
+  }
+
+  if (order.order_status === 'cancelled' || order.dispatch_status === 'cancelled') {
+    rows.push({ date: order.updated_at, status: 'El pedido fue cancelado' })
+  }
+
+  return [...persistedRows, ...rows]
+    .filter(row => row.date)
+    .sort((left, right) => new Date(left.date) - new Date(right.date))
+}
+
 const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null, pageTitle = 'Pedidos comerciales' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
+  const trackingModalRef = useRef()
+  const evidenceModalRef = useRef()
+  const evidenceFileRef = useRef()
 
   const idRef = useRef()
   const codeRef = useRef()
@@ -107,7 +242,47 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const [networks, setNetworks] = useState([])
   const [deliveryAddresses, setDeliveryAddresses] = useState([])
   const [items, setItems] = useState([emptyItem()])
-  const [taxAmount, setTaxAmount] = useState(0)
+  const [selectedDocumentType, setSelectedDocumentType] = useState('Factura')
+  const [trackingOrder, setTrackingOrder] = useState(null)
+  const [evidenceOrder, setEvidenceOrder] = useState(null)
+  const [evidenceFile, setEvidenceFile] = useState(null)
+  const [evidencePreview, setEvidencePreview] = useState('')
+  const [evidenceForm, setEvidenceForm] = useState({
+    recipient_name: '',
+    recipient_document_type: 'DNI',
+    recipient_document_number: '',
+    recipient_phone: '',
+    delivered_at: nowDateTimeLocal(),
+    evidence_notes: '',
+    evidence_url: '',
+    latitude: '',
+    longitude: '',
+  })
+
+  const articleSearchAPI = useMemo(() => {
+    const search = new URLSearchParams()
+    if (selectedBusinessId) search.append('business_id', selectedBusinessId)
+    if (selectedBranchId) search.append('business_branch_id', selectedBranchId)
+    if (selectedWarehouseId) search.append('warehouse_id', selectedWarehouseId)
+    if (selectedClientId) search.append('client_id', selectedClientId)
+    if (selectedEventualClientId) search.append('eventual_client_id', selectedEventualClientId)
+    if (selectedNetworkId) search.append('client_distribution_network_id', selectedNetworkId)
+    if (issueDateRef.current?.value) search.append('issue_date', issueDateRef.current.value)
+    return `/api/admin/commercial-orders/articles?${search.toString()}`
+  }, [
+    selectedBusinessId,
+    selectedBranchId,
+    selectedWarehouseId,
+    selectedClientId,
+    selectedEventualClientId,
+    selectedNetworkId,
+  ])
+
+  useEffect(() => {
+    return () => {
+      if (evidencePreview?.startsWith('blob:')) URL.revokeObjectURL(evidencePreview)
+    }
+  }, [evidencePreview])
 
   const getArticleRef = (uid) => {
     if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
@@ -188,11 +363,11 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
   const applyDeliveryAddressSnapshot = (address) => {
     if (!address) return
-    if (deliveryAddressRef.current) deliveryAddressRef.current.value = address.address ?? ''
-    if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = address.reference ?? ''
-    if (ubigeoRef.current) ubigeoRef.current.value = address.ubigeo ?? ''
-    if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = address.contact_name ?? ''
-    if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = address.contact_phone ?? ''
+    if (deliveryAddressRef.current) deliveryAddressRef.current.value = textValue(address.address)
+    if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = textValue(address.reference)
+    if (ubigeoRef.current) ubigeoRef.current.value = textValue(address.ubigeo)
+    if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = textValue(address.contact_name)
+    if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = textValue(address.contact_phone)
   }
 
   const repriceItem = async (item, overrides = {}) => {
@@ -257,22 +432,20 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     if (codeRef.current) codeRef.current.value = data?.code ?? 'Se genera al guardar'
     if (issueDateRef.current) issueDateRef.current.value = data?.issue_date ? data.issue_date.toString().slice(0, 10) : new Date().toISOString().slice(0, 10)
     if (promisedDateRef.current) promisedDateRef.current.value = data?.promised_delivery_at ? data.promised_delivery_at.toString().slice(0, 10) : ''
-    if (documentTypeRef.current) documentTypeRef.current.value = data?.document_type ?? 'Factura'
+    setSelectedDocumentType(normalizeDocumentType(data?.document_type ?? 'Factura'))
     if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
     if (paymentConditionRef.current) paymentConditionRef.current.value = data?.payment_condition ?? 'Contado'
     if (paymentMethodRef.current) paymentMethodRef.current.value = data?.payment_method ?? 'Transferencia'
     if (installmentsRef.current) installmentsRef.current.value = data?.installments ?? 1
     if (firstDueDateRef.current) firstDueDateRef.current.value = data?.first_due_date ? data.first_due_date.toString().slice(0, 10) : ''
-    if (orderStatusRef.current) orderStatusRef.current.value = data?.order_status ?? 'draft'
+    if (orderStatusRef.current) orderStatusRef.current.value = data?.order_status ?? (data?.external_source ? 'pending' : 'draft')
     if (dispatchStatusRef.current) dispatchStatusRef.current.value = data?.dispatch_status ?? 'pending'
     if (billingStatusRef.current) billingStatusRef.current.value = data?.billing_status ?? 'pending'
-    setTaxAmount(Number(data?.tax_amount ?? 0))
-    if (taxAmountRef.current) taxAmountRef.current.value = Number(data?.tax_amount ?? 0)
-    if (deliveryAddressRef.current) deliveryAddressRef.current.value = data?.delivery_address ?? ''
-    if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = data?.delivery_reference ?? ''
-    if (ubigeoRef.current) ubigeoRef.current.value = data?.ubigeo ?? ''
-    if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = data?.dispatch_contact_name ?? ''
-    if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = data?.dispatch_contact_phone ?? ''
+    if (deliveryAddressRef.current) deliveryAddressRef.current.value = textValue(data?.delivery_address)
+    if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = textValue(data?.delivery_reference)
+    if (ubigeoRef.current) ubigeoRef.current.value = textValue(data?.ubigeo)
+    if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = textValue(data?.dispatch_contact_name)
+    if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = textValue(data?.dispatch_contact_phone)
     if (observationsRef.current) observationsRef.current.value = data?.observations ?? ''
 
     const businessId = data?.business_id ? `${data.business_id}` : ''
@@ -345,6 +518,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
     const request = {
       id: idRef.current?.value || undefined,
+      external_source: externalSource || undefined,
       business_id: selectedBusinessId || null,
       business_branch_id: selectedBranchId || null,
       warehouse_id: selectedWarehouseId || null,
@@ -352,7 +526,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       eventual_client_id: selectedEventualClientId || null,
       client_distribution_network_id: selectedNetworkId || null,
       client_delivery_address_id: selectedDeliveryAddressId || null,
-      document_type: documentTypeRef.current?.value || 'Factura',
+      document_type: selectedDocumentType,
       currency: currencyRef.current?.value || 'PEN',
       payment_condition: paymentConditionRef.current?.value || 'Contado',
       payment_method: paymentMethodRef.current?.value || '',
@@ -360,10 +534,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       promised_delivery_at: promisedDateRef.current?.value || null,
       installments: installmentsRef.current?.value || 1,
       first_due_date: firstDueDateRef.current?.value || null,
-      order_status: orderStatusRef.current?.value || 'draft',
+      order_status: orderStatusRef.current?.value || (externalSource ? 'pending' : 'draft'),
       dispatch_status: dispatchStatusRef.current?.value || 'pending',
       billing_status: billingStatusRef.current?.value || 'pending',
-      tax_amount: Number(taxAmountRef.current?.value || 0),
+      tax_amount: orderTotals.taxAmount,
       delivery_address: deliveryAddressRef.current?.value?.trim() || '',
       delivery_reference: deliveryReferenceRef.current?.value?.trim() || '',
       ubigeo: ubigeoRef.current?.value?.trim() || '',
@@ -435,6 +609,116 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     const result = await commercialOrdersRest.boolean({ id, field, value })
     if (!result) return
     $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
+  const openTracking = (data) => {
+    setTrackingOrder(data)
+    $(trackingModalRef.current).modal('show')
+  }
+
+  const openEvidence = (data) => {
+    const evidence = latestEvidence(data)
+    setEvidenceOrder(data)
+    setEvidenceFile(null)
+    setEvidencePreview(isEvidenceImage(evidence?.evidence_url) ? evidence.evidence_url : '')
+    setEvidenceForm({
+      recipient_name: evidence?.recipient_name ?? data?.dispatch_contact_name ?? '',
+      recipient_document_type: evidence?.recipient_document_type ?? 'DNI',
+      recipient_document_number: evidence?.recipient_document_number ?? '',
+      recipient_phone: evidence?.recipient_phone ?? data?.dispatch_contact_phone ?? '',
+      delivered_at: evidence?.delivered_at ? `${evidence.delivered_at}`.replace(' ', 'T').slice(0, 16) : nowDateTimeLocal(),
+      evidence_notes: evidence?.evidence_notes ?? '',
+      evidence_url: evidence?.evidence_url ?? '',
+      latitude: evidence?.latitude ?? '',
+      longitude: evidence?.longitude ?? '',
+    })
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        setEvidenceForm(prev => ({
+          ...prev,
+          latitude: prev.latitude || position.coords.latitude,
+          longitude: prev.longitude || position.coords.longitude,
+        }))
+      }, () => {}, { enableHighAccuracy: true, timeout: 5000 })
+    }
+    setTimeout(() => {
+      if (evidenceFileRef.current) evidenceFileRef.current.value = ''
+    }, 0)
+    $(evidenceModalRef.current).modal('show')
+  }
+
+  const onEvidenceFileChange = (e) => {
+    const file = e.target.files?.[0] ?? null
+    setEvidenceFile(file)
+    setEvidencePreview(file ? URL.createObjectURL(file) : (isEvidenceImage(evidenceForm.evidence_url) ? evidenceForm.evidence_url : ''))
+  }
+
+  const onEvidenceFieldChange = (field, value) => setEvidenceForm(prev => ({ ...prev, [field]: value }))
+
+  const saveEvidence = async (e) => {
+    e.preventDefault()
+    if (!evidenceOrder?.id) return
+
+    const assignment = (evidenceOrder.dispatch_assignments ?? evidenceOrder.dispatchAssignments ?? [])
+      .filter(item => item?.status !== false && item?.status !== 0 && item?.dispatch)
+      .sort((left, right) => new Date(right?.dispatch?.scheduled_date || right?.created_at || 0) - new Date(left?.dispatch?.scheduled_date || left?.created_at || 0))[0]
+
+    const request = new FormData()
+    if (assignment?.dispatch_id) request.append('dispatch_id', assignment.dispatch_id)
+    request.append('recipient_name', evidenceForm.recipient_name ?? '')
+    request.append('recipient_document_type', evidenceForm.recipient_document_type ?? 'DNI')
+    request.append('recipient_document_number', evidenceForm.recipient_document_number ?? '')
+    request.append('recipient_phone', evidenceForm.recipient_phone ?? '')
+    request.append('delivered_at', evidenceForm.delivered_at ?? '')
+    request.append('evidence_notes', evidenceForm.evidence_notes ?? '')
+    request.append('evidence_url', evidenceForm.evidence_url ?? '')
+    request.append('latitude', evidenceForm.latitude ?? '')
+    request.append('longitude', evidenceForm.longitude ?? '')
+    if (evidenceFile) request.append('evidence_file', evidenceFile)
+
+    const result = await commercialOrdersRest.saveDeliveryEvidence(evidenceOrder.id, request)
+    if (!result) return
+    setEvidenceFile(null)
+    setEvidencePreview('')
+    if (evidenceFileRef.current) evidenceFileRef.current.value = ''
+    $(evidenceModalRef.current).modal('hide')
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
+  const onOpenReferralGuide = async (order) => {
+    const existingGuide = orderGuides(order)[0]
+    if (existingGuide) {
+      if (canIssueGuide(existingGuide)) {
+        const result = await Swal.fire({
+          title: 'Guia de remision',
+          text: `La guia ${guideNumber(existingGuide)} esta ${getReferralGuideStatusLabel(existingGuide.guide_status).toLowerCase()}.`,
+          icon: 'question',
+          showCancelButton: true,
+          showDenyButton: true,
+          confirmButtonText: 'Emitir',
+          denyButtonText: 'Ver PDF',
+          cancelButtonText: 'Cancelar'
+        })
+
+        if (result.isConfirmed) {
+          const issued = await referralGuidesRest.issue(existingGuide.id)
+          if (!issued?.data) return
+          $(gridRef.current).dxDataGrid('instance').refresh()
+          await openMagistralesRecordPdf(buildMagistralesRows.referralGuide(issued.data))
+          return
+        }
+
+        if (!result.isDenied) return
+      }
+
+      await openMagistralesRecordPdf(buildMagistralesRows.referralGuide(existingGuide))
+      return
+    }
+
+    const result = await referralGuidesRest.prepareFromCommercialOrder(order.id)
+    if (!result?.data) return
+    $(gridRef.current).dxDataGrid('instance').refresh()
+    await openMagistralesRecordPdf(buildMagistralesRows.referralGuide(result.data))
   }
 
   const onDeleteClicked = async (id) => {
@@ -551,8 +835,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     })
   }
 
-  const subtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
-  const grandTotal = useMemo(() => subtotal + Number(taxAmount || 0), [subtotal, taxAmount])
+  const grossSubtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
+  const orderTotals = useMemo(() => deriveDocumentTotals(grossSubtotal, selectedDocumentType), [grossSubtotal, selectedDocumentType])
+  const trackingRows = useMemo(() => buildTrackingRows(trackingOrder), [trackingOrder])
 
   return (<>
     <Table
@@ -609,10 +894,30 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
           minWidth: 160,
           calculateCellValue: (data) => data.distribution_network?.name ?? data.distributionNetwork?.name ?? '-'
         },
-        { dataField: 'order_status', caption: 'Estado pedido', width: 110, lookup: toLookup(commercialOrderStatusOptions) },
-        { dataField: 'dispatch_status', caption: 'Despacho', width: 110, lookup: toLookup(dispatchStatusOptions) },
+        { dataField: 'order_status', caption: 'Estado comercial', width: 120, lookup: toLookup(commercialOrderStatusOptions) },
+        { dataField: 'dispatch_status', caption: 'Estado entrega', width: 120, lookup: toLookup(dispatchStatusOptions) },
         { dataField: 'billing_status', caption: 'Facturacion', width: 110, lookup: toLookup(billingStatusOptions) },
         { dataField: 'payment_status', caption: 'Cobranza', width: 110, lookup: toLookup(paymentStatusOptions) },
+        { dataField: 'document_type', caption: 'Doc. venta', width: 120, calculateCellValue: (data) => normalizeDocumentType(data?.document_type) },
+        {
+          caption: 'Guia',
+          width: 140,
+          calculateCellValue: (data) => {
+            const guides = orderGuides(data)
+            if (guides.length === 0) return '-'
+            if (guides.length === 1) return guideNumber(guides[0])
+            return `${guides.length} guias`
+          }
+        },
+        {
+          caption: 'Evidencia',
+          width: 150,
+          calculateCellValue: (data) => {
+            const evidence = latestEvidence(data)
+            if (!evidence) return '-'
+            return evidence.recipient_name || evidence.code || 'Registrada'
+          }
+        },
         { dataField: 'currency', caption: 'Moneda', width: 90 },
         { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
         {
@@ -663,7 +968,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         },
         {
           caption: 'Acciones',
-          width: 190,
+          width: 335,
           fixed: true,
           fixedPosition: 'right',
           allowFiltering: false,
@@ -675,6 +980,33 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               title: 'Editar pedido',
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)
+            }))
+            const nextStatus = getNextDispatchStatus(data?.dispatch_status)
+            if (nextStatus) {
+              container.append(DxButton({
+                className: 'btn btn-xs btn-soft-success ms-1',
+                title: `Pasar a ${getDispatchStatusLabel(nextStatus)}`,
+                icon: 'mdi mdi-arrow-right-bold-circle-outline',
+                onClick: () => onBooleanChange({ id: data.id, field: 'dispatch_status', value: nextStatus })
+              }))
+            }
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-info ms-1',
+              title: 'Tracking pedido',
+              icon: 'mdi mdi-map-marker-path',
+              onClick: () => openTracking(data)
+            }))
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-warning ms-1',
+              title: orderGuides(data).length ? 'Ver guia' : 'Generar guia',
+              icon: 'mdi mdi-file-document-plus-outline',
+              onClick: () => onOpenReferralGuide(data)
+            }))
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-success ms-1',
+              title: latestEvidence(data) ? 'Ver evidencia' : 'Registrar evidencia',
+              icon: 'mdi mdi-image-check-outline',
+              onClick: () => openEvidence(data)
             }))
             container.append(DxButton({
               className: 'btn btn-xs btn-soft-danger ms-1',
@@ -723,10 +1055,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         </div>
         <div className='col-md-2'>
           <label className='form-label'>Doc. venta</label>
-          <select ref={documentTypeRef} className='form-control'>
+          <select ref={documentTypeRef} className='form-control' value={selectedDocumentType} onChange={(e) => setSelectedDocumentType(normalizeDocumentType(e.target.value))}>
             <option value='Factura'>Factura</option>
             <option value='Boleta'>Boleta</option>
-            <option value='Ticket'>Ticket</option>
+            <option value='Nota de pedido'>Nota de pedido</option>
           </select>
         </div>
         <div className='col-md-2'>
@@ -799,7 +1131,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
           <label className='form-label'>Despacho</label>
           <select ref={dispatchStatusRef} className='form-control'>
             {dispatchStatusOptions
-              .filter((option) => ['pending', 'preparing', 'dispatched', 'delivered', 'cancelled'].includes(option.value))
+              .filter((option) => ['pending', 'preparing', 'dispatched', 'in_route', 'delivered', 'cancelled'].includes(option.value))
               .map((option) => (
                 <option key={`commercial-order-dispatch-status-${option.value}`} value={option.value}>{option.label}</option>
               ))}
@@ -834,7 +1166,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         </div>
         <div className='col-md-2'>
           <label className='form-label'>Impuesto</label>
-          <input ref={taxAmountRef} type='number' step='0.01' className='form-control' value={taxAmount} onChange={(e) => setTaxAmount(Number(e.target.value || 0))} />
+          <input ref={taxAmountRef} type='number' step='0.01' className='form-control' value={orderTotals.taxAmount} readOnly />
         </div>
 
         <div className='col-12 mt-3 d-flex justify-content-between align-items-center'>
@@ -865,9 +1197,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                     <td>
                       <SelectAPIFormGroup
                         eRef={getArticleRef(item.uid)}
-                        searchAPI='/api/admin/articles/paginate'
+                        searchAPI={articleSearchAPI}
                         searchBy='name'
                         dropdownParent='#commercial-orders-form-container'
+                        disabled={!selectedWarehouseId}
                         onChange={(e) => onItemArticleChanged(item.uid, e)}
                       />
                       <small className='text-muted d-block mt-1'>
@@ -925,17 +1258,17 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               <tfoot>
                 <tr>
                   <th colSpan='5' className='text-end'>Subtotal</th>
-                  <th>{subtotal.toFixed(2)}</th>
+                  <th>{orderTotals.subtotal.toFixed(2)}</th>
                   <th colSpan='2'></th>
                 </tr>
                 <tr>
                   <th colSpan='5' className='text-end'>Impuesto</th>
-                  <th>{Number(taxAmount || 0).toFixed(2)}</th>
+                  <th>{orderTotals.taxAmount.toFixed(2)}</th>
                   <th colSpan='2'></th>
                 </tr>
                 <tr>
                   <th colSpan='5' className='text-end'>Total</th>
-                  <th>{grandTotal.toFixed(2)}</th>
+                  <th>{orderTotals.total.toFixed(2)}</th>
                   <th colSpan='2'></th>
                 </tr>
               </tfoot>
@@ -945,6 +1278,98 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
         <div className='col-12 mt-3'>
           <TextareaFormGroup eRef={observationsRef} label='Observaciones' rows={3} />
+        </div>
+      </div>
+    </Modal>
+
+    <Modal modalRef={trackingModalRef} title='Tracking del pedido' size='lg' hideButtonSubmit>
+      <div className='table-responsive'>
+        <table className='table table-sm align-middle mb-0'>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {trackingRows.length === 0 && (
+              <tr>
+                <td colSpan='2' className='text-muted text-center py-3'>Sin eventos registrados.</td>
+              </tr>
+            )}
+            {trackingRows.map((row, index) => (
+              <tr key={`commercial-order-tracking-${index}`}>
+                <td>{new Date(row.date).toLocaleString('es-PE')}</td>
+                <td>{row.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Modal>
+
+    <Modal modalRef={evidenceModalRef} title='Evidencia de entrega' size='lg' btnSubmitText='Registrar' onSubmit={saveEvidence}>
+      <div className='row'>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>Recibido por</label>
+          <input className='form-control' value={evidenceForm.recipient_name} onChange={(e) => onEvidenceFieldChange('recipient_name', e.target.value)} />
+        </div>
+        <div className='col-md-3 mb-3'>
+          <label className='form-label'>Tipo doc.</label>
+          <select className='form-control' value={evidenceForm.recipient_document_type} onChange={(e) => onEvidenceFieldChange('recipient_document_type', e.target.value)}>
+            <option value='DNI'>DNI</option>
+            <option value='RUC'>RUC</option>
+            <option value='CE'>CE</option>
+            <option value='OTRO'>Otro</option>
+          </select>
+        </div>
+        <div className='col-md-3 mb-3'>
+          <label className='form-label'>Numero</label>
+          <input className='form-control' value={evidenceForm.recipient_document_number} onChange={(e) => onEvidenceFieldChange('recipient_document_number', e.target.value)} />
+        </div>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>Telefono</label>
+          <input className='form-control' value={evidenceForm.recipient_phone} onChange={(e) => onEvidenceFieldChange('recipient_phone', e.target.value)} />
+        </div>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>Fecha y hora entrega</label>
+          <input type='datetime-local' className='form-control' value={evidenceForm.delivered_at} onChange={(e) => onEvidenceFieldChange('delivered_at', e.target.value)} />
+        </div>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>Foto / evidencia</label>
+          <input ref={evidenceFileRef} className='form-control' type='file' accept='image/png,image/jpeg,image/webp,image/gif' capture='environment' onChange={onEvidenceFileChange} />
+        </div>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>Enlace evidencia</label>
+          <input className='form-control' value={evidenceForm.evidence_url} onChange={(e) => onEvidenceFieldChange('evidence_url', e.target.value)} />
+        </div>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>Latitud</label>
+          <input className='form-control' value={evidenceForm.latitude} onChange={(e) => onEvidenceFieldChange('latitude', e.target.value)} />
+        </div>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>Longitud</label>
+          <input className='form-control' value={evidenceForm.longitude} onChange={(e) => onEvidenceFieldChange('longitude', e.target.value)} />
+        </div>
+        <div className='col-12 mb-3'>
+          <label className='form-label'>Observaciones</label>
+          <textarea className='form-control' rows='3' value={evidenceForm.evidence_notes} onChange={(e) => onEvidenceFieldChange('evidence_notes', e.target.value)} />
+        </div>
+        <div className='col-12'>
+          <div className='border rounded p-3'>
+            {evidencePreview ? (
+              <img
+                src={evidencePreview}
+                alt='Evidencia de entrega'
+                className='img-fluid rounded border bg-light'
+                style={{ maxHeight: 360, width: '100%', objectFit: 'contain' }}
+              />
+            ) : evidenceForm.evidence_url ? (
+              <a href={evidenceForm.evidence_url} target='_blank' rel='noreferrer'>Abrir evidencia registrada</a>
+            ) : (
+              <div className='text-muted py-4 text-center'>Sin evidencia registrada</div>
+            )}
+          </div>
         </div>
       </div>
     </Modal>

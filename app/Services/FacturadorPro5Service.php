@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\BusinessBranch;
 use App\Models\BillingDocument;
+use App\Models\ReferralGuide;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -24,6 +25,18 @@ class FacturadorPro5Service
         return $this->normalizeDocumentResponse($document, $response, 'issue', $requestBody);
     }
 
+    public function issueReferralGuide(ReferralGuide $guide, array $payload): array
+    {
+        if ($this->usesDemoMode()) {
+            return $this->demoReferralGuideResponse($guide, $payload);
+        }
+
+        $requestBody = Arr::get($payload, 'request.body', []);
+        $response = $this->requestJson('POST', (string) config('facturadorpro5.dispatch_endpoint', '/api/dispatches'), $requestBody, true);
+
+        return $this->normalizeReferralGuideResponse($guide, $response, $requestBody);
+    }
+
     public function cancel(BillingDocument $document, array $payload): array
     {
         if ($this->usesDemoMode()) {
@@ -31,7 +44,12 @@ class FacturadorPro5Service
         }
 
         $requestBody = Arr::get($payload, 'request.body', []);
-        $response = $this->requestJson('POST', (string) config('facturadorpro5.cancel_endpoint'), $requestBody, true);
+        $endpoint = trim((string) config('facturadorpro5.dispatch_cancel_endpoint', ''));
+        if ($endpoint === '') {
+            throw new \RuntimeException('El facturador hijo no expone aun un endpoint de anulacion fiscal para guias de remision. Configura FACTURADORPRO5_DISPATCH_CANCEL_ENDPOINT cuando ese endpoint exista.');
+        }
+
+        $response = $this->requestJson('POST', $endpoint, $requestBody, true);
 
         return [
             'success' => (bool) ($response['success'] ?? false),
@@ -42,6 +60,31 @@ class FacturadorPro5Service
             'external_status' => 'Anulado',
             'external_id' => $document->external_id ?: ('FP5-' . $document->code),
             'external_reference' => $document->external_reference,
+            'ticket' => Arr::get($response, 'data.ticket'),
+            'voided_external_id' => Arr::get($response, 'data.external_id'),
+            'request_echo' => $requestBody,
+            'response' => $response,
+        ];
+    }
+
+    public function cancelReferralGuide(ReferralGuide $guide, array $payload): array
+    {
+        if ($this->usesDemoMode()) {
+            return $this->demoReferralGuideCancelResponse($guide, $payload);
+        }
+
+        $requestBody = Arr::get($payload, 'request.body', []);
+        $response = $this->requestJson('POST', (string) config('facturadorpro5.cancel_endpoint'), $requestBody, true);
+
+        return [
+            'success' => (bool) ($response['success'] ?? false),
+            'provider' => 'facturadorpro5',
+            'mode' => $this->mode(),
+            'operation' => 'dispatch_voided',
+            'local_status' => 'cancelled',
+            'external_status' => 'Anulado',
+            'external_id' => $guide->external_id ?: ('FP5-GRE-' . $guide->code),
+            'external_reference' => $guide->external_reference,
             'ticket' => Arr::get($response, 'data.ticket'),
             'voided_external_id' => Arr::get($response, 'data.external_id'),
             'request_echo' => $requestBody,
@@ -153,6 +196,31 @@ class FacturadorPro5Service
         $contentType = $response->header('Content-Type') ?: $this->fallbackContentType($type);
         $disposition = $response->header('Content-Disposition');
         $filename = $this->resolveDownloadFilename($type, $document, $downloadUrl, $disposition);
+
+        return [
+            'content' => $response->body(),
+            'content_type' => $contentType,
+            'filename' => $filename,
+        ];
+    }
+
+    public function downloadReferralGuideFile(ReferralGuide $guide, string $type): array
+    {
+        $type = strtolower(trim($type));
+        if (!in_array($type, ['pdf', 'xml', 'cdr'], true)) {
+            throw new \InvalidArgumentException('Tipo de archivo no soportado');
+        }
+
+        $stored = $this->decodeJson($guide->response_payload);
+        $downloadUrl = Arr::get($stored, "links.{$type}");
+        if (!$downloadUrl) {
+            throw new \RuntimeException("El proveedor no devolvio enlace para {$type}");
+        }
+
+        $response = $this->requestBinary($downloadUrl, true);
+        $contentType = $response->header('Content-Type') ?: $this->fallbackContentType($type);
+        $disposition = $response->header('Content-Disposition');
+        $filename = $this->resolveReferralGuideDownloadFilename($type, $guide, $downloadUrl, $disposition);
 
         return [
             'content' => $response->body(),
@@ -324,6 +392,21 @@ class FacturadorPro5Service
         ];
     }
 
+    public function buildReferralGuideCancelRequestBody(ReferralGuide $guide, ?string $reason): array
+    {
+        return [
+            'external_id' => 'void-gre-' . strtolower($guide->code),
+            'date_of_reference' => optional($guide->issue_date)->format('Y-m-d') ?: now()->format('Y-m-d'),
+            'date_of_issue' => now()->format('Y-m-d'),
+            'documents' => [[
+                'document_type_id' => '09',
+                'series' => $guide->series,
+                'number' => $this->normalizeSequenceForProvider($guide->sequence),
+                'description' => $reason ?: 'Anulacion de guia de remision',
+            ]],
+        ];
+    }
+
     public function previewHeaders(): array
     {
         $headers = [
@@ -408,6 +491,48 @@ class FacturadorPro5Service
         ]);
     }
 
+    private function demoReferralGuideResponse(ReferralGuide $guide, array $payload): array
+    {
+        $reference = $guide->series . '-' . str_pad((string) ($guide->sequence ?: $guide->id), 8, '0', STR_PAD_LEFT);
+
+        return [
+            'success' => true,
+            'provider' => 'facturadorpro5',
+            'mode' => $this->mode(),
+            'operation' => 'dispatch',
+            'local_status' => 'accepted',
+            'issued_at' => Carbon::now()->toIso8601String(),
+            'external_status' => 'accepted',
+            'external_id' => 'FP5-GRE-' . $guide->code,
+            'external_reference' => 'SUNAT-' . $reference,
+            'filename' => preg_replace('/[^A-Za-z0-9._-]/', '_', $reference),
+            'state_type_id' => '05',
+            'cdr_code' => '0',
+            'cdr_description' => 'La guia de remision fue aceptada en modo demo',
+            'links' => [],
+            'request_echo' => Arr::get($payload, 'request.body', []),
+        ];
+    }
+
+    private function demoReferralGuideCancelResponse(ReferralGuide $guide, array $payload): array
+    {
+        return [
+            'success' => true,
+            'provider' => 'facturadorpro5',
+            'mode' => $this->mode(),
+            'operation' => 'dispatch_voided',
+            'local_status' => 'cancelled',
+            'cancelled_at' => Carbon::now()->toIso8601String(),
+            'external_status' => 'Anulado',
+            'external_id' => $guide->external_id ?: ('FP5-GRE-' . $guide->code),
+            'external_reference' => $guide->external_reference,
+            'ticket' => 'DEMO-GRE-' . $guide->code,
+            'voided_external_id' => 'VOID-GRE-' . $guide->code,
+            'reason' => Arr::get($payload, 'request.body.documents.0.description'),
+            'request_echo' => Arr::get($payload, 'request.body', []),
+        ];
+    }
+
     private function normalizeDocumentResponse(BillingDocument $document, array $response, string $operation, array $requestBody): array
     {
         $stateTypeId = (string) Arr::get($response, 'data.state_type_id', '');
@@ -424,6 +549,33 @@ class FacturadorPro5Service
             'local_status' => $localStatus,
             'external_status' => $externalStatus,
             'external_id' => (string) Arr::get($response, 'data.external_id', ('FP5-' . $document->code)),
+            'external_reference' => $externalReference,
+            'filename' => $filename,
+            'state_type_id' => $stateTypeId,
+            'hash' => Arr::get($response, 'data.hash'),
+            'qr' => Arr::get($response, 'data.qr'),
+            'links' => Arr::get($response, 'links', []),
+            'response' => Arr::get($response, 'response'),
+            'request_echo' => $requestBody,
+        ];
+    }
+
+    private function normalizeReferralGuideResponse(ReferralGuide $guide, array $response, array $requestBody): array
+    {
+        $stateTypeId = (string) Arr::get($response, 'data.state_type_id', '');
+        $externalReference = (string) Arr::get($response, 'data.number', $guide->external_reference);
+        $filename = (string) Arr::get($response, 'data.filename', '');
+        $localStatus = $this->mapStateTypeToLocalStatus($stateTypeId);
+        $externalStatus = (string) Arr::get($response, 'data.state_type_description', $this->mapStateTypeToExternalStatus($stateTypeId));
+
+        return [
+            'success' => (bool) ($response['success'] ?? false),
+            'provider' => 'facturadorpro5',
+            'mode' => $this->mode(),
+            'operation' => 'dispatch',
+            'local_status' => $localStatus,
+            'external_status' => $externalStatus,
+            'external_id' => (string) Arr::get($response, 'data.external_id', ('FP5-GRE-' . $guide->code)),
             'external_reference' => $externalReference,
             'filename' => $filename,
             'state_type_id' => $stateTypeId,
@@ -958,6 +1110,22 @@ class FacturadorPro5Service
         }
 
         $reference = $document->external_reference ?: $document->code;
+        return preg_replace('/[^A-Za-z0-9._-]/', '_', $reference) . '.' . $type;
+    }
+
+    private function resolveReferralGuideDownloadFilename(string $type, ReferralGuide $guide, string $url, ?string $disposition): string
+    {
+        if ($disposition && preg_match('/filename="?([^"]+)"?/i', $disposition, $matches)) {
+            return $matches[1];
+        }
+
+        $path = parse_url($url, PHP_URL_PATH);
+        $basename = $path ? basename($path) : null;
+        if ($basename && str_contains($basename, '.')) {
+            return $basename;
+        }
+
+        $reference = $guide->external_reference ?: $guide->code;
         return preg_replace('/[^A-Za-z0-9._-]/', '_', $reference) . '.' . $type;
     }
 

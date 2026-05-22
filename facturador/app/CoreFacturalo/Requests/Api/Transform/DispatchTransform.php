@@ -106,7 +106,8 @@ class DispatchTransform
 
             return [
                 'identity_document_type_id' => $driver['codigo_tipo_documento_identidad'],
-                'number' => $driver['numero_documento']
+                'number' => $driver['numero_documento'],
+                'license' => Functions::valueKeyInArray($driver, 'licencia'),
             ];
         }
         return null;

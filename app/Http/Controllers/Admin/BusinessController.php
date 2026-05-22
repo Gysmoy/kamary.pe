@@ -174,6 +174,7 @@ class BusinessController extends BasicController
                 'series_factura',
                 'series_boleta',
                 'series_nota_credito',
+                'series_guia',
                 'status',
             ]);
         } catch (\Throwable $th) {
@@ -197,6 +198,7 @@ class BusinessController extends BasicController
             $seriesFactura = $this->normalizeSeries($request->series_factura ?? null);
             $seriesBoleta = $this->normalizeSeries($request->series_boleta ?? null);
             $seriesNotaCredito = $this->normalizeSeries($request->series_nota_credito ?? null);
+            $seriesGuia = $this->normalizeSeries($request->series_guia ?? null);
 
             if ($name === '') {
                 throw new \Exception('El nombre de la sede es obligatorio');
@@ -255,7 +257,8 @@ class BusinessController extends BasicController
             $requiresSeriesResync = !$branch
                 || $branch->series_factura !== $seriesFactura
                 || $branch->series_boleta !== $seriesBoleta
-                || $branch->series_nota_credito !== $seriesNotaCredito;
+                || $branch->series_nota_credito !== $seriesNotaCredito
+                || $branch->series_guia !== $seriesGuia;
 
             if ($isUpdate && $branch) {
                 $payload = [
@@ -268,6 +271,7 @@ class BusinessController extends BasicController
                     'series_factura' => $seriesFactura,
                     'series_boleta' => $seriesBoleta,
                     'series_nota_credito' => $seriesNotaCredito,
+                    'series_guia' => $seriesGuia,
                     'status' => $request->status ?? $branch->status,
                     'updated_by' => $userId,
                 ];
@@ -294,6 +298,7 @@ class BusinessController extends BasicController
                     'series_factura' => $seriesFactura,
                     'series_boleta' => $seriesBoleta,
                     'series_nota_credito' => $seriesNotaCredito,
+                    'series_guia' => $seriesGuia,
                     'status' => true,
                     'created_by' => $userId,
                     'updated_by' => $userId,

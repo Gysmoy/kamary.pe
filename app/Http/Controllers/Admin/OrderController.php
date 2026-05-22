@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
+use App\Http\Classes\dxResponse;
 use App\Models\Article;
 use App\Models\ArticlePresentation;
 use App\Models\Client;
@@ -66,7 +67,7 @@ class OrderController extends BasicController
         $branchId = $body['business_branch_id'] ?? null;
         $warehouseId = $body['warehouse_id'] ?? null;
         $clientId = $body['client_id'] ?? null;
-        $documentType = trim((string)($body['document_type'] ?? 'Factura'));
+        $documentType = $this->normalizeDocumentType($body['document_type'] ?? 'Factura');
         $currency = strtoupper(trim((string)($body['currency'] ?? 'PEN')));
         $discountPercent = $this->toNullableDecimal($body['discount_percent'] ?? 1) ?? 1;
 
@@ -96,7 +97,7 @@ class OrderController extends BasicController
         }
         $body['updated_by'] = $userId;
 
-        $body['document_type'] = $documentType !== '' ? $documentType : 'Factura';
+        $body['document_type'] = $documentType;
         $body['currency'] = in_array($currency, ['PEN', 'USD', 'EUR']) ? $currency : 'PEN';
         $body['discount_percent'] = $discountPercent;
         $body['delivery_address'] = trim((string)($body['delivery_address'] ?? '')) ?: null;
@@ -208,6 +209,84 @@ class OrderController extends BasicController
         }
     }
 
+    public function articles(Request $request): HttpResponse|ResponseFactory
+    {
+        $response = new dxResponse();
+        try {
+            $warehouseId = $this->toNullableInt($request->query('warehouse_id', $request->input('warehouse_id')));
+            if (!$warehouseId) {
+                $response->status = 200;
+                $response->message = 'Operacion correcta';
+                $response->data = [];
+                $response->totalCount = 0;
+                return response($response->toArray(), $response->status);
+            }
+
+            $search = $this->extractSearchTerm($request->input('filter', []));
+            $stockRows = app(StockService::class)->availableStorageStockRows(
+                $warehouseId,
+                $search,
+                0,
+                BusinessScope::scopedKeyForRequest($request) ?: BusinessScope::KAMARY_PERU
+            );
+            $articleIds = collect($stockRows)
+                ->pluck('article_id')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            if (empty($articleIds)) {
+                $response->status = 200;
+                $response->message = 'Operacion correcta';
+                $response->data = [];
+                $response->totalCount = 0;
+                return response($response->toArray(), $response->status);
+            }
+
+            $query = Article::query()
+                ->select('articles.*')
+                ->with([
+                    'laboratory:id,name,code',
+                    'activePrinciple:id,laboratory_id,name',
+                    'client:id,full_name,document_number',
+                    'unit:id,name,symbol',
+                    'presentations:id,article_id,name,units,price,sort_order,status',
+                ])
+                ->where(function ($scope) {
+                    $scope->where('articles.module_scope', 'standard')
+                        ->orWhereNull('articles.module_scope');
+                })
+                ->whereNotNull('articles.status')
+                ->whereIn('articles.id', $articleIds);
+
+            if ($request->sort != null) {
+                foreach ($request->sort as $sorting) {
+                    $selector = $sorting['selector'] ?? 'name';
+                    if (!in_array($selector, ['id', 'code', 'name'], true)) $selector = 'name';
+                    $query->orderBy("articles.{$selector}", !empty($sorting['desc']) ? 'DESC' : 'ASC');
+                }
+            } else {
+                $query->orderBy('articles.name');
+            }
+
+            $response->totalCount = $request->requireTotalCount
+                ? (clone $query)->count('articles.id')
+                : 0;
+            $response->data = $query
+                ->skip($request->skip ?? 0)
+                ->take($request->take ?? 10)
+                ->get();
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
     public function boolean(Request $request)
     {
         $response = new Response();
@@ -251,6 +330,40 @@ class OrderController extends BasicController
         if ($text === '') return null;
         if (!is_numeric($text)) throw new \Exception("Valor numerico invalido: {$value}");
         return (float)$text;
+    }
+
+    private function toNullableInt($value): ?int
+    {
+        if ($value === null) return null;
+        $text = trim((string)$value);
+        if ($text === '') return null;
+        if (!is_numeric($text)) throw new \Exception("Valor numerico invalido: {$value}");
+        return (int)$text;
+    }
+
+    private function normalizeDocumentType($value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+        return match ($normalized) {
+            'boleta' => 'Boleta',
+            'nota de pedido', 'nota_pedido', 'note_order' => 'Nota de pedido',
+            default => 'Factura',
+        };
+    }
+
+    private function extractSearchTerm($filter): string
+    {
+        if (!is_array($filter)) return '';
+        if (count($filter) >= 3 && is_string($filter[0] ?? null) && is_string($filter[1] ?? null)) {
+            return trim((string)($filter[2] ?? ''));
+        }
+
+        foreach ($filter as $part) {
+            $term = $this->extractSearchTerm($part);
+            if ($term !== '') return $term;
+        }
+
+        return '';
     }
 
     private function getAvailableStockByWarehouse(int $articleId, int $warehouseId): float

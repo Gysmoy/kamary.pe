@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
+use App\Http\Classes\dxResponse;
 use App\Models\Article;
 use App\Models\ArticlePresentation;
 use App\Models\Client;
@@ -10,10 +11,12 @@ use App\Models\ClientDeliveryAddress;
 use App\Models\ClientDistributionNetwork;
 use App\Models\CommercialOrder;
 use App\Models\CommercialOrderItem;
+use App\Models\dxDataGrid;
 use App\Models\EventualClient;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\AccountsReceivableService;
+use App\Services\CommercialOrderTrackingService;
 use App\Services\PriceListResolverService;
 use App\Services\StockService;
 use App\Support\BusinessScope;
@@ -70,6 +73,17 @@ class CommercialOrderController extends BasicController
                 'items.priceListItem:id,price_list_id,article_id,laboratory_id,fixed_price,margin_percent,minimum_quantity,status',
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
+                'dispatchAssignments:id,dispatch_id,commercial_order_id,assignment_status,status',
+                'dispatchAssignments.dispatch:id,code,dispatch_status,manifest_code,scheduled_date,departed_at,delivered_at,status',
+                'referralGuides:id,code,business_id,business_branch_id,warehouse_id,dispatch_id,commercial_order_id,driver_id,vehicle_id,series,sequence,external_reference,issue_date,transfer_date,guide_status,external_status,origin_ubigeo,origin_address,destination_ubigeo,destination_address,recipient_name,recipient_document_type,recipient_document_number,recipient_phone,driver_name,driver_document_type,driver_document_number,driver_license_number,vehicle_plate,transfer_reason,package_count,gross_weight,metadata,observations,status',
+                'referralGuides.business:id,name,tax_number',
+                'referralGuides.branch:id,business_id,name,ubigeo,address',
+                'referralGuides.dispatch:id,code,manifest_code,dispatch_status,scheduled_date',
+                'referralGuides.items:id,referral_guide_id,item_code,description,unit,quantity,gross_weight,status',
+                'deliveryEvidences:id,code,business_id,dispatch_id,commercial_order_id,driver_id,recipient_name,recipient_document_type,recipient_document_number,recipient_phone,evidence_url,evidence_notes,delivered_at,latitude,longitude,status,created_at',
+                'deliveryEvidences.dispatch:id,code,manifest_code,dispatch_status',
+                'deliveryEvidences.driver:id,full_name,license_number',
+                'trackingEvents:id,commercial_order_id,dispatch_id,referral_guide_id,event_type,event_status,title,description,happened_at,metadata,status,created_at',
             ])
             ->join('users as creator', 'creator.id', '=', 'commercial_orders.created_by')
             ->join('users as updater', 'updater.id', '=', 'commercial_orders.updated_by');
@@ -88,6 +102,7 @@ class CommercialOrderController extends BasicController
         $body = $request->all();
         $userId = Auth::id();
         $orderId = $body['id'] ?? null;
+        $persistedOrder = $orderId ? CommercialOrder::find($orderId) : null;
 
         $businessId = $this->toNullableInt($body['business_id'] ?? null);
         $branchId = $this->toNullableInt($body['business_branch_id'] ?? null);
@@ -198,26 +213,28 @@ class CommercialOrderController extends BasicController
         $body['client_distribution_network_id'] = $networkId;
         $body['client_delivery_address_id'] = $deliveryAddressId;
         $body['seller_id'] = $sellerId;
-        $body['document_type'] = trim((string)($body['document_type'] ?? 'Factura')) ?: 'Factura';
+        $externalSource = trim((string) ($body['external_source'] ?? ($persistedOrder?->external_source ?? ''))) ?: null;
+        $body['external_source'] = $externalSource;
+        $body['document_type'] = $this->normalizeDocumentType($body['document_type'] ?? 'Factura');
         $body['currency'] = $this->normalizeCurrency($body['currency'] ?? 'PEN');
         $body['payment_condition'] = $this->normalizePaymentCondition($body['payment_condition'] ?? 'Contado');
         $body['payment_method'] = trim((string)($body['payment_method'] ?? '')) ?: null;
         $body['commercial_channel'] = $commercialChannel;
         $body['segment'] = $segment;
-        $body['order_status'] = $this->normalizeOrderStatus($body['order_status'] ?? 'draft');
+        $body['order_status'] = $this->normalizeOrderStatus($body['order_status'] ?? ($externalSource ? 'pending' : 'draft'));
         $body['dispatch_status'] = $this->normalizeDispatchStatus($body['dispatch_status'] ?? 'pending');
         $body['billing_status'] = $this->normalizeBillingStatus($body['billing_status'] ?? 'pending');
         $body['issue_date'] = $issueDate;
         $body['promised_delivery_at'] = $promisedDate;
         $body['installments'] = max(1, $this->toNullableInt($body['installments'] ?? null) ?? 1);
         $body['first_due_date'] = $firstDueDate;
-        $body['delivery_address'] = trim((string)($body['delivery_address'] ?? ($deliveryAddress->address ?? ''))) ?: null;
-        $body['delivery_reference'] = trim((string)($body['delivery_reference'] ?? ($deliveryAddress->reference ?? ''))) ?: null;
-        $body['ubigeo'] = trim((string)($body['ubigeo'] ?? ($deliveryAddress->ubigeo ?? ''))) ?: null;
+        $body['delivery_address'] = ($this->textValue($body['delivery_address'] ?? null) ?: $this->textValue($deliveryAddress->address ?? '')) ?: null;
+        $body['delivery_reference'] = ($this->textValue($body['delivery_reference'] ?? null) ?: $this->textValue($deliveryAddress->reference ?? '')) ?: null;
+        $body['ubigeo'] = ($this->textValue($body['ubigeo'] ?? null) ?: $this->textValue($deliveryAddress->ubigeo ?? '')) ?: null;
         $body['map_lat'] = $this->toNullableDecimal($body['map_lat'] ?? ($deliveryAddress->latitude ?? null));
         $body['map_lng'] = $this->toNullableDecimal($body['map_lng'] ?? ($deliveryAddress->longitude ?? null));
-        $body['dispatch_contact_name'] = trim((string)($body['dispatch_contact_name'] ?? ($deliveryAddress->contact_name ?? ''))) ?: null;
-        $body['dispatch_contact_phone'] = trim((string)($body['dispatch_contact_phone'] ?? ($deliveryAddress->contact_phone ?? ''))) ?: null;
+        $body['dispatch_contact_name'] = ($this->textValue($body['dispatch_contact_name'] ?? null) ?: $this->textValue($deliveryAddress->contact_name ?? '')) ?: null;
+        $body['dispatch_contact_phone'] = ($this->textValue($body['dispatch_contact_phone'] ?? null) ?: $this->textValue($deliveryAddress->contact_phone ?? '')) ?: null;
         $body['subtotal'] = $this->toNullableDecimal($body['subtotal'] ?? null) ?? 0;
         $body['tax_amount'] = $this->toNullableDecimal($body['tax_amount'] ?? null) ?? 0;
         $body['total'] = $this->toNullableDecimal($body['total'] ?? null) ?? 0;
@@ -329,19 +346,16 @@ class CommercialOrderController extends BasicController
 
             if ($inserted === 0) throw new \Exception('Debes agregar al menos un item');
 
-            $taxAmount = $this->toNullableDecimal($request->input('tax_amount')) ?? 0;
-            $total = $this->toNullableDecimal($request->input('total'));
             $subtotal = round($subtotal, 2);
-            $taxAmount = round($taxAmount, 2);
-            $total = is_null($total) ? round($subtotal + $taxAmount, 2) : round($total, 2);
+            $totals = $this->deriveFinancialTotals($subtotal, $jpa->document_type);
             $matchedPriceListIds = array_values(array_unique($matchedPriceListIds));
 
             $jpa->update([
                 'price_list_id' => count($matchedPriceListIds) === 1 ? $matchedPriceListIds[0] : null,
-                'subtotal' => $subtotal,
-                'tax_amount' => $taxAmount,
-                'total' => $total,
-                'balance_amount' => $total,
+                'subtotal' => $totals['subtotal'],
+                'tax_amount' => $totals['tax_amount'],
+                'total' => $totals['total'],
+                'balance_amount' => round(max(0, (float) $totals['total'] - (float) $jpa->paid_amount), 2),
             ]);
 
             app(AccountsReceivableService::class)->syncFromCommercialOrder($jpa->fresh([
@@ -456,6 +470,84 @@ class CommercialOrderController extends BasicController
         }
     }
 
+    public function articles(Request $request): HttpResponse|ResponseFactory
+    {
+        $response = new dxResponse();
+        try {
+            $warehouseId = $this->toNullableInt($request->query('warehouse_id', $request->input('warehouse_id')));
+            if (!$warehouseId) {
+                $response->status = 200;
+                $response->message = 'Operacion correcta';
+                $response->data = [];
+                $response->totalCount = 0;
+                return response($response->toArray(), $response->status);
+            }
+
+            $search = $this->extractSearchTerm($request->input('filter', []));
+            $stockRows = app(StockService::class)->availableStorageStockRows(
+                $warehouseId,
+                $search,
+                0,
+                BusinessScope::scopedKeyForRequest($request) ?: BusinessScope::KAMARY_PERU
+            );
+            $articleIds = collect($stockRows)
+                ->pluck('article_id')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            if (empty($articleIds)) {
+                $response->status = 200;
+                $response->message = 'Operacion correcta';
+                $response->data = [];
+                $response->totalCount = 0;
+                return response($response->toArray(), $response->status);
+            }
+
+            $query = Article::query()
+                ->select('articles.*')
+                ->with([
+                    'laboratory:id,name,code',
+                    'activePrinciple:id,laboratory_id,name',
+                    'client:id,full_name,document_number',
+                    'unit:id,name,symbol',
+                    'presentations:id,article_id,name,units,price,sort_order,status',
+                ])
+                ->where(function ($scope) {
+                    $scope->where('articles.module_scope', 'standard')
+                        ->orWhereNull('articles.module_scope');
+                })
+                ->whereNotNull('articles.status')
+                ->whereIn('articles.id', $articleIds);
+
+            if ($request->sort != null) {
+                foreach ($request->sort as $sorting) {
+                    $selector = $sorting['selector'] ?? 'name';
+                    if (!in_array($selector, ['id', 'code', 'name'], true)) $selector = 'name';
+                    $query->orderBy("articles.{$selector}", !empty($sorting['desc']) ? 'DESC' : 'ASC');
+                }
+            } else {
+                $query->orderBy('articles.name');
+            }
+
+            $response->totalCount = $request->requireTotalCount
+                ? (clone $query)->count('articles.id')
+                : 0;
+            $response->data = $query
+                ->skip($request->skip ?? 0)
+                ->take($request->take ?? 10)
+                ->get();
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
     public function boolean(Request $request)
     {
         $response = new Response();
@@ -467,9 +559,33 @@ class CommercialOrderController extends BasicController
 
             $value = $request->value;
             $payload = [
-                $field => $value,
                 'updated_by' => Auth::id(),
             ];
+            if ($field === 'order_status') {
+                $payload[$field] = $this->normalizeOrderStatus($value);
+                $payload['approved_at'] = in_array($payload[$field], ['confirmed', 'preparing', 'in_route', 'delivered', 'dispatched', 'billed', 'closed'], true)
+                    ? ($order->approved_at ?? now())
+                    : null;
+            } elseif ($field === 'dispatch_status') {
+                $payload[$field] = $this->normalizeDispatchStatus($value);
+                $nextOrderStatus = $this->orderStatusFromDispatchStatus($payload[$field]);
+                if ($nextOrderStatus && !in_array($order->order_status, ['billed', 'closed', 'cancelled'], true)) {
+                    $payload['order_status'] = $nextOrderStatus;
+                    $payload['approved_at'] = $order->approved_at ?? now();
+                }
+            } elseif ($field === 'billing_status') {
+                $payload[$field] = $this->normalizeBillingStatus($value);
+                $payload['billed_at'] = $payload[$field] === 'billed' ? ($order->billed_at ?? now()) : null;
+            } elseif ($field === 'document_type') {
+                $payload[$field] = $this->normalizeDocumentType($value);
+                $totals = $this->deriveFinancialTotals((float) $order->total, $payload[$field]);
+                $payload['subtotal'] = $totals['subtotal'];
+                $payload['tax_amount'] = $totals['tax_amount'];
+                $payload['total'] = $totals['total'];
+                $payload['balance_amount'] = round(max(0, (float) $totals['total'] - (float) $order->paid_amount), 2);
+            } else {
+                $payload[$field] = $value;
+            }
             $order->update($payload);
 
             app(AccountsReceivableService::class)->syncFromCommercialOrder($order->fresh([
@@ -479,6 +595,15 @@ class CommercialOrderController extends BasicController
                 'branch',
                 'warehouse',
             ]));
+            if (in_array($field, ['order_status', 'dispatch_status', 'billing_status'], true)) {
+                $freshOrder = $order->fresh();
+                $tracking = app(CommercialOrderTrackingService::class);
+                $tracking->recordStatusChange($freshOrder, $field, $payload[$field]);
+                if ($field === 'dispatch_status' && array_key_exists('order_status', $payload)) {
+                    $tracking->recordStatusChange($freshOrder, 'order_status', $payload['order_status']);
+                }
+                app(\App\Services\Integrations\ExternalOrderEventService::class)->recordOrderStatus($freshOrder, "{$field}_changed");
+            }
 
             DB::commit();
             $response->status = 200;
@@ -604,18 +729,54 @@ class CommercialOrderController extends BasicController
         return $normalized === 'credito' ? 'Credito' : 'Contado';
     }
 
+    private function normalizeDocumentType($value): string
+    {
+        $normalized = mb_strtolower(trim((string) $value));
+        return match ($normalized) {
+            'boleta' => 'Boleta',
+            'nota de pedido', 'nota_pedido', 'note_order' => 'Nota de pedido',
+            default => 'Factura',
+        };
+    }
+
+    private function textValue($value): string
+    {
+        if (is_array($value)) {
+            foreach (['address', 'reference', 'ubigeo', 'contact_name', 'contact_phone', 'name', 'description', 'value'] as $key) {
+                if (array_key_exists($key, $value) && !is_array($value[$key]) && trim((string) $value[$key]) !== '') {
+                    return trim((string) $value[$key]);
+                }
+            }
+            return '';
+        }
+
+        $text = trim((string) ($value ?? ''));
+        return $text === '[object Object]' ? '' : $text;
+    }
+
     private function normalizeOrderStatus($value): string
     {
-        $allowed = ['draft', 'confirmed', 'preparing', 'dispatched', 'billed', 'closed', 'cancelled'];
+        $allowed = ['draft', 'pending', 'confirmed', 'preparing', 'in_route', 'delivered', 'dispatched', 'billed', 'closed', 'cancelled'];
         $normalized = mb_strtolower(trim((string)$value));
         return in_array($normalized, $allowed, true) ? $normalized : 'draft';
     }
 
     private function normalizeDispatchStatus($value): string
     {
-        $allowed = ['pending', 'preparing', 'dispatched', 'delivered', 'cancelled'];
+        $allowed = ['pending', 'preparing', 'in_route', 'dispatched', 'delivered', 'cancelled'];
         $normalized = mb_strtolower(trim((string)$value));
         return in_array($normalized, $allowed, true) ? $normalized : 'pending';
+    }
+
+    private function orderStatusFromDispatchStatus(string $dispatchStatus): ?string
+    {
+        return match ($dispatchStatus) {
+            'preparing' => 'preparing',
+            'dispatched' => 'dispatched',
+            'in_route' => 'in_route',
+            'delivered' => 'delivered',
+            default => null,
+        };
     }
 
     private function normalizeBillingStatus($value): string
@@ -640,5 +801,49 @@ class CommercialOrderController extends BasicController
             $next = ((int)$matches[1]) + 1;
         }
         return 'PED-' . str_pad((string)$next, 6, '0', STR_PAD_LEFT);
+    }
+
+    private function deriveFinancialTotals(float $grossAmount, string $documentType): array
+    {
+        $grossAmount = round(max(0, $grossAmount), 2);
+        if (!$this->isTaxableDocumentType($documentType)) {
+            return [
+                'subtotal' => $grossAmount,
+                'tax_amount' => 0.00,
+                'total' => $grossAmount,
+            ];
+        }
+
+        $subtotal = round($grossAmount / 1.18, 2);
+        $taxAmount = round($grossAmount - $subtotal, 2);
+
+        return [
+            'subtotal' => $subtotal,
+            'tax_amount' => $taxAmount,
+            'total' => $grossAmount,
+        ];
+    }
+
+    private function isTaxableDocumentType(string $documentType): bool
+    {
+        return in_array($this->normalizeDocumentType($documentType), ['Factura', 'Boleta'], true);
+    }
+
+    private function extractSearchTerm($filter): string
+    {
+        if (!is_array($filter)) return '';
+        if (count($filter) === 3 && is_string($filter[0] ?? null) && is_string($filter[1] ?? null)) {
+            [$field, $operator, $value] = $filter;
+            if (in_array($field, ['name', 'code'], true) && in_array($operator, ['contains', 'startswith', '='], true)) {
+                return trim((string) $value);
+            }
+        }
+
+        foreach ($filter as $item) {
+            $term = $this->extractSearchTerm($item);
+            if ($term !== '') return $term;
+        }
+
+        return '';
     }
 }

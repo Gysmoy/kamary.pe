@@ -11,6 +11,7 @@ use App\Models\Vehicle;
 use App\Models\Warehouse;
 use App\Models\Zone;
 use App\Services\DispatchService;
+use App\Services\ReferralGuideService;
 use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -41,9 +42,19 @@ class DispatchController extends BasicController
                 'driver:id,full_name,license_number', 'vehicle:id,plate,label,vehicle_type', 'zoneMaster:id,name,code',
                 'exitNote:id,business_id,business_branch_id,warehouse_id,client_name,status',
                 'assignments:id,dispatch_id,commercial_order_id,commercial_order_code,customer_name,total,assignment_status,status',
-                'assignments.commercialOrder:id,code,client_id,eventual_client_id,dispatch_status,billing_status,total',
+                'assignments.commercialOrder:id,code,client_id,eventual_client_id,dispatch_status,billing_status,total,dispatch_contact_name,dispatch_contact_phone,delivery_address,delivery_reference,ubigeo',
                 'assignments.commercialOrder.client:id,full_name,document_number',
                 'assignments.commercialOrder.eventualClient:id,business_name,document_number',
+                'referralGuides:id,code,business_id,business_branch_id,warehouse_id,dispatch_id,commercial_order_id,driver_id,vehicle_id,series,sequence,external_reference,issue_date,transfer_date,guide_status,external_status,origin_ubigeo,origin_address,destination_ubigeo,destination_address,recipient_name,recipient_document_type,recipient_document_number,recipient_phone,driver_name,driver_document_type,driver_document_number,driver_license_number,vehicle_plate,transfer_reason,package_count,gross_weight,metadata,observations,status',
+                'referralGuides.business:id,name,tax_number',
+                'referralGuides.branch:id,business_id,name,ubigeo,address',
+                'referralGuides.driver:id,full_name,document_type,document_number,license_number',
+                'referralGuides.vehicle:id,plate,label',
+                'referralGuides.commercialOrder:id,code',
+                'referralGuides.items:id,referral_guide_id,item_code,description,unit,quantity,gross_weight,status',
+                'deliveryEvidences:id,code,business_id,dispatch_id,commercial_order_id,driver_id,recipient_name,recipient_document_type,recipient_document_number,recipient_phone,evidence_url,evidence_notes,delivered_at,latitude,longitude,status,created_at',
+                'deliveryEvidences.commercialOrder:id,code',
+                'deliveryEvidences.driver:id,full_name,license_number',
                 'creator:id,name,lastname,username,fullname', 'updater:id,name,lastname,username,fullname',
             ])
             ->join('users as creator', 'creator.id', '=', 'dispatches.created_by')
@@ -67,7 +78,7 @@ class DispatchController extends BasicController
         $branchId = $this->toNullableInt($body['business_branch_id'] ?? null);
         $warehouseId = (int) ($body['warehouse_id'] ?? 0);
         $scheduledDate = $this->normalizeDate($body['scheduled_date'] ?? now()->toDateString());
-        $dispatchStatus = $this->normalizeStatus($body['dispatch_status'] ?? 'waiting');
+        $dispatchStatus = $this->normalizeStatus($body['dispatch_status'] ?? 'pending');
         $driverId = $this->toNullableInt($body['driver_id'] ?? null);
         $vehicleId = $this->toNullableInt($body['vehicle_id'] ?? null);
         $zoneId = $this->toNullableInt($body['zone_id'] ?? null);
@@ -93,6 +104,11 @@ class DispatchController extends BasicController
         if (!is_array($rawAssignments)) $rawAssignments = [];
         $this->assignmentsPayload = $rawAssignments;
         unset($body['assignments']);
+
+        if (!$zoneId) {
+            $zoneId = $this->resolveZoneIdFromAssignments((int) $business->id, $rawAssignments);
+        }
+        $zone = $zoneId ? Zone::findOrFail($zoneId) : null;
 
         if ($id) {
             $persisted = Dispatch::with('assignments')->findOrFail($id);
@@ -120,6 +136,17 @@ class DispatchController extends BasicController
         $body['zone_id'] = $zone?->id;
         $body['zone'] = $zone?->name ?: (trim((string) ($body['zone'] ?? '')) ?: null);
         $body['manifest_code'] = trim((string) ($body['manifest_code'] ?? '')) ?: null;
+        if ($body['manifest_code'] && in_array($dispatchStatus, ['waiting', 'assigned', 'dispatched'], true)) {
+            $dispatchStatus = 'in_route';
+        }
+        if (!$body['manifest_code'] && in_array($dispatchStatus, ['in_route', 'delivered', 'closed'], true)) {
+            $body['manifest_code'] = $this->nextManifestCode();
+        }
+        $assignmentOrderIds = $this->assignmentOrderIds($rawAssignments);
+        if (empty($assignmentOrderIds)) throw new \Exception('Debes asignar al menos un pedido al despacho');
+        $this->assertRouteAssets($dispatchStatus, $driver, $vehicle, $zone);
+        $this->assertDeliveredHasEvidences((int) ($id ?? 0), $dispatchStatus, $assignmentOrderIds);
+
         $body['dispatch_status'] = $dispatchStatus;
         $body['departed_at'] = in_array($dispatchStatus, ['in_route', 'delivered', 'closed'], true) ? ($body['departed_at'] ?? now()) : null;
         $body['delivered_at'] = in_array($dispatchStatus, ['delivered', 'closed'], true) ? ($body['delivered_at'] ?? now()) : null;
@@ -174,9 +201,12 @@ class DispatchController extends BasicController
 
             app(DispatchService::class)->syncExitNote($jpa->fresh(['assignments.commercialOrder.items', 'exitNote.items']));
             app(DispatchService::class)->syncCommercialOrderStatuses(array_merge($this->previousOrderIds, $currentOrderIds));
+            if ($jpa->manifest_code || in_array($jpa->dispatch_status, ['in_route', 'delivered', 'closed'], true)) {
+                app(ReferralGuideService::class)->prepareForDispatch($jpa->fresh(['assignments.commercialOrder.items']));
+            }
 
             DB::commit();
-            return $jpa->fresh(['business', 'branch', 'warehouse', 'driver', 'vehicle', 'zoneMaster', 'exitNote', 'assignments.commercialOrder.client', 'assignments.commercialOrder.eventualClient', 'creator', 'updater']);
+            return $jpa->fresh(['business', 'branch', 'warehouse', 'driver', 'vehicle', 'zoneMaster', 'exitNote', 'assignments.commercialOrder.client', 'assignments.commercialOrder.eventualClient', 'referralGuides.items', 'creator', 'updater']);
         } catch (\Throwable $th) {
             DB::rollBack();
             throw $th;
@@ -245,9 +275,9 @@ class DispatchController extends BasicController
 
     private function normalizeStatus($value): string
     {
-        $allowed = ['waiting', 'assigned', 'in_route', 'delivered', 'incident', 'closed', 'cancelled'];
+        $allowed = ['pending', 'preparing', 'dispatched', 'waiting', 'assigned', 'in_route', 'delivered', 'incident', 'closed', 'cancelled'];
         $normalized = mb_strtolower(trim((string) $value));
-        return in_array($normalized, $allowed, true) ? $normalized : 'waiting';
+        return in_array($normalized, $allowed, true) ? $normalized : 'pending';
     }
 
     private function nextCode(): string
@@ -256,5 +286,158 @@ class DispatchController extends BasicController
         $latest = Dispatch::query()->latest('id')->value('code');
         if ($latest && preg_match('/(\d+)$/', $latest, $matches)) $next = ((int) $matches[1]) + 1;
         return 'DSP-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+    }
+
+    private function nextManifestCode(): string
+    {
+        $next = 1;
+        $latest = Dispatch::query()
+            ->whereNotNull('manifest_code')
+            ->where('manifest_code', 'like', 'MNF-%')
+            ->latest('id')
+            ->value('manifest_code');
+        if ($latest && preg_match('/(\d+)$/', $latest, $matches)) $next = ((int) $matches[1]) + 1;
+        return 'MNF-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+    }
+
+    private function resolveZoneIdFromAssignments(int $businessId, array $assignments): ?int
+    {
+        $orderIds = collect($assignments)
+            ->map(fn($row) => is_array($row) ? $this->toNullableInt($row['commercial_order_id'] ?? null) : null)
+            ->filter()
+            ->values()
+            ->all();
+        if (empty($orderIds)) return null;
+
+        $orders = CommercialOrder::query()
+            ->whereIn('id', $orderIds)
+            ->orderBy('id')
+            ->get(['id', 'ubigeo', 'delivery_address']);
+
+        $zones = Zone::query()
+            ->whereNotNull('status')
+            ->where(function ($scope) use ($businessId) {
+                $scope->where('business_id', $businessId)
+                    ->orWhereNull('business_id');
+            })
+            ->orderByRaw('CASE WHEN business_id IS NULL THEN 1 ELSE 0 END')
+            ->get(['id', 'business_id', 'ubigeo', 'name', 'district', 'reference', 'observations']);
+
+        foreach ($orders as $order) {
+            $zone = $this->matchZoneForOrder($zones, $order);
+            if ($zone) return (int) $zone->id;
+        }
+
+        return null;
+    }
+
+    private function matchZoneForOrder($zones, CommercialOrder $order): ?Zone
+    {
+        $ubigeo = $this->normalizeLocationText($order->ubigeo);
+        $address = $this->normalizeLocationText(trim(implode(' ', array_filter([
+            $order->delivery_address,
+            $order->delivery_reference,
+        ]))));
+
+        if ($ubigeo !== '') {
+            $exact = $zones->first(fn($zone) => $this->normalizeLocationText($zone->ubigeo) === $ubigeo);
+            if ($exact) return $exact;
+        }
+
+        foreach ($zones as $zone) {
+            $district = $this->normalizeLocationText($zone->district);
+            $name = $this->normalizeLocationText($zone->name);
+            $reference = $this->normalizeLocationText($zone->reference);
+            $observations = $this->normalizeLocationText($zone->observations);
+            $zoneText = trim("{$district} {$name} {$reference} {$observations}");
+
+            if ($ubigeo !== '' && $zoneText !== '' && str_contains($zoneText, $ubigeo)) return $zone;
+            if ($district !== '' && $address !== '' && str_contains($address, $district)) return $zone;
+            foreach ($this->zoneDistrictTokens($zone) as $token) {
+                if ($address !== '' && str_contains($address, $token)) return $zone;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeLocationText($value): string
+    {
+        $text = mb_strtolower(trim((string) ($value ?? '')));
+        return strtr($text, [
+            'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u',
+            'à' => 'a', 'è' => 'e', 'ì' => 'i', 'ò' => 'o', 'ù' => 'u',
+            'ä' => 'a', 'ë' => 'e', 'ï' => 'i', 'ö' => 'o', 'ü' => 'u',
+            'ñ' => 'n',
+        ]);
+    }
+
+    private function zoneDistrictTokens(Zone $zone): array
+    {
+        $text = $this->normalizeLocationText(trim(implode(' ', array_filter([
+            $zone->district,
+            $zone->reference,
+            $zone->observations,
+        ]))));
+        $parts = preg_split('/[,;|\\n]+/', $text) ?: [];
+        return collect($parts)
+            ->map(fn($part) => trim($part))
+            ->filter(fn($part) => mb_strlen($part) >= 4 && !in_array($part, ['lima', 'peru'], true))
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function assertRouteAssets(string $dispatchStatus, ?Driver $driver, ?Vehicle $vehicle, ?Zone $zone): void
+    {
+        if (!in_array($dispatchStatus, ['in_route', 'delivered', 'closed'], true)) {
+            return;
+        }
+
+        $errors = [];
+        if (!$driver) $errors[] = 'conductor';
+        if (!$vehicle) $errors[] = 'vehiculo';
+        if (!$zone) $errors[] = 'zona';
+
+        if (!empty($errors)) {
+            throw new \Exception('Para poner el despacho en ruta o entregado falta: ' . implode(', ', $errors) . '.');
+        }
+    }
+
+    private function assignmentOrderIds(array $assignments): array
+    {
+        return collect($assignments)
+            ->map(fn($row) => is_array($row) ? $this->toNullableInt($row['commercial_order_id'] ?? null) : null)
+            ->filter()
+            ->map(fn($value) => (int) $value)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function assertDeliveredHasEvidences(int $dispatchId, string $dispatchStatus, array $orderIds): void
+    {
+        if (!in_array($dispatchStatus, ['delivered', 'closed'], true)) {
+            return;
+        }
+
+        if ($dispatchId <= 0) {
+            throw new \Exception('Primero guarda el despacho y registra evidencias antes de marcarlo como entregado');
+        }
+
+        $coveredOrderIds = DB::table('delivery_evidences')
+            ->where('dispatch_id', $dispatchId)
+            ->whereIn('commercial_order_id', $orderIds)
+            ->whereNotNull('status')
+            ->pluck('commercial_order_id')
+            ->map(fn($value) => (int) $value)
+            ->unique()
+            ->all();
+
+        $missing = array_values(array_diff(array_map('intval', $orderIds), $coveredOrderIds));
+        if (!empty($missing)) {
+            $codes = CommercialOrder::query()->whereIn('id', $missing)->pluck('code')->all();
+            throw new \Exception('Registra evidencia de entrega antes de cerrar el despacho. Pendientes: ' . implode(', ', $codes));
+        }
     }
 }

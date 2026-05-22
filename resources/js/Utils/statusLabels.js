@@ -32,7 +32,7 @@ const spanishStatusLabels = new Map([
   ['partial', 'Parcial'],
   ['completed', 'Completado'],
   ['preparing', 'Preparando'],
-  ['dispatched', 'Despachado'],
+  ['dispatched', 'Despacho'],
   ['delivered', 'Entregado'],
   ['billed', 'Facturado'],
   ['closed', 'Cerrado'],
@@ -49,6 +49,7 @@ const spanishStatusLabels = new Map([
   ['in_progress', 'En progreso'],
   ['finished', 'Finalizado'],
   ['registered', 'Registrado'],
+  ['prepared', 'Generado'],
   ['processing', 'En proceso'],
   ['delivery', 'Entrega'],
   ['pickup', 'Recojo'],
@@ -59,7 +60,7 @@ const spanishStatusLabels = new Map([
   ['service_order', 'Orden de servicio'],
 ])
 
-const spanishStatusPattern = /\b(active|inactive|enabled|disabled|success|error|failed|pending|draft|sent|accepted|observed|rejected|cancelled|approved|confirmed|partial|completed|preparing|dispatched|delivered|billed|closed|waiting|assigned|in_route|incident|scheduled|executing|prefactured|invoiced|paid|in_process|in_progress|finished|registered|processing|delivery|pickup|transfer|return|visit|commercial_order|service_order)\b/gi
+const spanishStatusPattern = /\b(active|inactive|enabled|disabled|success|error|failed|pending|draft|sent|accepted|observed|rejected|cancelled|approved|confirmed|partial|completed|preparing|dispatched|delivered|billed|closed|waiting|assigned|in_route|incident|scheduled|executing|prefactured|invoiced|paid|in_process|in_progress|finished|registered|prepared|processing|delivery|pickup|transfer|return|visit|commercial_order|service_order)\b/gi
 
 export const getSpanishStatusLabel = (value, emptyLabel = '-') => {
   const normalized = `${value ?? ''}`.trim()
@@ -99,9 +100,12 @@ export const sourceTypeOptions = buildOptions([
 
 export const commercialOrderStatusOptions = buildOptions([
   ['draft', 'Borrador'],
+  ['pending', 'Pendiente'],
   ['confirmed', 'Confirmado'],
   ['preparing', 'Preparando'],
-  ['dispatched', 'Despachado'],
+  ['in_route', 'En ruta'],
+  ['delivered', 'Entregado'],
+  ['dispatched', 'Despacho'],
   ['billed', 'Facturado'],
   ['closed', 'Cerrado'],
   ['cancelled', 'Cancelado'],
@@ -122,7 +126,7 @@ export const operationalOrderStatusOptions = buildOptions([
   ['draft', 'Borrador'],
   ['confirmed', 'Confirmado'],
   ['preparing', 'Preparando'],
-  ['dispatched', 'Despachado'],
+  ['dispatched', 'Despacho'],
   ['billed', 'Facturado'],
   ['closed', 'Cerrado'],
   ['approved', 'Aprobada'],
@@ -136,7 +140,7 @@ export const operationalOrderStatusOptions = buildOptions([
 export const dispatchStatusOptions = buildOptions([
   ['pending', 'Pendiente'],
   ['preparing', 'Preparando'],
-  ['dispatched', 'Despachado'],
+  ['dispatched', 'Despacho'],
   ['delivered', 'Entregado'],
   ['waiting', 'En espera'],
   ['assigned', 'Asignado'],
@@ -190,6 +194,16 @@ export const billingDocumentStatusOptions = buildOptions([
   ['cancelled', 'Anulado'],
 ])
 
+export const referralGuideStatusOptions = buildOptions([
+  ['prepared', 'Generada'],
+  ['pending', 'Pendiente'],
+  ['sent', 'Enviada'],
+  ['accepted', 'Aceptada'],
+  ['observed', 'Observada'],
+  ['rejected', 'Rechazada'],
+  ['cancelled', 'Anulada'],
+])
+
 export const activityTypeOptions = buildOptions([
   ['delivery', 'Entrega'],
   ['pickup', 'Recojo'],
@@ -224,6 +238,7 @@ export const getPurchaseOrderStatusLabel = buildLabelResolver(purchaseOrderStatu
 export const getApprovalStatusLabel = buildLabelResolver(approvalStatusOptions)
 export const getPurchaseReceiptStatusLabel = buildLabelResolver(purchaseReceiptStatusOptions)
 export const getBillingDocumentStatusLabel = buildLabelResolver(billingDocumentStatusOptions)
+export const getReferralGuideStatusLabel = buildLabelResolver(referralGuideStatusOptions)
 export const getActivityTypeLabel = buildLabelResolver(activityTypeOptions)
 export const getActivityStatusLabel = buildLabelResolver(activityStatusOptions)
 export const getShiftLabel = buildLabelResolver(shiftOptions)

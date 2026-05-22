@@ -65,9 +65,10 @@ const Drivers = () => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
       }}
       columns={[
-        { caption: 'Acciones', width: 90, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
+        { caption: 'Acciones', width: 125, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           container.css('text-overflow', 'unset')
           container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-info ms-1', title: 'Ver ruta', icon: 'mdi mdi-map-marker-path', onClick: () => { window.location.href = `/admin/driver-routes?driver_id=${data.id}` } }))
         } },
         { dataField: 'id', caption: 'ID', width: 70 },
         { dataField: 'document_type', caption: 'Tipo documento', width: 130 },

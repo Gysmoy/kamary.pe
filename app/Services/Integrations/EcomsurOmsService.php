@@ -153,7 +153,8 @@ class EcomsurOmsService
         $items = $this->normalizeItems($pedido['Items'], $warehouse);
         $discount = $this->decimal($pedido['Descuento'] ?? 0);
         $shipping = $this->decimal($pedido['ImpEnvio'] ?? 0);
-        $subtotal = max(0, round(array_sum(array_column($items, 'total')) - $discount + $shipping, 2));
+        $grossTotal = max(0, round(array_sum(array_column($items, 'total')) - $discount + $shipping, 2));
+        $totals = $this->deriveFinancialTotals($grossTotal, $documentType);
 
         $order = CommercialOrder::query()
             ->where('external_source', $this->externalSource())
@@ -195,7 +196,7 @@ class EcomsurOmsService
             'payment_method' => $this->asNullableText($pedido['TipoPago'] ?? null),
             'commercial_channel' => $this->asNullableText($pedido['Ecommerce'] ?? $pedido['Canal'] ?? 'Multivende'),
             'segment' => $this->asNullableText($pedido['SubServicio'] ?? null),
-            'order_status' => 'confirmed',
+            'order_status' => 'pending',
             'payment_status' => $this->paymentStatus($pedido['TipoPago'] ?? null),
             'dispatch_status' => 'pending',
             'billing_status' => 'pending',
@@ -208,13 +209,13 @@ class EcomsurOmsService
             'ubigeo' => $this->asNullableText($pedido['Ubigeo'] ?? $pedido['Distrito'] ?? null),
             'dispatch_contact_name' => $this->asNullableText($pedido['Consignatario'] ?? null),
             'dispatch_contact_phone' => $this->asNullableText($pedido['TlfCliente'] ?? null),
-            'subtotal' => $subtotal,
-            'tax_amount' => 0,
-            'total' => $subtotal,
-            'paid_amount' => $this->paymentStatus($pedido['TipoPago'] ?? null) === 'paid' ? $subtotal : 0,
-            'balance_amount' => $this->paymentStatus($pedido['TipoPago'] ?? null) === 'paid' ? 0 : $subtotal,
+            'subtotal' => $totals['subtotal'],
+            'tax_amount' => $totals['tax_amount'],
+            'total' => $totals['total'],
+            'paid_amount' => $this->paymentStatus($pedido['TipoPago'] ?? null) === 'paid' ? $totals['total'] : 0,
+            'balance_amount' => $this->paymentStatus($pedido['TipoPago'] ?? null) === 'paid' ? 0 : $totals['total'],
             'observations' => $this->buildObservation($header, $pedido),
-            'approved_at' => $order->approved_at ?: now(),
+            'approved_at' => null,
             'updated_by' => $this->systemUserId(),
         ]);
         $order->save();
@@ -446,6 +447,26 @@ class EcomsurOmsService
             '03' => 'Boleta',
             default => 'Boleta',
         };
+    }
+
+    private function deriveFinancialTotals(float $grossAmount, string $documentType): array
+    {
+        $grossAmount = round(max(0, $grossAmount), 2);
+        if (!in_array($documentType, ['Factura', 'Boleta'], true)) {
+            return [
+                'subtotal' => $grossAmount,
+                'tax_amount' => 0,
+                'total' => $grossAmount,
+            ];
+        }
+
+        $subtotal = round($grossAmount / 1.18, 2);
+
+        return [
+            'subtotal' => $subtotal,
+            'tax_amount' => round($grossAmount - $subtotal, 2),
+            'total' => $grossAmount,
+        ];
     }
 
     private function paymentCondition($value): string

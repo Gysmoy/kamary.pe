@@ -167,6 +167,7 @@ class BusinessFacturadorSyncService
             '01' => trim((string) config('facturadorpro5.series.factura', '')),
             '03' => trim((string) config('facturadorpro5.series.boleta', '')),
             '07' => trim((string) config('facturadorpro5.series.nota_credito', '')),
+            '09' => trim((string) config('facturadorpro5.series.guia', '')),
         ];
 
         $records = [];
@@ -187,6 +188,7 @@ class BusinessFacturadorSyncService
                 '01' => trim((string) ($branch->series_factura ?: $defaultSeries['01'])),
                 '03' => trim((string) ($branch->series_boleta ?: $defaultSeries['03'])),
                 '07' => trim((string) ($branch->series_nota_credito ?: $defaultSeries['07'])),
+                '09' => trim((string) ($branch->series_guia ?: $defaultSeries['09'])),
             ];
 
             foreach ($seriesByType as $documentTypeId => $number) {

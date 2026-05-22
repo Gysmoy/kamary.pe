@@ -1,5 +1,5 @@
 import BasicRest from "../BasicRest";
-import { Fetch } from "sode-extend-react";
+import { Cookies, Fetch } from "sode-extend-react";
 import { toast } from "sonner";
 
 class CommercialOrdersRest extends BasicRest {
@@ -57,6 +57,35 @@ class CommercialOrdersRest extends BasicRest {
       })
       if (!status) throw new Error(result?.message || 'No se pudo obtener el articulo')
       return (result?.data ?? [])[0] ?? null
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
+  saveDeliveryEvidence = async (orderId, request) => {
+    try {
+      const res = await fetch(`/api/${this.path}/${orderId}/delivery-evidence`, {
+        method: 'POST',
+        headers: {
+          'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+        },
+        body: request
+      })
+      const result = JSON.parseable(await res.text())
+      if (!res.ok) throw new Error(result?.message || 'No se pudo registrar la evidencia')
+
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+
+      return result
     } catch (error) {
       toast.error("Error", {
         description: error.message,

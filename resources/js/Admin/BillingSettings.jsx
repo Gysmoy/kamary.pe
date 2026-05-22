@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import BaseAdminto from '@Adminto/Base'
 import CreateReactScript from '../Utils/CreateReactScript'
@@ -63,6 +63,7 @@ const BillingSettings = ({ can }) => {
   const branchSeriesFacturaRef = useRef()
   const branchSeriesBoletaRef = useRef()
   const branchSeriesNotaCreditoRef = useRef()
+  const branchSeriesGuiaRef = useRef()
   const branchModeRef = useRef()
 
   const [selectedBusiness, setSelectedBusiness] = useState(null)
@@ -70,6 +71,41 @@ const BillingSettings = ({ can }) => {
   const [isBranchEditing, setIsBranchEditing] = useState(false)
   const [selectedFiscalBusiness, setSelectedFiscalBusiness] = useState(null)
   const [branchUbigeoSelection, setBranchUbigeoSelection] = useState(EMPTY_UBIGEO_SELECTION)
+  const [facturadorMode, setFacturadorMode] = useState(null)
+  const [selectedFacturadorMode, setSelectedFacturadorMode] = useState('demo')
+
+  useEffect(() => {
+    loadFacturadorMode()
+  }, [])
+
+  const loadFacturadorMode = async () => {
+    const data = await businessesRest.getFacturadorMode()
+    if (!data) return
+    setFacturadorMode(data)
+    setSelectedFacturadorMode(data.mode || 'demo')
+  }
+
+  const onSaveFacturadorMode = async () => {
+    const nextMode = selectedFacturadorMode || 'demo'
+
+    if (nextMode === 'production' && facturadorMode?.mode !== 'production') {
+      const { isConfirmed } = await Swal.fire({
+        title: 'Activar produccion',
+        text: 'Los comprobantes dejaran de usar la respuesta demo y se enviaran al facturador configurado.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Activar produccion',
+        cancelButtonText: 'Cancelar'
+      })
+      if (!isConfirmed) return
+    }
+
+    const updated = await businessesRest.updateFacturadorMode(nextMode)
+    if (!updated) return
+    setFacturadorMode(updated)
+    setSelectedFacturadorMode(updated.mode || 'demo')
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }
 
   const fillFiscalForm = (business) => {
     fiscalBusinessIdRef.current.value = business?.id ?? ''
@@ -207,6 +243,7 @@ const BillingSettings = ({ can }) => {
     branchSeriesFacturaRef.current.value = branch?.series_factura ?? ''
     branchSeriesBoletaRef.current.value = branch?.series_boleta ?? ''
     branchSeriesNotaCreditoRef.current.value = branch?.series_nota_credito ?? ''
+    branchSeriesGuiaRef.current.value = branch?.series_guia ?? ''
     $(branchModalRef.current).modal('show')
   }
 
@@ -226,6 +263,7 @@ const BillingSettings = ({ can }) => {
       series_factura: branchSeriesFacturaRef.current.value.trim(),
       series_boleta: branchSeriesBoletaRef.current.value.trim(),
       series_nota_credito: branchSeriesNotaCreditoRef.current.value.trim(),
+      series_guia: branchSeriesGuiaRef.current.value.trim(),
     }
 
     const result = await businessesRest.saveBranch(selectedBusiness.id, request)
@@ -267,6 +305,34 @@ const BillingSettings = ({ can }) => {
   }
 
   return <>
+    <div className='card mb-3'>
+      <div className='card-body py-3'>
+        <div className='d-flex align-items-center justify-content-between gap-3 flex-wrap'>
+          <div>
+            <div className='small text-muted mb-1'>Modo global de emision</div>
+            <div className='d-flex align-items-center gap-2'>
+              <span className={`badge bg-${facturadorMode?.mode === 'production' ? 'danger' : 'info'}-subtle text-${facturadorMode?.mode === 'production' ? 'danger' : 'info'}`}>
+                {facturadorMode?.label ?? 'Demo / Test'}
+              </span>
+              <span className='small text-muted'>Origen: {facturadorMode?.source === 'panel' ? 'panel' : '.env'}</span>
+            </div>
+          </div>
+          <div className='d-flex align-items-end gap-2 flex-wrap'>
+            <div>
+              <label className='form-label mb-1'>Ambiente</label>
+              <select className='form-control' value={selectedFacturadorMode} onChange={(e) => setSelectedFacturadorMode(e.target.value)}>
+                <option value='demo'>Demo / Test</option>
+                <option value='production'>Produccion</option>
+              </select>
+            </div>
+            <button type='button' className='btn btn-primary' onClick={onSaveFacturadorMode} disabled={selectedFacturadorMode === facturadorMode?.mode}>
+              <i className='mdi mdi-content-save me-1'></i> Guardar modo
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div className='alert alert-info border mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2'>
       <div>
         Aquí solo se configura la facturación de empresas ya registradas.
@@ -479,6 +545,7 @@ const BillingSettings = ({ can }) => {
               <th>F001</th>
               <th>B001</th>
               <th>NC</th>
+              <th>GRE</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -486,7 +553,7 @@ const BillingSettings = ({ can }) => {
           <tbody>
             {branches.length === 0 && (
               <tr>
-                <td colSpan={11} className='text-center text-muted'>Sin sucursales registradas</td>
+                <td colSpan={12} className='text-center text-muted'>Sin sucursales registradas</td>
               </tr>
             )}
             {branches.map(branch => (
@@ -507,6 +574,7 @@ const BillingSettings = ({ can }) => {
                 <td>{branch.series_factura ?? '-'}</td>
                 <td>{branch.series_boleta ?? '-'}</td>
                 <td>{branch.series_nota_credito ?? '-'}</td>
+                <td>{branch.series_guia ?? '-'}</td>
                 <td>
                   {branch.status === null ? <span className='text-muted'>-</span> : (
                     <SwitchFormGroup checked={branch.status == 1} onChange={() => onBranchBooleanChange({
@@ -561,6 +629,7 @@ const BillingSettings = ({ can }) => {
         <InputFormGroup eRef={branchSeriesFacturaRef} label='Serie factura' col='col-md-4' />
         <InputFormGroup eRef={branchSeriesBoletaRef} label='Serie boleta' col='col-md-4' />
         <InputFormGroup eRef={branchSeriesNotaCreditoRef} label='Serie nota crédito' col='col-md-4' />
+        <InputFormGroup eRef={branchSeriesGuiaRef} label='Serie guia remision' col='col-md-4' />
       </div>
     </Modal>
   </>

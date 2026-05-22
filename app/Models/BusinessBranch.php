@@ -24,6 +24,7 @@ class BusinessBranch extends Model
         'series_factura',
         'series_boleta',
         'series_nota_credito',
+        'series_guia',
         'status',
         'created_by',
         'updated_by',

@@ -144,6 +144,26 @@ class CommercialOrder extends Model
         return $this->hasOne(AccountsReceivable::class, 'source_id')->where('source_type', 'commercial_order');
     }
 
+    public function dispatchAssignments()
+    {
+        return $this->hasMany(DispatchAssignment::class)->orderBy('id');
+    }
+
+    public function referralGuides()
+    {
+        return $this->hasMany(ReferralGuide::class)->orderByDesc('id');
+    }
+
+    public function deliveryEvidences()
+    {
+        return $this->hasMany(DeliveryEvidence::class)->orderByDesc('delivered_at')->orderByDesc('id');
+    }
+
+    public function trackingEvents()
+    {
+        return $this->hasMany(CommercialOrderTrackingEvent::class)->orderBy('happened_at')->orderBy('id');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

@@ -50,6 +50,9 @@ class Dispatch extends Model
     public function zoneMaster() { return $this->belongsTo(Zone::class, 'zone_id'); }
     public function exitNote() { return $this->belongsTo(ExitNote::class); }
     public function assignments() { return $this->hasMany(DispatchAssignment::class)->orderBy('id'); }
+    public function referralGuides() { return $this->hasMany(ReferralGuide::class)->orderByDesc('id'); }
+    public function deliveryEvidences() { return $this->hasMany(DeliveryEvidence::class)->orderByDesc('delivered_at')->orderByDesc('id'); }
+    public function trackingEvents() { return $this->hasMany(CommercialOrderTrackingEvent::class)->orderBy('happened_at')->orderBy('id'); }
     public function creator() { return $this->belongsTo(User::class, 'created_by'); }
     public function updater() { return $this->belongsTo(User::class, 'updated_by'); }
 }
