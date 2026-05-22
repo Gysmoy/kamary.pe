@@ -97,6 +97,7 @@ const Picking = () => {
       }}
       columns={[
         { dataField: 'id', caption: 'ID', width: 70 },
+        { dataField: 'order_status', caption: 'Estado pedido', visible: false, showInColumnChooser: false },
         {
           dataField: 'code',
           caption: 'Pedido',
