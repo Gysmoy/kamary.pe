@@ -106,6 +106,7 @@ const clearSelectValue = (ref) => {
   select.empty().val(null)
   select.trigger(select.data('select2') ? 'change.select2' : 'change')
 }
+const presentationEmptyLabel = (item) => item.article_id ? 'Unidad base' : 'Sin presentacion'
 
 const isTaxableDocumentType = (documentType) => ['Factura', 'Boleta'].includes(normalizeDocumentType(documentType))
 
@@ -772,6 +773,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   }
 
   const onItemArticleChanged = async (uid, e) => {
+    if ($(e.target).data('select2')) $(e.target).select2('close')
+
     const selected = $(e.target).select2('data')?.[0]
     const article = selected?.data ?? null
     const articleId = e.target.value || ''
@@ -1232,7 +1235,12 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         </div>
 
         <div className='col-12 mt-2'>
-          <div className='table-responsive border rounded'>
+          <style>{`
+            #commercial-orders-form-container .commercial-order-detail-table .form-group { position: relative; margin-bottom: 0 !important; }
+            #commercial-orders-form-container .commercial-order-detail-table .select2-container { width: 100% !important; }
+            #commercial-orders-form-container .commercial-order-detail-table .select2-dropdown { min-width: 260px; z-index: 1065; }
+          `}</style>
+          <div className='table-responsive border rounded commercial-order-detail-table' data-select2-local-dropdown='true'>
             <table className='table table-sm align-middle mb-0'>
               <thead>
                 <tr>
@@ -1266,9 +1274,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                       <select
                         className='form-control'
                         value={item.presentation_id}
+                        disabled={!item.article_id || item.presentations.length === 0}
                         onChange={(e) => onItemFieldChanged(item.uid, 'presentation_id', e.target.value)}
                       >
-                        <option value=''>Sin presentacion</option>
+                        <option value=''>{presentationEmptyLabel(item)}</option>
                         {item.presentations.map(presentation => (
                           <option key={`commercial-order-presentation-${item.uid}-${presentation.id}`} value={presentation.id}>
                             {`${presentation.name} (${presentation.units})`}
