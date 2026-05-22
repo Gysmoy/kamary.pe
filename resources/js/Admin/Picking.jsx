@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
@@ -36,9 +36,9 @@ const itemLines = (data) => (data?.items ?? []).map((item) => (
 ))
 
 const Picking = () => {
-  const gridRef = React.useRef()
-  const [selectedStatus, setSelectedStatus] = React.useState('preparing')
-  const filterValue = React.useMemo(() => (
+  const gridRef = useRef()
+  const [selectedStatus, setSelectedStatus] = useState('preparing')
+  const filterValue = useMemo(() => (
     selectedStatus === 'all'
       ? basePickingFilter
       : [...basePickingFilter, 'and', ['dispatch_status', '=', selectedStatus]]
@@ -164,6 +164,9 @@ const Picking = () => {
 }
 
 CreateReactScript((el, properties) => {
-  if (!properties.can('dispatch') && !properties.hasRole('Admin')) location.href = '/admin/'
+  if (!properties.can('dispatch') && !properties.hasRole('Admin')) {
+    location.href = '/admin/'
+    return
+  }
   createRoot(el).render(<BaseAdminto {...properties} title='Picking'><Picking {...properties} /></BaseAdminto>)
 })
