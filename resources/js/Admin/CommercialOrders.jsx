@@ -28,6 +28,7 @@ import {
 
 const commercialOrdersRest = new CommercialOrdersRest()
 const referralGuidesRest = new ReferralGuidesRest()
+const regularClientFilter = ['client_kind', '=', 'regular']
 
 const emptyItem = () => ({
   uid: crypto.randomUUID(),
@@ -82,6 +83,22 @@ const textValue = (value, fallback = '') => {
   }
   const text = `${value}`
   return text === '[object Object]' ? fallback : text
+}
+const normalizeSelectEntityId = (value) => {
+  const text = `${value ?? ''}`.trim()
+  const match = text.match(/^(client|eventual)-(\d+)$/)
+  return match ? match[2] : text
+}
+const warehouseOptionTemplate = (option) => {
+  if (option.loading) return option.text
+  const warehouse = option.data ?? {}
+  const name = option.text || warehouse.name || ''
+  const branch = warehouse.branch?.name
+  const business = warehouse.branch?.business?.name
+  const container = $('<span>').text(name)
+  if (branch) container.append($('<small>').addClass('text-muted ms-1').text(`- ${branch}`))
+  if (business) container.append($('<small>').addClass('text-muted ms-1').text(`(${business})`))
+  return container
 }
 
 const isTaxableDocumentType = (documentType) => ['Factura', 'Boleta'].includes(normalizeDocumentType(documentType))
@@ -277,6 +294,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     selectedEventualClientId,
     selectedNetworkId,
   ])
+  const warehouseFilter = useMemo(() => (
+    selectedBranchId ? ['business_branch_id', '=', Number(selectedBranchId)] : null
+  ), [selectedBranchId])
 
   useEffect(() => {
     return () => {
@@ -567,7 +587,16 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const onBusinessChanged = async (e) => {
     const businessId = e.target.value || ''
     setSelectedBusinessId(businessId)
+    setSelectedWarehouseId('')
+    if (warehouseRef.current) $(warehouseRef.current).empty().trigger('change')
     await loadBranches(businessId, null)
+  }
+
+  const onBranchChanged = (e) => {
+    const branchId = e.target.value || ''
+    setSelectedBranchId(branchId)
+    setSelectedWarehouseId('')
+    if (warehouseRef.current) $(warehouseRef.current).empty().trigger('change')
   }
 
   const onWarehouseChanged = async (e) => {
@@ -577,7 +606,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   }
 
   const onClientChanged = async (e) => {
-    const clientId = e.target.value || ''
+    const clientId = normalizeSelectEntityId(e.target.value)
     setSelectedClientId(clientId)
     clearCustomerSelections('regular')
     await loadNetworks(clientId, null)
@@ -585,7 +614,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   }
 
   const onEventualClientChanged = async (e) => {
-    const eventualClientId = e.target.value || ''
+    const eventualClientId = normalizeSelectEntityId(e.target.value)
     setSelectedEventualClientId(eventualClientId)
     clearCustomerSelections('eventual')
     await repriceAllItems()
@@ -1036,13 +1065,24 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
           <SelectAPIFormGroup eRef={businessRef} label='Empresa' required searchAPI='/api/admin/businesses/paginate' searchBy='name' dropdownParent='#commercial-orders-form-container' onChange={onBusinessChanged} />
         </div>
         <div className='col-md-3'>
-          <SelectFormGroup eRef={branchRef} label='Sede' dropdownParent='#commercial-orders-form-container' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value || '')}>
+          <SelectFormGroup eRef={branchRef} label='Sede' dropdownParent='#commercial-orders-form-container' value={selectedBranchId} onChange={onBranchChanged}>
             <option value=''>Sin sede</option>
             {branches.map(branch => <option key={`commercial-order-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
           </SelectFormGroup>
         </div>
         <div className='col-md-3'>
-          <SelectAPIFormGroup eRef={warehouseRef} label='Almacen' required searchAPI='/api/admin/warehouses/paginate' searchBy='name' dropdownParent='#commercial-orders-form-container' onChange={onWarehouseChanged} />
+          <SelectAPIFormGroup
+            eRef={warehouseRef}
+            label='Almacen'
+            required
+            searchAPI='/api/admin/warehouses/paginate'
+            searchBy='name'
+            filter={warehouseFilter}
+            dropdownParent='#commercial-orders-form-container'
+            onChange={onWarehouseChanged}
+            templateResult={warehouseOptionTemplate}
+            templateSelection={warehouseOptionTemplate}
+          />
         </div>
 
         <div className='col-md-3'>
@@ -1078,7 +1118,16 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         </div>
 
         <div className='col-md-6'>
-          <SelectAPIFormGroup eRef={clientRef} label='Cliente regular' searchAPI='/api/admin/clients/paginate' searchBy='full_name' dropdownParent='#commercial-orders-form-container' onChange={onClientChanged} />
+          <SelectAPIFormGroup
+            eRef={clientRef}
+            label='Cliente regular'
+            searchAPI='/api/admin/clients/paginate'
+            searchBy='full_name'
+            selectBy='entity_id'
+            filter={regularClientFilter}
+            dropdownParent='#commercial-orders-form-container'
+            onChange={onClientChanged}
+          />
         </div>
         <div className='col-md-6'>
           <SelectAPIFormGroup eRef={eventualClientRef} label='Cliente eventual' searchAPI='/api/admin/eventual-clients/paginate' searchBy='business_name' dropdownParent='#commercial-orders-form-container' onChange={onEventualClientChanged} />
