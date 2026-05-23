@@ -441,7 +441,7 @@ const Generals = ({ generals }) => {
                     autoComplete="off"
                   />
                   <small className="text-muted d-block mt-1">
-                    Se usa en pedidos comerciales para cargar el mapa de Google. Si queda vacio, el sistema usa GMAPS_API_KEY del .env o el mapa libre.
+                    Se usa en los formularios del panel para cargar Google Maps. Si queda vacio, el sistema usa GMAPS_API_KEY del .env.
                   </small>
                 </div>
               </div>

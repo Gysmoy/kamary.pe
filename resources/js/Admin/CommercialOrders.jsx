@@ -190,31 +190,6 @@ const nowDateTimeLocal = () => {
 }
 
 const defaultMapPosition = { lat: -12.046374, lng: -77.042793 }
-const leafletCdn = {
-  css: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-  js: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-}
-const freeMapLayers = [
-  {
-    name: 'Calles claras',
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    options: {
-      maxZoom: 20,
-      maxNativeZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    },
-  },
-  {
-    name: 'OpenStreetMap',
-    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-    options: {
-      maxZoom: 20,
-      maxNativeZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors',
-    },
-  },
-]
-let leafletLoader = null
 
 const parseCoordinate = (value) => {
   const number = Number(value)
@@ -227,36 +202,6 @@ const formatCoordinate = (value) => {
 }
 
 const hasMapPosition = (position) => parseCoordinate(position?.lat) !== null && parseCoordinate(position?.lng) !== null
-
-const loadLeaflet = () => {
-  if (window.L) return Promise.resolve(window.L)
-  if (leafletLoader) return leafletLoader
-
-  leafletLoader = new Promise((resolve, reject) => {
-    if (!document.querySelector(`link[href="${leafletCdn.css}"]`)) {
-      const link = document.createElement('link')
-      link.rel = 'stylesheet'
-      link.href = leafletCdn.css
-      document.head.appendChild(link)
-    }
-
-    const existingScript = document.querySelector(`script[src="${leafletCdn.js}"]`)
-    if (existingScript) {
-      existingScript.addEventListener('load', () => resolve(window.L), { once: true })
-      existingScript.addEventListener('error', () => reject(new Error('No se pudo cargar el mapa libre')), { once: true })
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = leafletCdn.js
-    script.async = true
-    script.onload = () => resolve(window.L)
-    script.onerror = () => reject(new Error('No se pudo cargar el mapa libre'))
-    document.body.appendChild(script)
-  })
-
-  return leafletLoader
-}
 
 const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionChange, onSearchTextChange, onAddressSelected, googleMapsApiKey }) => {
   const mapRef = useRef()
@@ -457,208 +402,11 @@ const DeliveryMapPicker = (props) => {
     return <GoogleDeliveryMapPicker {...props} googleMapsApiKey={googleMapsApiKey} />
   }
 
-  return <LeafletDeliveryMapPicker {...props} />
-}
-
-const LeafletDeliveryMapPicker = ({ modalRef, position, searchText, onPositionChange, onSearchTextChange, onAddressSelected }) => {
-  const containerRef = useRef()
-  const mapRef = useRef()
-  const markerRef = useRef()
-  const [loading, setLoading] = useState(false)
-  const [mapError, setMapError] = useState('')
-  const [results, setResults] = useState([])
-
-  const resolvedPosition = hasMapPosition(position)
-    ? { lat: parseCoordinate(position.lat), lng: parseCoordinate(position.lng) }
-    : defaultMapPosition
-
-  const setMarkerPosition = async (nextPosition, zoom = null) => {
-    const lat = parseCoordinate(nextPosition?.lat)
-    const lng = parseCoordinate(nextPosition?.lng)
-    if (lat === null || lng === null) return
-
-    const L = await loadLeaflet()
-    if (!mapRef.current || !containerRef.current) return
-
-    if (!markerRef.current) {
-      markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current)
-      markerRef.current.on('dragend', () => {
-        const markerPosition = markerRef.current.getLatLng()
-        onPositionChange({ lat: markerPosition.lat, lng: markerPosition.lng })
-      })
-    } else {
-      markerRef.current.setLatLng([lat, lng])
-    }
-
-    if (zoom) mapRef.current.setView([lat, lng], zoom)
-  }
-
-  useEffect(() => {
-    let cancelled = false
-
-    const initialize = async () => {
-      try {
-        const L = await loadLeaflet()
-        if (cancelled || !containerRef.current || mapRef.current) return
-
-        mapRef.current = L.map(containerRef.current, {
-          center: [resolvedPosition.lat, resolvedPosition.lng],
-          zoom: hasMapPosition(position) ? 17 : 13,
-          maxZoom: 20,
-          scrollWheelZoom: true,
-          wheelPxPerZoomLevel: 80,
-        })
-
-        const layers = freeMapLayers.reduce((collection, layer) => {
-          collection[layer.name] = L.tileLayer(layer.url, layer.options)
-          return collection
-        }, {})
-        layers[freeMapLayers[0].name].addTo(mapRef.current)
-        L.control.layers(layers, null, { position: 'topright' }).addTo(mapRef.current)
-
-        mapRef.current.on('click', (event) => {
-          const nextPosition = { lat: event.latlng.lat, lng: event.latlng.lng }
-          onPositionChange(nextPosition)
-          setMarkerPosition(nextPosition, 17)
-        })
-
-        if (hasMapPosition(position)) await setMarkerPosition(resolvedPosition)
-        setTimeout(() => mapRef.current?.invalidateSize(), 200)
-      } catch (error) {
-        if (!cancelled) setMapError(error.message)
-      }
-    }
-
-    initialize()
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
-    if (hasMapPosition(position)) {
-      setMarkerPosition(resolvedPosition)
-      return
-    }
-
-    if (markerRef.current && mapRef.current) {
-      markerRef.current.remove()
-      markerRef.current = null
-    }
-    mapRef.current?.setView([defaultMapPosition.lat, defaultMapPosition.lng], 13)
-  }, [position?.lat, position?.lng])
-
-  useEffect(() => {
-    const modal = modalRef?.current
-    if (!modal) return undefined
-
-    const onShown = () => {
-      setTimeout(() => {
-        mapRef.current?.invalidateSize()
-        if (hasMapPosition(position)) {
-          mapRef.current?.setView([parseCoordinate(position.lat), parseCoordinate(position.lng)], 17)
-        }
-      }, 180)
-    }
-
-    $(modal).on('shown.bs.modal', onShown)
-    return () => $(modal).off('shown.bs.modal', onShown)
-  }, [modalRef, position?.lat, position?.lng])
-
-  const searchAddress = async () => {
-    const query = `${searchText ?? ''}`.trim()
-    if (!query) {
-      setResults([])
-      setMapError('Escribe una direccion para buscar.')
-      return
-    }
-
-    setLoading(true)
-    setMapError('')
-    try {
-      const params = new URLSearchParams({
-        format: 'jsonv2',
-        q: `${query}, Peru`,
-        countrycodes: 'pe',
-        addressdetails: '1',
-        limit: '5',
-        'accept-language': 'es',
-      })
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`)
-      if (!response.ok) throw new Error('No se pudo consultar OpenStreetMap')
-
-      const data = await response.json()
-      setResults(Array.isArray(data) ? data : [])
-      if (!Array.isArray(data) || data.length === 0) setMapError('Sin resultados. Puedes marcar el punto manualmente en el mapa.')
-    } catch (error) {
-      setMapError(`${error.message}. Puedes marcar el punto manualmente en el mapa.`)
-      setResults([])
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const selectResult = (result) => {
-    const nextPosition = { lat: parseCoordinate(result.lat), lng: parseCoordinate(result.lon) }
-    onPositionChange(nextPosition)
-    onSearchTextChange(result.display_name ?? '')
-    onAddressSelected(result.display_name ?? '')
-    setMarkerPosition(nextPosition, 17)
-    setResults([])
-  }
-
   return (
     <div className='commercial-order-map-picker'>
-      <div className='commercial-order-map-search'>
-        <div>
-          <label className='form-label'>Buscar direccion en mapa</label>
-          <div className='input-group'>
-            <input
-              type='text'
-              className='form-control'
-              value={searchText}
-              placeholder='Ej. Av. Javier Prado 1234, San Isidro'
-              onChange={(event) => onSearchTextChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault()
-                  searchAddress()
-                }
-              }}
-            />
-            <button type='button' className='btn btn-outline-primary' onClick={searchAddress} disabled={loading}>
-              {loading ? 'Buscando...' : 'Buscar'}
-            </button>
-          </div>
-        </div>
-        <div className='commercial-order-map-coordinates'>
-          <label className='form-label'>Coordenadas</label>
-          <div className='commercial-order-map-coordinate-values'>
-            <span>{formatCoordinate(position?.lat) || '-'}</span>
-            <span>{formatCoordinate(position?.lng) || '-'}</span>
-          </div>
-        </div>
+      <div className='commercial-order-map-empty'>
+        Configura Google Maps API Key en Sistemas &gt; Datos generales &gt; Integraciones para habilitar el mapa.
       </div>
-
-      {results.length > 0 && (
-        <div className='commercial-order-map-results'>
-          {results.map((result) => (
-            <button
-              type='button'
-              key={`${result.place_id}-${result.lat}-${result.lon}`}
-              className='commercial-order-map-result'
-              onClick={() => selectResult(result)}
-            >
-              {result.display_name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {mapError && <small className='text-muted d-block mt-1'>{mapError}</small>}
-      <div ref={containerRef} className='commercial-order-map-canvas' />
-      <small className='text-muted d-block mt-2'>Haz clic en el mapa o arrastra el marcador para fijar la ubicacion de entrega.</small>
     </div>
   )
 }
@@ -1626,6 +1374,18 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         border: 1px solid var(--ct-border-color);
         overflow: hidden;
         background: var(--ct-light);
+      }
+      .commercial-order-map-empty {
+        min-height: 160px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        border: 1px dashed var(--ct-border-color);
+        border-radius: 6px;
+        color: var(--ct-gray-600);
+        background: var(--ct-light);
+        text-align: center;
       }
       .commercial-order-map-results {
         max-height: 142px;

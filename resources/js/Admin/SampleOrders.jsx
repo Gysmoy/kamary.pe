@@ -8,6 +8,7 @@ import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import SampleOrdersRest from '../Actions/Admin/SampleOrdersRest';
 import renderGridEditLink from '../Utils/renderGridEditLink';
+import Global from '../Utils/Global';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import { getUbigeoCatalog } from '../Utils/ubigeoInei';
 
@@ -295,6 +296,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     if (!form.ubigeo || ubigeoOptions.some(option => option.value === form.ubigeo)) return ubigeoOptions
     return [{ value: form.ubigeo, label: form.ubigeo }, ...ubigeoOptions]
   }, [form.ubigeo, ubigeoOptions])
+  const googleMapsApiKey = `${Global.GMAPS_API_KEY ?? ''}`.trim()
+  const sampleMapSrc = googleMapsApiKey
+    ? `https://www.google.com/maps/embed/v1/place?key=${googleMapsApiKey}&q=${encodeURIComponent(form.delivery_address || 'Lima Peru')}&zoom=11`
+    : ''
 
   const setField = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
   const closeMainModal = () => $(modalRef.current).modal('hide')
@@ -510,6 +515,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       .sample-input-group .form-control { min-height: 38px; border-radius: 4px; }
       .sample-plus { width: 34px; border-radius: 0 4px 4px 0; font-weight: 700; }
       .sample-map { width: 100%; height: 225px; border: 0; background: #90dcea; }
+      .sample-map-empty { width: 100%; min-height: 225px; display: flex; align-items: center; justify-content: center; padding: 16px; border: 1px solid #d5dbe5; border-radius: 4px; color: #687385; background: #edf2f7; text-align: center; }
       .sample-table { width: 100%; border-collapse: collapse; font-size: 12px; }
       .sample-table th, .sample-table td { border: 1px solid #e4e8ee; padding: 8px; vertical-align: middle; }
       .sample-table th { color: #27314c; font-weight: 700; text-transform: uppercase; font-size: 11px; }
@@ -664,11 +670,17 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         </div>
 
         <div className='span-4'>
-          <iframe
-            className='sample-map'
-            loading='lazy'
-            src={`https://maps.google.com/maps?q=${encodeURIComponent(form.delivery_address || 'Lima Peru')}&z=11&output=embed`}
-          />
+          {sampleMapSrc ? (
+            <iframe
+              title='Mapa de entrega'
+              className='sample-map'
+              loading='lazy'
+              referrerPolicy='no-referrer-when-downgrade'
+              src={sampleMapSrc}
+            />
+          ) : (
+            <div className='sample-map-empty'>Configura Google Maps API Key en Sistemas &gt; Datos generales &gt; Integraciones para ver el mapa.</div>
+          )}
         </div>
       </div>
 

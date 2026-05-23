@@ -340,7 +340,7 @@
     ]
   },
   "resources/js/Admin/Activities.jsx": {
-    "file": "assets/Activities-D5aVeF42.js",
+    "file": "assets/Activities-D4Fo14Ul.js",
     "name": "Activities",
     "src": "resources/js/Admin/Activities.jsx",
     "isEntry": true,
@@ -622,7 +622,7 @@
     ]
   },
   "resources/js/Admin/CommercialOrders.jsx": {
-    "file": "assets/CommercialOrders-Js0TKrXD.js",
+    "file": "assets/CommercialOrders-_IcerMxZ.js",
     "name": "CommercialOrders",
     "src": "resources/js/Admin/CommercialOrders.jsx",
     "isEntry": true,
@@ -922,7 +922,7 @@
     ]
   },
   "resources/js/Admin/Generals.jsx": {
-    "file": "assets/Generals-frfBdf8h.js",
+    "file": "assets/Generals-CNjFr2R6.js",
     "name": "Generals",
     "src": "resources/js/Admin/Generals.jsx",
     "isEntry": true,
@@ -1629,7 +1629,7 @@
     ]
   },
   "resources/js/Admin/SampleOrders.jsx": {
-    "file": "assets/SampleOrders-s_wx-eA6.js",
+    "file": "assets/SampleOrders-DZ3LLBjC.js",
     "name": "SampleOrders",
     "src": "resources/js/Admin/SampleOrders.jsx",
     "isEntry": true,
@@ -1872,7 +1872,7 @@
     ]
   },
   "resources/js/Admin/TakeOrders.jsx": {
-    "file": "assets/TakeOrders-Bv8Hflpj.js",
+    "file": "assets/TakeOrders-BNHX8cGh.js",
     "name": "TakeOrders",
     "src": "resources/js/Admin/TakeOrders.jsx",
     "isEntry": true,

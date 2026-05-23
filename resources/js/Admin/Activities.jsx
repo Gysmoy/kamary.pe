@@ -8,6 +8,7 @@ import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import ActivitiesRest from '../Actions/Admin/ActivitiesRest';
 import renderGridEditLink from '../Utils/renderGridEditLink';
+import Global from '../Utils/Global';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
   activityStatusOptions,
@@ -168,7 +169,10 @@ const Activities = () => {
   const mapQuery = (mapPreview.lat && mapPreview.lng)
     ? `${mapPreview.lat},${mapPreview.lng}`
     : (mapPreview.address || defaultOriginAddress)
-  const mapUrl = `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=12&output=embed`
+  const googleMapsApiKey = `${Global.GMAPS_API_KEY ?? ''}`.trim()
+  const mapUrl = googleMapsApiKey
+    ? `https://www.google.com/maps/embed/v1/place?key=${googleMapsApiKey}&q=${encodeURIComponent(mapQuery)}&zoom=12`
+    : ''
 
   const loadCatalogs = async () => {
     const [businessRows, warehouseRows, orderRows, dispatchRows, driverRows, vehicleRows, zoneRows, clientRows, eventualRows, articleRows] = await Promise.all([
@@ -446,6 +450,7 @@ const Activities = () => {
       .activity-separator { border-top: 1px solid #e8eaef; margin: 1rem 0; }
       .activity-map { width: 100%; height: 190px; border: 1px solid #d8dde6; overflow: hidden; background: #edf2f7; }
       .activity-map iframe { width: 100%; height: 100%; border: 0; display: block; }
+      .activity-map-empty { height: 100%; display: flex; align-items: center; justify-content: center; padding: 14px; color: #687385; text-align: center; }
       .activity-items-table { width: 100%; border-collapse: collapse; margin-top: .9rem; }
       .activity-items-table th,
       .activity-items-table td { border: 1px solid #e1e5ec; padding: .45rem; vertical-align: middle; }
@@ -564,7 +569,11 @@ const Activities = () => {
 
         <div className='activity-separator' />
         <div className='activity-map'>
-          <iframe title='Mapa de actividad' src={mapUrl} loading='lazy' referrerPolicy='no-referrer-when-downgrade'></iframe>
+          {mapUrl ? (
+            <iframe title='Mapa de actividad' src={mapUrl} loading='lazy' referrerPolicy='no-referrer-when-downgrade'></iframe>
+          ) : (
+            <div className='activity-map-empty'>Configura Google Maps API Key en Sistemas &gt; Datos generales &gt; Integraciones para ver el mapa.</div>
+          )}
         </div>
 
         <div className='row g-3 mt-2'>
