@@ -709,7 +709,7 @@
     ]
   },
   "resources/js/Admin/Dispatches.jsx": {
-    "file": "assets/Dispatches-BvI9A-3t.js",
+    "file": "assets/Dispatches-jEU4Jxtb.js",
     "name": "Dispatches",
     "src": "resources/js/Admin/Dispatches.jsx",
     "isEntry": true,
@@ -724,12 +724,12 @@
       "_ReferralGuidesRest-rY1Io38c.js",
       "_ZonesRest-KyEJ-Er4.js",
       "_UbigeoCascade--ehs5tys.js",
+      "_SelectFormGroup-CKkjMgAq.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_magistralesRecordPdf-B1VGSm58.js",
       "_ubigeoInei-D0FnAslC.js",
       "_statusLabels-DE3GulB3.js",
       "_BasicRest-EgGQVCk_.js",
-      "_SelectFormGroup-CKkjMgAq.js",
       "_tippy-react.esm-CcLOROAc.js"
     ]
   },

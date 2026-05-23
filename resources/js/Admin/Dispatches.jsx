@@ -11,6 +11,7 @@ import DispatchesRest from '../Actions/Admin/DispatchesRest';
 import ReferralGuidesRest from '../Actions/Admin/ReferralGuidesRest';
 import ZonesRest from '../Actions/Admin/ZonesRest';
 import UbigeoCascade from '../Components/Adminto/form/UbigeoCascade';
+import SelectFormGroup from '../Components/Adminto/form/SelectFormGroup';
 import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
@@ -303,6 +304,14 @@ const Dispatches = () => {
   const isOrderSelectedInOtherAssignment = (orderId, uid) => (
     assignments.some(row => row.uid !== uid && `${row.commercial_order_id}` === `${orderId}`)
   )
+
+  const assignmentSelectEffectKey = useMemo(() => (
+    [
+      selectedWarehouseId,
+      availableOrders.map(order => order.id).join(','),
+      assignments.map(row => `${row.uid}:${row.commercial_order_id}`).join('|'),
+    ].join('::')
+  ), [assignments, availableOrders, selectedWarehouseId])
 
   const onVehicleChange = (value) => {
     setSelectedVehicleId(value)
@@ -639,6 +648,67 @@ const Dispatches = () => {
   const currentZone = zoneMap[selectedZoneId]
 
   return <>
+    <style>{`
+      #dispatch-form-container .dispatch-assignment-summary {
+        color: var(--ct-gray-600);
+        font-size: 0.82rem;
+      }
+      #dispatch-form-container .dispatch-assignment-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      #dispatch-form-container .dispatch-assignment-row {
+        align-items: end;
+        display: grid;
+        gap: 12px 16px;
+        grid-template-columns: minmax(360px, 1fr) minmax(210px, 250px) minmax(120px, 160px) 68px;
+      }
+      #dispatch-form-container .dispatch-assignment-field,
+      #dispatch-form-container .dispatch-assignment-order-field {
+        min-width: 0;
+      }
+      #dispatch-form-container .dispatch-assignment-row .form-label {
+        line-height: 1.2;
+        margin-bottom: 6px;
+      }
+      #dispatch-form-container .dispatch-assignment-row .form-control,
+      #dispatch-form-container .dispatch-assignment-row .select2-container .select2-selection--single {
+        min-height: 38px;
+      }
+      #dispatch-form-container .dispatch-assignment-row .select2-container {
+        width: 100% !important;
+      }
+      #dispatch-form-container .dispatch-assignment-row .select2-container .select2-selection--single {
+        align-items: center;
+        border-color: var(--ct-border-color);
+        display: flex;
+      }
+      #dispatch-form-container .dispatch-assignment-row .select2-container .select2-selection__rendered {
+        line-height: 36px;
+        padding-left: 12px;
+        padding-right: 28px;
+      }
+      #dispatch-form-container .dispatch-assignment-row .select2-container .select2-selection__arrow {
+        height: 36px;
+      }
+      #dispatch-form-container .select2-dropdown {
+        z-index: 1065;
+      }
+      #dispatch-form-container .dispatch-assignment-remove {
+        height: 38px;
+      }
+      @media (max-width: 991.98px) {
+        #dispatch-form-container .dispatch-assignment-row {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 575.98px) {
+        #dispatch-form-container .dispatch-assignment-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    `}</style>
     <Table
       gridRef={gridRef}
       title='Despachos'
@@ -711,7 +781,7 @@ const Dispatches = () => {
     />
 
     <Modal modalRef={modalRef} title={isEditing ? 'Editar despacho' : 'Agregar despacho'} size='xl' onSubmit={onSave}>
-      <div className='row'>
+      <div id='dispatch-form-container' className='row'>
         <div className='col-md-3 mb-3'>
           <label className='form-label'>Codigo</label>
           <input ref={codeRef} className='form-control' disabled />
@@ -794,16 +864,32 @@ const Dispatches = () => {
         <div className='col-md-3 mb-3'><label className='form-label'>Distrito zona</label><input className='form-control' value={currentZone?.district ?? ''} disabled /></div>
         <div className='col-12 mb-3'>
           <div className='d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2'>
-            <label className='form-label mb-0'>Pedidos asignados</label>
+            <div>
+              <label className='form-label mb-0'>Pedidos asignados</label>
+              <div className='dispatch-assignment-summary'>
+                {!selectedWarehouseId
+                  ? 'Selecciona un almacen para listar sus pedidos disponibles.'
+                  : availableOrders.length > 0
+                    ? `${availableOrders.length} pedido(s) disponible(s) del almacen seleccionado. ${selectedAvailableOrderCount} ya seleccionado(s).`
+                    : 'No hay pedidos disponibles para este almacen. Revisa que el pedido tenga el mismo almacen y no este entregado/cancelado.'}
+              </div>
+            </div>
             <button type='button' className='btn btn-sm btn-outline-secondary' onClick={loadCommercialOrders} disabled={isLoadingOrders}>
               {isLoadingOrders ? 'Cargando pedidos...' : 'Recargar pedidos'}
             </button>
           </div>
           <div className='border rounded p-2'>
-            {assignments.map(row => <div key={row.uid} className='row align-items-end mb-2'>
-              <div className='col-md-6'>
-                <label className='form-label'>Pedido</label>
-                <select className='form-control' value={row.commercial_order_id} onChange={(e) => onAssignmentChange(row.uid, e.target.value)}>
+            <div className='dispatch-assignment-list'>
+              {assignments.map(row => <div key={row.uid} className='dispatch-assignment-row'>
+                <SelectFormGroup
+                  col='dispatch-assignment-order-field'
+                  label='Pedido'
+                  value={row.commercial_order_id}
+                  dropdownParent='#dispatch-form-container'
+                  noMargin
+                  effectWith={[assignmentSelectEffectKey]}
+                  onChange={(e) => onAssignmentChange(row.uid, e.target.value)}
+                >
                   <option value=''>{isLoadingOrders ? 'Cargando pedidos...' : 'Seleccione'}</option>
                   {!isLoadingOrders && availableOrders.length === 0 && <option value='' disabled>Sin pedidos disponibles</option>}
                   {availableOrders.map(order => {
@@ -814,29 +900,28 @@ const Dispatches = () => {
                       </option>
                     )
                   })}
-                </select>
-                <small className='text-muted d-block mt-1'>
-                  {!selectedWarehouseId
-                    ? 'Selecciona un almacen para listar sus pedidos disponibles.'
-                    : availableOrders.length > 0
-                      ? `${availableOrders.length} pedido(s) disponible(s) del almacen seleccionado. ${selectedAvailableOrderCount} ya seleccionado(s).`
-                      : 'No hay pedidos disponibles para este almacen. Revisa que el pedido tenga el mismo almacen y no este entregado/cancelado.'}
-                </small>
-              </div>
-              <div className='col-md-3'><label className='form-label'>Cliente</label><input className='form-control' value={row.customer_name} disabled /></div>
-              <div className='col-md-2'><label className='form-label'>Total</label><input className='form-control' value={Number(row.total || 0).toFixed(2)} disabled /></div>
-              <div className='col-md-1'>
-                <button
-                  type='button'
-                  className='btn btn-outline-danger w-100'
-                  title='Eliminar pedido asignado'
-                  onClick={() => setAssignments(prev => prev.length === 1 ? [emptyAssignment()] : prev.filter(item => item.uid !== row.uid))}
-                >
-                  <i className='mdi mdi-delete'></i>
-                </button>
-              </div>
-            </div>)}
-            <button type='button' className='btn btn-sm btn-outline-primary' onClick={() => setAssignments(prev => [...prev, emptyAssignment()])} disabled={!canAddAssignment}>
+                </SelectFormGroup>
+                <div className='dispatch-assignment-field'>
+                  <label className='form-label'>Cliente</label>
+                  <input className='form-control' value={row.customer_name} disabled />
+                </div>
+                <div className='dispatch-assignment-field'>
+                  <label className='form-label'>Total</label>
+                  <input className='form-control' value={Number(row.total || 0).toFixed(2)} disabled />
+                </div>
+                <div className='dispatch-assignment-field'>
+                  <button
+                    type='button'
+                    className='btn btn-outline-danger w-100 dispatch-assignment-remove'
+                    title='Eliminar pedido asignado'
+                    onClick={() => setAssignments(prev => prev.length === 1 ? [emptyAssignment()] : prev.filter(item => item.uid !== row.uid))}
+                  >
+                    <i className='mdi mdi-delete'></i>
+                  </button>
+                </div>
+              </div>)}
+            </div>
+            <button type='button' className='btn btn-sm btn-outline-primary mt-2' onClick={() => setAssignments(prev => [...prev, emptyAssignment()])} disabled={!canAddAssignment}>
               Agregar pedido
             </button>
           </div>
