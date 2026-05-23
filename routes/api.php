@@ -543,6 +543,7 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/dispatches', [AdminDispatchController::class, 'save']);
         Route::post('/dispatches/paginate', [AdminDispatchController::class, 'paginate']);
+        Route::get('/dispatches/{id}', [AdminDispatchController::class, 'get'])->whereNumber('id');
         Route::patch('/dispatches/status', [AdminDispatchController::class, 'status']);
         Route::patch('/dispatches/{field}', [AdminDispatchController::class, 'boolean']);
         Route::delete('/dispatches/{id}', [AdminDispatchController::class, 'delete']);

@@ -515,7 +515,12 @@ const Dispatches = () => {
     if (!result?.data) return
 
     await refreshGrid()
-    await openMagistralesRecordPdf(buildMagistralesRows.dispatch(result.data))
+    await openDispatchManifestPdf(result.data)
+  }
+
+  const openDispatchManifestPdf = async (dispatch) => {
+    const detail = dispatch?.id ? await dispatchesRest.get(dispatch.id) : null
+    await openMagistralesRecordPdf(buildMagistralesRows.dispatch(detail ?? dispatch))
   }
 
   const onOpenRoute = (dispatch) => {
@@ -774,7 +779,7 @@ const Dispatches = () => {
           }
           container.append(DxButton({ className: 'btn btn-xs btn-soft-warning ms-1', title: dispatchGuides(data).length ? 'Ver guias' : 'Generar guias', icon: 'mdi mdi-file-document', onClick: () => onShowGuides(data) }))
           container.append(DxButton({ className: 'btn btn-xs btn-soft-success ms-1', title: 'Ver evidencias', icon: 'mdi mdi-camera', onClick: () => onShowEvidences(data) }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Manifiesto PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.dispatch(data)) }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Manifiesto PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openDispatchManifestPdf(data) }))
           container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
         } },
         { dataField: 'id', caption: 'ID', width: 70 },
