@@ -1083,13 +1083,13 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             appendGridActionButton(container, {
               variant: 'warning',
               title: orderGuides(data).length ? 'Ver guia' : 'Generar guia',
-              icon: 'mdi mdi-file-document-plus-outline',
+              icon: 'mdi mdi-file-document',
               onClick: () => onOpenReferralGuide(data)
             })
             appendGridActionButton(container, {
               variant: 'success',
               title: latestEvidence(data) ? 'Ver evidencia' : 'Registrar evidencia',
-              icon: 'mdi mdi-image-check-outline',
+              icon: 'mdi mdi-camera',
               onClick: () => openEvidence(data)
             })
             appendGridActionButton(container, {
