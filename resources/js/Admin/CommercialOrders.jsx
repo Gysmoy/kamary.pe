@@ -85,6 +85,25 @@ const formatAuditUser = (user) => {
 }
 
 const roundMoney = (value) => Number((Number(value || 0)).toFixed(2))
+const normalizePositiveNumberText = (value) => {
+  const normalized = `${value ?? ''}`
+    .replace(',', '.')
+    .replace(/[^\d.]/g, '')
+  if (!normalized) return ''
+
+  const [wholeRaw, ...fractionParts] = normalized.split('.')
+  const whole = wholeRaw.replace(/^0+(?=\d)/, '') || (wholeRaw || fractionParts.length ? '0' : '')
+  const fraction = fractionParts.length ? `.${fractionParts.join('')}` : ''
+  return `${whole}${fraction}`
+}
+const readPositiveNumberInput = (event) => {
+  const normalized = normalizePositiveNumberText(event.target.value)
+  if (event.target.value !== normalized) event.target.value = normalized
+  return Number(normalized || 0)
+}
+const selectZeroInput = (event) => {
+  if (Number(event.target.value || 0) === 0) event.target.select()
+}
 
 const calculateItemDiscount = (grossTotal, discountType, discountValue) => {
   const gross = roundMoney(grossTotal)
@@ -2030,7 +2049,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                         min='0'
                         className='form-control'
                         value={item.price_unit}
-                        onChange={(e) => onItemFieldChanged(item.uid, 'price_unit', Number(e.target.value || 0))}
+                        onFocus={selectZeroInput}
+                        onChange={(e) => onItemFieldChanged(item.uid, 'price_unit', readPositiveNumberInput(e))}
                       />
                     </td>
                     <td>
@@ -2050,7 +2070,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                         min='0.01'
                         className='form-control'
                         value={item.quantity}
-                        onChange={(e) => onItemFieldChanged(item.uid, 'quantity', Number(e.target.value || 0))}
+                        onFocus={selectZeroInput}
+                        onChange={(e) => onItemFieldChanged(item.uid, 'quantity', readPositiveNumberInput(e))}
                       />
                     </td>
                     <td>
