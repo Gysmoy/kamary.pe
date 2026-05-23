@@ -279,13 +279,19 @@ class CommercialOrderController extends BasicController
     {
         DB::beginTransaction();
         try {
+            $stockReservationService = app(CommercialOrderStockService::class);
+            if (!$isNew) {
+                $stockReservationService->releaseOrderReservations(
+                    $jpa->fresh(['items']),
+                    'Liberacion de reserva por actualizacion del pedido'
+                );
+            }
             CommercialOrderItem::where('commercial_order_id', $jpa->id)->delete();
 
             $inserted = 0;
             $subtotal = 0;
             $matchedPriceListIds = [];
             $business = BusinessScope::findFixedBusiness($jpa->business_id);
-            $stockReservationService = app(CommercialOrderStockService::class);
             $reservationPlan = $stockReservationService->buildReservationPlan(
                 $this->itemsPayload,
                 (int)$jpa->warehouse_id,
@@ -416,7 +422,9 @@ class CommercialOrderController extends BasicController
                 'branch',
                 'warehouse',
             ]));
-            $stockReservationService->recordReservationTracking($jpa->fresh(), $reservationPlan);
+            $freshOrder = $jpa->fresh(['items']);
+            $stockReservationService->recordOrderReservationMovements($freshOrder);
+            $stockReservationService->recordReservationTracking($freshOrder, $reservationPlan);
 
             DB::commit();
 

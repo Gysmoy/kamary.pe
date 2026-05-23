@@ -221,8 +221,14 @@ class EcomsurOmsService
         ]);
         $order->save();
 
-        CommercialOrderItem::where('commercial_order_id', $order->id)->delete();
         $reservationService = app(CommercialOrderStockService::class);
+        if (!$isNew) {
+            $reservationService->releaseOrderReservations(
+                $order->fresh(['items']),
+                'Liberacion de reserva por actualizacion OMS'
+            );
+        }
+        CommercialOrderItem::where('commercial_order_id', $order->id)->delete();
         $reservationPlan = $reservationService->buildReservationPlan(array_map(fn($item) => [
             'article_id' => $item['article']->id,
             'warehouse_id' => $warehouse->id,
@@ -254,6 +260,7 @@ class EcomsurOmsService
             }
             CommercialOrderItem::create($itemPayload);
         }
+        $reservationService->recordOrderReservationMovements($order->fresh(['items']), 'Reserva de stock por pedido OMS');
 
         return [
             'external_order_id' => $externalOrderId,

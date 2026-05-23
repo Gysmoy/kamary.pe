@@ -61,6 +61,47 @@ class KardexController extends BasicController
                     movement_item.total as total
                 ");
 
+            $reservationMovements = null;
+            if (Schema::hasTable('commercial_order_stock_movements')) {
+                $reservationMovements = DB::table('commercial_order_stock_movements as movement_item')
+                    ->join('commercial_orders as movement_note', 'movement_note.id', '=', 'movement_item.commercial_order_id')
+                    ->join('articles as article', 'article.id', '=', 'movement_item.article_id')
+                    ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'article.laboratory_id')
+                    ->leftJoin('active_principles as active_principle', 'active_principle.id', '=', 'article.active_principle_id')
+                    ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
+                    ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'movement_item.warehouse_id')
+                    ->leftJoin('businesses as business', 'business.id', '=', 'movement_item.business_id')
+                    ->leftJoin('business_branches as branch', 'branch.id', '=', 'movement_item.business_branch_id')
+                    ->where('movement_item.status', 1)
+                    ->selectRaw("
+                        CONCAT('commercial-stock-', movement_item.id) as id,
+                        movement_note.id as note_id,
+                        movement_item.created_at as movement_date,
+                        CASE
+                            WHEN movement_item.movement_type = 'released' THEN 'Liberacion reserva'
+                            ELSE 'Reserva pedido'
+                        END as movement_type,
+                        movement_item.business_id as business_id,
+                        COALESCE(business.name, '') as business_name,
+                        movement_item.business_branch_id as business_branch_id,
+                        COALESCE(branch.name, '') as branch_name,
+                        article.id as article_id,
+                        COALESCE(article.code, '') as article_code,
+                        COALESCE(article.name, '') as article_name,
+                        article.laboratory_id as laboratory_id,
+                        COALESCE(laboratory.name, '') as laboratory_name,
+                        COALESCE(active_principle.name, '') as principle_name,
+                        COALESCE(unit.symbol, unit.name, '') as unit_label,
+                        COALESCE(warehouse.name, '') as warehouse_name,
+                        '' as batch_code,
+                        '' as location,
+                        COALESCE(movement_item.reference_code, '') as destination_location,
+                        CASE WHEN movement_item.movement_type = 'released' THEN movement_item.quantity ELSE 0 END as quantity_in,
+                        CASE WHEN movement_item.movement_type = 'released' THEN 0 ELSE movement_item.quantity END as quantity_out,
+                        0 as total
+                    ");
+            }
+
             $businessId = trim((string)($request->business_id ?? ''));
             $branchId = trim((string)($request->business_branch_id ?? ''));
             $laboratoryId = trim((string)($request->laboratory_id ?? ''));
@@ -69,26 +110,44 @@ class KardexController extends BasicController
             if (Schema::hasColumn('articles', 'module_scope')) {
                 $entryMovements->where('article.module_scope', $this->moduleScope);
                 $exitMovements->where('article.module_scope', $this->moduleScope);
+                if ($reservationMovements) {
+                    $reservationMovements->where('article.module_scope', $this->moduleScope);
+                }
             }
 
             if ($businessId !== '') {
                 $entryMovements->where('movement_note.business_id', $businessId);
                 $exitMovements->where('movement_note.business_id', $businessId);
+                if ($reservationMovements) {
+                    $reservationMovements->where('movement_item.business_id', $businessId);
+                }
             }
             if ($branchId !== '') {
                 $entryMovements->where('movement_note.business_branch_id', $branchId);
                 $exitMovements->where('movement_note.business_branch_id', $branchId);
+                if ($reservationMovements) {
+                    $reservationMovements->where('movement_item.business_branch_id', $branchId);
+                }
             }
             if ($laboratoryId !== '') {
                 $entryMovements->where('article.laboratory_id', $laboratoryId);
                 $exitMovements->where('article.laboratory_id', $laboratoryId);
+                if ($reservationMovements) {
+                    $reservationMovements->where('article.laboratory_id', $laboratoryId);
+                }
             }
             if ($articleId !== '') {
                 $entryMovements->where('movement_item.article_id', $articleId);
                 $exitMovements->where('movement_item.article_id', $articleId);
+                if ($reservationMovements) {
+                    $reservationMovements->where('movement_item.article_id', $articleId);
+                }
             }
 
             $union = $entryMovements->unionAll($exitMovements);
+            if ($reservationMovements) {
+                $union->unionAll($reservationMovements);
+            }
             $instance = DB::query()->fromSub($union, 'kardex');
 
             if ($request->filter) {

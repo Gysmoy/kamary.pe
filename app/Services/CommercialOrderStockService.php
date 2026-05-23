@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Article;
 use App\Models\CommercialOrder;
 use App\Models\CommercialOrderItem;
+use App\Models\CommercialOrderStockMovement;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -16,6 +18,11 @@ class CommercialOrderStockService
     public function supportsReservations(): bool
     {
         return Schema::hasColumn('commercial_order_items', 'reserved_quantity');
+    }
+
+    public function supportsReservationMovements(): bool
+    {
+        return Schema::hasTable('commercial_order_stock_movements');
     }
 
     public function buildReservationPlan(array $items, int $defaultWarehouseId, ?int $excludedOrderId = null): array
@@ -135,7 +142,25 @@ class CommercialOrderStockService
         if ($this->supportsReservations()) {
             foreach ($items as $item) {
                 $quantity = round((float)$item->quantity, 3);
-                if (abs((float)($item->reserved_quantity ?? 0) - $quantity) > 0.0001) {
+                $currentReserved = round((float)($item->reserved_quantity ?? 0), 3);
+                if (abs($currentReserved - $quantity) > 0.0001) {
+                    if ($quantity > $currentReserved) {
+                        $this->recordReservationMovement(
+                            $order,
+                            $item,
+                            'reserved',
+                            round($quantity - $currentReserved, 3),
+                            'Ajuste de reserva al finalizar preparacion'
+                        );
+                    } elseif ($currentReserved > $quantity) {
+                        $this->recordReservationMovement(
+                            $order,
+                            $item,
+                            'released',
+                            round($currentReserved - $quantity, 3),
+                            'Liberacion de reserva por ajuste de preparacion'
+                        );
+                    }
                     $item->update(['reserved_quantity' => $quantity]);
                 }
             }
@@ -151,13 +176,29 @@ class CommercialOrderStockService
         );
     }
 
-    public function releaseOrderReservations(CommercialOrder $order): void
+    public function recordOrderReservationMovements(CommercialOrder $order, string $reason = 'Reserva de stock por pedido'): void
+    {
+        if (!$this->supportsReservations() || !$this->supportsReservationMovements()) return;
+
+        $order->loadMissing('items');
+        foreach ($order->items as $item) {
+            $quantity = round((float)($item->reserved_quantity ?? 0), 3);
+            if ($quantity <= 0) continue;
+            $this->recordReservationMovement($order, $item, 'reserved', $quantity, $reason);
+        }
+    }
+
+    public function releaseOrderReservations(CommercialOrder $order, string $reason = 'Liberacion de reserva de stock'): void
     {
         if (!$this->supportsReservations()) return;
 
-        CommercialOrderItem::where('commercial_order_id', $order->id)
-            ->where('reserved_quantity', '>', 0)
-            ->update(['reserved_quantity' => 0]);
+        $order->loadMissing('items');
+        foreach ($order->items as $item) {
+            $quantity = round((float)($item->reserved_quantity ?? 0), 3);
+            if ($quantity <= 0) continue;
+            $this->recordReservationMovement($order, $item, 'released', $quantity, $reason);
+            $item->update(['reserved_quantity' => 0]);
+        }
     }
 
     public function recordReservationTracking(CommercialOrder $order, array $plan): void
@@ -238,5 +279,36 @@ class CommercialOrderStockService
         }
 
         return rtrim(rtrim(number_format($rounded, 3, '.', ''), '0'), '.');
+    }
+
+    private function recordReservationMovement(
+        CommercialOrder $order,
+        CommercialOrderItem $item,
+        string $movementType,
+        float $quantity,
+        string $reason
+    ): void {
+        if (!$this->supportsReservationMovements() || $quantity <= 0) return;
+
+        CommercialOrderStockMovement::create([
+            'commercial_order_id' => $order->id,
+            'commercial_order_item_id' => $item->id,
+            'business_id' => $order->business_id,
+            'business_branch_id' => $order->business_branch_id,
+            'warehouse_id' => $item->warehouse_id ?: $order->warehouse_id,
+            'article_id' => $item->article_id,
+            'movement_type' => $movementType,
+            'quantity' => $quantity,
+            'reference_code' => $order->code,
+            'observations' => $reason,
+            'metadata' => [
+                'order_code' => $order->code,
+                'order_status' => $order->order_status,
+                'dispatch_status' => $order->dispatch_status,
+            ],
+            'status' => true,
+            'created_by' => Auth::id(),
+            'updated_by' => Auth::id(),
+        ]);
     }
 }
