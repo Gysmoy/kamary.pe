@@ -17,6 +17,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\AccountsReceivableService;
 use App\Services\CommercialOrderTrackingService;
+use App\Services\CommercialOrderStockService;
 use App\Services\PriceListResolverService;
 use App\Services\StockService;
 use App\Support\BusinessScope;
@@ -25,6 +26,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Carbon;
 use SoDe\Extend\Response;
 
@@ -35,6 +37,7 @@ class CommercialOrderController extends BasicController
     public $prefix4filter = 'commercial_orders';
 
     private array $itemsPayload = [];
+    private bool $allowStockShortage = false;
 
     public function setReactViewProperties(Request $request)
     {
@@ -51,6 +54,12 @@ class CommercialOrderController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
+        $itemColumns = 'items:id,commercial_order_id,article_id,presentation_id,warehouse_id,price_list_item_id,external_item_number,external_sku,external_payload,stock_available,';
+        if (Schema::hasColumn('commercial_order_items', 'reserved_quantity')) {
+            $itemColumns .= 'reserved_quantity,';
+        }
+        $itemColumns .= 'cost_unit,price_unit,presentation_units,quantity,total,price_source,status';
+
         $query = $model::select('commercial_orders.*')
             ->with([
                 'business:id,name',
@@ -63,7 +72,7 @@ class CommercialOrderController extends BasicController
                 'seller:id,name,lastname,username,fullname',
                 'priceList:id,code',
                 'accountsReceivable:id,source_id,code,total,paid_amount,balance_amount,payment_status,status',
-                'items:id,commercial_order_id,article_id,presentation_id,warehouse_id,price_list_item_id,external_item_number,external_sku,external_payload,stock_available,cost_unit,price_unit,presentation_units,quantity,total,price_source,status',
+                $itemColumns,
                 'items.article:id,code,name,default_lot,laboratory_id,active_principle_id,unit_id',
                 'items.article.laboratory:id,name',
                 'items.article.activePrinciple:id,name',
@@ -195,8 +204,22 @@ class CommercialOrderController extends BasicController
             $rawItems = is_array($decoded) ? $decoded : [];
         }
         if (!is_array($rawItems)) $rawItems = [];
+        $this->allowStockShortage = filter_var($body['allow_stock_shortage'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $this->itemsPayload = $rawItems;
+        unset($body['allow_stock_shortage']);
         unset($body['items']);
+
+        $reservationPlan = app(CommercialOrderStockService::class)->buildReservationPlan(
+            $rawItems,
+            (int)$warehouseId,
+            $orderId ? (int)$orderId : null
+        );
+        if (!$this->allowStockShortage) {
+            app(CommercialOrderStockService::class)->assertNoShortages(
+                $reservationPlan,
+                'Stock insuficiente para crear el pedido.'
+            );
+        }
 
         if (!$orderId) {
             $body['code'] = $this->nextCode();
@@ -262,8 +285,20 @@ class CommercialOrderController extends BasicController
             $subtotal = 0;
             $matchedPriceListIds = [];
             $business = BusinessScope::findFixedBusiness($jpa->business_id);
+            $stockReservationService = app(CommercialOrderStockService::class);
+            $reservationPlan = $stockReservationService->buildReservationPlan(
+                $this->itemsPayload,
+                (int)$jpa->warehouse_id,
+                (int)$jpa->id
+            );
+            if (!$this->allowStockShortage) {
+                $stockReservationService->assertNoShortages(
+                    $reservationPlan,
+                    'Stock insuficiente para crear el pedido.'
+                );
+            }
 
-            foreach ($this->itemsPayload as $item) {
+            foreach ($this->itemsPayload as $itemIndex => $item) {
                 if (!is_array($item)) continue;
 
                 $articleId = $this->toNullableInt($item['article_id'] ?? null);
@@ -290,10 +325,13 @@ class CommercialOrderController extends BasicController
                     throw new \Exception("La cantidad por linea debe ser mayor a 0 para {$article->name}");
                 }
 
-                $availableStock = $this->getAvailableStockByWarehouse((int)$articleId, (int)$warehouseId);
-                if ($quantity > $availableStock) {
-                    throw new \Exception("Stock insuficiente para {$article->name}. Disponible: {$availableStock}");
-                }
+                $stockPlan = $reservationPlan['items'][$itemIndex] ?? null;
+                $availableStock = $stockPlan
+                    ? (float)$stockPlan['available_for_reservation']
+                    : $this->getAvailableStockByWarehouse((int)$articleId, (int)$warehouseId);
+                $reservedQuantity = $stockPlan
+                    ? (float)$stockPlan['reserved_quantity']
+                    : min($quantity, $availableStock);
 
                 $resolution = app(PriceListResolverService::class)->resolve([
                     'business_id' => $jpa->business_id,
@@ -321,7 +359,7 @@ class CommercialOrderController extends BasicController
                 $discountAmount = $this->calculateLineDiscount($grossLineTotal, $discountType, $discountValue);
                 $lineTotal = round(max(0, $grossLineTotal - $discountAmount), 2);
 
-                CommercialOrderItem::create([
+                $itemPayload = [
                     'commercial_order_id' => $jpa->id,
                     'article_id' => $article->id,
                     'presentation_id' => $presentationId ?: null,
@@ -343,7 +381,11 @@ class CommercialOrderController extends BasicController
                         ],
                     ],
                     'status' => isset($item['status']) ? (bool)$item['status'] : true,
-                ]);
+                ];
+                if ($stockReservationService->supportsReservations()) {
+                    $itemPayload['reserved_quantity'] = $reservedQuantity;
+                }
+                CommercialOrderItem::create($itemPayload);
 
                 if ($resolution['price_list_id']) {
                     $matchedPriceListIds[] = (int)$resolution['price_list_id'];
@@ -374,6 +416,7 @@ class CommercialOrderController extends BasicController
                 'branch',
                 'warehouse',
             ]));
+            $stockReservationService->recordReservationTracking($jpa->fresh(), $reservationPlan);
 
             DB::commit();
 
@@ -468,8 +511,13 @@ class CommercialOrderController extends BasicController
 
             $response->status = 200;
             $response->message = 'Operacion correcta';
+            $stockPlan = app(CommercialOrderStockService::class)->buildReservationPlan([[
+                'article_id' => $articleId,
+                'warehouse_id' => $warehouseId,
+                'quantity' => max(1, $quantity),
+            ]], $warehouseId);
             $response->data = array_merge($resolution, [
-                'stock_available' => $this->getAvailableStockByWarehouse($articleId, $warehouseId),
+                'stock_available' => $stockPlan['items'][0]['available_for_reservation'] ?? $this->getAvailableStockByWarehouse($articleId, $warehouseId),
             ]);
         } catch (\Throwable $th) {
             $response->status = 400;
@@ -577,6 +625,9 @@ class CommercialOrderController extends BasicController
                     : null;
             } elseif ($field === 'dispatch_status') {
                 $payload[$field] = $this->normalizeDispatchStatus($value);
+                if ($payload[$field] === 'dispatched') {
+                    app(CommercialOrderStockService::class)->assertOrderReadyForDispatch($order);
+                }
                 $nextOrderStatus = $this->orderStatusFromDispatchStatus($payload[$field]);
                 if ($nextOrderStatus && !in_array($order->order_status, ['billed', 'closed', 'cancelled'], true)) {
                     $payload['order_status'] = $nextOrderStatus;
@@ -596,6 +647,12 @@ class CommercialOrderController extends BasicController
                 $payload[$field] = $value;
             }
             $order->update($payload);
+            if (
+                ($field === 'dispatch_status' && in_array($payload[$field] ?? null, ['cancelled', 'delivered'], true))
+                || ($field === 'order_status' && in_array($payload[$field] ?? null, ['cancelled', 'closed'], true))
+            ) {
+                app(CommercialOrderStockService::class)->releaseOrderReservations($order);
+            }
 
             app(AccountsReceivableService::class)->syncFromCommercialOrder($order->fresh([
                 'client',
@@ -636,6 +693,9 @@ class CommercialOrderController extends BasicController
                 'status' => $request->status ? 0 : 1,
                 'updated_by' => Auth::id(),
             ]);
+            if ($request->status) {
+                app(CommercialOrderStockService::class)->releaseOrderReservations($order);
+            }
 
             app(AccountsReceivableService::class)->syncFromCommercialOrder($order->fresh([
                 'client',
@@ -667,6 +727,7 @@ class CommercialOrderController extends BasicController
                 'status' => null,
                 'updated_by' => Auth::id(),
             ]);
+            app(CommercialOrderStockService::class)->releaseOrderReservations($order);
 
             app(AccountsReceivableService::class)->syncFromCommercialOrder($order->fresh([
                 'client',

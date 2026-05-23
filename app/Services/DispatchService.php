@@ -109,12 +109,19 @@ class DispatchService
                         'warehouse_id' => $order->warehouse_id,
                         'quantity' => 0,
                         'total' => 0,
+                        'order_ids' => [],
                     ];
                 }
                 $grouped[$key]['quantity'] = round($grouped[$key]['quantity'] + (float)$item->quantity, 3);
                 $grouped[$key]['total'] = round($grouped[$key]['total'] + (float)$item->total, 2);
+                $grouped[$key]['order_ids'][] = (int)$order->id;
             }
         }
+
+        foreach ($grouped as &$line) {
+            $line['order_ids'] = array_values(array_unique($line['order_ids']));
+        }
+        unset($line);
 
         return $grouped;
     }
@@ -128,12 +135,19 @@ class DispatchService
         $stockService = app(StockService::class);
         $stockRows = [];
         foreach ($grouped as $line) {
-            $availableStock = $stockService->getAvailableStockByWarehouse((int)$line['article_id'], (int)$line['warehouse_id'], $exitNoteId);
+            $physicalStock = $stockService->getAvailableStockByWarehouse((int)$line['article_id'], (int)$line['warehouse_id'], $exitNoteId);
+            $reservedByOtherOrders = app(CommercialOrderStockService::class)->reservedByOtherOrders(
+                (int)$line['article_id'],
+                (int)$line['warehouse_id'],
+                $line['order_ids'] ?? []
+            );
+            $availableStock = max(0, round($physicalStock - $reservedByOtherOrders, 3));
             if ((float)$line['quantity'] > $availableStock + 0.0001) {
                 throw new \Exception("Stock insuficiente para cerrar el despacho. Articulo {$line['article_id']} disponible: {$availableStock}");
             }
 
             $line['stock'] = $availableStock;
+            unset($line['order_ids']);
             $stockRows[] = $line;
         }
 
@@ -192,6 +206,9 @@ class DispatchService
                 }
                 if ($orderStatusChanged) {
                     app(CommercialOrderTrackingService::class)->recordStatusChange($freshOrder, 'order_status', $nextOrderStatus);
+                }
+                if (in_array($nextStatus, ['delivered', 'cancelled'], true)) {
+                    app(CommercialOrderStockService::class)->releaseOrderReservations($freshOrder);
                 }
                 app(ExternalOrderEventService::class)->recordOrderStatus($freshOrder, 'dispatch_status_changed');
             }

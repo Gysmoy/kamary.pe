@@ -60,6 +60,7 @@ const emptyItem = () => ({
   presentation_id: '',
   presentation_units: 1,
   stock_available: 0,
+  reserved_quantity: 0,
   price_unit: 0,
   quantity: 1,
   gross_total: 0,
@@ -84,6 +85,11 @@ const formatAuditUser = (user) => {
 }
 
 const roundMoney = (value) => Number((Number(value || 0)).toFixed(2))
+const escapeHtml = (value) => $('<div>').text(value ?? '').html()
+const formatQuantity = (value) => {
+  const rounded = Number(Number(value || 0).toFixed(3))
+  return Number.isInteger(rounded) ? `${rounded}` : `${rounded}`.replace(/\.?0+$/, '')
+}
 const isManualPrice = (item) => item?.price_source === 'manual'
 const resolvePriceUnitValue = (item, resolution, force = false) => {
   const currentPrice = Number(item?.price_unit || 0)
@@ -198,6 +204,31 @@ const deriveDocumentTotals = (grossAmount, documentType) => {
     taxAmount: Number((gross - subtotal).toFixed(2)),
     total: Number(gross.toFixed(2)),
   }
+}
+
+const buildStockShortages = (items, warehouseId = '') => {
+  const usedByKey = new Map()
+
+  return (items ?? []).flatMap((item) => {
+    if (!item?.article_id) return []
+
+    const key = `${item.article_id}:${item.warehouse_id || warehouseId || ''}`
+    const quantity = Number(item.quantity || 0)
+    const stock = Number(item.stock_available || 0)
+    const used = Number(usedByKey.get(key) || 0)
+    const availableForLine = Math.max(0, stock - used)
+    const reserved = Math.min(quantity, availableForLine)
+    const shortage = Math.max(0, quantity - reserved)
+    usedByKey.set(key, used + reserved)
+
+    if (shortage <= 0.0001) return []
+    return [{
+      article: item.article_name || item.article_label || item.article_code || 'Articulo',
+      quantity,
+      available: availableForLine,
+      shortage,
+    }]
+  })
 }
 
 const orderGuides = (order) => order?.referral_guides ?? order?.referralGuides ?? []
@@ -844,6 +875,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         presentation_id: selectedPresentation?.id ? `${selectedPresentation.id}` : '',
         presentation_units: presentationUnits,
         stock_available: Number(row.stock_available || 0),
+        reserved_quantity: Number(row.reserved_quantity || 0),
         price_unit: Number(row.price_unit || 0),
         quantity: Number(row.quantity || 1),
         discount_type: row.external_payload?.commercial_form?.discount_type ?? 'none',
@@ -911,6 +943,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         presentation_id: item.presentation_id || null,
         warehouse_id: selectedWarehouseId || null,
         stock_available: item.stock_available,
+        reserved_quantity: item.reserved_quantity,
         presentation_units: item.presentation_units,
         price_unit: item.price_unit,
         quantity: item.quantity,
@@ -921,6 +954,28 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         total: item.total,
         status: true,
       })),
+    }
+
+    const shortages = buildStockShortages(items, selectedWarehouseId)
+    if (shortages.length > 0) {
+      const html = `
+        <div class="text-start">
+          <p>Hay productos sin stock suficiente. Se reservara lo disponible y el faltante quedara pendiente para preparacion.</p>
+          <ul class="mb-0 ps-3">
+            ${shortages.map(row => `<li><strong>${escapeHtml(row.article)}</strong>: faltan ${formatQuantity(row.shortage)} unidad(es) para completar ${formatQuantity(row.quantity)}. Disponible: ${formatQuantity(row.available)}.</li>`).join('')}
+          </ul>
+        </div>
+      `
+      const { isConfirmed } = await Swal.fire({
+        title: 'Stock insuficiente',
+        html,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Crear de todas formas',
+        cancelButtonText: 'Revisar pedido',
+      })
+      if (!isConfirmed) return
+      request.allow_stock_shortage = true
     }
 
     const result = await commercialOrdersRest.save(request)

@@ -21,6 +21,7 @@ class CommercialOrderItem extends Model
         'external_sku',
         'external_payload',
         'stock_available',
+        'reserved_quantity',
         'cost_unit',
         'price_unit',
         'presentation_units',
@@ -32,6 +33,7 @@ class CommercialOrderItem extends Model
 
     protected $casts = [
         'stock_available' => 'float',
+        'reserved_quantity' => 'float',
         'cost_unit' => 'float',
         'price_unit' => 'float',
         'presentation_units' => 'float',

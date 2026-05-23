@@ -210,15 +210,19 @@ const Picking = () => {
       : orders.map((item) => `${item.id}` === `${order.id}` ? { ...item, dispatch_status: nextStatus } : item)
     setOrders(nextOrders)
 
-    const result = await commercialOrdersRest.boolean({
+    const result = await commercialOrdersRest.booleanResult({
       id: order.id,
       field: 'dispatch_status',
       value: nextStatus,
     })
 
-    if (!result) {
+    if (!result?.ok) {
       setOrders(previousOrders)
-      Swal.fire('No se pudo mover', 'El estado del pedido no se actualizo.', 'error')
+      Swal.fire(
+        nextStatus === 'dispatched' ? 'Stock insuficiente' : 'No se pudo mover',
+        result?.message || 'El estado del pedido no se actualizo.',
+        'error'
+      )
     } else {
       await loadOrders()
     }

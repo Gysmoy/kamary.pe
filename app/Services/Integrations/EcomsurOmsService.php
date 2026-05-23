@@ -10,6 +10,7 @@ use App\Models\EventualClient;
 use App\Models\IntegrationLog;
 use App\Models\IntegrationMapping;
 use App\Models\Warehouse;
+use App\Services\CommercialOrderStockService;
 use App\Services\StockService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -221,8 +222,16 @@ class EcomsurOmsService
         $order->save();
 
         CommercialOrderItem::where('commercial_order_id', $order->id)->delete();
-        foreach ($items as $item) {
-            CommercialOrderItem::create([
+        $reservationService = app(CommercialOrderStockService::class);
+        $reservationPlan = $reservationService->buildReservationPlan(array_map(fn($item) => [
+            'article_id' => $item['article']->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => $item['quantity'],
+        ], $items), (int)$warehouse->id, (int)$order->id);
+
+        foreach ($items as $index => $item) {
+            $stockPlan = $reservationPlan['items'][$index] ?? null;
+            $itemPayload = [
                 'commercial_order_id' => $order->id,
                 'article_id' => $item['article']->id,
                 'presentation_id' => null,
@@ -231,7 +240,7 @@ class EcomsurOmsService
                 'external_item_number' => $item['external_item_number'],
                 'external_sku' => $item['external_sku'],
                 'external_payload' => $item['payload'],
-                'stock_available' => $item['stock_available'],
+                'stock_available' => $stockPlan['available_for_reservation'] ?? $item['stock_available'],
                 'cost_unit' => (float)($item['article']->cost_price ?? 0),
                 'price_unit' => $item['price_unit'],
                 'presentation_units' => 1,
@@ -239,7 +248,11 @@ class EcomsurOmsService
                 'total' => $item['total'],
                 'price_source' => 'external',
                 'status' => true,
-            ]);
+            ];
+            if ($reservationService->supportsReservations()) {
+                $itemPayload['reserved_quantity'] = $stockPlan['reserved_quantity'] ?? 0;
+            }
+            CommercialOrderItem::create($itemPayload);
         }
 
         return [

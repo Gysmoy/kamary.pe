@@ -67,6 +67,37 @@ class CommercialOrdersRest extends BasicRest {
     }
   }
 
+  booleanResult = async ({ id, field, value }) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/boolean`, {
+        method: 'PATCH',
+        body: JSON.stringify({ id, field, value })
+      })
+      if (!status) {
+        return {
+          ok: false,
+          message: result?.message || 'Ocurrio un error inesperado',
+        }
+      }
+
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+
+      return {
+        ok: true,
+        result,
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        message: error.message,
+      }
+    }
+  }
+
   saveDeliveryEvidence = async (orderId, request) => {
     try {
       const res = await fetch(`/api/${this.path}/${orderId}/delivery-evidence`, {
