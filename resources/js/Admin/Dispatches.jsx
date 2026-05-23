@@ -187,7 +187,7 @@ const Dispatches = () => {
       if (`${order.warehouse_id}` !== `${selectedWarehouseId}`) return false
       if (orderBelongsToCurrentDispatch(order)) return true
       if (activeAssignmentForOtherDispatch(order)) return false
-      return ['pending', 'preparing', 'dispatched', 'in_route'].includes(`${order.dispatch_status ?? ''}`)
+      return `${order.dispatch_status ?? ''}` === 'dispatched'
     })
   ), [orders, selectedBusinessId, selectedWarehouseId, currentDispatchId])
   const selectedAssignmentOrderIds = useMemo(() => (

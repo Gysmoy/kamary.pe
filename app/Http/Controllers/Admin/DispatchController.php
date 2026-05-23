@@ -420,7 +420,7 @@ class DispatchController extends BasicController
     {
         $orders = CommercialOrder::query()
             ->whereIn('id', $orderIds)
-            ->get(['id', 'code', 'business_id', 'warehouse_id', 'order_status', 'status'])
+            ->get(['id', 'code', 'business_id', 'warehouse_id', 'order_status', 'dispatch_status', 'status'])
             ->keyBy('id');
 
         foreach ($orderIds as $orderId) {
@@ -428,6 +428,9 @@ class DispatchController extends BasicController
             if (!$order) throw new \Exception("El pedido {$orderId} no existe");
             if (!$order->status || in_array($order->order_status, ['draft', 'cancelled'], true)) {
                 throw new \Exception("El pedido {$order->code} no esta disponible para despacho");
+            }
+            if ($order->dispatch_status !== 'dispatched') {
+                throw new \Exception("El pedido {$order->code} debe estar listo en Preparacion antes de asignarlo a despacho");
             }
             if ((int) $order->business_id !== $businessId) {
                 throw new \Exception("El pedido {$order->code} no pertenece a la empresa seleccionada");
