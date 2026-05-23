@@ -825,7 +825,16 @@ const Dispatches = () => {
               </div>
               <div className='col-md-3'><label className='form-label'>Cliente</label><input className='form-control' value={row.customer_name} disabled /></div>
               <div className='col-md-2'><label className='form-label'>Total</label><input className='form-control' value={Number(row.total || 0).toFixed(2)} disabled /></div>
-              <div className='col-md-1'><button type='button' className='btn btn-outline-danger w-100' onClick={() => setAssignments(prev => prev.length === 1 ? [emptyAssignment()] : prev.filter(item => item.uid !== row.uid))}>-</button></div>
+              <div className='col-md-1'>
+                <button
+                  type='button'
+                  className='btn btn-outline-danger w-100'
+                  title='Eliminar pedido asignado'
+                  onClick={() => setAssignments(prev => prev.length === 1 ? [emptyAssignment()] : prev.filter(item => item.uid !== row.uid))}
+                >
+                  <i className='mdi mdi-delete'></i>
+                </button>
+              </div>
             </div>)}
             <button type='button' className='btn btn-sm btn-outline-primary' onClick={() => setAssignments(prev => [...prev, emptyAssignment()])} disabled={!canAddAssignment}>
               Agregar pedido
