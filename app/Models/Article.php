@@ -25,6 +25,7 @@ class Article extends Model
     protected $fillable = [
         'code',
         'module_scope',
+        'business_id',
         'client_id',
         'name',
         'composition',
@@ -46,6 +47,7 @@ class Article extends Model
         'igv_rule',
         'units_per_article',
         'unit_weight',
+        'is_pack',
         'default_lot',
         'default_expiration_date',
         'stock_min',
@@ -70,6 +72,7 @@ class Article extends Model
         'status' => 'boolean',
         'margin_rule' => 'boolean',
         'igv_rule' => 'boolean',
+        'is_pack' => 'boolean',
         'stock_has_expiration' => 'boolean',
         'stock_has_lot' => 'boolean',
         'volume' => 'float',
@@ -89,6 +92,11 @@ class Article extends Model
     public function laboratory()
     {
         return $this->belongsTo(Laboratory::class);
+    }
+
+    public function business()
+    {
+        return $this->belongsTo(Business::class);
     }
 
     public function magistralLaboratory()

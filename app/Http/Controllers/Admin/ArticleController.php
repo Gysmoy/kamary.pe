@@ -15,6 +15,7 @@ use App\Models\StorageProductLot;
 use App\Models\Unit;
 use App\Models\Warehouse;
 use App\Services\StockService;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -35,26 +36,36 @@ class ArticleController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
+        $hasBusinessColumn = Schema::hasColumn('articles', 'business_id');
+        $with = [
+            'laboratory:id,name,code',
+            'magistralLaboratory:id,description,code',
+            'activePrinciple:id,laboratory_id,name',
+            'client:id,full_name,document_number',
+            'unit:id,name,symbol',
+            'equivalenceUnit:id,name,symbol',
+            'magistralCategory:id,code,description',
+            'presentations:id,article_id,name,units,price,purchase_price_national,purchase_price_foreign,sort_order,status',
+            'storageLots:id,article_id,lot,expiration_date,storage_condition,manufacturer_id,status',
+            'storageLots.manufacturer:id,name,code',
+            'creator:id,name,lastname,username,fullname',
+            'updater:id,name,lastname,username,fullname',
+        ];
+        if ($hasBusinessColumn) {
+            $with[] = 'business:id,business_key,name,trade_name,status';
+        }
+
         $query = $model::select('articles.*')
             ->distinct()
-            ->with([
-                'laboratory:id,name,code',
-                'magistralLaboratory:id,description,code',
-                'activePrinciple:id,laboratory_id,name',
-                'client:id,full_name,document_number',
-                'unit:id,name,symbol',
-                'equivalenceUnit:id,name,symbol',
-                'magistralCategory:id,code,description',
-                'presentations:id,article_id,name,units,price,purchase_price_national,purchase_price_foreign,sort_order,status',
-                'storageLots:id,article_id,lot,expiration_date,storage_condition,manufacturer_id,status',
-                'storageLots.manufacturer:id,name,code',
-                'creator:id,name,lastname,username,fullname',
-                'updater:id,name,lastname,username,fullname',
-            ])
+            ->with($with)
             ->join('units as unit', 'unit.id', '=', 'articles.unit_id')
             ->leftJoin('clients as client', 'client.id', '=', 'articles.client_id')
             ->join('users as creator', 'creator.id', '=', 'articles.created_by')
             ->join('users as updater', 'updater.id', '=', 'articles.updated_by');
+
+        if ($hasBusinessColumn) {
+            $query->leftJoin('businesses as business', 'business.id', '=', 'articles.business_id');
+        }
 
         if ($this->moduleScope === 'magistrales') {
             $query
@@ -90,6 +101,8 @@ class ArticleController extends BasicController
             $mapping = $request->mapping ?? [];
             $userId = Auth::id();
             $hasArticleModuleScope = Schema::hasColumn('articles', 'module_scope');
+            $hasArticleBusiness = Schema::hasColumn('articles', 'business_id');
+            $defaultBusinessId = $hasArticleBusiness ? $this->defaultBusinessIdForScope() : null;
             $hasMagistralStatus = Schema::hasColumn('articles', 'magistral_status');
 
             if (!is_array($rows) || count($rows) === 0) {
@@ -279,6 +292,7 @@ class ArticleController extends BasicController
                         $updateData['active_principle_id'] = $activePrincipleId;
                     }
                     if ($hasArticleModuleScope) $updateData['module_scope'] = $this->moduleScope;
+                    if ($hasArticleBusiness) $updateData['business_id'] = $defaultBusinessId;
                     if ($hasMagistralStatus && $this->moduleScope === 'magistrales') {
                         $updateData['magistral_status'] = $magistralStatus;
                     }
@@ -302,6 +316,7 @@ class ArticleController extends BasicController
                         'updated_by' => $userId,
                     ];
                     if ($hasArticleModuleScope) $createData['module_scope'] = $this->moduleScope;
+                    if ($hasArticleBusiness) $createData['business_id'] = $defaultBusinessId;
                     if ($hasMagistralStatus && $this->moduleScope === 'magistrales') {
                         $createData['magistral_status'] = $magistralStatus;
                     }
@@ -354,6 +369,7 @@ class ArticleController extends BasicController
             : null;
         $activePrincipleId = $body['active_principle_id'] ?? null;
         $unitId = $this->toNullableInt($body['unit_id'] ?? null);
+        $businessId = $this->toNullableInt($body['business_id'] ?? null);
         $magistralCategoryId = $this->toNullableInt($body['magistral_category_id'] ?? null);
         $requestedSubCategory = trim((string)($body['sub_category'] ?? ''));
         $magistralPresentation = $this->canonicalMagistralPresentation($body['magistral_presentation'] ?? null);
@@ -439,6 +455,10 @@ class ArticleController extends BasicController
             Laboratory::findOrFail($laboratoryId);
         }
         Unit::findOrFail($unitId);
+        $resolvedBusinessId = $businessId ?: $this->defaultBusinessIdForScope();
+        if ($resolvedBusinessId) {
+            BusinessScope::findFixedBusiness($resolvedBusinessId);
+        }
         if ($equivalenceUnitId) Unit::findOrFail($equivalenceUnitId);
         if ($magistralCategoryId) {
             MagistralCategory::whereIn('description', MagistralCategory::ALLOWED_DESCRIPTIONS)
@@ -477,6 +497,7 @@ class ArticleController extends BasicController
 
         $body['code'] = $code;
         $body['module_scope'] = $this->moduleScope;
+        $body['business_id'] = $resolvedBusinessId;
         $body['name'] = $name;
         $body['unit_id'] = $unitId;
         $body['composition'] = trim((string)($body['composition'] ?? '')) ?: null;
@@ -492,6 +513,7 @@ class ArticleController extends BasicController
         $body['notes'] = isset($body['notes']) ? trim((string)$body['notes']) : null;
         $body['margin_rule'] = $this->toBoolean($body['margin_rule'] ?? false);
         $body['igv_rule'] = $this->toBoolean($body['igv_rule'] ?? false);
+        $body['is_pack'] = $this->toBoolean($body['is_pack'] ?? false);
         $body['stock_has_expiration'] = $this->toBoolean($body['stock_has_expiration'] ?? false);
         $body['stock_has_lot'] = $this->toBoolean($body['stock_has_lot'] ?? false);
         $body['units_per_article'] = (int)($body['units_per_article'] ?? 1);
@@ -553,6 +575,7 @@ class ArticleController extends BasicController
 
         foreach ([
             'module_scope',
+            'business_id',
             'client_id',
             'magistral_status',
             'composition',
@@ -579,6 +602,7 @@ class ArticleController extends BasicController
             'sale_price_national',
             'purchase_price_national',
             'purchase_price_foreign',
+            'is_pack',
         ] as $column) {
             if (!Schema::hasColumn('articles', $column)) unset($body[$column]);
         }
@@ -1038,6 +1062,15 @@ class ArticleController extends BasicController
         $unit = Unit::firstOrCreate(['symbol' => 'MAG-GEN'], $data);
 
         return (int)$unit->id;
+    }
+
+    private function defaultBusinessIdForScope(): ?int
+    {
+        $scopeKey = in_array($this->moduleScope, ['magistrales', 'storage'], true)
+            ? BusinessScope::KAMARY_MEDICALS
+            : BusinessScope::KAMARY_PERU;
+
+        return BusinessScope::businessForKey($scopeKey)?->id;
     }
 
     private function nextMagistralArticleCode($articleType = null, $currentId = null): string

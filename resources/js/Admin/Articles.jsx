@@ -273,7 +273,7 @@ const getStockByPresentation = (stockUnits, presentations) => {
     })
 }
 
-const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
+const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) => {
   const isMagistrales = moduleScope === 'magistrales'
   const isStorageProduct = moduleScope === 'storage'
   const gridRef = useRef()
@@ -303,6 +303,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const igvRuleRef = useRef()
   const unitsPerArticleRef = useRef()
   const unitWeightRef = useRef()
+  const packRef = useRef()
   const defaultLotRef = useRef()
   const defaultExpirationDateRef = useRef()
   const stockMinRef = useRef()
@@ -333,6 +334,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
   const [principles, setPrinciples] = useState([])
   const [units, setUnits] = useState([])
   const [presentations, setPresentations] = useState([emptyPresentation()])
+  const [businesses, setBusinesses] = useState([])
+  const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedLaboratoryId, setSelectedLaboratoryId] = useState('')
   const [selectedPrincipleId, setSelectedPrincipleId] = useState('')
   const [selectedUnitId, setSelectedUnitId] = useState('')
@@ -362,6 +365,18 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     unit: '',
     status: '',
   })
+
+  const defaultBusinessId = (rows = businesses) => {
+    const scoped = rows.find(item => item.business_key === businessScopeKey)
+    const active = rows.find(item => item.status !== false && item.status !== 0)
+    return scoped?.id ? `${scoped.id}` : (active?.id ? `${active.id}` : '')
+  }
+
+  const loadBusinesses = async () => {
+    const rows = (await articlesRest.getBusinesses()).filter(item => item.status !== null)
+    setBusinesses(rows)
+    return rows
+  }
 
   const loadUnits = async (preferredUnitId = null, preferredEquivalenceUnitId = null) => {
     const list = await articlesRest.getUnits()
@@ -449,9 +464,23 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     loadUnits()
   }, [isStorageProduct])
 
+  useEffect(() => {
+    if (isStorageProduct || isMagistrales) return
+    loadBusinesses()
+  }, [isStorageProduct, isMagistrales])
+
   const onModalOpen = async (data = null, mode = 'edit') => {
     setIsEditing(!!data?.id)
     setIsViewing(mode === 'view')
+    let availableBusinesses = businesses
+    if (!isStorageProduct && !isMagistrales && availableBusinesses.length === 0) {
+      availableBusinesses = await loadBusinesses()
+    }
+    if (!isStorageProduct && !isMagistrales) {
+      setSelectedBusinessId(data?.business_id ? `${data.business_id}` : defaultBusinessId(availableBusinesses))
+    } else {
+      setSelectedBusinessId('')
+    }
 
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? ''
@@ -462,16 +491,17 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
     if (administrationRouteRef.current) administrationRouteRef.current.value = data?.administration_route ?? ''
     if (healthRegistrationRef.current) healthRegistrationRef.current.value = data?.health_registration ?? ''
     if (volumeRef.current) volumeRef.current.value = data?.volume ?? ''
-    if (marginRuleRef.current) marginRuleRef.current.checked = !!data?.margin_rule
+    if (marginRuleRef.current) marginRuleRef.current.value = data?.margin_rule ? '1' : '0'
     if (igvRuleRef.current) {
       if (isMagistrales) {
         igvRuleRef.current.value = data?.igv_rule ? '1' : '0'
       } else {
-        igvRuleRef.current.checked = !!data?.igv_rule
+        igvRuleRef.current.value = data?.igv_rule ? '1' : '0'
       }
     }
     if (unitsPerArticleRef.current) unitsPerArticleRef.current.value = data?.units_per_article ?? 1
     if (unitWeightRef.current) unitWeightRef.current.value = data?.unit_weight ?? ''
+    if (packRef.current) packRef.current.value = data?.is_pack ? '1' : '0'
     if (defaultLotRef.current) defaultLotRef.current.value = data?.default_lot ?? ''
     if (defaultExpirationDateRef.current) defaultExpirationDateRef.current.value = data?.default_expiration_date ? data.default_expiration_date.toString().slice(0, 10) : ''
     if (stockMinRef.current) stockMinRef.current.value = data?.stock_min ?? ''
@@ -497,7 +527,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       } else if (isStorageProduct) {
         statusRef.current.value = data?.status === false || data?.status === 0 ? '0' : '1'
       } else {
-        statusRef.current.checked = data?.status !== false && data?.status !== 0
+        statusRef.current.value = data?.status === false || data?.status === 0 ? '0' : '1'
       }
     }
     if (costPriceRef.current) costPriceRef.current.value = data?.cost_price ?? ''
@@ -583,17 +613,22 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       sub_category: (subCategoryRef.current?.value || selectedSubCategory || '').trim(),
       magistral_presentation: selectedMagistralPresentation || magistralPresentationRef.current?.value || null,
       health_registration: healthRegistrationRef.current?.value?.trim() ?? '',
+      business_id: (!isStorageProduct && !isMagistrales) ? (selectedBusinessId || null) : null,
       laboratory_id: isMagistrales ? null : (selectedLaboratoryId || null),
       magistral_laboratory_id: isMagistrales ? (selectedLaboratoryId || null) : null,
       active_principle_id: isMagistrales ? null : (selectedPrincipleId || null),
       unit_id: selectedUnitId || null,
       volume: volumeRef.current?.value ?? '',
-      margin_rule: marginRuleRef.current?.checked ?? false,
-      igv_rule: isMagistrales ? igvRuleRef.current?.value === '1' : (igvRuleRef.current?.checked ?? false),
+      margin_rule: marginRuleRef.current?.value === '1',
+      igv_rule: igvRuleRef.current?.value === '1',
       units_per_article: unitsPerArticleRef.current?.value || 1,
       ...(isMagistrales ? {
         magistral_status: statusRef.current?.value || 'vigente',
         status: statusRef.current?.value !== 'de_baja',
+      } : {}),
+      ...(!isMagistrales && !isStorageProduct ? {
+        status: statusRef.current?.value === '0' ? false : true,
+        is_pack: packRef.current?.value === '1',
       } : {}),
       ...(isStorageProduct ? {
         client_id: selectedStorageClientId || null,
@@ -1238,6 +1273,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       width: '130px',
       cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar articulo')
     },
+    {
+      dataField: 'business.name',
+      caption: 'Empresa',
+      width: '170px',
+      cellTemplate: (container, { data }) => container.text(data?.business?.name ?? '-')
+    },
     { dataField: 'name', caption: 'Articulo', minWidth: 180 },
     { dataField: 'laboratory.name', caption: 'Laboratorio', width: '150px' },
     { dataField: 'activePrinciple.name', caption: 'Principio activo', width: '180px' },
@@ -1261,6 +1302,13 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       }
     },
     igvColumn,
+    {
+      dataField: 'is_pack',
+      caption: 'Pack',
+      dataType: 'boolean',
+      width: '80px',
+      cellTemplate: (container, { data }) => container.text(data?.is_pack ? 'SI' : 'NO')
+    },
     presentationsColumn,
     ...auditColumns,
     statusColumn,
@@ -1655,6 +1703,28 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
         }
       `}</style>
     )}
+    {!isMagistrales && !isStorageProduct && (
+      <style>{`
+        .article-dialog {
+          max-width: calc(100vw - 48px);
+        }
+
+        .article-modal .modal-body {
+          padding: 1.25rem 1.5rem;
+        }
+
+        .article-modal .form-label {
+          color: #30364d;
+          font-weight: 600;
+        }
+
+        @media (max-width: 991.98px) {
+          .article-dialog {
+            max-width: calc(100vw - 16px);
+          }
+        }
+      `}</style>
+    )}
     <Table
       gridRef={gridRef}
       title={moduleTitle}
@@ -1801,8 +1871,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
       title={isMagistrales ? (isViewing ? 'Mostrar artículo magistral' : (isEditing ? 'Editar artículo magistral' : 'Agregar artículo magistral')) : (isStorageProduct ? 'ARTICULO' : (isViewing ? 'Mostrar articulo' : (isEditing ? 'Editar articulo' : 'Agregar articulo')))}
       onSubmit={onModalSubmit}
       size='xl'
-      dialogClass={isMagistrales ? 'magistrales-article-dialog' : ''}
-      contentClass={isMagistrales ? 'magistrales-article-modal' : ''}
+      dialogClass={isMagistrales ? 'magistrales-article-dialog' : (!isStorageProduct ? 'article-dialog' : '')}
+      contentClass={isMagistrales ? 'magistrales-article-modal' : (!isStorageProduct ? 'article-modal' : '')}
       hideButtonSubmit={isViewing}
       btnSubmitText={isMagistrales ? 'Guardar artículo' : 'Registrar'}
     >
@@ -1938,8 +2008,26 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
           renderMagistralesArticleForm()
         ) : (
         <fieldset className='row p-0 m-0' disabled={isViewing}>
-        <InputFormGroup eRef={codeRef} label={isMagistrales ? 'Codigo' : 'Codigo de articulo'} col='col-md-4' required />
-        <InputFormGroup eRef={nameRef} label={isMagistrales ? 'Descripcion' : 'Nombre del articulo'} col='col-md-8' required />
+        {!isMagistrales && !isStorageProduct && (
+          <div className='form-group col-md-4 mb-2'>
+            <label className='form-label'>Empresa <span className='text-danger'>*</span></label>
+            <select
+              className='form-control'
+              value={selectedBusinessId}
+              onChange={(e) => setSelectedBusinessId(e.target.value)}
+              required
+            >
+              <option value=''>Seleccione empresa</option>
+              {businesses.map(business => (
+                <option key={`article-business-${business.id}`} value={business.id}>
+                  {business.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <InputFormGroup eRef={codeRef} label={isMagistrales ? 'Codigo' : 'Codigo de articulo'} col={isMagistrales ? 'col-md-4' : 'col-md-4'} required />
+        <InputFormGroup eRef={nameRef} label={isMagistrales ? 'Descripcion' : 'Nombre del articulo'} col={isMagistrales ? 'col-md-8' : 'col-md-4'} required />
 
         {isMagistrales && <>
           <TextareaFormGroup eRef={compositionRef} label='Composicion' col='col-md-8' rows={2} />
@@ -2043,12 +2131,29 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
         {!isMagistrales && <>
           <InputFormGroup eRef={volumeRef} label='Volumen' col='col-md-3' type='number' step='0.001' />
           <InputFormGroup eRef={unitsPerArticleRef} label='Unidad por articulo' col='col-md-3' type='number' min='1' required />
-          <InputFormGroup eRef={unitWeightRef} label='Peso unitario' col='col-md-3' type='number' step='0.0001' />
+          <InputFormGroup eRef={unitWeightRef} label='Peso Unitario (Kg)' col='col-md-3' type='number' step='0.0001' />
           <div className='form-group col-md-3 mb-2'>
-            <label className='form-label d-block'>Regla de margen</label>
-            <div className='form-check form-switch'>
-              <input ref={marginRuleRef} className='form-check-input' type='checkbox' />
-            </div>
+            <label className='form-label'>Regla de margen</label>
+            <select ref={marginRuleRef} className='form-control' defaultValue='0'>
+              <option value=''>Seleccione</option>
+              {yesNoOptions.map(option => (
+                <option key={`margin-rule-${option.value}`} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className='form-group col-md-3 mb-2'>
+            <label className='form-label'>Estado</label>
+            <select ref={statusRef} className='form-control' defaultValue='1'>
+              <option value='1'>Activo</option>
+              <option value='0'>Inactivo</option>
+            </select>
+          </div>
+          <div className='form-group col-md-3 mb-2'>
+            <label className='form-label'>Pack</label>
+            <select ref={packRef} className='form-control' defaultValue='0'>
+              <option value='0'>NO</option>
+              <option value='1'>SI</option>
+            </select>
           </div>
         </>}
 
@@ -2066,10 +2171,13 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
         </>}
 
         <div className='form-group col-md-3 mb-2'>
-          <label className='form-label d-block'>{isMagistrales ? 'Afecto a IGV' : 'Regla de IGV'}</label>
-          <div className='form-check form-switch'>
-            <input ref={igvRuleRef} className='form-check-input' type='checkbox' />
-          </div>
+          <label className='form-label'>{isMagistrales ? 'Afecto a IGV' : 'Regla de IGV'}</label>
+          <select ref={igvRuleRef} className='form-control' defaultValue='0'>
+            <option value=''>Seleccione</option>
+            {yesNoOptions.map(option => (
+              <option key={`igv-rule-${option.value}`} value={option.value}>{option.label}</option>
+            ))}
+          </select>
         </div>
 
         {isMagistrales && <>
@@ -2107,7 +2215,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope }) => {
           <InputFormGroup eRef={purchasePriceForeignRef} label='P. compra (M.E)' col='col-md-3' type='number' min='0' step='0.01' />
         </>}
 
-        {!isMagistrales && <TextareaFormGroup eRef={notesRef} label='Notas' col='col-12' rows={3} />}
+        {!isMagistrales && <TextareaFormGroup eRef={notesRef} label='Observaciones' col='col-12' rows={3} />}
 
         <div className='col-12 mt-2'>
           <div className='d-flex justify-content-between align-items-center mb-2'>

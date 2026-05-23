@@ -75,6 +75,8 @@ jobs:
             docker network prune -f
             docker image prune -f
             docker compose up -d --build
+            docker compose exec -T app php artisan migrate --force
+            docker compose exec -T app php artisan optimize:clear
             
             curl -X POST https://devex.pe/free/deployments \
               -H "Content-Type: application/json" \
