@@ -2,29 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Models\Article;
-use App\Models\MagistralCategory;
-use App\Models\MagistralFormat;
-use App\Models\MagistralFormula;
-use App\Models\MagistralFormulaItem;
-use App\Models\MagistralIncome;
-use App\Models\MagistralIncomeItem;
-use App\Models\MagistralInventoryCount;
-use App\Models\MagistralInventoryCountItem;
+use App\Models\Business;
 use App\Models\MagistralLaboratory;
-use App\Models\MagistralOutput;
-use App\Models\MagistralOutputItem;
-use App\Models\MagistralProductionOrder;
-use App\Models\MagistralProductionOrderItem;
-use App\Models\MagistralResponsible;
-use App\Models\MagistralSale;
-use App\Models\MagistralSaleItem;
-use App\Models\MagistralSubcategory;
-use App\Models\PurchaseOrder;
-use App\Models\PurchaseOrderItem;
-use App\Models\Supplier;
 use App\Models\Unit;
-use App\Support\MagistralesStock;
+use App\Models\Warehouse;
+use App\Support\BusinessScope;
 use Database\Seeders\MagistralesProductionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -33,85 +15,64 @@ class MagistralesProductionSeederTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_magistrales_production_seeder_populates_operational_modules(): void
+    public function test_magistrales_production_seeder_creates_operational_scope(): void
     {
         $this->seed(MagistralesProductionSeeder::class);
 
-        $this->assertSame(10, Unit::where('module_scope', 'magistrales')->where('symbol', 'like', 'MAG%')->count());
-        $this->assertSame(10, MagistralLaboratory::where('code', 'like', 'MAGLAB-%')->count());
-        $this->assertSame(3, MagistralCategory::where('code', 'like', 'MAG-CAT-%')->whereIn('description', MagistralCategory::ALLOWED_DESCRIPTIONS)->count());
-        $this->assertSame(3, MagistralSubcategory::where('description', 'like', 'Subcategoria Magistral %')->count());
-        $this->assertSame(10, MagistralFormat::whereIn('description', $this->formatDescriptions())->count());
-        $this->assertSame(10, Supplier::where('module_scope', 'magistrales')->where('ruc', 'like', '99000%')->count());
-        $this->assertSame(10, MagistralResponsible::where('document_number', 'like', 'MAGRESP%')->count());
-        $this->assertSame(10, Article::where('module_scope', 'magistrales')->where('code', 'like', 'MAG-ART-%')->count());
-        $this->assertSame(10, Article::where('module_scope', 'magistrales')->whereIn('magistral_presentation', Article::MAGISTRAL_PRESENTATION_OPTIONS)->count());
-        $this->assertSame(10, Article::where('module_scope', 'magistrales')->whereNotNull('magistral_laboratory_id')->whereNull('laboratory_id')->whereNull('active_principle_id')->count());
-        $this->assertSame(10, MagistralFormula::whereHas('article', fn($query) => $query->where('code', 'like', 'MAG-ART-%'))->count());
-        $this->assertSame(20, MagistralFormulaItem::whereHas('formula.article', fn($query) => $query->where('code', 'like', 'MAG-ART-%'))->count());
-        $this->assertSame(10, PurchaseOrder::where('module_scope', 'magistrales')->where('code', 'like', 'MAG-OC-%')->count());
-        $this->assertSame(10, MagistralIncome::where('code', 'like', 'MAG-ING-%')->count());
-        $this->assertSame(10, MagistralProductionOrder::where('code', 'like', 'MAG-OP-%')->count());
-        $this->assertSame(10, MagistralOutput::where('code', 'like', 'MAG-SAL-%')->count());
-        $this->assertSame(10, MagistralSale::where('code', 'like', 'MAG-VTA-%')->count());
-        $this->assertSame(10, MagistralInventoryCount::where('code', 'like', 'MAG-INV-%')->count());
+        $business = Business::where('business_key', BusinessScope::KAMARY_MEDICALS)->first();
+        $this->assertNotNull($business);
+        $this->assertSame('Kamary Medicals', $business->name);
 
-        $article = Article::where('code', 'MAG-ART-001')->firstOrFail();
-        $this->assertGreaterThan(0, MagistralesStock::stock($article->id));
-        $this->assertGreaterThanOrEqual(3, MagistralesStock::movementRows($article->id)->count());
-        $valuationRows = MagistralesStock::valuationRows()
-            ->filter(fn(array $row) => str_starts_with((string)$row['article_code'], 'MAG-ART-'));
-        $this->assertSame(10, $valuationRows->count());
-        $this->assertSame(5, MagistralSale::where('code', 'like', 'MAG-VTA-%')->where('is_quote', true)->count());
-        $this->assertSame(5, MagistralSale::where('code', 'like', 'MAG-VTA-%')->where('is_quote', false)->count());
+        $branch = $business->branches()->where('name', 'Principal Magistrales')->first();
+        $this->assertNotNull($branch);
+        $this->assertSame('150101', $branch->ubigeo);
+        $this->assertSame('FM01', $branch->series_factura);
+        $this->assertSame('BM01', $branch->series_boleta);
+
+        $warehouse = Warehouse::where('business_branch_id', $branch->id)
+            ->where('name', 'Almacen Magistrales Principal')
+            ->first();
+        $this->assertNotNull($warehouse);
+        $this->assertTrue((bool) $warehouse->status);
     }
 
-    public function test_magistrales_production_seeder_is_idempotent(): void
+    public function test_magistrales_production_seeder_cleans_temporary_catalog_data_and_is_idempotent(): void
     {
+        Unit::create([
+            'module_scope' => 'magistrales',
+            'name' => 'Temporal',
+            'symbol' => 'TMP',
+            'status' => true,
+        ]);
+        MagistralLaboratory::create([
+            'code' => 'TEMP-LAB',
+            'description' => 'Temporal',
+            'status' => true,
+        ]);
+
         $this->seed(MagistralesProductionSeeder::class);
-        $firstCounts = $this->seededCounts();
+        $firstCounts = $this->scopeCounts();
+
+        $this->assertSame(0, Unit::where('module_scope', 'magistrales')->count());
+        $this->assertSame(0, MagistralLaboratory::count());
 
         $this->seed(MagistralesProductionSeeder::class);
 
-        $this->assertSame($firstCounts, $this->seededCounts());
+        $this->assertSame($firstCounts, $this->scopeCounts());
     }
 
-    private function seededCounts(): array
+    private function scopeCounts(): array
     {
+        $business = Business::where('business_key', BusinessScope::KAMARY_MEDICALS)->firstOrFail();
+
         return [
-            'categories' => MagistralCategory::where('code', 'like', 'MAG-CAT-%')->whereIn('description', MagistralCategory::ALLOWED_DESCRIPTIONS)->count(),
-            'formats' => MagistralFormat::whereIn('description', $this->formatDescriptions())->count(),
-            'articles' => Article::where('module_scope', 'magistrales')->where('code', 'like', 'MAG-ART-%')->count(),
-            'formulas' => MagistralFormula::whereHas('article', fn($query) => $query->where('code', 'like', 'MAG-ART-%'))->count(),
-            'formula_items' => MagistralFormulaItem::whereHas('formula.article', fn($query) => $query->where('code', 'like', 'MAG-ART-%'))->count(),
-            'purchase_orders' => PurchaseOrder::where('module_scope', 'magistrales')->where('code', 'like', 'MAG-OC-%')->count(),
-            'purchase_order_items' => PurchaseOrderItem::whereHas('purchaseOrder', fn($query) => $query->where('code', 'like', 'MAG-OC-%'))->count(),
-            'incomes' => MagistralIncome::where('code', 'like', 'MAG-ING-%')->count(),
-            'income_items' => MagistralIncomeItem::whereHas('income', fn($query) => $query->where('code', 'like', 'MAG-ING-%'))->count(),
-            'production_orders' => MagistralProductionOrder::where('code', 'like', 'MAG-OP-%')->count(),
-            'production_order_items' => MagistralProductionOrderItem::whereHas('productionOrder', fn($query) => $query->where('code', 'like', 'MAG-OP-%'))->count(),
-            'outputs' => MagistralOutput::where('code', 'like', 'MAG-SAL-%')->count(),
-            'output_items' => MagistralOutputItem::whereHas('output', fn($query) => $query->where('code', 'like', 'MAG-SAL-%'))->count(),
-            'sales' => MagistralSale::where('code', 'like', 'MAG-VTA-%')->count(),
-            'sale_items' => MagistralSaleItem::whereHas('sale', fn($query) => $query->where('code', 'like', 'MAG-VTA-%'))->count(),
-            'inventory_counts' => MagistralInventoryCount::where('code', 'like', 'MAG-INV-%')->count(),
-            'inventory_count_items' => MagistralInventoryCountItem::whereHas('inventoryCount', fn($query) => $query->where('code', 'like', 'MAG-INV-%'))->count(),
-        ];
-    }
-
-    private function formatDescriptions(): array
-    {
-        return [
-            'Capsulas x 30',
-            'Capsulas x 60',
-            'Jarabe 120 ml',
-            'Crema 30 g',
-            'Crema 60 g',
-            'Gel 50 g',
-            'Solucion 100 ml',
-            'Suspension 150 ml',
-            'Gotas 30 ml',
-            'Pote 100 g',
+            'businesses' => Business::where('business_key', BusinessScope::KAMARY_MEDICALS)->count(),
+            'branches' => $business->branches()->where('name', 'Principal Magistrales')->count(),
+            'warehouses' => Warehouse::whereIn('business_branch_id', $business->branches()->pluck('id'))
+                ->where('name', 'Almacen Magistrales Principal')
+                ->count(),
+            'units' => Unit::where('module_scope', 'magistrales')->count(),
+            'laboratories' => MagistralLaboratory::count(),
         ];
     }
 }

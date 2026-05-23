@@ -4,11 +4,14 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\Admin\Magistrales\IncomeController as MagistralesIncomeController;
 use App\Models\Article;
+use App\Models\Business;
 use App\Models\MagistralCategory;
 use App\Models\MagistralLaboratory;
 use App\Models\MagistralSubcategory;
 use App\Models\Unit;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Support\BusinessScope;
 use App\Support\ModulePermissions;
 use Database\Seeders\ModulePermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -38,8 +41,45 @@ class MagistralesModuleReadinessTest extends TestCase
             'status' => true,
         ]);
         $user->assignRole('Admin');
+        $this->ensureMagistralesWarehouse($user);
 
         return $user;
+    }
+
+    private function ensureMagistralesWarehouse(User $user): void
+    {
+        $business = Business::firstOrCreate(
+            ['business_key' => BusinessScope::KAMARY_MEDICALS],
+            [
+                'name' => 'Kamary Medicals',
+                'description' => 'Empresa para pruebas de magistrales',
+                'status' => true,
+                'created_by' => $user->id,
+                'updated_by' => $user->id,
+            ]
+        );
+
+        $branch = $business->branches()->firstOrCreate(
+            ['name' => 'Sede Magistrales QA'],
+            [
+                'status' => true,
+                'created_by' => $user->id,
+                'updated_by' => $user->id,
+            ]
+        );
+
+        Warehouse::firstOrCreate(
+            [
+                'business_branch_id' => $branch->id,
+                'name' => config('magistrales.default_warehouse_name', 'Almacen Magistrales Principal'),
+            ],
+            [
+                'description' => 'Almacen fijo de magistrales para pruebas',
+                'status' => true,
+                'created_by' => $user->id,
+                'updated_by' => $user->id,
+            ]
+        );
     }
 
     public function test_module_permissions_seeder_creates_permissions_and_assigns_admin(): void

@@ -4,11 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\ActivePrinciple;
 use App\Models\Article;
+use App\Models\Business;
 use App\Models\Laboratory;
 use App\Models\MagistralInventoryCountItem;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Support\BusinessScope;
 use App\Support\MagistralesStock;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -34,9 +36,27 @@ class MagistralesStockFlowsTest extends TestCase
 
     private function makeArticle(User $user): array
     {
+        $business = Business::firstOrCreate(
+            ['business_key' => BusinessScope::KAMARY_MEDICALS],
+            [
+                'name' => 'Kamary Medicals QA',
+                'description' => 'Empresa magistrales QA',
+                'status' => true,
+                'created_by' => $user->id,
+                'updated_by' => $user->id,
+            ]
+        );
+        $branch = $business->branches()->firstOrCreate([
+            'name' => 'Sede Magistrales QA',
+        ], [
+            'status' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
         $warehouse = Warehouse::create([
-            'name' => 'Almacen Magistral QA',
-            'description' => null,
+            'business_branch_id' => $branch->id,
+            'name' => config('magistrales.default_warehouse_name', 'Almacen Magistrales Principal'),
+            'description' => 'Almacen magistral QA',
             'status' => true,
             'created_by' => $user->id,
             'updated_by' => $user->id,
