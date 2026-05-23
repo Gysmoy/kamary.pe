@@ -60,15 +60,15 @@ const Businesses = ({ can }) => {
   return <>
     <div className='alert alert-info border mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2'>
       <div>
-        Estructura: Empresa &gt; Sucursales &gt; Almacenes.
-        {' '}La configuracion fiscal, sucursales, series y certificados se gestionan en configuracion facturacion.
+        Estructura: Empresa &gt; Sedes &gt; Almacenes.
+        {' '}La configuracion fiscal, sedes, series y certificados se gestionan en Sedes y facturacion.
         {can('services-billing') || can('businesses')
           ? <> Los almacenes se gestionan en <b>Configuraciones &gt; Estructura operativa &gt; Almacenes</b>.</>
           : null}
       </div>
       {(can('services-billing') || can('businesses')) && (
         <a href='/admin/billing-settings' className='btn btn-sm btn-primary'>
-          Ir a configuracion facturacion
+          Gestionar sedes
         </a>
       )}
     </div>

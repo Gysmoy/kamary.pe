@@ -107,6 +107,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
           {canAccessAny('businesses', 'users', 'roles', 'generals') && (
             <MenuItemContainer title='Sistemas' icon='ti ti-settings-cog'>
               {canAccess('businesses') && <MenuItem href='/admin/businesses' icon='ti ti-building'>Empresas</MenuItem>}
+              {canAccess('businesses') && <MenuItem href='/admin/billing-settings' icon='ti ti-building-community'>Sedes y facturacion</MenuItem>}
               {canAccess('generals') && <MenuItem href='/admin/generals' icon='ti ti-settings'>Datos generales</MenuItem>}
               {canAccess('users') && <MenuItem href='/admin/users' icon='ti ti-users'>Usuarios</MenuItem>}
               {canAccess('roles') && <MenuItem href='/admin/roles' icon='ti ti-shield-lock'>Roles y permisos</MenuItem>}
