@@ -192,6 +192,26 @@ const leafletCdn = {
   css: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   js: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
 }
+const freeMapLayers = [
+  {
+    name: 'Calles claras',
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    options: {
+      maxZoom: 20,
+      maxNativeZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    },
+  },
+  {
+    name: 'OpenStreetMap',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    options: {
+      maxZoom: 20,
+      maxNativeZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors',
+    },
+  },
+]
 let leafletLoader = null
 
 const parseCoordinate = (value) => {
@@ -279,19 +299,23 @@ const DeliveryMapPicker = ({ modalRef, position, searchText, onPositionChange, o
 
         mapRef.current = L.map(containerRef.current, {
           center: [resolvedPosition.lat, resolvedPosition.lng],
-          zoom: hasMapPosition(position) ? 16 : 12,
-          scrollWheelZoom: false,
+          zoom: hasMapPosition(position) ? 17 : 13,
+          maxZoom: 20,
+          scrollWheelZoom: true,
+          wheelPxPerZoomLevel: 80,
         })
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          attribution: '&copy; OpenStreetMap',
-        }).addTo(mapRef.current)
+        const layers = freeMapLayers.reduce((collection, layer) => {
+          collection[layer.name] = L.tileLayer(layer.url, layer.options)
+          return collection
+        }, {})
+        layers[freeMapLayers[0].name].addTo(mapRef.current)
+        L.control.layers(layers, null, { position: 'topright' }).addTo(mapRef.current)
 
         mapRef.current.on('click', (event) => {
           const nextPosition = { lat: event.latlng.lat, lng: event.latlng.lng }
           onPositionChange(nextPosition)
-          setMarkerPosition(nextPosition, 16)
+          setMarkerPosition(nextPosition, 17)
         })
 
         if (hasMapPosition(position)) await setMarkerPosition(resolvedPosition)
@@ -318,7 +342,7 @@ const DeliveryMapPicker = ({ modalRef, position, searchText, onPositionChange, o
       markerRef.current.remove()
       markerRef.current = null
     }
-    mapRef.current?.setView([defaultMapPosition.lat, defaultMapPosition.lng], 12)
+    mapRef.current?.setView([defaultMapPosition.lat, defaultMapPosition.lng], 13)
   }, [position?.lat, position?.lng])
 
   useEffect(() => {
@@ -329,7 +353,7 @@ const DeliveryMapPicker = ({ modalRef, position, searchText, onPositionChange, o
       setTimeout(() => {
         mapRef.current?.invalidateSize()
         if (hasMapPosition(position)) {
-          mapRef.current?.setView([parseCoordinate(position.lat), parseCoordinate(position.lng)], 16)
+          mapRef.current?.setView([parseCoordinate(position.lat), parseCoordinate(position.lng)], 17)
         }
       }, 180)
     }
@@ -376,7 +400,7 @@ const DeliveryMapPicker = ({ modalRef, position, searchText, onPositionChange, o
     onPositionChange(nextPosition)
     onSearchTextChange(result.display_name ?? '')
     onAddressSelected(result.display_name ?? '')
-    setMarkerPosition(nextPosition, 16)
+    setMarkerPosition(nextPosition, 17)
     setResults([])
   }
 
@@ -1393,7 +1417,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       }
       .commercial-order-map-canvas {
         width: 100%;
-        height: 260px;
+        height: 320px;
         border-radius: 6px;
         border: 1px solid var(--ct-border-color);
         overflow: hidden;
