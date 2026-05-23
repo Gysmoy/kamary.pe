@@ -171,7 +171,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
               {canAccess('activity') && <MenuItem href='/admin/activity' icon='ti ti-activity'>Actividad</MenuItem>}
               {canAccess('driver') && <MenuItem href='/admin/driver' icon='ti ti-user-circle'>Conductor</MenuItem>}
               {canAccess('dispatch') && <MenuItem href='/admin/driver-routes' icon='ti ti-route'>Ruta conductor</MenuItem>}
-              {canAccess('dispatch') && <MenuItem href='/admin/picking' icon='ti ti-list-check'>Preparacion de pedidos</MenuItem>}
+              {canAccess('dispatch') && <MenuItem href='/admin/picking' icon='ti ti-list-check'>Preparacion</MenuItem>}
               {canAccess('dispatch') && <MenuItem href='/admin/dispatch' icon='ti ti-truck-delivery'>Despacho</MenuItem>}
               {canAccess('vehicle-zone') && <MenuItem href='/admin/vehicle-zone' icon='ti ti-map-2'>Vehículo / Zona</MenuItem>}
             </MenuItemContainer>

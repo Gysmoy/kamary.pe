@@ -76,7 +76,7 @@ const Picking = () => {
   return (
     <Table
       gridRef={gridRef}
-      title='Preparacion de pedidos'
+      title='Preparacion'
       rest={commercialOrdersRest}
       pageSize={25}
       filterValue={filterValue}
@@ -169,5 +169,5 @@ CreateReactScript((el, properties) => {
     location.href = '/admin/'
     return
   }
-  createRoot(el).render(<BaseAdminto {...properties} title='Preparacion de pedidos'><Picking {...properties} /></BaseAdminto>)
+  createRoot(el).render(<BaseAdminto {...properties} title='Preparacion'><Picking {...properties} /></BaseAdminto>)
 })
