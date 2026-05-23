@@ -43,6 +43,8 @@ const Generals = ({ generals }) => {
   });
 
   const [activeTab, setActiveTab] = useState('delivery');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   const handleInputChange = (e, index, field) => {
     const { value } = e.target;
@@ -82,8 +84,10 @@ const Generals = ({ generals }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSaving(true);
+    setSaveMessage('');
     try {
-      await generalsRest.save([
+      const result = await generalsRest.save([
         { correlative: 'phone_contact', name: 'Teléfono de contacto', description: formData.phones.join(',') },
         { correlative: 'email_contact', name: 'Correo de contacto', description: formData.emails.join(',') },
         { correlative: 'address', name: 'Dirección', description: formData.address },
@@ -104,10 +108,15 @@ const Generals = ({ generals }) => {
         { correlative: 'topbar', name: 'Cintillo', description: formData.topbar?.toString() ?? false },
         { correlative: 'google_maps_api_key', name: 'Google Maps API Key', description: formData.googleMapsApiKey?.toString() ?? '' },
       ]);
-      // alert('Datos guardados exitosamente');
+      if (result) {
+        Global.set('GMAPS_API_KEY', formData.googleMapsApiKey?.toString() ?? '');
+        setSaveMessage('Configuracion guardada correctamente.');
+      }
     } catch (error) {
       console.error('Error al guardar los datos:', error);
-      // alert('Error al guardar los datos');
+      setSaveMessage('No se pudo guardar la configuracion.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -119,7 +128,7 @@ const Generals = ({ generals }) => {
 
   return (
     <div className="card">
-      <form className='card-body' onSubmit={handleSubmit}>
+      <form className='card-body' onSubmit={handleSubmit} noValidate>
         <ul className="nav nav-tabs" id="contactTabs" role="tablist">
           <li className="nav-item" role="presentation" hidden> {/* Quitar el hidden para que se muestren las opciones */}
             <button className={`nav-link ${activeTab === 'contact' ? 'active' : ''}`} onClick={() => setActiveTab('contact')} type="button" role="tab">
@@ -458,9 +467,12 @@ const Generals = ({ generals }) => {
           </div>
         </div>
 
-        <button type="submit" className="btn btn-primary mt-3">
-          Guardar
-        </button>
+        <div className="d-flex align-items-center gap-2 mt-3">
+          <button type="submit" className="btn btn-primary" disabled={isSaving}>
+            {isSaving ? 'Guardando...' : 'Guardar'}
+          </button>
+          {saveMessage && <small className="text-muted">{saveMessage}</small>}
+        </div>
       </form>
     </div>
   );
