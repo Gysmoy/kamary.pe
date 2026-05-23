@@ -362,6 +362,31 @@ const BillingSettings = ({ can }) => {
       pageSize={25}
       columns={[
         {
+          caption: 'Acciones',
+          width: '120px',
+          fixed: true,
+          fixedPosition: 'left',
+          cellTemplate: (container, { data }) => {
+            container.css('text-overflow', 'unset')
+
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-success',
+              title: 'Configuracion fiscal',
+              icon: 'mdi mdi-file-cog',
+              onClick: () => onFiscalOpen(data)
+            }))
+
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-info',
+              title: 'Sedes y series',
+              icon: 'mdi mdi-office-building-marker',
+              onClick: () => onBranchesOpen(data)
+            }))
+          },
+          allowFiltering: false,
+          allowExporting: false
+        },
+        {
           dataField: 'id',
           caption: 'ID',
           visible: false
@@ -447,6 +472,8 @@ const BillingSettings = ({ can }) => {
         {
           caption: 'Acciones',
           width: '220px',
+          visible: false,
+          showInColumnChooser: false,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
 
