@@ -28,6 +28,11 @@ class EntryNoteController extends BasicController
 
     private array $itemsPayload = [];
 
+    private function neutralBusinessScopePaths(): array
+    {
+        return ['/admin/entry-note'];
+    }
+
     private function listRelations(bool $isStorage): array
     {
         if ($isStorage) {
@@ -111,7 +116,7 @@ class EntryNoteController extends BasicController
             ->leftJoin('users as creator', 'creator.id', '=', 'entry_notes.created_by')
             ->leftJoin('users as updater', 'updater.id', '=', 'entry_notes.updated_by');
 
-        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $scopeKey = BusinessScope::scopedKeyForRequest(request(), $this->neutralBusinessScopePaths());
         $query->whereHas('business', function ($business) use ($scopeKey) {
             $business->whereIn('business_key', BusinessScope::fixedKeys());
             if ($scopeKey) $business->where('business_key', $scopeKey);
@@ -150,7 +155,7 @@ class EntryNoteController extends BasicController
             Client::findOrFail($clientId);
         }
 
-        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
+        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request, $this->neutralBusinessScopePaths());
         $warehouse = Warehouse::findOrFail($warehouseId);
         $body['business_branch_id'] = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
         $body['supplier_id'] = ($supplierId === '' || is_null($supplierId)) ? null : (int)$supplierId;
@@ -295,7 +300,7 @@ class EntryNoteController extends BasicController
     {
         $response = new Response();
         try {
-            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
+            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request, $this->neutralBusinessScopePaths());
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = $business->branches()->whereNotNull('status')->orderBy('name')->get(['id', 'business_id', 'name', 'status']);

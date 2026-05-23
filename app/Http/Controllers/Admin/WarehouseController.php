@@ -38,6 +38,7 @@ class WarehouseController extends BasicController
             ->join('users as updater', 'updater.id', '=', 'warehouses.updated_by');
 
         $scopeKey = BusinessScope::scopedKeyForRequest(request(), [
+            '/admin/entry-note',
             '/admin/warehouses',
         ]);
         $query->whereHas('branch.business', function ($business) use ($scopeKey) {

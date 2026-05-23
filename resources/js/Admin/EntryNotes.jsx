@@ -39,6 +39,7 @@ const toDateInput = (value) => {
 }
 
 const clientLabel = (client) => [client?.document_number, client?.full_name].filter(Boolean).join(' | ')
+const warehouseBusinessId = (warehouse) => warehouse?.branch?.business_id || warehouse?.branch?.business?.id || ''
 const locationCodeFromValue = (value) => `${value ?? ''}`.split(',')[0].split('|')[0].trim()
 const storageLocationOptionLabel = (location) => [location?.temperature_range, location?.code].filter(Boolean).join(' - ')
 
@@ -209,9 +210,13 @@ const EntryNotes = () => {
     }
   }, [items])
 
-  const loadWarehouses = async () => {
+  const loadWarehouses = async (businessId = selectedBusinessId) => {
     const warehousesData = await entryNotesRest.getWarehouses()
-    setWarehouses((warehousesData ?? []).filter(item => item.status !== null))
+    const active = (warehousesData ?? []).filter(item => item.status !== null)
+    setWarehouses(businessId
+      ? active.filter(item => `${warehouseBusinessId(item)}` === `${businessId}`)
+      : active
+    )
   }
 
   const loadBranches = async (businessId, preferredId = null) => {
@@ -379,7 +384,7 @@ const EntryNotes = () => {
 
     $(modalRef.current).modal('show')
     if (!storageContext) {
-      await loadWarehouses()
+      await loadWarehouses(businessId)
       await loadBranches(data?.business_id ?? null, data?.business_branch_id ?? null)
     }
     await refreshAllStocks(warehouseId, loadedItems)
@@ -476,7 +481,13 @@ const EntryNotes = () => {
   const onBusinessChanged = async (e) => {
     const businessId = e.target.value || ''
     setSelectedBusinessId(businessId)
-    await loadBranches(businessId, null)
+    setSelectedWarehouseId('')
+    if (warehouseRef.current) $(warehouseRef.current).empty().trigger('change')
+    setItems(prev => prev.map(item => ({ ...item, warehouse_id: '', stock: 0 })))
+    await Promise.all([
+      loadBranches(businessId, null),
+      loadWarehouses(businessId),
+    ])
   }
 
   const onWarehouseChanged = async (e) => {
@@ -1509,6 +1520,7 @@ const EntryNotes = () => {
           required
           searchAPI='/api/admin/warehouses/paginate'
           searchBy='name'
+          filter={selectedBusinessId ? ['branch.business_id', '=', Number(selectedBusinessId)] : undefined}
           dropdownParent='#entry-note-form-container'
           onChange={onWarehouseChanged}
         />

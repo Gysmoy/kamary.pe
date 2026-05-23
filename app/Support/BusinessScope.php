@@ -94,10 +94,10 @@ class BusinessScope
         return $business;
     }
 
-    public static function findFixedBusinessForRequest($id, Request $request): Business
+    public static function findFixedBusinessForRequest($id, Request $request, array $neutralPaths = []): Business
     {
         $business = self::findFixedBusiness($id);
-        $scopeKey = self::keyFromRequestPath($request);
+        $scopeKey = self::keyFromRequestPath($request, $neutralPaths);
 
         if ($scopeKey && $business->business_key !== $scopeKey) {
             throw new \Exception('La empresa seleccionada no corresponde al grupo actual');
