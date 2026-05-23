@@ -21,7 +21,6 @@ import {
   billingStatusOptions,
   commercialOrderStatusOptions,
   dispatchStatusOptions,
-  getDispatchStatusLabel,
   getReferralGuideStatusLabel,
   paymentStatusOptions,
   toLookup,
@@ -201,7 +200,6 @@ const deriveDocumentTotals = (grossAmount, documentType) => {
   }
 }
 
-const dispatchStatusSequence = ['pending', 'preparing', 'dispatched', 'in_route', 'delivered']
 const orderGuides = (order) => order?.referral_guides ?? order?.referralGuides ?? []
 const guideNumber = (guide) => guide?.external_reference || [guide?.series, guide?.sequence].filter(Boolean).join('-') || guide?.code || '-'
 const canIssueGuide = (guide) => guide && !['accepted', 'cancelled'].includes(guide.guide_status)
@@ -443,10 +441,10 @@ const DeliveryMapPicker = (props) => {
   )
 }
 
-const getNextDispatchStatus = (value) => {
-  const currentIndex = dispatchStatusSequence.indexOf(`${value ?? ''}`)
-  if (currentIndex < 0 || currentIndex === dispatchStatusSequence.length - 1) return null
-  return dispatchStatusSequence[currentIndex + 1]
+const canSendToPreparation = (order) => {
+  if (!order || order.status === null) return false
+  if (`${order.order_status ?? ''}` === 'cancelled') return false
+  return `${order.dispatch_status ?? 'pending'}` === 'pending'
 }
 
 const buildTrackingRows = (order) => {
@@ -1699,13 +1697,12 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)
             })
-            const nextStatus = getNextDispatchStatus(data?.dispatch_status)
-            if (nextStatus) {
+            if (canSendToPreparation(data)) {
               appendGridActionButton(container, {
                 variant: 'success',
-                title: `Pasar a ${getDispatchStatusLabel(nextStatus)}`,
-                icon: 'mdi mdi-arrow-right-bold-circle-outline',
-                onClick: () => onBooleanChange({ id: data.id, field: 'dispatch_status', value: nextStatus })
+                title: 'Mandar a Preparacion',
+                icon: 'mdi mdi-clipboard-check-outline',
+                onClick: () => onBooleanChange({ id: data.id, field: 'dispatch_status', value: 'preparing' })
               })
             }
             appendGridActionButton(container, {
