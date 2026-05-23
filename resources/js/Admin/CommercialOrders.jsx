@@ -1178,6 +1178,18 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     }))
   }
 
+  const onItemDiscountPercentChanged = (uid, value) => {
+    const percent = Number(value || 0)
+    setItems(prev => prev.map(item => {
+      if (item.uid !== uid) return item
+      return mapItemTotals({
+        ...item,
+        discount_type: percent > 0 ? 'percent' : 'none',
+        discount_value: percent > 0 ? percent : 0,
+      })
+    }))
+  }
+
   const onItemAdded = () => setItems(prev => [...prev, emptyItem()])
   const onItemRemoved = (uid) => {
     setItems(prev => {
@@ -1269,16 +1281,16 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         color: inherit !important;
       }
       .commercial-order-modal-dialog {
-        width: min(1540px, calc(100vw - 32px));
-        max-width: min(1540px, calc(100vw - 32px));
+        width: calc(100vw - 10px);
+        max-width: calc(100vw - 10px);
       }
       .commercial-order-modal-dialog.modal-dialog-centered {
         align-items: flex-start;
-        margin-top: 1rem;
-        margin-bottom: 1rem;
+        margin-top: 0.35rem;
+        margin-bottom: 0.35rem;
       }
       .commercial-order-modal-body {
-        padding: 16px 18px;
+        padding: 12px 14px;
       }
       .commercial-order-modal-body .form-label {
         font-weight: 600;
@@ -1373,7 +1385,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         border-bottom: 0;
       }
       #commercial-orders-form-container .commercial-order-detail-table table {
-        min-width: 1780px;
+        min-width: 1540px;
       }
       #commercial-orders-form-container .commercial-order-detail-table th {
         color: var(--ct-gray-700);
@@ -1404,11 +1416,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         min-height: 38px;
       }
       .commercial-order-discount-cell {
-        display: grid;
-        gap: 4px;
+        min-width: 92px;
       }
       .commercial-order-discount-cell .form-control {
-        min-width: 94px;
+        min-width: 92px;
       }
       #commercial-orders-form-container .commercial-order-detail-table .select2-container {
         width: 100% !important;
@@ -1845,19 +1856,19 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             <table className='table table-sm align-middle mb-0'>
               <thead>
                 <tr>
-                  <th style={{ minWidth: 120 }}>Descuento</th>
-                  <th style={{ minWidth: 130 }}>Codigo</th>
-                  <th style={{ minWidth: 120 }}>Codigo lote</th>
-                  <th style={{ minWidth: 330 }}>Nombre</th>
-                  <th style={{ minWidth: 170 }}>Laboratorio</th>
-                  <th style={{ minWidth: 170 }}>Principio activo</th>
-                  <th style={{ minWidth: 150 }}>Unidad</th>
-                  <th style={{ minWidth: 90 }}>Stock</th>
-                  <th style={{ minWidth: 150 }}>P. venta con IGV</th>
-                  <th style={{ minWidth: 150 }}>P. venta sin IGV</th>
-                  <th style={{ minWidth: 130 }}>Cantidad</th>
-                  <th style={{ minWidth: 130 }}>Total desc.</th>
-                  <th style={{ minWidth: 130 }}>Sub total</th>
+                  <th style={{ minWidth: 96 }}>Descuento</th>
+                  <th style={{ minWidth: 104 }}>Codigo</th>
+                  <th style={{ minWidth: 88 }}>Codigo lote</th>
+                  <th style={{ minWidth: 280 }}>Nombre</th>
+                  <th style={{ minWidth: 128 }}>Laboratorio</th>
+                  <th style={{ minWidth: 130 }}>Principio activo</th>
+                  <th style={{ minWidth: 110 }}>Unidad</th>
+                  <th style={{ minWidth: 64 }}>Stock</th>
+                  <th style={{ minWidth: 112 }}>P. venta con IGV</th>
+                  <th style={{ minWidth: 112 }}>P. venta sin IGV</th>
+                  <th style={{ minWidth: 92 }}>Cantidad</th>
+                  <th style={{ minWidth: 96 }}>Total desc.</th>
+                  <th style={{ minWidth: 96 }}>Sub total</th>
                   <th style={{ width: 70 }}></th>
                 </tr>
               </thead>
@@ -1868,23 +1879,14 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                       <div className='commercial-order-discount-cell'>
                         <select
                           className='form-control'
-                          value={item.discount_type}
-                          onChange={(e) => onItemFieldChanged(item.uid, 'discount_type', e.target.value)}
+                          value={item.discount_type === 'percent' ? `${Number(item.discount_value || 0)}` : ''}
+                          onChange={(e) => onItemDiscountPercentChanged(item.uid, e.target.value)}
                         >
-                          <option value='none'>Seleccione</option>
-                          <option value='percent'>Porcentaje</option>
-                          <option value='amount'>Importe</option>
+                          <option value=''>Seleccione</option>
+                          {[1, 2, 3, 4, 5].map(percent => (
+                            <option key={`commercial-order-discount-${item.uid}-${percent}`} value={percent}>{percent}%</option>
+                          ))}
                         </select>
-                        {item.discount_type !== 'none' && (
-                          <input
-                            type='number'
-                            step='0.01'
-                            min='0'
-                            className='form-control'
-                            value={item.discount_value}
-                            onChange={(e) => onItemFieldChanged(item.uid, 'discount_value', Number(e.target.value || 0))}
-                          />
-                        )}
                       </div>
                     </td>
                     <td><div className='commercial-order-readonly-cell'>{item.article_code || '-'}</div></td>
