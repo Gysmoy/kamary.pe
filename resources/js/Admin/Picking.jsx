@@ -1,166 +1,420 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
-import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import CommercialOrdersRest from '../Actions/Admin/CommercialOrdersRest';
-import renderGridEditLink from '../Utils/renderGridEditLink';
-import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
-import { dispatchStatusOptions, toLookup } from '../Utils/statusLabels';
 
 const commercialOrdersRest = new CommercialOrdersRest()
 
-const pickingStatusOptions = [
-  { value: 'preparing', label: 'En preparacion' },
-  { value: 'pending', label: 'Pendientes' },
-  { value: 'dispatched', label: 'Listos para despacho' },
-  { value: 'all', label: 'Todos' },
+const boardStatuses = [
+  {
+    value: 'pending',
+    title: 'En produccion',
+    description: 'Pedido en cola para ser preparado.',
+    accent: '#0acf97',
+    action: 'Preparar',
+    nextStatus: 'preparing',
+  },
+  {
+    value: 'preparing',
+    title: 'Preparando',
+    description: 'Pedido en preparacion.',
+    accent: '#f9bc0b',
+    action: 'Listo',
+    nextStatus: 'dispatched',
+  },
 ]
-const basePickingFilter = [
+
+const basePreparationFilter = [
   ['order_status', '<>', 'draft'],
   'and',
   ['order_status', '<>', 'cancelled'],
+  'and',
+  [
+    ['dispatch_status', '=', 'pending'],
+    'or',
+    ['dispatch_status', '=', 'preparing'],
+  ],
 ]
-const pickingStatusLabel = (value) => pickingStatusOptions.find((option) => option.value === value)?.label ?? value
-const customerName = (data) => data?.client?.full_name ?? data?.eventual_client?.business_name ?? data?.eventualClient?.business_name ?? '-'
+
+const customerName = (data) => data?.client?.full_name
+  ?? data?.eventual_client?.business_name
+  ?? data?.eventualClient?.business_name
+  ?? '-'
+
 const textValue = (value, fallback = '') => {
   if (value === null || value === undefined) return fallback
   if (typeof value === 'object') return value.address ?? value.reference ?? value.name ?? value.description ?? fallback
   const text = `${value}`.trim()
   return text === '[object Object]' ? fallback : text
 }
-const itemLines = (data) => (data?.items ?? []).map((item) => (
-  `${item?.article?.name || 'Articulo'} | Cant. ${Number(item?.quantity || 0).toFixed(2)}`
-))
+
+const formatDate = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return `${value}`.slice(0, 10)
+  return date.toLocaleDateString('es-PE')
+}
+
+const itemName = (item) => item?.article?.name || item?.description || item?.item_name || 'Articulo'
+const itemPresentation = (item) => item?.presentation?.name || item?.presentation_name || item?.article?.unit?.symbol || ''
+const itemQuantity = (item) => {
+  const quantity = Number(item?.quantity || 0)
+  return Number.isInteger(quantity) ? quantity.toFixed(0) : quantity.toFixed(2)
+}
+
+const PreparationCard = ({ order, status, onMove, updatingId, onDragStart }) => {
+  const items = order?.items ?? []
+  const isUpdating = `${updatingId ?? ''}` === `${order.id}`
+  const compact = status === 'pending'
+
+  return (
+    <article
+      className={`preparation-card ${isUpdating ? 'is-updating' : ''}`}
+      draggable={!isUpdating}
+      onDragStart={(event) => onDragStart(event, order)}
+    >
+      <div className='preparation-card-header'>
+        <div className='preparation-code'>
+          <strong>{order.code ?? `Pedido ${order.id}`}</strong>
+          <span>{formatDate(order.promised_delivery_at || order.issue_date)}</span>
+        </div>
+        <button
+          type='button'
+          className='btn btn-sm btn-primary'
+          disabled={isUpdating}
+          onClick={() => onMove(order, status.nextStatus)}
+        >
+          {isUpdating ? '...' : status.action}
+        </button>
+      </div>
+
+      <div className='preparation-meta'>
+        <div><span>Cliente:</span> {customerName(order)}</div>
+        <div><span>Almacen:</span> {order?.warehouse?.name ?? '-'}</div>
+        {!compact && <div><span>Direccion:</span> {textValue(order.delivery_address, '-')}</div>}
+        {!compact && <div><span>Contacto:</span> {[order.dispatch_contact_name, order.dispatch_contact_phone].filter(Boolean).join(' | ') || '-'}</div>}
+      </div>
+
+      {!compact && (
+        <div className='preparation-detail'>
+          <div>
+            <span>Documento:</span> {order.document_type ?? '-'}
+          </div>
+          <div>
+            <span>Entrega:</span> {formatDate(order.promised_delivery_at) || '-'}
+          </div>
+          <div>
+            <span>Total:</span> {Number(order.total || 0).toFixed(2)}
+          </div>
+        </div>
+      )}
+
+      <div className='preparation-items'>
+        {items.length === 0 && <div className='preparation-item muted'>Sin detalle</div>}
+        {items.map((item) => (
+          <div className='preparation-item' key={`preparation-order-${order.id}-item-${item.id}`}>
+            <div>
+              <strong>{itemName(item)}</strong>
+              {itemPresentation(item) && <small>{itemPresentation(item)}</small>}
+            </div>
+            <strong>x{itemQuantity(item)}</strong>
+          </div>
+        ))}
+      </div>
+
+      {status.value === 'preparing' && (
+        <div className='preparation-card-footer'>
+          <button
+            type='button'
+            className='btn btn-xs btn-outline-secondary'
+            disabled={isUpdating}
+            onClick={() => onMove(order, 'pending')}
+          >
+            Regresar a cola
+          </button>
+        </div>
+      )}
+    </article>
+  )
+}
+
+const PreparationColumn = ({ status, orders, onMove, updatingId, onDropOrder, onDragStart }) => (
+  <section
+    className='preparation-column'
+    style={{ '--preparation-accent': status.accent }}
+    onDragOver={(event) => event.preventDefault()}
+    onDrop={(event) => onDropOrder(event, status.value)}
+  >
+    <div className='preparation-column-header'>
+      <div>
+        <h4>{status.title}</h4>
+        <p>{status.description}</p>
+      </div>
+      <span>{orders.length} pedidos</span>
+    </div>
+
+    <div className='preparation-list'>
+      {orders.length === 0 && <div className='preparation-empty'>No hay pedidos en este estado.</div>}
+      {orders.map((order) => (
+        <PreparationCard
+          key={`preparation-order-${order.id}`}
+          order={order}
+          status={status}
+          onMove={onMove}
+          updatingId={updatingId}
+          onDragStart={onDragStart}
+        />
+      ))}
+    </div>
+  </section>
+)
 
 const Picking = () => {
-  const gridRef = useRef()
-  const [selectedStatus, setSelectedStatus] = useState('preparing')
-  const filterValue = useMemo(() => (
-    selectedStatus === 'all'
-      ? basePickingFilter
-      : [...basePickingFilter, 'and', ['dispatch_status', '=', selectedStatus]]
-  ), [selectedStatus])
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [updatingId, setUpdatingId] = useState(null)
 
-  const refreshGrid = async () => {
-    const instance = gridRef.current ? $(gridRef.current).dxDataGrid('instance') : null
-    if (instance) await instance.refresh()
+  const groupedOrders = useMemo(() => (
+    boardStatuses.reduce((carry, status) => ({
+      ...carry,
+      [status.value]: orders.filter((order) => order.dispatch_status === status.value),
+    }), {})
+  ), [orders])
+
+  const loadOrders = async () => {
+    setLoading(true)
+    try {
+      const result = await commercialOrdersRest.paginate({
+        take: 1000,
+        skip: 0,
+        isLoadingAll: true,
+        filter: basePreparationFilter,
+        sort: [{ selector: 'promised_delivery_at', desc: false }],
+      })
+      setOrders(result?.data ?? [])
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const updatePickingStatus = async (order, nextStatus) => {
-    const isCompleting = nextStatus === 'dispatched'
-    const isStarting = nextStatus === 'preparing'
-    const { isConfirmed } = await Swal.fire({
-      title: isCompleting ? 'Completar preparacion' : 'Actualizar preparacion',
-      text: isStarting
-        ? `El pedido ${order.code} pasara a En preparacion.`
-        : `El pedido ${order.code} pasara a ${pickingStatusLabel(nextStatus)}.`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: isCompleting ? 'Completar' : 'Actualizar',
-      cancelButtonText: 'Cancelar',
-    })
-    if (!isConfirmed) return
+  useEffect(() => { loadOrders() }, [])
+
+  const moveOrder = async (order, nextStatus) => {
+    if (!order?.id || order.dispatch_status === nextStatus || updatingId) return
+    setUpdatingId(order.id)
+    const previousOrders = orders
+    const nextOrders = nextStatus === 'dispatched'
+      ? orders.filter((item) => `${item.id}` !== `${order.id}`)
+      : orders.map((item) => `${item.id}` === `${order.id}` ? { ...item, dispatch_status: nextStatus } : item)
+    setOrders(nextOrders)
 
     const result = await commercialOrdersRest.boolean({
       id: order.id,
       field: 'dispatch_status',
       value: nextStatus,
     })
-    if (!result) return
-    await refreshGrid()
+
+    if (!result) {
+      setOrders(previousOrders)
+      Swal.fire('No se pudo mover', 'El estado del pedido no se actualizo.', 'error')
+    } else {
+      await loadOrders()
+    }
+    setUpdatingId(null)
+  }
+
+  const onDragStart = (event, order) => {
+    event.dataTransfer.setData('text/plain', `${order.id}`)
+    event.dataTransfer.effectAllowed = 'move'
+  }
+
+  const onDropOrder = (event, nextStatus) => {
+    event.preventDefault()
+    const orderId = event.dataTransfer.getData('text/plain')
+    const order = orders.find((item) => `${item.id}` === `${orderId}`)
+    if (!order) return
+    moveOrder(order, nextStatus)
   }
 
   return (
-    <Table
-      gridRef={gridRef}
-      title='Preparacion'
-      rest={commercialOrdersRest}
-      pageSize={25}
-      filterValue={filterValue}
-      toolBar={(items) => {
-        items.unshift({
-          widget: 'dxSelectBox',
-          location: 'after',
-          options: {
-            dataSource: pickingStatusOptions,
-            valueExpr: 'value',
-            displayExpr: 'label',
-            value: selectedStatus,
-            width: 190,
-            onValueChanged: (e) => setSelectedStatus(e.value),
+    <>
+      <style>{`
+        .preparation-page {
+          min-height: calc(100vh - 175px);
+        }
+        .preparation-toolbar {
+          align-items: center;
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 18px;
+        }
+        .preparation-toolbar h3 {
+          color: #263238;
+          font-size: 1.15rem;
+          font-weight: 700;
+          margin: 0;
+        }
+        .preparation-board {
+          display: grid;
+          gap: 22px;
+          grid-template-columns: minmax(320px, 0.95fr) minmax(420px, 1.55fr);
+        }
+        .preparation-column {
+          border-left: 4px solid var(--preparation-accent);
+          min-width: 0;
+          padding-left: 10px;
+        }
+        .preparation-column-header {
+          align-items: start;
+          display: flex;
+          gap: 12px;
+          justify-content: space-between;
+          margin-bottom: 14px;
+        }
+        .preparation-column-header h4 {
+          color: #263238;
+          font-size: 1.15rem;
+          font-weight: 700;
+          margin: 0;
+        }
+        .preparation-column-header p {
+          color: #6c7a86;
+          margin: 2px 0 0;
+        }
+        .preparation-column-header span {
+          color: #98a6ad;
+          font-size: 0.9rem;
+          white-space: nowrap;
+        }
+        .preparation-list {
+          display: grid;
+          gap: 8px;
+        }
+        .preparation-card {
+          background: #fff;
+          border: 1px solid #edf1f4;
+          border-radius: 5px;
+          box-shadow: 0 1px 2px rgba(31, 45, 61, 0.04);
+          cursor: grab;
+          padding: 13px 14px;
+        }
+        .preparation-card.is-updating {
+          opacity: 0.65;
+          pointer-events: none;
+        }
+        .preparation-card-header {
+          align-items: start;
+          display: flex;
+          gap: 12px;
+          justify-content: space-between;
+          margin-bottom: 8px;
+        }
+        .preparation-code {
+          align-items: baseline;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          min-width: 0;
+        }
+        .preparation-code strong {
+          color: #313a46;
+          font-size: 0.98rem;
+        }
+        .preparation-code span {
+          color: #98a6ad;
+          font-size: 0.82rem;
+        }
+        .preparation-meta {
+          color: #6c7a86;
+          display: grid;
+          gap: 3px;
+          margin-bottom: 12px;
+        }
+        .preparation-meta span,
+        .preparation-detail span {
+          color: #98a6ad;
+          font-weight: 600;
+        }
+        .preparation-detail {
+          border: 1px solid #dfe6ed;
+          border-radius: 4px;
+          color: #6c7a86;
+          display: grid;
+          gap: 4px;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          margin-bottom: 8px;
+          padding: 10px 12px;
+        }
+        .preparation-items {
+          display: grid;
+        }
+        .preparation-item {
+          align-items: center;
+          border-top: 1px solid #eef2f5;
+          color: #313a46;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+          min-height: 32px;
+        }
+        .preparation-item:first-child {
+          border-top: 0;
+        }
+        .preparation-item strong {
+          font-size: 0.95rem;
+        }
+        .preparation-item small {
+          color: #98a6ad;
+          display: block;
+          font-size: 0.78rem;
+        }
+        .preparation-item.muted {
+          color: #98a6ad;
+        }
+        .preparation-card-footer {
+          margin-top: 10px;
+        }
+        .preparation-empty {
+          background: rgba(255, 255, 255, 0.65);
+          border: 1px dashed #cfd8df;
+          border-radius: 5px;
+          color: #7f8c96;
+          padding: 18px;
+          text-align: center;
+        }
+        @media (max-width: 991.98px) {
+          .preparation-board {
+            grid-template-columns: 1fr;
           }
-        })
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: refreshGrid } })
-      }}
-      columns={[
-        { dataField: 'id', caption: 'ID', width: 70 },
-        { dataField: 'order_status', caption: 'Estado pedido', visible: false, showInColumnChooser: false },
-        {
-          dataField: 'code',
-          caption: 'Pedido',
-          width: 130,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => { window.location.href = '/admin/commercial-orders' }, 'Ver pedido')
-        },
-        { dataField: 'promised_delivery_at', caption: 'F. entrega', width: 110, dataType: 'date' },
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 130 },
-        { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 120 },
-        { caption: 'Cliente', minWidth: 220, calculateCellValue: customerName },
-        { caption: 'Direccion', minWidth: 240, calculateCellValue: (data) => textValue(data?.delivery_address) },
-        { dataField: 'dispatch_status', caption: 'Estado', width: 120, lookup: toLookup(dispatchStatusOptions) },
-        {
-          caption: 'Items',
-          minWidth: 280,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => {
-            const lines = itemLines(data)
-            if (lines.length === 0) return container.text('Sin detalle')
-            lines.forEach((line) => container.append($('<div>').append($('<small>').text(line))))
+          .preparation-detail {
+            grid-template-columns: 1fr;
           }
-        },
-        {
-          caption: 'Acciones',
-          width: 150,
-          allowFiltering: false,
-          allowExporting: false,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            if (data.dispatch_status === 'pending') {
-              container.append(DxButton({
-                className: 'btn btn-xs btn-soft-primary',
-                title: 'Iniciar preparacion',
-                icon: 'mdi mdi-play-circle-outline',
-                onClick: () => updatePickingStatus(data, 'preparing'),
-              }))
-            }
-            if (data.dispatch_status === 'preparing') {
-              container.append(DxButton({
-                className: 'btn btn-xs btn-soft-success',
-                title: 'Completar preparacion',
-                icon: 'mdi mdi-check-circle-outline',
-                onClick: () => updatePickingStatus(data, 'dispatched'),
-              }))
-            }
-            if (data.dispatch_status === 'dispatched') {
-              container.append(DxButton({
-                className: 'btn btn-xs btn-soft-warning',
-                title: 'Reabrir preparacion',
-                icon: 'mdi mdi-restore',
-                onClick: () => updatePickingStatus(data, 'preparing'),
-              }))
-            }
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger ms-1',
-              title: 'Imprimir pedido',
-              icon: 'mdi mdi-file-pdf-box',
-              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.commercialOrder(data)),
-            }))
-          }
-        },
-      ]}
-    />
+        }
+      `}</style>
+      <div className='preparation-page'>
+        <div className='preparation-toolbar'>
+          <h3>Preparacion</h3>
+          <button type='button' className='btn btn-sm btn-outline-primary' onClick={loadOrders} disabled={loading}>
+            <i className='mdi mdi-refresh me-1'></i>{loading ? 'Actualizando...' : 'Actualizar'}
+          </button>
+        </div>
+        <div className='preparation-board'>
+          {boardStatuses.map((status) => (
+            <PreparationColumn
+              key={`preparation-column-${status.value}`}
+              status={status}
+              orders={groupedOrders[status.value] ?? []}
+              onMove={moveOrder}
+              updatingId={updatingId}
+              onDropOrder={onDropOrder}
+              onDragStart={onDragStart}
+            />
+          ))}
+        </div>
+      </div>
+    </>
   )
 }
 
