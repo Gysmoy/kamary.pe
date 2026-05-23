@@ -126,6 +126,7 @@ const Dispatches = () => {
   const [drivers, setDrivers] = useState([])
   const [vehicles, setVehicles] = useState([])
   const [zones, setZones] = useState([])
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false)
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
@@ -157,16 +158,16 @@ const Dispatches = () => {
   })
 
   const orderMap = useMemo(() => Object.fromEntries(orders.map(order => [`${order.id}`, order])), [orders])
+  const warehouseMap = useMemo(() => Object.fromEntries(warehouses.map(row => [`${row.id}`, row])), [warehouses])
   const driverMap = useMemo(() => Object.fromEntries(drivers.map(row => [`${row.id}`, row])), [drivers])
   const vehicleMap = useMemo(() => Object.fromEntries(vehicles.map(row => [`${row.id}`, row])), [vehicles])
   const zoneMap = useMemo(() => Object.fromEntries(zones.map(row => [`${row.id}`, row])), [zones])
   const availableOrders = useMemo(() => (
     orders.filter(order => {
       if (selectedBusinessId && `${order.business_id}` !== `${selectedBusinessId}`) return false
-      if (selectedWarehouseId && `${order.warehouse_id}` !== `${selectedWarehouseId}`) return false
       return ['pending', 'preparing', 'dispatched', 'in_route'].includes(`${order.dispatch_status ?? ''}`)
     })
-  ), [orders, selectedBusinessId, selectedWarehouseId])
+  ), [orders, selectedBusinessId])
   const dispatchGridFilter = useMemo(() => (
     selectedDispatchFilter === 'all' ? null : ['dispatch_status', '=', selectedDispatchFilter]
   ), [selectedDispatchFilter])
@@ -182,6 +183,22 @@ const Dispatches = () => {
     if (instance) await instance.refresh()
   }
 
+  const normalizeDispatchOrders = (orderList = []) => (
+    (orderList ?? []).filter(row => row.status !== null && row.order_status !== 'cancelled' && row.dispatch_status !== 'delivered' && row.dispatch_status !== 'cancelled')
+  )
+
+  const loadCommercialOrders = async () => {
+    setIsLoadingOrders(true)
+    try {
+      const orderList = await dispatchesRest.getCommercialOrders()
+      const normalized = normalizeDispatchOrders(orderList)
+      setOrders(normalized)
+      return normalized
+    } finally {
+      setIsLoadingOrders(false)
+    }
+  }
+
   const loadCatalogs = async () => {
     const [businessList, warehouseList, orderList, driverList, vehicleList, zoneList] = await Promise.all([
       dispatchesRest.getBusinesses(),
@@ -193,7 +210,7 @@ const Dispatches = () => {
     ])
     setBusinesses(businessList)
     setWarehouses(warehouseList)
-    setOrders((orderList ?? []).filter(row => row.status !== null && row.order_status !== 'cancelled' && row.dispatch_status !== 'delivered' && row.dispatch_status !== 'cancelled'))
+    setOrders(normalizeDispatchOrders(orderList))
     setDrivers(driverList ?? [])
     setVehicles(vehicleList ?? [])
     setZones(zoneList ?? [])
@@ -211,6 +228,7 @@ const Dispatches = () => {
   }
 
   const onModalOpen = async (data = null) => {
+    await loadCommercialOrders()
     setIsEditing(!!data?.id)
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
@@ -230,8 +248,30 @@ const Dispatches = () => {
     $(modalRef.current).modal('show')
   }
 
-  const onAssignmentChange = (uid, value) => {
+  const onAssignmentChange = async (uid, value) => {
     const order = orderMap[value]
+    if (!order) {
+      setAssignments(prev => prev.map(row => row.uid === uid ? { ...row, commercial_order_id: '', customer_name: '', total: 0 } : row))
+      return
+    }
+
+    const incompatibleOrder = assignments
+      .filter(row => row.uid !== uid && row.commercial_order_id)
+      .map(row => orderMap[row.commercial_order_id])
+      .find(row => row && `${row.warehouse_id}` !== `${order.warehouse_id}`)
+    if (incompatibleOrder) {
+      Swal.fire('Almacen distinto', 'Un despacho solo puede contener pedidos del mismo almacen. Crea otro despacho para ese pedido.', 'warning')
+      return
+    }
+
+    if (order.business_id && `${selectedBusinessId}` !== `${order.business_id}`) {
+      setSelectedBusinessId(`${order.business_id}`)
+      await loadBranches(order.business_id, order.business_branch_id ?? '')
+    } else if (order.business_branch_id) {
+      setSelectedBranchId(`${order.business_branch_id}`)
+    }
+    if (order.warehouse_id) setSelectedWarehouseId(`${order.warehouse_id}`)
+
     if (!selectedZoneId && order?.ubigeo) {
       const matchedZone = zones.find(zone => `${zone?.ubigeo ?? ''}`.trim() !== '' && `${zone.ubigeo}` === `${order.ubigeo}`)
       if (matchedZone) setSelectedZoneId(`${matchedZone.id}`)
@@ -245,6 +285,12 @@ const Dispatches = () => {
       customer_name: order ? (order.client?.full_name ?? order.eventual_client?.business_name ?? order.eventualClient?.business_name ?? '') : '',
       total: Number(order?.total || 0)
     } : row))
+  }
+
+  const orderOptionLabel = (order) => {
+    const customer = order.client?.full_name ?? order.eventual_client?.business_name ?? order.eventualClient?.business_name ?? 'Cliente'
+    const warehouse = warehouseMap[order.warehouse_id]?.name ?? `Almacen ${order.warehouse_id ?? '-'}`
+    return `${order.code} - ${customer} | ${warehouse}`
   }
 
   const onVehicleChange = (value) => {
@@ -730,15 +776,26 @@ const Dispatches = () => {
         <div className='col-md-3 mb-3'><label className='form-label'>Zona final</label><input className='form-control' value={currentZone?.name ?? ''} disabled /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Distrito zona</label><input className='form-control' value={currentZone?.district ?? ''} disabled /></div>
         <div className='col-12 mb-3'>
-          <label className='form-label'>Pedidos asignados</label>
+          <div className='d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2'>
+            <label className='form-label mb-0'>Pedidos asignados</label>
+            <button type='button' className='btn btn-sm btn-outline-secondary' onClick={loadCommercialOrders} disabled={isLoadingOrders}>
+              {isLoadingOrders ? 'Cargando pedidos...' : 'Recargar pedidos'}
+            </button>
+          </div>
           <div className='border rounded p-2'>
             {assignments.map(row => <div key={row.uid} className='row align-items-end mb-2'>
               <div className='col-md-6'>
                 <label className='form-label'>Pedido</label>
                 <select className='form-control' value={row.commercial_order_id} onChange={(e) => onAssignmentChange(row.uid, e.target.value)}>
-                  <option value=''>Seleccione</option>
-                  {availableOrders.map(order => <option key={`dispatch-order-${order.id}`} value={order.id}>{order.code} - {order.client?.full_name ?? order.eventual_client?.business_name ?? order.eventualClient?.business_name ?? 'Cliente'}</option>)}
+                  <option value=''>{isLoadingOrders ? 'Cargando pedidos...' : 'Seleccione'}</option>
+                  {!isLoadingOrders && availableOrders.length === 0 && <option value='' disabled>Sin pedidos disponibles</option>}
+                  {availableOrders.map(order => <option key={`dispatch-order-${order.id}`} value={order.id}>{orderOptionLabel(order)}</option>)}
                 </select>
+                <small className='text-muted d-block mt-1'>
+                  {availableOrders.length > 0
+                    ? `${availableOrders.length} pedido(s) disponible(s). Al seleccionar, se usara el almacen del pedido.`
+                    : 'No hay pedidos disponibles para la empresa actual. Revisa que el pedido no este entregado/cancelado o usa Recargar pedidos.'}
+                </small>
               </div>
               <div className='col-md-3'><label className='form-label'>Cliente</label><input className='form-control' value={row.customer_name} disabled /></div>
               <div className='col-md-2'><label className='form-label'>Total</label><input className='form-control' value={Number(row.total || 0).toFixed(2)} disabled /></div>
