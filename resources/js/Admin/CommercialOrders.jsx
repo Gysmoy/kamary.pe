@@ -5,7 +5,6 @@ import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
 import Modal from '../Components/Adminto/Modal';
 import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
@@ -29,6 +28,21 @@ import {
 const commercialOrdersRest = new CommercialOrdersRest()
 const referralGuidesRest = new ReferralGuidesRest()
 const regularClientFilter = ['client_kind', '=', 'regular']
+
+const appendGridActionButton = (container, { variant, title, icon, onClick }) => {
+  const button = $('<button type="button"></button>')
+    .addClass(`btn btn-xs btn-soft-${variant} commercial-order-action-btn`)
+    .attr('title', title)
+    .attr('aria-label', title)
+    .append($('<i></i>').addClass(icon))
+    .on('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      onClick()
+    })
+
+  container.append(button)
+}
 
 const emptyItem = () => ({
   uid: crypto.randomUUID(),
@@ -878,6 +892,37 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const trackingRows = useMemo(() => buildTrackingRows(trackingOrder), [trackingOrder])
 
   return (<>
+    <style>{`
+      .commercial-order-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-width: 312px;
+        white-space: nowrap;
+        overflow: visible !important;
+      }
+      .commercial-order-action-btn {
+        width: 34px;
+        height: 30px;
+        padding: 0 !important;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        line-height: 1;
+        flex: 0 0 34px;
+      }
+      .commercial-order-action-btn i {
+        display: inline-flex;
+        font-size: 16px;
+        line-height: 1;
+      }
+      .commercial-order-action-btn.btn-soft-primary i { color: #3b82f6 !important; }
+      .commercial-order-action-btn.btn-soft-success i { color: #10c469 !important; }
+      .commercial-order-action-btn.btn-soft-info i { color: #35b8e0 !important; }
+      .commercial-order-action-btn.btn-soft-warning i { color: #f7b84b !important; }
+      .commercial-order-action-btn.btn-soft-danger i { color: #ff5b5b !important; }
+    `}</style>
     <Table
       gridRef={gridRef}
       title={pageTitle}
@@ -1006,58 +1051,59 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         },
         {
           caption: 'Acciones',
-          width: 335,
+          width: 360,
           fixed: true,
           fixedPosition: 'right',
           allowFiltering: false,
           allowExporting: false,
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
+            container.addClass('commercial-order-actions')
+            appendGridActionButton(container, {
+              variant: 'primary',
               title: 'Editar pedido',
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)
-            }))
+            })
             const nextStatus = getNextDispatchStatus(data?.dispatch_status)
             if (nextStatus) {
-              container.append(DxButton({
-                className: 'btn btn-xs btn-soft-success ms-1',
+              appendGridActionButton(container, {
+                variant: 'success',
                 title: `Pasar a ${getDispatchStatusLabel(nextStatus)}`,
                 icon: 'mdi mdi-arrow-right-bold-circle-outline',
                 onClick: () => onBooleanChange({ id: data.id, field: 'dispatch_status', value: nextStatus })
-              }))
+              })
             }
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-info ms-1',
+            appendGridActionButton(container, {
+              variant: 'info',
               title: 'Tracking pedido',
               icon: 'mdi mdi-map-marker-path',
               onClick: () => openTracking(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-warning ms-1',
+            })
+            appendGridActionButton(container, {
+              variant: 'warning',
               title: orderGuides(data).length ? 'Ver guia' : 'Generar guia',
               icon: 'mdi mdi-file-document-plus-outline',
               onClick: () => onOpenReferralGuide(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-success ms-1',
+            })
+            appendGridActionButton(container, {
+              variant: 'success',
               title: latestEvidence(data) ? 'Ver evidencia' : 'Registrar evidencia',
               icon: 'mdi mdi-image-check-outline',
               onClick: () => openEvidence(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger ms-1',
+            })
+            appendGridActionButton(container, {
+              variant: 'danger',
               title: 'Imprimir PDF',
               icon: 'mdi mdi-file-pdf-box',
               onClick: () => openMagistralesRecordPdf(buildMagistralesRows.commercialOrder(data))
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger ms-1',
+            })
+            appendGridActionButton(container, {
+              variant: 'danger',
               title: 'Eliminar pedido',
               icon: 'mdi mdi-delete',
               onClick: () => onDeleteClicked(data.id)
-            }))
+            })
           }
         }
       ]}
