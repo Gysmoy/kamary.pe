@@ -144,6 +144,7 @@ class DispatchController extends BasicController
         }
         $assignmentOrderIds = $this->assignmentOrderIds($rawAssignments);
         if (empty($assignmentOrderIds)) throw new \Exception('Debes asignar al menos un pedido al despacho');
+        $this->assertAssignmentsAvailableForDispatch($assignmentOrderIds, (int) ($id ?? 0), $businessId, $warehouseId);
         $this->assertRouteAssets($dispatchStatus, $driver, $vehicle, $zone);
         $this->assertDeliveredHasEvidences((int) ($id ?? 0), $dispatchStatus, $assignmentOrderIds);
 
@@ -413,6 +414,46 @@ class DispatchController extends BasicController
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function assertAssignmentsAvailableForDispatch(array $orderIds, int $dispatchId, int $businessId, int $warehouseId): void
+    {
+        $orders = CommercialOrder::query()
+            ->whereIn('id', $orderIds)
+            ->get(['id', 'code', 'business_id', 'warehouse_id', 'order_status', 'status'])
+            ->keyBy('id');
+
+        foreach ($orderIds as $orderId) {
+            $order = $orders->get($orderId);
+            if (!$order) throw new \Exception("El pedido {$orderId} no existe");
+            if (!$order->status || in_array($order->order_status, ['draft', 'cancelled'], true)) {
+                throw new \Exception("El pedido {$order->code} no esta disponible para despacho");
+            }
+            if ((int) $order->business_id !== $businessId) {
+                throw new \Exception("El pedido {$order->code} no pertenece a la empresa seleccionada");
+            }
+            if ((int) $order->warehouse_id !== $warehouseId) {
+                throw new \Exception("El pedido {$order->code} no corresponde al almacen del despacho");
+            }
+        }
+
+        $assigned = DispatchAssignment::query()
+            ->select('dispatch_assignments.commercial_order_id', 'dispatches.code as dispatch_code')
+            ->join('dispatches', 'dispatches.id', '=', 'dispatch_assignments.dispatch_id')
+            ->whereIn('dispatch_assignments.commercial_order_id', $orderIds)
+            ->where('dispatch_assignments.status', 1)
+            ->where('dispatches.status', 1)
+            ->whereNotIn('dispatches.dispatch_status', ['cancelled'])
+            ->where('dispatches.id', '!=', $dispatchId)
+            ->get()
+            ->keyBy('commercial_order_id');
+
+        foreach ($orderIds as $orderId) {
+            $assignment = $assigned->get($orderId);
+            if (!$assignment) continue;
+            $order = $orders->get($orderId);
+            throw new \Exception("El pedido {$order->code} ya esta asignado al despacho {$assignment->dispatch_code}");
+        }
     }
 
     private function assertDeliveredHasEvidences(int $dispatchId, string $dispatchStatus, array $orderIds): void

@@ -41,6 +41,8 @@ const dispatchAssignments = (dispatch) => dispatch?.assignments ?? []
 const dispatchGuides = (dispatch) => dispatch?.referral_guides ?? dispatch?.referralGuides ?? []
 const dispatchEvidences = (dispatch) => dispatch?.delivery_evidences ?? dispatch?.deliveryEvidences ?? []
 const assignmentOrder = (assignment) => assignment?.commercial_order ?? assignment?.commercialOrder
+const orderDispatchAssignments = (order) => order?.dispatch_assignments ?? order?.dispatchAssignments ?? []
+const isEnabledRecord = (value) => value !== null && value !== false && value !== 0 && `${value}` !== '0'
 const textValue = (value, fallback = '') => {
   if (value === null || value === undefined) return fallback
   if (typeof value === 'object') return value.address ?? value.reference ?? value.name ?? value.description ?? fallback
@@ -135,6 +137,7 @@ const Dispatches = () => {
   const [selectedVehicleId, setSelectedVehicleId] = useState('')
   const [selectedZoneId, setSelectedZoneId] = useState('')
   const [selectedDispatchFilter, setSelectedDispatchFilter] = useState('all')
+  const [currentDispatchId, setCurrentDispatchId] = useState('')
   const [assignments, setAssignments] = useState([emptyAssignment()])
   const [isEditing, setIsEditing] = useState(false)
   const [isEditingZone, setIsEditingZone] = useState(false)
@@ -163,14 +166,30 @@ const Dispatches = () => {
   const driverMap = useMemo(() => Object.fromEntries(drivers.map(row => [`${row.id}`, row])), [drivers])
   const vehicleMap = useMemo(() => Object.fromEntries(vehicles.map(row => [`${row.id}`, row])), [vehicles])
   const zoneMap = useMemo(() => Object.fromEntries(zones.map(row => [`${row.id}`, row])), [zones])
+  const orderBelongsToCurrentDispatch = (order, dispatchId = currentDispatchId) => (
+    !!dispatchId && orderDispatchAssignments(order).some((assignment) => (
+      isEnabledRecord(assignment?.status)
+      && `${assignment?.dispatch_id ?? assignment?.dispatch?.id ?? ''}` === `${dispatchId}`
+    ))
+  )
+  const activeAssignmentForOtherDispatch = (order, dispatchId = currentDispatchId) => (
+    orderDispatchAssignments(order).find((assignment) => {
+      const dispatch = assignment?.dispatch
+      if (!isEnabledRecord(assignment?.status) || !dispatch || !isEnabledRecord(dispatch?.status)) return false
+      if (`${assignment?.dispatch_id ?? dispatch?.id ?? ''}` === `${dispatchId ?? ''}`) return false
+      return `${dispatch?.dispatch_status ?? ''}` !== 'cancelled'
+    }) ?? null
+  )
   const availableOrders = useMemo(() => (
     orders.filter(order => {
       if (selectedBusinessId && `${order.business_id}` !== `${selectedBusinessId}`) return false
       if (!selectedWarehouseId) return false
       if (`${order.warehouse_id}` !== `${selectedWarehouseId}`) return false
+      if (orderBelongsToCurrentDispatch(order)) return true
+      if (activeAssignmentForOtherDispatch(order)) return false
       return ['pending', 'preparing', 'dispatched', 'in_route'].includes(`${order.dispatch_status ?? ''}`)
     })
-  ), [orders, selectedBusinessId, selectedWarehouseId])
+  ), [orders, selectedBusinessId, selectedWarehouseId, currentDispatchId])
   const selectedAssignmentOrderIds = useMemo(() => (
     new Set(assignments.map(row => `${row.commercial_order_id ?? ''}`).filter(Boolean))
   ), [assignments])
@@ -240,6 +259,7 @@ const Dispatches = () => {
   }
 
   const onModalOpen = async (data = null) => {
+    setCurrentDispatchId(data?.id ? `${data.id}` : '')
     await loadCommercialOrders()
     setIsEditing(!!data?.id)
     idRef.current.value = data?.id ?? ''
@@ -612,6 +632,19 @@ const Dispatches = () => {
     if (duplicatedOrderId) {
       Swal.fire('Pedido duplicado', `El pedido ${orderMap[duplicatedOrderId]?.code ?? duplicatedOrderId} ya esta seleccionado.`, 'warning')
       return
+    }
+    for (const orderId of selectedOrderIds) {
+      const order = orderMap[orderId]
+      if (!order) {
+        Swal.fire('Pedido no disponible', 'Recarga pedidos y vuelve a seleccionar el pedido.', 'warning')
+        return
+      }
+      const activeAssignment = activeAssignmentForOtherDispatch(order)
+      if (activeAssignment) {
+        const dispatchCode = activeAssignment.dispatch?.code ? ` ${activeAssignment.dispatch.code}` : ''
+        Swal.fire('Pedido ya asignado', `El pedido ${order.code ?? orderId} ya esta asignado al despacho${dispatchCode}. Quitalo de este despacho o anulalo en el despacho anterior.`, 'warning')
+        return
+      }
     }
     const request = {
       id: idRef.current.value || undefined,
