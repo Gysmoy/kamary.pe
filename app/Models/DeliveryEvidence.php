@@ -9,6 +9,8 @@ class DeliveryEvidence extends Model
 {
     use HasFactory;
 
+    protected $table = 'delivery_evidences';
+
     protected $fillable = [
         'code',
         'business_id',
