@@ -1250,7 +1250,6 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                   <th>Precio</th>
                   <th>Cantidad</th>
                   <th>Total</th>
-                  <th>Origen precio</th>
                   <th style={{ width: 70 }}></th>
                 </tr>
               </thead>
@@ -1307,10 +1306,6 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                       />
                     </td>
                     <td>{Number(item.total || 0).toFixed(2)}</td>
-                    <td>
-                      <small className='text-muted d-block'>{item.price_source || '-'}</small>
-                      <small className='text-muted d-block'>{item.price_list_code || '-'}</small>
-                    </td>
                     <td className='text-end'>
                       <button type='button' className='btn btn-sm btn-outline-danger' onClick={() => onItemRemoved(item.uid)}>
                         <i className='mdi mdi-close'></i>
@@ -1323,17 +1318,17 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                 <tr>
                   <th colSpan='5' className='text-end'>Subtotal</th>
                   <th>{orderTotals.subtotal.toFixed(2)}</th>
-                  <th colSpan='2'></th>
+                  <th></th>
                 </tr>
                 <tr>
                   <th colSpan='5' className='text-end'>Impuesto</th>
                   <th>{orderTotals.taxAmount.toFixed(2)}</th>
-                  <th colSpan='2'></th>
+                  <th></th>
                 </tr>
                 <tr>
                   <th colSpan='5' className='text-end'>Total</th>
                   <th>{orderTotals.total.toFixed(2)}</th>
-                  <th colSpan='2'></th>
+                  <th></th>
                 </tr>
               </tfoot>
             </table>
