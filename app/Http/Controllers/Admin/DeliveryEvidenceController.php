@@ -24,6 +24,7 @@ class DeliveryEvidenceController extends BasicController
         DB::beginTransaction();
 
         try {
+            $closingWarning = null;
             $order = CommercialOrder::with(['dispatchAssignments.dispatch', 'deliveryEvidences'])->whereKey($id)->whereNotNull('status')->firstOrFail();
             $dispatch = $this->resolveDispatch($order, $this->toNullableInt($request->input('dispatch_id')));
             $evidence = DeliveryEvidence::query()
@@ -100,11 +101,23 @@ class DeliveryEvidenceController extends BasicController
                     ->where('commercial_order_id', $order->id)
                     ->update(['assignment_status' => 'delivered']);
 
-                if ($this->markDispatchDeliveredWhenComplete($dispatch)) {
+                if ($this->dispatchCanBeDelivered($dispatch)) {
                     $dispatchService = app(DispatchService::class);
                     $freshDispatch = $dispatch->fresh(['assignments.commercialOrder.items', 'assignments.commercialOrder.client', 'assignments.commercialOrder.eventualClient', 'exitNote.items']);
-                    $dispatchService->syncExitNote($freshDispatch);
-                    $dispatchService->syncCommercialOrderStatuses([$order->id]);
+                    try {
+                        $dispatchService->assertExitNoteStockAvailable($freshDispatch);
+                        $dispatch->update([
+                            'dispatch_status' => 'delivered',
+                            'delivered_at' => $dispatch->delivered_at ?: now(),
+                            'updated_by' => Auth::id(),
+                        ]);
+                        $freshDispatch = $dispatch->fresh(['assignments.commercialOrder.items', 'assignments.commercialOrder.client', 'assignments.commercialOrder.eventualClient', 'exitNote.items']);
+                        $dispatchService->syncExitNote($freshDispatch);
+                        $dispatchService->syncCommercialOrderStatuses($freshDispatch->assignments->pluck('commercial_order_id')->filter()->all());
+                    } catch (\Throwable $closingError) {
+                        $closingWarning = 'Cierre pendiente: ' . $closingError->getMessage();
+                        // La evidencia no debe perderse por problemas de stock; el cierre queda pendiente.
+                    }
                 }
             }
 
@@ -121,7 +134,7 @@ class DeliveryEvidenceController extends BasicController
             DB::commit();
 
             $response->status = 200;
-            $response->message = 'Evidencia registrada correctamente';
+            $response->message = $closingWarning ?: 'Evidencia registrada correctamente';
             $response->data = $evidence->fresh(['commercialOrder:id,code', 'dispatch:id,code,manifest_code,dispatch_status', 'driver:id,full_name,license_number']);
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -184,7 +197,7 @@ class DeliveryEvidenceController extends BasicController
         return "/api/admin/delivery-evidence-media/{$filename}";
     }
 
-    private function markDispatchDeliveredWhenComplete(Dispatch $dispatch): bool
+    private function dispatchCanBeDelivered(Dispatch $dispatch): bool
     {
         $assignmentOrderIds = DispatchAssignment::query()
             ->where('dispatch_id', $dispatch->id)
@@ -212,12 +225,6 @@ class DeliveryEvidenceController extends BasicController
             ->count('commercial_order_id');
 
         if ($covered < $assignmentOrderIds->unique()->count()) return false;
-
-        $dispatch->update([
-            'dispatch_status' => 'delivered',
-            'delivered_at' => $dispatch->delivered_at ?: now(),
-            'updated_by' => Auth::id(),
-        ]);
 
         return true;
     }

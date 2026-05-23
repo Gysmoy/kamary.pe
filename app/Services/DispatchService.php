@@ -58,7 +58,42 @@ class DispatchService
             'updated_by' => Auth::id(),
         ]);
 
+        $stockRows = $this->exitNoteStockRows($this->buildExitNoteLines($dispatch), (int)$exitNote->id);
+
         ExitNoteItem::where('exit_note_id', $exitNote->id)->delete();
+        foreach ($stockRows as $line) {
+            ExitNoteItem::create([
+                'exit_note_id' => $exitNote->id,
+                'batch_code' => null,
+                'article_id' => $line['article_id'],
+                'warehouse_id' => $line['warehouse_id'],
+                'stock' => $line['stock'],
+                'expiration_date' => null,
+                'location' => null,
+                'destination_location' => $dispatch->zone,
+                'quantity' => $line['quantity'],
+                'total' => $line['total'],
+                'status' => true,
+            ]);
+        }
+
+        if ((int)$dispatch->exit_note_id !== (int)$exitNote->id) {
+            $dispatch->update(['exit_note_id' => $exitNote->id]);
+        }
+    }
+
+    public function assertExitNoteStockAvailable(Dispatch $dispatch): void
+    {
+        $dispatch->loadMissing('assignments.commercialOrder.items');
+        $this->exitNoteStockRows($this->buildExitNoteLines($dispatch), (int)($dispatch->exit_note_id ?? 0));
+    }
+
+    private function buildExitNoteLines(Dispatch $dispatch): array
+    {
+        $assignments = $dispatch->assignments->where('status', true)->values();
+        if ($assignments->isEmpty()) {
+            throw new \Exception('Debes agregar al menos un pedido para cerrar el despacho');
+        }
 
         $grouped = [];
         foreach ($assignments as $assignment) {
@@ -81,35 +116,28 @@ class DispatchService
             }
         }
 
+        return $grouped;
+    }
+
+    private function exitNoteStockRows(array $grouped, int $exitNoteId): array
+    {
         if (empty($grouped)) {
             throw new \Exception('El despacho no tiene items validos para generar salida');
         }
 
         $stockService = app(StockService::class);
+        $stockRows = [];
         foreach ($grouped as $line) {
-            $availableStock = $stockService->getAvailableStockByWarehouse((int)$line['article_id'], (int)$line['warehouse_id'], (int)$exitNote->id);
+            $availableStock = $stockService->getAvailableStockByWarehouse((int)$line['article_id'], (int)$line['warehouse_id'], $exitNoteId);
             if ((float)$line['quantity'] > $availableStock + 0.0001) {
                 throw new \Exception("Stock insuficiente para cerrar el despacho. Articulo {$line['article_id']} disponible: {$availableStock}");
             }
 
-            ExitNoteItem::create([
-                'exit_note_id' => $exitNote->id,
-                'batch_code' => null,
-                'article_id' => $line['article_id'],
-                'warehouse_id' => $line['warehouse_id'],
-                'stock' => $availableStock,
-                'expiration_date' => null,
-                'location' => null,
-                'destination_location' => $dispatch->zone,
-                'quantity' => $line['quantity'],
-                'total' => $line['total'],
-                'status' => true,
-            ]);
+            $line['stock'] = $availableStock;
+            $stockRows[] = $line;
         }
 
-        if ((int)$dispatch->exit_note_id !== (int)$exitNote->id) {
-            $dispatch->update(['exit_note_id' => $exitNote->id]);
-        }
+        return $stockRows;
     }
 
     public function syncCommercialOrderStatuses(array $orderIds): void
