@@ -917,11 +917,58 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         font-size: 16px;
         line-height: 1;
       }
-      .commercial-order-action-btn.btn-soft-primary i { color: #3b82f6 !important; }
-      .commercial-order-action-btn.btn-soft-success i { color: #10c469 !important; }
-      .commercial-order-action-btn.btn-soft-info i { color: #35b8e0 !important; }
-      .commercial-order-action-btn.btn-soft-warning i { color: #f7b84b !important; }
-      .commercial-order-action-btn.btn-soft-danger i { color: #ff5b5b !important; }
+      .commercial-order-action-btn:hover,
+      .commercial-order-action-btn:focus,
+      .commercial-order-action-btn:active {
+        box-shadow: none !important;
+        opacity: 1 !important;
+      }
+      .commercial-order-action-btn.btn-soft-primary,
+      .commercial-order-action-btn.btn-soft-primary:hover,
+      .commercial-order-action-btn.btn-soft-primary:focus,
+      .commercial-order-action-btn.btn-soft-primary:active {
+        background-color: rgba(59, 130, 246, 0.14) !important;
+        border-color: rgba(59, 130, 246, 0.18) !important;
+        color: #3b82f6 !important;
+      }
+      .commercial-order-action-btn.btn-soft-success,
+      .commercial-order-action-btn.btn-soft-success:hover,
+      .commercial-order-action-btn.btn-soft-success:focus,
+      .commercial-order-action-btn.btn-soft-success:active {
+        background-color: rgba(16, 196, 105, 0.14) !important;
+        border-color: rgba(16, 196, 105, 0.18) !important;
+        color: #10c469 !important;
+      }
+      .commercial-order-action-btn.btn-soft-info,
+      .commercial-order-action-btn.btn-soft-info:hover,
+      .commercial-order-action-btn.btn-soft-info:focus,
+      .commercial-order-action-btn.btn-soft-info:active {
+        background-color: rgba(53, 184, 224, 0.14) !important;
+        border-color: rgba(53, 184, 224, 0.18) !important;
+        color: #35b8e0 !important;
+      }
+      .commercial-order-action-btn.btn-soft-warning,
+      .commercial-order-action-btn.btn-soft-warning:hover,
+      .commercial-order-action-btn.btn-soft-warning:focus,
+      .commercial-order-action-btn.btn-soft-warning:active {
+        background-color: rgba(247, 184, 75, 0.16) !important;
+        border-color: rgba(247, 184, 75, 0.2) !important;
+        color: #f7b84b !important;
+      }
+      .commercial-order-action-btn.btn-soft-danger,
+      .commercial-order-action-btn.btn-soft-danger:hover,
+      .commercial-order-action-btn.btn-soft-danger:focus,
+      .commercial-order-action-btn.btn-soft-danger:active {
+        background-color: rgba(255, 91, 91, 0.14) !important;
+        border-color: rgba(255, 91, 91, 0.18) !important;
+        color: #ff5b5b !important;
+      }
+      .commercial-order-action-btn i,
+      .commercial-order-action-btn:hover i,
+      .commercial-order-action-btn:focus i,
+      .commercial-order-action-btn:active i {
+        color: inherit !important;
+      }
     `}</style>
     <Table
       gridRef={gridRef}
