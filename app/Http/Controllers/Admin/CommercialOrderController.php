@@ -59,7 +59,7 @@ class CommercialOrderController extends BasicController
                 'client:id,document_type,document_number,full_name',
                 'eventualClient:id,document_type,document_number,business_name',
                 'distributionNetwork:id,client_id,code,name,commercial_channel,segment',
-                'deliveryAddress:id,client_distribution_network_id,client_id,code,name,address,reference,ubigeo,contact_name,contact_phone',
+                'deliveryAddress:id,client_distribution_network_id,client_id,code,name,address,reference,ubigeo,latitude,longitude,contact_name,contact_phone',
                 'seller:id,name,lastname,username,fullname',
                 'priceList:id,code',
                 'accountsReceivable:id,source_id,code,total,paid_amount,balance_amount,payment_status,status',
@@ -398,7 +398,7 @@ class CommercialOrderController extends BasicController
             Client::findOrFail($clientId);
             $response->status = 200;
             $response->message = 'Operacion correcta';
-            $response->data = ClientDistributionNetwork::with('addresses:id,client_distribution_network_id,client_id,code,name,address,reference,ubigeo,contact_name,contact_phone,is_default,status')
+            $response->data = ClientDistributionNetwork::with('addresses:id,client_distribution_network_id,client_id,code,name,address,reference,ubigeo,latitude,longitude,contact_name,contact_phone,is_default,status')
                 ->where('client_id', $clientId)
                 ->whereNotNull('status')
                 ->orderByDesc('is_default')

@@ -162,6 +162,254 @@ const nowDateTimeLocal = () => {
   return date.toISOString().slice(0, 16)
 }
 
+const defaultMapPosition = { lat: -12.046374, lng: -77.042793 }
+const leafletCdn = {
+  css: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  js: 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+}
+let leafletLoader = null
+
+const parseCoordinate = (value) => {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
+const formatCoordinate = (value) => {
+  const number = parseCoordinate(value)
+  return number === null ? '' : number.toFixed(7)
+}
+
+const hasMapPosition = (position) => parseCoordinate(position?.lat) !== null && parseCoordinate(position?.lng) !== null
+
+const loadLeaflet = () => {
+  if (window.L) return Promise.resolve(window.L)
+  if (leafletLoader) return leafletLoader
+
+  leafletLoader = new Promise((resolve, reject) => {
+    if (!document.querySelector(`link[href="${leafletCdn.css}"]`)) {
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = leafletCdn.css
+      document.head.appendChild(link)
+    }
+
+    const existingScript = document.querySelector(`script[src="${leafletCdn.js}"]`)
+    if (existingScript) {
+      existingScript.addEventListener('load', () => resolve(window.L), { once: true })
+      existingScript.addEventListener('error', () => reject(new Error('No se pudo cargar el mapa libre')), { once: true })
+      return
+    }
+
+    const script = document.createElement('script')
+    script.src = leafletCdn.js
+    script.async = true
+    script.onload = () => resolve(window.L)
+    script.onerror = () => reject(new Error('No se pudo cargar el mapa libre'))
+    document.body.appendChild(script)
+  })
+
+  return leafletLoader
+}
+
+const DeliveryMapPicker = ({ modalRef, position, searchText, onPositionChange, onSearchTextChange, onAddressSelected }) => {
+  const containerRef = useRef()
+  const mapRef = useRef()
+  const markerRef = useRef()
+  const [loading, setLoading] = useState(false)
+  const [mapError, setMapError] = useState('')
+  const [results, setResults] = useState([])
+
+  const resolvedPosition = hasMapPosition(position)
+    ? { lat: parseCoordinate(position.lat), lng: parseCoordinate(position.lng) }
+    : defaultMapPosition
+
+  const setMarkerPosition = async (nextPosition, zoom = null) => {
+    const lat = parseCoordinate(nextPosition?.lat)
+    const lng = parseCoordinate(nextPosition?.lng)
+    if (lat === null || lng === null) return
+
+    const L = await loadLeaflet()
+    if (!mapRef.current || !containerRef.current) return
+
+    if (!markerRef.current) {
+      markerRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapRef.current)
+      markerRef.current.on('dragend', () => {
+        const markerPosition = markerRef.current.getLatLng()
+        onPositionChange({ lat: markerPosition.lat, lng: markerPosition.lng })
+      })
+    } else {
+      markerRef.current.setLatLng([lat, lng])
+    }
+
+    if (zoom) mapRef.current.setView([lat, lng], zoom)
+  }
+
+  useEffect(() => {
+    let cancelled = false
+
+    const initialize = async () => {
+      try {
+        const L = await loadLeaflet()
+        if (cancelled || !containerRef.current || mapRef.current) return
+
+        mapRef.current = L.map(containerRef.current, {
+          center: [resolvedPosition.lat, resolvedPosition.lng],
+          zoom: hasMapPosition(position) ? 16 : 12,
+          scrollWheelZoom: false,
+        })
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap',
+        }).addTo(mapRef.current)
+
+        mapRef.current.on('click', (event) => {
+          const nextPosition = { lat: event.latlng.lat, lng: event.latlng.lng }
+          onPositionChange(nextPosition)
+          setMarkerPosition(nextPosition, 16)
+        })
+
+        if (hasMapPosition(position)) await setMarkerPosition(resolvedPosition)
+        setTimeout(() => mapRef.current?.invalidateSize(), 200)
+      } catch (error) {
+        if (!cancelled) setMapError(error.message)
+      }
+    }
+
+    initialize()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (hasMapPosition(position)) {
+      setMarkerPosition(resolvedPosition)
+      return
+    }
+
+    if (markerRef.current && mapRef.current) {
+      markerRef.current.remove()
+      markerRef.current = null
+    }
+    mapRef.current?.setView([defaultMapPosition.lat, defaultMapPosition.lng], 12)
+  }, [position?.lat, position?.lng])
+
+  useEffect(() => {
+    const modal = modalRef?.current
+    if (!modal) return undefined
+
+    const onShown = () => {
+      setTimeout(() => {
+        mapRef.current?.invalidateSize()
+        if (hasMapPosition(position)) {
+          mapRef.current?.setView([parseCoordinate(position.lat), parseCoordinate(position.lng)], 16)
+        }
+      }, 180)
+    }
+
+    $(modal).on('shown.bs.modal', onShown)
+    return () => $(modal).off('shown.bs.modal', onShown)
+  }, [modalRef, position?.lat, position?.lng])
+
+  const searchAddress = async () => {
+    const query = `${searchText ?? ''}`.trim()
+    if (!query) {
+      setResults([])
+      setMapError('Escribe una direccion para buscar.')
+      return
+    }
+
+    setLoading(true)
+    setMapError('')
+    try {
+      const params = new URLSearchParams({
+        format: 'jsonv2',
+        q: `${query}, Peru`,
+        countrycodes: 'pe',
+        addressdetails: '1',
+        limit: '5',
+        'accept-language': 'es',
+      })
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?${params.toString()}`)
+      if (!response.ok) throw new Error('No se pudo consultar OpenStreetMap')
+
+      const data = await response.json()
+      setResults(Array.isArray(data) ? data : [])
+      if (!Array.isArray(data) || data.length === 0) setMapError('Sin resultados. Puedes marcar el punto manualmente en el mapa.')
+    } catch (error) {
+      setMapError(`${error.message}. Puedes marcar el punto manualmente en el mapa.`)
+      setResults([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const selectResult = (result) => {
+    const nextPosition = { lat: parseCoordinate(result.lat), lng: parseCoordinate(result.lon) }
+    onPositionChange(nextPosition)
+    onSearchTextChange(result.display_name ?? '')
+    onAddressSelected(result.display_name ?? '')
+    setMarkerPosition(nextPosition, 16)
+    setResults([])
+  }
+
+  return (
+    <div className='commercial-order-map-picker'>
+      <div className='commercial-order-map-search'>
+        <div>
+          <label className='form-label'>Buscar direccion en mapa</label>
+          <div className='input-group'>
+            <input
+              type='text'
+              className='form-control'
+              value={searchText}
+              placeholder='Ej. Av. Javier Prado 1234, San Isidro'
+              onChange={(event) => onSearchTextChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  searchAddress()
+                }
+              }}
+            />
+            <button type='button' className='btn btn-outline-primary' onClick={searchAddress} disabled={loading}>
+              {loading ? 'Buscando...' : 'Buscar'}
+            </button>
+          </div>
+        </div>
+        <div className='commercial-order-map-coordinates'>
+          <label className='form-label'>Coordenadas</label>
+          <div className='commercial-order-map-coordinate-values'>
+            <span>{formatCoordinate(position?.lat) || '-'}</span>
+            <span>{formatCoordinate(position?.lng) || '-'}</span>
+          </div>
+        </div>
+      </div>
+
+      {results.length > 0 && (
+        <div className='commercial-order-map-results'>
+          {results.map((result) => (
+            <button
+              type='button'
+              key={`${result.place_id}-${result.lat}-${result.lon}`}
+              className='commercial-order-map-result'
+              onClick={() => selectResult(result)}
+            >
+              {result.display_name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {mapError && <small className='text-muted d-block mt-1'>{mapError}</small>}
+      <div ref={containerRef} className='commercial-order-map-canvas' />
+      <small className='text-muted d-block mt-2'>Haz clic en el mapa o arrastra el marcador para fijar la ubicacion de entrega.</small>
+    </div>
+  )
+}
+
 const getNextDispatchStatus = (value) => {
   const currentIndex = dispatchStatusSequence.indexOf(`${value ?? ''}`)
   if (currentIndex < 0 || currentIndex === dispatchStatusSequence.length - 1) return null
@@ -276,6 +524,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const [selectedEventualClientId, setSelectedEventualClientId] = useState('')
   const [selectedNetworkId, setSelectedNetworkId] = useState('')
   const [selectedDeliveryAddressId, setSelectedDeliveryAddressId] = useState('')
+  const [mapPosition, setMapPosition] = useState({ lat: '', lng: '' })
+  const [mapSearchText, setMapSearchText] = useState('')
   const [branches, setBranches] = useState([])
   const [networks, setNetworks] = useState([])
   const [deliveryAddresses, setDeliveryAddresses] = useState([])
@@ -409,6 +659,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     if (ubigeoRef.current) ubigeoRef.current.value = textValue(address.ubigeo)
     if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = textValue(address.contact_name)
     if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = textValue(address.contact_phone)
+    setMapSearchText(textValue(address.address))
+    if (hasMapPosition({ lat: address.latitude, lng: address.longitude })) {
+      setMapPosition({ lat: Number(address.latitude), lng: Number(address.longitude) })
+    }
   }
 
   const repriceItem = async (item, overrides = {}) => {
@@ -488,6 +742,11 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = textValue(data?.dispatch_contact_name)
     if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = textValue(data?.dispatch_contact_phone)
     if (observationsRef.current) observationsRef.current.value = data?.observations ?? ''
+    setMapPosition({
+      lat: hasMapPosition({ lat: data?.map_lat, lng: data?.map_lng }) ? Number(data.map_lat) : '',
+      lng: hasMapPosition({ lat: data?.map_lat, lng: data?.map_lng }) ? Number(data.map_lng) : '',
+    })
+    setMapSearchText(textValue(data?.delivery_address))
 
     const businessId = data?.business_id ? `${data.business_id}` : ''
     const warehouseId = data?.warehouse_id ? `${data.warehouse_id}` : ''
@@ -582,6 +841,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       delivery_address: deliveryAddressRef.current?.value?.trim() || '',
       delivery_reference: deliveryReferenceRef.current?.value?.trim() || '',
       ubigeo: ubigeoRef.current?.value?.trim() || '',
+      map_lat: formatCoordinate(mapPosition.lat) || null,
+      map_lng: formatCoordinate(mapPosition.lng) || null,
       dispatch_contact_name: dispatchContactNameRef.current?.value?.trim() || '',
       dispatch_contact_phone: dispatchContactPhoneRef.current?.value?.trim() || '',
       observations: observationsRef.current?.value?.trim() || '',
@@ -1013,6 +1274,66 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         gap: 12px;
         margin-bottom: 10px;
       }
+      .commercial-order-map-picker {
+        border: 1px solid var(--ct-border-color);
+        border-radius: 8px;
+        padding: 10px;
+        background: #fff;
+      }
+      .commercial-order-map-search {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 220px;
+        gap: 10px;
+        align-items: end;
+        margin-bottom: 8px;
+      }
+      .commercial-order-map-coordinate-values {
+        min-height: 38px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2px;
+        padding: 5px 10px;
+        border: 1px solid var(--ct-border-color);
+        border-radius: 6px;
+        color: var(--ct-gray-700);
+        background: var(--ct-light);
+        font-size: 0.82rem;
+        line-height: 1.2;
+      }
+      .commercial-order-map-canvas {
+        width: 100%;
+        height: 260px;
+        border-radius: 6px;
+        border: 1px solid var(--ct-border-color);
+        overflow: hidden;
+        background: var(--ct-light);
+      }
+      .commercial-order-map-results {
+        max-height: 142px;
+        overflow-y: auto;
+        border: 1px solid var(--ct-border-color);
+        border-radius: 6px;
+        margin-bottom: 8px;
+        background: #fff;
+      }
+      .commercial-order-map-result {
+        display: block;
+        width: 100%;
+        padding: 7px 10px;
+        border: 0;
+        border-bottom: 1px solid var(--ct-border-color);
+        background: #fff;
+        color: var(--ct-gray-800);
+        text-align: left;
+        font-size: 0.86rem;
+      }
+      .commercial-order-map-result:hover,
+      .commercial-order-map-result:focus {
+        background: var(--ct-light);
+      }
+      .commercial-order-map-result:last-child {
+        border-bottom: 0;
+      }
       #commercial-orders-form-container .commercial-order-detail-table table {
         min-width: 980px;
       }
@@ -1051,6 +1372,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         .commercial-order-detail-toolbar {
           align-items: flex-start;
           flex-direction: column;
+        }
+        .commercial-order-map-search {
+          grid-template-columns: 1fr;
         }
       }
     `}</style>
@@ -1376,6 +1700,18 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             </div>
             <div className='col-12 col-xl-4'>
               <TextareaFormGroup eRef={deliveryReferenceRef} label='Referencia entrega' rows={2} />
+            </div>
+            <div className='col-12'>
+              <DeliveryMapPicker
+                modalRef={modalRef}
+                position={mapPosition}
+                searchText={mapSearchText}
+                onSearchTextChange={setMapSearchText}
+                onPositionChange={setMapPosition}
+                onAddressSelected={(address) => {
+                  if (deliveryAddressRef.current) deliveryAddressRef.current.value = address
+                }}
+              />
             </div>
             <div className='col-12 col-md-6 col-xl-5'>
               <label className='form-label'>Contacto despacho</label>
