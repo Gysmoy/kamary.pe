@@ -123,13 +123,6 @@
       "_CreateReactScript-CVBvb_ZT.js"
     ]
   },
-  "_QuillFormGroup-aFd7odZ0.js": {
-    "file": "assets/QuillFormGroup-aFd7odZ0.js",
-    "name": "QuillFormGroup",
-    "imports": [
-      "_CreateReactScript-CVBvb_ZT.js"
-    ]
-  },
   "_ReactAppend-CFW7FhtP.js": {
     "file": "assets/ReactAppend-CFW7FhtP.js",
     "name": "ReactAppend",
@@ -929,7 +922,7 @@
     ]
   },
   "resources/js/Admin/Generals.jsx": {
-    "file": "assets/Generals-CsG3yT03.js",
+    "file": "assets/Generals-QlYDJoXP.js",
     "name": "Generals",
     "src": "resources/js/Admin/Generals.jsx",
     "isEntry": true,
@@ -938,7 +931,6 @@
       "_esm-Oo-i9ug0.js",
       "_Base-CqAIkm3S.js",
       "_BasicRest-EgGQVCk_.js",
-      "_QuillFormGroup-aFd7odZ0.js",
       "_TextareaFormGroup-CXC2Hf-9.js",
       "_InputFormGroup-jbff0h5E.js",
       "_SelectFormGroup-BUDR8kAR.js",
@@ -1426,7 +1418,7 @@
     ]
   },
   "resources/js/Admin/Posts.jsx": {
-    "file": "assets/Posts-CXsGCKtf.js",
+    "file": "assets/Posts-CxvipOXL.js",
     "name": "Posts",
     "src": "resources/js/Admin/Posts.jsx",
     "isEntry": true,
@@ -1440,7 +1432,6 @@
       "_DxButton-CsjWvhyj.js",
       "_ImageFormGroup-C5E1ZQHO.js",
       "_BasicRest-EgGQVCk_.js",
-      "_QuillFormGroup-aFd7odZ0.js",
       "_SetSelectValue-DzFEWmph.js",
       "_statusLabels-DE3GulB3.js",
       "_tippy-react.esm-CcLOROAc.js"

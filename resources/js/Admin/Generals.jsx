@@ -6,7 +6,6 @@ import BaseAdminto from '../Components/Adminto/Base';
 import GeneralsRest from '../Actions/Admin/GeneralsRest';
 import CreateReactScript from '../Utils/CreateReactScript';
 import { createRoot } from 'react-dom/client';
-import QuillFormGroup from '../Components/Adminto/form/QuillFormGroup';
 import TextareaFormGroup from '../Components/Adminto/form/TextareaFormGroup';
 import Global from '../Utils/Global';
 import InputFormGroup from '../Components/Adminto/form/InputFormGroup';
@@ -383,10 +382,10 @@ const Generals = ({ generals }) => {
 
           <div className={`tab-pane fade ${activeTab === 'policies' ? 'show active' : ''}`} role="tabpanel">
             <div className="mb-3" hidden>
-              <QuillFormGroup label='Política de privacidad' value={formData.privacyPolicy} onChange={(value) => setFormData({ ...formData, privacyPolicy: value })} />
+              <TextareaFormGroup label='Política de privacidad' value={formData.privacyPolicy} onChange={(e) => setFormData({ ...formData, privacyPolicy: e.target.value })} />
             </div>
             <div className="mb-3">
-              <QuillFormGroup label='Términos y condiciones' value={formData.termsConditions} onChange={(value) => setFormData({ ...formData, termsConditions: value })} />
+              <TextareaFormGroup label='Términos y condiciones' value={formData.termsConditions} onChange={(e) => setFormData({ ...formData, termsConditions: e.target.value })} />
             </div>
           </div>
 
@@ -441,19 +440,21 @@ const Generals = ({ generals }) => {
           </div>
 
           <div className={`tab-pane fade ${activeTab === 'location' ? 'show active' : ''}`} role="tabpanel">
-            <LoadScript googleMapsApiKey={Global.GMAPS_API_KEY}>
-              <GoogleMap
-                mapContainerStyle={{ width: '100%', height: '400px' }}
-                center={formData.location}
-                zoom={10}
-                onClick={handleMapClick}
-              >
-                <Marker position={formData.location} />
-              </GoogleMap>
-            </LoadScript>
-            <small className="form-text text-muted">
-              Haz clic en el mapa para seleccionar la ubicación.
-            </small>
+            {activeTab === 'location' && Global.GMAPS_API_KEY ? <>
+              <LoadScript googleMapsApiKey={Global.GMAPS_API_KEY}>
+                <GoogleMap
+                  mapContainerStyle={{ width: '100%', height: '400px' }}
+                  center={formData.location}
+                  zoom={10}
+                  onClick={handleMapClick}
+                >
+                  <Marker position={formData.location} />
+                </GoogleMap>
+              </LoadScript>
+              <small className="form-text text-muted">
+                Haz clic en el mapa para seleccionar la ubicación.
+              </small>
+            </> : <small className="text-muted">Configura Google Maps API Key para habilitar el mapa.</small>}
           </div>
         </div>
 
