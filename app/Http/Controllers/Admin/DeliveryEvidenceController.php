@@ -7,6 +7,7 @@ use App\Models\CommercialOrder;
 use App\Models\DeliveryEvidence;
 use App\Models\Dispatch;
 use App\Models\DispatchAssignment;
+use App\Services\CommercialOrderStockService;
 use App\Services\CommercialOrderTrackingService;
 use App\Services\DispatchService;
 use Illuminate\Http\Request;
@@ -94,6 +95,10 @@ class DeliveryEvidenceController extends BasicController
                 $orderPayload['order_status'] = 'delivered';
             }
             $order->update($orderPayload);
+            app(CommercialOrderStockService::class)->releaseOrderReservations(
+                $order->fresh(['items']),
+                'Liberacion de reserva por entrega del pedido'
+            );
 
             if ($dispatch) {
                 DispatchAssignment::query()

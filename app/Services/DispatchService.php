@@ -196,6 +196,7 @@ class DispatchService
                 $payload['order_status'] = $nextOrderStatus;
             }
 
+            $shouldReleaseReservations = in_array($nextStatus, ['delivered', 'cancelled'], true);
             if (count($payload) > 1) {
                 $statusChanged = array_key_exists('dispatch_status', $payload);
                 $orderStatusChanged = array_key_exists('order_status', $payload);
@@ -207,10 +208,10 @@ class DispatchService
                 if ($orderStatusChanged) {
                     app(CommercialOrderTrackingService::class)->recordStatusChange($freshOrder, 'order_status', $nextOrderStatus);
                 }
-                if (in_array($nextStatus, ['delivered', 'cancelled'], true)) {
-                    app(CommercialOrderStockService::class)->releaseOrderReservations($freshOrder);
-                }
                 app(ExternalOrderEventService::class)->recordOrderStatus($freshOrder, 'dispatch_status_changed');
+            }
+            if ($shouldReleaseReservations) {
+                app(CommercialOrderStockService::class)->releaseOrderReservations($order->fresh(['items']));
             }
         }
     }
