@@ -28,11 +28,24 @@ class GeneralController extends BasicController
         $response = Response::simpleTryCatch(function () use ($request) {
             $body = $request->all();
             foreach ($body as $record) {
+                if (!is_array($record) || empty($record['correlative'])) {
+                    continue;
+                }
+
+                $description = $record['description'] ?? '';
+                if (is_bool($description)) {
+                    $description = $description ? 'true' : 'false';
+                } elseif (is_array($description)) {
+                    $description = implode(',', $description);
+                } else {
+                    $description = (string) $description;
+                }
+
                 General::updateOrCreate([
                     'correlative' => $record['correlative']
                 ], [
-                    'name' => $record['name'],
-                    'description' => $record['description']
+                    'name' => $record['name'] ?? $record['correlative'],
+                    'description' => $description
                 ]);
             }
         });

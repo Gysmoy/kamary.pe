@@ -38,7 +38,7 @@ const Generals = ({ generals }) => {
     freeShippingAmount: generals.find(x => x.correlative == 'free_shipping_amount')?.description ?? '10',
     freeShippingZones: (generals.find(x => x.correlative == 'free_shipping_zones')?.description ?? 'metropolitana').split(','),
     freeShippingBannerText: generals.find(x => x.correlative == 'free_shipping_banner')?.description ?? '',
-    topbar: generals.find(x => x.correlative == 'topbar')?.description ?? null,
+    topbar: generals.find(x => x.correlative == 'topbar')?.description ?? '',
     googleMapsApiKey: generals.find(x => x.correlative == 'google_maps_api_key')?.description ?? '',
   });
 
@@ -105,7 +105,7 @@ const Generals = ({ generals }) => {
         { correlative: 'free_shipping_amount', name: 'Monto mínimo para envío gratis', description: formData.freeShippingAmount.toString() },
         { correlative: 'free_shipping_zones', name: 'Zonas con envío gratis', description: formData.freeShippingZones.join(',') },
         { correlative: 'free_shipping_banner', name: 'Texto para banner', description: formData.freeShippingBannerText },
-        { correlative: 'topbar', name: 'Cintillo', description: formData.topbar?.toString() ?? false },
+        { correlative: 'topbar', name: 'Cintillo', description: formData.topbar?.toString() ?? '' },
         { correlative: 'google_maps_api_key', name: 'Google Maps API Key', description: formData.googleMapsApiKey?.toString() ?? '' },
       ]);
       if (result) {
