@@ -85,6 +85,19 @@ const formatAuditUser = (user) => {
 }
 
 const roundMoney = (value) => Number((Number(value || 0)).toFixed(2))
+const isManualPrice = (item) => item?.price_source === 'manual'
+const resolvePriceUnitValue = (item, resolution, force = false) => {
+  const currentPrice = Number(item?.price_unit || 0)
+  const resolvedPrice = Number(resolution?.price_unit)
+  if (!force && isManualPrice(item)) return currentPrice
+  if (!Number.isFinite(resolvedPrice)) return currentPrice
+  if (!force && resolvedPrice <= 0 && currentPrice > 0) return currentPrice
+  return resolvedPrice
+}
+const resolvePriceSourceValue = (item, resolution, force = false) => {
+  if (!force && isManualPrice(item)) return 'manual'
+  return resolution?.source || item?.price_source || 'fallback'
+}
 const normalizePositiveNumberText = (value) => {
   const normalized = `${value ?? ''}`
     .replace(',', '.')
@@ -740,8 +753,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         return mapItemTotals({
           ...item,
           stock_available: Number(resolution.stock_available || 0),
-          price_unit: Number(resolution.price_unit || 0),
-          price_source: resolution.source || 'fallback',
+          price_unit: resolvePriceUnitValue(item, resolution),
+          price_source: resolvePriceSourceValue(item, resolution),
           price_list_code: resolution.price_list_code || '',
         })
       }))
@@ -1172,6 +1185,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     if (!currentItem) return
 
     const nextState = mapItemTotals({ ...currentItem, [field]: value })
+    if (field === 'price_unit') {
+      nextState.price_source = 'manual'
+      nextState.price_list_code = ''
+    }
     setItems(prev => prev.map(item => item.uid === uid ? nextState : item))
 
     if (!['quantity', 'presentation_id'].includes(field)) return
@@ -1189,9 +1206,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         ...item,
         presentation_units: Number(presentation?.units || item.presentation_units || 1),
         stock_available: Number(resolution.stock_available || 0),
-        price_unit: Number(resolution.price_unit || 0),
-        price_source: resolution.source || 'fallback',
-        price_list_code: resolution.price_list_code || '',
+        price_unit: resolvePriceUnitValue(item, resolution, field === 'presentation_id'),
+        price_source: resolvePriceSourceValue(item, resolution, field === 'presentation_id'),
+        price_list_code: field === 'presentation_id' ? (resolution.price_list_code || '') : (isManualPrice(item) ? item.price_list_code : (resolution.price_list_code || '')),
       })
     }))
   }
