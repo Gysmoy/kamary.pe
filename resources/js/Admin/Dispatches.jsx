@@ -765,6 +765,18 @@ const Dispatches = () => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
       }}
       columns={[
+        { caption: 'Acciones', width: 315, fixed: true, fixedPosition: 'left', allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
+          container.css('text-overflow', 'unset')
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-info ms-1', title: 'Abrir ruta', icon: 'mdi mdi-map-marker-path', onClick: () => onOpenRoute(data) }))
+          if (!['in_route', 'delivered', 'closed', 'cancelled'].includes(data.dispatch_status)) {
+            container.append(DxButton({ className: 'btn btn-xs btn-soft-success ms-1', title: 'Generar manifiesto y poner en ruta', icon: 'mdi mdi-truck-fast-outline', onClick: () => onStartRoute(data) }))
+          }
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-warning ms-1', title: dispatchGuides(data).length ? 'Ver guias' : 'Generar guias', icon: 'mdi mdi-file-document', onClick: () => onShowGuides(data) }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-success ms-1', title: 'Ver evidencias', icon: 'mdi mdi-camera', onClick: () => onShowEvidences(data) }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Manifiesto PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.dispatch(data)) }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
+        } },
         { dataField: 'id', caption: 'ID', width: 70 },
         {
           dataField: 'code',
@@ -797,19 +809,7 @@ const Dispatches = () => {
             if (progress.total === 0) return '-'
             return `${progress.covered}/${progress.total}`
           }
-        },
-        { caption: 'Acciones', width: 315, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
-          container.css('text-overflow', 'unset')
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-info ms-1', title: 'Abrir ruta', icon: 'mdi mdi-map-marker-path', onClick: () => onOpenRoute(data) }))
-          if (!['in_route', 'delivered', 'closed', 'cancelled'].includes(data.dispatch_status)) {
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-success ms-1', title: 'Generar manifiesto y poner en ruta', icon: 'mdi mdi-truck-fast-outline', onClick: () => onStartRoute(data) }))
-          }
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-warning ms-1', title: dispatchGuides(data).length ? 'Ver guias' : 'Generar guias', icon: 'mdi mdi-file-document', onClick: () => onShowGuides(data) }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-success ms-1', title: 'Ver evidencias', icon: 'mdi mdi-camera', onClick: () => onShowEvidences(data) }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Manifiesto PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.dispatch(data)) }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
-        } }
+        }
       ]}
     />
 
