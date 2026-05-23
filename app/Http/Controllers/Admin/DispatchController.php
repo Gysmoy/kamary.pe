@@ -42,10 +42,12 @@ class DispatchController extends BasicController
                 'driver:id,full_name,license_number', 'vehicle:id,plate,label,vehicle_type', 'zoneMaster:id,name,code',
                 'exitNote:id,business_id,business_branch_id,warehouse_id,client_name,status',
                 'assignments:id,dispatch_id,commercial_order_id,commercial_order_code,customer_name,total,assignment_status,status',
-                'assignments.commercialOrder:id,code,client_id,eventual_client_id,dispatch_status,billing_status,total,dispatch_contact_name,dispatch_contact_phone,delivery_address,delivery_reference,ubigeo',
+                'assignments.commercialOrder:id,code,client_id,eventual_client_id,document_type,dispatch_status,billing_status,total,dispatch_contact_name,dispatch_contact_phone,delivery_address,delivery_reference,ubigeo,observations',
                 'assignments.commercialOrder.client:id,full_name,document_number',
                 'assignments.commercialOrder.eventualClient:id,business_name,document_number',
-                'referralGuides:id,code,business_id,business_branch_id,warehouse_id,dispatch_id,commercial_order_id,driver_id,vehicle_id,series,sequence,external_reference,issue_date,transfer_date,guide_status,external_status,origin_ubigeo,origin_address,destination_ubigeo,destination_address,recipient_name,recipient_document_type,recipient_document_number,recipient_phone,driver_name,driver_document_type,driver_document_number,driver_license_number,vehicle_plate,transfer_reason,package_count,gross_weight,metadata,observations,status',
+                'assignments.commercialOrder.billingDocuments:id,commercial_order_id,code,document_type,series,sequence,external_reference,local_status,status',
+                'referralGuides:id,code,business_id,business_branch_id,warehouse_id,dispatch_id,commercial_order_id,billing_document_id,driver_id,vehicle_id,series,sequence,external_reference,issue_date,transfer_date,guide_status,external_status,origin_ubigeo,origin_address,destination_ubigeo,destination_address,recipient_name,recipient_document_type,recipient_document_number,recipient_phone,driver_name,driver_document_type,driver_document_number,driver_license_number,vehicle_plate,transfer_reason,package_count,gross_weight,metadata,observations,status',
+                'referralGuides.billingDocument:id,code,document_type,series,sequence,external_reference,local_status,status',
                 'referralGuides.business:id,name,tax_number',
                 'referralGuides.branch:id,business_id,name,ubigeo,address',
                 'referralGuides.driver:id,full_name,document_type,document_number,license_number',
@@ -207,7 +209,7 @@ class DispatchController extends BasicController
             }
 
             DB::commit();
-            return $jpa->fresh(['business', 'branch', 'warehouse', 'driver', 'vehicle', 'zoneMaster', 'exitNote', 'assignments.commercialOrder.client', 'assignments.commercialOrder.eventualClient', 'referralGuides.items', 'creator', 'updater']);
+            return $jpa->fresh(['business', 'branch', 'warehouse', 'driver', 'vehicle', 'zoneMaster', 'exitNote', 'assignments.commercialOrder.client', 'assignments.commercialOrder.eventualClient', 'assignments.commercialOrder.billingDocuments', 'referralGuides.billingDocument', 'referralGuides.items', 'creator', 'updater']);
         } catch (\Throwable $th) {
             DB::rollBack();
             throw $th;

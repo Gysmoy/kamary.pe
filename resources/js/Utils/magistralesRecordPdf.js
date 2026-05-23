@@ -14,6 +14,7 @@ import {
   getSourceTypeLabel,
   translateStatusText,
 } from './statusLabels'
+import { getUbigeoCatalog } from './ubigeoInei'
 
 const asText = (value, fallback = '-') => {
   if (value === null || value === undefined || value === '') return fallback
@@ -721,6 +722,164 @@ const renderStorageExitNotePdf = (doc, document) => {
   doc.text('Responsable del cliente', pageWidth - margin - 18 - (signatureWidth / 2), signatureY + 14, { align: 'center' })
 }
 
+const manifestDocumentNumber = (data) => (
+  data?.external_reference
+  || [data?.series, data?.sequence].filter(Boolean).join('-')
+  || data?.code
+  || ''
+)
+
+const manifestOrderId = (assignment) => (
+  assignment?.commercial_order_id
+  ?? assignment?.commercialOrder?.id
+  ?? assignment?.commercial_order?.id
+)
+
+const manifestGuideForAssignment = (dispatch, assignment) => {
+  const orderId = `${manifestOrderId(assignment) ?? ''}`
+  return (dispatch?.referral_guides ?? dispatch?.referralGuides ?? []).find((guide) => (
+    `${guide?.commercial_order_id ?? guide?.commercialOrder?.id ?? ''}` === orderId
+  )) ?? null
+}
+
+const manifestBillingForAssignment = (dispatch, assignment) => {
+  const guide = manifestGuideForAssignment(dispatch, assignment)
+  const order = assignment?.commercial_order ?? assignment?.commercialOrder ?? {}
+  const guideBilling = guide?.billing_document ?? guide?.billingDocument
+  if (guideBilling) return guideBilling
+
+  return (order?.billing_documents ?? order?.billingDocuments ?? [])
+    .filter((document) => document?.status !== false && document?.status !== 0)
+    .find((document) => !['cancelled', 'voided'].includes(`${document?.local_status ?? ''}`))
+    ?? null
+}
+
+const manifestVehicleText = (data) => {
+  const plate = nested(data, 'vehicle.plate') || data?.vehicle_plate || ''
+  const label = nested(data, 'vehicle.label') || data?.vehicle_label || nested(data, 'vehicle.vehicle_type') || ''
+  if (plate && label && `${label}`.toUpperCase().includes(`${plate}`.toUpperCase())) return label
+  return [plate, label].filter(Boolean).join(' - ')
+}
+
+const manifestDistrict = (catalog, dispatch, assignment) => {
+  const order = assignment?.commercial_order ?? assignment?.commercialOrder ?? {}
+  const guide = manifestGuideForAssignment(dispatch, assignment)
+  const ubigeo = `${guide?.destination_ubigeo || order?.ubigeo || ''}`.trim()
+  if (!ubigeo) return '-'
+  return catalog?.recordByCode?.get(ubigeo)?.district || ubigeo
+}
+
+const drawManifestText = (doc, text, x, y, width, options = {}) => {
+  const lines = doc.splitTextToSize(asClientText(text, ''), width)
+  doc.text(lines, x, y, options)
+  return Math.max(10, lines.length * 8)
+}
+
+const renderDispatchManifestPdf = async (doc, document) => {
+  const data = document.source ?? {}
+  let catalog = null
+  try {
+    catalog = await getUbigeoCatalog()
+  } catch (error) {
+    catalog = null
+  }
+
+  const manifestCode = data?.manifest_code || data?.code || document.code
+  const driverName = nested(data, 'driver.full_name') || data?.driver_name || ''
+  const copilotName = data?.copilot_name || '-'
+  const zoneName = nested(data, 'zone_master.name') || nested(data, 'zoneMaster.name') || data?.zone || ''
+  const vehicleLine = [
+    manifestVehicleText(data),
+    zoneName ? `ZONA ${`${zoneName}`.toUpperCase()}` : '',
+    data?.shift ? `TURNO ${`${data.shift}`.toUpperCase()}` : '',
+  ].filter(Boolean).join(' | ')
+  const assignments = (data?.assignments ?? []).filter((assignment) => assignment?.status !== false && assignment?.status !== 0)
+  const rows = assignments.map((assignment) => {
+    const order = assignment?.commercial_order ?? assignment?.commercialOrder ?? {}
+    const guide = manifestGuideForAssignment(data, assignment)
+    const billing = manifestBillingForAssignment(data, assignment)
+    return {
+      district: manifestDistrict(catalog, data, assignment),
+      client: `ENTREGA | ${assignment?.customer_name || customerName(order) || '-'}`,
+      guide: manifestDocumentNumber(guide) || '-',
+      billing: manifestDocumentNumber(billing) || '-',
+      packages: Number(guide?.package_count || 1),
+    }
+  })
+  const totalPackages = rows.reduce((sum, row) => sum + Number(row.packages || 0), 0)
+
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const left = 42.5
+  const labelX = 52.7
+  const colonX = 128
+  const valueX = 143
+  const table = {
+    indexX: 46.5,
+    districtX: 62,
+    clientX: 170,
+    guideX: 392,
+    billingX: 463,
+    packagesX: 543,
+  }
+
+  doc.setTextColor(0, 0, 0)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.text(`F-53 HOJA DE RUTA: ${asText(manifestCode)}`, 46.5, 41)
+
+  const drawHeaderLine = (label, value, y, extra = null) => {
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(9)
+    doc.text(label, labelX, y)
+    doc.text(':', colonX, y)
+    drawManifestText(doc, value, valueX, y, extra ? 330 : pageWidth - valueX - 42)
+    if (extra) doc.text(extra, 491.5, y)
+  }
+
+  drawHeaderLine('CONDUCTOR', driverName, 76.5, 'CLAVE :')
+  drawHeaderLine('ACOMPAÑANTES', copilotName, 87.8)
+  drawHeaderLine('FECHA ENTREGA', asDate(data?.scheduled_date), 99.1)
+  drawHeaderLine('VEHICULO', vehicleLine, 110.4)
+
+  let y = 146
+  doc.setFontSize(7.2)
+  doc.text('DISTRITO:', table.districtX, y)
+  doc.text('CLIENTE', table.clientX, y)
+  doc.text('GUIA R.', table.guideX, y)
+  doc.text('COMPROB.', table.billingX, y)
+  doc.text('BULTOS', table.packagesX, y)
+
+  y += 17
+  rows.forEach((row, index) => {
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.2)
+    doc.text(`${index + 1}`, table.indexX, y)
+    drawManifestText(doc, row.district, table.districtX, y, 100)
+    drawManifestText(doc, row.client, table.clientX, y, 210)
+    drawManifestText(doc, row.guide, table.guideX, y, 65)
+    drawManifestText(doc, row.billing, table.billingX, y, 70)
+    doc.text(`${row.packages || 0}`, table.packagesX, y)
+    y += 17
+  })
+
+  doc.setFontSize(9.6)
+  doc.text('TOTAL', table.indexX, y + 2)
+  doc.text(`${totalPackages || 0}`, table.packagesX, y + 2)
+
+  const detailY = y + 30
+  doc.setFontSize(6.4)
+  doc.text('N° PEDIDO', table.indexX, detailY)
+  doc.text('CLIENTE', 145, detailY)
+  doc.text('OBSERVACIONES', 320, detailY)
+
+  const noteY = Math.max(detailY + 26, 288)
+  doc.setFontSize(9)
+  doc.text('NOTA: Llenar en caso de productos refrigerados:', 47.5, noteY)
+  doc.text('          a) Hora de partida y hora de llegada', left, noteY + 11.3)
+  doc.text('          b) Temperatura  ', left, noteY + 22.6)
+  doc.text('DOCUMENTO USO INTERNO', left, noteY + 56.2)
+}
+
 export const buildMagistralesRows = {
   purchaseOrder: (data) => ({
     title: data?.module_scope === 'magistrales' ? 'Orden de compra magistral' : 'Orden de compra',
@@ -1132,9 +1291,12 @@ export const buildMagistralesRows = {
     observations: data?.observations,
   }),
   dispatch: (data) => ({
-    title: data?.manifest_code ? 'Manifiesto de carga' : 'Despacho',
+    layout: 'dispatch-manifest',
+    title: 'Manifiesto',
     code: data?.manifest_code || data?.code,
+    orientation: 'portrait',
     filename: `manifiesto-${data?.manifest_code || data?.code || data?.id}`,
+    source: data,
     meta: [
       ['Empresa', nested(data, 'business.name')],
       ['Sede', nested(data, 'branch.name')],
@@ -1394,6 +1556,11 @@ export const openMagistralesRecordPdf = async (document) => {
     }
     if (document.layout === 'sample-referral-guide') {
       await renderSampleReferralGuidePdf(doc, document)
+      showPdfInModal(doc, document)
+      return
+    }
+    if (document.layout === 'dispatch-manifest') {
+      await renderDispatchManifestPdf(doc, document)
       showPdfInModal(doc, document)
       return
     }

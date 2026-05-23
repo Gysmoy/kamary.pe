@@ -154,6 +154,11 @@ class CommercialOrder extends Model
         return $this->hasMany(ReferralGuide::class)->orderByDesc('id');
     }
 
+    public function billingDocuments()
+    {
+        return $this->hasMany(BillingDocument::class)->orderByDesc('id');
+    }
+
     public function deliveryEvidences()
     {
         return $this->hasMany(DeliveryEvidence::class)->orderByDesc('delivered_at')->orderByDesc('id');
