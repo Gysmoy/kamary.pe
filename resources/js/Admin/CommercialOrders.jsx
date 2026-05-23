@@ -28,6 +28,7 @@ import {
 const commercialOrdersRest = new CommercialOrdersRest()
 const referralGuidesRest = new ReferralGuidesRest()
 const regularClientFilter = ['client_kind', '=', 'regular']
+const lineDiscountOptions = [1, 2, 3, 4, 5]
 
 const appendGridActionButton = (container, { variant, title, icon, onClick }) => {
   const button = $('<button type="button"></button>')
@@ -555,6 +556,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const [deliveryAddresses, setDeliveryAddresses] = useState([])
   const [items, setItems] = useState([emptyItem()])
   const [selectedDocumentType, setSelectedDocumentType] = useState('Factura')
+  const [discountMenu, setDiscountMenu] = useState(null)
   const [trackingOrder, setTrackingOrder] = useState(null)
   const [evidenceOrder, setEvidenceOrder] = useState(null)
   const [evidenceFile, setEvidenceFile] = useState(null)
@@ -598,6 +600,27 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       if (evidencePreview?.startsWith('blob:')) URL.revokeObjectURL(evidencePreview)
     }
   }, [evidencePreview])
+
+  useEffect(() => {
+    if (!discountMenu) return undefined
+
+    const closeMenu = () => setDiscountMenu(null)
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') closeMenu()
+    }
+
+    document.addEventListener('click', closeMenu)
+    document.addEventListener('keydown', closeOnEscape)
+    window.addEventListener('resize', closeMenu)
+    window.addEventListener('scroll', closeMenu, true)
+
+    return () => {
+      document.removeEventListener('click', closeMenu)
+      document.removeEventListener('keydown', closeOnEscape)
+      window.removeEventListener('resize', closeMenu)
+      window.removeEventListener('scroll', closeMenu, true)
+    }
+  }, [discountMenu])
 
   const getArticleRef = (uid) => {
     if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
@@ -1190,6 +1213,24 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     }))
   }
 
+  const onItemDiscountMenuOpened = (uid, event) => {
+    event.preventDefault()
+    event.stopPropagation()
+
+    const rect = event.currentTarget.getBoundingClientRect()
+    setDiscountMenu(current => current?.uid === uid ? null : {
+      uid,
+      top: rect.bottom + 4,
+      left: rect.left,
+      width: Math.max(rect.width, 130),
+    })
+  }
+
+  const onItemDiscountMenuSelected = (uid, value) => {
+    onItemDiscountPercentChanged(uid, value)
+    setDiscountMenu(null)
+  }
+
   const onItemAdded = () => setItems(prev => [...prev, emptyItem()])
   const onItemRemoved = (uid) => {
     setItems(prev => {
@@ -1418,8 +1459,51 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       .commercial-order-discount-cell {
         min-width: 92px;
       }
-      .commercial-order-discount-cell .form-control {
+      .commercial-order-discount-trigger {
         min-width: 92px;
+        width: 100%;
+        min-height: 38px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        border: 1px solid var(--ct-border-color);
+        border-radius: 4px;
+        background: #fff;
+        color: var(--ct-gray-700);
+        padding: 0.45rem 0.7rem;
+        text-align: left;
+      }
+      .commercial-order-discount-trigger:hover,
+      .commercial-order-discount-trigger:focus {
+        border-color: var(--ct-primary);
+        color: var(--ct-gray-800);
+      }
+      .commercial-order-discount-menu {
+        position: fixed;
+        z-index: 3000;
+        padding: 4px;
+        border: 1px solid var(--ct-border-color);
+        border-radius: 6px;
+        background: #fff;
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.16);
+      }
+      .commercial-order-discount-option {
+        width: 100%;
+        min-height: 34px;
+        display: block;
+        border: 0;
+        border-radius: 4px;
+        background: #fff;
+        color: var(--ct-gray-700);
+        padding: 6px 10px;
+        text-align: left;
+      }
+      .commercial-order-discount-option:hover,
+      .commercial-order-discount-option:focus,
+      .commercial-order-discount-option.active {
+        background: rgba(59, 130, 246, 0.12);
+        color: var(--ct-primary);
       }
       #commercial-orders-form-container .commercial-order-detail-table .select2-container {
         width: 100% !important;
@@ -1877,16 +1961,43 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                   <tr key={item.uid}>
                     <td>
                       <div className='commercial-order-discount-cell'>
-                        <select
-                          className='form-control'
-                          value={item.discount_type === 'percent' ? `${Number(item.discount_value || 0)}` : ''}
-                          onChange={(e) => onItemDiscountPercentChanged(item.uid, e.target.value)}
+                        <button
+                          type='button'
+                          className='commercial-order-discount-trigger'
+                          onClick={(event) => onItemDiscountMenuOpened(item.uid, event)}
                         >
-                          <option value=''>Seleccione</option>
-                          {[1, 2, 3, 4, 5].map(percent => (
-                            <option key={`commercial-order-discount-${item.uid}-${percent}`} value={percent}>{percent}%</option>
-                          ))}
-                        </select>
+                          <span>{item.discount_type === 'percent' && Number(item.discount_value || 0) > 0 ? `${Number(item.discount_value)}%` : 'Seleccione'}</span>
+                          <i className='mdi mdi-chevron-down'></i>
+                        </button>
+                        {discountMenu?.uid === item.uid && (
+                          <div
+                            className='commercial-order-discount-menu'
+                            style={{
+                              top: discountMenu.top,
+                              left: discountMenu.left,
+                              minWidth: discountMenu.width,
+                            }}
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <button
+                              type='button'
+                              className={`commercial-order-discount-option ${item.discount_type !== 'percent' ? 'active' : ''}`}
+                              onClick={() => onItemDiscountMenuSelected(item.uid, '')}
+                            >
+                              Seleccione
+                            </button>
+                            {lineDiscountOptions.map(percent => (
+                              <button
+                                type='button'
+                                key={`commercial-order-discount-floating-${item.uid}-${percent}`}
+                                className={`commercial-order-discount-option ${item.discount_type === 'percent' && Number(item.discount_value || 0) === percent ? 'active' : ''}`}
+                                onClick={() => onItemDiscountMenuSelected(item.uid, percent)}
+                              >
+                                {percent}%
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td><div className='commercial-order-readonly-cell'>{item.article_code || '-'}</div></td>
