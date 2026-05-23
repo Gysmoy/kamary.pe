@@ -165,9 +165,11 @@ const Dispatches = () => {
   const availableOrders = useMemo(() => (
     orders.filter(order => {
       if (selectedBusinessId && `${order.business_id}` !== `${selectedBusinessId}`) return false
+      if (!selectedWarehouseId) return false
+      if (`${order.warehouse_id}` !== `${selectedWarehouseId}`) return false
       return ['pending', 'preparing', 'dispatched', 'in_route'].includes(`${order.dispatch_status ?? ''}`)
     })
-  ), [orders, selectedBusinessId])
+  ), [orders, selectedBusinessId, selectedWarehouseId])
   const dispatchGridFilter = useMemo(() => (
     selectedDispatchFilter === 'all' ? null : ['dispatch_status', '=', selectedDispatchFilter]
   ), [selectedDispatchFilter])
@@ -248,29 +250,21 @@ const Dispatches = () => {
     $(modalRef.current).modal('show')
   }
 
-  const onAssignmentChange = async (uid, value) => {
+  const onAssignmentChange = (uid, value) => {
     const order = orderMap[value]
     if (!order) {
       setAssignments(prev => prev.map(row => row.uid === uid ? { ...row, commercial_order_id: '', customer_name: '', total: 0 } : row))
       return
     }
 
-    const incompatibleOrder = assignments
-      .filter(row => row.uid !== uid && row.commercial_order_id)
-      .map(row => orderMap[row.commercial_order_id])
-      .find(row => row && `${row.warehouse_id}` !== `${order.warehouse_id}`)
-    if (incompatibleOrder) {
-      Swal.fire('Almacen distinto', 'Un despacho solo puede contener pedidos del mismo almacen. Crea otro despacho para ese pedido.', 'warning')
+    if (selectedBusinessId && `${order.business_id}` !== `${selectedBusinessId}`) {
+      Swal.fire('Empresa distinta', 'El pedido no pertenece a la empresa seleccionada.', 'warning')
       return
     }
-
-    if (order.business_id && `${selectedBusinessId}` !== `${order.business_id}`) {
-      setSelectedBusinessId(`${order.business_id}`)
-      await loadBranches(order.business_id, order.business_branch_id ?? '')
-    } else if (order.business_branch_id) {
-      setSelectedBranchId(`${order.business_branch_id}`)
+    if (!selectedWarehouseId || `${order.warehouse_id}` !== `${selectedWarehouseId}`) {
+      Swal.fire('Almacen distinto', 'El pedido no pertenece al almacen seleccionado. Cambia el almacen del despacho para verlo.', 'warning')
+      return
     }
-    if (order.warehouse_id) setSelectedWarehouseId(`${order.warehouse_id}`)
 
     if (!selectedZoneId && order?.ubigeo) {
       const matchedZone = zones.find(zone => `${zone?.ubigeo ?? ''}`.trim() !== '' && `${zone.ubigeo}` === `${order.ubigeo}`)
@@ -792,9 +786,11 @@ const Dispatches = () => {
                   {availableOrders.map(order => <option key={`dispatch-order-${order.id}`} value={order.id}>{orderOptionLabel(order)}</option>)}
                 </select>
                 <small className='text-muted d-block mt-1'>
-                  {availableOrders.length > 0
-                    ? `${availableOrders.length} pedido(s) disponible(s). Al seleccionar, se usara el almacen del pedido.`
-                    : 'No hay pedidos disponibles para la empresa actual. Revisa que el pedido no este entregado/cancelado o usa Recargar pedidos.'}
+                  {!selectedWarehouseId
+                    ? 'Selecciona un almacen para listar sus pedidos disponibles.'
+                    : availableOrders.length > 0
+                      ? `${availableOrders.length} pedido(s) disponible(s) del almacen seleccionado.`
+                      : 'No hay pedidos disponibles para este almacen. Revisa que el pedido tenga el mismo almacen y no este entregado/cancelado.'}
                 </small>
               </div>
               <div className='col-md-3'><label className='form-label'>Cliente</label><input className='form-control' value={row.customer_name} disabled /></div>
