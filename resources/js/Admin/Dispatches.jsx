@@ -170,6 +170,15 @@ const Dispatches = () => {
       return ['pending', 'preparing', 'dispatched', 'in_route'].includes(`${order.dispatch_status ?? ''}`)
     })
   ), [orders, selectedBusinessId, selectedWarehouseId])
+  const selectedAssignmentOrderIds = useMemo(() => (
+    new Set(assignments.map(row => `${row.commercial_order_id ?? ''}`).filter(Boolean))
+  ), [assignments])
+  const selectedAvailableOrderCount = useMemo(() => (
+    availableOrders.filter(order => selectedAssignmentOrderIds.has(`${order.id}`)).length
+  ), [availableOrders, selectedAssignmentOrderIds])
+  const canAddAssignment = useMemo(() => (
+    !!selectedWarehouseId && availableOrders.some(order => !selectedAssignmentOrderIds.has(`${order.id}`))
+  ), [availableOrders, selectedAssignmentOrderIds, selectedWarehouseId])
   const dispatchGridFilter = useMemo(() => (
     selectedDispatchFilter === 'all' ? null : ['dispatch_status', '=', selectedDispatchFilter]
   ), [selectedDispatchFilter])
@@ -257,6 +266,10 @@ const Dispatches = () => {
       return
     }
 
+    if (assignments.some(row => row.uid !== uid && `${row.commercial_order_id}` === `${value}`)) {
+      Swal.fire('Pedido ya seleccionado', 'Este pedido ya esta agregado al despacho.', 'warning')
+      return
+    }
     if (selectedBusinessId && `${order.business_id}` !== `${selectedBusinessId}`) {
       Swal.fire('Empresa distinta', 'El pedido no pertenece a la empresa seleccionada.', 'warning')
       return
@@ -286,6 +299,10 @@ const Dispatches = () => {
     const warehouse = warehouseMap[order.warehouse_id]?.name ?? `Almacen ${order.warehouse_id ?? '-'}`
     return `${order.code} - ${customer} | ${warehouse}`
   }
+
+  const isOrderSelectedInOtherAssignment = (orderId, uid) => (
+    assignments.some(row => row.uid !== uid && `${row.commercial_order_id}` === `${orderId}`)
+  )
 
   const onVehicleChange = (value) => {
     setSelectedVehicleId(value)
@@ -581,6 +598,12 @@ const Dispatches = () => {
 
   const onSave = async (e) => {
     e.preventDefault()
+    const selectedOrderIds = assignments.map(row => row.commercial_order_id).filter(Boolean)
+    const duplicatedOrderId = selectedOrderIds.find((orderId, index) => selectedOrderIds.indexOf(orderId) !== index)
+    if (duplicatedOrderId) {
+      Swal.fire('Pedido duplicado', `El pedido ${orderMap[duplicatedOrderId]?.code ?? duplicatedOrderId} ya esta seleccionado.`, 'warning')
+      return
+    }
     const request = {
       id: idRef.current.value || undefined,
       business_id: selectedBusinessId || null,
@@ -595,7 +618,7 @@ const Dispatches = () => {
       manifest_code: manifestCodeRef.current.value.trim(),
       dispatch_status: dispatchStatusRef.current.value,
       observations: observationsRef.current.value.trim(),
-      assignments: assignments.filter(row => row.commercial_order_id).map(row => ({ commercial_order_id: row.commercial_order_id }))
+      assignments: selectedOrderIds.map(orderId => ({ commercial_order_id: orderId }))
     }
     const result = await dispatchesRest.save(request)
     if (!result) return
@@ -783,13 +806,20 @@ const Dispatches = () => {
                 <select className='form-control' value={row.commercial_order_id} onChange={(e) => onAssignmentChange(row.uid, e.target.value)}>
                   <option value=''>{isLoadingOrders ? 'Cargando pedidos...' : 'Seleccione'}</option>
                   {!isLoadingOrders && availableOrders.length === 0 && <option value='' disabled>Sin pedidos disponibles</option>}
-                  {availableOrders.map(order => <option key={`dispatch-order-${order.id}`} value={order.id}>{orderOptionLabel(order)}</option>)}
+                  {availableOrders.map(order => {
+                    const selectedInOtherRow = isOrderSelectedInOtherAssignment(order.id, row.uid)
+                    return (
+                      <option key={`dispatch-order-${order.id}`} value={order.id} disabled={selectedInOtherRow}>
+                        {`${orderOptionLabel(order)}${selectedInOtherRow ? ' (ya seleccionado)' : ''}`}
+                      </option>
+                    )
+                  })}
                 </select>
                 <small className='text-muted d-block mt-1'>
                   {!selectedWarehouseId
                     ? 'Selecciona un almacen para listar sus pedidos disponibles.'
                     : availableOrders.length > 0
-                      ? `${availableOrders.length} pedido(s) disponible(s) del almacen seleccionado.`
+                      ? `${availableOrders.length} pedido(s) disponible(s) del almacen seleccionado. ${selectedAvailableOrderCount} ya seleccionado(s).`
                       : 'No hay pedidos disponibles para este almacen. Revisa que el pedido tenga el mismo almacen y no este entregado/cancelado.'}
                 </small>
               </div>
@@ -797,7 +827,9 @@ const Dispatches = () => {
               <div className='col-md-2'><label className='form-label'>Total</label><input className='form-control' value={Number(row.total || 0).toFixed(2)} disabled /></div>
               <div className='col-md-1'><button type='button' className='btn btn-outline-danger w-100' onClick={() => setAssignments(prev => prev.length === 1 ? [emptyAssignment()] : prev.filter(item => item.uid !== row.uid))}>-</button></div>
             </div>)}
-            <button type='button' className='btn btn-sm btn-outline-primary' onClick={() => setAssignments(prev => [...prev, emptyAssignment()])}>Agregar pedido</button>
+            <button type='button' className='btn btn-sm btn-outline-primary' onClick={() => setAssignments(prev => [...prev, emptyAssignment()])} disabled={!canAddAssignment}>
+              Agregar pedido
+            </button>
           </div>
         </div>
         <div className='col-12 mb-1'><label className='form-label'>Observaciones</label><textarea ref={observationsRef} className='form-control' rows='3' /></div>
