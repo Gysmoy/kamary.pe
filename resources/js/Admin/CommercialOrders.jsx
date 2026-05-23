@@ -969,6 +969,90 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       .commercial-order-action-btn:active i {
         color: inherit !important;
       }
+      .commercial-order-modal-dialog {
+        width: min(1540px, calc(100vw - 32px));
+        max-width: min(1540px, calc(100vw - 32px));
+      }
+      .commercial-order-modal-dialog.modal-dialog-centered {
+        align-items: flex-start;
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+      }
+      .commercial-order-modal-body {
+        padding: 16px 18px;
+      }
+      .commercial-order-modal-body .form-label {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .commercial-order-form-section {
+        border: 1px solid var(--ct-border-color);
+        border-radius: 8px;
+        padding: 14px 16px 16px;
+        margin-bottom: 14px;
+        background: var(--ct-secondary-bg);
+      }
+      .commercial-order-section-title {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 12px;
+        color: var(--ct-gray-700);
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .commercial-order-section-title i {
+        color: var(--ct-primary);
+        font-size: 16px;
+      }
+      .commercial-order-detail-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 10px;
+      }
+      #commercial-orders-form-container .commercial-order-detail-table table {
+        min-width: 980px;
+      }
+      #commercial-orders-form-container .commercial-order-detail-table th {
+        color: var(--ct-gray-700);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      #commercial-orders-form-container .commercial-order-detail-table td {
+        vertical-align: top;
+      }
+      #commercial-orders-form-container .commercial-order-detail-table .form-group {
+        position: relative;
+        margin-bottom: 0 !important;
+      }
+      #commercial-orders-form-container .commercial-order-detail-table .select2-container {
+        width: 100% !important;
+      }
+      #commercial-orders-form-container .commercial-order-detail-table .select2-dropdown {
+        min-width: 260px;
+        z-index: 1065;
+      }
+      @media (max-width: 767.98px) {
+        .commercial-order-modal-dialog {
+          width: calc(100vw - 12px);
+          max-width: calc(100vw - 12px);
+          margin: 0.5rem auto;
+        }
+        .commercial-order-modal-body {
+          padding: 12px;
+        }
+        .commercial-order-form-section {
+          padding: 12px;
+        }
+        .commercial-order-detail-toolbar {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+      }
     `}</style>
     <Table
       gridRef={gridRef}
@@ -1156,183 +1240,211 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       ]}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar pedido comercial' : 'Agregar pedido comercial'} size='xl' onSubmit={onModalSubmit}>
-      <div id='commercial-orders-form-container' className='row'>
+    <Modal
+      modalRef={modalRef}
+      title={isEditing ? 'Editar pedido comercial' : 'Agregar pedido comercial'}
+      size='xl'
+      dialogClass='commercial-order-modal-dialog modal-dialog-scrollable'
+      bodyClass='commercial-order-modal-body'
+      bodyStyle={{ maxHeight: 'calc(100vh - 150px)', overflowY: 'auto', overflowX: 'hidden' }}
+      btnSubmitText='Guardar'
+      onSubmit={onModalSubmit}
+    >
+      <div id='commercial-orders-form-container'>
         <input ref={idRef} type='hidden' />
-        <div className='col-md-3'>
-          <label className='form-label'>Codigo</label>
-          <input ref={codeRef} className='form-control' readOnly />
-        </div>
-        <div className='col-md-3'>
-          <SelectAPIFormGroup eRef={businessRef} label='Empresa' required searchAPI='/api/admin/businesses/paginate' searchBy='name' dropdownParent='#commercial-orders-form-container' onChange={onBusinessChanged} />
-        </div>
-        <div className='col-md-3'>
-          <SelectFormGroup eRef={branchRef} label='Sede' dropdownParent='#commercial-orders-form-container' value={selectedBranchId} onChange={onBranchChanged}>
-            <option value=''>Sin sede</option>
-            {branches.map(branch => <option key={`commercial-order-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
-          </SelectFormGroup>
-        </div>
-        <div className='col-md-3'>
-          <SelectAPIFormGroup
-            eRef={warehouseRef}
-            label='Almacen'
-            required
-            searchAPI='/api/admin/warehouses/paginate'
-            searchBy='name'
-            filter={warehouseFilter}
-            dropdownParent='#commercial-orders-form-container'
-            onChange={onWarehouseChanged}
-            templateResult={warehouseOptionTemplate}
-            templateSelection={warehouseOptionTemplate}
-          />
-        </div>
 
-        <div className='col-md-3'>
-          <label className='form-label'>Fecha emision</label>
-          <input ref={issueDateRef} type='date' className='form-control' required />
-        </div>
-        <div className='col-md-3'>
-          <label className='form-label'>Entrega prometida</label>
-          <input ref={promisedDateRef} type='date' className='form-control' />
-        </div>
-        <div className='col-md-2'>
-          <label className='form-label'>Doc. venta</label>
-          <select ref={documentTypeRef} className='form-control' value={selectedDocumentType} onChange={(e) => setSelectedDocumentType(normalizeDocumentType(e.target.value))}>
-            <option value='Factura'>Factura</option>
-            <option value='Boleta'>Boleta</option>
-            <option value='Nota de pedido'>Nota de pedido</option>
-          </select>
-        </div>
-        <div className='col-md-2'>
-          <label className='form-label'>Moneda</label>
-          <select ref={currencyRef} className='form-control'>
-            <option value='PEN'>PEN</option>
-            <option value='USD'>USD</option>
-            <option value='EUR'>EUR</option>
-          </select>
-        </div>
-        <div className='col-md-2'>
-          <label className='form-label'>Pago</label>
-          <select ref={paymentConditionRef} className='form-control'>
-            <option value='Contado'>Contado</option>
-            <option value='Credito'>Credito</option>
-          </select>
-        </div>
+        <section className='commercial-order-form-section'>
+          <div className='commercial-order-section-title'>
+            <i className='mdi mdi-file-document'></i>
+            <span>Datos del pedido</span>
+          </div>
+          <div className='row g-2'>
+            <div className='col-12 col-md-6 col-xl-2'>
+              <label className='form-label'>Codigo</label>
+              <input ref={codeRef} className='form-control' readOnly />
+            </div>
+            <div className='col-12 col-md-6 col-xl-3'>
+              <SelectAPIFormGroup eRef={businessRef} label='Empresa' required searchAPI='/api/admin/businesses/paginate' searchBy='name' dropdownParent='#commercial-orders-form-container' onChange={onBusinessChanged} />
+            </div>
+            <div className='col-12 col-md-6 col-xl-3'>
+              <SelectFormGroup eRef={branchRef} label='Sede' dropdownParent='#commercial-orders-form-container' value={selectedBranchId} onChange={onBranchChanged}>
+                <option value=''>Sin sede</option>
+                {branches.map(branch => <option key={`commercial-order-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
+              </SelectFormGroup>
+            </div>
+            <div className='col-12 col-md-6 col-xl-4'>
+              <SelectAPIFormGroup
+                eRef={warehouseRef}
+                label='Almacen'
+                required
+                searchAPI='/api/admin/warehouses/paginate'
+                searchBy='name'
+                filter={warehouseFilter}
+                dropdownParent='#commercial-orders-form-container'
+                onChange={onWarehouseChanged}
+                templateResult={warehouseOptionTemplate}
+                templateSelection={warehouseOptionTemplate}
+              />
+            </div>
+            <div className='col-12 col-sm-6 col-lg-4 col-xl-2'>
+              <label className='form-label'>Fecha emision</label>
+              <input ref={issueDateRef} type='date' className='form-control' required />
+            </div>
+            <div className='col-12 col-sm-6 col-lg-4 col-xl-2'>
+              <label className='form-label'>Entrega prometida</label>
+              <input ref={promisedDateRef} type='date' className='form-control' />
+            </div>
+            <div className='col-12 col-sm-6 col-lg-4 col-xl-2'>
+              <label className='form-label'>Doc. venta</label>
+              <select ref={documentTypeRef} className='form-control' value={selectedDocumentType} onChange={(e) => setSelectedDocumentType(normalizeDocumentType(e.target.value))}>
+                <option value='Factura'>Factura</option>
+                <option value='Boleta'>Boleta</option>
+                <option value='Nota de pedido'>Nota de pedido</option>
+              </select>
+            </div>
+            <div className='col-12 col-sm-6 col-lg-4 col-xl-2'>
+              <label className='form-label'>Moneda</label>
+              <select ref={currencyRef} className='form-control'>
+                <option value='PEN'>PEN</option>
+                <option value='USD'>USD</option>
+                <option value='EUR'>EUR</option>
+              </select>
+            </div>
+            <div className='col-12 col-sm-6 col-lg-4 col-xl-2'>
+              <label className='form-label'>Pago</label>
+              <select ref={paymentConditionRef} className='form-control'>
+                <option value='Contado'>Contado</option>
+                <option value='Credito'>Credito</option>
+              </select>
+            </div>
+            <div className='col-12 col-sm-6 col-lg-4 col-xl-2'>
+              <label className='form-label'>Metodo de pago</label>
+              <input ref={paymentMethodRef} className='form-control' placeholder='Transferencia, Yape, Efectivo...' />
+            </div>
+          </div>
+        </section>
 
-        <div className='col-md-6'>
-          <SelectAPIFormGroup
-            eRef={clientRef}
-            label='Cliente regular'
-            searchAPI='/api/admin/clients/paginate'
-            searchBy='full_name'
-            selectBy='entity_id'
-            filter={regularClientFilter}
-            dropdownParent='#commercial-orders-form-container'
-            onChange={onClientChanged}
-          />
-        </div>
-        <div className='col-md-6'>
-          <SelectAPIFormGroup eRef={eventualClientRef} label='Cliente eventual' searchAPI='/api/admin/eventual-clients/paginate' searchBy='business_name' dropdownParent='#commercial-orders-form-container' onChange={onEventualClientChanged} />
-        </div>
+        <section className='commercial-order-form-section'>
+          <div className='commercial-order-section-title'>
+            <i className='mdi mdi-account'></i>
+            <span>Cliente y entrega</span>
+          </div>
+          <div className='row g-2'>
+            <div className='col-12 col-xl-6'>
+              <SelectAPIFormGroup
+                eRef={clientRef}
+                label='Cliente regular'
+                searchAPI='/api/admin/clients/paginate'
+                searchBy='full_name'
+                selectBy='entity_id'
+                filter={regularClientFilter}
+                dropdownParent='#commercial-orders-form-container'
+                onChange={onClientChanged}
+              />
+            </div>
+            <div className='col-12 col-xl-6'>
+              <SelectAPIFormGroup eRef={eventualClientRef} label='Cliente eventual' searchAPI='/api/admin/eventual-clients/paginate' searchBy='business_name' dropdownParent='#commercial-orders-form-container' onChange={onEventualClientChanged} />
+            </div>
+            <div className='col-12 col-md-6 col-xl-4'>
+              <label className='form-label'>Red / Nodo</label>
+              <select className='form-control' value={selectedNetworkId} onChange={onNetworkChanged}>
+                <option value=''>Sin red</option>
+                {networks.map(network => (
+                  <option key={`commercial-order-network-${network.id}`} value={network.id}>
+                    {`${network.code ?? ''} ${network.name ?? ''}`.trim()}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className='col-12 col-md-6 col-xl-4'>
+              <label className='form-label'>Direccion ligada</label>
+              <select className='form-control' value={selectedDeliveryAddressId} onChange={onDeliveryAddressChanged}>
+                <option value=''>Sin direccion ligada</option>
+                {deliveryAddresses.map(address => (
+                  <option key={`commercial-order-address-${address.id}`} value={address.id}>
+                    {`${address.code ?? ''} ${address.name ?? ''}`.trim()}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className='col-12 col-md-6 col-xl-4'>
+              <label className='form-label'>Ubigeo</label>
+              <input ref={ubigeoRef} className='form-control' />
+            </div>
+            <div className='col-12 col-xl-8'>
+              <TextareaFormGroup eRef={deliveryAddressRef} label='Direccion de entrega' rows={2} />
+            </div>
+            <div className='col-12 col-xl-4'>
+              <TextareaFormGroup eRef={deliveryReferenceRef} label='Referencia entrega' rows={2} />
+            </div>
+            <div className='col-12 col-md-6 col-xl-5'>
+              <label className='form-label'>Contacto despacho</label>
+              <input ref={dispatchContactNameRef} className='form-control' />
+            </div>
+            <div className='col-12 col-md-6 col-xl-3'>
+              <label className='form-label'>Telefono despacho</label>
+              <input ref={dispatchContactPhoneRef} className='form-control' />
+            </div>
+          </div>
+        </section>
 
-        <div className='col-md-4'>
-          <label className='form-label'>Red / Nodo</label>
-          <select className='form-control' value={selectedNetworkId} onChange={onNetworkChanged}>
-            <option value=''>Sin red</option>
-            {networks.map(network => (
-              <option key={`commercial-order-network-${network.id}`} value={network.id}>
-                {`${network.code ?? ''} ${network.name ?? ''}`.trim()}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className='col-md-4'>
-          <label className='form-label'>Direccion de entrega</label>
-          <select className='form-control' value={selectedDeliveryAddressId} onChange={onDeliveryAddressChanged}>
-            <option value=''>Sin direccion ligada</option>
-            {deliveryAddresses.map(address => (
-              <option key={`commercial-order-address-${address.id}`} value={address.id}>
-                {`${address.code ?? ''} ${address.name ?? ''}`.trim()}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className='col-md-4'>
-          <label className='form-label'>Metodo de pago</label>
-          <input ref={paymentMethodRef} className='form-control' placeholder='Transferencia, Yape, Efectivo...' />
-        </div>
+        <section className='commercial-order-form-section'>
+          <div className='commercial-order-section-title'>
+            <i className='mdi mdi-cash'></i>
+            <span>Estados y cobranza</span>
+          </div>
+          <div className='row g-2'>
+            <div className='col-12 col-sm-6 col-lg-2'>
+              <label className='form-label'>Cuotas</label>
+              <input ref={installmentsRef} type='number' min='1' step='1' defaultValue='1' className='form-control' />
+            </div>
+            <div className='col-12 col-sm-6 col-lg-2'>
+              <label className='form-label'>Primera cuota</label>
+              <input ref={firstDueDateRef} type='date' className='form-control' />
+            </div>
+            <div className='col-12 col-sm-6 col-lg-2'>
+              <label className='form-label'>Estado pedido</label>
+              <select ref={orderStatusRef} className='form-control'>
+                {commercialOrderStatusOptions.map((option) => (
+                  <option key={`commercial-order-status-${option.value}`} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className='col-12 col-sm-6 col-lg-2'>
+              <label className='form-label'>Despacho</label>
+              <select ref={dispatchStatusRef} className='form-control'>
+                {dispatchStatusOptions
+                  .filter((option) => ['pending', 'preparing', 'dispatched', 'in_route', 'delivered', 'cancelled'].includes(option.value))
+                  .map((option) => (
+                    <option key={`commercial-order-dispatch-status-${option.value}`} value={option.value}>{option.label}</option>
+                  ))}
+              </select>
+            </div>
+            <div className='col-12 col-sm-6 col-lg-2'>
+              <label className='form-label'>Facturacion</label>
+              <select ref={billingStatusRef} className='form-control'>
+                {billingStatusOptions.map((option) => (
+                  <option key={`commercial-order-billing-status-${option.value}`} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className='col-12 col-sm-6 col-lg-2'>
+              <label className='form-label'>Impuesto</label>
+              <input ref={taxAmountRef} type='number' step='0.01' className='form-control' value={orderTotals.taxAmount} readOnly />
+            </div>
+          </div>
+        </section>
 
-        <div className='col-md-2'>
-          <label className='form-label'>Cuotas</label>
-          <input ref={installmentsRef} type='number' min='1' step='1' defaultValue='1' className='form-control' />
-        </div>
-        <div className='col-md-2'>
-          <label className='form-label'>Primera cuota</label>
-          <input ref={firstDueDateRef} type='date' className='form-control' />
-        </div>
-        <div className='col-md-3'>
-          <label className='form-label'>Estado pedido</label>
-          <select ref={orderStatusRef} className='form-control'>
-            {commercialOrderStatusOptions.map((option) => (
-              <option key={`commercial-order-status-${option.value}`} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className='col-md-2'>
-          <label className='form-label'>Despacho</label>
-          <select ref={dispatchStatusRef} className='form-control'>
-            {dispatchStatusOptions
-              .filter((option) => ['pending', 'preparing', 'dispatched', 'in_route', 'delivered', 'cancelled'].includes(option.value))
-              .map((option) => (
-                <option key={`commercial-order-dispatch-status-${option.value}`} value={option.value}>{option.label}</option>
-              ))}
-          </select>
-        </div>
-        <div className='col-md-3'>
-          <label className='form-label'>Facturacion</label>
-          <select ref={billingStatusRef} className='form-control'>
-            {billingStatusOptions.map((option) => (
-              <option key={`commercial-order-billing-status-${option.value}`} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-
-        <div className='col-md-8'>
-          <TextareaFormGroup eRef={deliveryAddressRef} label='Direccion de entrega' rows={2} />
-        </div>
-        <div className='col-md-4'>
-          <TextareaFormGroup eRef={deliveryReferenceRef} label='Referencia entrega' rows={2} />
-        </div>
-        <div className='col-md-3'>
-          <label className='form-label'>Ubigeo</label>
-          <input ref={ubigeoRef} className='form-control' />
-        </div>
-        <div className='col-md-4'>
-          <label className='form-label'>Contacto despacho</label>
-          <input ref={dispatchContactNameRef} className='form-control' />
-        </div>
-        <div className='col-md-3'>
-          <label className='form-label'>Telefono despacho</label>
-          <input ref={dispatchContactPhoneRef} className='form-control' />
-        </div>
-        <div className='col-md-2'>
-          <label className='form-label'>Impuesto</label>
-          <input ref={taxAmountRef} type='number' step='0.01' className='form-control' value={orderTotals.taxAmount} readOnly />
-        </div>
-
-        <div className='col-12 mt-3 d-flex justify-content-between align-items-center'>
-          <h5 className='mb-0'>Detalle del pedido</h5>
-          <button type='button' className='btn btn-sm btn-outline-primary' onClick={onItemAdded}>
-            Agregar item
-          </button>
-        </div>
-
-        <div className='col-12 mt-2'>
-          <style>{`
-            #commercial-orders-form-container .commercial-order-detail-table .form-group { position: relative; margin-bottom: 0 !important; }
-            #commercial-orders-form-container .commercial-order-detail-table .select2-container { width: 100% !important; }
-            #commercial-orders-form-container .commercial-order-detail-table .select2-dropdown { min-width: 260px; z-index: 1065; }
-          `}</style>
+        <section className='commercial-order-form-section'>
+          <div className='commercial-order-detail-toolbar'>
+            <div className='commercial-order-section-title mb-0'>
+              <i className='mdi mdi-format-list-bulleted'></i>
+              <span>Detalle del pedido</span>
+            </div>
+            <button type='button' className='btn btn-sm btn-outline-primary' onClick={onItemAdded}>
+              Agregar item
+            </button>
+          </div>
           <div className='table-responsive border rounded commercial-order-detail-table' data-select2-local-dropdown='true'>
             <table className='table table-sm align-middle mb-0'>
               <thead>
@@ -1426,11 +1538,15 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               </tfoot>
             </table>
           </div>
-        </div>
+        </section>
 
-        <div className='col-12 mt-3'>
+        <section className='commercial-order-form-section mb-0'>
+          <div className='commercial-order-section-title'>
+            <i className='mdi mdi-note-text'></i>
+            <span>Observaciones</span>
+          </div>
           <TextareaFormGroup eRef={observationsRef} label='Observaciones' rows={3} />
-        </div>
+        </section>
       </div>
     </Modal>
 
