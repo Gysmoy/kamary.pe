@@ -426,7 +426,7 @@ const BillingSettings = ({ can }) => {
           width: 90,
           allowFiltering: false,
           cellTemplate: (container, { data }) => {
-            container.text(data.fiscal_logo_path ? 'Si' : 'No')
+            container.html(`<div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" ${data.fiscal_logo_path ? 'checked' : ''} disabled /></div>`)
           }
         },
         {
@@ -435,7 +435,7 @@ const BillingSettings = ({ can }) => {
           width: 110,
           allowFiltering: false,
           cellTemplate: (container, { data }) => {
-            container.text(data.fiscal_certificate_path ? 'Si' : 'No')
+            container.html(`<div class="form-check form-switch m-0"><input class="form-check-input" type="checkbox" ${data.fiscal_certificate_path ? 'checked' : ''} disabled /></div>`)
           }
         },
         {

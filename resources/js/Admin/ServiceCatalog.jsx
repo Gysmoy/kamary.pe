@@ -32,8 +32,7 @@ const ServiceCatalog = ({ moduleTitle = 'Servicios', serviceScope = 'services' }
   const unitPriceUsdRef = useRef()
   const applicableZoneRef = useRef()
   const linkedVehicleTypeRef = useRef()
-  const commissionYesRef = useRef()
-  const commissionNoRef = useRef()
+  const commissionEnabledRef = useRef()
   const observationsRef = useRef()
   const statusRef = useRef()
   const [isEditing, setIsEditing] = useState(false)
@@ -61,8 +60,7 @@ const ServiceCatalog = ({ moduleTitle = 'Servicios', serviceScope = 'services' }
       unitPriceUsdRef.current.value = Number(data?.unit_price_usd ?? 0)
       applicableZoneRef.current.value = data?.applicable_zone ?? ''
       linkedVehicleTypeRef.current.value = data?.linked_vehicle_type ?? ''
-      commissionYesRef.current.checked = !!data?.commissions_enabled
-      commissionNoRef.current.checked = !data?.commissions_enabled
+      commissionEnabledRef.current.checked = !!data?.commissions_enabled
     }
     $(modalRef.current).modal('show')
   }
@@ -94,7 +92,7 @@ const ServiceCatalog = ({ moduleTitle = 'Servicios', serviceScope = 'services' }
         unit_price_usd: unitPriceUsdRef.current.value,
         applicable_zone: applicableZoneRef.current.value.trim(),
         linked_vehicle_type: linkedVehicleTypeRef.current.value.trim(),
-        commissions_enabled: commissionYesRef.current.checked,
+        commissions_enabled: commissionEnabledRef.current.checked,
         observations: observationsRef.current.value.trim(),
       }
     const result = await serviceCatalogRest.save(request)
@@ -277,10 +275,9 @@ const ServiceCatalog = ({ moduleTitle = 'Servicios', serviceScope = 'services' }
           </div>
           <div className='col-12 mb-3'><label className='form-label'>Glosa</label><input ref={observationsRef} className='form-control' /></div>
           <div className='col-12 mb-1'>
-            <label className='form-label'>Este servicio paga comision al vendedor?</label>
-            <div className='service-catalog-commission-options'>
-              <label className='form-check-label'><input ref={commissionYesRef} type='radio' className='form-check-input me-1' name='service_commission' /> Si</label>
-              <label className='form-check-label'><input ref={commissionNoRef} type='radio' className='form-check-input me-1' name='service_commission' defaultChecked /> No</label>
+            <label className='form-label d-block'>Este servicio paga comision al vendedor?</label>
+            <div className='form-check form-switch'>
+              <input ref={commissionEnabledRef} type='checkbox' className='form-check-input' />
             </div>
           </div>
         </>}

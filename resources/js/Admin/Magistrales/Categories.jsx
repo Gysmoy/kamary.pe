@@ -5,6 +5,8 @@ import CreateReactScript from '../../Utils/CreateReactScript';
 import Table from '../../Components/Adminto/Table';
 import Modal from '../../Components/Adminto/Modal';
 import DxButton from '../../Components/dx/DxButton';
+import ReactAppend from '../../Utils/ReactAppend';
+import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import CategoriesRest from '../../Actions/Admin/Magistrales/CategoriesRest';
 
@@ -128,6 +130,12 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria', fixedWarehouse = 
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
+  const onBooleanChange = async ({ id, field, value }) => {
+    const result = await categoriesRest.boolean({ id, field, value })
+    if (!result) return
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
   return <>
     <Table
       gridRef={gridRef}
@@ -163,7 +171,15 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria', fixedWarehouse = 
           dataField: 'sale_material',
           caption: 'Material para venta',
           width: 170,
-          cellTemplate: (container, { data }) => container.text(data?.sale_material ? 'SI' : 'NO')
+          cellTemplate: (container, { data }) => {
+            $(container).empty()
+            if (data.status === null) return
+            ReactAppend(container, <SwitchFormGroup checked={data.sale_material == 1} onChange={() => onBooleanChange({
+              id: data.id,
+              field: 'sale_material',
+              value: !data.sale_material
+            })} />)
+          }
         },
         {
           dataField: 'status',
@@ -185,8 +201,18 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria', fixedWarehouse = 
         <div className='col-md-8 mb-3'><label className='form-label'>Descripcion</label><input ref={descriptionRef} className='form-control' required /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' required /></div>
         <div className='col-md-8 mb-3'><label className='form-label'>Almacen fijo</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
-        <div className='col-md-4 mb-3 form-check mt-4'><input ref={saleMaterialRef} type='checkbox' className='form-check-input' id='magCategorySaleMaterial' /><label className='form-check-label' htmlFor='magCategorySaleMaterial'>Material para Ventas</label></div>
-        <div className='col-md-4 mb-3 form-check mt-2'><input ref={statusRef} type='checkbox' className='form-check-input' id='magCategoryStatus' /><label className='form-check-label' htmlFor='magCategoryStatus'>Estado</label></div>
+        <div className='col-md-4 mb-3 mt-4'>
+          <label className='form-label d-block' htmlFor='magCategorySaleMaterial'>Material para Ventas</label>
+          <div className='form-check form-switch'>
+            <input ref={saleMaterialRef} type='checkbox' className='form-check-input' id='magCategorySaleMaterial' />
+          </div>
+        </div>
+        <div className='col-md-4 mb-3 mt-4'>
+          <label className='form-label d-block' htmlFor='magCategoryStatus'>Estado</label>
+          <div className='form-check form-switch'>
+            <input ref={statusRef} type='checkbox' className='form-check-input' id='magCategoryStatus' />
+          </div>
+        </div>
       </div>
     </Modal>
 

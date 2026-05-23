@@ -40,9 +40,13 @@ const setRefValue = (ref, value) => {
 }
 
 const getRefValue = (ref) => ref?.current?.value ?? ''
+const setRefChecked = (ref, value) => {
+  if (!ref?.current) return
+  ref.current.checked = !!value
+}
+const getRefChecked = (ref) => !!ref?.current?.checked
 const normalizePrefix = (value) => (value ?? '').toString().replace(/\D+/g, '')
 const normalizeDigits = (value) => (value ?? '').toString().replace(/\D+/g, '')
-const booleanLabel = (value) => value ? 'Si' : 'No'
 const renderStatusBadge = (container, value) => {
   const active = value === true || value === 1 || value === '1'
   container.html(`<span class="badge ${active ? 'bg-soft-success text-success border border-success' : 'bg-soft-secondary text-secondary border border-secondary'}">${active ? 'Activo' : 'Inactivo'}</span>`)
@@ -331,8 +335,6 @@ const Clients = ({
   const [isDocumentDataLocked, setIsDocumentDataLocked] = useState(false)
   const [lastLookedDocumentKey, setLastLookedDocumentKey] = useState('')
   const [phonePrefix, setPhonePrefix] = useState('51')
-  const [platformValue, setPlatformValue] = useState('0')
-  const [storageServiceValue, setStorageServiceValue] = useState('0')
   const [quickFilter, setQuickFilter] = useState(initialQuickFilter)
   const [totalRows, setTotalRows] = useState(0)
   const [ubigeoLocation, setUbigeoLocation] = useState(EMPTY_UBIGEO_SELECTION)
@@ -367,11 +369,9 @@ const Clients = ({
     setRefValue(documentNumberRef, '')
     setRefValue(documentLookupRef, '')
     setRefValue(fullNameRef, '')
-    setPlatformValue('0')
-    setStorageServiceValue(storageContext ? '1' : '0')
-    setRefValue(isPlatformRef, '0')
-    setRefValue(hasStorageServiceRef, storageContext ? '1' : '0')
-    setRefValue(storageTariffEnabledRef, '0')
+    setRefChecked(isPlatformRef, false)
+    setRefChecked(hasStorageServiceRef, storageContext)
+    setRefChecked(storageTariffEnabledRef, false)
     setRefValue(contractDueDaysRef, '')
     setRefValue(commercialChannelRef, '')
     setRefValue(segmentRef, '')
@@ -532,13 +532,9 @@ const Clients = ({
     setRefValue(documentNumberRef, data.document_number ?? '')
     setRefValue(documentLookupRef, data.document_number ?? '')
     setRefValue(fullNameRef, data.full_name ?? data.business_name ?? data.display_name ?? '')
-    const nextPlatformValue = data.is_platform ? '1' : '0'
-    const nextStorageValue = storageContext ? '1' : (data.has_storage_service ? '1' : '0')
-    setPlatformValue(nextPlatformValue)
-    setStorageServiceValue(nextStorageValue)
-    setRefValue(isPlatformRef, nextPlatformValue)
-    setRefValue(hasStorageServiceRef, nextStorageValue)
-    setRefValue(storageTariffEnabledRef, data.storage_tariff_enabled ? '1' : '0')
+    setRefChecked(isPlatformRef, !!data.is_platform)
+    setRefChecked(hasStorageServiceRef, storageContext || !!data.has_storage_service)
+    setRefChecked(storageTariffEnabledRef, !!data.storage_tariff_enabled)
     setRefValue(contractDueDaysRef, data.contract_due_days ?? '')
     setRefValue(commercialChannelRef, data.commercial_channel ?? '')
     setRefValue(segmentRef, data.segment ?? '')
@@ -640,9 +636,9 @@ const Clients = ({
       document_type: getRefValue(documentTypeRef),
       document_number: normalizeDigits(getRefValue(documentNumberRef)),
       full_name: getRefValue(fullNameRef).trim(),
-      is_platform: storageContext ? false : getRefValue(isPlatformRef),
-      has_storage_service: storageContext ? true : getRefValue(hasStorageServiceRef),
-      storage_tariff_enabled: storageContext ? getRefValue(storageTariffEnabledRef) : undefined,
+      is_platform: storageContext ? false : getRefChecked(isPlatformRef),
+      has_storage_service: storageContext ? true : getRefChecked(hasStorageServiceRef),
+      storage_tariff_enabled: storageContext ? getRefChecked(storageTariffEnabledRef) : undefined,
       contract_due_days: storageContext ? '' : getRefValue(contractDueDaysRef).trim(),
       commercial_channel: storageContext ? '' : getRefValue(commercialChannelRef).trim(),
       segment: storageContext ? '' : getRefValue(segmentRef).trim(),
@@ -1242,8 +1238,8 @@ const Clients = ({
           width: 95,
           dataType: 'boolean',
           cellTemplate: (container, { data }) => {
-            const badgeClass = data.is_habitual ? 'badge bg-success' : 'badge badge-soft-secondary'
-            container.html(`<span class="${badgeClass}">${data.is_habitual ? 'Si' : 'No'}</span>`)
+            $(container).empty()
+            ReactAppend(container, <SwitchFormGroup checked={!!data.is_habitual} disabled noMargin />)
           }
         },
         {
@@ -1268,13 +1264,21 @@ const Clients = ({
           dataField: 'is_platform',
           caption: 'Plataforma',
           width: 100,
-          calculateCellValue: (data) => booleanLabel(data.is_platform)
+          dataType: 'boolean',
+          cellTemplate: (container, { data }) => {
+            $(container).empty()
+            ReactAppend(container, <SwitchFormGroup checked={!!data.is_platform} disabled noMargin />)
+          }
         },
         {
           dataField: 'has_storage_service',
           caption: 'Almacenamiento',
           width: 130,
-          calculateCellValue: (data) => booleanLabel(data.has_storage_service)
+          dataType: 'boolean',
+          cellTemplate: (container, { data }) => {
+            $(container).empty()
+            ReactAppend(container, <SwitchFormGroup checked={!!data.has_storage_service} disabled noMargin />)
+          }
         },
         { dataField: 'contract_due_days', caption: 'Dias vcto.', width: 105, visible: false },
         { dataField: 'commercial_channel', caption: 'Canal', minWidth: 120, visible: false },
@@ -1419,14 +1423,14 @@ const Clients = ({
             <option value='1'>ACTIVO</option>
             <option value='0'>INACTIVO</option>
           </SelectFormGroup>
-          <SelectFormGroup
-            eRef={storageTariffEnabledRef}
-            label={<span>Tarifario por cliente <span className='text-danger'>(Referente al tarifario de servicio de almacen)</span></span>}
-            col='col-md-6'
-          >
-            <option value='0'>Inactivo</option>
-            <option value='1'>Activo</option>
-          </SelectFormGroup>
+          <div className='form-group col-md-6 mb-2'>
+            <label className='form-label d-block'>
+              Tarifario por cliente <span className='text-danger'>(Referente al tarifario de servicio de almacen)</span>
+            </label>
+            <div className='form-check form-switch'>
+              <input ref={storageTariffEnabledRef} type='checkbox' className='form-check-input' />
+            </div>
+          </div>
         </>}
         {!storageContext && !serviceContext && !isEventual && (
           <UbigeoCascade
@@ -1442,15 +1446,19 @@ const Clients = ({
 
         {!storageContext && !serviceContext && !isEventual && (
           <>
-            <SelectFormGroup eRef={isPlatformRef} label='Es plataforma' col='col-md-4' value={platformValue} onChange={(e) => setPlatformValue(e.target.value)} effectWith={[platformValue]}>
-              <option value='0'>No</option>
-              <option value='1'>Si</option>
-            </SelectFormGroup>
+            <div className='form-group col-md-4 mb-2'>
+              <label className='form-label d-block'>Es plataforma</label>
+              <div className='form-check form-switch'>
+                <input ref={isPlatformRef} type='checkbox' className='form-check-input' />
+              </div>
+            </div>
 
-            <SelectFormGroup eRef={hasStorageServiceRef} label='Cuenta con servicio de almacenamiento' col='col-md-4' value={storageServiceValue} onChange={(e) => setStorageServiceValue(e.target.value)} effectWith={[storageServiceValue]} disabled={storageContext}>
-              <option value='0'>No</option>
-              <option value='1'>Si</option>
-            </SelectFormGroup>
+            <div className='form-group col-md-4 mb-2'>
+              <label className='form-label d-block'>Cuenta con servicio de almacenamiento</label>
+              <div className='form-check form-switch'>
+                <input ref={hasStorageServiceRef} type='checkbox' className='form-check-input' disabled={storageContext} />
+              </div>
+            </div>
 
             <InputFormGroup eRef={contractDueDaysRef} label='Dias vcto. contrato' col='col-md-4' type='number' min='0' />
           </>

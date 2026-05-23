@@ -490,7 +490,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
   }
 
   const onAffectsIgvChanged = (e) => {
-    const next = `${e.target.value}` === '1'
+    const next = !!e.target.checked
     setAffectsIgv(next)
     setRefValue(affectsIgvRef, next ? '1' : '0')
   }
@@ -741,11 +741,10 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
               </select>
             </div>
             <div className='form-group col-md-2 mb-2'>
-              <label className='form-label'>Afecto IGV</label>
-              <select className='form-control' value={affectsIgv ? '1' : '0'} onChange={onAffectsIgvChanged}>
-                <option value='1'>Sí</option>
-                <option value='0'>No</option>
-              </select>
+              <label className='form-label d-block'>Afecto IGV</label>
+              <div className='form-check form-switch'>
+                <input className='form-check-input' type='checkbox' checked={affectsIgv} onChange={onAffectsIgvChanged} />
+              </div>
             </div>
           </>
         )}

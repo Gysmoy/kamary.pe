@@ -1818,16 +1818,9 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
 
       <div className='row g-3 align-items-end'>
         <div className='col-12 col-lg-4'>
-          <label className='form-label'>Detracci&oacute;n</label>
-          <div className='service-order-detraction-options'>
-            <div className='form-check'>
-              <input className='form-check-input' id='service-order-detraction-no' type='radio' name='service-order-detraction' checked={!detractionEnabled} onChange={() => setDetractionEnabled(false)} />
-              <label className='form-check-label' htmlFor='service-order-detraction-no'>No</label>
-            </div>
-            <div className='form-check'>
-              <input className='form-check-input' id='service-order-detraction-yes' type='radio' name='service-order-detraction' checked={detractionEnabled} onChange={() => setDetractionEnabled(true)} />
-              <label className='form-check-label' htmlFor='service-order-detraction-yes'>Si</label>
-            </div>
+          <label className='form-label d-block'>Detracci&oacute;n</label>
+          <div className='form-check form-switch service-order-detraction-options'>
+            <input className='form-check-input' id='service-order-detraction-enabled' type='checkbox' checked={detractionEnabled} onChange={(e) => setDetractionEnabled(e.target.checked)} />
           </div>
         </div>
         <div className='col-12 col-lg-6'>

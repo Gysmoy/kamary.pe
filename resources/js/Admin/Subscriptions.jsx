@@ -2,12 +2,12 @@ import BaseAdminto from '@Adminto/Base';
 import SubscriptionsRest from '@Rest/Admin/SubscriptionsRest';
 import React, { useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import { renderToString } from 'react-dom/server';
 import Swal from 'sweetalert2';
 import Table from '../Components/Adminto/Table';
 import DxButton from '../Components/dx/DxButton';
 import CreateReactScript from '../Utils/CreateReactScript';
 import ReactAppend from '../Utils/ReactAppend';
+import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 
 const subscriptionsRest = new SubscriptionsRest()
 
@@ -76,19 +76,8 @@ const Subscriptions = () => {
             displayExpr: 'text'
           },
           cellTemplate: (container, { data }) => {
-            container.html(renderToString(<span>
-              {
-                data.is_user
-                  ? <span className='text-primary'>
-                    <i className=' mdi mdi-check me-1'></i>
-                    Si
-                  </span>
-                  : <span className='text-danger'>
-                    <i className='mdi mdi-close me-1'></i>
-                    No
-                  </span>
-              }
-            </span>))
+            $(container).empty()
+            ReactAppend(container, <SwitchFormGroup checked={!!data.is_user} disabled noMargin />)
           },
         },
         {
@@ -104,19 +93,8 @@ const Subscriptions = () => {
             displayExpr: 'text'
           },
           cellTemplate: (container, { data }) => {
-            container.html(renderToString(<>
-              {
-                data.created_formula
-                  ? <span className='text-primary'>
-                    <i className=' mdi mdi-check me-1'></i>
-                    Si
-                  </span>
-                  : <span className='text-danger'>
-                    <i className='mdi mdi-close me-1'></i>
-                    No
-                  </span>
-              }
-            </>))
+            $(container).empty()
+            ReactAppend(container, <SwitchFormGroup checked={!!data.created_formula} disabled noMargin />)
           }
         },
         {
@@ -132,19 +110,8 @@ const Subscriptions = () => {
             displayExpr: 'text'
           },
           cellTemplate: (container, { data }) => {
-            container.html(renderToString(<span>
-              {
-                data.made_order
-                  ? <span className='text-primary'>
-                    <i className=' mdi mdi-check me-1'></i>
-                    Si
-                  </span>
-                  : <span className='text-danger'>
-                    <i className='mdi mdi-close me-1'></i>
-                    No
-                  </span>
-              }
-            </span>))
+            $(container).empty()
+            ReactAppend(container, <SwitchFormGroup checked={!!data.made_order} disabled noMargin />)
           }
         },
         {

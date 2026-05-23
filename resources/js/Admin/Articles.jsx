@@ -92,11 +92,6 @@ const emptyStorageLot = () => ({
   status: true,
 })
 
-const yesNoOptions = [
-  { value: '1', label: 'SI' },
-  { value: '0', label: 'NO' },
-]
-
 const magistralStatusOptions = [
   { value: 'vigente', label: 'VIGENTE' },
   { value: 'vencido', label: 'VENCIDO' },
@@ -491,17 +486,13 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     if (administrationRouteRef.current) administrationRouteRef.current.value = data?.administration_route ?? ''
     if (healthRegistrationRef.current) healthRegistrationRef.current.value = data?.health_registration ?? ''
     if (volumeRef.current) volumeRef.current.value = data?.volume ?? ''
-    if (marginRuleRef.current) marginRuleRef.current.value = data?.margin_rule ? '1' : '0'
+    if (marginRuleRef.current) marginRuleRef.current.checked = !!data?.margin_rule
     if (igvRuleRef.current) {
-      if (isMagistrales) {
-        igvRuleRef.current.value = data?.igv_rule ? '1' : '0'
-      } else {
-        igvRuleRef.current.value = data?.igv_rule ? '1' : '0'
-      }
+      igvRuleRef.current.checked = !!data?.igv_rule
     }
     if (unitsPerArticleRef.current) unitsPerArticleRef.current.value = data?.units_per_article ?? 1
     if (unitWeightRef.current) unitWeightRef.current.value = data?.unit_weight ?? ''
-    if (packRef.current) packRef.current.value = data?.is_pack ? '1' : '0'
+    if (packRef.current) packRef.current.checked = !!data?.is_pack
     if (defaultLotRef.current) defaultLotRef.current.value = data?.default_lot ?? ''
     if (defaultExpirationDateRef.current) defaultExpirationDateRef.current.value = data?.default_expiration_date ? data.default_expiration_date.toString().slice(0, 10) : ''
     if (stockMinRef.current) stockMinRef.current.value = data?.stock_min ?? ''
@@ -509,14 +500,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
     if (stockHasExpirationRef.current) {
       if (isMagistrales) {
-        stockHasExpirationRef.current.value = data?.stock_has_expiration ? '1' : '0'
+        stockHasExpirationRef.current.checked = !!data?.stock_has_expiration
       } else {
         stockHasExpirationRef.current.checked = !!data?.stock_has_expiration
       }
     }
     if (stockHasLotRef.current) {
       if (isMagistrales) {
-        stockHasLotRef.current.value = data?.stock_has_lot ? '1' : '0'
+        stockHasLotRef.current.checked = !!data?.stock_has_lot
       } else {
         stockHasLotRef.current.checked = !!data?.stock_has_lot
       }
@@ -619,8 +610,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       active_principle_id: isMagistrales ? null : (selectedPrincipleId || null),
       unit_id: selectedUnitId || null,
       volume: volumeRef.current?.value ?? '',
-      margin_rule: marginRuleRef.current?.value === '1',
-      igv_rule: igvRuleRef.current?.value === '1',
+      margin_rule: marginRuleRef.current?.checked ?? false,
+      igv_rule: igvRuleRef.current?.checked ?? false,
       units_per_article: unitsPerArticleRef.current?.value || 1,
       ...(isMagistrales ? {
         magistral_status: statusRef.current?.value || 'vigente',
@@ -628,7 +619,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       } : {}),
       ...(!isMagistrales && !isStorageProduct ? {
         status: statusRef.current?.value === '0' ? false : true,
-        is_pack: packRef.current?.value === '1',
+        is_pack: packRef.current?.checked ?? false,
       } : {}),
       ...(isStorageProduct ? {
         client_id: selectedStorageClientId || null,
@@ -647,8 +638,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       stock_min: stockMinRef.current?.value ?? '',
       stock_max: stockMaxRef.current?.value ?? '',
       currency: currencyRef.current?.value ?? '',
-      stock_has_expiration: isMagistrales ? stockHasExpirationRef.current?.value === '1' : (stockHasExpirationRef.current?.checked ?? false),
-      stock_has_lot: isMagistrales ? stockHasLotRef.current?.value === '1' : (stockHasLotRef.current?.checked ?? false),
+      stock_has_expiration: stockHasExpirationRef.current?.checked ?? false,
+      stock_has_lot: stockHasLotRef.current?.checked ?? false,
       cost_price: costPriceRef.current?.value ?? '',
       sale_price: salePriceRef.current?.value ?? '',
       equivalence_exchange_rate: null,
@@ -1115,7 +1106,15 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     dataField: 'igv_rule',
     caption: 'Afecto IGV',
     width: '110px',
-    cellTemplate: (container, { data }) => container.text(data?.igv_rule ? 'SI' : 'NO')
+    cellTemplate: (container, { data }) => {
+      $(container).empty()
+      if (data.status === null) return
+      ReactAppend(container, <SwitchFormGroup checked={data.igv_rule == 1} onChange={() => onBooleanChange({
+        id: data.id,
+        field: 'igv_rule',
+        value: !data.igv_rule
+      })} />)
+    }
   }
 
   const magistralStatusColumn = {
@@ -1307,7 +1306,15 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       caption: 'Pack',
       dataType: 'boolean',
       width: '80px',
-      cellTemplate: (container, { data }) => container.text(data?.is_pack ? 'SI' : 'NO')
+      cellTemplate: (container, { data }) => {
+        $(container).empty()
+        if (data.status === null) return
+        ReactAppend(container, <SwitchFormGroup checked={data.is_pack == 1} onChange={() => onBooleanChange({
+          id: data.id,
+          field: 'is_pack',
+          value: !data.is_pack
+        })} />)
+      }
     },
     presentationsColumn,
     ...auditColumns,
@@ -1450,12 +1457,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
               <InputFormGroup eRef={stockMinRef} label='Stock mínimo' col='col-md-3' type='number' min='0' step='0.001' />
               <InputFormGroup eRef={stockMaxRef} label='Stock máximo' col='col-md-3' type='number' min='0' step='0.001' />
               <div className='form-group col-md-3 mb-2'>
-                <label className='form-label'>Afecto a IGV</label>
-                <select ref={igvRuleRef} className='form-control' defaultValue='0'>
-                  {yesNoOptions.map(option => (
-                    <option key={`magistral-igv-${option.value}`} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
+                <label className='form-label d-block'>Afecto a IGV</label>
+                <div className='form-check form-switch'>
+                  <input ref={igvRuleRef} className='form-check-input' type='checkbox' />
+                </div>
               </div>
               <div className='form-group col-md-3 mb-2'>
                 <label className='form-label'>Moneda</label>
@@ -1465,20 +1470,16 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
                 </select>
               </div>
               <div className='form-group col-md-3 mb-2'>
-                <label className='form-label'>Stock con Vencim.</label>
-                <select ref={stockHasExpirationRef} className='form-control' defaultValue='0'>
-                  {yesNoOptions.map(option => (
-                    <option key={`magistral-exp-${option.value}`} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
+                <label className='form-label d-block'>Stock con Vencim.</label>
+                <div className='form-check form-switch'>
+                  <input ref={stockHasExpirationRef} className='form-check-input' type='checkbox' />
+                </div>
               </div>
               <div className='form-group col-md-3 mb-2'>
-                <label className='form-label'>Stock con Lote</label>
-                <select ref={stockHasLotRef} className='form-control' defaultValue='0'>
-                  {yesNoOptions.map(option => (
-                    <option key={`magistral-lot-${option.value}`} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
+                <label className='form-label d-block'>Stock con Lote</label>
+                <div className='form-check form-switch'>
+                  <input ref={stockHasLotRef} className='form-check-input' type='checkbox' />
+                </div>
               </div>
               <InputFormGroup eRef={costPriceRef} label='Precio Costo' col='col-md-3' type='number' min='0' step='0.01' />
               <InputFormGroup eRef={salePriceRef} label='Precio Venta' col='col-md-3' type='number' min='0' step='0.01' />
@@ -2133,13 +2134,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           <InputFormGroup eRef={unitsPerArticleRef} label='Unidad por articulo' col='col-md-3' type='number' min='1' required />
           <InputFormGroup eRef={unitWeightRef} label='Peso Unitario (Kg)' col='col-md-3' type='number' step='0.0001' />
           <div className='form-group col-md-3 mb-2'>
-            <label className='form-label'>Regla de margen</label>
-            <select ref={marginRuleRef} className='form-control' defaultValue='0'>
-              <option value=''>Seleccione</option>
-              {yesNoOptions.map(option => (
-                <option key={`margin-rule-${option.value}`} value={option.value}>{option.label}</option>
-              ))}
-            </select>
+            <label className='form-label d-block'>Regla de margen</label>
+            <div className='form-check form-switch'>
+              <input ref={marginRuleRef} className='form-check-input' type='checkbox' />
+            </div>
           </div>
           <div className='form-group col-md-3 mb-2'>
             <label className='form-label'>Estado</label>
@@ -2149,11 +2147,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
             </select>
           </div>
           <div className='form-group col-md-3 mb-2'>
-            <label className='form-label'>Pack</label>
-            <select ref={packRef} className='form-control' defaultValue='0'>
-              <option value='0'>NO</option>
-              <option value='1'>SI</option>
-            </select>
+            <label className='form-label d-block'>Pack</label>
+            <div className='form-check form-switch'>
+              <input ref={packRef} className='form-check-input' type='checkbox' />
+            </div>
           </div>
         </>}
 
@@ -2171,13 +2168,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
         </>}
 
         <div className='form-group col-md-3 mb-2'>
-          <label className='form-label'>{isMagistrales ? 'Afecto a IGV' : 'Regla de IGV'}</label>
-          <select ref={igvRuleRef} className='form-control' defaultValue='0'>
-            <option value=''>Seleccione</option>
-            {yesNoOptions.map(option => (
-              <option key={`igv-rule-${option.value}`} value={option.value}>{option.label}</option>
-            ))}
-          </select>
+          <label className='form-label d-block'>{isMagistrales ? 'Afecto a IGV' : 'Regla de IGV'}</label>
+          <div className='form-check form-switch'>
+            <input ref={igvRuleRef} className='form-check-input' type='checkbox' />
+          </div>
         </div>
 
         {isMagistrales && <>
