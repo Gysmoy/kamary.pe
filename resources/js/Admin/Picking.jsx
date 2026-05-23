@@ -53,7 +53,7 @@ const Picking = () => {
     const isCompleting = nextStatus === 'dispatched'
     const isStarting = nextStatus === 'preparing'
     const { isConfirmed } = await Swal.fire({
-      title: isCompleting ? 'Completar picking' : 'Actualizar picking',
+      title: isCompleting ? 'Completar preparacion' : 'Actualizar preparacion',
       text: isStarting
         ? `El pedido ${order.code} pasara a En preparacion.`
         : `El pedido ${order.code} pasara a ${pickingStatusLabel(nextStatus)}.`,
@@ -76,7 +76,7 @@ const Picking = () => {
   return (
     <Table
       gridRef={gridRef}
-      title='Picking'
+      title='Preparacion de pedidos'
       rest={commercialOrdersRest}
       pageSize={25}
       filterValue={filterValue}
@@ -130,7 +130,7 @@ const Picking = () => {
             if (data.dispatch_status === 'pending') {
               container.append(DxButton({
                 className: 'btn btn-xs btn-soft-primary',
-                title: 'Iniciar picking',
+                title: 'Iniciar preparacion',
                 icon: 'mdi mdi-play-circle-outline',
                 onClick: () => updatePickingStatus(data, 'preparing'),
               }))
@@ -138,7 +138,7 @@ const Picking = () => {
             if (data.dispatch_status === 'preparing') {
               container.append(DxButton({
                 className: 'btn btn-xs btn-soft-success',
-                title: 'Completar picking',
+                title: 'Completar preparacion',
                 icon: 'mdi mdi-check-circle-outline',
                 onClick: () => updatePickingStatus(data, 'dispatched'),
               }))
@@ -146,7 +146,7 @@ const Picking = () => {
             if (data.dispatch_status === 'dispatched') {
               container.append(DxButton({
                 className: 'btn btn-xs btn-soft-warning',
-                title: 'Reabrir picking',
+                title: 'Reabrir preparacion',
                 icon: 'mdi mdi-restore',
                 onClick: () => updatePickingStatus(data, 'preparing'),
               }))
@@ -169,5 +169,5 @@ CreateReactScript((el, properties) => {
     location.href = '/admin/'
     return
   }
-  createRoot(el).render(<BaseAdminto {...properties} title='Picking'><Picking {...properties} /></BaseAdminto>)
+  createRoot(el).render(<BaseAdminto {...properties} title='Preparacion de pedidos'><Picking {...properties} /></BaseAdminto>)
 })
