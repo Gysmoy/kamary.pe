@@ -40,6 +40,7 @@ const Generals = ({ generals }) => {
     freeShippingZones: (generals.find(x => x.correlative == 'free_shipping_zones')?.description ?? 'metropolitana').split(','),
     freeShippingBannerText: generals.find(x => x.correlative == 'free_shipping_banner')?.description ?? '',
     topbar: generals.find(x => x.correlative == 'topbar')?.description ?? null,
+    googleMapsApiKey: generals.find(x => x.correlative == 'google_maps_api_key')?.description ?? '',
   });
 
   const [activeTab, setActiveTab] = useState('delivery');
@@ -102,6 +103,7 @@ const Generals = ({ generals }) => {
         { correlative: 'free_shipping_zones', name: 'Zonas con envío gratis', description: formData.freeShippingZones.join(',') },
         { correlative: 'free_shipping_banner', name: 'Texto para banner', description: formData.freeShippingBannerText },
         { correlative: 'topbar', name: 'Cintillo', description: formData.topbar?.toString() ?? false },
+        { correlative: 'google_maps_api_key', name: 'Google Maps API Key', description: formData.googleMapsApiKey?.toString() ?? '' },
       ]);
       // alert('Datos guardados exitosamente');
     } catch (error) {
@@ -115,8 +117,6 @@ const Generals = ({ generals }) => {
   useEffect(() => {
     $('#cbo-keywords option').prop('selected', true).trigger('change')
   }, [null])
-
-  console.log(formData)
 
   return (
     <div className="card">
@@ -140,6 +140,11 @@ const Generals = ({ generals }) => {
           <li className="nav-item" role="presentation">
             <button className={`nav-link ${activeTab === 'web-details' ? 'active' : ''}`} onClick={() => setActiveTab('web-details')} type="button" role="tab">
               Detalles de la Web
+            </button>
+          </li>
+          <li className="nav-item" role="presentation">
+            <button className={`nav-link ${activeTab === 'integrations' ? 'active' : ''}`} onClick={() => setActiveTab('integrations')} type="button" role="tab">
+              Integraciones
             </button>
           </li>
           <li className="nav-item" role="presentation">
@@ -409,6 +414,27 @@ const Generals = ({ generals }) => {
                     required
                     style={{ minHeight: (3 * 27), fieldSizing: 'content' }}
                   />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className={`tab-pane fade ${activeTab === 'integrations' ? 'show active' : ''}`} role="tabpanel">
+            <div className="row">
+              <div className="col-xl-6 col-lg-7 col-md-9 col-sm-12">
+                <div className="mb-3">
+                  <label className="form-label">Google Maps API Key</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={formData.googleMapsApiKey}
+                    onChange={(e) => setFormData({ ...formData, googleMapsApiKey: e.target.value })}
+                    placeholder="AIza..."
+                    autoComplete="off"
+                  />
+                  <small className="text-muted d-block mt-1">
+                    Se usa en pedidos comerciales para cargar el mapa de Google. Si queda vacio, el sistema usa GMAPS_API_KEY del .env o el mapa libre.
+                  </small>
                 </div>
               </div>
             </div>

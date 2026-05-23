@@ -1,7 +1,9 @@
 ﻿import React, { createRef, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
+import Global from '../Utils/Global';
 import Table from '../Components/Adminto/Table';
 import Modal from '../Components/Adminto/Modal';
 import ReactAppend from '../Utils/ReactAppend';
@@ -256,7 +258,209 @@ const loadLeaflet = () => {
   return leafletLoader
 }
 
-const DeliveryMapPicker = ({ modalRef, position, searchText, onPositionChange, onSearchTextChange, onAddressSelected }) => {
+const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionChange, onSearchTextChange, onAddressSelected, googleMapsApiKey }) => {
+  const mapRef = useRef()
+  const [loading, setLoading] = useState(false)
+  const [mapError, setMapError] = useState('')
+  const [results, setResults] = useState([])
+
+  const resolvedPosition = hasMapPosition(position)
+    ? { lat: parseCoordinate(position.lat), lng: parseCoordinate(position.lng) }
+    : defaultMapPosition
+
+  const applyPosition = (nextPosition, zoom = 17) => {
+    const lat = parseCoordinate(nextPosition?.lat)
+    const lng = parseCoordinate(nextPosition?.lng)
+    if (lat === null || lng === null || !mapRef.current) return
+
+    mapRef.current.setCenter({ lat, lng })
+    mapRef.current.setZoom(zoom)
+  }
+
+  const handlePointSelected = (nextPosition) => {
+    onPositionChange(nextPosition)
+    applyPosition(nextPosition)
+  }
+
+  useEffect(() => {
+    if (hasMapPosition(position)) {
+      applyPosition(resolvedPosition)
+      return
+    }
+
+    applyPosition(defaultMapPosition, 13)
+  }, [position?.lat, position?.lng])
+
+  useEffect(() => {
+    const modal = modalRef?.current
+    if (!modal) return undefined
+
+    const onShown = () => {
+      setTimeout(() => {
+        if (hasMapPosition(position)) applyPosition(resolvedPosition)
+        else applyPosition(defaultMapPosition, 13)
+      }, 180)
+    }
+
+    $(modal).on('shown.bs.modal', onShown)
+    return () => $(modal).off('shown.bs.modal', onShown)
+  }, [modalRef, position?.lat, position?.lng])
+
+  const searchAddress = async () => {
+    const query = `${searchText ?? ''}`.trim()
+    if (!query) {
+      setResults([])
+      setMapError('Escribe una direccion para buscar.')
+      return
+    }
+
+    if (!window.google?.maps?.Geocoder) {
+      setMapError('Google Maps aun no termino de cargar.')
+      return
+    }
+
+    setLoading(true)
+    setMapError('')
+    try {
+      const geocoder = new window.google.maps.Geocoder()
+      geocoder.geocode({
+        address: `${query}, Peru`,
+        componentRestrictions: { country: 'PE' },
+        region: 'PE',
+      }, (response, status) => {
+        setLoading(false)
+        if (status !== 'OK' || !Array.isArray(response) || response.length === 0) {
+          setResults([])
+          setMapError('Sin resultados. Puedes marcar el punto manualmente en el mapa.')
+          return
+        }
+
+        setResults(response.slice(0, 5).map((result) => ({
+          place_id: result.place_id,
+          display_name: result.formatted_address,
+          lat: result.geometry.location.lat(),
+          lng: result.geometry.location.lng(),
+        })))
+      })
+    } catch (error) {
+      setLoading(false)
+      setMapError(`${error.message}. Puedes marcar el punto manualmente en el mapa.`)
+      setResults([])
+    }
+  }
+
+  const selectResult = (result) => {
+    const nextPosition = { lat: parseCoordinate(result.lat), lng: parseCoordinate(result.lng) }
+    onPositionChange(nextPosition)
+    onSearchTextChange(result.display_name ?? '')
+    onAddressSelected(result.display_name ?? '')
+    applyPosition(nextPosition)
+    setResults([])
+  }
+
+  return (
+    <div className='commercial-order-map-picker'>
+      <div className='commercial-order-map-search'>
+        <div>
+          <label className='form-label'>Buscar direccion en mapa</label>
+          <div className='input-group'>
+            <input
+              type='text'
+              className='form-control'
+              value={searchText}
+              onChange={(event) => onSearchTextChange(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  searchAddress()
+                }
+              }}
+              placeholder='Ej. Av. Javier Prado 123, San Isidro'
+            />
+            <button type='button' className='btn btn-outline-primary' onClick={searchAddress} disabled={loading}>
+              {loading ? 'Buscando...' : 'Buscar'}
+            </button>
+          </div>
+        </div>
+        <div className='commercial-order-map-coordinates'>
+          <label className='form-label'>Coordenadas</label>
+          <div className='commercial-order-map-coordinate-values'>
+            <span>{formatCoordinate(position?.lat) || '-'}</span>
+            <span>{formatCoordinate(position?.lng) || '-'}</span>
+          </div>
+        </div>
+      </div>
+
+      {results.length > 0 && (
+        <div className='commercial-order-map-results'>
+          {results.map((result) => (
+            <button
+              type='button'
+              key={`${result.place_id}-${result.lat}-${result.lng}`}
+              className='commercial-order-map-result'
+              onClick={() => selectResult(result)}
+            >
+              {result.display_name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {mapError && <small className='text-muted d-block mt-1'>{mapError}</small>}
+      <LoadScript
+        googleMapsApiKey={googleMapsApiKey}
+        language='es'
+        region='PE'
+        onError={() => setMapError('No se pudo cargar Google Maps. Revisa la API key y las restricciones de dominio.')}
+      >
+        <GoogleMap
+          mapContainerClassName='commercial-order-map-canvas'
+          center={resolvedPosition}
+          zoom={hasMapPosition(position) ? 17 : 13}
+          options={{
+            clickableIcons: true,
+            fullscreenControl: true,
+            gestureHandling: 'greedy',
+            mapTypeControl: true,
+            scrollwheel: true,
+            streetViewControl: false,
+          }}
+          onLoad={(map) => {
+            mapRef.current = map
+            setTimeout(() => {
+              if (hasMapPosition(position)) applyPosition(resolvedPosition)
+              else applyPosition(defaultMapPosition, 13)
+            }, 120)
+          }}
+          onClick={(event) => {
+            const nextPosition = { lat: event.latLng.lat(), lng: event.latLng.lng() }
+            handlePointSelected(nextPosition)
+          }}
+        >
+          {hasMapPosition(position) && (
+            <Marker
+              position={resolvedPosition}
+              draggable
+              onDragEnd={(event) => handlePointSelected({ lat: event.latLng.lat(), lng: event.latLng.lng() })}
+            />
+          )}
+        </GoogleMap>
+      </LoadScript>
+      <small className='text-muted d-block mt-2'>Haz clic en el mapa o arrastra el marcador para fijar la ubicacion de entrega.</small>
+    </div>
+  )
+}
+
+const DeliveryMapPicker = (props) => {
+  const googleMapsApiKey = `${Global.GMAPS_API_KEY ?? ''}`.trim()
+  if (googleMapsApiKey) {
+    return <GoogleDeliveryMapPicker {...props} googleMapsApiKey={googleMapsApiKey} />
+  }
+
+  return <LeafletDeliveryMapPicker {...props} />
+}
+
+const LeafletDeliveryMapPicker = ({ modalRef, position, searchText, onPositionChange, onSearchTextChange, onAddressSelected }) => {
   const containerRef = useRef()
   const mapRef = useRef()
   const markerRef = useRef()

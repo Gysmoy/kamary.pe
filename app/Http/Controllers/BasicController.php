@@ -137,6 +137,16 @@ class BasicController extends Controller
       $eurPrice = ExchangeRate::where('currency', 'EUR')->pluck('rate')->first() ?? null;
     }
 
+    $googleMapsApiKey = env('GMAPS_API_KEY');
+    if (Schema::hasTable('generals')) {
+      $panelGoogleMapsApiKey = General::query()
+        ->where('correlative', 'google_maps_api_key')
+        ->value('description');
+      if (trim((string)$panelGoogleMapsApiKey) !== '') {
+        $googleMapsApiKey = trim((string)$panelGoogleMapsApiKey);
+      }
+    }
+
     $properties = [
       'session' => $userJpa,
       'businessScopeKey' => BusinessScope::keyForPath($request->path()),
@@ -153,7 +163,7 @@ class BasicController extends Controller
         'EVOAPI_APIKEY' => env('EVOAPI_APIKEY'),
         'APP_DOMAIN' => env('APP_DOMAIN'),
         'APP_PROTOCOL' => env('APP_PROTOCOL', 'https'),
-        'GMAPS_API_KEY' => env('GMAPS_API_KEY'),
+        'GMAPS_API_KEY' => $googleMapsApiKey,
         'USD_PRICE' => $usdPrice,
         'EUR_PRICE' => $eurPrice,
       ],

@@ -52,6 +52,7 @@ use App\Http\Controllers\Admin\DriverRouteController as AdminDriverRouteControll
 use App\Http\Controllers\Admin\DriverController as AdminDriverController;
 use App\Http\Controllers\Admin\EntryNoteController as AdminEntryNoteController;
 use App\Http\Controllers\Admin\ExitNoteController as AdminExitNoteController;
+use App\Http\Controllers\Admin\GeneralController as AdminGeneralController;
 use App\Http\Controllers\Admin\InventoryReportController as AdminInventoryReportController;
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Admin\ItemController as AdminItemController;
@@ -112,6 +113,7 @@ Route::middleware('auth')->group(function () {
     Route::prefix('admin')->group(function () {
         Route::get('/', fn() => redirect()->to(ModulePermissions::homePathForUser(auth()->user())));
         Route::get('/home', [AdminHomeController::class, 'reactView']);
+        Route::get('/generals', [AdminGeneralController::class, 'reactView']);
 
         // Almacén
         Route::get('/articles', [AdminArticleController::class, 'reactView']);

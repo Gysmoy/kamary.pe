@@ -19,6 +19,7 @@ class ModulePermissions
             'users' => 'Usuarios',
             'roles' => 'Roles',
             'businesses' => 'Empresas',
+            'generals' => 'Sistemas - Datos generales',
 
             'articles' => 'Almacen - Articulos',
             'inventory' => 'Almacen - Inventario',
@@ -99,6 +100,7 @@ class ModulePermissions
             ['permission' => 'businesses', 'web' => '/admin/businesses', 'label' => 'Empresas'],
             ['permission' => 'users', 'web' => '/admin/users', 'label' => 'Usuarios'],
             ['permission' => 'roles', 'web' => '/admin/roles', 'label' => 'Roles y permisos'],
+            ['permission' => 'generals', 'web' => '/admin/generals', 'label' => 'Datos generales'],
 
             ['permission' => 'articles', 'web' => '/admin/articles', 'label' => 'Articulos'],
             ['permission' => 'inventory', 'web' => '/admin/inventory', 'label' => 'Inventario'],

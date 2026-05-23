@@ -24,6 +24,7 @@ use App\Http\Controllers\Admin\DriverController as AdminDriverController;
 use App\Http\Controllers\Admin\EventualClientController as AdminEventualClientController;
 use App\Http\Controllers\Admin\EntryNoteController as AdminEntryNoteController;
 use App\Http\Controllers\Admin\ExitNoteController as AdminExitNoteController;
+use App\Http\Controllers\Admin\GeneralController as AdminGeneralController;
 use App\Http\Controllers\Admin\InventoryReportController as AdminInventoryReportController;
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Admin\KardexController as AdminKardexController;
@@ -135,6 +136,8 @@ Route::middleware('auth')->group(function () {
         Route::patch('/users/status', [AdminUserController::class, 'status']);
         Route::patch('/users/{field}', [AdminUserController::class, 'boolean']);
         Route::delete('/users/{id}', [AdminUserController::class, 'delete']);
+
+        Route::post('/generals', [AdminGeneralController::class, 'save']);
 
         Route::post('/roles', [AdminRoleController::class, 'save']);
         Route::post('/roles/paginate', [AdminRoleController::class, 'paginate']);
