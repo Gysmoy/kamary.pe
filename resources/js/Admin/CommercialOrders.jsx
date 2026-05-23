@@ -48,6 +48,9 @@ const emptyItem = () => ({
   uid: crypto.randomUUID(),
   article_id: '',
   article_label: '',
+  article_code: '',
+  article_lot: '',
+  article_name: '',
   article_unit: '',
   article_laboratory: '',
   article_principle: '',
@@ -57,6 +60,10 @@ const emptyItem = () => ({
   stock_available: 0,
   price_unit: 0,
   quantity: 1,
+  gross_total: 0,
+  discount_type: 'none',
+  discount_value: 0,
+  discount_amount: 0,
   total: 0,
   price_source: 'fallback',
   price_list_code: '',
@@ -74,12 +81,29 @@ const formatAuditUser = (user) => {
   return ''
 }
 
+const roundMoney = (value) => Number((Number(value || 0)).toFixed(2))
+
+const calculateItemDiscount = (grossTotal, discountType, discountValue) => {
+  const gross = roundMoney(grossTotal)
+  const value = Number(discountValue || 0)
+  if (!Number.isFinite(value) || value <= 0 || gross <= 0) return 0
+  if (discountType === 'percent') return Math.min(gross, roundMoney(gross * Math.min(value, 100) / 100))
+  if (discountType === 'amount') return Math.min(gross, roundMoney(value))
+  return 0
+}
+
 const mapItemTotals = (item) => {
   const quantity = Number(item.quantity || 0)
   const price = Number(item.price_unit || 0)
+  const grossTotal = Number.isFinite(quantity * price) ? roundMoney(quantity * price) : 0
+  const discountAmount = calculateItemDiscount(grossTotal, item.discount_type, item.discount_value)
   return {
     ...item,
-    total: Number.isFinite(quantity * price) ? Number((quantity * price).toFixed(2)) : 0,
+    discount_type: item.discount_type || 'none',
+    discount_value: item.discount_type === 'none' ? 0 : Number(item.discount_value || 0),
+    gross_total: grossTotal,
+    discount_amount: discountAmount,
+    total: roundMoney(Math.max(0, grossTotal - discountAmount)),
   }
 }
 
@@ -776,6 +800,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         uid: crypto.randomUUID(),
         article_id: row.article_id ? `${row.article_id}` : '',
         article_label: article ? `${article.code ?? ''} - ${article.name ?? ''}`.trim() : '',
+        article_code: article?.code ?? row.external_sku ?? '',
+        article_lot: article?.default_lot ?? '',
+        article_name: article?.name ?? '',
         article_unit: article?.unit?.symbol ?? article?.unit?.name ?? '',
         article_laboratory: article?.laboratory?.name ?? '',
         article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? '',
@@ -790,6 +817,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         stock_available: Number(row.stock_available || 0),
         price_unit: Number(row.price_unit || 0),
         quantity: Number(row.quantity || 1),
+        discount_type: row.external_payload?.commercial_form?.discount_type ?? 'none',
+        discount_value: Number(row.external_payload?.commercial_form?.discount_value || 0),
+        discount_amount: Number(row.external_payload?.commercial_form?.discount_amount || 0),
+        gross_total: Number(row.external_payload?.commercial_form?.gross_total || 0),
         total: Number(row.total || 0),
         price_source: row.price_source || 'fallback',
         price_list_code: row?.price_list_item?.price_list?.code || data?.price_list?.code || '',
@@ -854,6 +885,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         presentation_units: item.presentation_units,
         price_unit: item.price_unit,
         quantity: item.quantity,
+        gross_total: item.gross_total,
+        discount_type: item.discount_type,
+        discount_value: item.discount_value,
+        discount_amount: item.discount_amount,
         total: item.total,
         status: true,
       })),
@@ -1069,6 +1104,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     const draftItem = {
       article_id: articleId,
       article_label: articleLabel,
+      article_code: hydrated?.code ?? '',
+      article_lot: hydrated?.default_lot ?? '',
+      article_name: hydrated?.name ?? '',
       article_unit: hydrated?.unit?.symbol ?? hydrated?.unit?.name ?? '',
       article_laboratory: hydrated?.laboratory?.name ?? '',
       article_principle: hydrated?.activePrinciple?.name ?? hydrated?.active_principle?.name ?? '',
@@ -1335,7 +1373,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         border-bottom: 0;
       }
       #commercial-orders-form-container .commercial-order-detail-table table {
-        min-width: 980px;
+        min-width: 1780px;
       }
       #commercial-orders-form-container .commercial-order-detail-table th {
         color: var(--ct-gray-700);
@@ -1344,11 +1382,33 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         white-space: nowrap;
       }
       #commercial-orders-form-container .commercial-order-detail-table td {
-        vertical-align: top;
+        vertical-align: middle;
+      }
+      #commercial-orders-form-container .commercial-order-detail-table tfoot th,
+      #commercial-orders-form-container .commercial-order-detail-table tfoot td {
+        background: var(--ct-light);
+        vertical-align: middle;
       }
       #commercial-orders-form-container .commercial-order-detail-table .form-group {
         position: relative;
         margin-bottom: 0 !important;
+      }
+      .commercial-order-detail-table .commercial-order-readonly-cell {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        color: var(--ct-gray-700);
+        font-size: 0.84rem;
+      }
+      .commercial-order-detail-table .commercial-order-article-name .select2-container .select2-selection--single {
+        min-height: 38px;
+      }
+      .commercial-order-discount-cell {
+        display: grid;
+        gap: 4px;
+      }
+      .commercial-order-discount-cell .form-control {
+        min-width: 94px;
       }
       #commercial-orders-form-container .commercial-order-detail-table .select2-container {
         width: 100% !important;
@@ -1785,12 +1845,19 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             <table className='table table-sm align-middle mb-0'>
               <thead>
                 <tr>
-                  <th style={{ minWidth: 260 }}>Articulo</th>
-                  <th style={{ minWidth: 120 }}>Presentacion</th>
-                  <th>Stock</th>
-                  <th>Precio</th>
-                  <th>Cantidad</th>
-                  <th>Total</th>
+                  <th style={{ minWidth: 120 }}>Descuento</th>
+                  <th style={{ minWidth: 130 }}>Codigo</th>
+                  <th style={{ minWidth: 120 }}>Codigo lote</th>
+                  <th style={{ minWidth: 330 }}>Nombre</th>
+                  <th style={{ minWidth: 170 }}>Laboratorio</th>
+                  <th style={{ minWidth: 170 }}>Principio activo</th>
+                  <th style={{ minWidth: 150 }}>Unidad</th>
+                  <th style={{ minWidth: 90 }}>Stock</th>
+                  <th style={{ minWidth: 150 }}>P. venta con IGV</th>
+                  <th style={{ minWidth: 150 }}>P. venta sin IGV</th>
+                  <th style={{ minWidth: 130 }}>Cantidad</th>
+                  <th style={{ minWidth: 130 }}>Total desc.</th>
+                  <th style={{ minWidth: 130 }}>Sub total</th>
                   <th style={{ width: 70 }}></th>
                 </tr>
               </thead>
@@ -1798,6 +1865,31 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                 {items.map((item) => (
                   <tr key={item.uid}>
                     <td>
+                      <div className='commercial-order-discount-cell'>
+                        <select
+                          className='form-control'
+                          value={item.discount_type}
+                          onChange={(e) => onItemFieldChanged(item.uid, 'discount_type', e.target.value)}
+                        >
+                          <option value='none'>Seleccione</option>
+                          <option value='percent'>Porcentaje</option>
+                          <option value='amount'>Importe</option>
+                        </select>
+                        {item.discount_type !== 'none' && (
+                          <input
+                            type='number'
+                            step='0.01'
+                            min='0'
+                            className='form-control'
+                            value={item.discount_value}
+                            onChange={(e) => onItemFieldChanged(item.uid, 'discount_value', Number(e.target.value || 0))}
+                          />
+                        )}
+                      </div>
+                    </td>
+                    <td><div className='commercial-order-readonly-cell'>{item.article_code || '-'}</div></td>
+                    <td><div className='commercial-order-readonly-cell'>{item.article_lot || '-'}</div></td>
+                    <td className='commercial-order-article-name'>
                       <SelectAPIFormGroup
                         eRef={getArticleRef(item.uid)}
                         searchAPI={articleSearchAPI}
@@ -1806,26 +1898,30 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                         disabled={!selectedWarehouseId}
                         onChange={(e) => onItemArticleChanged(item.uid, e)}
                       />
-                      <small className='text-muted d-block mt-1'>
-                        {[item.article_laboratory, item.article_principle, item.article_unit].filter(Boolean).join(' | ') || 'Sin datos'}
-                      </small>
                     </td>
+                    <td><div className='commercial-order-readonly-cell'>{item.article_laboratory || '-'}</div></td>
+                    <td><div className='commercial-order-readonly-cell'>{item.article_principle || '-'}</div></td>
                     <td>
-                      <select
-                        className='form-control'
-                        value={item.presentation_id}
-                        disabled={!item.article_id || item.presentations.length === 0}
-                        onChange={(e) => onItemFieldChanged(item.uid, 'presentation_id', e.target.value)}
-                      >
-                        <option value=''>{presentationEmptyLabel(item)}</option>
-                        {item.presentations.map(presentation => (
-                          <option key={`commercial-order-presentation-${item.uid}-${presentation.id}`} value={presentation.id}>
-                            {`${presentation.name} (${presentation.units})`}
-                          </option>
-                        ))}
-                      </select>
+                      <div>
+                        <div className='commercial-order-readonly-cell'>{item.article_unit || '-'}</div>
+                        {item.presentations.length > 0 && (
+                          <select
+                            className='form-control mt-1'
+                            value={item.presentation_id}
+                            disabled={!item.article_id}
+                            onChange={(e) => onItemFieldChanged(item.uid, 'presentation_id', e.target.value)}
+                          >
+                            <option value=''>{presentationEmptyLabel(item)}</option>
+                            {item.presentations.map(presentation => (
+                              <option key={`commercial-order-presentation-${item.uid}-${presentation.id}`} value={presentation.id}>
+                                {`${presentation.name} (${presentation.units})`}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
                     </td>
-                    <td>{Number(item.stock_available || 0).toFixed(2)}</td>
+                    <td><div className='commercial-order-readonly-cell'>{Number(item.stock_available || 0).toFixed(2)}</div></td>
                     <td>
                       <input
                         type='number'
@@ -1840,13 +1936,42 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                       <input
                         type='number'
                         step='0.01'
+                        min='0'
+                        className='form-control'
+                        value={deriveDocumentTotals(Number(item.price_unit || 0), selectedDocumentType).subtotal.toFixed(2)}
+                        readOnly
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type='number'
+                        step='0.01'
                         min='0.01'
                         className='form-control'
                         value={item.quantity}
                         onChange={(e) => onItemFieldChanged(item.uid, 'quantity', Number(e.target.value || 0))}
                       />
                     </td>
-                    <td>{Number(item.total || 0).toFixed(2)}</td>
+                    <td>
+                      <input
+                        type='number'
+                        step='0.01'
+                        min='0'
+                        className='form-control'
+                        value={Number(item.discount_amount || 0).toFixed(2)}
+                        readOnly
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type='number'
+                        step='0.01'
+                        min='0'
+                        className='form-control'
+                        value={Number(item.total || 0).toFixed(2)}
+                        readOnly
+                      />
+                    </td>
                     <td className='text-end'>
                       <button type='button' className='btn btn-sm btn-outline-danger' onClick={() => onItemRemoved(item.uid)}>
                         <i className='mdi mdi-close'></i>
@@ -1857,17 +1982,17 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               </tbody>
               <tfoot>
                 <tr>
-                  <th colSpan='5' className='text-end'>Subtotal</th>
-                  <th>{orderTotals.subtotal.toFixed(2)}</th>
+                  <th colSpan='12' className='text-end'>Sub total</th>
+                  <th>{grossSubtotal.toFixed(2)}</th>
                   <th></th>
                 </tr>
                 <tr>
-                  <th colSpan='5' className='text-end'>Impuesto</th>
-                  <th>{orderTotals.taxAmount.toFixed(2)}</th>
+                  <th colSpan='12' className='text-end'>Descuento global</th>
+                  <th>0.00</th>
                   <th></th>
                 </tr>
                 <tr>
-                  <th colSpan='5' className='text-end'>Total</th>
+                  <th colSpan='12' className='text-end'>Total</th>
                   <th>{orderTotals.total.toFixed(2)}</th>
                   <th></th>
                 </tr>

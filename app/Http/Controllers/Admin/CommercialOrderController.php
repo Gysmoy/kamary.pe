@@ -63,8 +63,8 @@ class CommercialOrderController extends BasicController
                 'seller:id,name,lastname,username,fullname',
                 'priceList:id,code',
                 'accountsReceivable:id,source_id,code,total,paid_amount,balance_amount,payment_status,status',
-                'items:id,commercial_order_id,article_id,presentation_id,warehouse_id,price_list_item_id,external_item_number,external_sku,stock_available,cost_unit,price_unit,presentation_units,quantity,total,price_source,status',
-                'items.article:id,code,name,laboratory_id,active_principle_id,unit_id',
+                'items:id,commercial_order_id,article_id,presentation_id,warehouse_id,price_list_item_id,external_item_number,external_sku,external_payload,stock_available,cost_unit,price_unit,presentation_units,quantity,total,price_source,status',
+                'items.article:id,code,name,default_lot,laboratory_id,active_principle_id,unit_id',
                 'items.article.laboratory:id,name',
                 'items.article.activePrinciple:id,name',
                 'items.article.unit:id,name,symbol',
@@ -315,10 +315,11 @@ class CommercialOrderController extends BasicController
                     ? 'manual'
                     : $resolution['source'];
 
-                $lineTotal = $this->toNullableDecimal($item['total'] ?? null);
-                if (is_null($lineTotal) || $lineTotal < 0) {
-                    $lineTotal = round((float)$quantity * (float)$priceUnit, 2);
-                }
+                $grossLineTotal = round((float)$quantity * (float)$priceUnit, 2);
+                $discountType = $this->normalizeDiscountType($item['discount_type'] ?? 'none');
+                $discountValue = max(0, $this->toNullableDecimal($item['discount_value'] ?? null) ?? 0);
+                $discountAmount = $this->calculateLineDiscount($grossLineTotal, $discountType, $discountValue);
+                $lineTotal = round(max(0, $grossLineTotal - $discountAmount), 2);
 
                 CommercialOrderItem::create([
                     'commercial_order_id' => $jpa->id,
@@ -333,6 +334,14 @@ class CommercialOrderController extends BasicController
                     'quantity' => $quantity,
                     'total' => $lineTotal,
                     'price_source' => $priceSource,
+                    'external_payload' => [
+                        'commercial_form' => [
+                            'discount_type' => $discountType,
+                            'discount_value' => $discountType === 'none' ? 0 : $discountValue,
+                            'discount_amount' => $discountAmount,
+                            'gross_total' => $grossLineTotal,
+                        ],
+                    ],
                     'status' => isset($item['status']) ? (bool)$item['status'] : true,
                 ]);
 
@@ -791,6 +800,23 @@ class CommercialOrderController extends BasicController
         $allowed = ['pending', 'partial', 'paid'];
         $normalized = mb_strtolower(trim((string)$value));
         return in_array($normalized, $allowed, true) ? $normalized : 'pending';
+    }
+
+    private function normalizeDiscountType($value): string
+    {
+        $allowed = ['none', 'percent', 'amount'];
+        $normalized = mb_strtolower(trim((string)$value));
+        return in_array($normalized, $allowed, true) ? $normalized : 'none';
+    }
+
+    private function calculateLineDiscount(float $grossLineTotal, string $discountType, float $discountValue): float
+    {
+        $grossLineTotal = round(max(0, $grossLineTotal), 2);
+        $discountValue = max(0, $discountValue);
+        if ($grossLineTotal <= 0 || $discountValue <= 0 || $discountType === 'none') return 0.00;
+        if ($discountType === 'percent') return round(min($grossLineTotal, $grossLineTotal * min($discountValue, 100) / 100), 2);
+        if ($discountType === 'amount') return round(min($grossLineTotal, $discountValue), 2);
+        return 0.00;
     }
 
     private function nextCode(): string
