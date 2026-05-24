@@ -7,7 +7,12 @@ export const select2DropdownParentFor = (select, explicitParent = null, fallback
     if (localParent) return $(localParent)
   }
 
-  if (explicitParent) return $(explicitParent)
+  if (explicitParent) {
+    const explicitElement = $(explicitParent).get(0)
+    const modal = explicitElement?.closest?.('.modal')
+    if (modal && explicitElement?.closest?.('.modal-body')) return $(modal)
+    return $(explicitParent)
+  }
   if (fallbackParent) return $(fallbackParent)
 
   return $(select?.closest?.('.modal, .offcanvas, .swal2-popup') || document.body)
