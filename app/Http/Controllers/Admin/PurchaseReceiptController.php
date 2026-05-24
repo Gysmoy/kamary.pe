@@ -42,7 +42,7 @@ class PurchaseReceiptController extends BasicController
                 'warehouse:id,name',
                 'supplier:id,ruc,business_name',
                 'items:id,purchase_receipt_id,purchase_order_item_id,batch_id,batch_code,lot,expiration_date,article_id,warehouse_id,stock_before,units_per_box,boxes_quantity,cost_unit,location,quantity,total,status',
-                'items.purchaseOrderItem:id,purchase_order_id,article_id,requested_quantity,received_quantity,price_unit,total,status',
+                'items.purchaseOrderItem:id,purchase_order_id,article_id,presentation_id,presentation_label,presentation_units,requested_quantity,received_quantity,price_unit,total,status',
                 'items.batch:id,business_id,article_id,lot,expiration_date',
                 'items.article:id,code,name,laboratory_id,active_principle_id,unit_id',
                 'items.article.laboratory:id,name',
@@ -196,6 +196,9 @@ class PurchaseReceiptController extends BasicController
                         throw new \Exception('El articulo del detalle no coincide con el item de la orden de compra');
                     }
                 }
+                $presentationUnits = $purchaseOrderItem
+                    ? max(1, (float)($purchaseOrderItem->presentation_units ?? 1))
+                    : 1;
 
                 $batchId = $item['batch_id'] ?? null;
                 $batch = null;
@@ -215,6 +218,9 @@ class PurchaseReceiptController extends BasicController
                 BusinessScope::branchIdFromWarehouse($business, $itemWarehouse, $jpa->business_branch_id);
 
                 $quantity = $this->toNullableDecimal($item['quantity'] ?? null) ?? 0;
+                $stockQuantity = $purchaseOrderItem
+                    ? round($quantity * $presentationUnits, 3)
+                    : $quantity;
                 $stockBefore = $this->toNullableDecimal($item['stock_before'] ?? null) ?? 0;
                 $unitsPerBox = $this->toNullableDecimal($item['units_per_box'] ?? null) ?? 0;
                 $boxesQuantity = $this->toNullableDecimal($item['boxes_quantity'] ?? null) ?? 0;
@@ -263,7 +269,7 @@ class PurchaseReceiptController extends BasicController
                     'boxes_quantity' => $boxesQuantity,
                     'cost_unit' => $costUnit,
                     'location' => trim((string)($item['location'] ?? '')) ?: null,
-                    'quantity' => $quantity,
+                    'quantity' => $stockQuantity,
                     'total' => $lineTotal,
                     'status' => isset($item['status']) ? (bool)$item['status'] : true,
                 ]);
@@ -443,12 +449,13 @@ class PurchaseReceiptController extends BasicController
 
         $receivedByItem = DB::table('purchase_receipt_items as receipt_item')
             ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
+            ->join('purchase_order_items as order_item', 'order_item.id', '=', 'receipt_item.purchase_order_item_id')
             ->where('receipt.purchase_order_id', $purchaseOrderId)
             ->where('receipt.receipt_status', 'confirmed')
             ->where('receipt.status', 1)
             ->where('receipt_item.status', 1)
             ->groupBy('receipt_item.purchase_order_item_id')
-            ->selectRaw('receipt_item.purchase_order_item_id, SUM(receipt_item.quantity) as qty')
+            ->selectRaw('receipt_item.purchase_order_item_id, SUM(receipt_item.quantity / CASE WHEN COALESCE(order_item.presentation_units, 0) > 0 THEN order_item.presentation_units ELSE 1 END) as qty')
             ->pluck('qty', 'purchase_order_item_id');
 
         $anyReceived = false;
@@ -478,12 +485,14 @@ class PurchaseReceiptController extends BasicController
     {
         return (float)DB::table('purchase_receipt_items as receipt_item')
             ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
+            ->join('purchase_order_items as order_item', 'order_item.id', '=', 'receipt_item.purchase_order_item_id')
             ->where('receipt_item.purchase_order_item_id', $purchaseOrderItemId)
             ->where('receipt.receipt_status', 'confirmed')
             ->where('receipt.status', 1)
             ->where('receipt_item.status', 1)
             ->where('receipt.id', '!=', $currentReceiptId)
-            ->sum('receipt_item.quantity');
+            ->selectRaw('SUM(receipt_item.quantity / CASE WHEN COALESCE(order_item.presentation_units, 0) > 0 THEN order_item.presentation_units ELSE 1 END) as qty')
+            ->value('qty');
     }
 
     private function toNullableDecimal($value): ?float
@@ -557,7 +566,7 @@ class PurchaseReceiptController extends BasicController
 
             $articleId = (int)($item['article_id'] ?? 0);
             $warehouseId = (int)($item['warehouse_id'] ?? $receipt->warehouse_id ?? 0);
-            $quantity = round((float)($this->toNullableDecimal($item['quantity'] ?? null) ?? 0), 3);
+            $quantity = $this->payloadStockQuantity($item);
 
             if ($articleId <= 0 || $warehouseId <= 0 || $quantity <= 0) continue;
 
@@ -582,6 +591,22 @@ class PurchaseReceiptController extends BasicController
                 throw new \Exception("No puedes modificar la recepcion porque dejaria stock negativo para el articulo {$articleId} en almacen {$warehouseId}");
             }
         }
+    }
+
+    private function payloadStockQuantity(array $item): float
+    {
+        $quantity = round((float)($this->toNullableDecimal($item['quantity'] ?? null) ?? 0), 3);
+        if ($quantity <= 0) return 0.0;
+
+        $purchaseOrderItemId = $this->toNullableInt($item['purchase_order_item_id'] ?? null);
+        if (!$purchaseOrderItemId) return $quantity;
+
+        $presentationUnits = (float)PurchaseOrderItem::query()
+            ->where('id', $purchaseOrderItemId)
+            ->value('presentation_units');
+        if ($presentationUnits <= 0) $presentationUnits = 1;
+
+        return round($quantity * $presentationUnits, 3);
     }
 
     private function stockMapKey(int $articleId, int $warehouseId): string

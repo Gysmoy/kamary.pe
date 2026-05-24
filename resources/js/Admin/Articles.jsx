@@ -298,7 +298,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const igvRuleRef = useRef()
   const unitsPerArticleRef = useRef()
   const unitWeightRef = useRef()
-  const packRef = useRef()
   const defaultLotRef = useRef()
   const defaultExpirationDateRef = useRef()
   const stockMinRef = useRef()
@@ -492,7 +491,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     }
     if (unitsPerArticleRef.current) unitsPerArticleRef.current.value = data?.units_per_article ?? 1
     if (unitWeightRef.current) unitWeightRef.current.value = data?.unit_weight ?? ''
-    if (packRef.current) packRef.current.checked = !!data?.is_pack
     if (defaultLotRef.current) defaultLotRef.current.value = data?.default_lot ?? ''
     if (defaultExpirationDateRef.current) defaultExpirationDateRef.current.value = data?.default_expiration_date ? data.default_expiration_date.toString().slice(0, 10) : ''
     if (stockMinRef.current) stockMinRef.current.value = data?.stock_min ?? ''
@@ -619,7 +617,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       } : {}),
       ...(!isMagistrales && !isStorageProduct ? {
         status: statusRef.current?.value === '0' ? false : true,
-        is_pack: packRef.current?.checked ?? false,
       } : {}),
       ...(isStorageProduct ? {
         client_id: selectedStorageClientId || null,
@@ -1301,21 +1298,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       }
     },
     igvColumn,
-    {
-      dataField: 'is_pack',
-      caption: 'Pack',
-      dataType: 'boolean',
-      width: '80px',
-      cellTemplate: (container, { data }) => {
-        $(container).empty()
-        if (data.status === null) return
-        ReactAppend(container, <SwitchFormGroup checked={data.is_pack == 1} onChange={() => onBooleanChange({
-          id: data.id,
-          field: 'is_pack',
-          value: !data.is_pack
-        })} />)
-      }
-    },
     presentationsColumn,
     ...auditColumns,
     statusColumn,
@@ -2145,12 +2127,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
               <option value='1'>Activo</option>
               <option value='0'>Inactivo</option>
             </select>
-          </div>
-          <div className='form-group col-md-3 mb-2'>
-            <label className='form-label d-block'>Pack</label>
-            <div className='form-check form-switch'>
-              <input ref={packRef} className='form-check-input' type='checkbox' />
-            </div>
           </div>
         </>}
 

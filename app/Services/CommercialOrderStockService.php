@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Article;
+use App\Models\ArticlePresentation;
 use App\Models\CommercialOrder;
 use App\Models\CommercialOrderItem;
 use App\Models\CommercialOrderStockMovement;
@@ -38,7 +39,9 @@ class CommercialOrderStockService
             if (!$articleId) continue;
 
             $warehouseId = $this->toNullableInt($item['warehouse_id'] ?? null) ?? $defaultWarehouseId;
-            $quantity = max(0, $this->toDecimal($item['quantity'] ?? 0));
+            $lineQuantity = max(0, $this->toDecimal($item['quantity'] ?? 0));
+            $presentationUnits = $this->presentationUnitsForItem($item, $articleId);
+            $quantity = $this->toBaseQuantity($lineQuantity, $presentationUnits);
             if ($quantity <= 0) continue;
 
             $article = Article::find($articleId);
@@ -60,6 +63,8 @@ class CommercialOrderStockService
                 'article_name' => $articleName,
                 'warehouse_id' => $warehouseId,
                 'quantity' => $quantity,
+                'line_quantity' => $lineQuantity,
+                'presentation_units' => $presentationUnits,
                 'physical_stock' => $physicalStock,
                 'reserved_by_others' => $reservedByOthers,
                 'available_for_reservation' => $availableForLine,
@@ -111,7 +116,10 @@ class CommercialOrderStockService
                 ];
             }
 
-            $grouped[$key]['quantity'] = round($grouped[$key]['quantity'] + (float)$item->quantity, 3);
+            $grouped[$key]['quantity'] = round($grouped[$key]['quantity'] + $this->toBaseQuantity(
+                (float)$item->quantity,
+                (float)($item->presentation_units ?: 1)
+            ), 3);
             $grouped[$key]['reserved_quantity'] = round($grouped[$key]['reserved_quantity'] + (float)($item->reserved_quantity ?? 0), 3);
         }
 
@@ -141,7 +149,7 @@ class CommercialOrderStockService
 
         if ($this->supportsReservations()) {
             foreach ($items as $item) {
-                $quantity = round((float)$item->quantity, 3);
+                $quantity = $this->toBaseQuantity((float)$item->quantity, (float)($item->presentation_units ?: 1));
                 $currentReserved = round((float)($item->reserved_quantity ?? 0), 3);
                 if (abs($currentReserved - $quantity) > 0.0001) {
                     if ($quantity > $currentReserved) {
@@ -262,6 +270,30 @@ class CommercialOrderStockService
         $text = trim((string)($value ?? ''));
         if ($text === '' || !is_numeric($text)) return 0.0;
         return (float)$text;
+    }
+
+    private function presentationUnitsForItem(array $item, int $articleId): float
+    {
+        $presentationId = $this->toNullableInt($item['presentation_id'] ?? null);
+        if ($presentationId) {
+            $units = ArticlePresentation::query()
+                ->where('id', $presentationId)
+                ->where('article_id', $articleId)
+                ->value('units');
+
+            if ((float)$units > 0) {
+                return (float)$units;
+            }
+        }
+
+        $units = $this->toDecimal($item['presentation_units'] ?? 1);
+        return $units > 0 ? $units : 1.0;
+    }
+
+    private function toBaseQuantity(float $quantity, float $presentationUnits): float
+    {
+        $units = $presentationUnits > 0 ? $presentationUnits : 1.0;
+        return round(max(0, $quantity) * $units, 3);
     }
 
     private function toNullableInt($value): ?int

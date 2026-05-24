@@ -213,7 +213,9 @@ const buildStockShortages = (items, warehouseId = '') => {
     if (!item?.article_id) return []
 
     const key = `${item.article_id}:${item.warehouse_id || warehouseId || ''}`
-    const quantity = Number(item.quantity || 0)
+    const lineQuantity = Number(item.quantity || 0)
+    const presentationUnits = Number(item.presentation_units || 1) || 1
+    const quantity = Number((lineQuantity * presentationUnits).toFixed(3))
     const stock = Number(item.stock_available || 0)
     const used = Number(usedByKey.get(key) || 0)
     const availableForLine = Math.max(0, stock - used)
@@ -225,6 +227,8 @@ const buildStockShortages = (items, warehouseId = '') => {
     return [{
       article: item.article_name || item.article_label || item.article_code || 'Articulo',
       quantity,
+      lineQuantity,
+      presentationUnits,
       available: availableForLine,
       shortage,
     }]
@@ -962,7 +966,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         <div class="text-start">
           <p>Hay productos sin stock suficiente. Se reservara lo disponible y el faltante quedara pendiente para preparacion.</p>
           <ul class="mb-0 ps-3">
-            ${shortages.map(row => `<li><strong>${escapeHtml(row.article)}</strong>: faltan ${formatQuantity(row.shortage)} unidad(es) para completar ${formatQuantity(row.quantity)}. Disponible: ${formatQuantity(row.available)}.</li>`).join('')}
+            ${shortages.map(row => `<li><strong>${escapeHtml(row.article)}</strong>: faltan ${formatQuantity(row.shortage)} unidad(es) base para completar ${formatQuantity(row.quantity)}. Cantidad: ${formatQuantity(row.lineQuantity)} x ${formatQuantity(row.presentationUnits)}. Disponible: ${formatQuantity(row.available)}.</li>`).join('')}
           </ul>
         </div>
       `

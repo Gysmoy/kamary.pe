@@ -580,12 +580,16 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   })
 
   const saveOrder = async (bill = false) => {
-    const invalidStockItem = items.find(item => item.article_id && Number(item.quantity || 0) > Number(item.stock_available || 0))
+    const invalidStockItem = items.find(item => {
+      const baseQuantity = Number(item.quantity || 0) * (Number(item.presentation_units || 1) || 1)
+      return item.article_id && baseQuantity > Number(item.stock_available || 0)
+    })
     if (invalidStockItem) {
+      const baseQuantity = Number(invalidStockItem.quantity || 0) * (Number(invalidStockItem.presentation_units || 1) || 1)
       await Swal.fire({
         icon: 'warning',
         title: 'Stock insuficiente',
-        text: `${invalidStockItem.article_label || 'El articulo seleccionado'} solo tiene ${Number(invalidStockItem.stock_available || 0).toFixed(2)} disponible en el almacen elegido.`,
+        text: `${invalidStockItem.article_label || 'El articulo seleccionado'} necesita ${baseQuantity.toFixed(2)} unidad(es) base y solo tiene ${Number(invalidStockItem.stock_available || 0).toFixed(2)} disponible en el almacen elegido.`,
       })
       return
     }

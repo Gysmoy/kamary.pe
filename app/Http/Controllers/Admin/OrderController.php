@@ -145,10 +145,11 @@ class OrderController extends BasicController
                 $quantity = $this->toNullableDecimal($item['quantity'] ?? null) ?? 0;
                 $priceUnit = $this->toNullableDecimal($item['price_unit'] ?? null) ?? 0;
                 if ($quantity <= 0) throw new \Exception('La cantidad por linea debe ser mayor a 0');
+                $baseQuantity = round($quantity * $presentationUnits, 3);
 
                 $availableStock = $this->getAvailableStockByWarehouse((int)$articleId, (int)$warehouseId);
-                if ($quantity > $availableStock) {
-                    throw new \Exception("Stock insuficiente para {$article->name}. Disponible: {$availableStock}");
+                if ($baseQuantity > $availableStock + 0.0001) {
+                    throw new \Exception("Stock insuficiente para {$article->name}. Disponible: {$availableStock} unidad(es) base");
                 }
 
                 $stock = $this->toNullableDecimal($item['stock'] ?? null);

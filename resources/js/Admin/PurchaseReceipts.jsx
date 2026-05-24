@@ -134,6 +134,7 @@ const PurchaseReceipts = () => {
     const orderedQuantity = Number(purchaseOrderItem?.requested_quantity || 0)
     const alreadyReceived = Number(purchaseOrderItem?.received_quantity || 0)
     const pendingQuantity = Math.max(0, orderedQuantity - alreadyReceived)
+    const presentationUnits = Number(purchaseOrderItem?.presentation_units || 1) || 1
     return mapItemTotals({
       uid: crypto.randomUUID(),
       purchase_order_item_id: purchaseOrderItem?.id ? `${purchaseOrderItem.id}` : '',
@@ -142,6 +143,8 @@ const PurchaseReceipts = () => {
       article_unit: article?.unit?.symbol ?? article?.unit?.name ?? '',
       article_laboratory: article?.laboratory?.name ?? '',
       article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? '',
+      presentation_label: purchaseOrderItem?.presentation_label || purchaseOrderItem?.presentation?.name || '',
+      presentation_units: presentationUnits,
       ordered_quantity: orderedQuantity,
       already_received: alreadyReceived,
       pending_quantity: pendingQuantity,
@@ -156,6 +159,10 @@ const PurchaseReceipts = () => {
     const purchaseOrderItem = row?.purchaseOrderItem ?? row?.purchase_order_item ?? null
     const orderedQuantity = Number(purchaseOrderItem?.requested_quantity || 0)
     const alreadyReceived = Number(purchaseOrderItem?.received_quantity || 0)
+    const presentationUnits = Number(purchaseOrderItem?.presentation_units || 1) || 1
+    const quantity = purchaseOrderItem
+      ? Number((Number(row?.quantity || 0) / presentationUnits).toFixed(3))
+      : Number(row?.quantity || 0)
     return mapItemTotals({
       uid: crypto.randomUUID(),
       purchase_order_item_id: row?.purchase_order_item_id ? `${row.purchase_order_item_id}` : '',
@@ -164,6 +171,8 @@ const PurchaseReceipts = () => {
       article_unit: article?.unit?.symbol ?? article?.unit?.name ?? '',
       article_laboratory: article?.laboratory?.name ?? '',
       article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? '',
+      presentation_label: purchaseOrderItem?.presentation_label || purchaseOrderItem?.presentation?.name || '',
+      presentation_units: presentationUnits,
       ordered_quantity: orderedQuantity,
       already_received: alreadyReceived,
       pending_quantity: Math.max(0, orderedQuantity - alreadyReceived),
@@ -175,7 +184,7 @@ const PurchaseReceipts = () => {
       boxes_quantity: Number(row?.boxes_quantity || 0),
       cost_unit: Number(row?.cost_unit || 0),
       location: row?.location ?? '',
-      quantity: Number(row?.quantity || 0),
+      quantity,
       total: Number(row?.total || 0),
     })
   }
@@ -679,6 +688,7 @@ const PurchaseReceipts = () => {
                   <th>Artículo</th>
                   <th>Lab. | Principio</th>
                   <th>Unidad</th>
+                  <th>Presentacion</th>
                   <th>Solic.</th>
                   <th>Ya rec.</th>
                   <th>Pend.</th>
@@ -714,6 +724,10 @@ const PurchaseReceipts = () => {
                     </td>
                     <td><small>{`${item.article_laboratory || '-'} | ${item.article_principle || '-'}`}</small></td>
                     <td><small>{item.article_unit || '-'}</small></td>
+                    <td>
+                      <small>{item.presentation_label || '-'}</small>
+                      {item.presentation_units ? <small className='d-block text-muted'>{Number(item.presentation_units || 1).toFixed(3)} und.</small> : null}
+                    </td>
                     <td><input className='form-control form-control-sm' value={Number(item.ordered_quantity || 0).toFixed(3)} readOnly /></td>
                     <td><input className='form-control form-control-sm' value={Number(item.already_received || 0).toFixed(3)} readOnly /></td>
                     <td><input className='form-control form-control-sm' value={Number(item.pending_quantity || 0).toFixed(3)} readOnly /></td>

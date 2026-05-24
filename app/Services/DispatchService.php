@@ -102,17 +102,23 @@ class DispatchService
 
             foreach ($order->items as $item) {
                 if (!$item->status || (float)$item->quantity <= 0) continue;
-                $key = $item->article_id . ':' . $order->warehouse_id;
+                $warehouseId = (int)($item->warehouse_id ?: $order->warehouse_id);
+                $key = $item->article_id . ':' . $warehouseId;
+                $presentationUnits = (float)($item->presentation_units ?: 1);
+                if ($presentationUnits <= 0) $presentationUnits = 1;
+                $baseQuantity = round((float)$item->quantity * $presentationUnits, 3);
+                if ($baseQuantity <= 0) continue;
+
                 if (!isset($grouped[$key])) {
                     $grouped[$key] = [
                         'article_id' => $item->article_id,
-                        'warehouse_id' => $order->warehouse_id,
+                        'warehouse_id' => $warehouseId,
                         'quantity' => 0,
                         'total' => 0,
                         'order_ids' => [],
                     ];
                 }
-                $grouped[$key]['quantity'] = round($grouped[$key]['quantity'] + (float)$item->quantity, 3);
+                $grouped[$key]['quantity'] = round($grouped[$key]['quantity'] + $baseQuantity, 3);
                 $grouped[$key]['total'] = round($grouped[$key]['total'] + (float)$item->total, 2);
                 $grouped[$key]['order_ids'][] = (int)$order->id;
             }

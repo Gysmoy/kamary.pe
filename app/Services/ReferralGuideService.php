@@ -95,7 +95,9 @@ class ReferralGuideService
             if ($items->isEmpty()) throw new \Exception("El pedido {$order->code} no tiene items activos");
 
             $grossWeight = round($items->sum(function ($item) {
-                return (float) $item->quantity * (float) ($item->article?->unit_weight ?? 0);
+                $presentationUnits = (float)($item->presentation_units ?: 1);
+                if ($presentationUnits <= 0) $presentationUnits = 1;
+                return (float) $item->quantity * $presentationUnits * (float) ($item->article?->unit_weight ?? 0);
             }), 3);
 
             $guide->fill([
@@ -482,7 +484,9 @@ class ReferralGuideService
         ReferralGuideItem::where('referral_guide_id', $guide->id)->delete();
 
         foreach ($order->items->where('status', true) as $item) {
-            $weight = round((float) $item->quantity * (float) ($item->article?->unit_weight ?? 0), 3);
+            $presentationUnits = (float)($item->presentation_units ?: 1);
+            if ($presentationUnits <= 0) $presentationUnits = 1;
+            $weight = round((float) $item->quantity * $presentationUnits * (float) ($item->article?->unit_weight ?? 0), 3);
             ReferralGuideItem::create([
                 'referral_guide_id' => $guide->id,
                 'commercial_order_item_id' => $item->id,

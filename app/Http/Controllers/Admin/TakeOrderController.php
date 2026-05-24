@@ -283,10 +283,11 @@ class TakeOrderController extends BasicController
                 if ($quantity <= 0) {
                     throw new \Exception("La cantidad por linea debe ser mayor a 0 para {$article->name}");
                 }
+                $baseQuantity = round($quantity * $presentationUnits, 3);
 
                 $availableStock = $this->getAvailableStockByWarehouse((int)$articleId, (int)$warehouseId);
-                if ($quantity > $availableStock) {
-                    throw new \Exception("Stock insuficiente para {$article->name}. Disponible: {$availableStock}");
+                if ($baseQuantity > $availableStock + 0.0001) {
+                    throw new \Exception("Stock insuficiente para {$article->name}. Disponible: {$availableStock} unidad(es) base");
                 }
 
                 $resolution = app(PriceListResolverService::class)->resolve([

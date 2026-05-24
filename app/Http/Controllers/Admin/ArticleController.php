@@ -517,7 +517,6 @@ class ArticleController extends BasicController
         $body['notes'] = isset($body['notes']) ? trim((string)$body['notes']) : null;
         $body['margin_rule'] = $this->toBoolean($body['margin_rule'] ?? false);
         $body['igv_rule'] = $this->toBoolean($body['igv_rule'] ?? false);
-        $body['is_pack'] = $this->toBoolean($body['is_pack'] ?? false);
         $body['stock_has_expiration'] = $this->toBoolean($body['stock_has_expiration'] ?? false);
         $body['stock_has_lot'] = $this->toBoolean($body['stock_has_lot'] ?? false);
         $body['units_per_article'] = (int)($body['units_per_article'] ?? 1);
@@ -606,7 +605,6 @@ class ArticleController extends BasicController
             'sale_price_national',
             'purchase_price_national',
             'purchase_price_foreign',
-            'is_pack',
         ] as $column) {
             if (!Schema::hasColumn('articles', $column)) unset($body[$column]);
         }

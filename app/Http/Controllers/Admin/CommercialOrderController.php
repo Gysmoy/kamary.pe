@@ -330,6 +330,7 @@ class CommercialOrderController extends BasicController
                 if ($quantity <= 0) {
                     throw new \Exception("La cantidad por linea debe ser mayor a 0 para {$article->name}");
                 }
+                $baseQuantity = round($quantity * $presentationUnits, 3);
 
                 $stockPlan = $reservationPlan['items'][$itemIndex] ?? null;
                 $availableStock = $stockPlan
@@ -337,7 +338,7 @@ class CommercialOrderController extends BasicController
                     : $this->getAvailableStockByWarehouse((int)$articleId, (int)$warehouseId);
                 $reservedQuantity = $stockPlan
                     ? (float)$stockPlan['reserved_quantity']
-                    : min($quantity, $availableStock);
+                    : min($baseQuantity, $availableStock);
 
                 $resolution = app(PriceListResolverService::class)->resolve([
                     'business_id' => $jpa->business_id,
