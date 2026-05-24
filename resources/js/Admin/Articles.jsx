@@ -1854,8 +1854,9 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       title={isMagistrales ? (isViewing ? 'Mostrar artículo magistral' : (isEditing ? 'Editar artículo magistral' : 'Agregar artículo magistral')) : (isStorageProduct ? 'ARTICULO' : (isViewing ? 'Mostrar articulo' : (isEditing ? 'Editar articulo' : 'Agregar articulo')))}
       onSubmit={onModalSubmit}
       size='xl'
-      dialogClass={isMagistrales ? 'magistrales-article-dialog' : (!isStorageProduct ? 'article-dialog' : '')}
+      dialogClass={`${isMagistrales ? 'magistrales-article-dialog' : (!isStorageProduct ? 'article-dialog' : '')} modal-dialog-scrollable`}
       contentClass={isMagistrales ? 'magistrales-article-modal' : (!isStorageProduct ? 'article-modal' : '')}
+      bodyStyle={{ maxHeight: 'calc(100vh - 170px)', overflowY: 'auto', overflowX: 'hidden' }}
       hideButtonSubmit={isViewing}
       btnSubmitText={isMagistrales ? 'Guardar artículo' : 'Registrar'}
     >
