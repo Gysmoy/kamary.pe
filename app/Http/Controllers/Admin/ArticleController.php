@@ -426,6 +426,10 @@ class ArticleController extends BasicController
             unset($body['magistral_status']);
         }
 
+        if ($this->moduleScope === 'standard' && $code === '') {
+            $code = $this->nextStandardArticleCode($id);
+        }
+
         if ($code === '') throw new \Exception('El codigo de articulo es obligatorio');
         if ($name === '') throw new \Exception('El nombre del articulo es obligatorio');
         if ($this->moduleScope === 'magistrales') {
@@ -1121,6 +1125,35 @@ class ArticleController extends BasicController
             $exists = Article::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
                 ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
                     $query->where('module_scope', $this->moduleScope);
+                })
+                ->when($currentId, fn($query) => $query->where('id', '!=', $currentId))
+                ->exists();
+            $next++;
+        } while ($exists);
+
+        return $code;
+    }
+
+    private function nextStandardArticleCode($currentId = null): string
+    {
+        $lastId = (int)Article::query()
+            ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('module_scope', $this->moduleScope)
+                        ->orWhereNull('module_scope');
+                });
+            })
+            ->max('id');
+        $next = max(1, $lastId + 1);
+
+        do {
+            $code = 'ART-' . str_pad((string)$next, 6, '0', STR_PAD_LEFT);
+            $exists = Article::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
+                ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
+                    $query->where(function ($scope) {
+                        $scope->where('module_scope', $this->moduleScope)
+                            ->orWhereNull('module_scope');
+                    });
                 })
                 ->when($currentId, fn($query) => $query->where('id', '!=', $currentId))
                 ->exists();

@@ -2027,7 +2027,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
             </select>
           </div>
         )}
-        <InputFormGroup eRef={codeRef} label={isMagistrales ? 'Codigo' : 'Codigo de articulo'} col={isMagistrales ? 'col-md-4' : 'col-md-4'} required />
+        <InputFormGroup eRef={codeRef} label={isMagistrales ? 'Codigo' : 'Codigo de articulo'} col='col-md-4' readOnly placeholder='Se genera al guardar' />
         <InputFormGroup eRef={nameRef} label={isMagistrales ? 'Descripcion' : 'Nombre del articulo'} col={isMagistrales ? 'col-md-8' : 'col-md-4'} required />
 
         {isMagistrales && <>
