@@ -262,6 +262,8 @@ const EntryNotes = () => {
     return warehouses.find(warehouse => `${warehouse.id}` === `${warehouseId}`)?.name ?? ''
   }
 
+  const warehouseLocationLabel = (warehouseId, fallback = '') => getWarehouseName(warehouseId) || fallback || ''
+
   const refreshItemStock = async (uid, articleId, warehouseId) => {
     if (!uid) return
     if (!articleId || !warehouseId) {
@@ -352,6 +354,8 @@ const EntryNotes = () => {
 
     const detail = (data?.items ?? []).map(row => {
       const locationCode = locationCodeFromValue(row.location)
+      const rowWarehouseId = row.warehouse_id ? `${row.warehouse_id}` : warehouseId
+      const rowWarehouseLabel = row.warehouse?.name ?? data?.warehouse?.name ?? ''
       return ({
         uid: crypto.randomUUID(),
         batch_id: row.lot ?? row.batch_code ?? '',
@@ -368,11 +372,11 @@ const EntryNotes = () => {
         article_principle: row.article?.activePrinciple?.name ?? row.article?.active_principle?.name ?? '',
         article_unit: row.article?.unit?.symbol ?? row.article?.unit?.name ?? '',
         storage_lots: row.article?.storageLots ?? row.article?.storage_lots ?? [],
-        warehouse_id: row.warehouse_id ? `${row.warehouse_id}` : warehouseId,
+        warehouse_id: rowWarehouseId,
         stock: row.stock ?? 0,
         cost_unit: row.cost_unit ?? 0,
-        location: locationCode,
-        locations: locationCode ? [locationCode] : [],
+        location: storageContext ? locationCode : warehouseLocationLabel(rowWarehouseId, rowWarehouseLabel || locationCode),
+        locations: storageContext && locationCode ? [locationCode] : [],
         requested_quantity: row.requested_quantity ?? row.quantity ?? 0,
         received_quantity: row.received_quantity ?? row.quantity ?? 0,
         quantity: row.quantity ?? 0,
@@ -423,6 +427,8 @@ const EntryNotes = () => {
     formData.append('items', JSON.stringify(items.map(item => {
       const selectedLot = selectedStorageLotForItem(item)
       const location = locationCodeFromValue(Array.isArray(item.locations) ? item.locations[0] : item.location)
+      const warehouseId = item.warehouse_id || selectedWarehouseId || null
+      const warehouseLabel = warehouseLocationLabel(warehouseId, item.location)
       const receivedQuantity = storageContext ? item.received_quantity : item.quantity
       const costUnit = Number(item.cost_unit || 0)
       const lot = (item.lot || item.batch_code || selectedLot?.lot || '').toString().trim()
@@ -433,10 +439,10 @@ const EntryNotes = () => {
         storage_condition: item.storage_condition || selectedLot?.storage_condition || null,
         manufacturer_id: item.manufacturer_id || selectedLot?.manufacturer_id || null,
         article_id: item.article_id || null,
-        warehouse_id: item.warehouse_id || selectedWarehouseId || null,
+        warehouse_id: warehouseId,
         stock: item.stock,
         cost_unit: costUnit,
-        location: storageContext ? location : (item.location ?? '').toString().trim(),
+        location: storageContext ? location : warehouseLabel.toString().trim(),
         requested_quantity: storageContext ? item.requested_quantity : item.quantity,
         received_quantity: receivedQuantity,
         quantity: receivedQuantity,
@@ -483,7 +489,7 @@ const EntryNotes = () => {
     setSelectedBusinessId(businessId)
     setSelectedWarehouseId('')
     if (warehouseRef.current) $(warehouseRef.current).empty().trigger('change')
-    setItems(prev => prev.map(item => ({ ...item, warehouse_id: '', stock: 0 })))
+    setItems(prev => prev.map(item => ({ ...item, warehouse_id: '', stock: 0, location: storageContext ? item.location : '' })))
     await Promise.all([
       loadBranches(businessId, null),
       loadWarehouses(businessId),
@@ -492,8 +498,14 @@ const EntryNotes = () => {
 
   const onWarehouseChanged = async (e) => {
     const warehouseId = e.target.value || ''
+    const selected = $(e.target).select2('data')?.[0]
+    const warehouseLabel = warehouseLocationLabel(warehouseId, selected?.text)
     setSelectedWarehouseId(warehouseId)
-    const updatedItems = items.map(item => ({ ...item, warehouse_id: warehouseId }))
+    const updatedItems = items.map(item => ({
+      ...item,
+      warehouse_id: warehouseId,
+      location: storageContext ? item.location : warehouseLabel,
+    }))
     setItems(updatedItems)
     if (!warehouseId) return
     await refreshAllStocks(warehouseId, updatedItems)
@@ -516,6 +528,7 @@ const EntryNotes = () => {
     const batch = selected?.data ?? null
     const batchId = e.target.value || ''
     const currentItem = items.find(item => item.uid === uid)
+    const warehouseLabel = warehouseLocationLabel(selectedWarehouseId, currentItem?.location)
 
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
@@ -532,6 +545,7 @@ const EntryNotes = () => {
           article_principle: '',
           article_unit: '',
           stock: 0,
+          location: storageContext ? item.location : warehouseLabel,
         }
       }
       if (!batch) {
@@ -542,6 +556,7 @@ const EntryNotes = () => {
           batch_code: selected?.text ?? batchId,
           lot: selected?.text ?? batchId,
           warehouse_id: selectedWarehouseId || item.warehouse_id,
+          location: storageContext ? item.location : warehouseLabel,
         }
       }
 
@@ -559,6 +574,7 @@ const EntryNotes = () => {
         article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? item.article_principle,
         article_unit: article?.unit?.symbol ?? article?.unit?.name ?? item.article_unit,
         warehouse_id: selectedWarehouseId || item.warehouse_id,
+        location: storageContext ? item.location : warehouseLabel,
       }
     }))
 
@@ -884,6 +900,7 @@ const EntryNotes = () => {
   const onItemAdded = () => setItems(prev => [...prev, {
     ...emptyItem(),
     warehouse_id: selectedWarehouseId || '',
+    location: storageContext ? '' : warehouseLocationLabel(selectedWarehouseId),
   }])
   const onItemRemoved = (uid) => {
     setItems(prev => {
@@ -1628,7 +1645,7 @@ const EntryNotes = () => {
                       <td><input className='form-control form-control-sm bg-light text-muted' type='number' min='0' step='0.001' value={Number(item.stock || 0).toFixed(3)} readOnly tabIndex='-1' /></td>
                       <td><input className='form-control form-control-sm' value={getWarehouseName(item.warehouse_id || selectedWarehouseId)} readOnly /></td>
                       <td><input className='form-control form-control-sm' type='number' min='0' step='0.0001' value={item.cost_unit} onChange={(e) => onItemUpdated(item.uid, 'cost_unit', e.target.value)} /></td>
-                      <td><input className='form-control form-control-sm' value={item.location} onChange={(e) => onItemUpdated(item.uid, 'location', e.target.value)} /></td>
+                      <td><input className='form-control form-control-sm bg-light text-muted' value={item.location || warehouseLocationLabel(item.warehouse_id || selectedWarehouseId)} readOnly tabIndex='-1' /></td>
                       <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => onItemUpdated(item.uid, 'quantity', e.target.value)} /></td>
                       <td><input className='form-control form-control-sm' type='number' value={Number(item.total || 0).toFixed(2)} readOnly /></td>
                       <td>
