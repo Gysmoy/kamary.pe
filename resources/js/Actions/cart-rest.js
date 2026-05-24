@@ -1,4 +1,5 @@
-import { Cookies, Fetch } from "sode-extend-react";
+import { Fetch } from "sode-extend-react";
+import xsrfToken from "../Utils/xsrfToken";
 
 class CartRest {
     verify = async (items) => {
@@ -9,7 +10,7 @@ class CartRest {
                 headers: {
                     Accept: 'application/json',
                     'Content-Type': 'application/json',
-                    'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+                    'X-Xsrf-Token': xsrfToken()
                 },
                 body: JSON.stringify(items)
             })

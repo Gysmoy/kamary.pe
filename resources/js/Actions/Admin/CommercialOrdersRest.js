@@ -1,6 +1,7 @@
 import BasicRest from "../BasicRest";
-import { Cookies, Fetch } from "sode-extend-react";
+import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import xsrfToken from "../../Utils/xsrfToken";
 
 class CommercialOrdersRest extends BasicRest {
   path = 'admin/commercial-orders'
@@ -103,7 +104,7 @@ class CommercialOrdersRest extends BasicRest {
       const res = await fetch(`/api/${this.path}/${orderId}/delivery-evidence`, {
         method: 'POST',
         headers: {
-          'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+          'X-Xsrf-Token': xsrfToken()
         },
         body: request
       })

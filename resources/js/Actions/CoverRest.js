@@ -1,4 +1,5 @@
-import { Cookies, Fetch, Notify } from "sode-extend-react"
+import { Fetch, Notify } from "sode-extend-react"
+import xsrfToken from "../Utils/xsrfToken"
 
 class CoverRest {
   saveCover = async (file) => {
@@ -14,7 +15,7 @@ class CoverRest {
       const res = await fetch('/api/cover', {
         method: 'POST',
         headers: {
-          'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+          'X-Xsrf-Token': xsrfToken()
         },
         body: request
       })

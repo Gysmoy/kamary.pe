@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import BasicRest from "./BasicRest";
+import xsrfToken from "../Utils/xsrfToken";
 
 class ProfileRest extends BasicRest {
     path = 'admin/profile'
@@ -9,7 +10,7 @@ class ProfileRest extends BasicRest {
             const res = await fetch(`/api/${this.path}`, {
                 method: 'POST',
                 headers: {
-                    'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+                    'X-Xsrf-Token': xsrfToken()
                 },
                 body: request
             })

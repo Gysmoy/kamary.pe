@@ -1,6 +1,7 @@
 import BasicRest from "../BasicRest";
-import { Cookies, Fetch } from "sode-extend-react";
+import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import xsrfToken from "../../Utils/xsrfToken";
 
 class SalesReportRest extends BasicRest {
   path = 'admin/sales-report'
@@ -31,7 +32,7 @@ class SalesReportRest extends BasicRest {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+        'X-Xsrf-Token': xsrfToken()
       },
       body: JSON.stringify({ ...params, ...this.filters }),
       signal

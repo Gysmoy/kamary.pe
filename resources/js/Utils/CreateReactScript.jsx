@@ -1,9 +1,10 @@
 import { createInertiaApp } from '@inertiajs/react'
-import { Cookies, FetchParams } from 'sode-extend-react'
+import { FetchParams } from 'sode-extend-react'
 import Global from './Global';
 import 'swiper/css'
 import 'tippy.js/dist/tippy.css'
 import LaravelSession from './LaravelSession';
+import xsrfToken from './xsrfToken';
 
 const escapeHtml = (value) => `${value ?? ''}`.replace(/[&<>"']/g, (char) => ({
   '&': '&amp;',
@@ -87,7 +88,7 @@ const CreateReactScript = (render) => {
           headers: {
             Accept: 'application/json',
             'Content-Type': 'application/json',
-            'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+            'X-Xsrf-Token': xsrfToken()
           }
         })
         render(el, { ...properties, can, hasRole })

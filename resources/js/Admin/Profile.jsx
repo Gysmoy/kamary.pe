@@ -1,7 +1,7 @@
 import Tippy from '@tippyjs/react';
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Cookies, JSON } from 'sode-extend-react';
+import { JSON } from 'sode-extend-react';
 import 'tippy.js/dist/tippy.css';
 import BaseAdminto from '../Components/Adminto/Base';
 import InputFormGroup from '../Components/Adminto/form/InputFormGroup';
@@ -9,6 +9,7 @@ import CreateReactScript from '../Utils/CreateReactScript';
 import { toast } from 'sonner';
 import resizeImage from '../Utils/resizeImage';
 import ProfileRest from '../Actions/Admin/profile-rest';
+import xsrfToken from '../Utils/xsrfToken';
 
 const profileRest = new ProfileRest()
 
@@ -49,7 +50,7 @@ const Profile = (props) => {
       const res = await fetch('/api/admin/profile', {
         method: 'POST',
         headers: {
-          'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+          'X-Xsrf-Token': xsrfToken()
         },
         body: request
       })

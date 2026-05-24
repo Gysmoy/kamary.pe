@@ -1,6 +1,6 @@
 import BasicRest from "../BasicRest";
-import { Cookies } from "sode-extend-react";
 import { toast } from "sonner";
+import xsrfToken from "../../Utils/xsrfToken";
 
 class AccountsPayableRest extends BasicRest {
   path = 'admin/accounts-payable'
@@ -10,7 +10,7 @@ class AccountsPayableRest extends BasicRest {
       const res = await fetch(`/api/${this.path}/${id}/payments`, {
         method: 'POST',
         headers: {
-          'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+          'X-Xsrf-Token': xsrfToken()
         },
         body: request
       })

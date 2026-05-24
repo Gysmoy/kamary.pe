@@ -1,7 +1,8 @@
 import BasicRest from "../BasicRest";
-import { Cookies, Fetch } from "sode-extend-react";
+import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
 import { isMagistralesPath, isStoragePath } from "../../Utils/permissionScope";
+import xsrfToken from "../../Utils/xsrfToken";
 
 class InventoryRest extends BasicRest {
   path = isMagistralesPath()
@@ -28,7 +29,7 @@ class InventoryRest extends BasicRest {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+        'X-Xsrf-Token': xsrfToken()
       },
       body: JSON.stringify({
         ...params,
@@ -123,7 +124,7 @@ class InventoryRest extends BasicRest {
       const res = await fetch(`/api/admin/storage/inventory/${id}/import`, {
         method: 'POST',
         headers: {
-          'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+          'X-Xsrf-Token': xsrfToken()
         },
         body: formData
       })

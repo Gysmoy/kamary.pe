@@ -1,5 +1,6 @@
-import { Cookies, Fetch } from "sode-extend-react"
+import { Fetch } from "sode-extend-react"
 import { toast } from "sonner"
+import xsrfToken from "../Utils/xsrfToken"
 
 class ProfileRest {
   static save = async (request) => {
@@ -32,7 +33,7 @@ class ProfileRest {
       const res = await fetch('/api/profile', {
         method: 'POST',
         headers: {
-          'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+          'X-Xsrf-Token': xsrfToken()
         },
         body: request
       })

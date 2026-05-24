@@ -1,8 +1,9 @@
 import Tippy from "@tippyjs/react";
 import React, { useEffect, useRef } from "react"
-import { Cookies, JSON } from "sode-extend-react"
+import { JSON } from "sode-extend-react"
 import select2SpanishLanguage from "../../../Utils/select2SpanishLanguage"
 import { select2DropdownParentFor } from "../../../Utils/select2DropdownParent"
+import xsrfToken from "../../../Utils/xsrfToken"
 
 const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = false, disabled = false, dropdownParent, searchAPI, searchBy, selectBy = 'id', multiple = false, filter = null, onChange = () => { },
   templateResult,
@@ -34,7 +35,7 @@ const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = fa
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
-          'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+          'X-Xsrf-Token': xsrfToken()
         },
         type: "POST",
         quietMillis: 50,

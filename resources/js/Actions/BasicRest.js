@@ -1,5 +1,6 @@
-import { Cookies, Fetch } from "sode-extend-react"
+import { Fetch } from "sode-extend-react"
 import { toast } from "sonner"
+import xsrfToken from "../Utils/xsrfToken"
 
 class BasicRest {
   path = null
@@ -79,7 +80,7 @@ class BasicRest {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+        'X-Xsrf-Token': xsrfToken()
       },
       body: JSON.stringify(params),
       signal
@@ -95,7 +96,7 @@ class BasicRest {
         const res = await fetch(`/api/${this.path}`, {
           method: 'POST',
           headers: {
-            'X-Xsrf-Token': decodeURIComponent(Cookies.get('XSRF-TOKEN'))
+            'X-Xsrf-Token': xsrfToken()
           },
           body: request
         })
