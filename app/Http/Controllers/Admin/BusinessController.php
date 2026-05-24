@@ -584,6 +584,7 @@ class BusinessController extends BasicController
             '/admin/businesses',
             '/admin/billing-settings',
             '/admin/entry-note',
+            '/admin/articles',
             '/admin/warehouses',
         ]);
     }
