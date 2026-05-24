@@ -1411,7 +1411,7 @@ const EntryNotes = () => {
                     <th>Fecha de vencimiento</th>
                     <th>Articulo</th>
                     <th>U. medida</th>
-                    <th>Stock</th>
+                    <th>Stock actual</th>
                     <th>Fabricante</th>
                     <th>Condicion almacenamiento</th>
                     <th>Ubicacion</th>
@@ -1442,7 +1442,7 @@ const EntryNotes = () => {
                           <input className='form-control form-control-sm' value={item.article_label} readOnly />
                         </td>
                         <td style={{ minWidth: 110 }}><input className='form-control form-control-sm' value={item.article_unit} readOnly /></td>
-                        <td style={{ minWidth: 95 }}><input className='form-control form-control-sm' type='number' value={Number(item.stock || 0).toFixed(3)} readOnly /></td>
+                        <td style={{ minWidth: 110 }}><input className='form-control form-control-sm bg-light text-muted' type='number' value={Number(item.stock || 0).toFixed(3)} readOnly tabIndex='-1' /></td>
                         <td style={{ minWidth: 170 }}><input className='form-control form-control-sm' value={manufacturerLabel} readOnly /></td>
                         <td style={{ minWidth: 210 }}><input className='form-control form-control-sm' value={storageCondition} readOnly /></td>
                         <td style={{ minWidth: 240 }}>
@@ -1585,7 +1585,7 @@ const EntryNotes = () => {
                   <th>Articulo</th>
                   <th>Laboratorio | Principio activo</th>
                   <th>Unidad</th>
-                  <th>Stock</th>
+                  <th>Stock actual</th>
                   <th>Almacen</th>
                   <th>P. Costo Unit.</th>
                   <th>Ubicacion</th>
@@ -1625,7 +1625,7 @@ const EntryNotes = () => {
                       <td><input className='form-control form-control-sm' value={item.article_label} readOnly /></td>
                       <td><small>{articleExtra}</small></td>
                       <td><small>{unitLabel}</small></td>
-                      <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={Number(item.stock || 0).toFixed(3)} readOnly /></td>
+                      <td><input className='form-control form-control-sm bg-light text-muted' type='number' min='0' step='0.001' value={Number(item.stock || 0).toFixed(3)} readOnly tabIndex='-1' /></td>
                       <td><input className='form-control form-control-sm' value={getWarehouseName(item.warehouse_id || selectedWarehouseId)} readOnly /></td>
                       <td><input className='form-control form-control-sm' type='number' min='0' step='0.0001' value={item.cost_unit} onChange={(e) => onItemUpdated(item.uid, 'cost_unit', e.target.value)} /></td>
                       <td><input className='form-control form-control-sm' value={item.location} onChange={(e) => onItemUpdated(item.uid, 'location', e.target.value)} /></td>
