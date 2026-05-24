@@ -55,6 +55,10 @@ export const syncSelect2 = (root = document) => {
   if (!$?.fn?.select2 || !root?.querySelectorAll) return
 
   root
+    .querySelectorAll('select[data-no-select2], select[data-select2-managed], select.swal2-select')
+    .forEach(destroyAutoSelect2)
+
+  root
     .querySelectorAll('select:not([data-no-select2]):not([data-select2-managed]):not(.swal2-select)')
     .forEach((select) => {
       if (shouldSkipSelect2(select)) return

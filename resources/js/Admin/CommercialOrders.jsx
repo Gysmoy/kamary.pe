@@ -185,6 +185,12 @@ const clearSelectValue = (ref) => {
   select.trigger(select.data('select2') ? 'change.select2' : 'change')
 }
 const presentationEmptyLabel = (item) => item.article_id ? 'Unidad base' : 'Sin presentacion'
+const presentationOptionLabel = (presentation, item) => {
+  const name = presentation?.name || 'Presentacion'
+  const units = formatQuantity(presentation?.units || 1)
+  const unit = item?.article_unit ? ` ${item.article_unit}` : ' unidad(es) base'
+  return `${name} (${units}${unit})`
+}
 
 const isTaxableDocumentType = (documentType) => ['Factura', 'Boleta'].includes(normalizeDocumentType(documentType))
 
@@ -1241,7 +1247,14 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     const currentItem = items.find(item => item.uid === uid)
     if (!currentItem) return
 
-    const nextState = mapItemTotals({ ...currentItem, [field]: value })
+    const selectedPresentation = field === 'presentation_id'
+      ? currentItem.presentations.find(row => `${row.id}` === `${value}`)
+      : null
+    const nextState = mapItemTotals({
+      ...currentItem,
+      [field]: value,
+      ...(field === 'presentation_id' ? { presentation_units: Number(selectedPresentation?.units || 1) } : {}),
+    })
     if (field === 'price_unit') {
       nextState.price_source = 'manual'
       nextState.price_list_code = ''
@@ -2100,6 +2113,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                         {item.presentations.length > 0 && (
                           <select
                             className='form-control mt-1'
+                            data-no-select2='true'
                             value={item.presentation_id}
                             disabled={!item.article_id}
                             onChange={(e) => onItemFieldChanged(item.uid, 'presentation_id', e.target.value)}
@@ -2107,7 +2121,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                             <option value=''>{presentationEmptyLabel(item)}</option>
                             {item.presentations.map(presentation => (
                               <option key={`commercial-order-presentation-${item.uid}-${presentation.id}`} value={presentation.id}>
-                                {`${presentation.name} (${presentation.units})`}
+                                {presentationOptionLabel(presentation, item)}
                               </option>
                             ))}
                           </select>
