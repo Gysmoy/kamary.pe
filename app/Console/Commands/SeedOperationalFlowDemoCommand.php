@@ -284,9 +284,24 @@ class SeedOperationalFlowDemoCommand extends Command
 
     private function ensureDemoContext(): array
     {
-        $business = DB::table('businesses')
-            ->when(Schema::hasColumn('businesses', 'business_key'), fn($query) => $query->where('business_key', 'kamary_peru'))
-            ->first();
+        $business = null;
+
+        if (Schema::hasColumn('businesses', 'business_key')) {
+            $business = DB::table('businesses')
+                ->where('business_key', 'kamary_peru')
+                ->first();
+        }
+
+        if (!$business) {
+            $business = DB::table('businesses')
+                ->whereNotNull('status')
+                ->where(function ($query) {
+                    $query->where('name', 'like', '%Kamary Peru%')
+                        ->orWhere('trade_name', 'like', '%Kamary Peru%');
+                })
+                ->orderBy('id')
+                ->first();
+        }
 
         if (!$business) {
             $business = DB::table('businesses')
@@ -310,11 +325,14 @@ class SeedOperationalFlowDemoCommand extends Command
         }
 
         $this->updateRow('businesses', (int) $business->id, [
+            'business_key' => 'kamary_peru',
+            'name' => $business->name ?: 'Kamary Peru',
             'status' => true,
             'tax_number' => $business->tax_number ?? '20600000001',
-            'trade_name' => $business->trade_name ?? $business->name,
+            'trade_name' => $business->trade_name ?? $business->name ?? 'Kamary Peru',
             'updated_by' => $this->userId,
         ]);
+        $business = DB::table('businesses')->find($business->id);
 
         $branch = DB::table('business_branches')
             ->where('business_id', $business->id)
