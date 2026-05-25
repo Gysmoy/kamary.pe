@@ -10,7 +10,7 @@ const commercialOrdersRest = new CommercialOrdersRest()
 const boardStatuses = [
   {
     value: 'pending',
-    title: 'En produccion',
+    title: 'En cola',
     description: 'Pedido en cola para ser preparado.',
     accent: '#0acf97',
     action: 'Preparar',
