@@ -348,10 +348,6 @@ const DriverRoutes = () => {
             <label className='form-label'>Foto</label>
             <input ref={evidenceFileRef} type='file' accept='image/*' capture='environment' className='form-control' onChange={onEvidenceFileChange} />
           </div>
-          <div className='col-md-6 mb-3'>
-            <label className='form-label'>Enlace evidencia</label>
-            <input className='form-control' value={evidenceForm.evidence_url} onChange={(event) => onEvidenceFieldChange('evidence_url', event.target.value)} />
-          </div>
           <div className='col-md-3 mb-3'>
             <label className='form-label'>Latitud</label>
             <input className='form-control' value={evidenceForm.latitude} onChange={(event) => onEvidenceFieldChange('latitude', event.target.value)} />

@@ -1093,10 +1093,6 @@ const Dispatches = () => {
           <input ref={evidenceFileRef} className='form-control' type='file' accept='image/png,image/jpeg,image/webp,image/gif' capture='environment' onChange={onDispatchEvidenceFileChange} />
         </div>
         <div className='col-md-6 mb-3'>
-          <label className='form-label'>Enlace evidencia</label>
-          <input className='form-control' value={evidenceForm.evidence_url} onChange={(e) => onEvidenceFieldChange('evidence_url', e.target.value)} />
-        </div>
-        <div className='col-md-6 mb-3'>
           <label className='form-label'>Latitud</label>
           <input className='form-control' value={evidenceForm.latitude} onChange={(e) => onEvidenceFieldChange('latitude', e.target.value)} />
         </div>
