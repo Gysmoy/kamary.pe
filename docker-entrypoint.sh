@@ -33,8 +33,10 @@ mkdir -p storage/framework/cache/data
 mkdir -p bootstrap/cache
 touch storage/logs/laravel.log
 
-chown -R www-data:www-data storage bootstrap/cache
-chmod -R 777 storage bootstrap/cache
+chown www-data:www-data storage storage/app bootstrap/cache
+chmod 775 storage storage/app bootstrap/cache
+chown -R www-data:www-data storage/logs storage/framework bootstrap/cache
+chmod -R ug+rwX storage/logs storage/framework bootstrap/cache
 
 # 1. Run Migrations
 run_artisan_with_retries "Running migrations" migrate --force || true

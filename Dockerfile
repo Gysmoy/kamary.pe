@@ -23,7 +23,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 
 # 5. Copy application code
-COPY . /var/www/html
+COPY --chown=www-data:www-data . /var/www/html
 
 # 5.1 Prepare Laravel runtime directories before Composer scripts run
 RUN mkdir -p \
@@ -36,10 +36,6 @@ RUN mkdir -p \
 # 6. Install PHP dependencies
 # RUN composer install --no-interaction --no-dev --optimize-autoloader
 RUN composer install --no-interaction --optimize-autoloader
-
-# 7. Set permissions
-RUN chmod -R 777 /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
 # 8. Copy and set entrypoint
 COPY docker-entrypoint.sh /usr/local/bin/
