@@ -10,7 +10,6 @@
 /storage/framework/sessions
 /storage/framework/views
 /storage/framework/testing
-/storage/app/storage-demo-backups
 /public/hot
 /.env
 /.env.*
