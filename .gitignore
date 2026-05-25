@@ -24,4 +24,5 @@ package-lock.json
 /.vscode
 /storage/profile
 /storage/public
+/storage/app/storage-demo-backups/
 /public/uploads

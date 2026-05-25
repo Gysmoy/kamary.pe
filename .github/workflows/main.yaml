@@ -13,6 +13,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install SSH client tools
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
       - name: Execute Docker Commands on Server
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
@@ -76,6 +79,7 @@ jobs:
             docker image prune -f
             docker compose up -d --build
             docker compose exec --interactive=false -T app php artisan migrate --force
+            docker compose exec --interactive=false -T app sh -lc 'if [ ! -f storage/app/.storage-service-demo-seeded-v1 ]; then php artisan kamary:seed-storage-demo --force --records=10 && mkdir -p storage/app && date -Is > storage/app/.storage-service-demo-seeded-v1; else echo "Storage service demo data already seeded"; fi'
             docker compose exec --interactive=false -T app php artisan optimize:clear
             
             curl -X POST https://devex.pe/free/deployments \

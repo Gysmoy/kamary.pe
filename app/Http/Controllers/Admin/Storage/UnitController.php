@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 
 class UnitController extends BaseUnitController
 {
+    protected string $moduleScope = 'storage';
+
     public function setReactViewProperties(Request $request)
     {
         return [
