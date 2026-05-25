@@ -800,7 +800,7 @@ const Dispatches = () => {
         {
           dataField: 'code',
           caption: 'Codigo',
-          width: 120,
+          width: 175,
           cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar despacho')
         },
         { dataField: 'scheduled_date', caption: 'Fecha', dataType: 'date', width: 110 },
