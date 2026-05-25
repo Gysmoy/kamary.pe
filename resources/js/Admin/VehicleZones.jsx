@@ -13,6 +13,7 @@ import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
 
 const vehiclesRest = new VehiclesRest()
 const zonesRest = new ZonesRest()
+const zonesGridRest = new ZonesRest()
 const VIEW_FILTERS = [
   { key: 'all', label: 'Todo' },
   { key: 'zones', label: 'Solo zonas' },
@@ -137,7 +138,7 @@ const VehicleZones = () => {
   const combinedRest = useMemo(() => ({
     paginate: async (params = {}) => {
       const [zoneData, vehicleData] = await Promise.all([
-        zonesRest.paginate({ take: 1000, skip: 0, isLoadingAll: true }),
+        zonesGridRest.paginate({ take: 1000, skip: 0, isLoadingAll: true }),
         vehiclesRest.paginate({ take: 1000, skip: 0, isLoadingAll: true }),
       ])
 
