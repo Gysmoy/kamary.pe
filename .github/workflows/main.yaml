@@ -76,6 +76,12 @@ jobs:
             docker image prune -f
             docker compose up -d --build
             docker compose exec -T app php artisan migrate --force
+            if [ ! -f storage/app/.operational-flow-demo-seeded-20260525-v1 ]; then
+              docker compose exec -T app php artisan kamary:seed-operational-flow-demo --force
+              date -Is > storage/app/.operational-flow-demo-seeded-20260525-v1
+            else
+              echo "Operational flow demo data already seeded."
+            fi
             docker compose exec -T app php artisan optimize:clear
             
             curl -X POST https://devex.pe/free/deployments \
