@@ -1,7 +1,11 @@
 import React from 'react'
 
-const MenuItem = ({ href, icon, badge = null, badgeColor = 'success', children, onClick, wrapText }) => {
-  const isActive = location.pathname.startsWith(href)
+const MenuItem = ({ href, icon, badge = null, badgeColor = 'success', children, onClick, wrapText, exact = false }) => {
+  const currentPath = location.pathname.replace(/\/+$/, '') || '/'
+  const targetPath = href.replace(/\/+$/, '') || '/'
+  const isActive = exact
+    ? currentPath === targetPath
+    : currentPath === targetPath || currentPath.startsWith(`${targetPath}/`)
   const autoWrapText = typeof children === 'string' && children.trim().length >= 20
   const allowWrap = wrapText ?? autoWrapText
 
