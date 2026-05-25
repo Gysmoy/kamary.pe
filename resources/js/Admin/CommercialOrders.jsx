@@ -1660,6 +1660,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
           width: 170,
           cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar pedido')
         },
+        { dataField: 'external_source', caption: 'Origen externo', visible: false, showInColumnChooser: false },
         { dataField: 'external_order_id', caption: 'Pedido VTEX', width: 150, visible: !!externalSource },
         { dataField: 'external_ecommerce', caption: 'Ecommerce', width: 140, visible: !!externalSource },
         { dataField: 'external_channel', caption: 'Canal', width: 130, visible: !!externalSource },
