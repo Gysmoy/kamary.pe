@@ -7,16 +7,21 @@ class CommercialOrdersRest extends BasicRest {
   path = 'admin/commercial-orders'
   externalSource = null
 
-  paginate = async (params = {}) => {
-    if (!this.externalSource) return super.paginate(params)
+  constructor() {
+    super()
+    const basePaginate = this.paginate.bind(this)
 
-    const externalSourceFilter = ['external_source', '=', this.externalSource]
-    return super.paginate({
-      ...params,
-      filter: params?.filter
-        ? [externalSourceFilter, 'and', params.filter]
-        : externalSourceFilter,
-    })
+    this.paginate = async (params = {}) => {
+      if (!this.externalSource) return basePaginate(params)
+
+      const externalSourceFilter = ['external_source', '=', this.externalSource]
+      return basePaginate({
+        ...params,
+        filter: params?.filter
+          ? [externalSourceFilter, 'and', params.filter]
+          : externalSourceFilter,
+      })
+    }
   }
 
   getBranchesByBusiness = async (businessId) => {

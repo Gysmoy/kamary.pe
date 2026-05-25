@@ -52,8 +52,8 @@
       "_Base-Swikytyn.js"
     ]
   },
-  "_CommercialOrdersRest-Bvd5TOuS.js": {
-    "file": "assets/CommercialOrdersRest-Bvd5TOuS.js",
+  "_CommercialOrdersRest-2yGI8L6o.js": {
+    "file": "assets/CommercialOrdersRest-2yGI8L6o.js",
     "name": "CommercialOrdersRest",
     "imports": [
       "_BasicRest-CMSnDGzV.js",
@@ -626,7 +626,7 @@
     ]
   },
   "resources/js/Admin/CommercialOrders.jsx": {
-    "file": "assets/CommercialOrders-CXx174A7.js",
+    "file": "assets/CommercialOrders-Bj359DpS.js",
     "name": "CommercialOrders",
     "src": "resources/js/Admin/CommercialOrders.jsx",
     "isEntry": true,
@@ -641,7 +641,7 @@
       "_SetSelectValue-CKWqCoeT.js",
       "_SelectFormGroup-LO6rYEh7.js",
       "_TextareaFormGroup-CpI74Wxz.js",
-      "_CommercialOrdersRest-Bvd5TOuS.js",
+      "_CommercialOrdersRest-2yGI8L6o.js",
       "_ReferralGuidesRest-Ybz9Ozy1.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_magistralesRecordPdf-2jaC5WPh.js",
@@ -708,7 +708,7 @@
     ]
   },
   "resources/js/Admin/Dispatches.jsx": {
-    "file": "assets/Dispatches-DfPy-PEK.js",
+    "file": "assets/Dispatches-D8JvKiW4.js",
     "name": "Dispatches",
     "src": "resources/js/Admin/Dispatches.jsx",
     "isEntry": true,
@@ -718,7 +718,7 @@
       "_Table-D9EeLIbA.js",
       "_Modal-CqJvtwJb.js",
       "_DxButton-CsjWvhyj.js",
-      "_CommercialOrdersRest-Bvd5TOuS.js",
+      "_CommercialOrdersRest-2yGI8L6o.js",
       "_DispatchesRest-CdGUgJjz.js",
       "_ReferralGuidesRest-Ybz9Ozy1.js",
       "_ZonesRest-D153Ifl0.js",
@@ -733,7 +733,7 @@
     ]
   },
   "resources/js/Admin/DriverRoutes.jsx": {
-    "file": "assets/DriverRoutes-II74TIuO.js",
+    "file": "assets/DriverRoutes-CUX9Ggkd.js",
     "name": "DriverRoutes",
     "src": "resources/js/Admin/DriverRoutes.jsx",
     "isEntry": true,
@@ -742,7 +742,7 @@
       "_Base-CU7D3bVu.js",
       "_Modal-CqJvtwJb.js",
       "_DispatchesRest-CdGUgJjz.js",
-      "_CommercialOrdersRest-Bvd5TOuS.js",
+      "_CommercialOrdersRest-2yGI8L6o.js",
       "_statusLabels-BIn8QltQ.js",
       "_magistralesRecordPdf-2jaC5WPh.js",
       "_BasicRest-CMSnDGzV.js",
@@ -1405,14 +1405,14 @@
     ]
   },
   "resources/js/Admin/Picking.jsx": {
-    "file": "assets/Picking-By6qhkCZ.js",
+    "file": "assets/Picking-DX2NwZTK.js",
     "name": "Picking",
     "src": "resources/js/Admin/Picking.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-CY9by_Tt.js",
       "_Base-CU7D3bVu.js",
-      "_CommercialOrdersRest-Bvd5TOuS.js",
+      "_CommercialOrdersRest-2yGI8L6o.js",
       "_BasicRest-CMSnDGzV.js"
     ]
   },
