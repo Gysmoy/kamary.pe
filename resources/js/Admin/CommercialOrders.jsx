@@ -555,6 +555,8 @@ const buildTrackingRows = (order) => {
 }
 
 const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null, pageTitle = 'Pedidos comerciales' }) => {
+  commercialOrdersRest.externalSource = externalSource || null
+
   const gridRef = useRef()
   const modalRef = useRef()
   const trackingModalRef = useRef()
@@ -1631,7 +1633,6 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       gridRef={gridRef}
       title={pageTitle}
       rest={commercialOrdersRest}
-      filterValue={externalSource ? ['external_source', '=', externalSource] : null}
       toolBar={(container) => {
         container.unshift({
           widget: 'dxButton', location: 'after',

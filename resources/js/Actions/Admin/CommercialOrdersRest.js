@@ -5,6 +5,19 @@ import xsrfToken from "../../Utils/xsrfToken";
 
 class CommercialOrdersRest extends BasicRest {
   path = 'admin/commercial-orders'
+  externalSource = null
+
+  paginate = async (params = {}) => {
+    if (!this.externalSource) return super.paginate(params)
+
+    const externalSourceFilter = ['external_source', '=', this.externalSource]
+    return super.paginate({
+      ...params,
+      filter: params?.filter
+        ? [externalSourceFilter, 'and', params.filter]
+        : externalSourceFilter,
+    })
+  }
 
   getBranchesByBusiness = async (businessId) => {
     if (!businessId) return []
