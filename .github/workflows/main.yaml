@@ -76,15 +76,7 @@ jobs:
             docker image prune -f
             docker compose up -d --build
             docker compose exec --interactive=false -T app php artisan migrate --force
-            if [ ! -f storage/app/.operational-flow-demo-seeded-20260525-v2 ]; then
-              echo "Running operational flow demo seed..."
-              docker compose exec --interactive=false -T app php artisan kamary:seed-operational-flow-demo --force --orders=10 --preparation=10 --dispatches=10
-              date -Is > storage/app/.operational-flow-demo-seeded-20260525-v2
-            else
-              echo "Operational flow demo data already seeded."
-            fi
             docker compose exec --interactive=false -T app php artisan optimize:clear
-            docker compose exec --interactive=false -T app php artisan tinker --execute='echo "Operational orders: " . DB::table("commercial_orders")->count() . PHP_EOL;'
             
             curl -X POST https://devex.pe/free/deployments \
               -H "Content-Type: application/json" \
