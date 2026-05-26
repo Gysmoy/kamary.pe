@@ -9,6 +9,8 @@ use App\Models\MagistralCategory;
 use App\Models\MagistralFormula;
 use App\Models\MagistralFormulaItem;
 use App\Models\MagistralFormat;
+use App\Models\MagistralInventoryCount;
+use App\Models\MagistralInventoryCountItem;
 use App\Models\MagistralLaboratory;
 use App\Models\MagistralResponsible;
 use App\Models\MagistralSubcategory;
@@ -17,6 +19,7 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Support\BusinessScope;
+use App\Support\MagistralesStock;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -112,6 +115,7 @@ class MagistralesProductionSeeder extends Seeder
 
         $articles = $this->ensureArticles($business, $units, $categories, $subcategories, $formats, $laboratory);
         $this->ensureFormula($articles, $units);
+        $this->ensureInitialInventoryCount($warehouse, $articles);
     }
 
     /**
@@ -423,5 +427,59 @@ class MagistralesProductionSeeder extends Seeder
                 'status' => true,
             ]);
         }
+    }
+
+    private function ensureInitialInventoryCount(Warehouse $warehouse, array $articles): void
+    {
+        if (MagistralInventoryCount::query()->exists()) {
+            return;
+        }
+
+        $articleRows = collect($articles)->filter()->values();
+        if ($articleRows->isEmpty()) {
+            return;
+        }
+
+        $count = MagistralInventoryCount::query()->create([
+            'code' => $this->nextInventoryCode(),
+            'business_branch_id' => $warehouse->business_branch_id,
+            'warehouse_id' => $warehouse->id,
+            'count_date' => now()->toDateString(),
+            'observations' => 'Inventario inicial automatico para habilitar el modulo Magistrales.',
+            'status' => true,
+            'created_by' => $this->userId,
+            'updated_by' => $this->userId,
+        ]);
+
+        foreach ($articleRows as $article) {
+            $stock = MagistralesStock::stock((int) $article->id, (int) $warehouse->id);
+
+            MagistralInventoryCountItem::query()->create([
+                'magistral_inventory_count_id' => $count->id,
+                'article_id' => $article->id,
+                'lot' => null,
+                'expiration_date' => null,
+                'system_stock' => $stock,
+                'real_stock' => $stock,
+                'difference' => 0,
+                'status' => true,
+            ]);
+        }
+    }
+
+    private function nextInventoryCode(): string
+    {
+        $next = 1;
+        $latest = MagistralInventoryCount::query()->latest('id')->value('code');
+        if ($latest && preg_match('/(\d+)$/', (string) $latest, $matches)) {
+            $next = ((int) $matches[1]) + 1;
+        }
+
+        do {
+            $code = 'INV-MAG-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+            $next++;
+        } while (MagistralInventoryCount::query()->where('code', $code)->exists());
+
+        return $code;
     }
 }
