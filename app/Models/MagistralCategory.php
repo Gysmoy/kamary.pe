@@ -13,6 +13,13 @@ class MagistralCategory extends Model
         'GINECOLOGIA',
         'INSUMOS',
         'ANDROLOGIA',
+        'DERMATOLOGIA',
+        'PEDIATRIA',
+        'GASTROENTEROLOGIA',
+        'DOLOR',
+        'COSMETICA',
+        'CAPSULAS',
+        'NUTRICION',
     ];
 
     protected $table = 'magistral_categories';

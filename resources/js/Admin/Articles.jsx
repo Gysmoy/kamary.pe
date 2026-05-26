@@ -162,6 +162,13 @@ const allowedMagistralCategoryLabels = [
   'GINECOLOGIA',
   'INSUMOS',
   'ANDROLOGIA',
+  'DERMATOLOGIA',
+  'PEDIATRIA',
+  'GASTROENTEROLOGIA',
+  'DOLOR',
+  'COSMETICA',
+  'CAPSULAS',
+  'NUTRICION',
 ]
 
 const magistralPresentationOptions = [
