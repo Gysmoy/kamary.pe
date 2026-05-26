@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Business;
+use App\Models\BusinessBranch;
 use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Builder;
 use RuntimeException;
@@ -36,6 +38,9 @@ class MagistralesWarehouse
 
         $warehouses = self::scopedQuery()->orderBy('warehouses.id')->get();
         if ($warehouses->count() === 1) return $warehouses->first();
+
+        $warehouse = self::ensureWarehouse();
+        if ($warehouse) return $warehouse;
 
         throw new RuntimeException(
             'No se pudo resolver el almacen fijo de Magistrales. Configura MAGISTRALES_DEFAULT_WAREHOUSE_ID o MAGISTRALES_DEFAULT_WAREHOUSE_NAME.'
@@ -107,5 +112,51 @@ class MagistralesWarehouse
     private static function configuredWarehouseName(): string
     {
         return trim((string) config('magistrales.default_warehouse_name', ''));
+    }
+
+    public static function ensureWarehouse(): ?Warehouse
+    {
+        try {
+            $business = Business::query()->updateOrCreate(
+                ['business_key' => BusinessScope::KAMARY_MEDICALS],
+                [
+                    'name' => 'Kamary Medicals',
+                    'trade_name' => 'Kamary Medicals',
+                    'description' => 'Unidad operativa para formulas magistrales.',
+                    'status' => true,
+                ]
+            );
+
+            $branch = BusinessBranch::query()->updateOrCreate(
+                [
+                    'business_id' => $business->id,
+                    'name' => 'Principal Magistrales',
+                ],
+                [
+                    'establishment_code' => '0000',
+                    'ubigeo' => '150101',
+                    'address' => 'Calle Leoncio Prado 830, Urb. La Vina, San Luis, Lima',
+                    'email' => 'magistrales@kamarymedicals.pe',
+                    'telephone' => '014856320',
+                    'series_factura' => 'FM01',
+                    'series_boleta' => 'BM01',
+                    'series_nota_credito' => 'FCM1',
+                    'status' => true,
+                ]
+            );
+
+            return Warehouse::query()->updateOrCreate(
+                [
+                    'business_branch_id' => $branch->id,
+                    'name' => self::configuredWarehouseName() ?: 'Almacen Magistrales Principal',
+                ],
+                [
+                    'description' => 'Almacen fijo del modulo Magistrales.',
+                    'status' => true,
+                ]
+            );
+        } catch (\Throwable $th) {
+            return null;
+        }
     }
 }

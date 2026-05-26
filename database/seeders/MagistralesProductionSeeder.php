@@ -2,22 +2,16 @@
 
 namespace Database\Seeders;
 
-use App\Models\AccountsPayable;
 use App\Models\Article;
 use App\Models\Business;
 use App\Models\BusinessBranch;
 use App\Models\MagistralCategory;
+use App\Models\MagistralFormula;
+use App\Models\MagistralFormulaItem;
 use App\Models\MagistralFormat;
-use App\Models\MagistralIncome;
-use App\Models\MagistralInventoryCount;
 use App\Models\MagistralLaboratory;
-use App\Models\MagistralOutput;
-use App\Models\MagistralProductionOrder;
 use App\Models\MagistralResponsible;
-use App\Models\MagistralSale;
 use App\Models\MagistralSubcategory;
-use App\Models\PurchaseOrder;
-use App\Models\PurchaseReceipt;
 use App\Models\Supplier;
 use App\Models\Unit;
 use App\Models\User;
@@ -40,76 +34,12 @@ class MagistralesProductionSeeder extends Seeder
         $this->userId = User::query()->orderBy('id')->value('id');
 
         DB::transaction(function () {
-            $this->purgeExistingMagistralesData();
-
             $business = $this->ensureBusiness();
             $branch = $this->ensureBranch($business);
-            $this->ensureWarehouse($branch);
+            $warehouse = $this->ensureWarehouse($branch);
+
+            $this->ensureBaseCatalog($business, $warehouse);
         });
-    }
-
-    private function purgeExistingMagistralesData(): void
-    {
-        MagistralInventoryCount::query()->delete();
-        MagistralSale::query()->delete();
-        MagistralOutput::query()->delete();
-        MagistralProductionOrder::query()->delete();
-        MagistralIncome::query()->delete();
-
-        $purchaseOrderIds = PurchaseOrder::query()
-            ->where('module_scope', 'magistrales')
-            ->pluck('id');
-        if ($purchaseOrderIds->isNotEmpty()) {
-            AccountsPayable::query()
-                ->where('source_type', 'purchase_order')
-                ->whereIn('source_id', $purchaseOrderIds)
-                ->delete();
-            PurchaseOrder::query()->whereIn('id', $purchaseOrderIds)->delete();
-        }
-
-        $articleIds = Article::query()
-            ->where('module_scope', 'magistrales')
-            ->pluck('id');
-        if ($articleIds->isNotEmpty()) {
-            Article::query()->whereIn('id', $articleIds)->delete();
-        }
-
-        $supplierIds = Supplier::query()
-            ->where('module_scope', 'magistrales')
-            ->pluck('id');
-        if ($supplierIds->isNotEmpty()) {
-            $purchaseReceiptIds = PurchaseReceipt::query()
-                ->whereIn('supplier_id', $supplierIds)
-                ->pluck('id');
-            if ($purchaseReceiptIds->isNotEmpty()) {
-                AccountsPayable::query()
-                    ->where('source_type', 'purchase_receipt')
-                    ->whereIn('source_id', $purchaseReceiptIds)
-                    ->delete();
-                PurchaseReceipt::query()->whereIn('id', $purchaseReceiptIds)->delete();
-            }
-
-            $supplierPurchaseOrderIds = PurchaseOrder::query()
-                ->whereIn('supplier_id', $supplierIds)
-                ->pluck('id');
-            if ($supplierPurchaseOrderIds->isNotEmpty()) {
-                AccountsPayable::query()
-                    ->where('source_type', 'purchase_order')
-                    ->whereIn('source_id', $supplierPurchaseOrderIds)
-                    ->delete();
-                PurchaseOrder::query()->whereIn('id', $supplierPurchaseOrderIds)->delete();
-            }
-
-            AccountsPayable::query()->whereIn('supplier_id', $supplierIds)->delete();
-            Supplier::query()->whereIn('id', $supplierIds)->delete();
-        }
-
-        MagistralResponsible::query()->delete();
-        MagistralFormat::query()->delete();
-        MagistralSubcategory::query()->delete();
-        MagistralCategory::query()->delete();
-        MagistralLaboratory::query()->delete();
-        Unit::query()->where('module_scope', 'magistrales')->delete();
     }
 
     private function ensureBusiness(): Business
@@ -138,7 +68,7 @@ class MagistralesProductionSeeder extends Seeder
             [
                 'establishment_code' => '0000',
                 'ubigeo' => '150101',
-                'address' => 'Calle Leoncio Prado 830, Urb. La Viña, San Luis, Lima',
+                'address' => 'Calle Leoncio Prado 830, Urb. La Vina, San Luis, Lima',
                 'email' => 'magistrales@kamarymedicals.pe',
                 'telephone' => '014856320',
                 'facturador_sync_status' => 'pending',
@@ -167,5 +97,327 @@ class MagistralesProductionSeeder extends Seeder
                 'updated_by' => $this->userId,
             ]
         );
+    }
+
+    private function ensureBaseCatalog(Business $business, Warehouse $warehouse): void
+    {
+        $units = $this->ensureUnits();
+        $categories = $this->ensureCategories($warehouse);
+        $subcategories = $this->ensureSubcategories($categories);
+        $formats = $this->ensureFormats();
+        $laboratory = $this->ensureLaboratory();
+
+        $this->ensureResponsible();
+        $this->ensureSupplier();
+
+        $articles = $this->ensureArticles($business, $units, $categories, $subcategories, $formats, $laboratory);
+        $this->ensureFormula($articles, $units);
+    }
+
+    /**
+     * Unit symbols are globally unique, so Magistrales uses its own symbols
+     * instead of reclassifying shared commercial units.
+     */
+    private function ensureUnits(): array
+    {
+        return [
+            'UND' => Unit::query()->updateOrCreate(
+                ['symbol' => 'MAG-UND'],
+                [
+                    'module_scope' => 'magistrales',
+                    'name' => 'Unidad Magistral',
+                    'status' => true,
+                    'created_by' => $this->userId,
+                    'updated_by' => $this->userId,
+                ]
+            ),
+            'G' => Unit::query()->updateOrCreate(
+                ['symbol' => 'MAG-G'],
+                [
+                    'module_scope' => 'magistrales',
+                    'name' => 'Gramo Magistral',
+                    'status' => true,
+                    'created_by' => $this->userId,
+                    'updated_by' => $this->userId,
+                ]
+            ),
+            'ML' => Unit::query()->updateOrCreate(
+                ['symbol' => 'MAG-ML'],
+                [
+                    'module_scope' => 'magistrales',
+                    'name' => 'Mililitro Magistral',
+                    'status' => true,
+                    'created_by' => $this->userId,
+                    'updated_by' => $this->userId,
+                ]
+            ),
+        ];
+    }
+
+    private function ensureCategories(Warehouse $warehouse): array
+    {
+        $categories = [];
+
+        foreach ([
+            ['code' => 'MAG-CAT-001', 'description' => 'GINECOLOGIA'],
+            ['code' => 'MAG-CAT-002', 'description' => 'INSUMOS'],
+            ['code' => 'MAG-CAT-003', 'description' => 'ANDROLOGIA'],
+        ] as $category) {
+            $categories[$category['description']] = MagistralCategory::query()->updateOrCreate(
+                ['code' => $category['code']],
+                [
+                    'description' => $category['description'],
+                    'warehouse_id' => $warehouse->id,
+                    'sale_material' => $category['description'] !== 'INSUMOS',
+                    'status' => true,
+                    'created_by' => $this->userId,
+                    'updated_by' => $this->userId,
+                ]
+            );
+        }
+
+        MagistralCategory::query()
+            ->whereNotIn('description', MagistralCategory::ALLOWED_DESCRIPTIONS)
+            ->update([
+                'status' => null,
+                'updated_by' => $this->userId,
+                'updated_at' => now(),
+            ]);
+
+        return $categories;
+    }
+
+    private function ensureSubcategories(array $categories): array
+    {
+        $map = [
+            'GINECOLOGIA' => ['Hormonal', 'Ovulos', 'Gel'],
+            'INSUMOS' => ['Activos', 'Excipientes', 'Envases'],
+            'ANDROLOGIA' => ['Capsulas', 'Soluciones'],
+        ];
+
+        $subcategories = [];
+
+        foreach ($map as $categoryName => $items) {
+            $category = $categories[$categoryName] ?? null;
+            if (!$category) continue;
+
+            foreach ($items as $description) {
+                $subcategories[$categoryName][$description] = MagistralSubcategory::query()->updateOrCreate(
+                    [
+                        'magistral_category_id' => $category->id,
+                        'description' => $description,
+                    ],
+                    [
+                        'status' => true,
+                        'created_by' => $this->userId,
+                        'updated_by' => $this->userId,
+                    ]
+                );
+            }
+        }
+
+        return $subcategories;
+    }
+
+    private function ensureFormats(): array
+    {
+        $formats = [];
+
+        foreach ([
+            ['description' => 'Capsulas x 30', 'quantity' => 30],
+            ['description' => 'Crema 30 g', 'quantity' => 30],
+            ['description' => 'Solucion 100 ml', 'quantity' => 100],
+        ] as $format) {
+            $formats[$format['description']] = MagistralFormat::query()->updateOrCreate(
+                ['description' => $format['description']],
+                [
+                    'quantity' => $format['quantity'],
+                    'status' => true,
+                    'created_by' => $this->userId,
+                    'updated_by' => $this->userId,
+                ]
+            );
+        }
+
+        return $formats;
+    }
+
+    private function ensureLaboratory(): MagistralLaboratory
+    {
+        return MagistralLaboratory::query()->updateOrCreate(
+            ['code' => 'MAGLAB-001'],
+            [
+                'description' => 'Laboratorio Magistral Kamary',
+                'status' => true,
+                'created_by' => $this->userId,
+                'updated_by' => $this->userId,
+            ]
+        );
+    }
+
+    private function ensureResponsible(): MagistralResponsible
+    {
+        return MagistralResponsible::query()->updateOrCreate(
+            ['document_number' => 'MAG-RESP-001'],
+            [
+                'name' => 'Responsable Magistrales',
+                'status' => true,
+                'created_by' => $this->userId,
+                'updated_by' => $this->userId,
+            ]
+        );
+    }
+
+    private function ensureSupplier(): Supplier
+    {
+        return Supplier::query()->updateOrCreate(
+            ['ruc' => '20600000001'],
+            [
+                'module_scope' => 'magistrales',
+                'business_name' => 'Proveedor Magistral Base',
+                'trade_name' => 'Proveedor Magistral Base',
+                'business_line' => 'Insumos magistrales',
+                'billing_type' => 'contado',
+                'credit_type' => 'sin_credito',
+                'payment_condition' => 'contado',
+                'payment_term_days' => 0,
+                'status' => true,
+                'created_by' => $this->userId,
+                'updated_by' => $this->userId,
+            ]
+        );
+    }
+
+    private function ensureArticles(
+        Business $business,
+        array $units,
+        array $categories,
+        array $subcategories,
+        array $formats,
+        MagistralLaboratory $laboratory
+    ): array {
+        $articles = [];
+
+        $baseData = [
+            'module_scope' => 'magistrales',
+            'business_id' => $business->id,
+            'status' => true,
+            'magistral_status' => 'active',
+            'currency' => 'PEN',
+            'stock_has_expiration' => true,
+            'stock_has_lot' => true,
+            'magistral_laboratory_id' => $laboratory->id,
+            'created_by' => $this->userId,
+            'updated_by' => $this->userId,
+        ];
+
+        $articles['base'] = Article::query()->updateOrCreate(
+            ['module_scope' => 'magistrales', 'code' => 'MAG-INS-001'],
+            array_merge($baseData, [
+                'name' => 'Base excipiente magistral',
+                'composition' => 'Excipiente base para preparaciones magistrales.',
+                'article_type' => 'INSUMO',
+                'magistral_category_id' => $categories['INSUMOS']->id ?? null,
+                'sub_category' => optional($subcategories['INSUMOS']['Excipientes'] ?? null)->description,
+                'magistral_presentation' => 'POLVO',
+                'unit_id' => $units['G']->id,
+                'stock_min' => 100,
+                'stock_max' => 5000,
+                'cost_price' => 1.50,
+                'sale_price' => 2.10,
+                'purchase_price_national' => 1.50,
+                'sale_price_national' => 2.10,
+            ])
+        );
+
+        $articles['active'] = Article::query()->updateOrCreate(
+            ['module_scope' => 'magistrales', 'code' => 'MAG-INS-002'],
+            array_merge($baseData, [
+                'name' => 'Activo magistral demo',
+                'composition' => 'Activo referencial para formulas magistrales.',
+                'article_type' => 'INSUMO',
+                'magistral_category_id' => $categories['INSUMOS']->id ?? null,
+                'sub_category' => optional($subcategories['INSUMOS']['Activos'] ?? null)->description,
+                'magistral_presentation' => 'POLVO',
+                'unit_id' => $units['G']->id,
+                'stock_min' => 10,
+                'stock_max' => 500,
+                'cost_price' => 8.00,
+                'sale_price' => 12.00,
+                'purchase_price_national' => 8.00,
+                'sale_price_national' => 12.00,
+            ])
+        );
+
+        $articles['formula'] = Article::query()->updateOrCreate(
+            ['module_scope' => 'magistrales', 'code' => 'MAG-FRM-001'],
+            array_merge($baseData, [
+                'name' => 'Formula magistral base',
+                'composition' => 'Producto base para validar recetas magistrales.',
+                'article_type' => 'FORMULA',
+                'magistral_category_id' => $categories['GINECOLOGIA']->id ?? null,
+                'sub_category' => optional($subcategories['GINECOLOGIA']['Hormonal'] ?? null)->description,
+                'magistral_presentation' => 'UNIDAD',
+                'magistral_format_id' => $formats['Capsulas x 30']->id ?? null,
+                'unit_id' => $units['UND']->id,
+                'stock_min' => 1,
+                'stock_max' => 100,
+                'cost_price' => 25.00,
+                'sale_price' => 45.00,
+                'purchase_price_national' => 25.00,
+                'sale_price_national' => 45.00,
+            ])
+        );
+
+        return $articles;
+    }
+
+    private function ensureFormula(array $articles, array $units): void
+    {
+        $formulaArticle = $articles['formula'] ?? null;
+        if (!$formulaArticle) return;
+
+        $formula = MagistralFormula::query()->firstOrCreate(
+            ['article_id' => $formulaArticle->id],
+            [
+                'detail' => 'Formula base creada para habilitar el flujo inicial de Magistrales.',
+                'preparation_instructions' => 'Validar receta, pesar insumos y registrar lote antes de dispensar.',
+                'preparation_method' => 'Mezcla y encapsulado segun indicacion tecnica.',
+                'conservation' => 'Conservar en lugar fresco y seco.',
+                'stability' => 'Segun criterio del responsable tecnico.',
+                'usage' => 'Uso segun receta.',
+                'last_edited_by' => $this->userId,
+                'last_edited_at' => now(),
+                'status' => true,
+                'created_by' => $this->userId,
+                'updated_by' => $this->userId,
+            ]
+        );
+
+        if ($formula->items()->exists()) {
+            return;
+        }
+
+        foreach ([
+            ['article' => $articles['base'] ?? null, 'quantity' => 29.5, 'unit_price' => 1.50],
+            ['article' => $articles['active'] ?? null, 'quantity' => 0.5, 'unit_price' => 8.00],
+        ] as $item) {
+            $article = $item['article'];
+            if (!$article) continue;
+
+            MagistralFormulaItem::query()->create([
+                'magistral_formula_id' => $formula->id,
+                'article_id' => $article->id,
+                'total_units' => 30,
+                'code' => $article->code,
+                'description' => $article->name,
+                'quantity' => $item['quantity'],
+                'presentation' => optional($units['G'] ?? null)->symbol,
+                'total_quantity' => $item['quantity'] * 30,
+                'unit_price' => $item['unit_price'],
+                'subtotal' => $item['quantity'] * $item['unit_price'],
+                'status' => true,
+            ]);
+        }
     }
 }
