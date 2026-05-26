@@ -370,12 +370,15 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       columns={[
         {
           caption: 'Acciones',
-          width: 110,
+          width: 135,
+          minWidth: 135,
+          fixed: true,
+          fixedPosition: 'left',
           allowFiltering: false,
           allowSorting: false,
           allowExporting: false,
           cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
+            container.css({ overflow: 'visible', textOverflow: 'unset', whiteSpace: 'nowrap' })
             container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Ver inventario', icon: 'mdi mdi-pencil', onClick: () => openExistingModal(data) }))
             container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar inventario', icon: 'mdi mdi-delete', onClick: () => remove(data.id) }))
           }
@@ -383,7 +386,8 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         {
           dataField: 'code',
           caption: 'Codigo',
-          minWidth: 130,
+          width: 185,
+          minWidth: 185,
           cellTemplate: (container, { data }) => {
             $('<a></a>').attr('href', '#').text(data.code ?? '').on('click', (e) => {
               e.preventDefault()
@@ -405,7 +409,8 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         {
           dataField: 'inventory_status',
           caption: 'Estado',
-          width: 115,
+          width: 145,
+          minWidth: 145,
           cellTemplate: (container, { data }) => container.html(inventoryStatusBadge(data.inventory_status))
         },
       ]}
@@ -420,22 +425,63 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       size='xl'
       hideFooter
       dialogClass='modal-dialog-scrollable storage-inventory-dialog'
-      contentClass='rounded-2'
+      contentClass='storage-inventory-modal'
       headerClass='py-2 border-0 bg-storage-inventory-modal'
       closeButtonClass='btn-close-white'
-      bodyClass='p-4'
+      bodyClass='storage-inventory-body'
       bodyStyle={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', overflowX: 'hidden' }}
       onSubmit={(e) => e.preventDefault()}
       onClose={resetModal}
     >
       <style>{`
         .bg-storage-inventory-modal { background: #25274f; }
-        .storage-inventory-dialog { max-width: min(1280px, calc(100vw - 64px)); }
+        .storage-inventory-dialog {
+          width: calc(100vw - 32px);
+          max-width: calc(100vw - 32px);
+          margin: 0.9rem auto;
+        }
+        .storage-inventory-modal {
+          border: 0;
+          border-radius: 6px;
+        }
+        .storage-inventory-body {
+          padding: 1rem 1.25rem 1.25rem;
+        }
         .storage-inventory-modal-actions { min-height: 43px; }
         .storage-inventory-filter-row .form-label { margin-bottom: 0.45rem; font-weight: 600; }
-        .storage-inventory-table-wrap { min-height: 160px; }
+        .storage-inventory-section {
+          border: 1px solid #e3e8ef;
+          border-radius: 6px;
+          padding: 1rem;
+          margin-bottom: 1rem;
+        }
+        .storage-inventory-section-title {
+          color: #4b5563;
+          font-size: 0.78rem;
+          font-weight: 700;
+          margin-bottom: 0.9rem;
+          text-transform: uppercase;
+        }
+        .storage-inventory-table-wrap {
+          border: 1px solid #e3e8ef;
+          border-radius: 6px;
+          min-height: 160px;
+          overflow: auto;
+        }
+        .storage-inventory-table {
+          min-width: 1580px;
+        }
+        .storage-inventory-table th {
+          color: #30364d;
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          white-space: nowrap;
+        }
+        .storage-inventory-table td {
+          vertical-align: middle;
+        }
         @media (max-width: 767.98px) {
-          .storage-inventory-dialog { max-width: calc(100vw - 20px); margin-left: auto; margin-right: auto; }
+          .storage-inventory-dialog { width: calc(100vw - 12px); max-width: calc(100vw - 12px); }
         }
       `}</style>
       <input ref={fileRef} type='file' accept='.csv' hidden onChange={uploadFormat} />
@@ -455,7 +501,9 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       </div>
       <hr className='my-4' />
 
-      <div className='row g-4 align-items-end storage-inventory-filter-row mb-4'>
+      <div className='storage-inventory-section'>
+        <div className='storage-inventory-section-title'><i className='mdi mdi-filter-outline me-1'></i> Filtros de inventario</div>
+      <div className='row g-4 align-items-end storage-inventory-filter-row mb-0'>
         <div className='col-12 col-md-6 col-xl-2'>
           <label className='form-label'>Almacen</label>
           <select className='form-select' value={warehouseId} disabled={!!selectedCount} onChange={(e) => changeWarehouse(e.target.value)}>
@@ -496,8 +544,9 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           </button>
         </div>
       </div>
+      </div>
 
-      <div className='d-flex flex-wrap gap-4 mb-5'>
+      <div className='d-flex flex-wrap gap-4 mb-4'>
         <button type='button' className='btn btn-outline-success px-5 py-2' disabled={!selectedCount?.id} onClick={downloadFormat}>
           Descargar Formato
         </button>
@@ -520,11 +569,11 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           <input className='form-control form-control-sm' style={{ width: 220 }} value={tableSearch} onChange={(e) => setTableSearch(e.target.value)} />
         </label>
       </div>
-      <div className='table-responsive border rounded position-relative storage-inventory-table-wrap'>
+      <div className='position-relative storage-inventory-table-wrap'>
         {loadingRows && <div className='position-absolute top-0 start-0 end-0 bottom-0 bg-white bg-opacity-75 d-flex align-items-center justify-content-center' style={{ zIndex: 1 }}>
           <i className='mdi mdi-spin mdi-loading mdi-36px'></i>
         </div>}
-        <table className='table table-sm table-striped mb-0'>
+        <table className='table table-sm table-striped mb-0 storage-inventory-table'>
           <thead>
             <tr>
               <th style={{ width: 80 }}>ID</th>
