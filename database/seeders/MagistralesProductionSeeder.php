@@ -14,6 +14,8 @@ use App\Models\MagistralInventoryCountItem;
 use App\Models\MagistralLaboratory;
 use App\Models\MagistralResponsible;
 use App\Models\MagistralSubcategory;
+use App\Models\PurchaseOrder;
+use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
 use App\Models\Unit;
 use App\Models\User;
@@ -116,6 +118,7 @@ class MagistralesProductionSeeder extends Seeder
         $articles = $this->ensureArticles($business, $units, $categories, $subcategories, $formats, $laboratory);
         $this->ensureFormula($articles, $units);
         $this->ensureInitialInventoryCount($warehouse, $articles);
+        $this->ensureInitialPurchaseOrder($business, $warehouse, $articles);
     }
 
     /**
@@ -481,5 +484,98 @@ class MagistralesProductionSeeder extends Seeder
         } while (MagistralInventoryCount::query()->where('code', $code)->exists());
 
         return $code;
+    }
+
+    private function ensureInitialPurchaseOrder(Business $business, Warehouse $warehouse, array $articles): void
+    {
+        $hasMagistralesOrder = PurchaseOrder::query()
+            ->where('module_scope', 'magistrales')
+            ->exists();
+
+        if ($hasMagistralesOrder) {
+            return;
+        }
+
+        $supplier = Supplier::query()
+            ->where('module_scope', 'magistrales')
+            ->whereNotNull('status')
+            ->orderBy('id')
+            ->first();
+        $article = $articles['base'] ?? collect($articles)->filter()->first();
+
+        if (!$supplier || !$article) {
+            return;
+        }
+
+        $price = $this->articleCost($article);
+        $quantity = 1;
+        $total = round($quantity * $price, 2);
+
+        $order = PurchaseOrder::query()->create([
+            'business_id' => $business->id,
+            'module_scope' => 'magistrales',
+            'business_branch_id' => $warehouse->business_branch_id,
+            'warehouse_id' => $warehouse->id,
+            'supplier_id' => $supplier->id,
+            'buyer_name' => 'Admin Kamary',
+            'article_type' => $article->article_type ?? 'INSUMO',
+            'code' => $this->nextPurchaseOrderCode(),
+            'issue_date' => now()->toDateString(),
+            'expected_date' => now()->addDays(7)->toDateString(),
+            'max_delivery_date' => now()->addDays(15)->toDateString(),
+            'delivery_place' => $warehouse->name,
+            'currency' => $article->currency ?: 'PEN',
+            'payment_condition' => 'Contado',
+            'payment_method' => 'Transferencia',
+            'document_type' => 'Orden compra',
+            'affects_igv' => false,
+            'order_status' => 'draft',
+            'approval_status' => 'pending',
+            'observations' => 'Orden inicial automatica para habilitar el modulo Magistrales. Puede anularse o reemplazarse.',
+            'subtotal' => $total,
+            'tax_amount' => 0,
+            'total' => $total,
+            'status' => true,
+            'created_by' => $this->userId,
+            'updated_by' => $this->userId,
+        ]);
+
+        PurchaseOrderItem::query()->create([
+            'purchase_order_id' => $order->id,
+            'article_id' => $article->id,
+            'presentation_id' => null,
+            'presentation_label' => $article->magistral_presentation,
+            'presentation_units' => 1,
+            'last_price' => $price,
+            'requested_quantity' => $quantity,
+            'received_quantity' => 0,
+            'price_unit' => $price,
+            'total' => $total,
+            'status' => true,
+        ]);
+    }
+
+    private function nextPurchaseOrderCode(): string
+    {
+        $next = 1;
+
+        do {
+            $code = 'OC-MAG-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
+            $next++;
+        } while (PurchaseOrder::query()->where('code', $code)->exists());
+
+        return $code;
+    }
+
+    private function articleCost(Article $article): float
+    {
+        foreach (['purchase_price_national', 'cost_price', 'sale_price'] as $field) {
+            $value = $article->{$field} ?? null;
+            if (is_numeric($value) && (float) $value > 0) {
+                return round((float) $value, 4);
+            }
+        }
+
+        return 0;
     }
 }
