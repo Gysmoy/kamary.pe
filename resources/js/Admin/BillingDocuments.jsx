@@ -703,6 +703,22 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     }
   }
 
+  const storageFilterFieldColumns = [
+    { dataField: 'local_status', caption: 'Estado local', visible: false, showInColumnChooser: false, lookup: toLookup(billingControlStatusOptions) },
+    { dataField: 'document_type', caption: 'Tipo comprobante', visible: false, showInColumnChooser: false },
+    { dataField: 'business_id', caption: 'Empresa', dataType: 'number', visible: false, showInColumnChooser: false },
+    { dataField: 'client_id', caption: 'Cliente', dataType: 'number', visible: false, showInColumnChooser: false },
+    { dataField: 'created_at', caption: 'F. Registro', dataType: 'datetime', visible: false, showInColumnChooser: false },
+  ]
+
+  const withStorageFilterFields = (columns) => {
+    const dataFields = new Set(columns.map(column => column?.dataField).filter(Boolean))
+    return [
+      ...columns,
+      ...storageFilterFieldColumns.filter(column => !dataFields.has(column.dataField)),
+    ]
+  }
+
   const storageColumnsByTab = {
     prefactures: [
       storageActionColumn,
@@ -770,7 +786,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     ],
   }
 
-  const currentStorageColumns = storageColumnsByTab[activeStorageTab] ?? storageColumnsByTab.prefactures
+  const currentStorageColumns = withStorageFilterFields(storageColumnsByTab[activeStorageTab] ?? storageColumnsByTab.prefactures)
 
   const storageTitle = <div>
     <div className='d-flex align-items-center justify-content-between mb-2'>
