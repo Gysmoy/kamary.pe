@@ -9,6 +9,7 @@ return new class extends Migration
     private string $businessKey = 'kamary_medicals';
     private string $branchName = 'Principal Magistrales';
     private string $warehouseName = 'Almacen Magistrales Principal';
+    private string $initialObservation = 'Orden inicial automatica para habilitar el modulo Magistrales. Puede anularse o reemplazarse.';
 
     public function up(): void
     {
@@ -19,16 +20,6 @@ return new class extends Migration
             || !Schema::hasTable('suppliers')
         ) {
             return;
-        }
-
-        if (Schema::hasColumn('purchase_orders', 'module_scope')) {
-            $hasMagistralesOrder = DB::table('purchase_orders')
-                ->where('module_scope', 'magistrales')
-                ->exists();
-
-            if ($hasMagistralesOrder) {
-                return;
-            }
         }
 
         $warehouse = $this->fixedWarehouse();
@@ -58,8 +49,10 @@ return new class extends Migration
         $price = $this->articleCost($article);
         $quantity = 1;
         $total = round($quantity * $price, 2);
+        $existingOrder = $this->existingInitialOrder();
+        $orderCode = $existingOrder?->code ?: $this->nextPurchaseOrderCode();
 
-        $orderId = DB::table('purchase_orders')->insertGetId($this->payload('purchase_orders', [
+        $orderPayload = $this->payload('purchase_orders', [
             'business_id' => $warehouse->business_id,
             'module_scope' => 'magistrales',
             'business_branch_id' => $warehouse->business_branch_id,
@@ -67,7 +60,7 @@ return new class extends Migration
             'supplier_id' => $supplierId,
             'buyer_name' => 'Admin Kamary',
             'article_type' => $article->article_type ?? 'INSUMO',
-            'code' => $this->nextPurchaseOrderCode(),
+            'code' => $orderCode,
             'issue_date' => $now->toDateString(),
             'expected_date' => $now->copy()->addDays(7)->toDateString(),
             'max_delivery_date' => $now->copy()->addDays(15)->toDateString(),
@@ -79,7 +72,7 @@ return new class extends Migration
             'affects_igv' => false,
             'order_status' => 'draft',
             'approval_status' => 'pending',
-            'observations' => 'Orden inicial automatica para habilitar el modulo Magistrales. Puede anularse o reemplazarse.',
+            'observations' => $this->initialObservation,
             'subtotal' => $total,
             'tax_amount' => 0,
             'total' => $total,
@@ -88,7 +81,29 @@ return new class extends Migration
             'updated_by' => $userId,
             'created_at' => $now,
             'updated_at' => $now,
-        ]));
+        ]);
+
+        if ($existingOrder) {
+            DB::table('purchase_orders')
+                ->where('id', $existingOrder->id)
+                ->update(array_diff_key($orderPayload, ['code' => true, 'created_at' => true]));
+            $orderId = (int) $existingOrder->id;
+        } else {
+            $updateColumns = array_values(array_filter(
+                array_keys($orderPayload),
+                fn(string $column) => !in_array($column, ['code', 'created_at'], true)
+            ));
+
+            DB::table('purchase_orders')->upsert([$orderPayload], ['code'], $updateColumns);
+            $orderId = (int) DB::table('purchase_orders')->where('code', $orderCode)->value('id');
+        }
+
+        if (
+            !$orderId
+            || DB::table('purchase_order_items')->where('purchase_order_id', $orderId)->exists()
+        ) {
+            return;
+        }
 
         DB::table('purchase_order_items')->insert($this->payload('purchase_order_items', [
             'purchase_order_id' => $orderId,
@@ -114,7 +129,7 @@ return new class extends Migration
         }
 
         $orderIds = DB::table('purchase_orders')
-            ->where('observations', 'Orden inicial automatica para habilitar el modulo Magistrales. Puede anularse o reemplazarse.')
+            ->where('observations', $this->initialObservation)
             ->pluck('id');
 
         if ($orderIds->isEmpty()) {
@@ -154,6 +169,34 @@ return new class extends Migration
             ->whereNotNull('branch.status')
             ->whereNotNull('business.status')
             ->orderBy('warehouses.id')
+            ->first();
+    }
+
+    private function existingInitialOrder(): ?object
+    {
+        $query = DB::table('purchase_orders')
+            ->where('observations', $this->initialObservation)
+            ->orderBy('id');
+
+        $order = $query->first();
+        if ($order) {
+            return $order;
+        }
+
+        if (Schema::hasColumn('purchase_orders', 'module_scope')) {
+            $order = DB::table('purchase_orders')
+                ->where('module_scope', 'magistrales')
+                ->orderBy('id')
+                ->first();
+
+            if ($order) {
+                return $order;
+            }
+        }
+
+        return DB::table('purchase_orders')
+            ->where('code', 'like', 'OC-MAG-%')
+            ->orderBy('id')
             ->first();
     }
 
