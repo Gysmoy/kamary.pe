@@ -144,6 +144,7 @@ class BillingDocumentController extends BasicController
         ], fn($value) => !is_null($value) && $value !== ''));
 
         if (!$id) {
+            DB::table('businesses')->where('id', $businessId)->lockForUpdate()->value('id');
             $body['code'] = $this->nextCode();
             $body['created_by'] = $userId;
             $body['status'] = true;
@@ -494,7 +495,7 @@ class BillingDocumentController extends BasicController
     private function nextCode(): string
     {
         $next = 1;
-        $latest = BillingDocument::query()->latest('id')->value('code');
+        $latest = BillingDocument::query()->lockForUpdate()->latest('id')->value('code');
         if ($latest && preg_match('/(\d+)$/', $latest, $matches)) $next = ((int) $matches[1]) + 1;
         return 'FAC-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
     }

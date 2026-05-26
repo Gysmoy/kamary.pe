@@ -277,6 +277,7 @@ class BasicController extends Controller
   {
     $response = new Response();
     try {
+      DB::beginTransaction();
 
       $body = $this->beforeSave($request);
 
@@ -330,9 +331,12 @@ class BasicController extends Controller
         $response->data = $data;
       }
 
+      DB::commit();
+
       $response->status = 200;
       $response->message = 'Operacion correcta';
     } catch (\Throwable $th) {
+      if (DB::transactionLevel() > 0) DB::rollBack();
       $response->status = 400;
       $response->message = $th->getMessage();
     } finally {

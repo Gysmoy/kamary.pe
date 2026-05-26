@@ -765,6 +765,7 @@ class ArticleController extends BasicController
                 ->where('exit_note.status', 1)
                 ->where('exit_item.status', 1)
                 ->where('exit_item.article_id', $article->id)
+                ->when(Schema::hasColumn('exit_notes', 'exit_status'), fn($query) => $query->where('exit_note.exit_status', 'approved'))
                 ->groupBy('exit_item.warehouse_id')
                 ->selectRaw('exit_item.warehouse_id, COALESCE(SUM(exit_item.quantity), 0) as qty_out');
 

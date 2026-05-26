@@ -187,7 +187,7 @@ class ExitNoteController extends BasicController
 
                 $hasStorageKey = $isStorage || ($lot !== '' && $expirationDate) || $location !== '';
                 $availableStock = $hasStorageKey
-                    ? app(StockService::class)->getAvailableStockByStorageKey((int)$articleId, (int)$warehouseId, $lot, $expirationDate, $location, (int)$jpa->id, (int)$jpa->business_id)
+                    ? app(StockService::class)->getAvailableStockByStorageKey((int)$articleId, (int)$warehouseId, $lot, $expirationDate, $location, (int)$jpa->id, (int)$jpa->business_id, !$isStorage)
                     : $this->getAvailableStockByWarehouse((int)$articleId, (int)$warehouseId, (int)$jpa->id);
                 $stockKey = $this->stockReservationKey((int)$articleId, (int)$warehouseId, $hasStorageKey ? $lot : '', $hasStorageKey ? $expirationDate : null, $hasStorageKey ? $location : '');
                 $alreadyReserved = (float)($reservedStock[$stockKey] ?? 0);
@@ -297,7 +297,7 @@ class ExitNoteController extends BasicController
             if ($request->has('exit_status')) {
                 $nextStatus = $this->normalizeExitStatus($request->input('exit_status'));
                 if ($nextStatus === 'approved') {
-                    $this->assertExitStockAvailable($jpa);
+                    $this->assertExitStockAvailable($jpa, $this->isStorageRequest($request));
                 }
                 $jpa->update([
                     'exit_status' => $nextStatus,
@@ -310,7 +310,7 @@ class ExitNoteController extends BasicController
 
             $nextStatus = $request->status ? 0 : 1;
             if ((int)$nextStatus === 1) {
-                $this->assertExitStockAvailable($jpa);
+                $this->assertExitStockAvailable($jpa, $this->isStorageRequest($request));
             }
 
             $jpa->update([
@@ -405,7 +405,7 @@ class ExitNoteController extends BasicController
         ]);
     }
 
-    private function assertExitStockAvailable(ExitNote $jpa): void
+    private function assertExitStockAvailable(ExitNote $jpa, bool $storageOnly = false): void
     {
         $reservedStock = [];
         foreach ($jpa->items as $item) {
@@ -414,9 +414,9 @@ class ExitNoteController extends BasicController
             $lot = trim((string)($item->batch_code ?? ''));
             $location = trim((string)($item->location ?? ''));
             $expirationDate = $item->expiration_date ? $item->expiration_date->format('Y-m-d') : null;
-            $hasStorageKey = ($lot !== '' && $expirationDate) || $location !== '';
+            $hasStorageKey = $storageOnly || ($lot !== '' && $expirationDate) || $location !== '';
             $availableStock = $hasStorageKey
-                ? app(StockService::class)->getAvailableStockByStorageKey((int)$item->article_id, (int)$item->warehouse_id, $lot, $expirationDate, $location, (int)$jpa->id, (int)$jpa->business_id)
+                ? app(StockService::class)->getAvailableStockByStorageKey((int)$item->article_id, (int)$item->warehouse_id, $lot, $expirationDate, $location, (int)$jpa->id, (int)$jpa->business_id, !$storageOnly)
                 : $this->getAvailableStockByWarehouse((int)$item->article_id, (int)$item->warehouse_id, (int)$jpa->id);
             $stockKey = $this->stockReservationKey((int)$item->article_id, (int)$item->warehouse_id, $hasStorageKey ? $lot : '', $hasStorageKey ? $expirationDate : null, $hasStorageKey ? $location : '');
             $alreadyReserved = (float)($reservedStock[$stockKey] ?? 0);

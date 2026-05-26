@@ -78,7 +78,8 @@ class StockService
         ?string $expirationDate,
         ?string $location,
         int $excludedExitNoteId = 0,
-        ?int $businessId = null
+        ?int $businessId = null,
+        bool $includePurchaseReceipts = true
     ): float {
         $lot = $this->normalizeStockText($lot);
         $location = $this->normalizeStockText($location);
@@ -98,18 +99,21 @@ class StockService
             ->when($businessId, fn($query) => $query->where('entry_note.business_id', $businessId))
             ->sum('entry_item.quantity');
 
-        $receiptQty = (float)DB::table('purchase_receipt_items as receipt_item')
-            ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
-            ->where('receipt.status', 1)
-            ->where('receipt.receipt_status', 'confirmed')
-            ->where('receipt_item.status', 1)
-            ->where('receipt_item.article_id', $articleId)
-            ->where('receipt_item.warehouse_id', $warehouseId)
-            ->whereRaw("COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') = ?", [$lot])
-            ->whereRaw("COALESCE(NULLIF(receipt_item.location, ''), '') = ?", [$location])
-            ->whereRaw("COALESCE(DATE(receipt_item.expiration_date), '1000-01-01') = ?", [$dateKey])
-            ->when($businessId, fn($query) => $query->where('receipt.business_id', $businessId))
-            ->sum('receipt_item.quantity');
+        $receiptQty = 0;
+        if ($includePurchaseReceipts) {
+            $receiptQty = (float)DB::table('purchase_receipt_items as receipt_item')
+                ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
+                ->where('receipt.status', 1)
+                ->where('receipt.receipt_status', 'confirmed')
+                ->where('receipt_item.status', 1)
+                ->where('receipt_item.article_id', $articleId)
+                ->where('receipt_item.warehouse_id', $warehouseId)
+                ->whereRaw("COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') = ?", [$lot])
+                ->whereRaw("COALESCE(NULLIF(receipt_item.location, ''), '') = ?", [$location])
+                ->whereRaw("COALESCE(DATE(receipt_item.expiration_date), '1000-01-01') = ?", [$dateKey])
+                ->when($businessId, fn($query) => $query->where('receipt.business_id', $businessId))
+                ->sum('receipt_item.quantity');
+        }
 
         $qtyOutQuery = DB::table('exit_note_items as exit_item')
             ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
@@ -160,25 +164,8 @@ class StockService
                 entry_item.quantity as quantity
             ");
 
-        $receiptMovements = DB::table('purchase_receipt_items as receipt_item')
-            ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
-            ->join('businesses as receipt_business', 'receipt_business.id', '=', 'receipt.business_id')
-            ->where('receipt.status', 1)
-            ->where('receipt.receipt_status', 'confirmed')
-            ->where('receipt_item.status', 1)
-            ->where('receipt_business.business_key', $businessKey)
-            ->selectRaw("
-                CONCAT('purchase-receipt-', receipt_item.id) as source_key,
-                receipt_item.article_id as article_id,
-                receipt_item.warehouse_id as warehouse_id,
-                COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') as lot,
-                receipt_item.expiration_date as expiration_date,
-                COALESCE(NULLIF(receipt_item.location, ''), '') as location,
-                receipt_item.quantity as quantity
-            ");
-
         $incomingTotals = DB::query()
-            ->fromSub($entryMovements->unionAll($receiptMovements), 'incoming')
+            ->fromSub($entryMovements, 'incoming')
             ->selectRaw('
                 MIN(incoming.source_key) as source_key,
                 incoming.article_id,
@@ -330,27 +317,8 @@ class StockService
                 entry_item.quantity as quantity
             ");
 
-        $receiptMovements = DB::table('purchase_receipt_items as receipt_item')
-            ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
-            ->join('businesses as receipt_business', 'receipt_business.id', '=', 'receipt.business_id')
-            ->where('receipt.status', 1)
-            ->where('receipt.receipt_status', 'confirmed')
-            ->where('receipt_item.status', 1)
-            ->where('receipt_business.business_key', $businessKey)
-            ->selectRaw("
-                receipt_item.article_id as article_id,
-                receipt_item.warehouse_id as warehouse_id,
-                COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') as lot,
-                receipt_item.expiration_date as expiration_date,
-                COALESCE(NULLIF(receipt_item.location, ''), '') as location,
-                NULL as client_id,
-                '' as client_name,
-                COALESCE(DATE(receipt.confirmed_at), DATE(receipt.created_at)) as occupied_from,
-                receipt_item.quantity as quantity
-            ");
-
         $incomingTotals = DB::query()
-            ->fromSub($entryMovements->unionAll($receiptMovements), 'incoming')
+            ->fromSub($entryMovements, 'incoming')
             ->selectRaw("
                 incoming.article_id,
                 incoming.warehouse_id,

@@ -19,6 +19,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\Response;
 
 class InventoryController extends BasicController
@@ -155,6 +156,8 @@ class InventoryController extends BasicController
             }
 
             DB::beginTransaction();
+
+            Warehouse::query()->whereKey($warehouseId)->lockForUpdate()->first();
 
             $count = StorageInventoryCount::create([
                 'code' => $this->nextCode(),
@@ -339,14 +342,40 @@ class InventoryController extends BasicController
                 throw new \Exception('El inventario no pertenece al grupo de almacenamiento');
             }
 
+            $stockService = app(StockService::class);
             $positiveRows = [];
             $negativeRows = [];
             foreach ($count->items as $item) {
-                $difference = round((float)$item->difference, 3);
-                if (abs($difference) <= 0.0001) continue;
                 if (!$item->article_id || !$item->warehouse_id) {
                     throw new \Exception("El item {$item->id} no tiene articulo o almacen valido");
                 }
+
+                $currentStock = round($stockService->getAvailableStockByStorageKey(
+                    (int)$item->article_id,
+                    (int)$item->warehouse_id,
+                    trim((string)($item->lot ?? '')),
+                    $item->expiration_date ? $item->expiration_date->format('Y-m-d') : null,
+                    trim((string)($item->location ?? '')),
+                    0,
+                    (int)$business->id,
+                    false
+                ), 3);
+                $realStock = round((float)$item->real_stock, 3);
+                $difference = round($realStock - $currentStock, 3);
+
+                if (
+                    abs(round((float)$item->system_stock, 3) - $currentStock) > 0.0001
+                    || abs(round((float)$item->difference, 3) - $difference) > 0.0001
+                ) {
+                    $item->update([
+                        'system_stock' => $currentStock,
+                        'difference' => $difference,
+                    ]);
+                    $item->system_stock = $currentStock;
+                    $item->difference = $difference;
+                }
+
+                if (abs($difference) <= 0.0001) continue;
                 if ($difference > 0) $positiveRows[] = $item;
                 else $negativeRows[] = $item;
             }
@@ -420,25 +449,8 @@ class InventoryController extends BasicController
                 entry_item.quantity as quantity
             ");
 
-        $receiptMovements = DB::table('purchase_receipt_items as receipt_item')
-            ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
-            ->join('businesses as receipt_business', 'receipt_business.id', '=', 'receipt.business_id')
-            ->where('receipt.status', 1)
-            ->where('receipt.receipt_status', 'confirmed')
-            ->where('receipt_item.status', 1)
-            ->where('receipt_business.business_key', BusinessScope::KAMARY_MEDICALS)
-            ->selectRaw("
-                CONCAT('purchase-receipt-', receipt_item.id) as source_key,
-                receipt_item.article_id as article_id,
-                receipt_item.warehouse_id as warehouse_id,
-                COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') as lot,
-                receipt_item.expiration_date as expiration_date,
-                COALESCE(NULLIF(receipt_item.location, ''), '') as location,
-                receipt_item.quantity as quantity
-            ");
-
         $incomingTotals = DB::query()
-            ->fromSub($entryMovements->unionAll($receiptMovements), 'incoming')
+            ->fromSub($entryMovements, 'incoming')
             ->selectRaw('
                 MIN(incoming.source_key) as source_key,
                 incoming.article_id,
@@ -456,6 +468,7 @@ class InventoryController extends BasicController
             ->where('exit_note.status', 1)
             ->where('exit_item.status', 1)
             ->where('exit_business.business_key', BusinessScope::KAMARY_MEDICALS)
+            ->when(Schema::hasColumn('exit_notes', 'exit_status'), fn($query) => $query->where('exit_note.exit_status', 'approved'))
             ->selectRaw("
                 exit_item.article_id,
                 COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) as warehouse_id,
@@ -553,21 +566,8 @@ class InventoryController extends BasicController
                 2 as priority
             ");
 
-        $receiptLocations = DB::table('purchase_receipt_items')
-            ->join('purchase_receipts', 'purchase_receipts.id', '=', 'purchase_receipt_items.purchase_receipt_id')
-            ->join('businesses', 'businesses.id', '=', 'purchase_receipts.business_id')
-            ->whereNotNull('purchase_receipt_items.location')
-            ->where('purchase_receipt_items.location', '!=', '')
-            ->where('businesses.business_key', BusinessScope::KAMARY_MEDICALS)
-            ->selectRaw("
-                purchase_receipt_items.location as location,
-                purchase_receipt_items.warehouse_id,
-                CAST(NULL AS CHAR) as temperature_range,
-                3 as priority
-            ");
-
         $rows = DB::query()
-            ->fromSub($registeredLocations->union($entryLocations)->union($receiptLocations), 'locations')
+            ->fromSub($registeredLocations->union($entryLocations), 'locations')
             ->distinct()
             ->whereNotNull('location')
             ->orderBy('location')
@@ -588,7 +588,7 @@ class InventoryController extends BasicController
     private function nextCode(): string
     {
         $next = 1;
-        $latest = StorageInventoryCount::query()->latest('id')->value('code');
+        $latest = StorageInventoryCount::query()->lockForUpdate()->latest('id')->value('code');
         if ($latest && preg_match('/(\d+)$/', $latest, $matches)) {
             $next = ((int)$matches[1]) + 1;
         }
@@ -677,7 +677,8 @@ class InventoryController extends BasicController
                 $expirationDate,
                 $location,
                 (int)$exitNote->id,
-                $businessId
+                $businessId,
+                false
             );
             $stockKey = implode('|', [
                 $item->article_id,

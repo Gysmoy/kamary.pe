@@ -16,6 +16,7 @@ use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\Response;
 
 class KardexController extends BasicController
@@ -237,10 +238,23 @@ class KardexController extends BasicController
 
             DB::beginTransaction();
 
+            Warehouse::query()->whereKey($warehouse->id)->lockForUpdate()->first();
+
             $locationId = $this->nullableInt($request->input('id'));
             $location = $locationId ? StorageLocation::find($locationId) : new StorageLocation();
             if ($locationId && !$location) {
                 throw new \Exception('La ubicacion seleccionada no existe');
+            }
+
+            $duplicatedLocation = StorageLocation::query()
+                ->where('warehouse_id', $warehouse->id)
+                ->whereNotNull('status')
+                ->whereRaw('LOWER(TRIM(code)) = ?', [mb_strtolower($code)])
+                ->when($locationId, fn($query) => $query->whereKeyNot($locationId))
+                ->lockForUpdate()
+                ->exists();
+            if ($duplicatedLocation) {
+                throw new \Exception('Ya existe una ubicacion con esa codificacion en el almacen seleccionado');
             }
 
             if (!$location->exists) {
@@ -405,42 +419,13 @@ class KardexController extends BasicController
                     1 as sort_order
                 ");
 
-            $receiptMovements = DB::table('purchase_receipt_items as receipt_item')
-                ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
-                ->join('businesses as receipt_business', 'receipt_business.id', '=', 'receipt.business_id')
-                ->where('receipt.status', 1)
-                ->where('receipt.receipt_status', 'confirmed')
-                ->where('receipt_item.status', 1)
-                ->where('receipt_business.business_key', BusinessScope::KAMARY_MEDICALS)
-                ->where('receipt_item.article_id', $articleId)
-                ->when($clientId, fn($query) => $query->whereRaw('1 = 0'))
-                ->when($warehouseId, fn($query) => $query->where('receipt_item.warehouse_id', $warehouseId))
-                ->whereRaw("COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') = ?", [$lot])
-                ->whereRaw("COALESCE(receipt_item.expiration_date, '1000-01-01') = COALESCE(?, '1000-01-01')", [$expirationDate])
-                ->whereRaw("COALESCE(NULLIF(receipt_item.location, ''), '') = ?", [$location])
-                ->selectRaw("
-                    CONCAT('receipt-', receipt_item.id) as id,
-                    COALESCE(receipt.confirmed_at, receipt.updated_at, receipt.created_at) as movement_date,
-                    receipt.code as code,
-                    TRIM(CONCAT(
-                        COALESCE(receipt.document_type, ''),
-                        CASE WHEN COALESCE(receipt.document_series, '') <> '' OR COALESCE(receipt.document_sequence, '') <> '' THEN ' ' ELSE '' END,
-                        COALESCE(receipt.document_series, ''),
-                        CASE WHEN COALESCE(receipt.document_series, '') <> '' AND COALESCE(receipt.document_sequence, '') <> '' THEN '-' ELSE '' END,
-                        COALESCE(receipt.document_sequence, '')
-                    )) as document,
-                    'ENTRADA' as operation,
-                    receipt_item.quantity as quantity_in,
-                    0 as quantity_out,
-                    2 as sort_order
-                ");
-
             $exitMovements = DB::table('exit_note_items as exit_item')
                 ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
                 ->join('businesses as exit_business', 'exit_business.id', '=', 'exit_note.business_id')
                 ->where('exit_note.status', 1)
                 ->where('exit_item.status', 1)
                 ->where('exit_business.business_key', BusinessScope::KAMARY_MEDICALS)
+                ->when(Schema::hasColumn('exit_notes', 'exit_status'), fn($query) => $query->where('exit_note.exit_status', 'approved'))
                 ->where('exit_item.article_id', $articleId)
                 ->when($warehouseId, fn($query) => $query->whereRaw('COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) = ?', [$warehouseId]))
                 ->whereRaw("COALESCE(NULLIF(exit_item.batch_code, ''), '') = ?", [$lot])
@@ -454,11 +439,10 @@ class KardexController extends BasicController
                     'SALIDA' as operation,
                     0 as quantity_in,
                     exit_item.quantity as quantity_out,
-                    3 as sort_order
+                    2 as sort_order
                 ");
 
             $movementQuery = $entryMovements
-                ->unionAll($receiptMovements)
                 ->unionAll($exitMovements);
 
             $rows = DB::query()
@@ -578,27 +562,8 @@ class KardexController extends BasicController
                 entry_item.quantity as quantity
             ");
 
-        $receiptMovements = DB::table('purchase_receipt_items as receipt_item')
-            ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
-            ->join('businesses as receipt_business', 'receipt_business.id', '=', 'receipt.business_id')
-            ->where('receipt.status', 1)
-            ->where('receipt.receipt_status', 'confirmed')
-            ->where('receipt_item.status', 1)
-            ->where('receipt_business.business_key', BusinessScope::KAMARY_MEDICALS)
-            ->selectRaw("
-                receipt_item.article_id as article_id,
-                receipt_item.warehouse_id as warehouse_id,
-                COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') as lot,
-                receipt_item.expiration_date as expiration_date,
-                COALESCE(NULLIF(receipt_item.location, ''), '') as location,
-                NULL as client_id,
-                '' as client_name,
-                COALESCE(DATE(receipt.confirmed_at), DATE(receipt.created_at)) as occupied_from,
-                receipt_item.quantity as quantity
-            ");
-
         $incomingTotals = DB::query()
-            ->fromSub($entryMovements->unionAll($receiptMovements), 'incoming')
+            ->fromSub($entryMovements, 'incoming')
             ->selectRaw("
                 incoming.article_id,
                 incoming.warehouse_id,
@@ -618,6 +583,7 @@ class KardexController extends BasicController
             ->where('exit_note.status', 1)
             ->where('exit_item.status', 1)
             ->where('exit_business.business_key', BusinessScope::KAMARY_MEDICALS)
+            ->when(Schema::hasColumn('exit_notes', 'exit_status'), fn($query) => $query->where('exit_note.exit_status', 'approved'))
             ->selectRaw("
                 exit_item.article_id,
                 COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) as warehouse_id,
@@ -694,27 +660,8 @@ class KardexController extends BasicController
                 COALESCE(entry_note.updated_at, entry_note.created_at) as movement_at
             ");
 
-        $receiptMovements = DB::table('purchase_receipt_items as receipt_item')
-            ->join('purchase_receipts as receipt', 'receipt.id', '=', 'receipt_item.purchase_receipt_id')
-            ->join('businesses as receipt_business', 'receipt_business.id', '=', 'receipt.business_id')
-            ->where('receipt.status', 1)
-            ->where('receipt.receipt_status', 'confirmed')
-            ->where('receipt_item.status', 1)
-            ->where('receipt_business.business_key', BusinessScope::KAMARY_MEDICALS)
-            ->selectRaw("
-                CONCAT('purchase-receipt-', receipt_item.id) as source_key,
-                receipt_item.article_id as article_id,
-                receipt_item.warehouse_id as warehouse_id,
-                COALESCE(NULLIF(receipt_item.lot, ''), NULLIF(receipt_item.batch_code, ''), '') as lot,
-                receipt_item.expiration_date as expiration_date,
-                COALESCE(NULLIF(receipt_item.location, ''), '') as location,
-                receipt_item.quantity as quantity,
-                NULL as client_id,
-                COALESCE(receipt.confirmed_at, receipt.updated_at, receipt.created_at) as movement_at
-            ");
-
         $incomingTotals = DB::query()
-            ->fromSub($entryMovements->unionAll($receiptMovements), 'incoming')
+            ->fromSub($entryMovements, 'incoming')
             ->selectRaw('
                 MIN(incoming.source_key) as source_key,
                 incoming.article_id,
@@ -734,6 +681,7 @@ class KardexController extends BasicController
             ->where('exit_note.status', 1)
             ->where('exit_item.status', 1)
             ->where('exit_business.business_key', BusinessScope::KAMARY_MEDICALS)
+            ->when(Schema::hasColumn('exit_notes', 'exit_status'), fn($query) => $query->where('exit_note.exit_status', 'approved'))
             ->selectRaw("
                 exit_item.article_id,
                 COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) as warehouse_id,

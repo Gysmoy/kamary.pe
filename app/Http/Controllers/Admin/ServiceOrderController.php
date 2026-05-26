@@ -130,6 +130,7 @@ class ServiceOrderController extends BasicController
         unset($body['items']);
 
         if (!$id) {
+            DB::table('businesses')->where('id', $business->id)->lockForUpdate()->value('id');
             $body['code'] = $this->nextCode();
             $body['created_by'] = $userId;
             $body['status'] = true;
@@ -638,6 +639,7 @@ class ServiceOrderController extends BasicController
         $next = 1;
         $latest = ServiceOrder::query()
             ->when(Schema::hasColumn('service_orders', 'order_type'), fn($query) => $query->where('order_type', $this->orderType()))
+            ->lockForUpdate()
             ->latest('id')
             ->value('code');
         if ($latest && preg_match('/(\d+)$/', $latest, $matches)) $next = ((int) $matches[1]) + 1;
@@ -647,7 +649,7 @@ class ServiceOrderController extends BasicController
     private function nextBillingCode(): string
     {
         $next = 1;
-        $latest = BillingDocument::query()->latest('id')->value('code');
+        $latest = BillingDocument::query()->lockForUpdate()->latest('id')->value('code');
         if ($latest && preg_match('/(\d+)$/', $latest, $matches)) $next = ((int) $matches[1]) + 1;
         return 'FAC-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
     }

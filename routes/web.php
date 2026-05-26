@@ -155,17 +155,17 @@ Route::middleware('auth')->group(function () {
         Route::get('/reports/inventory', [AdminInventoryReportController::class, 'reactView']);
 
         // Serv. Almacen...
-        Route::get('/storage-inventory', [AdminStorageInventoryController::class, 'reactView']);
-        Route::get('/storage-clients', [AdminStorageClientController::class, 'reactView']);
-        Route::get('/storage-service-orders', [AdminStorageServiceOrderController::class, 'reactView']);
-        Route::get('/storage-units', [AdminStorageUnitController::class, 'reactView']);
-        Route::get('/storage-products', [AdminStorageProductController::class, 'reactView']);
-        Route::get('/storage-entry-note', [AdminStorageEntryNoteController::class, 'reactView']);
-        Route::get('/storage-exit-note', [AdminStorageExitNoteController::class, 'reactView']);
-        Route::get('/storage-kardex', [AdminStorageKardexController::class, 'reactView']);
-        Route::get('/storage-general-service', [AdminStorageGeneralServiceController::class, 'reactView']);
-        Route::get('/storage-billing-control', [AdminStorageBillingControlController::class, 'reactView']);
-        Route::get('/storage-general-service-orders', [AdminStorageGeneralServiceOrderController::class, 'reactView']);
+        Route::get('/storage-inventory', [AdminStorageInventoryController::class, 'reactView'])->middleware('module.permission:storage-inventory');
+        Route::get('/storage-clients', [AdminStorageClientController::class, 'reactView'])->middleware('module.permission:storage-clients');
+        Route::get('/storage-service-orders', [AdminStorageServiceOrderController::class, 'reactView'])->middleware('module.permission:storage-service-orders');
+        Route::get('/storage-units', [AdminStorageUnitController::class, 'reactView'])->middleware('module.permission:storage-units');
+        Route::get('/storage-products', [AdminStorageProductController::class, 'reactView'])->middleware('module.permission:storage-products');
+        Route::get('/storage-entry-note', [AdminStorageEntryNoteController::class, 'reactView'])->middleware('module.permission:storage-entry-note');
+        Route::get('/storage-exit-note', [AdminStorageExitNoteController::class, 'reactView'])->middleware('module.permission:storage-exit-note');
+        Route::get('/storage-kardex', [AdminStorageKardexController::class, 'reactView'])->middleware('module.permission:storage-kardex');
+        Route::get('/storage-general-service', [AdminStorageGeneralServiceController::class, 'reactView'])->middleware('module.permission:storage-general-service');
+        Route::get('/storage-billing-control', [AdminStorageBillingControlController::class, 'reactView'])->middleware('module.permission:storage-billing-control');
+        Route::get('/storage-general-service-orders', [AdminStorageGeneralServiceOrderController::class, 'reactView'])->middleware('module.permission:storage-general-service-orders');
 
         // Despacho
         Route::get('/activity', [AdminActivityController::class, 'reactView']);

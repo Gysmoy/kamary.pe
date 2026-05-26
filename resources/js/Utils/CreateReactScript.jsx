@@ -61,7 +61,20 @@ const CreateReactScript = (render) => {
           LaravelSession.set(`${key}`, session[key])
         }
 
+        const superRoles = ['admin', 'root', 'administrador', 'super admin', 'superadmin']
+        const hasRole = (role) => {
+          const roles = properties?.session?.roles ?? []
+          const expectedRole = `${role ?? ''}`.trim().toLowerCase()
+          return Boolean(roles.find(x => `${x?.name ?? ''}`.trim().toLowerCase() == expectedRole))
+        }
+        const isSuperUser = () => {
+          const roles = properties?.session?.roles ?? []
+          return Boolean(roles.find(x => superRoles.includes(`${x?.name ?? ''}`.trim().toLowerCase())))
+        }
+
         const can = (page, ...keys) => {
+          if (isSuperUser()) return true
+
           const keys2validate = []
           const pages = Array.isArray(page) ? page : [page]
 
@@ -77,11 +90,6 @@ const CreateReactScript = (render) => {
             if (rol?.permissions?.find(x => keys2validate.includes(x.name) || x.name == 'general.root')) return true
           }
           return false
-        }
-
-        const hasRole = (role) => {
-          const roles = properties?.session?.roles ?? []
-          return Boolean(roles.find(x => x.name == role))
         }
 
         FetchParams.call = () => ({

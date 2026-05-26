@@ -167,13 +167,42 @@ class ModulePermissions
             return false;
         }
 
-        if ($user->hasAnyRole(['Admin', 'Root'])) {
+        if (self::isSuperUser($user)) {
             return true;
         }
 
         try {
             return $user->can($permission);
         } catch (PermissionDoesNotExist $exception) {
+            return false;
+        }
+    }
+
+    public static function isSuperUser(?User $user): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        $superRoles = ['admin', 'root', 'administrador', 'super admin', 'superadmin'];
+
+        try {
+            if ($user->hasAnyRole(['Admin', 'Root', 'Administrador', 'Super Admin', 'SuperAdmin'])) {
+                return true;
+            }
+        } catch (\Throwable $exception) {
+            //
+        }
+
+        try {
+            $roleNames = $user->relationLoaded('roles')
+                ? $user->roles->pluck('name')
+                : $user->getRoleNames();
+
+            return $roleNames
+                ->map(fn($role) => mb_strtolower(trim((string)$role)))
+                ->contains(fn($role) => in_array($role, $superRoles, true));
+        } catch (\Throwable $exception) {
             return false;
         }
     }

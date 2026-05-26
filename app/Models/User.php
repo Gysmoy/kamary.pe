@@ -62,12 +62,22 @@ class User extends Authenticatable
 
     public function isRoot()
     {
-        return $this->hasRole('Root');
+        try {
+            if ($this->hasRole('Root')) {
+                return true;
+            }
+
+            return $this->getRoleNames()
+                ->map(fn($role) => mb_strtolower(trim((string)$role)))
+                ->contains('root');
+        } catch (\Throwable $exception) {
+            return false;
+        }
     }
 
     public function isAdmin()
     {
-        return $this->hasRole('Admin');
+        return \App\Support\ModulePermissions::isSuperUser($this);
     }
 
 

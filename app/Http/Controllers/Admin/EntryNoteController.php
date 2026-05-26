@@ -325,15 +325,45 @@ class EntryNoteController extends BasicController
             Article::findOrFail($articleId);
             Warehouse::findOrFail($warehouseId);
 
-            $stock = app(StockService::class)->getAvailableStockByWarehouse($articleId, $warehouseId);
-            $qtyOut = (float)DB::table('exit_note_items as exit_item')
-                ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
-                ->where('exit_note.status', 1)
-                ->where('exit_item.status', 1)
-                ->where('exit_item.article_id', $articleId)
-                ->where('exit_item.warehouse_id', $warehouseId)
-                ->sum('exit_item.quantity');
-            $qtyIn = $stock + $qtyOut;
+            if ($this->isStorageRequest($request)) {
+                $qtyIn = (float)DB::table('entry_note_items as entry_item')
+                    ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
+                    ->join('businesses as business', 'business.id', '=', 'entry_note.business_id')
+                    ->where('entry_note.status', 1)
+                    ->where('entry_note.entry_status', 'approved')
+                    ->where('entry_item.status', 1)
+                    ->where('business.business_key', BusinessScope::KAMARY_MEDICALS)
+                    ->where('entry_item.article_id', $articleId)
+                    ->whereRaw('COALESCE(entry_item.warehouse_id, entry_note.warehouse_id) = ?', [$warehouseId])
+                    ->sum('entry_item.quantity');
+
+                $qtyOutQuery = DB::table('exit_note_items as exit_item')
+                    ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
+                    ->join('businesses as business', 'business.id', '=', 'exit_note.business_id')
+                    ->where('exit_note.status', 1)
+                    ->where('exit_item.status', 1)
+                    ->where('business.business_key', BusinessScope::KAMARY_MEDICALS)
+                    ->where('exit_item.article_id', $articleId)
+                    ->whereRaw('COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) = ?', [$warehouseId]);
+                if (\Illuminate\Support\Facades\Schema::hasColumn('exit_notes', 'exit_status')) {
+                    $qtyOutQuery->where('exit_note.exit_status', 'approved');
+                }
+                $qtyOut = (float)$qtyOutQuery->sum('exit_item.quantity');
+                $stock = round($qtyIn - $qtyOut, 3);
+            } else {
+                $stock = app(StockService::class)->getAvailableStockByWarehouse($articleId, $warehouseId);
+                $qtyOutQuery = DB::table('exit_note_items as exit_item')
+                    ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
+                    ->where('exit_note.status', 1)
+                    ->where('exit_item.status', 1)
+                    ->where('exit_item.article_id', $articleId)
+                    ->where('exit_item.warehouse_id', $warehouseId);
+                if (\Illuminate\Support\Facades\Schema::hasColumn('exit_notes', 'exit_status')) {
+                    $qtyOutQuery->where('exit_note.exit_status', 'approved');
+                }
+                $qtyOut = (float)$qtyOutQuery->sum('exit_item.quantity');
+                $qtyIn = $stock + $qtyOut;
+            }
 
             $response->status = 200;
             $response->message = 'Operacion correcta';

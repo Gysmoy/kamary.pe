@@ -347,116 +347,140 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::prefix('storage')->group(function () {
-            Route::get('/inventory/options', [AdminStorageInventoryController::class, 'options']);
-            Route::post('/inventory/preview', [AdminStorageInventoryController::class, 'preview']);
-            Route::post('/inventory', [AdminStorageInventoryController::class, 'save']);
-            Route::post('/inventory/paginate', [AdminStorageInventoryController::class, 'paginate']);
-            Route::post('/inventory/{id}/apply', [AdminStorageInventoryController::class, 'apply']);
-            Route::get('/inventory/{id}', [AdminStorageInventoryController::class, 'get']);
-            Route::get('/inventory/{id}/format', [AdminStorageInventoryController::class, 'format']);
-            Route::post('/inventory/{id}/import', [AdminStorageInventoryController::class, 'import']);
-            Route::patch('/inventory/status', [AdminStorageInventoryController::class, 'status']);
-            Route::delete('/inventory/{id}', [AdminStorageInventoryController::class, 'delete']);
+            $storageAny = 'module.permission:storage-inventory,storage-clients,storage-service-orders,storage-units,storage-products,storage-entry-note,storage-exit-note,storage-kardex,storage-general-service,storage-billing-control,storage-general-service-orders';
 
-            Route::post('/clients', [AdminStorageClientController::class, 'save']);
-            Route::post('/clients/paginate', [AdminStorageClientController::class, 'paginate']);
-            Route::patch('/clients/status', [AdminStorageClientController::class, 'status']);
-            Route::patch('/clients/{field}', [AdminStorageClientController::class, 'boolean']);
-            Route::delete('/clients/{id}', [AdminStorageClientController::class, 'delete']);
-            Route::get('/clients/document/{type}/{number}', [AdminStorageClientController::class, 'lookupByDocument']);
+            Route::middleware('module.permission:storage-inventory')->group(function () {
+                Route::get('/inventory/options', [AdminStorageInventoryController::class, 'options']);
+                Route::post('/inventory/preview', [AdminStorageInventoryController::class, 'preview']);
+                Route::post('/inventory', [AdminStorageInventoryController::class, 'save']);
+                Route::post('/inventory/paginate', [AdminStorageInventoryController::class, 'paginate']);
+                Route::post('/inventory/{id}/apply', [AdminStorageInventoryController::class, 'apply']);
+                Route::get('/inventory/{id}', [AdminStorageInventoryController::class, 'get']);
+                Route::get('/inventory/{id}/format', [AdminStorageInventoryController::class, 'format']);
+                Route::post('/inventory/{id}/import', [AdminStorageInventoryController::class, 'import']);
+                Route::patch('/inventory/status', [AdminStorageInventoryController::class, 'status']);
+                Route::delete('/inventory/{id}', [AdminStorageInventoryController::class, 'delete']);
+            });
 
-            Route::post('/client-notifications', [AdminStorageClientNotificationController::class, 'save']);
-            Route::post('/client-notifications/paginate', [AdminStorageClientNotificationController::class, 'paginate']);
-            Route::patch('/client-notifications/status', [AdminStorageClientNotificationController::class, 'status']);
-            Route::patch('/client-notifications/{field}', [AdminStorageClientNotificationController::class, 'boolean']);
-            Route::delete('/client-notifications/{id}', [AdminStorageClientNotificationController::class, 'delete']);
+            Route::middleware($storageAny)->group(function () {
+                Route::post('/clients/paginate', [AdminStorageClientController::class, 'paginate']);
+                Route::get('/clients/document/{type}/{number}', [AdminStorageClientController::class, 'lookupByDocument']);
+                Route::post('/units/paginate', [AdminStorageUnitController::class, 'paginate']);
+                Route::post('/articles/paginate', [AdminStorageProductController::class, 'paginate']);
+                Route::get('/articles/laboratories/{id}/principles', [AdminStorageProductController::class, 'principles']);
+                Route::get('/articles/{id}/stock-by-warehouse', [AdminStorageProductController::class, 'stockByWarehouse']);
+                Route::get('/kardex/options', [AdminStorageKardexController::class, 'options']);
+                Route::post('/kardex/paginate', [AdminStorageKardexController::class, 'paginate']);
+                Route::post('/general-service/paginate', [AdminStorageGeneralServiceController::class, 'paginate']);
+            });
 
-            Route::get('/client-tariffs/client/{clientId}', [AdminStorageClientTariffController::class, 'byClient']);
-            Route::post('/client-tariffs', [AdminStorageClientTariffController::class, 'save']);
-            Route::delete('/client-tariffs/{id}', [AdminStorageClientTariffController::class, 'delete']);
+            Route::middleware('module.permission:storage-clients')->group(function () {
+                Route::post('/clients', [AdminStorageClientController::class, 'save']);
+                Route::patch('/clients/status', [AdminStorageClientController::class, 'status']);
+                Route::patch('/clients/{field}', [AdminStorageClientController::class, 'boolean']);
+                Route::delete('/clients/{id}', [AdminStorageClientController::class, 'delete']);
+                Route::post('/client-notifications', [AdminStorageClientNotificationController::class, 'save']);
+                Route::post('/client-notifications/paginate', [AdminStorageClientNotificationController::class, 'paginate']);
+                Route::patch('/client-notifications/status', [AdminStorageClientNotificationController::class, 'status']);
+                Route::patch('/client-notifications/{field}', [AdminStorageClientNotificationController::class, 'boolean']);
+                Route::delete('/client-notifications/{id}', [AdminStorageClientNotificationController::class, 'delete']);
+                Route::get('/client-tariffs/client/{clientId}', [AdminStorageClientTariffController::class, 'byClient']);
+                Route::post('/client-tariffs', [AdminStorageClientTariffController::class, 'save']);
+                Route::delete('/client-tariffs/{id}', [AdminStorageClientTariffController::class, 'delete']);
+                Route::post('/client-contracts', [AdminStorageClientContractController::class, 'save']);
+                Route::post('/client-contracts/paginate', [AdminStorageClientContractController::class, 'paginate']);
+                Route::get('/client-contracts/{id}/file', [AdminStorageClientContractController::class, 'file']);
+                Route::delete('/client-contracts/{id}', [AdminStorageClientContractController::class, 'delete']);
+            });
 
-            Route::post('/client-contracts', [AdminStorageClientContractController::class, 'save']);
-            Route::post('/client-contracts/paginate', [AdminStorageClientContractController::class, 'paginate']);
-            Route::get('/client-contracts/{id}/file', [AdminStorageClientContractController::class, 'file']);
-            Route::delete('/client-contracts/{id}', [AdminStorageClientContractController::class, 'delete']);
+            Route::middleware('module.permission:storage-units')->group(function () {
+                Route::post('/units', [AdminStorageUnitController::class, 'save']);
+                Route::post('/units/import', [AdminStorageUnitController::class, 'import']);
+                Route::patch('/units/status', [AdminStorageUnitController::class, 'status']);
+                Route::patch('/units/{field}', [AdminStorageUnitController::class, 'boolean']);
+                Route::delete('/units/{id}', [AdminStorageUnitController::class, 'delete']);
+            });
 
-            Route::post('/units', [AdminStorageUnitController::class, 'save']);
-            Route::post('/units/import', [AdminStorageUnitController::class, 'import']);
-            Route::post('/units/paginate', [AdminStorageUnitController::class, 'paginate']);
-            Route::patch('/units/status', [AdminStorageUnitController::class, 'status']);
-            Route::patch('/units/{field}', [AdminStorageUnitController::class, 'boolean']);
-            Route::delete('/units/{id}', [AdminStorageUnitController::class, 'delete']);
+            Route::middleware('module.permission:storage-products')->group(function () {
+                Route::post('/articles', [AdminStorageProductController::class, 'save']);
+                Route::post('/articles/import', [AdminStorageProductController::class, 'import']);
+                Route::patch('/articles/status', [AdminStorageProductController::class, 'status']);
+                Route::patch('/articles/{field}', [AdminStorageProductController::class, 'boolean']);
+                Route::delete('/articles/{id}', [AdminStorageProductController::class, 'delete']);
+            });
 
-            Route::post('/articles', [AdminStorageProductController::class, 'save']);
-            Route::post('/articles/import', [AdminStorageProductController::class, 'import']);
-            Route::post('/articles/paginate', [AdminStorageProductController::class, 'paginate']);
-            Route::patch('/articles/status', [AdminStorageProductController::class, 'status']);
-            Route::patch('/articles/{field}', [AdminStorageProductController::class, 'boolean']);
-            Route::delete('/articles/{id}', [AdminStorageProductController::class, 'delete']);
-            Route::get('/articles/laboratories/{id}/principles', [AdminStorageProductController::class, 'principles']);
-            Route::get('/articles/{id}/stock-by-warehouse', [AdminStorageProductController::class, 'stockByWarehouse']);
+            Route::middleware('module.permission:storage-entry-note')->group(function () {
+                Route::post('/entry-notes', [AdminStorageEntryNoteController::class, 'save']);
+                Route::post('/entry-notes/paginate', [AdminStorageEntryNoteController::class, 'paginate']);
+                Route::patch('/entry-notes/{id}/entry-status', [AdminStorageEntryNoteController::class, 'entryStatus']);
+                Route::patch('/entry-notes/status', [AdminStorageEntryNoteController::class, 'status']);
+                Route::patch('/entry-notes/{field}', [AdminStorageEntryNoteController::class, 'boolean']);
+                Route::delete('/entry-notes/{id}', [AdminStorageEntryNoteController::class, 'delete']);
+                Route::get('/entry-notes/businesses/{id}/branches', [AdminStorageEntryNoteController::class, 'branches']);
+                Route::get('/entry-notes/current-stock', [AdminStorageEntryNoteController::class, 'currentStock']);
+                Route::get('/entry-notes/{id}', [AdminStorageEntryNoteController::class, 'get']);
+            });
 
-            Route::post('/entry-notes', [AdminStorageEntryNoteController::class, 'save']);
-            Route::post('/entry-notes/paginate', [AdminStorageEntryNoteController::class, 'paginate']);
-            Route::patch('/entry-notes/{id}/entry-status', [AdminStorageEntryNoteController::class, 'entryStatus']);
-            Route::patch('/entry-notes/status', [AdminStorageEntryNoteController::class, 'status']);
-            Route::patch('/entry-notes/{field}', [AdminStorageEntryNoteController::class, 'boolean']);
-            Route::delete('/entry-notes/{id}', [AdminStorageEntryNoteController::class, 'delete']);
-            Route::get('/entry-notes/businesses/{id}/branches', [AdminStorageEntryNoteController::class, 'branches']);
-            Route::get('/entry-notes/current-stock', [AdminStorageEntryNoteController::class, 'currentStock']);
-            Route::get('/entry-notes/{id}', [AdminStorageEntryNoteController::class, 'get']);
+            Route::middleware('module.permission:storage-exit-note')->group(function () {
+                Route::post('/exit-notes', [AdminStorageExitNoteController::class, 'save']);
+                Route::post('/exit-notes/paginate', [AdminStorageExitNoteController::class, 'paginate']);
+                Route::get('/exit-notes/available-stock', [AdminStorageExitNoteController::class, 'availableStock']);
+                Route::patch('/exit-notes/status', [AdminStorageExitNoteController::class, 'status']);
+                Route::patch('/exit-notes/{field}', [AdminStorageExitNoteController::class, 'boolean']);
+                Route::delete('/exit-notes/{id}', [AdminStorageExitNoteController::class, 'delete']);
+                Route::get('/exit-notes/businesses/{id}/branches', [AdminStorageExitNoteController::class, 'branches']);
+            });
 
-            Route::post('/exit-notes', [AdminStorageExitNoteController::class, 'save']);
-            Route::post('/exit-notes/paginate', [AdminStorageExitNoteController::class, 'paginate']);
-            Route::get('/exit-notes/available-stock', [AdminStorageExitNoteController::class, 'availableStock']);
-            Route::patch('/exit-notes/status', [AdminStorageExitNoteController::class, 'status']);
-            Route::patch('/exit-notes/{field}', [AdminStorageExitNoteController::class, 'boolean']);
-            Route::delete('/exit-notes/{id}', [AdminStorageExitNoteController::class, 'delete']);
-            Route::get('/exit-notes/businesses/{id}/branches', [AdminStorageExitNoteController::class, 'branches']);
+            Route::middleware('module.permission:storage-kardex')->group(function () {
+                Route::get('/kardex/locations-report', [AdminStorageKardexController::class, 'locationsReport']);
+                Route::get('/kardex/inventory-report', [AdminStorageKardexController::class, 'inventoryReport']);
+                Route::post('/kardex/movements', [AdminStorageKardexController::class, 'movements']);
+                Route::post('/kardex/warehouses', [AdminStorageKardexController::class, 'saveWarehouse']);
+                Route::delete('/kardex/warehouses/{id}', [AdminStorageKardexController::class, 'deleteWarehouse']);
+                Route::post('/kardex/locations', [AdminStorageKardexController::class, 'saveLocation']);
+                Route::delete('/kardex/locations/{id}', [AdminStorageKardexController::class, 'deleteLocation']);
+            });
 
-            Route::get('/kardex/options', [AdminStorageKardexController::class, 'options']);
-            Route::get('/kardex/locations-report', [AdminStorageKardexController::class, 'locationsReport']);
-            Route::get('/kardex/inventory-report', [AdminStorageKardexController::class, 'inventoryReport']);
-            Route::post('/kardex/movements', [AdminStorageKardexController::class, 'movements']);
-            Route::post('/kardex/warehouses', [AdminStorageKardexController::class, 'saveWarehouse']);
-            Route::delete('/kardex/warehouses/{id}', [AdminStorageKardexController::class, 'deleteWarehouse']);
-            Route::post('/kardex/locations', [AdminStorageKardexController::class, 'saveLocation']);
-            Route::delete('/kardex/locations/{id}', [AdminStorageKardexController::class, 'deleteLocation']);
-            Route::post('/kardex/paginate', [AdminStorageKardexController::class, 'paginate']);
+            Route::middleware('module.permission:storage-general-service')->group(function () {
+                Route::post('/general-service', [AdminStorageGeneralServiceController::class, 'save']);
+                Route::patch('/general-service/status', [AdminStorageGeneralServiceController::class, 'status']);
+                Route::patch('/general-service/{field}', [AdminStorageGeneralServiceController::class, 'boolean']);
+                Route::delete('/general-service/{id}', [AdminStorageGeneralServiceController::class, 'delete']);
+            });
 
-            Route::post('/general-service', [AdminStorageGeneralServiceController::class, 'save']);
-            Route::post('/general-service/paginate', [AdminStorageGeneralServiceController::class, 'paginate']);
-            Route::patch('/general-service/status', [AdminStorageGeneralServiceController::class, 'status']);
-            Route::patch('/general-service/{field}', [AdminStorageGeneralServiceController::class, 'boolean']);
-            Route::delete('/general-service/{id}', [AdminStorageGeneralServiceController::class, 'delete']);
+            Route::middleware('module.permission:storage-billing-control')->group(function () {
+                Route::post('/billing-control', [AdminStorageBillingControlController::class, 'save']);
+                Route::post('/billing-control/paginate', [AdminStorageBillingControlController::class, 'paginate']);
+                Route::patch('/billing-control/status', [AdminStorageBillingControlController::class, 'status']);
+                Route::patch('/billing-control/{field}', [AdminStorageBillingControlController::class, 'boolean']);
+                Route::delete('/billing-control/{id}', [AdminStorageBillingControlController::class, 'delete']);
+                Route::get('/billing-control/{id}/connector-payload', [AdminStorageBillingControlController::class, 'connectorPayload']);
+                Route::post('/billing-control/{id}/prepare-voucher', [AdminStorageBillingControlController::class, 'prepareVoucher']);
+                Route::post('/billing-control/{id}/issue', [AdminStorageBillingControlController::class, 'issue']);
+                Route::post('/billing-control/{id}/cancel', [AdminStorageBillingControlController::class, 'cancel']);
+                Route::post('/billing-control/{id}/credit-note', [AdminStorageBillingControlController::class, 'creditNote']);
+                Route::post('/billing-control/{id}/provider-response', [AdminStorageBillingControlController::class, 'registerProviderResponse']);
+                Route::post('/billing-control/{id}/provider-status', [AdminStorageBillingControlController::class, 'providerStatus']);
+                Route::get('/billing-control/{id}/download/{type}', [AdminStorageBillingControlController::class, 'download'])->where('type', 'pdf|xml|cdr');
+            });
 
-            Route::post('/billing-control', [AdminStorageBillingControlController::class, 'save']);
-            Route::post('/billing-control/paginate', [AdminStorageBillingControlController::class, 'paginate']);
-            Route::patch('/billing-control/status', [AdminStorageBillingControlController::class, 'status']);
-            Route::patch('/billing-control/{field}', [AdminStorageBillingControlController::class, 'boolean']);
-            Route::delete('/billing-control/{id}', [AdminStorageBillingControlController::class, 'delete']);
-            Route::get('/billing-control/{id}/connector-payload', [AdminStorageBillingControlController::class, 'connectorPayload']);
-            Route::post('/billing-control/{id}/prepare-voucher', [AdminStorageBillingControlController::class, 'prepareVoucher']);
-            Route::post('/billing-control/{id}/issue', [AdminStorageBillingControlController::class, 'issue']);
-            Route::post('/billing-control/{id}/cancel', [AdminStorageBillingControlController::class, 'cancel']);
-            Route::post('/billing-control/{id}/credit-note', [AdminStorageBillingControlController::class, 'creditNote']);
-            Route::post('/billing-control/{id}/provider-response', [AdminStorageBillingControlController::class, 'registerProviderResponse']);
-            Route::post('/billing-control/{id}/provider-status', [AdminStorageBillingControlController::class, 'providerStatus']);
-            Route::get('/billing-control/{id}/download/{type}', [AdminStorageBillingControlController::class, 'download'])->where('type', 'pdf|xml|cdr');
+            Route::middleware('module.permission:storage-service-orders')->group(function () {
+                Route::post('/service-orders', [AdminStorageServiceOrderController::class, 'save']);
+                Route::post('/service-orders/paginate', [AdminStorageServiceOrderController::class, 'paginate']);
+                Route::patch('/service-orders/status', [AdminStorageServiceOrderController::class, 'status']);
+                Route::patch('/service-orders/{field}', [AdminStorageServiceOrderController::class, 'boolean']);
+                Route::delete('/service-orders/{id}', [AdminStorageServiceOrderController::class, 'delete']);
+                Route::get('/service-orders/businesses/{id}/branches', [AdminStorageServiceOrderController::class, 'branches']);
+            });
 
-            Route::post('/service-orders', [AdminStorageServiceOrderController::class, 'save']);
-            Route::post('/service-orders/paginate', [AdminStorageServiceOrderController::class, 'paginate']);
-            Route::patch('/service-orders/status', [AdminStorageServiceOrderController::class, 'status']);
-            Route::patch('/service-orders/{field}', [AdminStorageServiceOrderController::class, 'boolean']);
-            Route::delete('/service-orders/{id}', [AdminStorageServiceOrderController::class, 'delete']);
-            Route::get('/service-orders/businesses/{id}/branches', [AdminStorageServiceOrderController::class, 'branches']);
-
-            Route::post('/general-service-orders', [AdminStorageGeneralServiceOrderController::class, 'save']);
-            Route::post('/general-service-orders/paginate', [AdminStorageGeneralServiceOrderController::class, 'paginate']);
-            Route::patch('/general-service-orders/status', [AdminStorageGeneralServiceOrderController::class, 'status']);
-            Route::patch('/general-service-orders/{field}', [AdminStorageGeneralServiceOrderController::class, 'boolean']);
-            Route::delete('/general-service-orders/{id}', [AdminStorageGeneralServiceOrderController::class, 'delete']);
-            Route::get('/general-service-orders/businesses/{id}/branches', [AdminStorageGeneralServiceOrderController::class, 'branches']);
+            Route::middleware('module.permission:storage-general-service-orders')->group(function () {
+                Route::post('/general-service-orders', [AdminStorageGeneralServiceOrderController::class, 'save']);
+                Route::post('/general-service-orders/paginate', [AdminStorageGeneralServiceOrderController::class, 'paginate']);
+                Route::patch('/general-service-orders/status', [AdminStorageGeneralServiceOrderController::class, 'status']);
+                Route::patch('/general-service-orders/{field}', [AdminStorageGeneralServiceOrderController::class, 'boolean']);
+                Route::delete('/general-service-orders/{id}', [AdminStorageGeneralServiceOrderController::class, 'delete']);
+                Route::get('/general-service-orders/businesses/{id}/branches', [AdminStorageGeneralServiceOrderController::class, 'branches']);
+            });
         });
 
         Route::post('/clients', [AdminClientController::class, 'save']);

@@ -7,12 +7,15 @@ use App\Models\Client;
 use App\Models\ClientContract;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class ClientContractController extends BasicController
 {
     public $model = ClientContract::class;
     public $prefix4filter = 'client_contracts';
+
+    private ?string $oldFilePath = null;
 
     public function setPaginationInstance(string $model)
     {
@@ -25,6 +28,7 @@ class ClientContractController extends BasicController
     {
         $body = $request->all();
         $userId = Auth::id();
+        $this->oldFilePath = null;
         $id = $body['id'] ?? null;
         $clientId = (int)($body['client_id'] ?? 0);
 
@@ -71,14 +75,31 @@ class ClientContractController extends BasicController
                 throw new \Exception('Solo se permiten archivos PDF, Word o imagen');
             }
 
+            $allowedMimeTypes = [
+                'pdf' => ['application/pdf'],
+                'doc' => ['application/msword', 'application/vnd.ms-word', 'application/x-cfb', 'application/x-ole-storage'],
+                'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip'],
+                'jpg' => ['image/jpeg'],
+                'jpeg' => ['image/jpeg'],
+                'png' => ['image/png'],
+            ];
+            $detectedMime = $file->getMimeType();
+            $clientMime = $file->getClientMimeType();
+            if (
+                !in_array($detectedMime, $allowedMimeTypes[$extension] ?? [], true)
+                && !in_array($clientMime, $allowedMimeTypes[$extension] ?? [], true)
+            ) {
+                throw new \Exception('El tipo real del archivo no coincide con el formato permitido');
+            }
+
             if ($current?->file_path) {
-                Storage::disk('public')->delete($current->file_path);
+                $this->oldFilePath = $current->file_path;
             }
 
             $path = $file->store('client-contracts', 'public');
             $body['file_path'] = $path;
             $body['file_name'] = $file->getClientOriginalName();
-            $body['file_mime'] = $file->getClientMimeType();
+            $body['file_mime'] = $detectedMime ?: $clientMime;
         } elseif ($current) {
             unset($body['file_path'], $body['file_name'], $body['file_mime']);
         }
@@ -97,6 +118,17 @@ class ClientContractController extends BasicController
         unset($body['file']);
 
         return $body;
+    }
+
+    public function afterSave(Request $request, object $jpa, bool $isNew)
+    {
+        if ($this->oldFilePath) {
+            $oldFilePath = $this->oldFilePath;
+            DB::afterCommit(fn() => Storage::disk('public')->delete($oldFilePath));
+            $this->oldFilePath = null;
+        }
+
+        return null;
     }
 
     public function file(Request $request, string $id)
