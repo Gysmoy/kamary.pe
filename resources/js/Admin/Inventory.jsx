@@ -418,53 +418,96 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
 
     <Modal
       modalRef={modalRef}
-      title={<div className='d-flex align-items-center gap-2 text-white fw-bold fs-6 text-uppercase'>
+      title={<h4 className='modal-title d-flex align-items-center gap-2 mb-0'>
         <i className='mdi mdi-format-list-bulleted'></i>
-        Registrar inventario
-      </div>}
+        REGISTRAR INVENTARIO
+      </h4>}
       size='xl'
       hideFooter
       dialogClass='modal-dialog-scrollable storage-inventory-dialog'
-      contentClass='storage-inventory-modal'
-      headerClass='py-2 border-0 bg-storage-inventory-modal'
+      contentClass='storage-inventory-template-modal'
+      headerClass='storage-inventory-template-header'
       closeButtonClass='btn-close-white'
-      bodyClass='storage-inventory-body'
-      bodyStyle={{ maxHeight: 'calc(100vh - 180px)', overflowY: 'auto', overflowX: 'hidden' }}
+      bodyClass='storage-inventory-template-body'
+      bodyStyle={{ maxHeight: 'calc(100vh - 120px)', overflowY: 'auto', overflowX: 'hidden' }}
       onSubmit={(e) => e.preventDefault()}
       onClose={resetModal}
     >
       <style>{`
-        .bg-storage-inventory-modal { background: #25274f; }
         .storage-inventory-dialog {
-          width: calc(100vw - 32px);
-          max-width: calc(100vw - 32px);
-          margin: 0.9rem auto;
+          width: min(1360px, calc(100vw - 48px));
+          max-width: min(1360px, calc(100vw - 48px));
+          margin: 1.75rem auto;
         }
-        .storage-inventory-modal {
+        .storage-inventory-template-modal {
           border: 0;
-          border-radius: 6px;
+          border-radius: 0;
         }
-        .storage-inventory-body {
-          padding: 1rem 1.25rem 1.25rem;
+        .storage-inventory-template-header {
+          background: #272954;
+          color: #fff;
+          padding: .48rem 1rem;
+          border: 0;
+          border-radius: 0;
         }
-        .storage-inventory-modal-actions { min-height: 43px; }
-        .storage-inventory-filter-row .form-label { margin-bottom: 0.45rem; font-weight: 600; }
-        .storage-inventory-section {
-          border: 1px solid #e3e8ef;
-          border-radius: 6px;
-          padding: 1rem;
-          margin-bottom: 1rem;
-        }
-        .storage-inventory-section-title {
-          color: #4b5563;
-          font-size: 0.78rem;
+        .storage-inventory-template-header .modal-title {
+          color: #fff;
+          font-size: .78rem;
           font-weight: 700;
-          margin-bottom: 0.9rem;
+          letter-spacing: 0;
           text-transform: uppercase;
+        }
+        .storage-inventory-template-body {
+          padding: 0 1.75rem 1.35rem;
+          color: #30384d;
+        }
+        .storage-inventory-template-body label,
+        .storage-inventory-template-body .form-label {
+          color: #30384d;
+          font-size: .78rem;
+          font-weight: 600;
+          margin-bottom: .3rem;
+        }
+        .storage-inventory-template-body .form-control,
+        .storage-inventory-template-body .form-select {
+          min-height: 32px;
+          border-radius: 0;
+          font-size: .8rem;
+          padding: .3rem .55rem;
+        }
+        .storage-inventory-template-body .btn {
+          border-radius: 0;
+          font-size: .78rem;
+          font-weight: 700;
+        }
+        .storage-inventory-modal-actions {
+          border-bottom: 1px solid #e4e7ec;
+          margin: 0 0 1.25rem !important;
+          min-height: 0;
+          padding: 1rem 0;
+        }
+        .storage-inventory-template-subtitle {
+          color: #30384d;
+          font-size: .78rem;
+          font-weight: 700;
+          margin-bottom: .75rem;
+          text-transform: uppercase;
+        }
+        .storage-inventory-toolbar {
+          border-bottom: 1px solid #e4e7ec;
+          margin-bottom: 1.5rem;
+          padding-bottom: 1rem;
+        }
+        .storage-inventory-heading {
+          color: #30384d;
+          font-size: 1.35rem;
+          font-weight: 700;
+          letter-spacing: 0;
+          text-align: center;
         }
         .storage-inventory-table-wrap {
           border: 1px solid #e3e8ef;
-          border-radius: 6px;
+          border-radius: 0;
           min-height: 160px;
           overflow: auto;
         }
@@ -476,16 +519,18 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           font-size: 0.75rem;
           text-transform: uppercase;
           white-space: nowrap;
+          background: #fff;
         }
         .storage-inventory-table td {
           vertical-align: middle;
         }
         @media (max-width: 767.98px) {
           .storage-inventory-dialog { width: calc(100vw - 12px); max-width: calc(100vw - 12px); }
+          .storage-inventory-template-body { padding: 0 1rem 1rem; }
         }
       `}</style>
       <input ref={fileRef} type='file' accept='.csv' hidden onChange={uploadFormat} />
-      <div className='d-flex justify-content-center gap-4 storage-inventory-modal-actions my-3'>
+      <div className='d-flex flex-wrap justify-content-center gap-4 storage-inventory-modal-actions'>
         {!selectedCount && <button type='button' className='btn btn-primary' onClick={registerInventory}>
           <i className='mdi mdi-plus me-1'></i>
           Registrar
@@ -499,11 +544,12 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           Aplicar inventario
         </button>}
       </div>
-      <hr className='my-4' />
 
-      <div className='storage-inventory-section'>
-        <div className='storage-inventory-section-title'><i className='mdi mdi-filter-outline me-1'></i> Filtros de inventario</div>
-      <div className='row g-4 align-items-end storage-inventory-filter-row mb-0'>
+      <div className='storage-inventory-template-subtitle'>
+        <i className='mdi mdi-filter-outline me-1'></i>
+        INGRESAR DATOS
+      </div>
+      <div className='row g-3 align-items-end storage-inventory-filter-row mb-3'>
         <div className='col-12 col-md-6 col-xl-2'>
           <label className='form-label'>Almacen</label>
           <select className='form-select' value={warehouseId} disabled={!!selectedCount} onChange={(e) => changeWarehouse(e.target.value)}>
@@ -544,18 +590,17 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           </button>
         </div>
       </div>
-      </div>
 
-      <div className='d-flex flex-wrap gap-4 mb-4'>
-        <button type='button' className='btn btn-outline-success px-5 py-2' disabled={!selectedCount?.id} onClick={downloadFormat}>
+      <div className='d-flex flex-wrap gap-4 storage-inventory-toolbar'>
+        <button type='button' className='btn btn-outline-success px-4' disabled={!selectedCount?.id} onClick={downloadFormat}>
           Descargar Formato
         </button>
-        <button type='button' className='btn btn-outline-success px-5 py-2' disabled={!selectedCount?.id || selectedCountApplied} onClick={() => fileRef.current?.click()}>
+        <button type='button' className='btn btn-outline-success px-4' disabled={!selectedCount?.id || selectedCountApplied} onClick={() => fileRef.current?.click()}>
           Subir Formato
         </button>
       </div>
 
-      <h3 className='text-center mb-4'>INVENTARIO N° {selectedCountCode}</h3>
+      <h3 className='storage-inventory-heading mb-4'>INVENTARIO N° {selectedCountCode}</h3>
       {selectedClientName && <div className='d-flex justify-content-end mb-2'><span className='badge badge-soft-secondary fs-14'>{selectedClientName}</span></div>}
       <div className='d-flex flex-wrap justify-content-between align-items-center gap-3 mb-2'>
         <label className='d-inline-flex align-items-center gap-2 mb-0'>
