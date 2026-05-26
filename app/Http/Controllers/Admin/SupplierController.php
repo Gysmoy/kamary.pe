@@ -232,8 +232,9 @@ class SupplierController extends BasicController
     {
         $response = new Response();
         try {
+            $field = $this->allowedBooleanFieldFromRequest($request);
             $data = [];
-            $data[$request->field] = $request->value;
+            $data[$field] = $request->value;
             $data['updated_by'] = Auth::id();
 
             $updated = $this->scopedSupplierMutationQuery($request->id)->update($data);

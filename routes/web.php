@@ -108,10 +108,10 @@ Route::get('/confirmation/{token}', [AuthController::class, 'loginView'])->name(
 Route::get('/unsubscribe', [MailingController::class, 'reactView'])->name('Unsubscribe.jsx');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/comercial/tomapedido', [AdminTakeOrderController::class, 'reactView']);
+    Route::get('/comercial/tomapedido', [AdminTakeOrderController::class, 'reactView'])->middleware('module.permission:take-orders');
 
     // Admin routes
-    Route::prefix('admin')->group(function () {
+    Route::prefix('admin')->middleware('admin.permission')->group(function () {
         Route::get('/', fn() => redirect()->to(ModulePermissions::homePathForUser(auth()->user())));
         Route::get('/home', [AdminHomeController::class, 'reactView']);
         Route::get('/generals', [AdminGeneralController::class, 'reactView']);
@@ -253,4 +253,5 @@ Route::middleware('auth')->group(function () {
 
 Route::get('/mailing/new-formula', fn() => view('mailing.new-formula'));
 Route::get('/repository/{uuid}', [AdminRepositoryController::class, 'media'])->withoutMiddleware('throttle');
-Route::get('/graph/sales/{type}/{filter}', [AdminHomeController::class, 'getSales']);
+Route::get('/graph/sales/{type}/{filter}', [AdminHomeController::class, 'getSales'])
+    ->middleware(['auth', 'module.permission:dashboard']);

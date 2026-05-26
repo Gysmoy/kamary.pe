@@ -285,8 +285,9 @@ class PurchaseOrderController extends BasicController
         $response = new Response();
         DB::beginTransaction();
         try {
+            $field = $this->allowedBooleanFieldFromRequest($request);
             $data = [];
-            $data[$request->field] = $request->value;
+            $data[$field] = $request->value;
             $data['updated_by'] = Auth::id();
             $updated = $this->scopedPurchaseOrderMutationQuery($request->id)->update($data);
             if (!$updated) throw new \Exception('Orden de compra no encontrada en este modulo');

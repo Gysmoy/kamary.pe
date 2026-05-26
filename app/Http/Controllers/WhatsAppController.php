@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Formula;
 use App\Models\Sale;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use SoDe\Extend\Fetch;
+use SoDe\Extend\JSON;
 use SoDe\Extend\Text;
 
 class WhatsAppController extends Controller
@@ -85,7 +87,7 @@ class WhatsAppController extends Controller
                     }
                 }
             } catch (\Throwable $th) {
-                dump($th->getMessage());
+                Log::warning('Error enviando WhatsApp al cliente', ['exception' => $th]);
             }
             try {
                 if ($send2group)
@@ -103,10 +105,10 @@ class WhatsAppController extends Controller
                         ]
                     ]);
             } catch (\Throwable $th) {
-                dump($th->getMessage());
+                Log::warning('Error enviando WhatsApp al grupo', ['exception' => $th]);
             }
         } catch (\Throwable $th) {
-            dump($th->getMessage());
+            Log::error('Error preparando envio de WhatsApp de venta', ['exception' => $th]);
         }
     }
 }

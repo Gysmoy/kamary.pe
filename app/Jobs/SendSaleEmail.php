@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 use SoDe\Extend\Crypto;
 use SoDe\Extend\Fetch;
@@ -94,7 +95,7 @@ class SendSaleEmail implements ShouldQueue
         ]);
       }
     } catch (\Throwable $th) {
-      dump($th->getMessage());
+      Log::error('Error enviando resumen de venta por correo', ['exception' => $th]);
     }
   }
 }

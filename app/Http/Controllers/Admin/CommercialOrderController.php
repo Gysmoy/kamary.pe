@@ -622,6 +622,9 @@ class CommercialOrderController extends BasicController
             $order = CommercialOrder::findOrFail($request->id);
             $field = trim((string)$request->field);
             if ($field === '') throw new \Exception('Campo invalido');
+            if (!in_array($field, ['status', 'order_status', 'dispatch_status', 'billing_status', 'payment_status', 'document_type'], true)) {
+                throw new \Exception('Campo no permitido para esta operacion');
+            }
 
             $value = $request->value;
             $payload = [

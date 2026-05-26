@@ -110,12 +110,13 @@ class BusinessController extends BasicController
     {
         $response = new Response();
         try {
-            if (in_array($request->field, ['status', 'business_key'], true)) {
+            $field = $this->allowedBooleanFieldFromRequest($request);
+            if (in_array($field, ['status', 'business_key'], true)) {
                 throw new \Exception('No puedes modificar el estado o clave de una empresa fija');
             }
 
             $data = [];
-            $data[$request->field] = $request->value;
+            $data[$field] = $request->value;
             $data['updated_by'] = Auth::id();
 
             $this->model::where($this->identifier, $request->id)->update($data);
@@ -321,8 +322,13 @@ class BusinessController extends BasicController
         $response = new Response();
         try {
             BusinessScope::findFixedBusiness($id);
+            $field = trim((string)$request->field);
+            if (!in_array($field, ['status'], true)) {
+                throw new \Exception('Campo no permitido para esta operacion');
+            }
+
             $data = [];
-            $data[$request->field] = $request->value;
+            $data[$field] = $request->value;
 
             BusinessBranch::where('business_id', $id)
                 ->where('id', $branchId)

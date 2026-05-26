@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\File;
 
 // Admin
 use App\Http\Controllers\Admin\ActivityController as AdminActivityController;
+use App\Http\Controllers\Admin\HomeController as AdminHomeController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\AccountsPayableController as AdminAccountsPayableController;
 use App\Http\Controllers\Admin\AccountController as AdminAccountController;
@@ -108,8 +109,10 @@ Route::prefix('integrations')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::delete('logout', [AuthController::class, 'destroy'])->name('logout');
 
+    Route::get('/graph/sales/{type}/{filter}', [AdminHomeController::class, 'getSales'])
+        ->middleware('module.permission:dashboard');
 
-    Route::prefix('admin')->group(function () {
+    Route::prefix('admin')->middleware('admin.permission')->group(function () {
         Route::get('/ubigeo/inei', function () {
             $path = storage_path('app/utils/ubigeo-inei.json');
 

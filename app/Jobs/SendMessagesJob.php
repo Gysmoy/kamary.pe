@@ -11,6 +11,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 use App\Models\SendingHistory;
 use Exception;
 use SoDe\Extend\Fetch;
@@ -48,7 +49,7 @@ class SendMessagesJob implements ShouldQueue
       $historyJpa->failed = HistoryDetail::where('sending_history_id', $historyJpa->id)->where('status', false)->count();
       $historyJpa->status = true;
     } catch (\Throwable $th) {
-      dump($th->getMessage());
+      Log::error('Error ejecutando envio masivo', ['exception' => $th]);
       $historyJpa->status = false;
     } finally {
       $historyJpa->save();
@@ -107,7 +108,7 @@ class SendMessagesJob implements ShouldQueue
 
         $historyJpa->completed++;
       } catch (\Throwable $th) {
-        dump($th->getMessage());
+        Log::warning('Error enviando correo masivo', ['exception' => $th]);
         $error = $th->getMessage();
         $historyJpa->failed++;
       } finally {
@@ -122,7 +123,7 @@ class SendMessagesJob implements ShouldQueue
             'error' => $error,
           ]);
         } catch (\Throwable $th) {
-          dump($th->getMessage());
+          Log::warning('Error registrando detalle de envio masivo', ['exception' => $th]);
         }
       }
     }

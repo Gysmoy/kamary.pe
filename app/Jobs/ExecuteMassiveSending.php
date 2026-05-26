@@ -9,6 +9,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ExecuteMassiveSending implements ShouldQueue
 {
@@ -32,7 +33,7 @@ class ExecuteMassiveSending implements ShouldQueue
                 ]);
                 $controller->save($request);
             } catch (\Throwable $th) {
-                dump($th->getMessage()); 
+                Log::warning('Error creando historial de envio masivo', ['exception' => $th]);
             }
         }
     }

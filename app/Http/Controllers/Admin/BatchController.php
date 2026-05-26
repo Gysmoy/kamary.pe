@@ -252,8 +252,9 @@ class BatchController extends BasicController
     {
         $response = new Response();
         try {
+            $field = $this->allowedBooleanFieldFromRequest($request);
             $data = [];
-            $data[$request->field] = $request->value;
+            $data[$field] = $request->value;
             $data['updated_by'] = Auth::id();
 
             $this->model::where($this->identifier, $request->id)->update($data);

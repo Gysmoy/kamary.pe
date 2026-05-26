@@ -37,8 +37,9 @@ class RouteServiceProvider extends ServiceProvider
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
 
-            // Rutas de la web
+            // Endpoints internos protegidos por token
             Route::prefix('free')
+                ->middleware(['throttle:60,1', 'internal.token'])
                 ->group(base_path('routes/free.php'));
         });
     }

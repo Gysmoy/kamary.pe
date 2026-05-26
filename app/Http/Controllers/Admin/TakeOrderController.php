@@ -556,6 +556,9 @@ class TakeOrderController extends BasicController
             $order = TakeOrder::findOrFail($request->id);
             $field = trim((string)$request->field);
             if ($field === '') throw new \Exception('Campo invalido');
+            if (!in_array($field, ['status', 'order_status'], true)) {
+                throw new \Exception('Campo no permitido para esta operacion');
+            }
 
             $value = $request->value;
             $payload = [

@@ -8,6 +8,7 @@ use App\Models\Social;
 use App\Models\Subscription;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use SoDe\Extend\File;
 use SoDe\Extend\JSON;
 use SoDe\Extend\Text;
@@ -126,7 +127,7 @@ class MailingController extends BasicController
             $mail->send();
         } catch (\Throwable $th) {
             if (\env('APP_ENV') == 'local') {
-                dump($th->getMessage());
+                Log::warning('Error notificando contacto', ['exception' => $th]);
             }
         }
     }
@@ -153,7 +154,7 @@ class MailingController extends BasicController
             $mail->send();
         } catch (\Throwable $th) {
             if (\env('APP_ENV') == 'local') {
-                dump($th->getMessage());
+                Log::warning('Error enviando notificacion simple', ['exception' => $th]);
             }
         }
     }

@@ -705,8 +705,9 @@ class ArticleController extends BasicController
     {
         $response = new Response();
         try {
+            $field = $this->allowedBooleanFieldFromRequest($request);
             $data = [];
-            $data[$request->field] = $request->value;
+            $data[$field] = $request->value;
             $data['updated_by'] = Auth::id();
 
             $query = $this->scopedArticleMutationQuery($request->id);

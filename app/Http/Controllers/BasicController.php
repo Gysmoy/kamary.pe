@@ -42,6 +42,7 @@ class BasicController extends Controller
   public $throwMediaError = false;
   public $ignorePrefix = [];
   public $with4get = [];
+  public $booleanFields = [];
   public $ignoreStatusFilter = false;
   public $useIntervention = true;
   public $identifier = 'id';
@@ -378,8 +379,13 @@ class BasicController extends Controller
   {
     $response = new Response();
     try {
+      $field = trim((string)$request->field);
+      if (!$this->isAllowedBooleanField($field)) {
+        throw new Exception('Campo no permitido para actualizacion directa');
+      }
+
       $data = [];
-      $data[$request->field] = $request->value;
+      $data[$field] = $request->value;
 
       $this->model::where($this->identifier, $request->id)
         ->update($data);
@@ -395,6 +401,47 @@ class BasicController extends Controller
         $response->status
       );
     }
+  }
+
+  protected function isAllowedBooleanField(string $field): bool
+  {
+    if ($field === '' || !preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $field)) {
+      return false;
+    }
+
+    $allowed = array_unique(array_merge([
+      'status',
+      'visible',
+      'featured',
+      'is_default',
+      'available',
+      'delivery_free',
+      'igv_rule',
+      'margin_rule',
+      'dispatch_status',
+      'order_status',
+      'paid_to_seller',
+      'seen',
+      'is_advertising',
+      'is_repurchase',
+      'is_roas',
+      'sale_material',
+      'notify_purchases',
+      'notify_sales',
+      'notify_prices',
+    ], $this->booleanFields));
+
+    return in_array($field, $allowed, true);
+  }
+
+  protected function allowedBooleanFieldFromRequest(Request $request): string
+  {
+    $field = trim((string)$request->field);
+    if (!$this->isAllowedBooleanField($field)) {
+      throw new Exception('Campo no permitido para actualizacion directa');
+    }
+
+    return $field;
   }
 
   public function delete(Request $request, string $id)

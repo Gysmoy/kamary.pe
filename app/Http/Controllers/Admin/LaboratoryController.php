@@ -203,8 +203,13 @@ class LaboratoryController extends BasicController
         $response = new Response();
         try {
             Laboratory::findOrFail($id);
+            $field = trim((string)$request->field);
+            if (!in_array($field, ['status'], true)) {
+                throw new \Exception('Campo no permitido para esta operacion');
+            }
+
             $data = [];
-            $data[$request->field] = $request->value;
+            $data[$field] = $request->value;
 
             ActivePrinciple::where('laboratory_id', $id)
                 ->where('id', $principleId)
@@ -360,8 +365,9 @@ class LaboratoryController extends BasicController
     {
         $response = new Response();
         try {
+            $field = $this->allowedBooleanFieldFromRequest($request);
             $data = [];
-            $data[$request->field] = $request->value;
+            $data[$field] = $request->value;
             $data['updated_by'] = Auth::id();
 
             $this->model::where($this->identifier, $request->id)->update($data);

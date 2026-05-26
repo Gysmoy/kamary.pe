@@ -93,6 +93,71 @@ class HomeController extends BasicController
         ];
     }
 
+    public function getSales(Request $request, string $type, string $filter)
+    {
+        if (!ModulePermissions::userCan($request->user(), 'dashboard')) {
+            return response()->json([
+                'status' => 403,
+                'message' => 'No tienes permiso para acceder a este modulo.',
+            ], 403);
+        }
+
+        [$startDate, $endDate] = $this->salesGraphRange($filter);
+        $rows = [];
+
+        if ($this->hasTables(['sales', 'statuses'])) {
+            $amountExpression = 'COALESCE(SUM(sales.total_amount), 0)';
+            if (Schema::hasColumn('sales', 'upsell_amount')) {
+                $amountExpression = 'COALESCE(SUM(sales.total_amount), 0) + COALESCE(SUM(sales.upsell_amount), 0)';
+            }
+
+            $rows = DB::table('sales')
+                ->join('statuses', 'statuses.id', '=', 'sales.status_id')
+                ->where('statuses.is_ok', true)
+                ->whereDate('sales.sale_date', '>=', $startDate)
+                ->whereDate('sales.sale_date', '<=', $endDate)
+                ->groupBy('sales.sale_date')
+                ->orderBy('sales.sale_date')
+                ->selectRaw('sales.sale_date as date')
+                ->selectRaw('COUNT(*) as count')
+                ->selectRaw("{$amountExpression} as total")
+                ->get()
+                ->map(fn($row) => [
+                    'date' => $row->date,
+                    'count' => (int) $row->count,
+                    'total' => round((float) $row->total, 2),
+                    'value' => $type === 'count' ? (int) $row->count : round((float) $row->total, 2),
+                ])
+                ->values()
+                ->all();
+        } elseif ($this->hasTable('commercial_orders')) {
+            $rows = $this->activeCommercialOrders($startDate, $endDate)
+                ->groupBy('issue_date')
+                ->orderBy('issue_date')
+                ->selectRaw('issue_date as date')
+                ->selectRaw('COUNT(*) as count')
+                ->selectRaw('COALESCE(SUM(total), 0) as total')
+                ->get()
+                ->map(fn($row) => [
+                    'date' => $row->date,
+                    'count' => (int) $row->count,
+                    'total' => round((float) $row->total, 2),
+                    'value' => $type === 'count' ? (int) $row->count : round((float) $row->total, 2),
+                ])
+                ->values()
+                ->all();
+        }
+
+        return response()->json([
+            'status' => 200,
+            'message' => 'Operacion correcta',
+            'type' => $type,
+            'start' => $startDate,
+            'end' => $endDate,
+            'data' => $rows,
+        ]);
+    }
+
     private function countRows(string $table): ?int
     {
         if (!Schema::hasTable($table)) return null;
@@ -103,6 +168,26 @@ class HomeController extends BasicController
         }
 
         return $query->count();
+    }
+
+    private function salesGraphRange(string $filter): array
+    {
+        if (str_contains($filter, '|')) {
+            [$start, $end] = array_pad(explode('|', $filter, 2), 2, null);
+            return [
+                Carbon::parse($start ?: now())->toDateString(),
+                Carbon::parse($end ?: now())->toDateString(),
+            ];
+        }
+
+        return match ($filter) {
+            'today' => [now()->toDateString(), now()->toDateString()],
+            'yesterday' => [now()->subDay()->toDateString(), now()->subDay()->toDateString()],
+            'week' => [now()->startOfWeek()->toDateString(), now()->toDateString()],
+            'last-30', 'last30' => [now()->subDays(29)->toDateString(), now()->toDateString()],
+            'year' => [now()->startOfYear()->toDateString(), now()->toDateString()],
+            default => [now()->startOfMonth()->toDateString(), now()->toDateString()],
+        };
     }
 
     private function salesSummary(string $startDate, string $endDate): array

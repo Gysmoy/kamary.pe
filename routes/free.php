@@ -9,14 +9,14 @@ use App\Http\Controllers\MailingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/exchange-rates', [ExchangeRateController::class, 'refresh']);
-Route::get('/template/{id}', [MailingTemplateController::class, 'get'])->withoutMiddleware('throttle');
-Route::post('/template', [MailingTemplateController::class, 'save'])->withoutMiddleware('throttle');
+Route::get('/template/{id}', [MailingTemplateController::class, 'get']);
+Route::post('/template', [MailingTemplateController::class, 'save']);
 
 Route::prefix('/mailing')->group(function () {
     Route::post('/send', [MailingController::class, 'send']);
     Route::get('/execute', [AdminSendingHistoryController::class, 'execute']);
     Route::post('/history', [AdminSendingHistoryController::class, 'save']);
     Route::post('/history/detail', [AdminHistoryDetailController::class, 'save']);
-})->withoutMiddleware('throttle');
+});
 
 Route::get('/transactions/revenues', [AdminTransactionController::class, 'revenues']);
