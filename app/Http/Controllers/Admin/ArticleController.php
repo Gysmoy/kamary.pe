@@ -85,6 +85,9 @@ class ArticleController extends BasicController
                 }
             });
         }
+        if ($this->moduleScope === 'storage') {
+            $query->whereHas('client', fn($client) => StorageScope::applyClientScope($client, 'clients'));
+        }
 
         return $query;
     }
@@ -461,7 +464,14 @@ class ArticleController extends BasicController
         } else {
             Laboratory::findOrFail($laboratoryId);
         }
-        Unit::findOrFail($unitId);
+        $unit = Unit::findOrFail($unitId);
+        if (
+            $this->moduleScope === 'storage'
+            && Schema::hasColumn('units', 'module_scope')
+            && (string)($unit->module_scope ?? '') !== 'storage'
+        ) {
+            throw new \Exception('La unidad de medida no pertenece al modulo de almacenamiento');
+        }
         $resolvedBusinessId = $businessId ?: $this->defaultBusinessIdForScope();
         if ($resolvedBusinessId) {
             BusinessScope::findFixedBusiness($resolvedBusinessId);
@@ -695,7 +705,9 @@ class ArticleController extends BasicController
             $data[$request->field] = $request->value;
             $data['updated_by'] = Auth::id();
 
-            $this->model::where($this->identifier, $request->id)->update($data);
+            $query = $this->scopedArticleMutationQuery($request->id);
+            if (!$query->exists()) throw new \Exception('Articulo no encontrado en este modulo');
+            $query->update($data);
 
             $response->status = 200;
             $response->message = 'Operacion correcta';
@@ -711,7 +723,9 @@ class ArticleController extends BasicController
     {
         $response = new Response();
         try {
-            $this->model::where($this->identifier, $request->id)->update([
+            $query = $this->scopedArticleMutationQuery($request->id);
+            if (!$query->exists()) throw new \Exception('Articulo no encontrado en este modulo');
+            $query->update([
                 'status' => $request->status ? 0 : 1,
                 'updated_by' => Auth::id(),
             ]);
@@ -724,6 +738,44 @@ class ArticleController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $query = $this->scopedArticleMutationQuery($id);
+            if (!$query->exists()) throw new \Exception('Articulo no encontrado en este modulo');
+            $query->update([
+                'status' => null,
+                'updated_by' => Auth::id(),
+            ]);
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function scopedArticleMutationQuery($id)
+    {
+        return $this->model::query()
+            ->where($this->identifier, $id)
+            ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('module_scope', $this->moduleScope);
+                    if ($this->moduleScope === 'standard') {
+                        $scope->orWhereNull('module_scope');
+                    }
+                });
+            })
+            ->when($this->moduleScope === 'storage', function ($query) {
+                $query->whereHas('client', fn($client) => StorageScope::applyClientScope($client, 'clients'));
+            });
     }
 
     public function principles(Request $request, string $laboratoryId): HttpResponse|ResponseFactory

@@ -52,6 +52,9 @@ class ExitNoteController extends BasicController
             $business->whereIn('business_key', BusinessScope::fixedKeys());
             if ($scopeKey) $business->where('business_key', $scopeKey);
         });
+        if ($this->isStorageRequest(request())) {
+            $query->whereHas('client', fn($client) => StorageScope::applyClientScope($client, 'clients'));
+        }
 
         return $query;
     }
@@ -91,7 +94,8 @@ class ExitNoteController extends BasicController
             $client = StorageScope::assertClient($clientId);
             $clientId = (int)$client->id;
             if (!empty($body['id'])) {
-                $currentExit = ExitNote::query()->find($body['id']);
+                $currentExit = $this->scopedExitNoteQuery($request)->whereKey($body['id'])->first();
+                if (!$currentExit) throw new \Exception('Nota de salida de almacenamiento no encontrada');
                 if ($currentExit && (int)$currentExit->client_id !== $clientId) {
                     throw new \Exception('No se puede cambiar el cliente de una nota de salida de almacenamiento');
                 }
@@ -285,6 +289,23 @@ class ExitNoteController extends BasicController
         }
     }
 
+    public function get(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $jpa = $this->scopedExitNoteQuery($request)->with($this->with4get)->find($id);
+            if (!$jpa) throw new \Exception('El registro que buscas no existe');
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = $jpa;
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
     public function boolean(Request $request)
     {
         $response = new Response();
@@ -292,7 +313,10 @@ class ExitNoteController extends BasicController
             $data = [];
             $data[$request->field] = $request->value;
             $data['updated_by'] = Auth::id();
-            $this->model::where($this->identifier, $request->id)->update($data);
+            $updated = $this->scopedExitNoteQuery($request)
+                ->where($this->identifier, $request->id)
+                ->update($data);
+            if (!$updated) throw new \Exception('Nota de salida no encontrada en este modulo');
             $response->status = 200;
             $response->message = 'Operacion correcta';
         } catch (\Throwable $th) {
@@ -307,7 +331,8 @@ class ExitNoteController extends BasicController
     {
         $response = new Response();
         try {
-            $jpa = $this->model::with(['items:id,exit_note_id,batch_code,article_id,warehouse_id,expiration_date,location,quantity,status'])
+            $jpa = $this->scopedExitNoteQuery($request)
+                ->with(['items:id,exit_note_id,batch_code,article_id,warehouse_id,expiration_date,location,quantity,status'])
                 ->findOrFail($request->id);
 
             if ($request->has('exit_status')) {
@@ -341,6 +366,42 @@ class ExitNoteController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $updated = $this->scopedExitNoteQuery($request)
+                ->where($this->identifier, $id)
+                ->update([
+                    'status' => null,
+                    'updated_by' => Auth::id(),
+                ]);
+            if (!$updated) throw new \Exception('No se ha eliminado ningun registro');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function scopedExitNoteQuery(Request $request)
+    {
+        return $this->model::query()
+            ->when($this->isStorageRequest($request), function ($query) use ($request) {
+                $scopeKey = BusinessScope::scopedKeyForRequest($request);
+                $query
+                    ->whereHas('client', fn($client) => StorageScope::applyClientScope($client, 'clients'))
+                    ->whereHas('business', function ($business) use ($scopeKey) {
+                        $business->whereIn('business_key', BusinessScope::fixedKeys());
+                        if ($scopeKey) $business->where('business_key', $scopeKey);
+                    });
+            });
     }
 
     private function toNullableDecimal($value): ?float

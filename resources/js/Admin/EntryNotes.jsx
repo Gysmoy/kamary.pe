@@ -270,7 +270,7 @@ const EntryNotes = () => {
       setItems(prev => prev.map(item => item.uid === uid ? { ...item, stock: 0 } : item))
       return
     }
-    const stockData = await entryNotesRest.getCurrentStock(articleId, warehouseId)
+    const stockData = await entryNotesRest.getCurrentStock(articleId, warehouseId, storageContext ? currentStorageClientId() : null)
     setItems(prev => prev.map(item => item.uid === uid ? { ...item, stock: Number(stockData?.stock || 0) } : item))
   }
 
@@ -842,7 +842,7 @@ const EntryNotes = () => {
       const stockByArticle = {}
       const articleIds = [...new Set(rows.map(row => row.article_id).filter(Boolean))]
       await Promise.all(articleIds.map(async articleId => {
-        const stockData = await entryNotesRest.getCurrentStock(articleId, warehouseId)
+        const stockData = await entryNotesRest.getCurrentStock(articleId, warehouseId, storageContext ? currentStorageClientId() : null)
         stockByArticle[articleId] = Number(stockData?.stock || 0)
       }))
 

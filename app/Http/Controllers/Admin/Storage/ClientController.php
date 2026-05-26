@@ -6,11 +6,14 @@ use App\Http\Controllers\Admin\ClientController as BaseClientController;
 use App\Http\Classes\dxResponse;
 use App\Models\MailingTemplate;
 use App\Models\dxDataGrid;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use SoDe\Extend\Response;
 
 class ClientController extends BaseClientController
 {
@@ -99,6 +102,72 @@ class ClientController extends BaseClientController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    public function boolean(Request $request)
+    {
+        $response = new Response();
+        try {
+            $data = [];
+            $data[$request->field] = $request->value;
+            $data['updated_by'] = Auth::id();
+
+            $updated = $this->storageClientMutationQuery($request->id)->update($data);
+            if (!$updated) throw new \Exception('Cliente no encontrado en almacenamiento');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function status(Request $request)
+    {
+        $response = new Response();
+        try {
+            $updated = $this->storageClientMutationQuery($request->id)->update([
+                'status' => $request->status ? 0 : 1,
+                'updated_by' => Auth::id(),
+            ]);
+            if (!$updated) throw new \Exception('Cliente no encontrado en almacenamiento');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $updated = $this->storageClientMutationQuery($id)->update([
+                'status' => null,
+                'updated_by' => Auth::id(),
+            ]);
+            if (!$updated) throw new \Exception('No se ha eliminado ningun registro');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function storageClientMutationQuery($id)
+    {
+        return StorageScope::clientQuery()->where($this->identifier, $id);
     }
 
     private function buildStorageClientsQuery()

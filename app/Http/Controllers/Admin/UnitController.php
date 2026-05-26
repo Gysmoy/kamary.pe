@@ -202,7 +202,8 @@ class UnitController extends BasicController
             $data[$request->field] = $request->value;
             $data['updated_by'] = Auth::id();
 
-            $this->model::where($this->identifier, $request->id)->update($data);
+            $updated = $this->scopedUnitMutationQuery($request->id)->update($data);
+            if (!$updated) throw new \Exception('Unidad de medida no encontrada en este modulo');
 
             $response->status = 200;
             $response->message = 'Operacion correcta';
@@ -218,10 +219,11 @@ class UnitController extends BasicController
     {
         $response = new Response();
         try {
-            $this->model::where($this->identifier, $request->id)->update([
+            $updated = $this->scopedUnitMutationQuery($request->id)->update([
                 'status' => $request->status ? 0 : 1,
                 'updated_by' => Auth::id(),
             ]);
+            if (!$updated) throw new \Exception('Unidad de medida no encontrada en este modulo');
 
             $response->status = 200;
             $response->message = 'Operacion correcta';
@@ -231,6 +233,40 @@ class UnitController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $updated = $this->scopedUnitMutationQuery($id)->update([
+                'status' => null,
+                'updated_by' => Auth::id(),
+            ]);
+            if (!$updated) throw new \Exception('No se ha eliminado ningun registro');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function scopedUnitMutationQuery($id)
+    {
+        return $this->model::query()
+            ->where($this->identifier, $id)
+            ->when(Schema::hasColumn('units', 'module_scope'), function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('module_scope', $this->moduleScope);
+                    if ($this->moduleScope === 'standard') {
+                        $scope->orWhereNull('module_scope');
+                    }
+                });
+            });
     }
 
     private function toBoolean($value): bool

@@ -57,6 +57,18 @@ class BillingDocumentController extends BasicController
         return $query;
     }
 
+    protected function billingDocumentQueryForRequest(Request $request)
+    {
+        return BillingDocument::query();
+    }
+
+    protected function findBillingDocumentForRequest(Request $request, string|int $id, array $with = []): BillingDocument
+    {
+        return $this->billingDocumentQueryForRequest($request)
+            ->with($with)
+            ->findOrFail($id);
+    }
+
     public function beforeSave(Request $request)
     {
         $body = $request->all();
@@ -68,7 +80,7 @@ class BillingDocumentController extends BasicController
         if (!$id && !$commercialOrderId && !$serviceOrderId) throw new \Exception('Debes seleccionar un pedido comercial u orden de servicio');
         if ($commercialOrderId && $serviceOrderId) throw new \Exception('No puedes mezclar pedido comercial y orden de servicio en el mismo comprobante');
 
-        $document = $id ? BillingDocument::findOrFail($id) : null;
+        $document = $id ? $this->findBillingDocumentForRequest($request, $id) : null;
         if ($document && $document->local_status !== 'pending') {
             throw new \Exception('Solo puedes editar comprobantes pendientes');
         }
@@ -207,7 +219,7 @@ class BillingDocumentController extends BasicController
     {
         $response = new Response();
         try {
-            $document = BillingDocument::with(['items', 'client', 'eventualClient', 'commercialOrder', 'serviceOrder', 'referenceDocument'])->findOrFail($id);
+            $document = $this->findBillingDocumentForRequest($request, $id, ['items', 'client', 'eventualClient', 'commercialOrder', 'serviceOrder', 'referenceDocument']);
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = app(BillingDocumentService::class)->buildConnectorPayload($document);
@@ -224,7 +236,7 @@ class BillingDocumentController extends BasicController
         $response = new Response();
         DB::beginTransaction();
         try {
-            $document = BillingDocument::findOrFail($id);
+            $document = $this->findBillingDocumentForRequest($request, $id);
             $updated = app(BillingDocumentService::class)->issueDocument($document);
             DB::commit();
             $response->status = 200;
@@ -244,7 +256,7 @@ class BillingDocumentController extends BasicController
         $response = new Response();
         DB::beginTransaction();
         try {
-            $document = BillingDocument::findOrFail($id);
+            $document = $this->findBillingDocumentForRequest($request, $id);
             $updated = app(BillingDocumentService::class)->prepareVoucher($document, $request->only([
                 'detraction_enabled',
                 'detraction_percent',
@@ -270,7 +282,7 @@ class BillingDocumentController extends BasicController
         $response = new Response();
         DB::beginTransaction();
         try {
-            $document = BillingDocument::findOrFail($id);
+            $document = $this->findBillingDocumentForRequest($request, $id);
             $updated = app(BillingDocumentService::class)->cancelDocument($document, trim((string) $request->input('reason')));
             DB::commit();
             $response->status = 200;
@@ -290,7 +302,7 @@ class BillingDocumentController extends BasicController
         $response = new Response();
         DB::beginTransaction();
         try {
-            $document = BillingDocument::findOrFail($id);
+            $document = $this->findBillingDocumentForRequest($request, $id);
             $updated = app(BillingDocumentService::class)->createCreditNote($document, [
                 'series' => trim((string) $request->input('series')),
                 'issue_date' => $this->normalizeDate($request->input('issue_date') ?? now()->toDateString()),
@@ -315,7 +327,7 @@ class BillingDocumentController extends BasicController
         $response = new Response();
         DB::beginTransaction();
         try {
-            $document = BillingDocument::findOrFail($id);
+            $document = $this->findBillingDocumentForRequest($request, $id);
             $localStatus = $this->normalizeLocalStatus($request->input('local_status') ?? $document->local_status);
             $externalStatus = trim((string) ($request->input('external_status') ?? $document->external_status)) ?: $document->external_status;
             $externalId = trim((string) ($request->input('external_id') ?? '')) ?: null;
@@ -350,7 +362,7 @@ class BillingDocumentController extends BasicController
             DB::commit();
             $response->status = 200;
             $response->message = 'Estado del proveedor actualizado';
-            $response->data = BillingDocument::with(['business', 'branch', 'warehouse', 'client', 'eventualClient', 'commercialOrder', 'serviceOrder', 'referenceDocument', 'items', 'events', 'creator', 'updater'])->findOrFail($id);
+            $response->data = $this->findBillingDocumentForRequest($request, $id, ['business', 'branch', 'warehouse', 'client', 'eventualClient', 'commercialOrder', 'serviceOrder', 'referenceDocument', 'items', 'events', 'creator', 'updater']);
         } catch (\Throwable $th) {
             DB::rollBack();
             $response->status = 400;
@@ -365,7 +377,7 @@ class BillingDocumentController extends BasicController
         $response = new Response();
         DB::beginTransaction();
         try {
-            $document = BillingDocument::findOrFail($id);
+            $document = $this->findBillingDocumentForRequest($request, $id);
             $updated = app(BillingDocumentService::class)->syncProviderStatus($document);
             DB::commit();
             $response->status = 200;
@@ -383,7 +395,7 @@ class BillingDocumentController extends BasicController
     public function download(Request $request, string $id, string $type): HttpResponse|ResponseFactory
     {
         try {
-            $document = BillingDocument::findOrFail($id);
+            $document = $this->findBillingDocumentForRequest($request, $id);
             $file = app(FacturadorPro5Service::class)->downloadFile($document, $type);
 
             return response($file['content'], 200, [
@@ -403,7 +415,7 @@ class BillingDocumentController extends BasicController
     {
         $response = new Response();
         try {
-            $document = BillingDocument::findOrFail($request->id);
+            $document = $this->findBillingDocumentForRequest($request, $request->id);
             if ($document->local_status !== 'pending') {
                 throw new \Exception('Solo puedes cambiar el estado interno de comprobantes pendientes');
             }
@@ -427,7 +439,7 @@ class BillingDocumentController extends BasicController
     {
         $response = new Response();
         try {
-            $document = BillingDocument::findOrFail($id);
+            $document = $this->findBillingDocumentForRequest($request, $id);
             if ($document->local_status !== 'pending') {
                 throw new \Exception('Solo puedes eliminar comprobantes pendientes');
             }

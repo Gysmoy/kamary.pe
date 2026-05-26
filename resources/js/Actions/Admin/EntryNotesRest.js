@@ -186,10 +186,12 @@ class EntryNotesRest extends BasicRest {
     }
   }
 
-  getCurrentStock = async (articleId, warehouseId) => {
+  getCurrentStock = async (articleId, warehouseId, clientId = null) => {
     if (!articleId || !warehouseId) return { qty_in: 0, qty_out: 0, stock: 0 }
     try {
-      const response = await fetch(`/api/${this.path}/current-stock?article_id=${articleId}&warehouse_id=${warehouseId}`, {
+      const params = new URLSearchParams({ article_id: articleId, warehouse_id: warehouseId })
+      if (clientId) params.set('client_id', clientId)
+      const response = await fetch(`/api/${this.path}/current-stock?${params.toString()}`, {
         method: 'GET',
         headers: { Accept: 'application/json' }
       })

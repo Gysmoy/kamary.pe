@@ -162,10 +162,7 @@ class KardexController extends BasicController
             DB::beginTransaction();
 
             $warehouseId = $this->nullableInt($request->input('id'));
-            $warehouse = $warehouseId ? Warehouse::find($warehouseId) : new Warehouse();
-            if ($warehouseId && !$warehouse) {
-                throw new \Exception('El almacen seleccionado no existe');
-            }
+            $warehouse = $warehouseId ? $this->storageWarehouse($warehouseId) : new Warehouse();
 
             if (!$warehouse->exists) {
                 $warehouse->created_by = Auth::id();
@@ -199,10 +196,7 @@ class KardexController extends BasicController
         $response = new Response();
 
         try {
-            $warehouse = Warehouse::find($id);
-            if (!$warehouse) {
-                throw new \Exception('El almacen seleccionado no existe');
-            }
+            $warehouse = $this->storageWarehouse($id);
             $warehouse->update(['status' => null, 'updated_by' => Auth::id()]);
 
             $response->status = 200;
@@ -236,10 +230,7 @@ class KardexController extends BasicController
             Warehouse::query()->whereKey($warehouse->id)->lockForUpdate()->first();
 
             $locationId = $this->nullableInt($request->input('id'));
-            $location = $locationId ? StorageLocation::find($locationId) : new StorageLocation();
-            if ($locationId && !$location) {
-                throw new \Exception('La ubicacion seleccionada no existe');
-            }
+            $location = $locationId ? $this->storageLocation($locationId) : new StorageLocation();
 
             $duplicatedLocation = StorageLocation::query()
                 ->where('warehouse_id', $warehouse->id)
@@ -286,10 +277,7 @@ class KardexController extends BasicController
         $response = new Response();
 
         try {
-            $location = StorageLocation::find($id);
-            if (!$location) {
-                throw new \Exception('La ubicacion seleccionada no existe');
-            }
+            $location = $this->storageLocation($id);
             $location->update(['status' => null, 'updated_by' => Auth::id()]);
 
             $response->status = 200;
@@ -801,6 +789,22 @@ class KardexController extends BasicController
         }
 
         return $warehouse;
+    }
+
+    private function storageLocation($id): StorageLocation
+    {
+        $location = StorageLocation::query()
+            ->whereKey($this->nullableInt($id))
+            ->whereHas('warehouse.branch.business', function ($business) {
+                $business->where('business_key', BusinessScope::KAMARY_MEDICALS)->whereNotNull('status');
+            })
+            ->first();
+
+        if (!$location) {
+            throw new \Exception('La ubicacion seleccionada no existe');
+        }
+
+        return $location;
     }
 
     private function warehouseOptionsQuery()

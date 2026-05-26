@@ -51,7 +51,8 @@ class InventoryController extends BasicController
             ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'storage_inventory_counts.warehouse_id')
             ->leftJoin('clients as client', 'client.id', '=', 'storage_inventory_counts.client_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'storage_inventory_counts.created_by')
-            ->leftJoin('users as updater', 'updater.id', '=', 'storage_inventory_counts.updated_by');
+            ->leftJoin('users as updater', 'updater.id', '=', 'storage_inventory_counts.updated_by')
+            ->whereHas('client', fn($query) => StorageScope::applyClientScope($query));
     }
 
     public function options(Request $request): HttpResponse|ResponseFactory
@@ -116,7 +117,7 @@ class InventoryController extends BasicController
         $response = new Response();
 
         try {
-            $count = StorageInventoryCount::with([
+            $count = $this->storageInventoryQuery()->with([
                 'branch:id,name,business_id',
                 'warehouse:id,name,business_branch_id',
                 'client:id,document_type,document_number,full_name',
@@ -215,7 +216,7 @@ class InventoryController extends BasicController
 
     public function format(Request $request, string $id)
     {
-        $count = StorageInventoryCount::with(['items' => fn($query) => $query->whereNotNull('status')->orderBy('id')])
+        $count = $this->storageInventoryQuery()->with(['items' => fn($query) => $query->whereNotNull('status')->orderBy('id')])
             ->findOrFail($id);
         $filename = "{$count->code}_inventario.csv";
 
@@ -258,7 +259,7 @@ class InventoryController extends BasicController
         $response = new Response();
 
         try {
-            $count = StorageInventoryCount::findOrFail($id);
+            $count = $this->storageInventoryQuery()->findOrFail($id);
             if (!$request->hasFile('format_file')) {
                 throw new \Exception('Debes seleccionar el formato a subir');
             }
@@ -325,7 +326,7 @@ class InventoryController extends BasicController
         try {
             DB::beginTransaction();
 
-            $count = StorageInventoryCount::with([
+            $count = $this->storageInventoryQuery()->with([
                 'items' => fn($query) => $query->whereNotNull('status')->orderBy('id'),
                 'warehouse.branch.business',
                 'client:id,full_name,document_number',
@@ -591,6 +592,56 @@ class InventoryController extends BasicController
             ->unique(fn($row) => ($row['warehouse_id'] ?? 'all') . '|' . $row['location'])
             ->values()
             ->all();
+    }
+
+    public function status(Request $request)
+    {
+        $response = new Response();
+        try {
+            $updated = $this->storageInventoryQuery()
+                ->where($this->identifier, $request->id)
+                ->update([
+                    'status' => $request->status ? 0 : 1,
+                    'updated_by' => Auth::id(),
+                ]);
+            if (!$updated) throw new \Exception('Inventario no encontrado en almacenamiento');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $updated = $this->storageInventoryQuery()
+                ->where($this->identifier, $id)
+                ->update([
+                    'status' => null,
+                    'updated_by' => Auth::id(),
+                ]);
+            if (!$updated) throw new \Exception('No se ha eliminado ningun registro');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function storageInventoryQuery()
+    {
+        return $this->model::query()
+            ->whereHas('client', fn($query) => StorageScope::applyClientScope($query));
     }
 
     private function nextCode(): string

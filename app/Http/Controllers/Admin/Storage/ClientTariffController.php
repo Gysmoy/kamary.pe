@@ -104,6 +104,34 @@ class ClientTariffController extends BasicController
         return $body;
     }
 
+    public function delete(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $updated = $this->storageTariffQuery()
+                ->where($this->identifier, $id)
+                ->update([
+                    'status' => null,
+                    'updated_by' => Auth::id(),
+                ]);
+            if (!$updated) throw new \Exception('No se ha eliminado ningun registro');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function storageTariffQuery()
+    {
+        return $this->model::query()
+            ->whereHas('client', fn($query) => StorageScope::applyClientScope($query));
+    }
+
     private function assertClient(int $clientId): void
     {
         StorageScope::assertClient($clientId);

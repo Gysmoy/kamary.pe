@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use SoDe\Extend\Response;
 
 class ServiceCatalogController extends BasicController
 {
@@ -58,6 +59,7 @@ class ServiceCatalogController extends BasicController
         if ($name === '') throw new \Exception('El nombre es obligatorio');
 
         $existsCode = ServiceCatalog::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
+            ->when(Schema::hasColumn('services', 'service_scope'), fn($query) => $query->where('service_scope', $this->serviceScope()))
             ->when($id, fn($query) => $query->where('id', '!=', $id))
             ->exists();
         if ($existsCode) throw new \Exception('Ya existe un servicio con este codigo');
@@ -87,6 +89,74 @@ class ServiceCatalogController extends BasicController
         $body['observations'] = trim((string) ($body['observations'] ?? '')) ?: null;
 
         return $body;
+    }
+
+    public function boolean(Request $request)
+    {
+        $response = new Response();
+        try {
+            $data = [];
+            $data[$request->field] = $request->value;
+            $data['updated_by'] = Auth::id();
+
+            $updated = $this->scopedServiceMutationQuery($request->id)->update($data);
+            if (!$updated) throw new \Exception('Servicio no encontrado en este modulo');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function status(Request $request)
+    {
+        $response = new Response();
+        try {
+            $updated = $this->scopedServiceMutationQuery($request->id)->update([
+                'status' => $request->status ? 0 : 1,
+                'updated_by' => Auth::id(),
+            ]);
+            if (!$updated) throw new \Exception('Servicio no encontrado en este modulo');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $updated = $this->scopedServiceMutationQuery($id)->update([
+                'status' => null,
+                'updated_by' => Auth::id(),
+            ]);
+            if (!$updated) throw new \Exception('No se ha eliminado ningun registro');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function scopedServiceMutationQuery($id)
+    {
+        return $this->model::query()
+            ->where($this->identifier, $id)
+            ->when(Schema::hasColumn('services', 'service_scope'), fn($query) => $query->where('service_scope', $this->serviceScope()));
     }
 
     private function toDecimal($value): float

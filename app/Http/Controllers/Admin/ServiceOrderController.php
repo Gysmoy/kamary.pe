@@ -48,12 +48,17 @@ class ServiceOrderController extends BasicController
 
     protected function clientModuleScopeForOrder(): string
     {
-        return $this->orderType() === 'service' ? 'services' : 'storage';
+        return $this->isStorageOrderType() ? 'storage' : 'services';
     }
 
     protected function serviceScopeForOrder(): string
     {
-        return $this->orderType() === 'service' ? 'services' : 'storage_general';
+        return $this->isStorageOrderType() ? 'storage_general' : 'services';
+    }
+
+    protected function isStorageOrderType(): bool
+    {
+        return in_array($this->orderType(), ['storage', 'storage_general', 'storage_service'], true);
     }
 
     public function setPaginationInstance(string $model)
@@ -71,6 +76,9 @@ class ServiceOrderController extends BasicController
 
         if (Schema::hasColumn('service_orders', 'order_type')) {
             $query->where('service_orders.order_type', $this->orderType());
+        }
+        if ($this->isStorageOrderType()) {
+            $query->whereHas('client', fn($client) => StorageScope::applyClientScope($client, 'clients'));
         }
 
         if (request()->boolean('deleted')) {
@@ -297,17 +305,52 @@ class ServiceOrderController extends BasicController
         }
     }
 
+    private function findOrderForMutation($id): ServiceOrder
+    {
+        $query = ServiceOrder::query();
+        if (Schema::hasColumn('service_orders', 'order_type')) {
+            $query->where('order_type', $this->orderType());
+        }
+        if ($this->isStorageOrderType()) {
+            $query->whereHas('client', fn($client) => StorageScope::applyClientScope($client, 'clients'));
+        }
+
+        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $query->whereHas('business', function ($business) use ($scopeKey) {
+            $business->whereIn('business_key', BusinessScope::fixedKeys());
+            if ($scopeKey) $business->where('business_key', $scopeKey);
+        });
+
+        return $query->findOrFail($id);
+    }
+
     public function boolean(Request $request)
     {
         $response = new \SoDe\Extend\Response();
         DB::beginTransaction();
         try {
-            $order = ServiceOrder::findOrFail($request->id);
+            $order = $this->findOrderForMutation($request->id);
             $field = trim((string) $request->field);
             if ($field === '') throw new \Exception('Campo invalido');
+            if (!in_array($field, ['order_status', 'billing_status', 'payment_status', 'status'], true)) {
+                throw new \Exception('Campo no permitido para esta operacion');
+            }
+            if (!Schema::hasColumn('service_orders', $field)) {
+                throw new \Exception('Campo no disponible en ordenes de servicio');
+            }
+
+            $value = $request->value;
+            if ($field === 'order_status') $value = $this->normalizeOrderStatus($value);
+            if ($field === 'billing_status') $value = $this->normalizeBillingStatus($value);
+            if ($field === 'payment_status') $value = $this->normalizePaymentStatus($value);
+            if ($field === 'status') $value = $this->toBoolean($value);
+
+            if ($field === 'order_status' && $value === 'cancelled' && $this->isStorageOrderType()) {
+                $this->deletePendingStoragePrefactures((int) $order->id);
+            }
 
             $order->update([
-                $field => $request->value,
+                $field => $value,
                 'updated_by' => Auth::id(),
             ]);
 
@@ -335,7 +378,7 @@ class ServiceOrderController extends BasicController
         $response = new \SoDe\Extend\Response();
         DB::beginTransaction();
         try {
-            $order = ServiceOrder::findOrFail($request->id);
+            $order = $this->findOrderForMutation($request->id);
             $order->update([
                 'status' => $request->status ? 0 : 1,
                 'updated_by' => Auth::id(),
@@ -365,7 +408,7 @@ class ServiceOrderController extends BasicController
         $response = new \SoDe\Extend\Response();
         DB::beginTransaction();
         try {
-            $order = ServiceOrder::findOrFail($id);
+            $order = $this->findOrderForMutation($id);
             $order->update([
                 'status' => null,
                 'updated_by' => Auth::id(),

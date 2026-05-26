@@ -95,8 +95,8 @@ class EntryNoteController extends BasicController
 
     public function get(Request $request, string $id)
     {
-        $response = Response::simpleTryCatch(function () use ($id) {
-            $entryNote = $this->model::with($this->detailRelations())->find($id);
+        $response = Response::simpleTryCatch(function () use ($request, $id) {
+            $entryNote = $this->scopedEntryNoteQuery($request)->with($this->detailRelations())->find($id);
             if (!$entryNote) throw new \Exception('El registro que buscas no existe');
             return $entryNote;
         });
@@ -121,6 +121,9 @@ class EntryNoteController extends BasicController
             $business->whereIn('business_key', BusinessScope::fixedKeys());
             if ($scopeKey) $business->where('business_key', $scopeKey);
         });
+        if ($isStorage) {
+            $query->whereHas('client', fn($client) => StorageScope::applyClientScope($client, 'clients'));
+        }
 
         return $query;
     }
@@ -154,7 +157,8 @@ class EntryNoteController extends BasicController
             if (trim((string)($body['vehicle_plate'] ?? '')) === '') throw new \Exception('El numero de placa es obligatorio');
             StorageScope::assertClient($clientId);
             if (!empty($body['id'])) {
-                $currentEntry = EntryNote::query()->find($body['id']);
+                $currentEntry = $this->scopedEntryNoteQuery($request)->whereKey($body['id'])->first();
+                if (!$currentEntry) throw new \Exception('Nota de entrada de almacenamiento no encontrada');
                 if ($currentEntry && (int)$currentEntry->client_id !== (int)$clientId) {
                     throw new \Exception('No se puede cambiar el cliente de una nota de entrada de almacenamiento');
                 }
@@ -328,10 +332,14 @@ class EntryNoteController extends BasicController
             if ($articleId <= 0) throw new \Exception('El articulo es obligatorio');
             if ($warehouseId <= 0) throw new \Exception('El almacen es obligatorio');
 
-            Article::findOrFail($articleId);
             Warehouse::findOrFail($warehouseId);
 
             if ($this->isStorageRequest($request)) {
+                $article = StorageScope::assertArticle($articleId);
+                $clientId = $this->normalizeClientId($request->input('client_id')) ?: (int)($article->client_id ?? 0);
+                if (!$clientId) throw new \Exception('El cliente es obligatorio para consultar stock de almacenamiento');
+                StorageScope::assertArticleBelongsToClient($articleId, $clientId);
+
                 $qtyIn = (float)DB::table('entry_note_items as entry_item')
                     ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
                     ->join('businesses as business', 'business.id', '=', 'entry_note.business_id')
@@ -340,6 +348,7 @@ class EntryNoteController extends BasicController
                     ->where('entry_item.status', 1)
                     ->where('business.business_key', BusinessScope::KAMARY_MEDICALS)
                     ->where('entry_item.article_id', $articleId)
+                    ->where('entry_note.client_id', $clientId)
                     ->whereRaw('COALESCE(entry_item.warehouse_id, entry_note.warehouse_id) = ?', [$warehouseId])
                     ->sum('entry_item.quantity');
 
@@ -350,6 +359,7 @@ class EntryNoteController extends BasicController
                     ->where('exit_item.status', 1)
                     ->where('business.business_key', BusinessScope::KAMARY_MEDICALS)
                     ->where('exit_item.article_id', $articleId)
+                    ->where('exit_note.client_id', $clientId)
                     ->whereRaw('COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) = ?', [$warehouseId]);
                 if (\Illuminate\Support\Facades\Schema::hasColumn('exit_notes', 'exit_status')) {
                     $qtyOutQuery->where('exit_note.exit_status', 'approved');
@@ -357,6 +367,7 @@ class EntryNoteController extends BasicController
                 $qtyOut = (float)$qtyOutQuery->sum('exit_item.quantity');
                 $stock = round($qtyIn - $qtyOut, 3);
             } else {
+                Article::findOrFail($articleId);
                 $stock = app(StockService::class)->getAvailableStockByWarehouse($articleId, $warehouseId);
                 $qtyOutQuery = DB::table('exit_note_items as exit_item')
                     ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
@@ -394,7 +405,10 @@ class EntryNoteController extends BasicController
             $data[$request->field] = $request->value;
             $data['updated_by'] = Auth::id();
 
-            $this->model::where($this->identifier, $request->id)->update($data);
+            $updated = $this->scopedEntryNoteQuery($request)
+                ->where($this->identifier, $request->id)
+                ->update($data);
+            if (!$updated) throw new \Exception('Nota de entrada no encontrada en este modulo');
 
             $response->status = 200;
             $response->message = 'Operacion correcta';
@@ -410,10 +424,13 @@ class EntryNoteController extends BasicController
     {
         $response = new Response();
         try {
-            $this->model::where($this->identifier, $request->id)->update([
+            $updated = $this->scopedEntryNoteQuery($request)
+                ->where($this->identifier, $request->id)
+                ->update([
                 'status' => $request->status ? 0 : 1,
                 'updated_by' => Auth::id(),
             ]);
+            if (!$updated) throw new \Exception('Nota de entrada no encontrada en este modulo');
 
             $response->status = 200;
             $response->message = 'Operacion correcta';
@@ -434,7 +451,7 @@ class EntryNoteController extends BasicController
                 throw new \Exception('Estado de nota no valido');
             }
 
-            $entryNote = $this->model::findOrFail($id);
+            $entryNote = $this->scopedEntryNoteQuery($request)->findOrFail($id);
             if ($status === 'approved' && $this->isStorageRequest($request)) {
                 $entryNote->load('items');
                 $this->assertStorageLocationsAvailable($entryNote, $entryNote->items);
@@ -458,6 +475,42 @@ class EntryNoteController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $updated = $this->scopedEntryNoteQuery($request)
+                ->where($this->identifier, $id)
+                ->update([
+                    'status' => null,
+                    'updated_by' => Auth::id(),
+                ]);
+            if (!$updated) throw new \Exception('No se ha eliminado ningun registro');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function scopedEntryNoteQuery(Request $request)
+    {
+        return $this->model::query()
+            ->when($this->isStorageRequest($request), function ($query) use ($request) {
+                $scopeKey = BusinessScope::scopedKeyForRequest($request);
+                $query
+                    ->whereHas('client', fn($client) => StorageScope::applyClientScope($client, 'clients'))
+                    ->whereHas('business', function ($business) use ($scopeKey) {
+                        $business->whereIn('business_key', BusinessScope::fixedKeys());
+                        if ($scopeKey) $business->where('business_key', $scopeKey);
+                    });
+            });
     }
 
     private function isStorageRequest(Request $request): bool

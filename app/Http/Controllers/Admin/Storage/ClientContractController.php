@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use SoDe\Extend\Response;
 
 class ClientContractController extends BasicController
 {
@@ -144,6 +145,34 @@ class ClientContractController extends BasicController
             $contract->file_path,
             $contract->file_name ?: basename($contract->file_path)
         );
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $updated = $this->storageContractQuery()
+                ->where($this->identifier, $id)
+                ->update([
+                    'status' => null,
+                    'updated_by' => Auth::id(),
+                ]);
+            if (!$updated) throw new \Exception('No se ha eliminado ningun registro');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function storageContractQuery()
+    {
+        return $this->model::query()
+            ->whereHas('client', fn($query) => StorageScope::applyClientScope($query));
     }
 
     private function normalizeDate($value, string $label): string

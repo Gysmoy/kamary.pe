@@ -31,9 +31,22 @@ class BillingControlController extends BaseBillingDocumentController
                 if (Schema::hasColumn('service_orders', 'order_type')) {
                     $serviceOrder->whereIn('service_orders.order_type', $this->storageOrderTypes);
                 }
+                $serviceOrder->whereHas('client', fn($client) => StorageScope::applyClientScope($client, 'clients'));
             });
 
         return $query;
+    }
+
+    protected function billingDocumentQueryForRequest(Request $request)
+    {
+        return parent::billingDocumentQueryForRequest($request)
+            ->where('source_type', 'service_order')
+            ->whereHas('serviceOrder', function ($serviceOrder) {
+                if (Schema::hasColumn('service_orders', 'order_type')) {
+                    $serviceOrder->whereIn('service_orders.order_type', $this->storageOrderTypes);
+                }
+                $serviceOrder->whereHas('client', fn($client) => StorageScope::applyClientScope($client, 'clients'));
+            });
     }
 
     public function beforeSave(Request $request)

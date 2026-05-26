@@ -36,6 +36,9 @@ class ProductController extends BaseArticleController
                     $query->where('status', 1)->orderBy('sort_order')->orderBy('id');
                 }
             ])->findOrFail($articleId);
+            $clientId = (int)($article->client_id ?? 0);
+            if (!$clientId) throw new \Exception('El producto de almacenamiento no tiene cliente asignado');
+            StorageScope::assertClient($clientId);
 
             $incomingTotals = DB::table('entry_note_items as entry_item')
                 ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
@@ -45,6 +48,7 @@ class ProductController extends BaseArticleController
                 ->where('entry_item.status', 1)
                 ->where('business.business_key', BusinessScope::KAMARY_MEDICALS)
                 ->where('entry_item.article_id', $article->id)
+                ->when($clientId, fn($query) => $query->where('entry_note.client_id', $clientId))
                 ->selectRaw('
                     COALESCE(entry_item.warehouse_id, entry_note.warehouse_id) as warehouse_id,
                     COALESCE(SUM(entry_item.quantity), 0) as qty_in
@@ -58,6 +62,7 @@ class ProductController extends BaseArticleController
                 ->where('exit_item.status', 1)
                 ->where('business.business_key', BusinessScope::KAMARY_MEDICALS)
                 ->where('exit_item.article_id', $article->id)
+                ->when($clientId, fn($query) => $query->where('exit_note.client_id', $clientId))
                 ->when(Schema::hasColumn('exit_notes', 'exit_status'), fn($query) => $query->where('exit_note.exit_status', 'approved'))
                 ->selectRaw('
                     COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) as warehouse_id,
