@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Admin\Storage;
 use App\Http\Classes\dxResponse;
 use App\Http\Controllers\BasicController;
 use App\Models\Business;
-use App\Models\Client;
 use App\Models\dxDataGrid;
 use App\Models\StorageLocation;
 use App\Models\Warehouse;
 use App\Support\BusinessScope;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -78,12 +78,7 @@ class KardexController extends BasicController
                     'occupied_until',
                 ]);
 
-            $clients = Client::query()
-                ->whereNotNull('status')
-                ->where(function ($query) {
-                    $query->where('has_storage_service', true)
-                        ->orWhere('storage_tariff_enabled', true);
-                })
+            $clients = StorageScope::clientQuery()
                 ->orderBy('full_name')
                 ->get(['id', 'document_type', 'document_number', 'full_name', 'short_code', 'status']);
 
@@ -383,6 +378,7 @@ class KardexController extends BasicController
 
             $warehouseId = $this->nullableInt($request->input('warehouse_id'));
             $clientId = $this->nullableInt($request->input('client_id'));
+            if ($clientId) StorageScope::assertClient($clientId);
             $lot = trim((string) $request->input('lot', ''));
             $expirationDate = $this->nullableDate($request->input('expiration_date'));
             $location = trim((string) $request->input('location', ''));
@@ -428,6 +424,7 @@ class KardexController extends BasicController
                 ->when(Schema::hasColumn('exit_notes', 'exit_status'), fn($query) => $query->where('exit_note.exit_status', 'approved'))
                 ->where('exit_item.article_id', $articleId)
                 ->when($warehouseId, fn($query) => $query->whereRaw('COALESCE(exit_item.warehouse_id, exit_note.warehouse_id) = ?', [$warehouseId]))
+                ->when($clientId, fn($query) => $query->where('exit_note.client_id', $clientId))
                 ->whereRaw("COALESCE(NULLIF(exit_item.batch_code, ''), '') = ?", [$lot])
                 ->whereRaw("COALESCE(exit_item.expiration_date, '1000-01-01') = COALESCE(?, '1000-01-01')", [$expirationDate])
                 ->whereRaw("COALESCE(NULLIF(exit_item.location, ''), '') = ?", [$location])
@@ -570,12 +567,12 @@ class KardexController extends BasicController
                 incoming.lot,
                 incoming.expiration_date,
                 incoming.location,
-                MIN(incoming.client_id) as client_id,
+                incoming.client_id,
                 GROUP_CONCAT(DISTINCT NULLIF(incoming.client_name, '') SEPARATOR ', ') as client_name,
                 MIN(incoming.occupied_from) as occupied_from,
                 COALESCE(SUM(incoming.quantity), 0) as qty_in
             ")
-            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location');
+            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location', 'incoming.client_id');
 
         $outgoingTotals = DB::table('exit_note_items as exit_item')
             ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
@@ -590,19 +587,22 @@ class KardexController extends BasicController
                 COALESCE(NULLIF(exit_item.batch_code, ''), '') as lot,
                 exit_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(exit_item.location, ''), '') as location,
+                exit_note.client_id as client_id,
                 COALESCE(SUM(exit_item.quantity), 0) as qty_out
             ")
-            ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location');
+            ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location', 'exit_note.client_id');
 
         $currentRows = DB::query()
             ->fromSub($incomingTotals, 'stock')
             ->join('articles as article', 'article.id', '=', 'stock.article_id')
+            ->when(Schema::hasColumn('articles', 'module_scope'), fn($query) => $query->where('article.module_scope', 'storage'))
             ->leftJoinSub($outgoingTotals, 'outgoing', function ($join) {
                 $join->on('outgoing.article_id', '=', 'stock.article_id')
                     ->on('outgoing.warehouse_id', '=', 'stock.warehouse_id')
                     ->whereRaw("COALESCE(outgoing.lot, '') = COALESCE(stock.lot, '')")
                     ->whereRaw("COALESCE(outgoing.location, '') = COALESCE(stock.location, '')")
-                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')");
+                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')")
+                    ->whereRaw("COALESCE(outgoing.client_id, 0) = COALESCE(stock.client_id, 0)");
             })
             ->whereRaw('(COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0)) > 0')
             ->selectRaw("
@@ -639,6 +639,7 @@ class KardexController extends BasicController
     {
         $warehouseId = $this->nullableInt($request->input('warehouse_id'));
         $clientId = $this->nullableInt($request->input('client_id'));
+        if ($clientId) StorageScope::assertClient($clientId);
         $stockMode = (string) $request->input('stock_mode', 'with_stock');
 
         $entryMovements = DB::table('entry_note_items as entry_item')
@@ -670,10 +671,10 @@ class KardexController extends BasicController
                 incoming.expiration_date,
                 incoming.location,
                 COALESCE(SUM(incoming.quantity), 0) as qty_in,
-                MIN(incoming.client_id) as client_id,
+                incoming.client_id,
                 MAX(incoming.movement_at) as last_movement_at
             ')
-            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location');
+            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location', 'incoming.client_id');
 
         $outgoingTotals = DB::table('exit_note_items as exit_item')
             ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
@@ -689,13 +690,15 @@ class KardexController extends BasicController
                 exit_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(exit_item.location, ''), '') as location,
                 COALESCE(SUM(exit_item.quantity), 0) as qty_out,
+                exit_note.client_id as client_id,
                 MAX(COALESCE(exit_note.updated_at, exit_note.created_at)) as last_movement_at
             ")
-            ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location');
+            ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location', 'exit_note.client_id');
 
         $base = DB::query()
             ->fromSub($incomingTotals, 'stock')
             ->join('articles as article', 'article.id', '=', 'stock.article_id')
+            ->when(Schema::hasColumn('articles', 'module_scope'), fn($query) => $query->where('article.module_scope', 'storage'))
             ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
             ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'stock.warehouse_id')
             ->leftJoin('storage_locations as storage_location', function ($join) {
@@ -709,7 +712,8 @@ class KardexController extends BasicController
                     ->on('outgoing.warehouse_id', '=', 'stock.warehouse_id')
                     ->whereRaw("COALESCE(outgoing.lot, '') = COALESCE(stock.lot, '')")
                     ->whereRaw("COALESCE(outgoing.location, '') = COALESCE(stock.location, '')")
-                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')");
+                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')")
+                    ->whereRaw("COALESCE(outgoing.client_id, 0) = COALESCE(stock.client_id, 0)");
             })
             ->when($warehouseId, fn($query) => $query->where('stock.warehouse_id', $warehouseId))
             ->when($clientId, fn($query) => $query->where('stock.client_id', $clientId))

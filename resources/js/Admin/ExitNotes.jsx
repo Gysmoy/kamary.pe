@@ -601,6 +601,10 @@ const ExitNotes = () => {
   }
 
   const openStockSearchModal = async () => {
+    if (!selectedClientId) {
+      await Swal.fire({ icon: 'warning', title: 'Cliente requerido', text: 'Selecciona el cliente antes de insertar productos.' })
+      return
+    }
     if (!selectedWarehouseId) {
       await Swal.fire({ icon: 'warning', title: 'Almacen requerido', text: 'Selecciona el almacen antes de insertar productos.' })
       return
@@ -617,6 +621,11 @@ const ExitNotes = () => {
 
   const searchAvailableStockRows = async () => {
     const warehouseId = stockSearchWarehouseId || selectedWarehouseId
+    const clientId = selectedClientId
+    if (!clientId) {
+      await Swal.fire({ icon: 'warning', title: 'Cliente requerido', text: 'Selecciona el cliente para buscar stock.' })
+      return
+    }
     if (!warehouseId) {
       await Swal.fire({ icon: 'warning', title: 'Almacen requerido', text: 'Selecciona el almacen para buscar stock.' })
       return
@@ -626,6 +635,7 @@ const ExitNotes = () => {
     try {
       const rows = await exitNotesRest.getAvailableStock({
         warehouseId,
+        clientId,
         search: stockSearchTerm,
         exitNoteId: idRef.current?.value || ''
       })
@@ -656,6 +666,7 @@ const ExitNotes = () => {
       const existing = new Set(currentRows.map(item => [
         item.article_id,
         item.warehouse_id || selectedWarehouseId,
+        selectedClientId,
         item.lot || item.batch_code,
         item.expiration_date,
         item.location,
@@ -664,6 +675,7 @@ const ExitNotes = () => {
         .filter(row => !existing.has([
           row.article_id,
           row.warehouse_id || stockSearchWarehouseId || selectedWarehouseId,
+          row.client_id || selectedClientId,
           row.lot,
           row.expiration_date,
           row.location,
@@ -737,6 +749,7 @@ const ExitNotes = () => {
   }
 
   const storageColumns = [
+    { dataField: 'client_id', caption: 'Cliente ID', visible: false, showInColumnChooser: false },
     {
       caption: 'Acciones',
       width: 245,

@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin\Storage;
 
 use App\Http\Controllers\BasicController;
-use App\Models\Client;
 use App\Models\ClientNotification;
 use App\Models\MailingTemplate;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -19,6 +19,9 @@ class ClientNotificationController extends BasicController
     {
         return $model::query()
             ->select('client_notifications.*')
+            ->whereHas('client', function ($query) {
+                StorageScope::applyClientScope($query);
+            })
             ->selectRaw("(SELECT TRIM(CONCAT(COALESCE(users.name, ''), ' ', COALESCE(users.lastname, ''))) FROM users WHERE users.id = client_notifications.created_by LIMIT 1) AS creator_label");
     }
 
@@ -28,13 +31,12 @@ class ClientNotificationController extends BasicController
         $userId = Auth::id();
         $clientId = (int)($body['client_id'] ?? 0);
 
-        $clientExists = Client::query()
-            ->whereKey($clientId)
-            ->whereNotNull('status')
-            ->exists();
-
-        if (!$clientExists) {
-            throw new \Exception('Cliente no encontrado');
+        StorageScope::assertClient($clientId);
+        if (!empty($body['id'])) {
+            $current = ClientNotification::query()->find($body['id']);
+            if ($current && (int)$current->client_id !== $clientId) {
+                throw new \Exception('No se puede cambiar el cliente de la notificacion de almacenamiento');
+            }
         }
 
         $notificationKey = trim((string)($body['notification_key'] ?? ''));

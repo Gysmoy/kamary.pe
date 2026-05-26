@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
 use App\Models\Article;
-use App\Models\Client;
 use App\Models\EntryNote;
 use App\Models\EntryNoteItem;
 use App\Models\Laboratory;
 use App\Models\Warehouse;
 use App\Services\StockService;
 use App\Support\BusinessScope;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -152,7 +152,13 @@ class EntryNoteController extends BasicController
             if (trim((string)($body['driver_name'] ?? '')) === '') throw new \Exception('El nombre del chofer es obligatorio');
             if (trim((string)($body['driver_license'] ?? '')) === '') throw new \Exception('El numero de brevete es obligatorio');
             if (trim((string)($body['vehicle_plate'] ?? '')) === '') throw new \Exception('El numero de placa es obligatorio');
-            Client::findOrFail($clientId);
+            StorageScope::assertClient($clientId);
+            if (!empty($body['id'])) {
+                $currentEntry = EntryNote::query()->find($body['id']);
+                if ($currentEntry && (int)$currentEntry->client_id !== (int)$clientId) {
+                    throw new \Exception('No se puede cambiar el cliente de una nota de entrada de almacenamiento');
+                }
+            }
         }
 
         $business = BusinessScope::findFixedBusinessForRequest($businessId, $request, $this->neutralBusinessScopePaths());
@@ -537,7 +543,7 @@ class EntryNoteController extends BasicController
 
         $articles = Article::query()
             ->whereIn('id', $articleIds)
-            ->get(['id', 'code', 'name', 'client_id'])
+            ->get(['id', 'code', 'name', 'client_id', 'module_scope'])
             ->keyBy('id');
 
         foreach ($items as $idx => $item) {
@@ -551,6 +557,11 @@ class EntryNoteController extends BasicController
             $lineLabel = $lineNumber > 0 ? " en la linea {$lineNumber}" : '';
             if (!$article) {
                 throw new \Exception("El articulo seleccionado{$lineLabel} no existe");
+            }
+
+            if (($article->module_scope ?? null) !== 'storage') {
+                $articleName = trim(implode(' - ', array_filter([$article->code, $article->name]))) ?: "ID {$articleId}";
+                throw new \Exception("El articulo {$articleName}{$lineLabel} no pertenece al modulo de almacenamiento");
             }
 
             if ((int)($article->client_id ?? 0) !== $clientId) {

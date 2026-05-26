@@ -714,6 +714,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   }
 
   const defaultServiceOrderColumns = [
+    { dataField: 'client_id', caption: 'Cliente ID', visible: false, showInColumnChooser: false },
     { dataField: 'row_number', caption: '#', width: 56, allowFiltering: false, calculateCellValue: (data) => data.id },
     actionColumn,
     {
@@ -770,6 +771,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   ]
 
   const storageServiceOrderColumns = [
+    { dataField: 'client_id', caption: 'Cliente ID', visible: false, showInColumnChooser: false },
     actionColumn,
     { dataField: 'order_status', caption: 'Estado', width: 145, minWidth: 145, lookup: toLookup(serviceOrderStatusOptions), cellTemplate: renderStorageOrderStatus },
     {

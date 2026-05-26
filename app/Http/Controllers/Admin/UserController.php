@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
 use App\Models\User;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\File;
@@ -44,6 +45,9 @@ class UserController extends BasicController
                 $body['storage_client_id'] = $body['storage_client_id'] === '' || $body['storage_client_id'] === null
                     ? null
                     : (int) $body['storage_client_id'];
+                if ($body['storage_client_id']) {
+                    StorageScope::assertClient((int)$body['storage_client_id']);
+                }
             } else {
                 unset($body['storage_client_id']);
             }

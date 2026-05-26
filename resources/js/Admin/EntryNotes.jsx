@@ -1034,6 +1034,7 @@ const EntryNotes = () => {
   }
 
   const storageColumns = [
+    { dataField: 'client_id', caption: 'Cliente ID', visible: false, showInColumnChooser: false },
     {
       caption: 'Acciones',
       width: 275,

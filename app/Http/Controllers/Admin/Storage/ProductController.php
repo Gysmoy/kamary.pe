@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Admin\Storage;
 
 use App\Http\Controllers\Admin\ArticleController as BaseArticleController;
-use App\Models\Article;
 use App\Models\Warehouse;
 use App\Support\BusinessScope;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -31,7 +31,7 @@ class ProductController extends BaseArticleController
         $response = new Response();
 
         try {
-            $article = Article::with([
+            $article = StorageScope::articleQuery()->with([
                 'presentations' => function ($query) {
                     $query->where('status', 1)->orderBy('sort_order')->orderBy('id');
                 }

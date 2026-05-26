@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Admin\Storage;
 
 use App\Http\Controllers\BasicController;
-use App\Models\Client;
 use App\Models\ClientContract;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +21,9 @@ class ClientContractController extends BasicController
     {
         return $model::query()
             ->select('client_contracts.*')
+            ->whereHas('client', function ($query) {
+                StorageScope::applyClientScope($query);
+            })
             ->selectRaw("(SELECT TRIM(CONCAT(COALESCE(users.name, ''), ' ', COALESCE(users.lastname, ''))) FROM users WHERE users.id = client_contracts.created_by LIMIT 1) AS creator_label");
     }
 
@@ -32,15 +35,7 @@ class ClientContractController extends BasicController
         $id = $body['id'] ?? null;
         $clientId = (int)($body['client_id'] ?? 0);
 
-        $clientExists = Client::query()
-            ->whereKey($clientId)
-            ->whereNotNull('status')
-            ->where('client_kind', 'regular')
-            ->exists();
-
-        if (!$clientExists) {
-            throw new \Exception('Cliente no encontrado');
-        }
+        StorageScope::assertClient($clientId);
 
         $contractCode = trim((string)($body['contract_code'] ?? ''));
         if ($contractCode === '') {
@@ -136,6 +131,9 @@ class ClientContractController extends BasicController
         $contract = ClientContract::query()
             ->whereKey($id)
             ->whereNotNull('status')
+            ->whereHas('client', function ($query) {
+                StorageScope::applyClientScope($query);
+            })
             ->firstOrFail();
 
         if (!$contract->file_path || !Storage::disk('public')->exists($contract->file_path)) {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\Storage;
 
 use App\Http\Controllers\Admin\BillingDocumentController as BaseBillingDocumentController;
 use App\Models\ServiceOrder;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
@@ -50,6 +51,7 @@ class BillingControlController extends BaseBillingDocumentController
         if (Schema::hasColumn('service_orders', 'order_type') && !in_array($order->order_type, $this->storageOrderTypes, true)) {
             throw new \Exception('La orden seleccionada no pertenece a almacenamiento.');
         }
+        StorageScope::assertClient((int)$order->client_id);
 
         return $body;
     }

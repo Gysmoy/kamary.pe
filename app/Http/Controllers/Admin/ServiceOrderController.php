@@ -11,6 +11,7 @@ use App\Models\ServiceOrder;
 use App\Models\ServiceOrderItem;
 use App\Services\BillingDocumentService;
 use App\Support\BusinessScope;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -48,6 +49,11 @@ class ServiceOrderController extends BasicController
     protected function clientModuleScopeForOrder(): string
     {
         return $this->orderType() === 'service' ? 'services' : 'storage';
+    }
+
+    protected function serviceScopeForOrder(): string
+    {
+        return $this->orderType() === 'service' ? 'services' : 'storage_general';
     }
 
     public function setPaginationInstance(string $model)
@@ -108,13 +114,21 @@ class ServiceOrderController extends BasicController
         if (!$issueDate) throw new \Exception('La fecha es obligatoria');
 
         $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
-        $client = Client::findOrFail($clientId);
+        $client = $this->clientModuleScopeForOrder() === 'storage'
+            ? StorageScope::assertClient($clientId)
+            : Client::findOrFail($clientId);
         if ($client->client_kind !== 'regular') throw new \Exception('La orden de servicio debe trabajar con cliente regular');
         if (
             Schema::hasColumn('clients', 'module_scope')
             && ($client->module_scope ?? null) !== $this->clientModuleScopeForOrder()
         ) {
             throw new \Exception('El cliente no pertenece a este modulo');
+        }
+        if ($id && $this->clientModuleScopeForOrder() === 'storage') {
+            $currentOrder = ServiceOrder::query()->find($id);
+            if ($currentOrder && (int)$currentOrder->client_id !== $clientId) {
+                throw new \Exception('No se puede cambiar el cliente de una orden de almacenamiento');
+            }
         }
 
         $branch = BusinessScope::requireBranchForBusiness($business, $branchId);
@@ -201,6 +215,12 @@ class ServiceOrderController extends BasicController
                 $serviceId = $this->toNullableInt($item['service_id'] ?? null);
                 if (!$serviceId) throw new \Exception('Cada linea debe tener servicio');
                 $service = ServiceCatalog::findOrFail($serviceId);
+                if (
+                    Schema::hasColumn('services', 'service_scope')
+                    && ($service->service_scope ?? null) !== $this->serviceScopeForOrder()
+                ) {
+                    throw new \Exception('El servicio seleccionado no pertenece a este modulo');
+                }
                 $quantity = $this->toDecimal($item['quantity'] ?? 0, 3);
                 if ($quantity <= 0) throw new \Exception("La cantidad debe ser mayor a 0 para {$service->name}");
                 $unitPrice = $this->toDecimal($item['unit_price'] ?? ($jpa->currency === 'USD' ? $service->unit_price_usd : $service->unit_price_pen));

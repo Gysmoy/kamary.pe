@@ -266,6 +266,10 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
   }
 
   const refreshPreview = async () => {
+    if (!clientId) {
+      await Swal.fire({ icon: 'warning', title: 'Cliente requerido', text: 'Selecciona el cliente antes de filtrar inventario.' })
+      return
+    }
     setLoadingRows(true)
     const data = await inventoryRest.previewStorageInventory({
       warehouse_id: warehouseId || null,
@@ -277,6 +281,10 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
   }
 
   const registerInventory = async () => {
+    if (!clientId) {
+      await Swal.fire({ icon: 'warning', title: 'Cliente requerido', text: 'Selecciona el cliente antes de registrar inventario.' })
+      return
+    }
     const result = await inventoryRest.saveStorageInventory({
       warehouse_id: warehouseId || null,
       location: location || null,
@@ -545,7 +553,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           </select>
         </div>
         <div className='col-12 col-xl-2 d-grid'>
-          <button type='button' className='btn btn-outline-primary py-2 fw-semibold' disabled={!!selectedCount || !warehouseId || loadingRows} onClick={refreshPreview}>
+          <button type='button' className='btn btn-outline-primary py-2 fw-semibold' disabled={!!selectedCount || !warehouseId || !clientId || loadingRows} onClick={refreshPreview}>
             <i className='mdi mdi-magnify me-1'></i>
             Filtrar
           </button>

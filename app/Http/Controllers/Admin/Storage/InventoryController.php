@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Admin\Storage;
 
 use App\Http\Controllers\BasicController;
-use App\Models\Client;
-use App\Models\ClientStorageTariff;
 use App\Models\EntryNote;
 use App\Models\EntryNoteItem;
 use App\Models\ExitNote;
@@ -14,6 +12,7 @@ use App\Models\StorageInventoryCountItem;
 use App\Models\Warehouse;
 use App\Services\StockService;
 use App\Support\BusinessScope;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -69,11 +68,7 @@ class InventoryController extends BasicController
                 ->orderBy('name')
                 ->get(['id', 'business_branch_id', 'name', 'status']);
 
-            $clients = Client::query()
-                ->whereNotNull('status')
-                ->where(function ($query) {
-                    $query->where('has_storage_service', true)->orWhere('storage_tariff_enabled', true);
-                })
+            $clients = StorageScope::clientQuery()
                 ->orderBy('full_name')
                 ->get(['id', 'document_type', 'document_number', 'full_name', 'short_code', 'status']);
 
@@ -95,10 +90,14 @@ class InventoryController extends BasicController
         $response = new Response();
 
         try {
+            $clientId = $this->toNullableInt($request->input('client_id'));
+            if (!$clientId) throw new \Exception('El cliente es obligatorio');
+            StorageScope::assertClient($clientId);
+
             $rows = $this->stockRows(
                 $this->toNullableInt($request->input('warehouse_id')),
                 trim((string)($request->input('location') ?? '')),
-                $this->toNullableInt($request->input('client_id'))
+                $clientId
             );
 
             $response->status = 200;
@@ -147,7 +146,8 @@ class InventoryController extends BasicController
 
             $warehouse = Warehouse::with('branch')->findOrFail($warehouseId);
             $clientId = $this->toNullableInt($request->input('client_id'));
-            if ($clientId) Client::findOrFail($clientId);
+            if (!$clientId) throw new \Exception('El cliente es obligatorio');
+            StorageScope::assertClient($clientId);
 
             $location = trim((string)($request->input('location') ?? '')) ?: null;
             $rows = $this->stockRows($warehouseId, $location ?? '', $clientId);
@@ -333,6 +333,8 @@ class InventoryController extends BasicController
 
             if (!$count->status) throw new \Exception('El inventario esta eliminado');
             if ($count->inventory_status === 'Aplicado') throw new \Exception('Este inventario ya fue aplicado');
+            if (!$count->client_id) throw new \Exception('El inventario no tiene cliente asignado');
+            StorageScope::assertClient((int)$count->client_id);
 
             $warehouse = $count->warehouse;
             if (!$warehouse || !$warehouse->business_branch_id) throw new \Exception('El inventario no tiene almacen valido');
@@ -349,6 +351,7 @@ class InventoryController extends BasicController
                 if (!$item->article_id || !$item->warehouse_id) {
                     throw new \Exception("El item {$item->id} no tiene articulo o almacen valido");
                 }
+                StorageScope::assertArticleBelongsToClient((int)$item->article_id, (int)$count->client_id);
 
                 $currentStock = round($stockService->getAvailableStockByStorageKey(
                     (int)$item->article_id,
@@ -358,7 +361,8 @@ class InventoryController extends BasicController
                     trim((string)($item->location ?? '')),
                     0,
                     (int)$business->id,
-                    false
+                    false,
+                    (int)$count->client_id
                 ), 3);
                 $realStock = round((float)$item->real_stock, 3);
                 $difference = round($realStock - $currentStock, 3);
@@ -426,12 +430,6 @@ class InventoryController extends BasicController
 
     private function stockRows(?int $warehouseId, string $location, ?int $clientId): array
     {
-        $client = $clientId ? Client::find($clientId) : null;
-        $clientName = $client?->full_name ?? '';
-        $temperature = $clientId
-            ? (ClientStorageTariff::where('client_id', $clientId)->value('temperature_range') ?? '')
-            : '';
-
         $entryMovements = DB::table('entry_note_items as entry_item')
             ->join('entry_notes as entry_note', 'entry_note.id', '=', 'entry_item.entry_note_id')
             ->join('businesses as entry_business', 'entry_business.id', '=', 'entry_note.business_id')
@@ -446,6 +444,7 @@ class InventoryController extends BasicController
                 COALESCE(NULLIF(entry_item.lot, ''), NULLIF(entry_item.batch_code, ''), '') as lot,
                 entry_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(entry_item.location, ''), '') as location,
+                entry_note.client_id as client_id,
                 entry_item.quantity as quantity
             ");
 
@@ -458,9 +457,10 @@ class InventoryController extends BasicController
                 incoming.lot,
                 incoming.expiration_date,
                 incoming.location,
+                incoming.client_id,
                 COALESCE(SUM(incoming.quantity), 0) as qty_in
             ')
-            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location');
+            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location', 'incoming.client_id');
 
         $outgoingTotals = DB::table('exit_note_items as exit_item')
             ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
@@ -475,15 +475,19 @@ class InventoryController extends BasicController
                 COALESCE(NULLIF(exit_item.batch_code, ''), '') as lot,
                 exit_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(exit_item.location, ''), '') as location,
+                exit_note.client_id as client_id,
                 COALESCE(SUM(exit_item.quantity), 0) as qty_out
             ")
-            ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location');
+            ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location', 'exit_note.client_id');
 
         $query = DB::query()
             ->fromSub($incomingTotals, 'stock')
             ->join('articles as article', 'article.id', '=', 'stock.article_id')
+            ->when(Schema::hasColumn('articles', 'module_scope'), fn($query) => $query->where('article.module_scope', 'storage'))
             ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
             ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'stock.warehouse_id')
+            ->leftJoin('clients as client', 'client.id', '=', 'stock.client_id')
+            ->leftJoin('client_storage_tariffs as tariff', 'tariff.client_id', '=', 'stock.client_id')
             ->leftJoin('storage_locations as storage_location', function ($join) {
                 $join->on('storage_location.warehouse_id', '=', 'stock.warehouse_id')
                     ->whereRaw('storage_location.code = stock.location')
@@ -494,10 +498,12 @@ class InventoryController extends BasicController
                     ->on('outgoing.warehouse_id', '=', 'stock.warehouse_id')
                     ->whereRaw("COALESCE(outgoing.lot, '') = COALESCE(stock.lot, '')")
                     ->whereRaw("COALESCE(outgoing.location, '') = COALESCE(stock.location, '')")
-                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')");
+                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')")
+                    ->whereRaw("COALESCE(outgoing.client_id, 0) = COALESCE(stock.client_id, 0)");
             })
             ->when($warehouseId, fn($query) => $query->where('stock.warehouse_id', $warehouseId))
             ->when($location !== '', fn($query) => $query->where('stock.location', $location))
+            ->when($clientId, fn($query) => $query->where('stock.client_id', $clientId))
             ->whereRaw('(COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0)) > 0')
             ->orderBy('article.name')
             ->orderBy('stock.lot')
@@ -508,15 +514,17 @@ class InventoryController extends BasicController
                 COALESCE(stock.lot, '') as lot,
                 stock.expiration_date,
                 COALESCE(article.name, '') as article_name,
+                stock.client_id,
+                COALESCE(client.full_name, '') as client_name,
                 COALESCE(unit.symbol, unit.name, '') as unit_label,
                 COALESCE(stock.location, '') as location,
-                storage_location.temperature_range as registered_temperature_range,
+                COALESCE(storage_location.temperature_range, tariff.temperature_range, '') as registered_temperature_range,
                 COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0) as system_stock
             ");
 
         return $query->get()
             ->values()
-            ->map(function ($row, $index) use ($clientName, $temperature) {
+            ->map(function ($row, $index) {
                 $systemStock = round((float)$row->system_stock, 3);
                 return [
                     'id' => $index + 1,
@@ -526,10 +534,10 @@ class InventoryController extends BasicController
                     'lot' => (string)($row->lot ?? ''),
                     'expiration_date' => $row->expiration_date ? substr((string)$row->expiration_date, 0, 10) : '',
                     'article_name' => (string)($row->article_name ?? ''),
-                    'client_name' => $clientName,
+                    'client_name' => (string)($row->client_name ?? ''),
                     'unit_label' => (string)($row->unit_label ?? ''),
                     'location' => (string)($row->location ?? ''),
-                    'temperature_range' => (string)($row->registered_temperature_range ?? $temperature),
+                    'temperature_range' => (string)($row->registered_temperature_range ?? ''),
                     'system_stock' => $systemStock,
                     'real_stock' => 0,
                 ];
@@ -651,11 +659,19 @@ class InventoryController extends BasicController
     private function createInventoryExitAdjustment(StorageInventoryCount $count, array $items, int $businessId, int $branchId): ExitNote
     {
         $userId = Auth::id();
+        $today = now()->toDateString();
         $exitNote = ExitNote::create([
             'business_id' => $businessId,
             'business_branch_id' => $branchId,
             'warehouse_id' => $count->warehouse_id,
+            'client_id' => $count->client_id,
             'client_name' => $count->client?->full_name ?: null,
+            'exit_date' => $today,
+            'document_type' => 'Ajuste inventario',
+            'document_series' => 'AJE',
+            'document_sequence' => $count->code,
+            'document_date' => $today,
+            'exit_status' => 'approved',
             'motives' => ["Ajuste negativo generado desde inventario {$count->code}"],
             'observations' => "Ajuste negativo generado desde inventario {$count->code}",
             'status' => true,
@@ -678,11 +694,13 @@ class InventoryController extends BasicController
                 $location,
                 (int)$exitNote->id,
                 $businessId,
-                false
+                false,
+                (int)$count->client_id
             );
             $stockKey = implode('|', [
                 $item->article_id,
                 $item->warehouse_id,
+                $count->client_id,
                 mb_strtolower($lot),
                 $expirationDate ?: '',
                 mb_strtolower($location),

@@ -6,7 +6,6 @@ use App\Http\Controllers\BasicController;
 use App\Models\ActivePrinciple;
 use App\Models\Article;
 use App\Models\ArticlePresentation;
-use App\Models\Client;
 use App\Models\Laboratory;
 use App\Models\MagistralCategory;
 use App\Models\MagistralLaboratory;
@@ -16,6 +15,7 @@ use App\Models\Unit;
 use App\Models\Warehouse;
 use App\Services\StockService;
 use App\Support\BusinessScope;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -80,10 +80,6 @@ class ArticleController extends BasicController
         if (Schema::hasColumn('articles', 'module_scope')) {
             $query->where(function ($scope) {
                 $scope->where('articles.module_scope', $this->moduleScope);
-                if ($this->moduleScope === 'storage') {
-                    $scope->orWhere('articles.module_scope', 'standard')
-                        ->orWhereNull('articles.module_scope');
-                }
                 if ($this->moduleScope === 'standard') {
                     $scope->orWhereNull('articles.module_scope');
                 }
@@ -381,7 +377,14 @@ class ArticleController extends BasicController
         if ($this->moduleScope === 'storage') {
             $clientId = $this->toNullableInt($body['client_id'] ?? null);
             if (!$clientId) throw new \Exception('El cliente es obligatorio');
-            Client::findOrFail($clientId);
+            StorageScope::assertClient($clientId);
+            $articleId = $this->toNullableInt($id);
+            if ($articleId) {
+                $currentArticle = StorageScope::assertArticle($articleId);
+                if ((int)($currentArticle->client_id ?? 0) !== $clientId) {
+                    throw new \Exception('No se puede cambiar el cliente de un producto de almacenamiento');
+                }
+            }
             $body['client_id'] = $clientId;
 
             $this->storageLotsPayload = $this->normalizeStorageLotsPayload($request->storage_lots ?? []);

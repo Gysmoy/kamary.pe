@@ -79,7 +79,8 @@ class StockService
         ?string $location,
         int $excludedExitNoteId = 0,
         ?int $businessId = null,
-        bool $includePurchaseReceipts = true
+        bool $includePurchaseReceipts = true,
+        ?int $clientId = null
     ): float {
         $lot = $this->normalizeStockText($lot);
         $location = $this->normalizeStockText($location);
@@ -97,6 +98,7 @@ class StockService
             ->whereRaw("COALESCE(NULLIF(entry_item.location, ''), '') = ?", [$location])
             ->whereRaw("COALESCE(DATE(entry_item.expiration_date), '1000-01-01') = ?", [$dateKey])
             ->when($businessId, fn($query) => $query->where('entry_note.business_id', $businessId))
+            ->when($clientId, fn($query) => $query->where('entry_note.client_id', $clientId))
             ->sum('entry_item.quantity');
 
         $receiptQty = 0;
@@ -124,7 +126,8 @@ class StockService
             ->whereRaw("COALESCE(NULLIF(exit_item.batch_code, ''), '') = ?", [$lot])
             ->whereRaw("COALESCE(NULLIF(exit_item.location, ''), '') = ?", [$location])
             ->whereRaw("COALESCE(DATE(exit_item.expiration_date), '1000-01-01') = ?", [$dateKey])
-            ->when($businessId, fn($query) => $query->where('exit_note.business_id', $businessId));
+            ->when($businessId, fn($query) => $query->where('exit_note.business_id', $businessId))
+            ->when($clientId, fn($query) => $query->where('exit_note.client_id', $clientId));
         if (Schema::hasColumn('exit_notes', 'exit_status')) {
             $qtyOutQuery->where('exit_note.exit_status', 'approved');
         }
@@ -142,7 +145,9 @@ class StockService
         ?int $warehouseId = null,
         ?string $search = '',
         int $excludedExitNoteId = 0,
-        ?string $businessKey = null
+        ?string $businessKey = null,
+        ?int $clientId = null,
+        ?string $articleModuleScope = null
     ): array {
         $businessKey = BusinessScope::normalize($businessKey) ?: BusinessScope::KAMARY_MEDICALS;
         $needle = mb_strtolower(trim((string)$search));
@@ -161,6 +166,7 @@ class StockService
                 COALESCE(NULLIF(entry_item.lot, ''), NULLIF(entry_item.batch_code, ''), '') as lot,
                 entry_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(entry_item.location, ''), '') as location,
+                entry_note.client_id as client_id,
                 entry_item.quantity as quantity
             ");
 
@@ -173,9 +179,10 @@ class StockService
                 incoming.lot,
                 incoming.expiration_date,
                 incoming.location,
+                incoming.client_id,
                 COALESCE(SUM(incoming.quantity), 0) as qty_in
             ')
-            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location');
+            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location', 'incoming.client_id');
 
         $outgoingTotals = DB::table('exit_note_items as exit_item')
             ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
@@ -190,9 +197,10 @@ class StockService
                 COALESCE(NULLIF(exit_item.batch_code, ''), '') as lot,
                 exit_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(exit_item.location, ''), '') as location,
+                exit_note.client_id as client_id,
                 COALESCE(SUM(exit_item.quantity), 0) as qty_out
             ")
-            ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location');
+            ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location', 'exit_note.client_id');
         if (Schema::hasColumn('exit_notes', 'exit_status')) {
             $outgoingTotals->where('exit_note.exit_status', 'approved');
         }
@@ -200,6 +208,10 @@ class StockService
         $query = DB::query()
             ->fromSub($incomingTotals, 'stock')
             ->join('articles as article', 'article.id', '=', 'stock.article_id')
+            ->when(
+                $articleModuleScope !== null && Schema::hasColumn('articles', 'module_scope'),
+                fn($query) => $query->where('article.module_scope', $articleModuleScope)
+            )
             ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
             ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'article.laboratory_id')
             ->leftJoin('active_principles as active_principle', 'active_principle.id', '=', 'article.active_principle_id')
@@ -209,15 +221,17 @@ class StockService
                     ->whereRaw('storage_location.code = stock.location')
                     ->whereNotNull('storage_location.status');
             })
-            ->leftJoin('clients as client', 'client.id', '=', 'storage_location.client_id')
+            ->leftJoin('clients as client', 'client.id', '=', 'stock.client_id')
             ->leftJoinSub($outgoingTotals, 'outgoing', function ($join) {
                 $join->on('outgoing.article_id', '=', 'stock.article_id')
                     ->on('outgoing.warehouse_id', '=', 'stock.warehouse_id')
                     ->whereRaw("COALESCE(outgoing.lot, '') = COALESCE(stock.lot, '')")
                     ->whereRaw("COALESCE(outgoing.location, '') = COALESCE(stock.location, '')")
-                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')");
+                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')")
+                    ->whereRaw("COALESCE(outgoing.client_id, 0) = COALESCE(stock.client_id, 0)");
             })
             ->when($warehouseId, fn($query) => $query->where('stock.warehouse_id', $warehouseId))
+            ->when($clientId, fn($query) => $query->where('stock.client_id', $clientId))
             ->whereRaw('(COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0)) > 0')
             ->when($needle !== '', function ($query) use ($needle) {
                 $like = '%' . $needle . '%';
@@ -248,7 +262,7 @@ class StockService
                 stock.expiration_date,
                 COALESCE(stock.location, '') as location,
                 storage_location.temperature_range,
-                storage_location.client_id,
+                stock.client_id,
                 COALESCE(client.full_name, '') as client_name,
                 COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0) as stock
             ");
@@ -261,6 +275,7 @@ class StockService
                     'id' => implode('|', [
                         $row->article_id,
                         $row->warehouse_id,
+                        $row->client_id,
                         (string)$row->lot,
                         $expirationDate,
                         (string)$row->location,
@@ -325,12 +340,12 @@ class StockService
                 incoming.lot,
                 incoming.expiration_date,
                 incoming.location,
-                MIN(incoming.client_id) as client_id,
+                incoming.client_id,
                 GROUP_CONCAT(DISTINCT NULLIF(incoming.client_name, '') SEPARATOR ', ') as client_name,
                 MIN(incoming.occupied_from) as occupied_from,
                 COALESCE(SUM(incoming.quantity), 0) as qty_in
             ")
-            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location');
+            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date', 'incoming.location', 'incoming.client_id');
 
         $outgoingTotals = DB::table('exit_note_items as exit_item')
             ->join('exit_notes as exit_note', 'exit_note.id', '=', 'exit_item.exit_note_id')
@@ -344,9 +359,10 @@ class StockService
                 COALESCE(NULLIF(exit_item.batch_code, ''), '') as lot,
                 exit_item.expiration_date as expiration_date,
                 COALESCE(NULLIF(exit_item.location, ''), '') as location,
+                exit_note.client_id as client_id,
                 COALESCE(SUM(exit_item.quantity), 0) as qty_out
             ")
-            ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location');
+            ->groupBy('exit_item.article_id', 'warehouse_id', 'lot', 'exit_item.expiration_date', 'location', 'exit_note.client_id');
         if (Schema::hasColumn('exit_notes', 'exit_status')) {
             $outgoingTotals->where('exit_note.exit_status', 'approved');
         }
@@ -354,6 +370,7 @@ class StockService
         $query = DB::query()
             ->fromSub($incomingTotals, 'stock')
             ->join('articles as article', 'article.id', '=', 'stock.article_id')
+            ->when(Schema::hasColumn('articles', 'module_scope'), fn($query) => $query->where('article.module_scope', 'storage'))
             ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
             ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'stock.warehouse_id')
             ->leftJoinSub($outgoingTotals, 'outgoing', function ($join) {
@@ -361,7 +378,8 @@ class StockService
                     ->on('outgoing.warehouse_id', '=', 'stock.warehouse_id')
                     ->whereRaw("COALESCE(outgoing.lot, '') = COALESCE(stock.lot, '')")
                     ->whereRaw("COALESCE(outgoing.location, '') = COALESCE(stock.location, '')")
-                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')");
+                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')")
+                    ->whereRaw("COALESCE(outgoing.client_id, 0) = COALESCE(stock.client_id, 0)");
             })
             ->when($warehouseId, fn($query) => $query->where('stock.warehouse_id', $warehouseId))
             ->when($location !== '', fn($query) => $query->whereRaw("LOWER(COALESCE(stock.location, '')) = ?", [$location]))

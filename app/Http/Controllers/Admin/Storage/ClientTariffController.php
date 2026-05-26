@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\Storage;
 use App\Http\Controllers\BasicController;
 use App\Models\Client;
 use App\Models\ClientStorageTariff;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -23,6 +24,14 @@ class ClientTariffController extends BasicController
     ];
 
     private const CURRENCIES = ['PEN', 'USD'];
+
+    public function setPaginationInstance(string $model)
+    {
+        return $model::query()
+            ->whereHas('client', function ($query) {
+                StorageScope::applyClientScope($query);
+            });
+    }
 
     public function byClient(Request $request, string $clientId)
     {
@@ -52,6 +61,12 @@ class ClientTariffController extends BasicController
         $clientId = (int)($body['client_id'] ?? 0);
 
         $this->assertClient($clientId);
+        if (!empty($body['id'])) {
+            $current = ClientStorageTariff::query()->find($body['id']);
+            if ($current && (int)$current->client_id !== $clientId) {
+                throw new \Exception('No se puede cambiar el cliente de la tarifa de almacenamiento');
+            }
+        }
 
         $temperature = trim((string)($body['temperature_range'] ?? ''));
         if (!in_array($temperature, self::TEMPERATURES, true)) {
@@ -91,14 +106,6 @@ class ClientTariffController extends BasicController
 
     private function assertClient(int $clientId): void
     {
-        $clientExists = Client::query()
-            ->whereKey($clientId)
-            ->whereNotNull('status')
-            ->where('client_kind', 'regular')
-            ->exists();
-
-        if (!$clientExists) {
-            throw new \Exception('Cliente no encontrado');
-        }
+        StorageScope::assertClient($clientId);
     }
 }

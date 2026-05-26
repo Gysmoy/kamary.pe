@@ -10,6 +10,7 @@ use App\Models\ExitNoteItem;
 use App\Models\Warehouse;
 use App\Services\StockService;
 use App\Support\BusinessScope;
+use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -87,6 +88,14 @@ class ExitNoteController extends BasicController
             if (trim((string)($body['document_series'] ?? '')) === '') throw new \Exception('La serie es obligatoria');
             if (trim((string)($body['document_sequence'] ?? '')) === '') throw new \Exception('La secuencia es obligatoria');
             if (trim((string)($body['document_date'] ?? '')) === '') throw new \Exception('La fecha de documento es obligatoria');
+            $client = StorageScope::assertClient($clientId);
+            $clientId = (int)$client->id;
+            if (!empty($body['id'])) {
+                $currentExit = ExitNote::query()->find($body['id']);
+                if ($currentExit && (int)$currentExit->client_id !== $clientId) {
+                    throw new \Exception('No se puede cambiar el cliente de una nota de salida de almacenamiento');
+                }
+            }
         }
 
         $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
@@ -160,7 +169,11 @@ class ExitNoteController extends BasicController
 
                 $articleId = $item['article_id'] ?? null;
                 if (!$articleId) throw new \Exception('Cada linea debe tener articulo');
-                Article::findOrFail($articleId);
+                if ($isStorage) {
+                    StorageScope::assertArticleBelongsToClient((int)$articleId, (int)$jpa->client_id);
+                } else {
+                    Article::findOrFail($articleId);
+                }
 
                 $warehouseId = $item['warehouse_id'] ?? $jpa->warehouse_id;
                 if (!$warehouseId) throw new \Exception('Cada linea debe tener almacen');
@@ -187,7 +200,7 @@ class ExitNoteController extends BasicController
 
                 $hasStorageKey = $isStorage || ($lot !== '' && $expirationDate) || $location !== '';
                 $availableStock = $hasStorageKey
-                    ? app(StockService::class)->getAvailableStockByStorageKey((int)$articleId, (int)$warehouseId, $lot, $expirationDate, $location, (int)$jpa->id, (int)$jpa->business_id, !$isStorage)
+                    ? app(StockService::class)->getAvailableStockByStorageKey((int)$articleId, (int)$warehouseId, $lot, $expirationDate, $location, (int)$jpa->id, (int)$jpa->business_id, !$isStorage, $isStorage ? (int)$jpa->client_id : null)
                     : $this->getAvailableStockByWarehouse((int)$articleId, (int)$warehouseId, (int)$jpa->id);
                 $stockKey = $this->stockReservationKey((int)$articleId, (int)$warehouseId, $hasStorageKey ? $lot : '', $hasStorageKey ? $expirationDate : null, $hasStorageKey ? $location : '');
                 $alreadyReserved = (float)($reservedStock[$stockKey] ?? 0);
@@ -236,15 +249,18 @@ class ExitNoteController extends BasicController
         try {
             $warehouseId = $this->toNullableInt($request->input('warehouse_id'));
             $exitNoteId = $this->toNullableInt($request->input('exit_note_id')) ?? 0;
+            $clientId = $this->toNullableInt($request->input('client_id'));
             $search = trim((string)$request->input('q', ''));
 
             if ($warehouseId) Warehouse::findOrFail($warehouseId);
+            if (!$clientId) throw new \Exception('El cliente es obligatorio');
+            StorageScope::assertClient($clientId);
 
             $businessKey = BusinessScope::scopedKeyForRequest($request) ?: BusinessScope::keyForPath($request->path());
 
             $response->status = 200;
             $response->message = 'Operacion correcta';
-            $response->data = app(StockService::class)->availableStorageStockRows($warehouseId, $search, $exitNoteId, $businessKey);
+            $response->data = app(StockService::class)->availableStorageStockRows($warehouseId, $search, $exitNoteId, $businessKey, $clientId, 'storage');
         } catch (\Throwable $th) {
             $response->status = 400;
             $response->message = $th->getMessage();
@@ -416,7 +432,7 @@ class ExitNoteController extends BasicController
             $expirationDate = $item->expiration_date ? $item->expiration_date->format('Y-m-d') : null;
             $hasStorageKey = $storageOnly || ($lot !== '' && $expirationDate) || $location !== '';
             $availableStock = $hasStorageKey
-                ? app(StockService::class)->getAvailableStockByStorageKey((int)$item->article_id, (int)$item->warehouse_id, $lot, $expirationDate, $location, (int)$jpa->id, (int)$jpa->business_id, !$storageOnly)
+                ? app(StockService::class)->getAvailableStockByStorageKey((int)$item->article_id, (int)$item->warehouse_id, $lot, $expirationDate, $location, (int)$jpa->id, (int)$jpa->business_id, !$storageOnly, $storageOnly ? (int)$jpa->client_id : null)
                 : $this->getAvailableStockByWarehouse((int)$item->article_id, (int)$item->warehouse_id, (int)$jpa->id);
             $stockKey = $this->stockReservationKey((int)$item->article_id, (int)$item->warehouse_id, $hasStorageKey ? $lot : '', $hasStorageKey ? $expirationDate : null, $hasStorageKey ? $location : '');
             $alreadyReserved = (float)($reservedStock[$stockKey] ?? 0);

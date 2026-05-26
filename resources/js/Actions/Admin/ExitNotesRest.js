@@ -101,10 +101,11 @@ class ExitNotesRest extends BasicRest {
     }
   }
 
-  getAvailableStock = async ({ warehouseId, search = '', exitNoteId = '' } = {}) => {
+  getAvailableStock = async ({ warehouseId, clientId = '', search = '', exitNoteId = '' } = {}) => {
     try {
       const params = new URLSearchParams()
       if (warehouseId) params.set('warehouse_id', warehouseId)
+      if (clientId) params.set('client_id', clientId)
       if (search) params.set('q', search)
       if (exitNoteId) params.set('exit_note_id', exitNoteId)
 
