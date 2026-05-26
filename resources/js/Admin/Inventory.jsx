@@ -418,16 +418,10 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
 
     <Modal
       modalRef={modalRef}
-      title={<h4 className='modal-title d-flex align-items-center gap-2 mb-0'>
-        <i className='mdi mdi-format-list-bulleted'></i>
-        REGISTRAR INVENTARIO
-      </h4>}
+      title='Registrar inventario'
       size='xl'
       hideFooter
       dialogClass='modal-dialog-scrollable storage-inventory-dialog'
-      contentClass='storage-inventory-template-modal'
-      headerClass='storage-inventory-template-header'
-      closeButtonClass='btn-close-white'
       bodyClass='storage-inventory-template-body'
       bodyStyle={{ maxHeight: 'calc(100vh - 120px)', overflowY: 'auto', overflowX: 'hidden' }}
       onSubmit={(e) => e.preventDefault()}
@@ -435,50 +429,17 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
     >
       <style>{`
         .storage-inventory-dialog {
-          width: min(1360px, calc(100vw - 48px));
-          max-width: min(1360px, calc(100vw - 48px));
-          margin: 1.75rem auto;
-        }
-        .storage-inventory-template-modal {
-          border: 0;
-          border-radius: 0;
-        }
-        .storage-inventory-template-header {
-          background: #272954;
-          color: #fff;
-          padding: .48rem 1rem;
-          border: 0;
-          border-radius: 0;
-        }
-        .storage-inventory-template-header .modal-title {
-          color: #fff;
-          font-size: .78rem;
-          font-weight: 700;
-          letter-spacing: 0;
-          text-transform: uppercase;
+          width: calc(100vw - 32px);
+          max-width: calc(100vw - 32px);
+          margin: .9rem auto;
         }
         .storage-inventory-template-body {
-          padding: 0 1.75rem 1.35rem;
+          padding: 1rem 1.25rem 1.25rem;
           color: #30384d;
         }
-        .storage-inventory-template-body label,
         .storage-inventory-template-body .form-label {
-          color: #30384d;
-          font-size: .78rem;
+          margin-bottom: .45rem;
           font-weight: 600;
-          margin-bottom: .3rem;
-        }
-        .storage-inventory-template-body .form-control,
-        .storage-inventory-template-body .form-select {
-          min-height: 32px;
-          border-radius: 0;
-          font-size: .8rem;
-          padding: .3rem .55rem;
-        }
-        .storage-inventory-template-body .btn {
-          border-radius: 0;
-          font-size: .78rem;
-          font-weight: 700;
         }
         .storage-inventory-modal-actions {
           border-bottom: 1px solid #e4e7ec;
