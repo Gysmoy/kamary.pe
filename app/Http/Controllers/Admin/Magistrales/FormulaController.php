@@ -26,7 +26,7 @@ class FormulaController extends BasicController
     {
         return [
             'moduleTitle' => 'Magistrales - Formulas',
-            'requiredPermission' => 'magistrales-formulas',
+            'requiredPermission' => ['magistrales-formulas', 'magistrales-products'],
         ];
     }
 

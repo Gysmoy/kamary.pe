@@ -377,6 +377,10 @@ class ArticleController extends BasicController
         $this->presentationsPayload = is_array($request->presentations) ? $request->presentations : [];
         $this->storageLotsPayload = [];
 
+        if ($id && !$this->scopedArticleMutationQuery($id)->exists()) {
+            throw new \Exception('Articulo no encontrado en este modulo');
+        }
+
         if ($this->moduleScope === 'storage') {
             $clientId = $this->toNullableInt($body['client_id'] ?? null);
             if (!$clientId) throw new \Exception('El cliente es obligatorio');

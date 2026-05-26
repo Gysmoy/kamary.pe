@@ -31,7 +31,7 @@ class ProductionOrderController extends BasicController
     {
         return [
             'moduleTitle' => 'Magistrales - O. Produccion',
-            'requiredPermission' => 'magistrales-production-order',
+            'requiredPermission' => ['magistrales-production-order', 'magistrales-warehouse'],
             'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }

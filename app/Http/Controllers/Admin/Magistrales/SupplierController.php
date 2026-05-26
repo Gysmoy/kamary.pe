@@ -14,6 +14,7 @@ class SupplierController extends BaseSupplierController
         return [
             'moduleScope' => 'magistrales',
             'moduleTitle' => 'Magistrales - Proveedor',
+            'requiredPermission' => ['magistrales-supplier', 'magistrales-procurement'],
         ];
     }
 }

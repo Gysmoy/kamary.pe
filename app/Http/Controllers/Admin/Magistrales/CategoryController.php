@@ -24,7 +24,7 @@ class CategoryController extends BasicController
     {
         return [
             'moduleTitle' => 'Magistrales - Categoria',
-            'requiredPermission' => 'magistrales-category',
+            'requiredPermission' => ['magistrales-category', 'magistrales-products'],
             'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }

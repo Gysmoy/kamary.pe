@@ -11,6 +11,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use SoDe\Extend\Response;
@@ -20,6 +21,7 @@ class AccountsPayableController extends BasicController
     public $model = AccountsPayable::class;
     public $reactView = 'Admin/AccountsPayable';
     public $prefix4filter = 'accounts_payable';
+    protected string $moduleScope = 'standard';
 
     public function setPaginationInstance(string $model)
     {
@@ -32,7 +34,7 @@ class AccountsPayableController extends BasicController
 
         DB::beginTransaction();
         try {
-            $accountsPayable = AccountsPayable::findOrFail($id);
+            $accountsPayable = $this->loadAccountsPayable((int)$id);
 
             if (!$accountsPayable->status) {
                 throw new \Exception('La cuenta por pagar no esta activa');
@@ -103,9 +105,9 @@ class AccountsPayableController extends BasicController
         return Storage::download($path, basename($filename));
     }
 
-    private function baseQuery()
+    protected function baseQuery()
     {
-        return AccountsPayable::select('accounts_payable.*')
+        $query = AccountsPayable::select('accounts_payable.*')
             ->selectRaw('source_receipt.code as purchase_receipt_code')
             ->selectRaw('COALESCE(source_order.code, source_receipt_order.code) as purchase_order_code')
             ->leftJoin('purchase_receipts as source_receipt', function ($join) {
@@ -131,11 +133,47 @@ class AccountsPayableController extends BasicController
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ]);
+
+        if (Schema::hasColumn('purchase_orders', 'module_scope')) {
+            $query->where(function ($scope) {
+                $scope->where(function ($purchaseOrderScope) {
+                    $purchaseOrderScope->where('accounts_payable.source_type', 'purchase_order');
+                    $this->applyPurchaseOrderModuleScope($purchaseOrderScope, 'source_order');
+                });
+
+                $scope->orWhere(function ($purchaseReceiptScope) {
+                    $purchaseReceiptScope->where('accounts_payable.source_type', 'purchase_receipt')
+                        ->where(function ($receiptOrderScope) {
+                            if ($this->moduleScope === 'standard') {
+                                $receiptOrderScope->whereNull('source_receipt_order.id')
+                                    ->orWhere(function ($linkedOrderScope) {
+                                        $this->applyPurchaseOrderModuleScope($linkedOrderScope, 'source_receipt_order');
+                                    });
+                                return;
+                            }
+
+                            $this->applyPurchaseOrderModuleScope($receiptOrderScope, 'source_receipt_order');
+                        });
+                });
+            });
+        }
+
+        return $query;
     }
 
     private function loadAccountsPayable(int $id): AccountsPayable
     {
         return $this->baseQuery()->findOrFail($id);
+    }
+
+    private function applyPurchaseOrderModuleScope($query, string $alias): void
+    {
+        $query->where(function ($scope) use ($alias) {
+            $scope->where("{$alias}.module_scope", $this->moduleScope);
+            if ($this->moduleScope === 'standard') {
+                $scope->orWhereNull("{$alias}.module_scope");
+            }
+        });
     }
 
     private function toNullableDecimal($value): ?float

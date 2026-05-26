@@ -29,7 +29,7 @@ class SaleController extends BasicController
     {
         return [
             'moduleTitle' => 'Magistrales - Ventas',
-            'requiredPermission' => 'magistrales-sales',
+            'requiredPermission' => ['magistrales-sales', 'magistrales-billing'],
             'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }

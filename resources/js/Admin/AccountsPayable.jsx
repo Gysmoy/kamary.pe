@@ -30,9 +30,9 @@ const paymentMethodOptions = [
 
 const formatMoney = (value) => Number(value || 0).toFixed(2)
 const formatDate = (value) => value?.toString?.().slice?.(0, 10) || value || '-'
-const fileUrl = (filename) => filename ? `/api/admin/accounts-payable/payments/media/${filename}` : null
+const fileUrl = (filename) => filename ? `/api/${accountsPayableRest.path}/payments/media/${filename}` : null
 
-const AccountsPayable = () => {
+const AccountsPayable = ({ moduleTitle = 'Cuentas por pagar' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const paymentModalRef = useRef()
@@ -98,7 +98,7 @@ const AccountsPayable = () => {
   return (<>
     <Table
       gridRef={gridRef}
-      title='Cuentas por pagar'
+      title={moduleTitle}
       rest={accountsPayableRest}
       toolBar={(container) => {
         container.unshift({
@@ -353,7 +353,7 @@ const AccountsPayable = () => {
 
 CreateReactScript((el, properties) => {
   if (!properties.can(scopedPermission('accounts-payable')) && !properties.hasRole('Admin')) location.href = '/admin/';
-  createRoot(el).render(<BaseAdminto {...properties} title='Cuentas por pagar'>
+  createRoot(el).render(<BaseAdminto {...properties} title={properties.moduleTitle ?? 'Cuentas por pagar'}>
     <AccountsPayable {...properties} />
   </BaseAdminto>);
 })

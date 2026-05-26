@@ -14,7 +14,7 @@ class UnitController extends BaseUnitController
         return [
             'moduleScope' => 'magistrales',
             'moduleTitle' => 'Magistrales - Unidad',
-            'requiredPermission' => 'magistrales-unit',
+            'requiredPermission' => ['magistrales-unit', 'magistrales-products'],
         ];
     }
 }

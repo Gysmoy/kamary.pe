@@ -19,7 +19,7 @@ class KardexController extends BasicController
     {
         return [
             'moduleTitle' => 'Magistrales - Kardex',
-            'requiredPermission' => 'magistrales-kardex',
+            'requiredPermission' => ['magistrales-kardex', 'magistrales-warehouse'],
             'moduleScope' => 'magistrales',
             'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];

@@ -17,7 +17,7 @@ class FormatController extends BasicController
     {
         return [
             'moduleTitle' => 'Magistrales - Formatos',
-            'requiredPermission' => 'magistrales-formats',
+            'requiredPermission' => ['magistrales-formats', 'magistrales-products'],
         ];
     }
 

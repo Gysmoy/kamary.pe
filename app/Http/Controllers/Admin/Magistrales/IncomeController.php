@@ -28,7 +28,7 @@ class IncomeController extends BasicController
     {
         return [
             'moduleTitle' => 'Magistrales - Nota de Entrada',
-            'requiredPermission' => 'magistrales-incomes',
+            'requiredPermission' => ['magistrales-incomes', 'magistrales-procurement'],
             'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }

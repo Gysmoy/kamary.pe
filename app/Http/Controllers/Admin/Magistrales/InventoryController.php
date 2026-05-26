@@ -29,7 +29,7 @@ class InventoryController extends BasicController
     {
         return [
             'moduleTitle' => 'Magistrales - Inventario',
-            'requiredPermission' => 'magistrales-inventory',
+            'requiredPermission' => ['magistrales-inventory', 'magistrales-warehouse'],
             'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }

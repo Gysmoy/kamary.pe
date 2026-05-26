@@ -17,7 +17,7 @@ class LaboratoryController extends BasicController
     {
         return [
             'moduleTitle' => 'Magistrales - Laboratorio',
-            'requiredPermission' => 'magistrales-laboratory',
+            'requiredPermission' => ['magistrales-laboratory', 'magistrales-products'],
         ];
     }
 

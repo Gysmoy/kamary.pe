@@ -42,7 +42,7 @@ class OutputController extends BasicController
     {
         return [
             'moduleTitle' => 'Magistrales - Salidas',
-            'requiredPermission' => 'magistrales-outputs',
+            'requiredPermission' => ['magistrales-outputs', 'magistrales-warehouse'],
             'fixedWarehouse' => MagistralesWarehouse::summary(),
             'reasonOptions' => self::REASON_OPTIONS,
         ];

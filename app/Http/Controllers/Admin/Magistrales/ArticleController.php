@@ -20,6 +20,7 @@ class ArticleController extends BaseArticleController
         return [
             'moduleScope' => 'magistrales',
             'moduleTitle' => 'Magistrales - Articulos',
+            'requiredPermission' => ['magistrales-articles', 'magistrales-products'],
         ];
     }
 

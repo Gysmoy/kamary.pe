@@ -19,6 +19,7 @@ class PurchaseOrderController extends BasePurchaseOrderController
         return [
             'moduleScope' => 'magistrales',
             'moduleTitle' => 'Magistrales - O. Compra',
+            'requiredPermission' => ['magistrales-purchase-order', 'magistrales-procurement'],
             'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }

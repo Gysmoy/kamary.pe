@@ -1,9 +1,10 @@
 import BasicRest from "../BasicRest";
 import { toast } from "sonner";
 import xsrfToken from "../../Utils/xsrfToken";
+import { isMagistralesPath } from "../../Utils/permissionScope";
 
 class AccountsPayableRest extends BasicRest {
-  path = 'admin/accounts-payable'
+  path = isMagistralesPath() ? 'admin/magistrales/accounts-payable' : 'admin/accounts-payable'
 
   registerPayment = async (id, request) => {
     try {

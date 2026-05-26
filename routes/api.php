@@ -35,6 +35,7 @@ use App\Http\Controllers\Admin\PriceListController as AdminPriceListController;
 use App\Http\Controllers\Admin\PurchaseOrderController as AdminPurchaseOrderController;
 use App\Http\Controllers\Admin\PurchaseReceiptController as AdminPurchaseReceiptController;
 use App\Http\Controllers\Admin\ReferralGuideController as AdminReferralGuideController;
+use App\Http\Controllers\Admin\Magistrales\AccountsPayableController as AdminMagistralesAccountsPayableController;
 use App\Http\Controllers\Admin\Magistrales\ArticleController as AdminMagistralesArticleController;
 use App\Http\Controllers\Admin\Magistrales\CategoryController as AdminMagistralesCategoryController;
 use App\Http\Controllers\Admin\Magistrales\FormatController as AdminMagistralesFormatController;
@@ -244,106 +245,164 @@ Route::middleware('auth')->group(function () {
         Route::get('/suppliers/ruc/{ruc}', [AdminSupplierController::class, 'lookupByRuc']);
 
         Route::prefix('magistrales')->group(function () {
-            Route::post('/articles', [AdminMagistralesArticleController::class, 'save']);
-            Route::post('/articles/import', [AdminMagistralesArticleController::class, 'import']);
-            Route::post('/articles/paginate', [AdminMagistralesArticleController::class, 'paginate']);
-            Route::patch('/articles/status', [AdminMagistralesArticleController::class, 'status']);
-            Route::patch('/articles/{field}', [AdminMagistralesArticleController::class, 'boolean']);
-            Route::delete('/articles/{id}', [AdminMagistralesArticleController::class, 'delete']);
-            Route::get('/articles/laboratories/{id}/principles', [AdminMagistralesArticleController::class, 'principles']);
-            Route::get('/articles/{id}/stock-by-warehouse', [AdminMagistralesArticleController::class, 'stockByWarehouse']);
+            $magistralesAny = 'module.permission:magistrales-dashboard,magistrales-products,magistrales-procurement,magistrales-warehouse,magistrales-billing,magistrales-articles,magistrales-category,magistrales-formats,magistrales-formulas,magistrales-incomes,magistrales-inventory,magistrales-kardex,magistrales-laboratory,magistrales-purchase-order,magistrales-production-order,magistrales-supplier,magistrales-responsible,magistrales-outputs,magistrales-unit,magistrales-sales';
+            $magistralesArticles = 'module.permission:magistrales-articles,magistrales-products';
+            $magistralesCategory = 'module.permission:magistrales-category,magistrales-products';
+            $magistralesFormats = 'module.permission:magistrales-formats,magistrales-products';
+            $magistralesFormulas = 'module.permission:magistrales-formulas,magistrales-products';
+            $magistralesLaboratory = 'module.permission:magistrales-laboratory,magistrales-products';
+            $magistralesUnit = 'module.permission:magistrales-unit,magistrales-products';
+            $magistralesIncomes = 'module.permission:magistrales-incomes,magistrales-procurement';
+            $magistralesResponsible = 'module.permission:magistrales-responsible,magistrales-warehouse';
+            $magistralesProduction = 'module.permission:magistrales-production-order,magistrales-warehouse';
+            $magistralesOutputs = 'module.permission:magistrales-outputs,magistrales-warehouse';
+            $magistralesSales = 'module.permission:magistrales-sales,magistrales-billing';
+            $magistralesInventory = 'module.permission:magistrales-inventory,magistrales-warehouse';
+            $magistralesKardex = 'module.permission:magistrales-kardex,magistrales-warehouse';
+            $magistralesPurchaseOrders = 'module.permission:magistrales-purchase-order,magistrales-procurement';
+            $magistralesSuppliers = 'module.permission:magistrales-supplier,magistrales-procurement';
+            $magistralesProcurement = 'module.permission:magistrales-procurement';
 
-            Route::post('/categories', [AdminMagistralesCategoryController::class, 'save']);
-            Route::post('/categories/paginate', [AdminMagistralesCategoryController::class, 'paginate']);
-            Route::patch('/categories/status', [AdminMagistralesCategoryController::class, 'status']);
-            Route::patch('/categories/{field}', [AdminMagistralesCategoryController::class, 'boolean']);
-            Route::delete('/categories/{id}', [AdminMagistralesCategoryController::class, 'delete']);
-            Route::get('/categories/{categoryId}/subcategories', [AdminMagistralesCategoryController::class, 'subcategories']);
-            Route::post('/categories/{categoryId}/subcategories', [AdminMagistralesCategoryController::class, 'saveSubcategory']);
-            Route::patch('/categories/{categoryId}/subcategories/status', [AdminMagistralesCategoryController::class, 'statusSubcategory']);
-            Route::delete('/categories/{categoryId}/subcategories/{id}', [AdminMagistralesCategoryController::class, 'deleteSubcategory']);
+            Route::middleware($magistralesAny)->group(function () {
+                Route::post('/articles/paginate', [AdminMagistralesArticleController::class, 'paginate']);
+                Route::get('/articles/laboratories/{id}/principles', [AdminMagistralesArticleController::class, 'principles']);
+                Route::get('/articles/{id}/stock-by-warehouse', [AdminMagistralesArticleController::class, 'stockByWarehouse']);
+                Route::post('/categories/paginate', [AdminMagistralesCategoryController::class, 'paginate']);
+                Route::get('/categories/{categoryId}/subcategories', [AdminMagistralesCategoryController::class, 'subcategories']);
+                Route::post('/formats/paginate', [AdminMagistralesFormatController::class, 'paginate']);
+                Route::post('/formulas/paginate', [AdminMagistralesFormulaController::class, 'paginate']);
+                Route::post('/laboratories/paginate', [AdminMagistralesLaboratoryController::class, 'paginate']);
+                Route::post('/units/paginate', [AdminMagistralesUnitController::class, 'paginate']);
+                Route::post('/responsibles/paginate', [AdminMagistralesResponsibleController::class, 'paginate']);
+                Route::post('/suppliers/paginate', [AdminMagistralesSupplierController::class, 'paginate']);
+            });
 
-            Route::post('/formats', [AdminMagistralesFormatController::class, 'save']);
-            Route::post('/formats/paginate', [AdminMagistralesFormatController::class, 'paginate']);
-            Route::patch('/formats/status', [AdminMagistralesFormatController::class, 'status']);
-            Route::patch('/formats/{field}', [AdminMagistralesFormatController::class, 'boolean']);
-            Route::delete('/formats/{id}', [AdminMagistralesFormatController::class, 'delete']);
+            Route::middleware($magistralesArticles)->group(function () {
+                Route::post('/articles', [AdminMagistralesArticleController::class, 'save']);
+                Route::post('/articles/import', [AdminMagistralesArticleController::class, 'import']);
+                Route::patch('/articles/status', [AdminMagistralesArticleController::class, 'status']);
+                Route::patch('/articles/{field}', [AdminMagistralesArticleController::class, 'boolean']);
+                Route::delete('/articles/{id}', [AdminMagistralesArticleController::class, 'delete']);
+            });
 
-            Route::post('/formulas', [AdminMagistralesFormulaController::class, 'save']);
-            Route::post('/formulas/paginate', [AdminMagistralesFormulaController::class, 'paginate']);
-            Route::patch('/formulas/status', [AdminMagistralesFormulaController::class, 'status']);
-            Route::patch('/formulas/{field}', [AdminMagistralesFormulaController::class, 'boolean']);
-            Route::delete('/formulas/{id}', [AdminMagistralesFormulaController::class, 'delete']);
+            Route::middleware($magistralesCategory)->group(function () {
+                Route::post('/categories', [AdminMagistralesCategoryController::class, 'save']);
+                Route::patch('/categories/status', [AdminMagistralesCategoryController::class, 'status']);
+                Route::patch('/categories/{field}', [AdminMagistralesCategoryController::class, 'boolean']);
+                Route::delete('/categories/{id}', [AdminMagistralesCategoryController::class, 'delete']);
+                Route::post('/categories/{categoryId}/subcategories', [AdminMagistralesCategoryController::class, 'saveSubcategory']);
+                Route::patch('/categories/{categoryId}/subcategories/status', [AdminMagistralesCategoryController::class, 'statusSubcategory']);
+                Route::delete('/categories/{categoryId}/subcategories/{id}', [AdminMagistralesCategoryController::class, 'deleteSubcategory']);
+            });
 
-            Route::post('/incomes', [AdminMagistralesIncomeController::class, 'save']);
-            Route::post('/incomes/paginate', [AdminMagistralesIncomeController::class, 'paginate']);
-            Route::patch('/incomes/status', [AdminMagistralesIncomeController::class, 'status']);
-            Route::delete('/incomes/{id}', [AdminMagistralesIncomeController::class, 'delete']);
-            Route::post('/entry-notes', [AdminMagistralesIncomeController::class, 'save']);
-            Route::post('/entry-notes/paginate', [AdminMagistralesIncomeController::class, 'paginate']);
-            Route::patch('/entry-notes/status', [AdminMagistralesIncomeController::class, 'status']);
-            Route::delete('/entry-notes/{id}', [AdminMagistralesIncomeController::class, 'delete']);
+            Route::middleware($magistralesFormats)->group(function () {
+                Route::post('/formats', [AdminMagistralesFormatController::class, 'save']);
+                Route::patch('/formats/status', [AdminMagistralesFormatController::class, 'status']);
+                Route::patch('/formats/{field}', [AdminMagistralesFormatController::class, 'boolean']);
+                Route::delete('/formats/{id}', [AdminMagistralesFormatController::class, 'delete']);
+            });
 
-            Route::post('/laboratories', [AdminMagistralesLaboratoryController::class, 'save']);
-            Route::post('/laboratories/paginate', [AdminMagistralesLaboratoryController::class, 'paginate']);
-            Route::patch('/laboratories/status', [AdminMagistralesLaboratoryController::class, 'status']);
-            Route::patch('/laboratories/{field}', [AdminMagistralesLaboratoryController::class, 'boolean']);
-            Route::delete('/laboratories/{id}', [AdminMagistralesLaboratoryController::class, 'delete']);
+            Route::middleware($magistralesFormulas)->group(function () {
+                Route::post('/formulas', [AdminMagistralesFormulaController::class, 'save']);
+                Route::patch('/formulas/status', [AdminMagistralesFormulaController::class, 'status']);
+                Route::patch('/formulas/{field}', [AdminMagistralesFormulaController::class, 'boolean']);
+                Route::delete('/formulas/{id}', [AdminMagistralesFormulaController::class, 'delete']);
+            });
 
-            Route::post('/units', [AdminMagistralesUnitController::class, 'save']);
-            Route::post('/units/import', [AdminMagistralesUnitController::class, 'import']);
-            Route::post('/units/paginate', [AdminMagistralesUnitController::class, 'paginate']);
-            Route::patch('/units/status', [AdminMagistralesUnitController::class, 'status']);
-            Route::patch('/units/{field}', [AdminMagistralesUnitController::class, 'boolean']);
-            Route::delete('/units/{id}', [AdminMagistralesUnitController::class, 'delete']);
+            Route::middleware($magistralesIncomes)->group(function () {
+                Route::post('/incomes', [AdminMagistralesIncomeController::class, 'save']);
+                Route::post('/incomes/paginate', [AdminMagistralesIncomeController::class, 'paginate']);
+                Route::patch('/incomes/status', [AdminMagistralesIncomeController::class, 'status']);
+                Route::delete('/incomes/{id}', [AdminMagistralesIncomeController::class, 'delete']);
+                Route::post('/entry-notes', [AdminMagistralesIncomeController::class, 'save']);
+                Route::post('/entry-notes/paginate', [AdminMagistralesIncomeController::class, 'paginate']);
+                Route::patch('/entry-notes/status', [AdminMagistralesIncomeController::class, 'status']);
+                Route::delete('/entry-notes/{id}', [AdminMagistralesIncomeController::class, 'delete']);
+            });
 
-            Route::post('/responsibles', [AdminMagistralesResponsibleController::class, 'save']);
-            Route::post('/responsibles/paginate', [AdminMagistralesResponsibleController::class, 'paginate']);
-            Route::patch('/responsibles/status', [AdminMagistralesResponsibleController::class, 'status']);
-            Route::patch('/responsibles/{field}', [AdminMagistralesResponsibleController::class, 'boolean']);
-            Route::delete('/responsibles/{id}', [AdminMagistralesResponsibleController::class, 'delete']);
+            Route::middleware($magistralesLaboratory)->group(function () {
+                Route::post('/laboratories', [AdminMagistralesLaboratoryController::class, 'save']);
+                Route::patch('/laboratories/status', [AdminMagistralesLaboratoryController::class, 'status']);
+                Route::patch('/laboratories/{field}', [AdminMagistralesLaboratoryController::class, 'boolean']);
+                Route::delete('/laboratories/{id}', [AdminMagistralesLaboratoryController::class, 'delete']);
+            });
 
-            Route::post('/production-orders', [AdminMagistralesProductionOrderController::class, 'save']);
-            Route::post('/production-orders/paginate', [AdminMagistralesProductionOrderController::class, 'paginate']);
-            Route::patch('/production-orders/status', [AdminMagistralesProductionOrderController::class, 'status']);
-            Route::patch('/production-orders/{field}', [AdminMagistralesProductionOrderController::class, 'boolean']);
-            Route::delete('/production-orders/{id}', [AdminMagistralesProductionOrderController::class, 'delete']);
+            Route::middleware($magistralesUnit)->group(function () {
+                Route::post('/units', [AdminMagistralesUnitController::class, 'save']);
+                Route::post('/units/import', [AdminMagistralesUnitController::class, 'import']);
+                Route::patch('/units/status', [AdminMagistralesUnitController::class, 'status']);
+                Route::patch('/units/{field}', [AdminMagistralesUnitController::class, 'boolean']);
+                Route::delete('/units/{id}', [AdminMagistralesUnitController::class, 'delete']);
+            });
 
-            Route::post('/outputs', [AdminMagistralesOutputController::class, 'save']);
-            Route::post('/outputs/paginate', [AdminMagistralesOutputController::class, 'paginate']);
-            Route::get('/outputs/available-stock', [AdminMagistralesOutputController::class, 'availableStock']);
-            Route::patch('/outputs/status', [AdminMagistralesOutputController::class, 'status']);
-            Route::patch('/outputs/{field}', [AdminMagistralesOutputController::class, 'boolean']);
-            Route::delete('/outputs/{id}', [AdminMagistralesOutputController::class, 'delete']);
+            Route::middleware($magistralesResponsible)->group(function () {
+                Route::post('/responsibles', [AdminMagistralesResponsibleController::class, 'save']);
+                Route::patch('/responsibles/status', [AdminMagistralesResponsibleController::class, 'status']);
+                Route::patch('/responsibles/{field}', [AdminMagistralesResponsibleController::class, 'boolean']);
+                Route::delete('/responsibles/{id}', [AdminMagistralesResponsibleController::class, 'delete']);
+            });
 
-            Route::post('/sales', [AdminMagistralesSaleController::class, 'save']);
-            Route::post('/sales/paginate', [AdminMagistralesSaleController::class, 'paginate']);
-            Route::patch('/sales/status', [AdminMagistralesSaleController::class, 'status']);
-            Route::patch('/sales/{field}', [AdminMagistralesSaleController::class, 'boolean']);
-            Route::delete('/sales/{id}', [AdminMagistralesSaleController::class, 'delete']);
+            Route::middleware($magistralesProduction)->group(function () {
+                Route::post('/production-orders', [AdminMagistralesProductionOrderController::class, 'save']);
+                Route::post('/production-orders/paginate', [AdminMagistralesProductionOrderController::class, 'paginate']);
+                Route::patch('/production-orders/status', [AdminMagistralesProductionOrderController::class, 'status']);
+                Route::patch('/production-orders/{field}', [AdminMagistralesProductionOrderController::class, 'boolean']);
+                Route::delete('/production-orders/{id}', [AdminMagistralesProductionOrderController::class, 'delete']);
+            });
 
-            Route::post('/inventory', [AdminMagistralesInventoryController::class, 'save']);
-            Route::post('/inventory/stock', [AdminMagistralesInventoryController::class, 'stock']);
-            Route::post('/inventory/paginate', [AdminMagistralesInventoryController::class, 'paginate']);
-            Route::patch('/inventory/status', [AdminMagistralesInventoryController::class, 'status']);
-            Route::delete('/inventory/{id}', [AdminMagistralesInventoryController::class, 'delete']);
-            Route::post('/kardex/paginate', [AdminMagistralesKardexController::class, 'paginate']);
-            Route::post('/kardex/movements', [AdminMagistralesKardexController::class, 'movements']);
+            Route::middleware($magistralesOutputs)->group(function () {
+                Route::post('/outputs', [AdminMagistralesOutputController::class, 'save']);
+                Route::post('/outputs/paginate', [AdminMagistralesOutputController::class, 'paginate']);
+                Route::get('/outputs/available-stock', [AdminMagistralesOutputController::class, 'availableStock']);
+                Route::patch('/outputs/status', [AdminMagistralesOutputController::class, 'status']);
+                Route::patch('/outputs/{field}', [AdminMagistralesOutputController::class, 'boolean']);
+                Route::delete('/outputs/{id}', [AdminMagistralesOutputController::class, 'delete']);
+            });
 
-            Route::post('/purchase-orders', [AdminMagistralesPurchaseOrderController::class, 'save']);
-            Route::post('/purchase-orders/paginate', [AdminMagistralesPurchaseOrderController::class, 'paginate']);
-            Route::patch('/purchase-orders/status', [AdminMagistralesPurchaseOrderController::class, 'status']);
-            Route::patch('/purchase-orders/{field}', [AdminMagistralesPurchaseOrderController::class, 'boolean']);
-            Route::delete('/purchase-orders/{id}', [AdminMagistralesPurchaseOrderController::class, 'delete']);
-            Route::get('/purchase-orders/businesses/{id}/branches', [AdminMagistralesPurchaseOrderController::class, 'branches']);
+            Route::middleware($magistralesSales)->group(function () {
+                Route::post('/sales', [AdminMagistralesSaleController::class, 'save']);
+                Route::post('/sales/paginate', [AdminMagistralesSaleController::class, 'paginate']);
+                Route::patch('/sales/status', [AdminMagistralesSaleController::class, 'status']);
+                Route::patch('/sales/{field}', [AdminMagistralesSaleController::class, 'boolean']);
+                Route::delete('/sales/{id}', [AdminMagistralesSaleController::class, 'delete']);
+            });
 
-            Route::post('/suppliers', [AdminMagistralesSupplierController::class, 'save']);
-            Route::post('/suppliers/import', [AdminMagistralesSupplierController::class, 'import']);
-            Route::post('/suppliers/paginate', [AdminMagistralesSupplierController::class, 'paginate']);
-            Route::patch('/suppliers/status', [AdminMagistralesSupplierController::class, 'status']);
-            Route::patch('/suppliers/{field}', [AdminMagistralesSupplierController::class, 'boolean']);
-            Route::delete('/suppliers/{id}', [AdminMagistralesSupplierController::class, 'delete']);
-            Route::get('/suppliers/ruc/{ruc}', [AdminMagistralesSupplierController::class, 'lookupByRuc']);
+            Route::middleware($magistralesInventory)->group(function () {
+                Route::post('/inventory', [AdminMagistralesInventoryController::class, 'save']);
+                Route::post('/inventory/stock', [AdminMagistralesInventoryController::class, 'stock']);
+                Route::post('/inventory/paginate', [AdminMagistralesInventoryController::class, 'paginate']);
+                Route::patch('/inventory/status', [AdminMagistralesInventoryController::class, 'status']);
+                Route::delete('/inventory/{id}', [AdminMagistralesInventoryController::class, 'delete']);
+            });
+
+            Route::middleware($magistralesKardex)->group(function () {
+                Route::post('/kardex/paginate', [AdminMagistralesKardexController::class, 'paginate']);
+                Route::post('/kardex/movements', [AdminMagistralesKardexController::class, 'movements']);
+            });
+
+            Route::middleware($magistralesPurchaseOrders)->group(function () {
+                Route::post('/purchase-orders', [AdminMagistralesPurchaseOrderController::class, 'save']);
+                Route::post('/purchase-orders/paginate', [AdminMagistralesPurchaseOrderController::class, 'paginate']);
+                Route::patch('/purchase-orders/status', [AdminMagistralesPurchaseOrderController::class, 'status']);
+                Route::patch('/purchase-orders/{field}', [AdminMagistralesPurchaseOrderController::class, 'boolean']);
+                Route::delete('/purchase-orders/{id}', [AdminMagistralesPurchaseOrderController::class, 'delete']);
+                Route::get('/purchase-orders/businesses/{id}/branches', [AdminMagistralesPurchaseOrderController::class, 'branches']);
+            });
+
+            Route::middleware($magistralesProcurement)->group(function () {
+                Route::post('/accounts-payable/paginate', [AdminMagistralesAccountsPayableController::class, 'paginate']);
+                Route::post('/accounts-payable/{id}/payments', [AdminMagistralesAccountsPayableController::class, 'registerPayment']);
+                Route::get('/accounts-payable/payments/media/{filename}', [AdminMagistralesAccountsPayableController::class, 'paymentFile'])->where('filename', '.*');
+            });
+
+            Route::middleware($magistralesSuppliers)->group(function () {
+                Route::post('/suppliers', [AdminMagistralesSupplierController::class, 'save']);
+                Route::post('/suppliers/import', [AdminMagistralesSupplierController::class, 'import']);
+                Route::patch('/suppliers/status', [AdminMagistralesSupplierController::class, 'status']);
+                Route::patch('/suppliers/{field}', [AdminMagistralesSupplierController::class, 'boolean']);
+                Route::delete('/suppliers/{id}', [AdminMagistralesSupplierController::class, 'delete']);
+                Route::get('/suppliers/ruc/{ruc}', [AdminMagistralesSupplierController::class, 'lookupByRuc']);
+            });
         });
 
         Route::prefix('storage')->group(function () {

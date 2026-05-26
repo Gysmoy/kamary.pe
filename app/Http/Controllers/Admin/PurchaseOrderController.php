@@ -93,9 +93,13 @@ class PurchaseOrderController extends BasicController
         if (!$supplierId) throw new \Exception('El proveedor es obligatorio');
         if (!$issueDate) throw new \Exception('La fecha de emision es obligatoria');
 
+        if ($purchaseOrderId && !$this->scopedPurchaseOrderMutationQuery($purchaseOrderId)->exists()) {
+            throw new \Exception('Orden de compra no encontrada en este modulo');
+        }
+
         $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
         $warehouse = Warehouse::findOrFail($warehouseId);
-        Supplier::findOrFail($supplierId);
+        $this->scopedSupplierQuery()->findOrFail($supplierId);
 
         $body['business_branch_id'] = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
 
@@ -162,7 +166,7 @@ class PurchaseOrderController extends BasicController
 
                 $articleId = $item['article_id'] ?? null;
                 if (!$articleId) throw new \Exception('Cada linea debe tener articulo');
-                $article = Article::findOrFail($articleId);
+                $article = $this->scopedArticleQuery()->findOrFail($articleId);
                 $presentation = null;
                 $presentationId = $hasPresentationId ? $this->toNullableInt($item['presentation_id'] ?? null) : null;
                 if ($presentationId) {
@@ -284,9 +288,10 @@ class PurchaseOrderController extends BasicController
             $data = [];
             $data[$request->field] = $request->value;
             $data['updated_by'] = Auth::id();
-            $this->model::where($this->identifier, $request->id)->update($data);
+            $updated = $this->scopedPurchaseOrderMutationQuery($request->id)->update($data);
+            if (!$updated) throw new \Exception('Orden de compra no encontrada en este modulo');
 
-            $purchaseOrder = PurchaseOrder::findOrFail($request->id);
+            $purchaseOrder = $this->scopedPurchaseOrderMutationQuery($request->id)->firstOrFail();
             $this->syncAccountsPayable($purchaseOrder->fresh());
 
             DB::commit();
@@ -306,7 +311,7 @@ class PurchaseOrderController extends BasicController
         $response = new Response();
         DB::beginTransaction();
         try {
-            $purchaseOrder = PurchaseOrder::findOrFail($id);
+            $purchaseOrder = $this->scopedPurchaseOrderMutationQuery($id)->firstOrFail();
             $purchaseOrder->update([
                 'status' => null,
                 'updated_by' => Auth::id(),
@@ -330,10 +335,11 @@ class PurchaseOrderController extends BasicController
     {
         $response = new Response();
         try {
-            $this->model::where($this->identifier, $request->id)->update([
+            $updated = $this->scopedPurchaseOrderMutationQuery($request->id)->update([
                 'status' => $request->status ? 0 : 1,
                 'updated_by' => Auth::id(),
             ]);
+            if (!$updated) throw new \Exception('Orden de compra no encontrada en este modulo');
             $response->status = 200;
             $response->message = 'Operacion correcta';
         } catch (\Throwable $th) {
@@ -406,6 +412,46 @@ class PurchaseOrderController extends BasicController
     private function syncAccountsPayable(PurchaseOrder $purchaseOrder): void
     {
         app(AccountsPayableService::class)->syncFromPurchaseOrder($purchaseOrder);
+    }
+
+    private function scopedPurchaseOrderMutationQuery($id)
+    {
+        return $this->model::query()
+            ->where($this->identifier, $id)
+            ->when(Schema::hasColumn('purchase_orders', 'module_scope'), function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('module_scope', $this->moduleScope);
+                    if ($this->moduleScope === 'standard') {
+                        $scope->orWhereNull('module_scope');
+                    }
+                });
+            });
+    }
+
+    private function scopedSupplierQuery()
+    {
+        return Supplier::query()
+            ->when(Schema::hasColumn('suppliers', 'module_scope'), function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('module_scope', $this->moduleScope);
+                    if ($this->moduleScope === 'standard') {
+                        $scope->orWhereNull('module_scope');
+                    }
+                });
+            });
+    }
+
+    private function scopedArticleQuery()
+    {
+        return Article::query()
+            ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('module_scope', $this->moduleScope);
+                    if ($this->moduleScope === 'standard') {
+                        $scope->orWhereNull('module_scope');
+                    }
+                });
+            });
     }
 
     private function nextCode(): string

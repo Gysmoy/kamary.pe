@@ -48,6 +48,10 @@ class SupplierController extends BasicController
         $userId = Auth::id();
         $id = $body['id'] ?? null;
 
+        if ($id && !$this->scopedSupplierMutationQuery($id)->exists()) {
+            throw new \Exception('Proveedor no encontrado en este modulo');
+        }
+
         $ruc = preg_replace('/\D+/', '', (string)($body['ruc'] ?? ''));
         $businessName = trim((string)($body['business_name'] ?? ''));
 
@@ -232,7 +236,8 @@ class SupplierController extends BasicController
             $data[$request->field] = $request->value;
             $data['updated_by'] = Auth::id();
 
-            $this->model::where($this->identifier, $request->id)->update($data);
+            $updated = $this->scopedSupplierMutationQuery($request->id)->update($data);
+            if (!$updated) throw new \Exception('Proveedor no encontrado en este modulo');
 
             $response->status = 200;
             $response->message = 'Operacion correcta';
@@ -248,10 +253,31 @@ class SupplierController extends BasicController
     {
         $response = new Response();
         try {
-            $this->model::where($this->identifier, $request->id)->update([
+            $updated = $this->scopedSupplierMutationQuery($request->id)->update([
                 'status' => $request->status ? 0 : 1,
                 'updated_by' => Auth::id(),
             ]);
+            if (!$updated) throw new \Exception('Proveedor no encontrado en este modulo');
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $updated = $this->scopedSupplierMutationQuery($id)->update([
+                'status' => null,
+                'updated_by' => Auth::id(),
+            ]);
+            if (!$updated) throw new \Exception('Proveedor no encontrado en este modulo');
 
             $response->status = 200;
             $response->message = 'Operacion correcta';
@@ -364,5 +390,19 @@ class SupplierController extends BasicController
         }
 
         return $number;
+    }
+
+    private function scopedSupplierMutationQuery($id)
+    {
+        return $this->model::query()
+            ->where($this->identifier, $id)
+            ->when(Schema::hasColumn('suppliers', 'module_scope'), function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('module_scope', $this->moduleScope);
+                    if ($this->moduleScope === 'standard') {
+                        $scope->orWhereNull('module_scope');
+                    }
+                });
+            });
     }
 }

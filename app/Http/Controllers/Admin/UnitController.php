@@ -169,6 +169,10 @@ class UnitController extends BasicController
             throw new \Exception('El codigo/simbolo de la unidad de medida es obligatorio');
         }
 
+        if ($id && !$this->scopedUnitMutationQuery($id)->exists()) {
+            throw new \Exception('Unidad de medida no encontrada en este modulo');
+        }
+
         $existsSymbol = Unit::whereRaw('LOWER(symbol) = ?', [mb_strtolower($symbol)])
             ->when(Schema::hasColumn('units', 'module_scope'), fn($query) => $query->where('module_scope', $this->moduleScope))
             ->when($id, fn($query) => $query->where('id', '!=', $id))

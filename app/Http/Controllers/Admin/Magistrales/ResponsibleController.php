@@ -17,7 +17,7 @@ class ResponsibleController extends BasicController
     {
         return [
             'moduleTitle' => 'Magistrales - Responsable',
-            'requiredPermission' => 'magistrales-responsible',
+            'requiredPermission' => ['magistrales-responsible', 'magistrales-warehouse'],
         ];
     }
 
