@@ -133,7 +133,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario' }) => {
             })
           }}
           columns={[
-            { dataField: 'code', caption: 'Codigo', minWidth: 120 },
+            { dataField: 'code', caption: 'Codigo', width: 175, minWidth: 175 },
             { dataField: 'name', caption: 'Articulo', minWidth: 250 },
             { dataField: 'laboratory.name', caption: 'Laboratorio', minWidth: 170 },
             { dataField: 'active_principle.name', caption: 'Principio Activo', minWidth: 180 },

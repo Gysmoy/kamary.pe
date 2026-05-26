@@ -681,21 +681,35 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
 
   const actionColumn = {
     caption: 'Acciones',
-    width: isStorageOrderList ? 92 : 150,
+    width: isStorageOrderList ? 136 : 150,
+    minWidth: isStorageOrderList ? 136 : 150,
+    fixed: isStorageOrderList,
+    fixedPosition: 'left',
     allowFiltering: false,
     allowExporting: false,
     cellTemplate: (container, { data }) => {
-      container.css('text-overflow', 'unset')
-      container.append(DxButton({
+      container.css({
+        overflow: 'visible',
+        textOverflow: 'unset',
+        whiteSpace: 'nowrap',
+      })
+      const actions = $('<div>').css({
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.35rem',
+        minWidth: 'max-content',
+      })
+      container.append(actions)
+      actions.append(DxButton({
         className: isStorageOrderList ? 'btn btn-xs btn-soft-warning' : 'btn btn-xs btn-soft-primary',
         title: 'Editar orden de servicio',
         icon: 'mdi mdi-pencil',
         onClick: () => onModalOpen(data)
       }))
       if (!isStorageOrderList) {
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.serviceOrder(data)) }))
+        actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.serviceOrder(data)) }))
       }
-      container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Anular orden de servicio', icon: isStorageOrderList ? 'mdi mdi-close' : 'mdi mdi-delete', onClick: () => onCancel(data.id) }))
+      actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Anular orden de servicio', icon: isStorageOrderList ? 'mdi mdi-close' : 'mdi mdi-delete', onClick: () => onCancel(data.id) }))
     }
   }
 
@@ -757,19 +771,20 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
 
   const storageServiceOrderColumns = [
     actionColumn,
-    { dataField: 'order_status', caption: 'Estado', width: 115, lookup: toLookup(serviceOrderStatusOptions), cellTemplate: renderStorageOrderStatus },
+    { dataField: 'order_status', caption: 'Estado', width: 145, minWidth: 145, lookup: toLookup(serviceOrderStatusOptions), cellTemplate: renderStorageOrderStatus },
     {
       dataField: 'code',
       caption: 'Codigo',
-      width: 125,
+      width: 185,
+      minWidth: 185,
       cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar orden de servicio')
     },
-    { dataField: 'business.name', caption: 'Empresa', minWidth: 170 },
-    { dataField: 'client.full_name', caption: 'Cliente', minWidth: 220 },
-    { dataField: 'expected_document_type', caption: 'Tipo comprobante', width: 160 },
+    { dataField: 'business.name', caption: 'Empresa', minWidth: 210 },
+    { dataField: 'client.full_name', caption: 'Cliente', minWidth: 330 },
+    { dataField: 'expected_document_type', caption: 'Tipo comprobante', width: 170, minWidth: 170 },
     { dataField: 'currency', caption: 'Moneda', width: 105, lookup: toLookup(currencyOptions) },
-    { dataField: 'created_at', caption: 'Fecha registro', dataType: 'datetime', width: 170, format: 'yyyy-MM-dd HH:mm:ss' },
-    { dataField: 'creator.fullname', caption: 'Usuario registro', minWidth: 160, calculateCellValue: (data) => formatGridUser(data.creator) },
+    { dataField: 'created_at', caption: 'Fecha registro', dataType: 'datetime', width: 185, minWidth: 185, format: 'yyyy-MM-dd HH:mm:ss' },
+    { dataField: 'creator.fullname', caption: 'Usuario registro', minWidth: 185, calculateCellValue: (data) => formatGridUser(data.creator) },
   ]
 
   const serviceOrderColumns = isStorageOrderList ? storageServiceOrderColumns : defaultServiceOrderColumns
@@ -1522,8 +1537,14 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
             font-weight: 700;
             text-transform: uppercase;
           }
+          .storage-general-lines-wrap {
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            overflow: auto;
+          }
           .storage-general-lines {
             width: 100%;
+            min-width: 980px;
             border-collapse: collapse;
             font-size: 12px;
           }
@@ -1629,7 +1650,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           </button>
         </div>
 
-        <div className='table-responsive'>
+        <div className='storage-general-lines-wrap'>
           <table className='storage-general-lines'>
             <thead>
               <tr>

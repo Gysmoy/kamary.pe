@@ -1129,9 +1129,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
   const actionsColumn = {
     caption: 'Acciones',
-    width: isMagistrales ? '95px' : '120px',
+    width: isStorageProduct ? '135px' : (isMagistrales ? '95px' : '120px'),
+    minWidth: isStorageProduct ? 135 : undefined,
+    fixed: isStorageProduct,
+    fixedPosition: 'left',
     cellTemplate: (container, { data }) => {
-      container.css('text-overflow', 'unset')
+      container.css({ overflow: 'visible', textOverflow: 'unset', whiteSpace: 'nowrap' })
       if (isMagistrales) {
         container.append(DxButton({
           className: 'btn btn-xs btn-soft-success',
@@ -1266,7 +1269,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     {
       dataField: 'code',
       caption: 'Codigo',
-      width: '130px',
+      width: '170px',
+      minWidth: 170,
       cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar articulo')
     },
     {
@@ -1318,7 +1322,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       minWidth: 220,
       cellTemplate: (container, { data }) => container.text(data?.client?.full_name ?? '')
     },
-    { dataField: 'name', caption: 'Nombre articulo', minWidth: 260 },
+    { dataField: 'name', caption: 'Nombre articulo', minWidth: 320 },
     unitColumn,
     storageStatusColumn,
   ]
@@ -1557,6 +1561,80 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   return (<>
     {isStorageProduct && (
       <style>{`
+        .storage-product-dialog {
+          width: calc(100vw - 32px);
+          max-width: calc(100vw - 32px);
+          margin: 0.9rem auto;
+        }
+
+        .storage-product-modal {
+          border: 0;
+          border-radius: 6px;
+        }
+
+        .storage-product-header {
+          background: #272954;
+          color: #fff;
+          padding: 0.65rem 1rem;
+        }
+
+        .storage-product-header .modal-title {
+          color: #fff;
+          font-size: 0.88rem;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        .storage-product-body {
+          background: #fff;
+          padding: 1rem 1.25rem 1.25rem;
+        }
+
+        .storage-product-form .form-label {
+          color: #30364d;
+          font-size: 0.8rem;
+          font-weight: 600;
+        }
+
+        .storage-product-section {
+          border: 1px solid #e3e8ef;
+          border-radius: 6px;
+          padding: 1rem;
+          margin-bottom: 1rem;
+        }
+
+        .storage-product-section-title {
+          align-items: center;
+          color: #4b5563;
+          display: flex;
+          font-size: 0.78rem;
+          font-weight: 700;
+          gap: 0.35rem;
+          margin-bottom: 0.8rem;
+          text-transform: uppercase;
+        }
+
+        .storage-product-lots-wrap {
+          border: 1px solid #e3e8ef;
+          border-radius: 6px;
+          overflow: auto;
+        }
+
+        .storage-product-lots {
+          min-width: 1120px;
+        }
+
+        .storage-product-lots th {
+          color: #30364d;
+          font-size: 0.75rem;
+          text-transform: uppercase;
+          white-space: nowrap;
+        }
+
+        .storage-product-lots td {
+          vertical-align: middle;
+        }
+
         .storage-manufacturer-picker {
           align-items: stretch;
           display: flex;
@@ -1608,6 +1686,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
         }
 
         @media (max-width: 767.98px) {
+          .storage-product-dialog {
+            width: calc(100vw - 12px);
+            max-width: calc(100vw - 12px);
+          }
+
           .storage-manufacturer-form-grid {
             grid-template-columns: 1fr;
           }
@@ -1853,9 +1936,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       modalRef={modalRef}
       title={isMagistrales ? (isViewing ? 'Mostrar artículo magistral' : (isEditing ? 'Editar artículo magistral' : 'Agregar artículo magistral')) : (isStorageProduct ? 'ARTICULO' : (isViewing ? 'Mostrar articulo' : (isEditing ? 'Editar articulo' : 'Agregar articulo')))}
       onSubmit={onModalSubmit}
-      size='xl'
-      dialogClass={`${isMagistrales ? 'magistrales-article-dialog' : (!isStorageProduct ? 'article-dialog' : '')} modal-dialog-scrollable`}
-      contentClass={isMagistrales ? 'magistrales-article-modal' : (!isStorageProduct ? 'article-modal' : '')}
+      size={isStorageProduct ? 'full-width' : 'xl'}
+      dialogClass={`${isStorageProduct ? 'storage-product-dialog' : (isMagistrales ? 'magistrales-article-dialog' : (!isStorageProduct ? 'article-dialog' : ''))} modal-dialog-scrollable`}
+      contentClass={isStorageProduct ? 'storage-product-modal' : (isMagistrales ? 'magistrales-article-modal' : (!isStorageProduct ? 'article-modal' : ''))}
+      headerClass={isStorageProduct ? 'storage-product-header' : ''}
+      closeButtonClass={isStorageProduct ? 'btn-close-white' : ''}
+      bodyClass={isStorageProduct ? 'storage-product-body' : ''}
       bodyStyle={{ maxHeight: 'calc(100vh - 170px)', overflowY: 'auto', overflowX: 'hidden' }}
       hideButtonSubmit={isViewing}
       btnSubmitText={isMagistrales ? 'Guardar artículo' : 'Registrar'}
@@ -1863,7 +1949,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       <div className='row' id='article-form-container'>
         <input ref={idRef} type='hidden' />
         {isStorageProduct ? (
-        <fieldset className='row p-0 m-0' disabled={isViewing}>
+        <fieldset className='row m-0 storage-product-form storage-product-section' disabled={isViewing}>
           <div className='form-group col-md-4 mb-2'>
             <label className='form-label'>Cliente <span className='text-danger'>*</span></label>
             <select
@@ -1912,8 +1998,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
             <button type='button' className='btn btn-sm btn-outline-primary mb-3' onClick={onStorageLotAdded}>
               <i className='mdi mdi-plus-circle-outline me-1'></i> AÑADIR LOTE / SERIE
             </button>
-            <div className='table-responsive border rounded'>
-              <table className='table table-sm table-bordered mb-0 align-middle'>
+            <div className='storage-product-lots-wrap'>
+              <table className='table table-sm table-bordered mb-0 align-middle storage-product-lots'>
                 <thead>
                   <tr>
                     <th style={{ width: '30%' }}>LOTE / SERIE</th>

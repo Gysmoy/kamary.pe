@@ -739,8 +739,8 @@ const ExitNotes = () => {
   const storageColumns = [
     {
       caption: 'Acciones',
-      width: 210,
-      minWidth: 210,
+      width: 245,
+      minWidth: 245,
       fixed: true,
       fixedPosition: 'left',
       cellTemplate: (container, { data }) => {
@@ -763,7 +763,7 @@ const ExitNotes = () => {
       allowFiltering: false,
       allowExporting: false,
     },
-    { dataField: 'code', caption: 'Codigo', minWidth: 110, cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code || `NS${`${data?.id ?? ''}`.padStart(5, '0')}`, () => onModalOpen(data), 'Editar nota de salida') },
+    { dataField: 'code', caption: 'Codigo', width: 185, minWidth: 185, cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code || `NS${`${data?.id ?? ''}`.padStart(5, '0')}`, () => onModalOpen(data), 'Editar nota de salida') },
     { dataField: 'client_name', caption: 'Cliente', minWidth: 260 },
     { dataField: 'warehouse.name', caption: 'Almacen origen', minWidth: 180 },
     { caption: 'Destino', minWidth: 150, calculateCellValue: storageDestinationLabel, allowFiltering: false },
@@ -777,7 +777,7 @@ const ExitNotes = () => {
     {
       dataField: 'exit_status',
       caption: 'Estado',
-      minWidth: 110,
+      minWidth: 145,
       cellTemplate: (container, { data }) => ReactAppend(container, <span className={exitStatusClass(data?.exit_status)}>{exitStatusLabel(data?.exit_status)}</span>)
     },
   ]
@@ -841,6 +841,10 @@ const ExitNotes = () => {
         .storage-exit-total-label { font-style: italic; font-weight: 700; text-align: right; }
         .storage-exit-actions { display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; min-width: max-content; }
         .storage-exit-actions .btn { flex: 0 0 auto; margin-right: 0 !important; }
+        .storage-exit-lines-wrap { border: 1px solid #e3e8ef; border-radius: 6px; overflow: auto; }
+        .storage-exit-lines { min-width: 1560px; }
+        .storage-exit-lines th { color: #30364d; font-size: 0.74rem; text-transform: uppercase; white-space: nowrap; }
+        .storage-exit-lines td { vertical-align: middle; }
       `}</style>
       <div className='card mb-3'>
         <div className='card-body'>
@@ -984,8 +988,8 @@ const ExitNotes = () => {
             </button>
 
             <h4 className='text-center my-4'>Nota de salida</h4>
-            <div className='table-responsive border'>
-              <table className='table table-sm mb-0'>
+            <div className='storage-exit-lines-wrap'>
+              <table className='table table-sm mb-0 storage-exit-lines'>
                 <thead>
                   <tr>
                     <th>Numero de lote</th>

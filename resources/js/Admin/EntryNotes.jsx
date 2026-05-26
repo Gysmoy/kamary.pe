@@ -1036,8 +1036,10 @@ const EntryNotes = () => {
   const storageColumns = [
     {
       caption: 'Acciones',
-      width: 240,
-      minWidth: 240,
+      width: 275,
+      minWidth: 275,
+      fixed: true,
+      fixedPosition: 'left',
       cellTemplate: (container, { data }) => {
         container.css({
           textOverflow: 'unset',
@@ -1119,7 +1121,8 @@ const EntryNotes = () => {
     {
       dataField: 'code',
       caption: 'Codigo',
-      minWidth: 110,
+      width: 185,
+      minWidth: 185,
       cellTemplate: (container, { data }) => {
         const isApproved = data?.entry_status === 'approved'
         renderGridEditLink(container, data?.code ?? data?.id, () => onModalOpen(data, { viewOnly: isApproved }), isApproved ? 'Ver nota de entrada' : 'Editar nota de entrada')
@@ -1146,7 +1149,8 @@ const EntryNotes = () => {
     {
       dataField: 'entry_status',
       caption: 'Estado',
-      width: 110,
+      width: 145,
+      minWidth: 145,
       cellTemplate: (container, { data }) => {
         const status = data?.entry_status ?? 'pending'
         const className = status === 'approved' ? 'badge bg-success' : status === 'cancelled' ? 'badge bg-danger' : 'badge bg-warning text-dark'
@@ -1267,6 +1271,82 @@ const EntryNotes = () => {
   }
 
   return (<>
+    {storageContext && <style>{`
+      .storage-entry-dialog {
+        width: calc(100vw - 32px);
+        max-width: calc(100vw - 32px);
+        margin: 0.9rem auto;
+      }
+
+      .storage-entry-modal {
+        border: 0;
+        border-radius: 6px;
+      }
+
+      .storage-entry-header {
+        background: #272954;
+        color: #fff;
+        padding: 0.65rem 1rem;
+      }
+
+      .storage-entry-header .modal-title {
+        color: #fff;
+        font-size: 0.88rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .storage-entry-body {
+        background: #fff;
+        padding: 1rem 1.25rem 1.25rem;
+      }
+
+      .storage-entry-form {
+        color: #30364d;
+      }
+
+      .storage-entry-form .form-label {
+        color: #30364d;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+
+      .storage-entry-form-section {
+        border: 1px solid #e3e8ef;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .storage-entry-lines-wrap {
+        border: 1px solid #e3e8ef;
+        border-radius: 6px;
+        overflow: auto;
+      }
+
+      .storage-entry-lines {
+        min-width: 1740px;
+      }
+
+      .storage-entry-lines th {
+        color: #30364d;
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .storage-entry-lines td {
+        vertical-align: middle;
+      }
+
+      @media (max-width: 767.98px) {
+        .storage-entry-dialog {
+          width: calc(100vw - 12px);
+          max-width: calc(100vw - 12px);
+        }
+      }
+    `}</style>}
+
     {storageContext && <div className='card mb-3'>
       <div className='card-header'>Nota de entrada registrados</div>
       <div className='card-body'>
@@ -1345,10 +1425,15 @@ const EntryNotes = () => {
       title={isViewing ? 'Ver nota de entrada' : (storageContext ? 'Registrar nota de entrada' : (isEditing ? 'Editar nota de entrada' : 'Agregar nota de entrada'))}
       onSubmit={onModalSubmit}
       size='full-width'
+      dialogClass={storageContext ? 'storage-entry-dialog modal-dialog-scrollable' : ''}
+      contentClass={storageContext ? 'storage-entry-modal' : ''}
+      headerClass={storageContext ? 'storage-entry-header' : ''}
+      closeButtonClass={storageContext ? 'btn-close-white' : ''}
+      bodyClass={storageContext ? 'storage-entry-body' : ''}
       hideButtonSubmit={isViewing}
     >
       {storageContext ? (
-        <fieldset className='row' id='entry-note-form-container' disabled={isViewing}>
+        <fieldset className='row storage-entry-form' id='entry-note-form-container' disabled={isViewing}>
           <input ref={idRef} type='hidden' />
 
           <SelectAPIFormGroup
@@ -1420,8 +1505,8 @@ const EntryNotes = () => {
 
           <div className='col-12'>
             <h4 className='text-center mb-3'>Nota de entrada</h4>
-            <div className='table-responsive border rounded'>
-              <table className='table table-sm table-bordered mb-0'>
+            <div className='storage-entry-lines-wrap'>
+              <table className='table table-sm table-bordered mb-0 storage-entry-lines'>
                 <thead>
                   <tr>
                     <th>Numero de lote</th>
