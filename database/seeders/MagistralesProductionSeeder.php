@@ -157,6 +157,7 @@ class MagistralesProductionSeeder extends Seeder
     private function ensureCategories(Warehouse $warehouse): array
     {
         $categories = [];
+        $activeIds = [];
 
         foreach ([
             ['code' => 'MAG-CAT-001', 'description' => 'GINECOLOGIA'],
@@ -174,15 +175,18 @@ class MagistralesProductionSeeder extends Seeder
                     'updated_by' => $this->userId,
                 ]
             );
+            $activeIds[] = $categories[$category['description']]->id;
         }
 
-        MagistralCategory::query()
-            ->whereNotIn('description', MagistralCategory::ALLOWED_DESCRIPTIONS)
-            ->update([
-                'status' => null,
-                'updated_by' => $this->userId,
-                'updated_at' => now(),
-            ]);
+        if (count($activeIds) > 0) {
+            MagistralCategory::query()
+                ->whereNotIn('id', $activeIds)
+                ->update([
+                    'status' => null,
+                    'updated_by' => $this->userId,
+                    'updated_at' => now(),
+                ]);
+        }
 
         return $categories;
     }

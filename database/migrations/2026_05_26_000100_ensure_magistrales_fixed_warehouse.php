@@ -203,17 +203,12 @@ return new class extends Migration
         if (!Schema::hasTable('magistral_categories')) return [];
 
         $categories = [];
+        $activeIds = [];
         foreach ([
             ['code' => 'MAG-CAT-001', 'description' => 'GINECOLOGIA', 'sale_material' => true],
             ['code' => 'MAG-CAT-002', 'description' => 'INSUMOS', 'sale_material' => false],
             ['code' => 'MAG-CAT-003', 'description' => 'ANDROLOGIA', 'sale_material' => true],
         ] as $category) {
-            $row = DB::table('magistral_categories')->where('code', $category['code'])->first()
-                ?? DB::table('magistral_categories')
-                    ->whereRaw('LOWER(TRIM(description)) = ?', [strtolower($category['description'])])
-                    ->orderBy('id')
-                    ->first();
-
             $payload = [
                 'code' => $category['code'],
                 'description' => $category['description'],
@@ -224,20 +219,60 @@ return new class extends Migration
                 'updated_by' => $userId,
             ];
 
-            $categories[$category['description']] = $row
-                ? $this->updateRow('magistral_categories', (int) $row->id, $payload)
-                : $this->insertRow('magistral_categories', $payload);
-        }
-
-        DB::table('magistral_categories')
-            ->whereNotIn('description', ['GINECOLOGIA', 'INSUMOS', 'ANDROLOGIA'])
-            ->update($this->payload('magistral_categories', [
-                'status' => null,
-                'updated_by' => $userId,
+            $upsertPayload = $this->payload('magistral_categories', array_merge($payload, [
+                'created_at' => now(),
                 'updated_at' => now(),
             ]));
+            $updateColumns = array_values(array_filter(
+                array_keys($upsertPayload),
+                fn(string $column) => !in_array($column, ['code', 'created_at'], true)
+            ));
+
+            DB::table('magistral_categories')->upsert([$upsertPayload], ['code'], $updateColumns);
+
+            $categoryId = $this->categoryIdByCode($category['code']);
+            if (!$categoryId) {
+                $categoryId = $this->categoryIdByDescription($category['description']);
+            }
+
+            if ($categoryId) {
+                $this->updateRow('magistral_categories', $categoryId, $payload);
+                $categories[$category['description']] = $categoryId;
+                $activeIds[] = $categoryId;
+            }
+        }
+
+        if (count($activeIds) > 0) {
+            DB::table('magistral_categories')
+                ->whereNotIn('id', $activeIds)
+                ->update($this->payload('magistral_categories', [
+                    'status' => null,
+                    'updated_by' => $userId,
+                    'updated_at' => now(),
+                ]));
+        }
 
         return $categories;
+    }
+
+    private function categoryIdByCode(string $code): ?int
+    {
+        $id = DB::table('magistral_categories')
+            ->whereRaw('LOWER(TRIM(code)) = ?', [strtolower($code)])
+            ->orderBy('id')
+            ->value('id');
+
+        return $id ? (int) $id : null;
+    }
+
+    private function categoryIdByDescription(string $description): ?int
+    {
+        $id = DB::table('magistral_categories')
+            ->whereRaw('LOWER(TRIM(description)) = ?', [strtolower($description)])
+            ->orderBy('id')
+            ->value('id');
+
+        return $id ? (int) $id : null;
     }
 
     private function ensureSubcategories(array $categories, ?int $userId): array
