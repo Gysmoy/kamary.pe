@@ -5,9 +5,11 @@ import CreateReactScript from '../../Utils/CreateReactScript';
 import Table from '../../Components/Adminto/Table';
 import Modal from '../../Components/Adminto/Modal';
 import DxButton from '../../Components/dx/DxButton';
+import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import LaboratoriesRest from '../../Actions/Admin/Magistrales/LaboratoriesRest';
 import renderGridEditLink from '../../Utils/renderGridEditLink';
+import setSwitchChecked from '../../Utils/setSwitchChecked';
 
 const laboratoriesRest = new LaboratoriesRest()
 
@@ -25,7 +27,7 @@ const Laboratories = ({ moduleTitle = 'Magistrales - Laboratorio' }) => {
     idRef.current.value = data?.id ?? ''
     descriptionRef.current.value = data?.description ?? ''
     codeRef.current.value = data?.code ?? ''
-    statusRef.current.value = data?.status === false || data?.status === 0 ? '0' : '1'
+    setSwitchChecked(statusRef.current, data?.status !== false && data?.status !== 0)
     $(modalRef.current).modal('show')
   }
 
@@ -35,7 +37,7 @@ const Laboratories = ({ moduleTitle = 'Magistrales - Laboratorio' }) => {
       id: idRef.current.value || undefined,
       description: descriptionRef.current.value.trim(),
       code: codeRef.current.value.trim(),
-      status: statusRef.current.value === '1',
+      status: statusRef.current.checked,
     })
     if (!result) return
     $(gridRef.current).dxDataGrid('instance').refresh()
@@ -111,13 +113,7 @@ const Laboratories = ({ moduleTitle = 'Magistrales - Laboratorio' }) => {
           <label className='form-label'>Codigo</label>
           <input ref={codeRef} className='form-control' required />
         </div>
-        <div className='col-12 mb-3'>
-          <label className='form-label'>Estado</label>
-          <select ref={statusRef} className='form-control' defaultValue='1'>
-            <option value='1'>Activo</option>
-            <option value='0'>Inactivo</option>
-          </select>
-        </div>
+        <SwitchFormGroup eRef={statusRef} label='Estado' col='col-12' checked />
       </div>
     </Modal>
   </>

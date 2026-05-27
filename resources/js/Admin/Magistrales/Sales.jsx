@@ -11,6 +11,7 @@ import Swal from 'sweetalert2';
 import SalesRest from '../../Actions/Admin/Magistrales/SalesRest';
 import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
+import setSwitchChecked from '../../Utils/setSwitchChecked';
 
 const rest = new SalesRest()
 const paymentLabels = { pending: 'Pendiente', paid: 'Pagado', partial: 'Parcial', cancelled: 'Cancelado' }
@@ -82,8 +83,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     doctorRef.current.value = data?.doctor ?? ''
     discountPolicyRef.current.value = data?.discount_policy ?? ''
     saleTypeRef.current.value = data?.sale_type ?? 'venta'
-    allergyRef.current.checked = !!data?.allergy
-    intoleranceRef.current.checked = !!data?.intolerance
+    setSwitchChecked(allergyRef.current, !!data?.allergy)
+    setSwitchChecked(intoleranceRef.current, !!data?.intolerance)
     dateRef.current.value = data?.sale_date?.toString?.().slice?.(0, 10) ?? new Date().toISOString().slice(0, 10)
     const nextItems = (data?.items ?? []).map(item => ({
       uid: crypto.randomUUID(),
@@ -223,8 +224,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         <div className='col-md-2 mb-3'><label className='form-label'>Fecha</label><input ref={dateRef} type='date' className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Politica descuento</label><input ref={discountPolicyRef} className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Tipo venta</label><input ref={saleTypeRef} className='form-control' /></div>
-        <div className='col-md-3 mb-3 form-check mt-4'><input ref={allergyRef} type='checkbox' className='form-check-input' id='magSaleAllergy' /><label className='form-check-label' htmlFor='magSaleAllergy'>Alergia</label></div>
-        <div className='col-md-3 mb-3 form-check mt-4'><input ref={intoleranceRef} type='checkbox' className='form-check-input' id='magSaleIntolerance' /><label className='form-check-label' htmlFor='magSaleIntolerance'>Intolerancia</label></div>
+        <SwitchFormGroup eRef={allergyRef} label='Alergia' col='col-md-3 mt-4' />
+        <SwitchFormGroup eRef={intoleranceRef} label='Intolerancia' col='col-md-3 mt-4' />
 
         <div className='col-12 mt-2'>
           <div className='d-flex justify-content-between align-items-center mb-2'>

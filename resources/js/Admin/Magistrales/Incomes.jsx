@@ -11,6 +11,7 @@ import Swal from 'sweetalert2';
 import IncomesRest from '../../Actions/Admin/Magistrales/IncomesRest';
 import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
+import setSwitchChecked from '../../Utils/setSwitchChecked';
 
 const incomesRest = new IncomesRest()
 
@@ -107,7 +108,7 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada', fixedWarehouse
     paymentMethodRef.current.value = data?.payment_method ?? ''
     originRef.current.value = data?.origin ?? ''
     currencyRef.current.value = data?.currency ?? 'PEN'
-    affectsIgvRef.current.checked = !!data?.affects_igv
+    setSwitchChecked(affectsIgvRef.current, !!data?.affects_igv)
     issueDateRef.current.value = data?.issue_date?.toString?.().slice?.(0, 10) ?? new Date().toISOString().slice(0, 10)
     observationsRef.current.value = data?.observations ?? ''
 
@@ -326,7 +327,7 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada', fixedWarehouse
         <div className='col-md-2 mb-3'><label className='form-label'>Serie</label><input ref={documentSeriesRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Secuencia</label><input ref={documentSequenceRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Moneda</label><select ref={currencyRef} className='form-control'><option value='PEN'>PEN</option><option value='USD'>USD</option></select></div>
-        <div className='col-md-3 mb-3 form-check mt-4'><input ref={affectsIgvRef} type='checkbox' className='form-check-input' id='magIncomeAffectsIgv' /><label className='form-check-label' htmlFor='magIncomeAffectsIgv'>Afecto IGV</label></div>
+        <SwitchFormGroup eRef={affectsIgvRef} label='Afecto IGV' col='col-md-3 mt-4' />
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha</label><input ref={issueDateRef} type='date' className='form-control' /></div>
 
         <div className='col-12'><hr className='my-2' /></div>

@@ -17,6 +17,7 @@ import PurchaseOrdersRest from '../Actions/Admin/PurchaseOrdersRest';
 import { scopedPermission } from '../Utils/permissionScope';
 import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
+import setSwitchChecked from '../Utils/setSwitchChecked';
 import {
   approvalStatusOptions,
   purchaseOrderStatusOptions,
@@ -271,7 +272,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     setSelectedArticleType(data?.article_type ?? '')
     const currentAffectsIgv = typeof data?.affects_igv === 'boolean' ? data.affects_igv : true
     setAffectsIgv(currentAffectsIgv)
-    setRefValue(affectsIgvRef, currentAffectsIgv ? '1' : '0')
+    setSwitchChecked(affectsIgvRef.current, currentAffectsIgv)
 
     setTaxAmount(Number(data?.tax_amount ?? 0))
     setRefValue(taxAmountRef, Number(data?.tax_amount ?? 0))
@@ -492,7 +493,6 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
   const onAffectsIgvChanged = (e) => {
     const next = !!e.target.checked
     setAffectsIgv(next)
-    setRefValue(affectsIgvRef, next ? '1' : '0')
   }
 
   return (<>
@@ -623,7 +623,6 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     <Modal modalRef={modalRef} title={isEditing ? 'Editar orden de compra' : 'Agregar orden de compra'} onSubmit={onModalSubmit} size='full-width'>
       <div className='row' id='purchase-order-form-container'>
         <input ref={idRef} type='hidden' />
-        <input ref={affectsIgvRef} type='hidden' />
 
         {isMagistrales ? (
           <>
@@ -740,12 +739,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
                 {DOCUMENT_TYPE_OPTIONS.map(option => <option key={`purchase-order-document-type-${option}`} value={option}>{option}</option>)}
               </select>
             </div>
-            <div className='form-group col-md-2 mb-2'>
-              <label className='form-label d-block'>Afecto IGV</label>
-              <div className='form-check form-switch'>
-                <input className='form-check-input' type='checkbox' checked={affectsIgv} onChange={onAffectsIgvChanged} />
-              </div>
-            </div>
+            <SwitchFormGroup eRef={affectsIgvRef} label='Afecto IGV' col='col-md-2' checked={affectsIgv} onChange={onAffectsIgvChanged} refreshable={isMagistrales} />
           </>
         )}
         <div className='form-group col-md-2 mb-2'>

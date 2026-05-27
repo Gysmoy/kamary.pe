@@ -17,6 +17,7 @@ import SetSelectValue from '../Utils/SetSelectValue';
 import { scopedPermission } from '../Utils/permissionScope';
 import renderGridEditLink from '../Utils/renderGridEditLink';
 import ArticlesRest from '../Actions/Admin/ArticlesRest';
+import setSwitchChecked from '../Utils/setSwitchChecked';
 
 const articlesRest = new ArticlesRest()
 
@@ -584,7 +585,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     if (marginRuleRef.current) marginRuleRef.current.checked = !!data?.margin_rule
     if (igvRuleRef.current) {
       if (isMagistrales) {
-        igvRuleRef.current.value = data?.igv_rule ? '1' : '0'
+        setSwitchChecked(igvRuleRef.current, !!data?.igv_rule)
       } else {
         igvRuleRef.current.checked = !!data?.igv_rule
       }
@@ -598,14 +599,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
     if (stockHasExpirationRef.current) {
       if (isMagistrales) {
-        stockHasExpirationRef.current.value = data?.stock_has_expiration ? '1' : '0'
+        setSwitchChecked(stockHasExpirationRef.current, !!data?.stock_has_expiration)
       } else {
         stockHasExpirationRef.current.checked = !!data?.stock_has_expiration
       }
     }
     if (stockHasLotRef.current) {
       if (isMagistrales) {
-        stockHasLotRef.current.value = data?.stock_has_lot ? '1' : '0'
+        setSwitchChecked(stockHasLotRef.current, !!data?.stock_has_lot)
       } else {
         stockHasLotRef.current.checked = !!data?.stock_has_lot
       }
@@ -710,7 +711,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       unit_id: selectedUnitId || null,
       volume: volumeRef.current?.value ?? '',
       margin_rule: marginRuleRef.current?.checked ?? false,
-      igv_rule: isMagistrales ? (igvRuleRef.current?.value === '1') : (igvRuleRef.current?.checked ?? false),
+      igv_rule: igvRuleRef.current?.checked ?? false,
       units_per_article: unitsPerArticleRef.current?.value || 1,
       ...(isMagistrales ? {
         magistral_status: statusRef.current?.value || 'vigente',
@@ -736,8 +737,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       stock_min: stockMinRef.current?.value ?? '',
       stock_max: stockMaxRef.current?.value ?? '',
       currency: currencyRef.current?.value ?? '',
-      stock_has_expiration: isMagistrales ? (stockHasExpirationRef.current?.value === '1') : (stockHasExpirationRef.current?.checked ?? false),
-      stock_has_lot: isMagistrales ? (stockHasLotRef.current?.value === '1') : (stockHasLotRef.current?.checked ?? false),
+      stock_has_expiration: stockHasExpirationRef.current?.checked ?? false,
+      stock_has_lot: stockHasLotRef.current?.checked ?? false,
       cost_price: costPriceRef.current?.value ?? '',
       sale_price: salePriceRef.current?.value ?? '',
       equivalence_exchange_rate: equivalenceExchangeRateRef.current?.value ?? '',
@@ -1552,13 +1553,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
             <div className='row g-3 magistrales-section-body'>
               <InputFormGroup eRef={stockMinRef} label='Stock mínimo' col='col-md-3' type='number' min='0' step='0.001' />
               <InputFormGroup eRef={stockMaxRef} label='Stock máximo' col='col-md-3' type='number' min='0' step='0.001' />
-              <div className='form-group col-md-3 mb-2'>
-                <label className='form-label'>Afecto a IGV</label>
-                <select ref={igvRuleRef} className='form-control' defaultValue='0'>
-                  <option value='0'>NO</option>
-                  <option value='1'>SI</option>
-                </select>
-              </div>
+              <SwitchFormGroup eRef={igvRuleRef} label='Afecto a IGV' col='col-md-3' checked={false} />
               <div className='form-group col-md-3 mb-2'>
                 <label className='form-label'>Moneda</label>
                 <select ref={currencyRef} className='form-control' defaultValue='PEN'>
@@ -1566,20 +1561,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
                   <option value='USD'>Dolares</option>
                 </select>
               </div>
-              <div className='form-group col-md-3 mb-2'>
-                <label className='form-label'>Stock con Vencim.</label>
-                <select ref={stockHasExpirationRef} className='form-control' defaultValue='0'>
-                  <option value='0'>NO</option>
-                  <option value='1'>SI</option>
-                </select>
-              </div>
-              <div className='form-group col-md-3 mb-2'>
-                <label className='form-label'>Stock con Lote</label>
-                <select ref={stockHasLotRef} className='form-control' defaultValue='0'>
-                  <option value='0'>NO</option>
-                  <option value='1'>SI</option>
-                </select>
-              </div>
+              <SwitchFormGroup eRef={stockHasExpirationRef} label='Stock con Vencim.' col='col-md-3' checked={false} />
+              <SwitchFormGroup eRef={stockHasLotRef} label='Stock con Lote' col='col-md-3' checked={false} />
               <InputFormGroup eRef={costPriceRef} label='Precio Costo' col='col-md-3' type='number' min='0' step='0.01' />
               <InputFormGroup eRef={salePriceRef} label='Precio Venta' col='col-md-3' type='number' min='0' step='0.01' />
             </div>

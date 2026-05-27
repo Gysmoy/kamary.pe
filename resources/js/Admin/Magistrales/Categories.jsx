@@ -9,6 +9,7 @@ import ReactAppend from '../../Utils/ReactAppend';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import CategoriesRest from '../../Actions/Admin/Magistrales/CategoriesRest';
+import setSwitchChecked from '../../Utils/setSwitchChecked';
 
 const categoriesRest = new CategoriesRest()
 
@@ -43,8 +44,8 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria', fixedWarehouse = 
     codeRef.current.value = data?.code ?? ''
     descriptionRef.current.value = data?.description ?? ''
     warehouseRef.current.value = data?.warehouse_id ?? fixedWarehouseId
-    saleMaterialRef.current.checked = !!data?.sale_material
-    statusRef.current.checked = data?.status !== false && data?.status !== 0
+    setSwitchChecked(saleMaterialRef.current, !!data?.sale_material)
+    setSwitchChecked(statusRef.current, data?.status !== false && data?.status !== 0)
     $(modalRef.current).modal('show')
   }
 
@@ -73,7 +74,7 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria', fixedWarehouse = 
     setIsSubcategoryEditing(false)
     if (subcategoryIdRef.current) subcategoryIdRef.current.value = ''
     if (subcategoryDescriptionRef.current) subcategoryDescriptionRef.current.value = ''
-    if (subcategoryStatusRef.current) subcategoryStatusRef.current.value = '1'
+    setSwitchChecked(subcategoryStatusRef.current, true)
   }
 
   const onSubcategoryModalOpen = async (category) => {
@@ -88,7 +89,7 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria', fixedWarehouse = 
     setIsSubcategoryEditing(!!data?.id)
     subcategoryIdRef.current.value = data?.id ?? ''
     subcategoryDescriptionRef.current.value = data?.description ?? ''
-    subcategoryStatusRef.current.value = isActive(data?.status ?? 1) ? '1' : '0'
+    setSwitchChecked(subcategoryStatusRef.current, isActive(data?.status ?? 1))
   }
 
   const onSubcategorySave = async (e) => {
@@ -98,7 +99,7 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria', fixedWarehouse = 
     const result = await categoriesRest.saveSubcategory(selectedCategory.id, {
       id: subcategoryIdRef.current.value || undefined,
       description: subcategoryDescriptionRef.current.value.trim(),
-      status: subcategoryStatusRef.current.value === '1',
+      status: subcategoryStatusRef.current.checked,
     })
     if (!result) return
     await refreshSubcategories()
@@ -201,18 +202,8 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria', fixedWarehouse = 
         <div className='col-md-8 mb-3'><label className='form-label'>Descripcion</label><input ref={descriptionRef} className='form-control' required /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' required /></div>
         <div className='col-md-8 mb-3'><label className='form-label'>Almacen fijo</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
-        <div className='col-md-4 mb-3 mt-4'>
-          <label className='form-label d-block' htmlFor='magCategorySaleMaterial'>Material para Ventas</label>
-          <div className='form-check form-switch'>
-            <input ref={saleMaterialRef} type='checkbox' className='form-check-input' id='magCategorySaleMaterial' />
-          </div>
-        </div>
-        <div className='col-md-4 mb-3 mt-4'>
-          <label className='form-label d-block' htmlFor='magCategoryStatus'>Estado</label>
-          <div className='form-check form-switch'>
-            <input ref={statusRef} type='checkbox' className='form-check-input' id='magCategoryStatus' />
-          </div>
-        </div>
+        <SwitchFormGroup eRef={saleMaterialRef} label='Material para Ventas' col='col-md-4 mt-4' />
+        <SwitchFormGroup eRef={statusRef} label='Estado' col='col-md-4 mt-4' checked />
       </div>
     </Modal>
 
@@ -223,13 +214,7 @@ const Categories = ({ moduleTitle = 'Magistrales - Categoria', fixedWarehouse = 
           <label className='form-label'>Descripcion</label>
           <input ref={subcategoryDescriptionRef} className='form-control' required />
         </div>
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Estado</label>
-          <select ref={subcategoryStatusRef} className='form-control' defaultValue='1'>
-            <option value='1'>Activo</option>
-            <option value='0'>Inactivo</option>
-          </select>
-        </div>
+        <SwitchFormGroup eRef={subcategoryStatusRef} label='Estado' col='col-md-4' checked />
         <div className='col-md-2 mb-2 d-flex gap-2'>
           <button type='submit' className='btn btn-primary w-100'>{isSubcategoryEditing ? 'Actualizar' : 'Registrar'}</button>
           {isSubcategoryEditing && <button type='button' className='btn btn-light' onClick={resetSubcategoryForm}>Limpiar</button>}

@@ -272,6 +272,10 @@
     "file": "assets/resizeImage-CAkDvg_q.js",
     "name": "resizeImage"
   },
+  "_setSwitchChecked-BcAIL3nj.js": {
+    "file": "assets/setSwitchChecked-BcAIL3nj.js",
+    "name": "setSwitchChecked"
+  },
   "_statusLabels-BZtxAx6i.js": {
     "file": "assets/statusLabels-BZtxAx6i.js",
     "name": "statusLabels"
@@ -390,7 +394,7 @@
     ]
   },
   "resources/js/Admin/Articles.jsx": {
-    "file": "assets/Articles-BNbKvXZf.js",
+    "file": "assets/Articles-C-ncvmjq.js",
     "name": "Articles",
     "src": "resources/js/Admin/Articles.jsx",
     "isEntry": true,
@@ -410,6 +414,7 @@
       "_permissionScope-Be8AULz2.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_BasicRest-EXKW_n5g.js",
+      "_setSwitchChecked-BcAIL3nj.js",
       "_statusLabels-BZtxAx6i.js",
       "_tippy-react.esm-DZzWNIYv.js"
     ]
@@ -1117,7 +1122,7 @@
     ]
   },
   "resources/js/Admin/Magistrales/Categories.jsx": {
-    "file": "assets/Categories-hqSTlqxk.js",
+    "file": "assets/Categories-BlVZ3gUM.js",
     "name": "Categories",
     "src": "resources/js/Admin/Magistrales/Categories.jsx",
     "isEntry": true,
@@ -1130,6 +1135,7 @@
       "_ReactAppend-DIHzhAcr.js",
       "_SwitchFormGroup-BGd4U0oE.js",
       "_BasicRest-EXKW_n5g.js",
+      "_setSwitchChecked-BcAIL3nj.js",
       "_statusLabels-BZtxAx6i.js",
       "_tippy-react.esm-DZzWNIYv.js"
     ]
@@ -1146,7 +1152,7 @@
     ]
   },
   "resources/js/Admin/Magistrales/Formats.jsx": {
-    "file": "assets/Formats-CiCrnYh1.js",
+    "file": "assets/Formats-C3qRc7vE.js",
     "name": "Formats",
     "src": "resources/js/Admin/Magistrales/Formats.jsx",
     "isEntry": true,
@@ -1160,6 +1166,7 @@
       "_SwitchFormGroup-BGd4U0oE.js",
       "_BasicRest-EXKW_n5g.js",
       "_renderGridEditLink-D8NGEeKJ.js",
+      "_setSwitchChecked-BcAIL3nj.js",
       "_statusLabels-BZtxAx6i.js",
       "_tippy-react.esm-DZzWNIYv.js"
     ]
@@ -1186,7 +1193,7 @@
     ]
   },
   "resources/js/Admin/Magistrales/Incomes.jsx": {
-    "file": "assets/Incomes-vZQczCxs.js",
+    "file": "assets/Incomes-OrIZl7zR.js",
     "name": "Incomes",
     "src": "resources/js/Admin/Magistrales/Incomes.jsx",
     "isEntry": true,
@@ -1201,6 +1208,7 @@
       "_BasicRest-EXKW_n5g.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_magistralesRecordPdf-BwomA9YQ.js",
+      "_setSwitchChecked-BcAIL3nj.js",
       "_statusLabels-BZtxAx6i.js",
       "_tippy-react.esm-DZzWNIYv.js",
       "_ubigeoInei-D0FnAslC.js"
@@ -1229,7 +1237,7 @@
     ]
   },
   "resources/js/Admin/Magistrales/Laboratories.jsx": {
-    "file": "assets/Laboratories-C3Vfd1eL.js",
+    "file": "assets/Laboratories-D0HQf6o-.js",
     "name": "Laboratories",
     "src": "resources/js/Admin/Magistrales/Laboratories.jsx",
     "isEntry": true,
@@ -1239,9 +1247,12 @@
       "_Table-C6X9lnHt.js",
       "_Modal-CAfsOhZN.js",
       "_DxButton-CsjWvhyj.js",
+      "_SwitchFormGroup-BGd4U0oE.js",
       "_BasicRest-EXKW_n5g.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_statusLabels-BZtxAx6i.js"
+      "_setSwitchChecked-BcAIL3nj.js",
+      "_statusLabels-BZtxAx6i.js",
+      "_tippy-react.esm-DZzWNIYv.js"
     ]
   },
   "resources/js/Admin/Magistrales/Outputs.jsx": {
@@ -1309,7 +1320,7 @@
     ]
   },
   "resources/js/Admin/Magistrales/Sales.jsx": {
-    "file": "assets/Sales-B9zMIbaw.js",
+    "file": "assets/Sales-w1ybGhe0.js",
     "name": "Sales",
     "src": "resources/js/Admin/Magistrales/Sales.jsx",
     "isEntry": true,
@@ -1324,6 +1335,7 @@
       "_Stage4Rest-BAMEejJ3.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_magistralesRecordPdf-BwomA9YQ.js",
+      "_setSwitchChecked-BcAIL3nj.js",
       "_BasicRest-EXKW_n5g.js",
       "_statusLabels-BZtxAx6i.js",
       "_tippy-react.esm-DZzWNIYv.js",
@@ -1501,7 +1513,7 @@
     ]
   },
   "resources/js/Admin/PurchaseOrders.jsx": {
-    "file": "assets/PurchaseOrders-ajrIt--a.js",
+    "file": "assets/PurchaseOrders-BZ8nBQh4.js",
     "name": "PurchaseOrders",
     "src": "resources/js/Admin/PurchaseOrders.jsx",
     "isEntry": true,
@@ -1521,6 +1533,7 @@
       "_permissionScope-Be8AULz2.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_magistralesRecordPdf-BwomA9YQ.js",
+      "_setSwitchChecked-BcAIL3nj.js",
       "_statusLabels-BZtxAx6i.js",
       "_tippy-react.esm-DZzWNIYv.js",
       "_ubigeoInei-D0FnAslC.js"

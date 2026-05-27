@@ -10,6 +10,7 @@ import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import FormatsRest from '../../Actions/Admin/Magistrales/FormatsRest';
 import renderGridEditLink from '../../Utils/renderGridEditLink';
+import setSwitchChecked from '../../Utils/setSwitchChecked';
 
 const formatsRest = new FormatsRest()
 
@@ -27,7 +28,7 @@ const Formats = ({ moduleTitle = 'Magistrales - Formatos' }) => {
     idRef.current.value = data?.id ?? ''
     descriptionRef.current.value = data?.description ?? ''
     quantityRef.current.value = data?.quantity ?? 0
-    statusRef.current.checked = data?.status !== false && data?.status !== 0
+    setSwitchChecked(statusRef.current, data?.status !== false && data?.status !== 0)
     $(modalRef.current).modal('show')
   }
 
@@ -106,7 +107,7 @@ const Formats = ({ moduleTitle = 'Magistrales - Formatos' }) => {
         <input ref={idRef} hidden />
         <div className='col-md-8 mb-3'><label className='form-label'>Descripcion</label><input ref={descriptionRef} className='form-control' required /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Cantidad</label><input ref={quantityRef} type='number' step='0.001' className='form-control' /></div>
-        <div className='col-md-4 mb-3 form-check'><input ref={statusRef} type='checkbox' className='form-check-input' id='magFormatStatus' /><label className='form-check-label' htmlFor='magFormatStatus'>Estado</label></div>
+        <SwitchFormGroup eRef={statusRef} label='Estado' col='col-md-4 mt-4' checked />
       </div>
     </Modal>
   </>
