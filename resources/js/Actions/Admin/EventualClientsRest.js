@@ -1,9 +1,26 @@
 import BasicRest from "../BasicRest";
 import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
+import xsrfToken from "../../Utils/xsrfToken";
 
 class EventualClientsRest extends BasicRest {
   path = 'admin/eventual-clients'
+
+  orders = (clientId) => ({
+    paginate: async (params) => {
+      const res = await fetch(`/api/${this.path}/${clientId}/orders/paginate`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Xsrf-Token': xsrfToken()
+        },
+        body: JSON.stringify(params)
+      })
+
+      return await res.json()
+    }
+  })
 
   lookupByDocument = async (documentType, documentNumber) => {
     try {

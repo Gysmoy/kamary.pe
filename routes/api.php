@@ -554,6 +554,7 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/eventual-clients', [AdminEventualClientController::class, 'save']);
         Route::post('/eventual-clients/paginate', [AdminEventualClientController::class, 'paginate']);
+        Route::post('/eventual-clients/{id}/orders/paginate', [AdminEventualClientController::class, 'orders'])->whereNumber('id');
         Route::patch('/eventual-clients/status', [AdminEventualClientController::class, 'status']);
         Route::patch('/eventual-clients/{field}', [AdminEventualClientController::class, 'boolean']);
         Route::delete('/eventual-clients/{id}', [AdminEventualClientController::class, 'delete']);

@@ -18,6 +18,8 @@ class EventualClient extends Model
         'phone',
         'address',
         'contact_name',
+        'short_code',
+        'contract_due_days',
         'notes',
         'status',
         'created_by',
@@ -25,6 +27,7 @@ class EventualClient extends Model
     ];
 
     protected $casts = [
+        'contract_due_days' => 'integer',
         'status' => 'boolean',
     ];
 
@@ -36,5 +39,10 @@ class EventualClient extends Model
     public function updater()
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function commercialOrders()
+    {
+        return $this->hasMany(CommercialOrder::class);
     }
 }

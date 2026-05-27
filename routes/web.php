@@ -46,6 +46,7 @@ use App\Http\Controllers\Admin\BusinessController as AdminBusinessController;
 use App\Http\Controllers\Admin\ClientDistributionNetworkController as AdminClientDistributionNetworkController;
 use App\Http\Controllers\Admin\ClientController as AdminClientController;
 use App\Http\Controllers\Admin\CommercialOrderController as AdminCommercialOrderController;
+use App\Http\Controllers\Admin\EventualClientController as AdminEventualClientController;
 use App\Http\Controllers\Admin\TakeOrderController as AdminTakeOrderController;
 use App\Http\Controllers\Admin\DispatchController as AdminDispatchController;
 use App\Http\Controllers\Admin\DailySummaryController as AdminDailySummaryController;
@@ -158,7 +159,7 @@ Route::middleware('auth')->group(function () {
 
         // Comercial
         Route::get('/clients', [AdminClientController::class, 'reactView']);
-        Route::get('/eventual-clients', [AdminClientController::class, 'reactView']);
+        Route::get('/eventual-clients', [AdminEventualClientController::class, 'reactView']);
         Route::get('/client-distribution', [AdminClientDistributionNetworkController::class, 'reactView']);
         Route::get('/accounts-receivable', [AdminAccountsReceivableController::class, 'reactView']);
         Route::get('/commercial-orders', [AdminCommercialOrderController::class, 'reactView']);

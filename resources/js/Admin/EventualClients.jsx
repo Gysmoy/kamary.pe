@@ -4,14 +4,13 @@ import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
 import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
 import DxButton from '../Components/dx/DxButton';
-import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import EventualClientsRest from '../Actions/Admin/EventualClientsRest';
 import renderGridEditLink from '../Utils/renderGridEditLink';
+import { getCommercialOrderStatusLabel } from '../Utils/statusLabels';
 
 const eventualClientsRest = new EventualClientsRest()
 
@@ -22,6 +21,7 @@ const setRefValue = (ref, value) => {
 
 const getRefValue = (ref) => ref?.current?.value ?? ''
 const normalizePrefix = (value) => (value ?? '').toString().replace(/\D+/g, '')
+const normalizeDocumentType = (value) => `${value ?? ''}`.trim().toUpperCase()
 
 const formatAuditUser = (user) => {
   if (!user) return ''
@@ -35,9 +35,63 @@ const formatAuditUser = (user) => {
   return ''
 }
 
+const renderClientStatusBadge = (container, active) => {
+  const enabled = active === true || active === 1 || active === '1'
+  container.html(`<span class="badge ${enabled ? 'bg-soft-success text-success border border-success' : 'bg-soft-secondary text-secondary border border-secondary'}">${enabled ? 'Activo' : 'Inactivo'}</span>`)
+}
+
+const contractDueLabel = (days) => {
+  const value = Number(days || 0)
+  if (!Number.isFinite(value) || value <= 0) return 'SIN CONTRATO ACTIVO'
+  return `${value} dia${value === 1 ? '' : 's'}`
+}
+
+const renderContractDue = (container, days) => {
+  const value = Number(days || 0)
+  if (Number.isFinite(value) && value > 0) {
+    container.html(`<span class="badge bg-soft-success text-success border border-success">${contractDueLabel(value)}</span>`)
+    return
+  }
+  container.text('SIN CONTRATO ACTIVO')
+}
+
+const orderStatusClass = (status) => ({
+  draft: 'bg-soft-secondary text-secondary border border-secondary',
+  pending: 'bg-soft-warning text-warning border border-warning',
+  confirmed: 'bg-soft-info text-info border border-info',
+  preparing: 'bg-soft-primary text-primary border border-primary',
+  in_route: 'bg-soft-primary text-primary border border-primary',
+  delivered: 'bg-soft-success text-success border border-success',
+  dispatched: 'bg-soft-info text-info border border-info',
+  billed: 'bg-soft-success text-success border border-success',
+  closed: 'bg-soft-dark text-dark border border-dark',
+  cancelled: 'bg-soft-danger text-danger border border-danger',
+}[`${status ?? ''}`] ?? 'bg-soft-secondary text-secondary border border-secondary')
+
+const renderOrderStatusBadge = (container, status) => {
+  container.html(`<span class="badge ${orderStatusClass(status)}">${getCommercialOrderStatusLabel(status)}</span>`)
+}
+
+const paymentLabel = (data) => {
+  const value = `${data?.payment_label ?? ''}`.trim()
+  if (value) return value
+  const method = `${data?.payment_method ?? '-'}`.trim() || '-'
+  const condition = `${data?.payment_condition ?? ''}`.trim()
+  return condition ? `${method} [${condition}]` : method
+}
+
+const customerLabel = (data) => {
+  const direct = `${data?.customer_label ?? ''}`.trim()
+  if (direct) return direct
+  const client = data?.eventual_client ?? data?.eventualClient
+  return `${client?.document_number ?? ''} | ${client?.business_name ?? ''}`.trim().replace(/^\|\s*/, '') || '-'
+}
+
 const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', requiredPermission = 'eventual-clients' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
+  const ordersModalRef = useRef()
+  const ordersGridRef = useRef()
   const lookupTimeoutRef = useRef()
 
   const idRef = useRef()
@@ -47,6 +101,9 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
   const emailRef = useRef()
   const phonePrefixRef = useRef()
   const phoneRef = useRef()
+  const shortCodeRef = useRef()
+  const contractDueDaysRef = useRef()
+  const statusRef = useRef()
   const addressRef = useRef()
   const contactNameRef = useRef()
   const notesRef = useRef()
@@ -54,12 +111,14 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
   const [isEditing, setIsEditing] = useState(false)
   const [documentType, setDocumentType] = useState('dni')
   const [phonePrefix, setPhonePrefix] = useState('51')
+  const [statusValue, setStatusValue] = useState('1')
   const [isSearchingDocument, setIsSearchingDocument] = useState(false)
   const [isDocumentDataLocked, setIsDocumentDataLocked] = useState(false)
   const [lastLookedDocumentKey, setLastLookedDocumentKey] = useState('')
+  const [selectedClient, setSelectedClient] = useState(null)
+  const [ordersRest, setOrdersRest] = useState(null)
 
   const docMaxLength = documentType === 'dni' ? 8 : (documentType === 'ruc' ? 11 : 20)
-  const displayNameLabel = documentType === 'ruc' ? 'Razon social' : 'Nombre completo'
 
   const clearForm = () => {
     setRefValue(idRef, '')
@@ -68,11 +127,16 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
     setRefValue(businessNameRef, '')
     setRefValue(emailRef, '')
     setRefValue(phoneRef, '')
+    setRefValue(shortCodeRef, '')
+    setRefValue(contractDueDaysRef, '')
     setRefValue(addressRef, '')
     setRefValue(contactNameRef, '')
     setRefValue(notesRef, '')
+    setDocumentType('dni')
     setPhonePrefix('51')
+    setStatusValue('1')
     setRefValue(phonePrefixRef, '51')
+    setRefValue(statusRef, '1')
   }
 
   const applyApiClientData = (client = {}) => {
@@ -140,21 +204,26 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
     setLastLookedDocumentKey('')
 
     if (data?.id) {
+      const nextStatus = data.status === false || data.status === 0 || data.status === '0' ? '0' : '1'
+      const normalizedPrefix = normalizePrefix(data.phone_prefix) || '51'
+
       setDocumentType(data.document_type ?? 'dni')
+      setPhonePrefix(normalizedPrefix)
+      setStatusValue(nextStatus)
+
       setRefValue(idRef, data.id)
       setRefValue(documentTypeRef, data.document_type ?? 'dni')
       setRefValue(documentNumberRef, data.document_number ?? '')
       setRefValue(businessNameRef, data.business_name ?? '')
       setRefValue(emailRef, data.email ?? '')
       setRefValue(phoneRef, data.phone ?? '')
+      setRefValue(shortCodeRef, data.short_code ?? '')
+      setRefValue(contractDueDaysRef, data.contract_due_days ?? '')
       setRefValue(addressRef, data.address ?? '')
       setRefValue(contactNameRef, data.contact_name ?? '')
       setRefValue(notesRef, data.notes ?? '')
-      const normalizedPrefix = normalizePrefix(data.phone_prefix) || '51'
-      setPhonePrefix(normalizedPrefix)
       setRefValue(phonePrefixRef, normalizedPrefix)
-    } else {
-      setDocumentType('dni')
+      setRefValue(statusRef, nextStatus)
     }
 
     $(modalRef.current).modal('show')
@@ -171,6 +240,9 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
       email: getRefValue(emailRef).trim(),
       phone_prefix: normalizePrefix(getRefValue(phonePrefixRef)),
       phone: getRefValue(phoneRef).trim(),
+      short_code: getRefValue(shortCodeRef).trim(),
+      contract_due_days: getRefValue(contractDueDaysRef).trim(),
+      status: getRefValue(statusRef) === '1',
       address: getRefValue(addressRef).trim(),
       contact_name: getRefValue(contactNameRef).trim(),
       notes: getRefValue(notesRef).trim(),
@@ -181,12 +253,6 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
 
     $(gridRef.current).dxDataGrid('instance').refresh()
     $(modalRef.current).modal('hide')
-  }
-
-  const onBooleanChange = async ({ id, value }) => {
-    const result = await eventualClientsRest.boolean({ id, field: 'status', value })
-    if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -204,16 +270,44 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
+  const onOrdersOpen = (data) => {
+    setSelectedClient(data)
+    setOrdersRest(eventualClientsRest.orders(data.id))
+    $(ordersModalRef.current).modal('show')
+  }
+
+  const exportGrid = () => {
+    const instance = $(gridRef.current).dxDataGrid('instance')
+    if (!instance) return
+    instance.exportToExcel(false)
+  }
+
   useEffect(() => () => {
     if (lookupTimeoutRef.current) clearTimeout(lookupTimeoutRef.current)
   }, [])
 
   return (<>
+    <div className='row g-2 mb-3'>
+      <div className='col-md-4'>
+        <button type='button' className='btn btn-primary w-100 d-flex align-items-center justify-content-between' onClick={() => onModalOpen()}>
+          <span><i className='mdi mdi-plus-circle-outline me-1'></i> Registrar Cliente</span>
+          <i className='mdi mdi-account-plus-outline'></i>
+        </button>
+      </div>
+      <div className='col-md-4'>
+        <button type='button' className='btn btn-success w-100 d-flex align-items-center justify-content-between' onClick={exportGrid}>
+          <span><i className='mdi mdi-file-excel-outline me-1'></i> Exportar Clientes</span>
+          <i className='mdi mdi-download-outline'></i>
+        </button>
+      </div>
+    </div>
+
     <Table
       gridRef={gridRef}
       title={sectionTitle}
       rest={eventualClientsRest}
       pageSize={25}
+      exportable
       toolBar={(container) => {
         container.unshift({
           widget: 'dxButton', location: 'after',
@@ -227,56 +321,12 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
           widget: 'dxButton', location: 'after',
           options: {
             icon: 'add',
-            hint: 'Agregar cliente eventual',
+            hint: 'Registrar cliente eventual',
             onClick: () => onModalOpen()
           }
         });
       }}
       columns={[
-        { dataField: 'id', caption: 'ID', width: 70 },
-        { dataField: 'document_type', caption: 'Tipo Doc.', width: 95 },
-        { dataField: 'document_number', caption: 'Numero', width: 130 },
-        {
-          dataField: 'business_name',
-          caption: 'Cliente eventual',
-          minWidth: 220,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business_name, () => onModalOpen(data), 'Editar cliente eventual')
-        },
-        { dataField: 'contact_name', caption: 'Contacto', minWidth: 160 },
-        { dataField: 'email', caption: 'Correo', minWidth: 180 },
-        {
-          dataField: 'mobile_full',
-          caption: 'Celular',
-          width: 140,
-          calculateCellValue: (data) => {
-            const prefix = normalizePrefix(data.phone_prefix)
-            return `${prefix ? `+${prefix}` : ''} ${data.phone ?? ''}`.trim()
-          }
-        },
-        { dataField: 'address', caption: 'Direccion', minWidth: 220 },
-        {
-          dataField: 'creator.fullname',
-          caption: 'Creado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
-        },
-        {
-          dataField: 'updater.fullname',
-          caption: 'Actualizado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
-        },
-        {
-          dataField: 'status',
-          caption: 'Estado',
-          dataType: 'boolean',
-          width: 95,
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({ id: data.id, value: !data.status })} />)
-          }
-        },
         {
           caption: 'Acciones',
           width: 120,
@@ -289,26 +339,87 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
               onClick: () => onModalOpen(data)
             }))
             container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
+              className: 'btn btn-xs btn-soft-danger ms-1',
               title: 'Eliminar',
               icon: 'mdi mdi-delete',
               onClick: () => onDeleteClicked(data.id)
             }))
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-info ms-1',
+              title: 'Ver pedidos del cliente',
+              icon: 'mdi mdi-view-grid-outline',
+              onClick: () => onOrdersOpen(data)
+            }))
           },
           allowFiltering: false,
+          allowSorting: false,
           allowExporting: false
+        },
+        { dataField: 'id', caption: 'ID', width: 80 },
+        {
+          dataField: 'document_type',
+          caption: 'Tipo documento',
+          width: 140,
+          calculateCellValue: (data) => normalizeDocumentType(data.document_type)
+        },
+        { dataField: 'document_number', caption: 'N documento', width: 135 },
+        {
+          dataField: 'business_name',
+          caption: 'Razon social',
+          minWidth: 260,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business_name, () => onModalOpen(data), 'Editar cliente eventual')
+        },
+        { dataField: 'email', caption: 'Email', minWidth: 180 },
+        { dataField: 'address', caption: 'Direccion', minWidth: 260 },
+        {
+          dataField: 'contract_due_days',
+          caption: 'Dias vcto. contrato',
+          width: 160,
+          cellTemplate: (container, { data }) => renderContractDue(container, data.contract_due_days)
+        },
+        {
+          dataField: 'status',
+          caption: 'Estado',
+          width: 110,
+          dataType: 'boolean',
+          cellTemplate: (container, { data }) => renderClientStatusBadge(container, data.status)
+        },
+        { dataField: 'short_code', caption: 'Codigo corto', width: 130, visible: false },
+        {
+          dataField: 'mobile_full',
+          caption: 'Celular',
+          width: 140,
+          visible: false,
+          calculateCellValue: (data) => {
+            const prefix = normalizePrefix(data.phone_prefix)
+            return `${prefix ? `+${prefix}` : ''} ${data.phone ?? ''}`.trim()
+          }
+        },
+        {
+          dataField: 'creator.fullname',
+          caption: 'Creado por',
+          visible: false,
+          allowFiltering: false,
+          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
+        },
+        {
+          dataField: 'updater.fullname',
+          caption: 'Actualizado por',
+          visible: false,
+          allowFiltering: false,
+          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
         }
       ]}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar cliente eventual' : 'Agregar cliente eventual'} onSubmit={onModalSubmit} size='lg' btnSubmitText='Guardar'>
+    <Modal modalRef={modalRef} title={isEditing ? 'Editar cliente eventual' : 'Cliente eventual'} onSubmit={onModalSubmit} size='xl' btnSubmitText={isEditing ? 'Guardar cambios' : 'Registrar'}>
       <div className='row'>
         <input ref={idRef} type='hidden' />
 
         <SelectFormGroup
           eRef={documentTypeRef}
-          label='Tipo Doc.'
-          col='col-md-4'
+          label='Tipo de Documento'
+          col='col-md-6'
           required
           disabled={isEditing}
           value={documentType}
@@ -322,8 +433,8 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
 
         <InputFormGroup
           eRef={documentNumberRef}
-          label={`Documento${isSearchingDocument ? ' (consultando...)' : ''}`}
-          col='col-md-4'
+          label={`N Documento${isSearchingDocument ? ' (consultando...)' : ''}`}
+          col='col-md-6'
           required
           disabled={isEditing}
           max={docMaxLength}
@@ -335,26 +446,19 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
         />
 
         <InputFormGroup
-          eRef={contactNameRef}
-          label='Contacto'
-          col='col-md-4'
-          disabled={isDocumentDataLocked && documentType === 'dni'}
-        />
-
-        <InputFormGroup
           eRef={businessNameRef}
-          label={displayNameLabel}
-          col='col-md-8'
+          label='Razon Social'
+          col='col-12'
           required
-          disabled={isEditing || isDocumentDataLocked}
+          disabled={isDocumentDataLocked}
         />
 
-        <InputFormGroup eRef={emailRef} label='Correo' col='col-md-4' />
+        <InputFormGroup eRef={emailRef} label='Emails' col='col-md-6' />
 
         <SelectFormGroup
           eRef={phonePrefixRef}
-          label='Prefijo celular'
-          col='col-md-4'
+          label='Prefijo'
+          col='col-md-2'
           value={phonePrefix}
           onChange={(e) => setPhonePrefix(normalizePrefix(e.target.value))}
           effectWith={[phonePrefix]}
@@ -368,13 +472,77 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
         </SelectFormGroup>
 
         <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-4' />
-        <InputFormGroup eRef={addressRef} label='Direccion' col='col-md-12' />
+        <InputFormGroup eRef={shortCodeRef} label='Codigo corto' col='col-md-4' uppercase />
+        <InputFormGroup eRef={contractDueDaysRef} label='Dias vcto. contrato' col='col-md-4' type='number' min='0' />
 
-        <div className='form-group col-12 mb-2'>
-          <label className='form-label'>Notas</label>
-          <textarea ref={notesRef} className='form-control' rows='3'></textarea>
+        <SelectFormGroup
+          eRef={statusRef}
+          label='Estado'
+          col='col-md-4'
+          required
+          value={statusValue}
+          onChange={(e) => setStatusValue(e.target.value)}
+          effectWith={[statusValue]}
+        >
+          <option value='1'>ACTIVO</option>
+          <option value='0'>INACTIVO</option>
+        </SelectFormGroup>
+
+        <InputFormGroup eRef={addressRef} label='Direccion' col='col-12' />
+        <InputFormGroup eRef={contactNameRef} label='Contacto' col='col-md-6' />
+
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Notas</label>
+          <textarea ref={notesRef} className='form-control' rows='2'></textarea>
         </div>
       </div>
+    </Modal>
+
+    <Modal
+      modalRef={ordersModalRef}
+      title={<div className='d-flex flex-wrap align-items-center gap-2'>
+        <h4 className='modal-title mb-0'>Pedidos del cliente eventual</h4>
+        {selectedClient && <span className='badge badge-soft-secondary'>{selectedClient.document_number} - {selectedClient.business_name}</span>}
+      </div>}
+      size='xl'
+      hideFooter
+      onSubmit={(e) => e.preventDefault()}
+    >
+      {ordersRest && <Table
+        key={`eventual-client-orders-${selectedClient?.id ?? 'none'}`}
+        gridRef={ordersGridRef}
+        title='Pedidos'
+        rest={ordersRest}
+        pageSize={10}
+        columns={[
+          {
+            dataField: 'order_status',
+            caption: 'Estado',
+            width: 135,
+            cellTemplate: (container, { data }) => renderOrderStatusBadge(container, data.order_status)
+          },
+          { dataField: 'voucher_label', caption: 'Comprobante', width: 145, allowFiltering: false, allowSearch: false, calculateCellValue: (data) => data.voucher_label || '-' },
+          { dataField: 'document_type', caption: 'Tipo documento', width: 150 },
+          { dataField: 'customer_label', caption: 'Cliente', minWidth: 260, allowFiltering: false, allowSearch: false, calculateCellValue: customerLabel },
+          { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+          { dataField: 'payment_label', caption: 'Tipo de pago', width: 180, allowFiltering: false, allowSearch: false, calculateCellValue: paymentLabel },
+          { dataField: 'seller_label', caption: 'Usuario', width: 190, allowFiltering: false, allowSearch: false, calculateCellValue: (data) => data.seller_label || formatAuditUser(data.seller) || '-' },
+          { dataField: 'created_at', caption: 'Fecha registro', width: 170, dataType: 'datetime' },
+          { dataField: 'creator_label', caption: 'Usuario registro', width: 170, allowFiltering: false, allowSearch: false, calculateCellValue: (data) => data.creator_label || formatAuditUser(data.creator) || '-' },
+          { dataField: 'code', caption: 'Codigo', width: 140 },
+          { dataField: 'business_label', caption: 'Empresa', width: 190, allowFiltering: false, allowSearch: false, calculateCellValue: (data) => data.business_label || data.business?.name || '-' },
+        ]}
+        toolBar={(container) => {
+          container.unshift({
+            widget: 'dxButton', location: 'after',
+            options: {
+              icon: 'refresh',
+              hint: 'Refrescar pedidos',
+              onClick: () => $(ordersGridRef.current).dxDataGrid('instance').refresh()
+            }
+          });
+        }}
+      />}
     </Modal>
   </>)
 }

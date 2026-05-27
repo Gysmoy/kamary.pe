@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
+use App\Http\Classes\dxResponse;
+use App\Models\CommercialOrder;
+use App\Models\dxDataGrid;
 use App\Models\EventualClient;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\File;
 use SoDe\Extend\JSON;
 use SoDe\Extend\Response;
@@ -37,8 +41,8 @@ class EventualClientController extends BasicController
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ])
-            ->join('users as creator', 'creator.id', '=', 'eventual_clients.created_by')
-            ->join('users as updater', 'updater.id', '=', 'eventual_clients.updated_by');
+            ->leftJoin('users as creator', 'creator.id', '=', 'eventual_clients.created_by')
+            ->leftJoin('users as updater', 'updater.id', '=', 'eventual_clients.updated_by');
     }
 
     public function beforeSave(Request $request)
@@ -77,7 +81,9 @@ class EventualClientController extends BasicController
 
         if (!$id) {
             $body['created_by'] = $userId;
-            $body['status'] = true;
+            if (!array_key_exists('status', $body)) {
+                $body['status'] = true;
+            }
         }
         $body['updated_by'] = $userId;
         $body['document_type'] = $documentType;
@@ -89,6 +95,26 @@ class EventualClientController extends BasicController
         $body['address'] = trim((string)($body['address'] ?? '')) ?: null;
         $body['contact_name'] = trim((string)($body['contact_name'] ?? '')) ?: null;
         $body['notes'] = trim((string)($body['notes'] ?? '')) ?: null;
+        if (array_key_exists('status', $body)) {
+            $body['status'] = $this->toBoolean($body['status']);
+        }
+
+        if (Schema::hasColumn('eventual_clients', 'short_code')) {
+            $body['short_code'] = strtoupper(trim((string)($body['short_code'] ?? ''))) ?: null;
+        } else {
+            unset($body['short_code']);
+        }
+
+        if (Schema::hasColumn('eventual_clients', 'contract_due_days')) {
+            $contractDueDays = trim((string)($body['contract_due_days'] ?? ''));
+            if ($contractDueDays === '') {
+                $body['contract_due_days'] = null;
+            } else {
+                $body['contract_due_days'] = max(0, (int)$contractDueDays);
+            }
+        } else {
+            unset($body['contract_due_days']);
+        }
 
         return $body;
     }
@@ -179,6 +205,92 @@ class EventualClientController extends BasicController
         }
     }
 
+    public function orders(Request $request, int $id): HttpResponse|ResponseFactory
+    {
+        $response = new dxResponse();
+
+        try {
+            EventualClient::whereKey($id)->whereNotNull('status')->firstOrFail();
+
+            $query = CommercialOrder::query()
+                ->select('commercial_orders.*')
+                ->selectRaw("COALESCE(NULLIF(businesses.name, ''), '') AS business_label")
+                ->selectRaw("COALESCE(NULLIF(TRIM(CONCAT(COALESCE(eventual_clients.document_number, ''), ' | ', COALESCE(eventual_clients.business_name, ''))), '|'), COALESCE(eventual_clients.business_name, ''), '') AS customer_label")
+                ->selectRaw("COALESCE(NULLIF(users_seller.fullname, ''), NULLIF(TRIM(CONCAT(COALESCE(users_seller.name, ''), ' ', COALESCE(users_seller.lastname, ''))), ''), users_seller.username, '') AS seller_label")
+                ->selectRaw("COALESCE(NULLIF(users_creator.username, ''), NULLIF(users_creator.fullname, ''), NULLIF(TRIM(CONCAT(COALESCE(users_creator.name, ''), ' ', COALESCE(users_creator.lastname, ''))), ''), '') AS creator_label")
+                ->selectRaw("TRIM(CONCAT(COALESCE(NULLIF(commercial_orders.payment_method, ''), '-'), CASE WHEN commercial_orders.payment_condition IS NULL OR commercial_orders.payment_condition = '' THEN '' ELSE CONCAT(' [', commercial_orders.payment_condition, ']') END)) AS payment_label")
+                ->selectRaw("(SELECT billing_documents.code FROM billing_documents WHERE billing_documents.commercial_order_id = commercial_orders.id AND billing_documents.status IS NOT NULL ORDER BY billing_documents.id DESC LIMIT 1) AS voucher_label")
+                ->with([
+                    'business:id,name',
+                    'eventualClient:id,document_type,document_number,business_name',
+                    'seller:id,name,lastname,username,fullname',
+                    'creator:id,name,lastname,username,fullname',
+                ])
+                ->leftJoin('businesses', 'businesses.id', '=', 'commercial_orders.business_id')
+                ->leftJoin('eventual_clients', 'eventual_clients.id', '=', 'commercial_orders.eventual_client_id')
+                ->leftJoin('users as users_seller', 'users_seller.id', '=', 'commercial_orders.seller_id')
+                ->leftJoin('users as users_creator', 'users_creator.id', '=', 'commercial_orders.created_by')
+                ->where('commercial_orders.eventual_client_id', $id)
+                ->whereNotNull('commercial_orders.status');
+
+            if ($request->filter) {
+                dxDataGrid::filter($query, $request->filter ?? [], false, 'commercial_orders', [
+                    'business_label',
+                    'customer_label',
+                    'seller_label',
+                    'creator_label',
+                    'payment_label',
+                    'voucher_label',
+                ]);
+            }
+
+            $totalCount = 0;
+            if ($request->requireTotalCount) {
+                $totalCount = (clone $query)->distinct()->count('commercial_orders.id');
+            }
+
+            if ($request->sort != null) {
+                foreach ($request->sort as $sorting) {
+                    $selector = $sorting['selector'];
+                    $direction = $sorting['desc'] ? 'DESC' : 'ASC';
+
+                    if (in_array($selector, [
+                        'business_label',
+                        'customer_label',
+                        'seller_label',
+                        'creator_label',
+                        'payment_label',
+                        'voucher_label',
+                    ], true)) {
+                        $query->orderBy($selector, $direction);
+                        continue;
+                    }
+
+                    if (!str_contains($selector, '.')) {
+                        $selector = "commercial_orders.{$selector}";
+                    }
+                    $query->orderBy($selector, $direction);
+                }
+            } else {
+                $query->orderBy('commercial_orders.id', 'DESC');
+            }
+
+            $orders = $request->isLoadingAll
+                ? $query->get()
+                : $query->skip($request->skip ?? 0)->take($request->take ?? 10)->get();
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = $orders;
+            $response->totalCount = $totalCount;
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
     public function boolean(Request $request)
     {
         $response = new Response();
@@ -214,5 +326,13 @@ class EventualClientController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    private function toBoolean(mixed $value): bool
+    {
+        if (is_bool($value)) return $value;
+        if (is_numeric($value)) return (int)$value === 1;
+
+        return in_array(strtolower(trim((string)$value)), ['1', 'true', 'on', 'yes', 'activo', 'active'], true);
     }
 }
