@@ -102,7 +102,9 @@ class EnsureAdminPermissionForPath
 
             'clients' => $readRoute ? ['clients', 'orders', 'take-orders', 'accounts-receivable', 'sample-orders'] : ['clients'],
             'eventual-clients' => ['eventual-clients'],
-            'client-distribution' => ['client-distribution'],
+            'client-distribution' => ($readRoute && str_starts_with('/' . trim($request->path(), '/'), '/api/'))
+                ? ['client-distribution', 'clients', 'orders', 'take-orders', 'pricing']
+                : ['client-distribution'],
             'accounts-receivable' => ['accounts-receivable'],
             'commercial-orders', 'orders', 'sales-report' => ['orders'],
             'reports' => $second === 'inventory' ? ['inventory'] : ['orders'],

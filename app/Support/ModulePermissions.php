@@ -120,7 +120,6 @@ class ModulePermissions
 
             ['permission' => 'clients', 'web' => '/admin/clients', 'label' => 'Cliente'],
             ['permission' => 'eventual-clients', 'web' => '/admin/eventual-clients', 'label' => 'Clientes Eventual'],
-            ['permission' => 'client-distribution', 'web' => '/admin/client-distribution', 'label' => 'Red de distribucion'],
             ['permission' => 'accounts-receivable', 'web' => '/admin/accounts-receivable', 'label' => 'Cuenta por Cobrar'],
             ['permission' => 'take-orders', 'web' => '/admin/comercial/tomapedido', 'label' => 'Toma pedido'],
             ['permission' => 'orders', 'web' => '/admin/commercial-orders', 'label' => 'Pedido'],

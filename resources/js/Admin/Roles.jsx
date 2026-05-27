@@ -36,6 +36,8 @@ const MAGISTRALES_MENU_PERMISSIONS = [
   'magistrales-sales'
 ]
 
+const HIDDEN_PERMISSION_NAMES = ['client-distribution']
+
 const QUICK_FLAGS = {
   kamaryMedicals: MAGISTRALES_MENU_PERMISSIONS,
   kamaryPeru: [
@@ -48,7 +50,6 @@ const QUICK_FLAGS = {
     'accounts-payable',
     'clients',
     'eventual-clients',
-    'client-distribution',
     'pricing',
     'take-orders',
     'orders',
@@ -104,7 +105,7 @@ const PERMISSION_GROUPS = [
   {
     key: 'comercial',
     title: 'Comercial',
-    permissions: ['clients', 'eventual-clients', 'accounts-receivable', 'take-orders', 'orders', 'pricing', 'client-distribution']
+    permissions: ['clients', 'eventual-clients', 'accounts-receivable', 'take-orders', 'orders', 'pricing']
   },
   {
     key: 'almacenamiento',
@@ -166,9 +167,13 @@ const Roles = ({ permissions }) => {
   const [selectedPermissions, setSelectedPermissions] = useState([])
   const [permissionSearch, setPermissionSearch] = useState('')
 
-  const permissionMap = useMemo(() => {
-    return new Map(permissions.map(permission => [permission.name, permission]))
+  const visiblePermissions = useMemo(() => {
+    return permissions.filter(permission => !HIDDEN_PERMISSION_NAMES.includes(permission.name))
   }, [permissions])
+
+  const permissionMap = useMemo(() => {
+    return new Map(visiblePermissions.map(permission => [permission.name, permission]))
+  }, [visiblePermissions])
 
   const knownPermissionNames = useMemo(() => {
     return new Set(PERMISSION_GROUPS.flatMap(group => group.permissions))
@@ -201,7 +206,7 @@ const Roles = ({ permissions }) => {
       }
     }).filter(group => group.items.length > 0)
 
-    const otherPermissions = permissions
+    const otherPermissions = visiblePermissions
       .filter(permission => !knownPermissionNames.has(permission.name))
       .filter(matchesSearch)
 
@@ -214,7 +219,7 @@ const Roles = ({ permissions }) => {
     }
 
     return grouped
-  }, [knownPermissionNames, permissionMap, permissionSearch, permissions])
+  }, [knownPermissionNames, permissionMap, permissionSearch, visiblePermissions])
 
   const selectedPermissionsSet = useMemo(() => new Set(selectedPermissions), [selectedPermissions])
   const currentProfileLabel = useMemo(() => resolveProfileLabel(selectedPermissions), [selectedPermissions])
@@ -273,7 +278,7 @@ const Roles = ({ permissions }) => {
   }
 
   const handleSelectAllPermissions = () => {
-    setSelectedPermissions(permissions.map(({ name }) => name))
+    setSelectedPermissions(visiblePermissions.map(({ name }) => name))
   }
 
   const handleClearAllPermissions = () => {
