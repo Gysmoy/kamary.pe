@@ -30,6 +30,14 @@ const commercialOrdersRest = new CommercialOrdersRest()
 const referralGuidesRest = new ReferralGuidesRest()
 const regularClientFilter = ['client_kind', '=', 'regular']
 const lineDiscountOptions = [1, 2, 3, 4, 5]
+const paymentMethodOptions = [
+  'EFECTIVO [CONTADO]',
+  'TRANSFERENCIA [CONTADO]',
+  'YAPE [CONTADO]',
+  'PLIN [CONTADO]',
+  'TARJETA [CONTADO]',
+  'TRANSFERENCIA [CREDITO]',
+]
 
 const appendGridActionButton = (container, { variant, title, icon, onClick }) => {
   const button = $('<button type="button"></button>')
@@ -162,6 +170,15 @@ const textValue = (value, fallback = '') => {
   const text = `${value}`
   return text === '[object Object]' ? fallback : text
 }
+const paymentConditionFromPaymentMethod = (value) => `${value ?? ''}`.toUpperCase().includes('CREDITO') ? 'Credito' : 'Contado'
+const normalizePaymentMethodForForm = (value) => {
+  const text = `${value ?? ''}`.trim()
+  if (!text) return 'EFECTIVO [CONTADO]'
+  if (text.toUpperCase() === 'TRANSFERENCIA') return 'TRANSFERENCIA [CONTADO]'
+  return text
+}
+const clientAddressValue = (client) => textValue(client?.full_address, textValue(client?.address, textValue(client?.fiscal_address)))
+const clientUbigeoValue = (client) => textValue(client?.ubigeo, textValue(client?.district_ubigeo, textValue(client?.inei_ubigeo)))
 const normalizeSelectEntityId = (value) => {
   const text = `${value ?? ''}`.trim()
   const match = text.match(/^(client|eventual)-(\d+)$/)
@@ -570,12 +587,17 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const warehouseRef = useRef()
   const clientRef = useRef()
   const eventualClientRef = useRef()
+  const sellerRef = useRef()
+  const doctorNameRef = useRef()
   const issueDateRef = useRef()
   const promisedDateRef = useRef()
   const documentTypeRef = useRef()
   const currencyRef = useRef()
   const paymentConditionRef = useRef()
   const paymentMethodRef = useRef()
+  const purchaseOrderRef = useRef()
+  const guideNumberRef = useRef()
+  const referralGuideRef = useRef()
   const installmentsRef = useRef()
   const firstDueDateRef = useRef()
   const orderStatusRef = useRef()
@@ -702,7 +724,16 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     setSelectedBranchId('')
   }
 
-  const loadNetworks = async (clientId, preferredId = null) => {
+  const applyClientSnapshot = (client) => {
+    if (!client) return
+    const address = clientAddressValue(client)
+    const ubigeo = clientUbigeoValue(client)
+    if (address && deliveryAddressRef.current) deliveryAddressRef.current.value = address
+    if (ubigeo && ubigeoRef.current) ubigeoRef.current.value = ubigeo
+    if (address) setMapSearchText(address)
+  }
+
+  const loadNetworks = async (clientId, preferredId = null, fallbackClient = null) => {
     if (!clientId) {
       setNetworks([])
       setSelectedNetworkId('')
@@ -722,6 +753,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     setSelectedNetworkId('')
     setDeliveryAddresses([])
     setSelectedDeliveryAddressId('')
+    applyClientSnapshot(fallbackClient)
   }
 
   const loadDeliveryAddresses = async (networkId, preferredId = null, currentNetworks = null) => {
@@ -826,7 +858,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     setSelectedDocumentType(normalizeDocumentType(data?.document_type ?? 'Factura'))
     if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
     if (paymentConditionRef.current) paymentConditionRef.current.value = data?.payment_condition ?? 'Contado'
-    if (paymentMethodRef.current) paymentMethodRef.current.value = data?.payment_method ?? 'Transferencia'
+    if (paymentMethodRef.current) paymentMethodRef.current.value = normalizePaymentMethodForForm(data?.payment_method)
     if (installmentsRef.current) installmentsRef.current.value = data?.installments ?? 1
     if (firstDueDateRef.current) firstDueDateRef.current.value = data?.first_due_date ? data.first_due_date.toString().slice(0, 10) : ''
     if (orderStatusRef.current) orderStatusRef.current.value = data?.order_status ?? (data?.external_source ? 'pending' : 'draft')
@@ -837,6 +869,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     if (ubigeoRef.current) ubigeoRef.current.value = textValue(data?.ubigeo)
     if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = textValue(data?.dispatch_contact_name)
     if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = textValue(data?.dispatch_contact_phone)
+    if (purchaseOrderRef.current) purchaseOrderRef.current.value = data?.purchase_order ?? ''
+    if (guideNumberRef.current) guideNumberRef.current.value = data?.guide_number ?? ''
+    if (referralGuideRef.current) referralGuideRef.current.value = data?.referral_guide ?? ''
+    if (doctorNameRef.current) doctorNameRef.current.value = data?.doctor_name ?? ''
     if (observationsRef.current) observationsRef.current.value = data?.observations ?? ''
     setMapPosition({
       lat: hasMapPosition({ lat: data?.map_lat, lng: data?.map_lng }) ? Number(data.map_lat) : '',
@@ -861,6 +897,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     else clearSelectValue(clientRef)
     if (eventualClientId && data?.eventual_client?.business_name) SetSelectValue(eventualClientRef.current, eventualClientId, `${data.eventual_client.document_number ?? ''} - ${data.eventual_client.business_name}`.trim())
     else clearSelectValue(eventualClientRef)
+    if (data?.seller_id && data?.seller) SetSelectValue(sellerRef.current, data.seller_id, formatAuditUser(data.seller))
+    else clearSelectValue(sellerRef)
 
     const detail = (data?.items ?? []).map(row => {
       const article = row.article ?? null
@@ -928,12 +966,17 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       warehouse_id: selectedWarehouseId || null,
       client_id: selectedClientId || null,
       eventual_client_id: selectedEventualClientId || null,
+      seller_id: sellerRef.current?.value || null,
       client_distribution_network_id: selectedNetworkId || null,
       client_delivery_address_id: selectedDeliveryAddressId || null,
       document_type: selectedDocumentType,
       currency: currencyRef.current?.value || 'PEN',
-      payment_condition: paymentConditionRef.current?.value || 'Contado',
+      payment_condition: paymentConditionFromPaymentMethod(paymentMethodRef.current?.value || paymentConditionRef.current?.value || 'Contado'),
       payment_method: paymentMethodRef.current?.value || '',
+      purchase_order: purchaseOrderRef.current?.value?.trim() || '',
+      guide_number: guideNumberRef.current?.value?.trim() || '',
+      referral_guide: referralGuideRef.current?.value?.trim() || '',
+      doctor_name: doctorNameRef.current?.value?.trim() || '',
       issue_date: issueDateRef.current?.value || '',
       promised_delivery_at: promisedDateRef.current?.value || null,
       installments: installmentsRef.current?.value || 1,
@@ -1020,9 +1063,11 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
   const onClientChanged = async (e) => {
     const clientId = normalizeSelectEntityId(e.target.value)
+    const selectedClient = $(e.target).select2('data')?.[0]?.data ?? null
     setSelectedClientId(clientId)
     clearCustomerSelections('regular')
-    await loadNetworks(clientId, null)
+    applyClientSnapshot(selectedClient)
+    await loadNetworks(clientId, null, selectedClient)
     await repriceAllItems()
   }
 
@@ -1826,6 +1871,17 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     >
       <div id='commercial-orders-form-container'>
         <input ref={idRef} type='hidden' />
+        <input ref={codeRef} type='hidden' />
+        <input ref={issueDateRef} type='hidden' />
+        <input ref={promisedDateRef} type='hidden' />
+        <input ref={paymentConditionRef} type='hidden' />
+        <input ref={installmentsRef} type='hidden' />
+        <input ref={firstDueDateRef} type='hidden' />
+        <input ref={orderStatusRef} type='hidden' />
+        <input ref={dispatchStatusRef} type='hidden' />
+        <input ref={billingStatusRef} type='hidden' />
+        <input ref={taxAmountRef} type='hidden' value={orderTotals.taxAmount} readOnly />
+        <input ref={deliveryReferenceRef} type='hidden' />
 
         <section className='commercial-order-form-section'>
           <div className='commercial-order-section-title'>
@@ -1833,14 +1889,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             <span>Datos del pedido</span>
           </div>
           <div className='row g-2'>
-            <div className='col-12 col-md-6 col-xl-2'>
-              <label className='form-label'>Codigo</label>
-              <input ref={codeRef} className='form-control' readOnly />
-            </div>
-            <div className='col-12 col-md-6 col-xl-3'>
+            <div className='col-12 col-md-6 col-xl-4'>
               <SelectAPIFormGroup eRef={businessRef} label='Empresa' required searchAPI='/api/admin/businesses/paginate' searchBy='name' dropdownParent='#commercial-orders-form-container' onChange={onBusinessChanged} />
             </div>
-            <div className='col-12 col-md-6 col-xl-3'>
+            <div className='col-12 col-md-6 col-xl-4'>
               <SelectFormGroup eRef={branchRef} label='Sede' dropdownParent='#commercial-orders-form-container' value={selectedBranchId} onChange={onBranchChanged}>
                 <option value=''>Sin sede</option>
                 {branches.map(branch => <option key={`commercial-order-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
@@ -1860,15 +1912,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                 templateSelection={warehouseOptionTemplate}
               />
             </div>
-            <div className='col-12 col-sm-6 col-lg-4 col-xl-2'>
-              <label className='form-label'>Fecha emision</label>
-              <input ref={issueDateRef} type='date' className='form-control' required />
-            </div>
-            <div className='col-12 col-sm-6 col-lg-4 col-xl-2'>
-              <label className='form-label'>Entrega prometida</label>
-              <input ref={promisedDateRef} type='date' className='form-control' />
-            </div>
-            <div className='col-12 col-sm-6 col-lg-4 col-xl-2'>
+            <div className='col-12 col-sm-6 col-lg-4 col-xl-3'>
               <label className='form-label'>Doc. venta</label>
               <select ref={documentTypeRef} className='form-control' value={selectedDocumentType} onChange={(e) => setSelectedDocumentType(normalizeDocumentType(e.target.value))}>
                 <option value='Factura'>Factura</option>
@@ -1876,7 +1920,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                 <option value='Nota de pedido'>Nota de pedido</option>
               </select>
             </div>
-            <div className='col-12 col-sm-6 col-lg-4 col-xl-2'>
+            <div className='col-12 col-sm-6 col-lg-4 col-xl-3'>
               <label className='form-label'>Moneda</label>
               <select ref={currencyRef} className='form-control'>
                 <option value='PEN'>PEN</option>
@@ -1884,16 +1928,12 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                 <option value='EUR'>EUR</option>
               </select>
             </div>
-            <div className='col-12 col-sm-6 col-lg-4 col-xl-2'>
-              <label className='form-label'>Pago</label>
-              <select ref={paymentConditionRef} className='form-control'>
-                <option value='Contado'>Contado</option>
-                <option value='Credito'>Credito</option>
+            <div className='col-12 col-sm-6 col-lg-4 col-xl-3'>
+              <label className='form-label'>Forma de pago</label>
+              <select ref={paymentMethodRef} className='form-control'>
+                <option value=''>Seleccione</option>
+                {paymentMethodOptions.map(option => <option key={`commercial-order-payment-${option}`} value={option}>{option}</option>)}
               </select>
-            </div>
-            <div className='col-12 col-sm-6 col-lg-4 col-xl-2'>
-              <label className='form-label'>Metodo de pago</label>
-              <input ref={paymentMethodRef} className='form-control' placeholder='Transferencia, Yape, Efectivo...' />
             </div>
           </div>
         </section>
@@ -1919,37 +1959,24 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             <div className='col-12 col-xl-6'>
               <SelectAPIFormGroup eRef={eventualClientRef} label='Cliente eventual' searchAPI='/api/admin/eventual-clients/paginate' searchBy='business_name' dropdownParent='#commercial-orders-form-container' onChange={onEventualClientChanged} />
             </div>
-            <div className='col-12 col-md-6 col-xl-4'>
-              <label className='form-label'>Red / Nodo</label>
-              <select className='form-control' value={selectedNetworkId} onChange={onNetworkChanged}>
-                <option value=''>Sin red</option>
-                {networks.map(network => (
-                  <option key={`commercial-order-network-${network.id}`} value={network.id}>
-                    {`${network.code ?? ''} ${network.name ?? ''}`.trim()}
-                  </option>
-                ))}
-              </select>
+            <div className='col-12 col-md-6 col-xl-2'>
+              <label className='form-label'>Orden de compra</label>
+              <input ref={purchaseOrderRef} className='form-control' />
             </div>
-            <div className='col-12 col-md-6 col-xl-4'>
-              <label className='form-label'>Direccion ligada</label>
-              <select className='form-control' value={selectedDeliveryAddressId} onChange={onDeliveryAddressChanged}>
-                <option value=''>Sin direccion ligada</option>
-                {deliveryAddresses.map(address => (
-                  <option key={`commercial-order-address-${address.id}`} value={address.id}>
-                    {`${address.code ?? ''} ${address.name ?? ''}`.trim()}
-                  </option>
-                ))}
-              </select>
+            <div className='col-12 col-md-6 col-xl-2'>
+              <label className='form-label'>Numero de guia</label>
+              <input ref={guideNumberRef} className='form-control' />
             </div>
-            <div className='col-12 col-md-6 col-xl-4'>
+            <div className='col-12 col-md-6 col-xl-2'>
+              <label className='form-label'>Guia remision</label>
+              <input ref={referralGuideRef} className='form-control' />
+            </div>
+            <div className='col-12 col-md-6 col-xl-2'>
               <label className='form-label'>Ubigeo</label>
               <input ref={ubigeoRef} className='form-control' />
             </div>
-            <div className='col-12 col-xl-8'>
-              <TextareaFormGroup eRef={deliveryAddressRef} label='Direccion de entrega' rows={2} />
-            </div>
             <div className='col-12 col-xl-4'>
-              <TextareaFormGroup eRef={deliveryReferenceRef} label='Referencia entrega' rows={2} />
+              <TextareaFormGroup eRef={deliveryAddressRef} label='Direccion de entrega' rows={2} />
             </div>
             <div className='col-12'>
               <DeliveryMapPicker
@@ -1964,59 +1991,17 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               />
             </div>
             <div className='col-12 col-md-6 col-xl-5'>
-              <label className='form-label'>Contacto despacho</label>
+              <label className='form-label'>Nombre contacto entrega</label>
               <input ref={dispatchContactNameRef} className='form-control' />
             </div>
             <div className='col-12 col-md-6 col-xl-3'>
-              <label className='form-label'>Telefono despacho</label>
+              <label className='form-label'>Celular contacto entrega</label>
               <input ref={dispatchContactPhoneRef} className='form-control' />
             </div>
-          </div>
-        </section>
-
-        <section className='commercial-order-form-section'>
-          <div className='commercial-order-section-title'>
-            <i className='mdi mdi-cash'></i>
-            <span>Estados y cobranza</span>
-          </div>
-          <div className='row g-2'>
-            <div className='col-12 col-sm-6 col-lg-2'>
-              <label className='form-label'>Cuotas</label>
-              <input ref={installmentsRef} type='number' min='1' step='1' defaultValue='1' className='form-control' />
-            </div>
-            <div className='col-12 col-sm-6 col-lg-2'>
-              <label className='form-label'>Primera cuota</label>
-              <input ref={firstDueDateRef} type='date' className='form-control' />
-            </div>
-            <div className='col-12 col-sm-6 col-lg-2'>
-              <label className='form-label'>Estado pedido</label>
-              <select ref={orderStatusRef} className='form-control'>
-                {commercialOrderStatusOptions.map((option) => (
-                  <option key={`commercial-order-status-${option.value}`} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className='col-12 col-sm-6 col-lg-2'>
-              <label className='form-label'>Despacho</label>
-              <select ref={dispatchStatusRef} className='form-control'>
-                {dispatchStatusOptions
-                  .filter((option) => ['pending', 'preparing', 'dispatched', 'in_route', 'delivered', 'cancelled'].includes(option.value))
-                  .map((option) => (
-                    <option key={`commercial-order-dispatch-status-${option.value}`} value={option.value}>{option.label}</option>
-                  ))}
-              </select>
-            </div>
-            <div className='col-12 col-sm-6 col-lg-2'>
-              <label className='form-label'>Facturacion</label>
-              <select ref={billingStatusRef} className='form-control'>
-                {billingStatusOptions.map((option) => (
-                  <option key={`commercial-order-billing-status-${option.value}`} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className='col-12 col-sm-6 col-lg-2'>
-              <label className='form-label'>Impuesto</label>
-              <input ref={taxAmountRef} type='number' step='0.01' className='form-control' value={orderTotals.taxAmount} readOnly />
+            <SelectAPIFormGroup eRef={sellerRef} label='Vendedor' col='col-12 col-md-6 col-xl-2' searchAPI='/api/admin/users/paginate' searchBy='fullname' dropdownParent='#commercial-orders-form-container' />
+            <div className='col-12 col-md-6 col-xl-2'>
+              <label className='form-label'>Medico</label>
+              <input ref={doctorNameRef} className='form-control' />
             </div>
           </div>
         </section>

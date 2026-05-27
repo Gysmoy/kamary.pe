@@ -236,12 +236,16 @@ class CommercialOrderController extends BasicController
         $body['client_distribution_network_id'] = $networkId;
         $body['client_delivery_address_id'] = $deliveryAddressId;
         $body['seller_id'] = $sellerId;
+        $body['doctor_name'] = trim((string)($body['doctor_name'] ?? '')) ?: null;
         $externalSource = trim((string) ($body['external_source'] ?? ($persistedOrder?->external_source ?? ''))) ?: null;
         $body['external_source'] = $externalSource;
         $body['document_type'] = $this->normalizeDocumentType($body['document_type'] ?? 'Factura');
         $body['currency'] = $this->normalizeCurrency($body['currency'] ?? 'PEN');
         $body['payment_condition'] = $this->normalizePaymentCondition($body['payment_condition'] ?? 'Contado');
         $body['payment_method'] = trim((string)($body['payment_method'] ?? '')) ?: null;
+        $body['purchase_order'] = trim((string)($body['purchase_order'] ?? '')) ?: null;
+        $body['guide_number'] = trim((string)($body['guide_number'] ?? '')) ?: null;
+        $body['referral_guide'] = trim((string)($body['referral_guide'] ?? '')) ?: null;
         $body['commercial_channel'] = $commercialChannel;
         $body['segment'] = $segment;
         $body['order_status'] = $this->normalizeOrderStatus($body['order_status'] ?? ($externalSource ? 'pending' : 'draft'));
