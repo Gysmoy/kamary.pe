@@ -9,8 +9,12 @@ use App\Models\MagistralFormula;
 use App\Models\MagistralFormulaHistory;
 use App\Models\MagistralFormulaItem;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use SoDe\Extend\Response;
 
 class FormulaController extends BasicController
 {
@@ -119,6 +123,74 @@ class FormulaController extends BasicController
         MagistralFormulaHistory::create($history);
 
         return $jpa->fresh(['article', 'items.article.unit', 'items.article.presentations', 'lastEditor', 'histories.editor', 'creator', 'updater']);
+    }
+
+    public function histories(Request $request, string $id): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+
+        try {
+            $formula = MagistralFormula::findOrFail($id);
+            $this->ensureCreationHistory($formula);
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = MagistralFormulaHistory::query()
+                ->with('editor:id,name,lastname,username,fullname')
+                ->where('magistral_formula_id', $formula->id)
+                ->latest('id')
+                ->get();
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function ensureCreationHistory(MagistralFormula $formula): void
+    {
+        $hasHistory = MagistralFormulaHistory::where('magistral_formula_id', $formula->id)->exists();
+        if ($hasHistory) return;
+
+        $timestamp = $formula->created_at ?: ($formula->last_edited_at ?: now());
+        $history = [
+            'magistral_formula_id' => $formula->id,
+            'article_id' => $formula->article_id,
+            'detail' => $formula->detail,
+            'change_reason' => 'Creacion de formula',
+            'edited_by' => $formula->created_by ?: $formula->last_edited_by ?: $formula->updated_by ?: Auth::id(),
+            'items_snapshot' => json_encode($this->formulaItemsSnapshot($formula->id)),
+            'created_at' => $timestamp,
+            'updated_at' => $timestamp,
+        ];
+
+        foreach ($this->structuredFields() as $field) {
+            $history[$field] = $formula->{$field};
+        }
+
+        DB::table('magistral_formula_histories')->insert($history);
+    }
+
+    private function formulaItemsSnapshot(int $formulaId): array
+    {
+        return MagistralFormulaItem::query()
+            ->where('magistral_formula_id', $formulaId)
+            ->orderBy('id')
+            ->get([
+                'article_id',
+                'total_units',
+                'code',
+                'description',
+                'quantity',
+                'presentation',
+                'total_quantity',
+                'unit_price',
+                'subtotal',
+            ])
+            ->map(fn($item) => $item->toArray())
+            ->values()
+            ->all();
     }
 
     private function parseItems(array $items): array

@@ -307,6 +307,7 @@ Route::middleware('auth')->group(function () {
 
             Route::middleware($magistralesFormulas)->group(function () {
                 Route::post('/formulas', [AdminMagistralesFormulaController::class, 'save']);
+                Route::get('/formulas/{id}/histories', [AdminMagistralesFormulaController::class, 'histories']);
                 Route::patch('/formulas/status', [AdminMagistralesFormulaController::class, 'status']);
                 Route::patch('/formulas/{field}', [AdminMagistralesFormulaController::class, 'boolean']);
                 Route::delete('/formulas/{id}', [AdminMagistralesFormulaController::class, 'delete']);

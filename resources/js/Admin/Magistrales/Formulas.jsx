@@ -102,6 +102,7 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
   const [articles, setArticles] = useState([])
   const [formulaItems, setFormulaItems] = useState([emptyItem()])
   const [historyRows, setHistoryRows] = useState([])
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const formulaArticles = articles.filter(article => !isInputArticle(article))
   const inputArticles = articles.filter(isInputArticle)
@@ -237,9 +238,14 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
-  const onHistoryOpen = (data) => {
-    setHistoryRows(data?.histories ?? [])
+  const onHistoryOpen = async (data) => {
+    setHistoryRows([])
+    setIsHistoryLoading(true)
     $(historyModalRef.current).modal('show')
+
+    const rows = data?.id ? await formulasRest.getHistories(data.id) : []
+    setHistoryRows(rows)
+    setIsHistoryLoading(false)
   }
 
   return <>
@@ -385,8 +391,9 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
             </tr>
           </thead>
           <tbody>
-            {historyRows.length === 0 && <tr><td colSpan='3' className='text-center text-muted py-3'>Sin historial</td></tr>}
-            {historyRows.map(row => (
+            {isHistoryLoading && <tr><td colSpan='3' className='text-center text-muted py-3'>Cargando historial...</td></tr>}
+            {!isHistoryLoading && historyRows.length === 0 && <tr><td colSpan='3' className='text-center text-muted py-3'>Sin historial</td></tr>}
+            {!isHistoryLoading && historyRows.map(row => (
               <tr key={`formula-history-${row.id}`}>
                 <td>{formatUser(row.editor)}</td>
                 <td>{formatDateTime(row.created_at)}</td>

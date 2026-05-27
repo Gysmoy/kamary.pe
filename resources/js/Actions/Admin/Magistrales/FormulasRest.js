@@ -20,6 +20,17 @@ class FormulasRest extends BasicRest {
   path = 'admin/magistrales/formulas'
 
   getArticles = async () => await loadAll('/api/admin/magistrales/articles/paginate')
+
+  getHistories = async (id) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${id}/histories`)
+      if (!status) throw new Error(result?.message || 'No se pudo cargar el historial')
+      return result?.data ?? []
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
+      return []
+    }
+  }
 }
 
 export default FormulasRest
