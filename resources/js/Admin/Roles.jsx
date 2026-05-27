@@ -15,11 +15,25 @@ const rolesRest = new RolesRest()
 
 const MAGISTRALES_MENU_PERMISSIONS = [
   'magistrales-dashboard',
+  'magistrales-products',
+  'magistrales-procurement',
+  'magistrales-warehouse',
+  'magistrales-billing',
   'magistrales-articles',
+  'magistrales-category',
   'magistrales-formats',
   'magistrales-formulas',
+  'magistrales-incomes',
+  'magistrales-inventory',
+  'magistrales-kardex',
+  'magistrales-laboratory',
   'magistrales-purchase-order',
   'magistrales-production-order',
+  'magistrales-supplier',
+  'magistrales-responsible',
+  'magistrales-outputs',
+  'magistrales-unit',
+  'magistrales-sales'
 ]
 
 const QUICK_FLAGS = {
@@ -48,7 +62,6 @@ const QUICK_FLAGS = {
     'activity',
     'daily-summary',
     'articles',
-    'warehouses',
     'inventory',
     'kardex',
     'laboratories',
@@ -81,7 +94,7 @@ const PERMISSION_GROUPS = [
   {
     key: 'almacen',
     title: 'Almacen',
-    permissions: ['articles', 'warehouses', 'inventory', 'kardex', 'laboratories', 'batches', 'entry-note', 'exit-note', 'suppliers', 'units-of-measure']
+    permissions: ['articles', 'inventory', 'kardex', 'laboratories', 'batches', 'entry-note', 'exit-note', 'suppliers', 'units-of-measure']
   },
   {
     key: 'administracion',
@@ -119,23 +132,6 @@ const PERMISSION_GROUPS = [
     permissions: MAGISTRALES_MENU_PERMISSIONS
   }
 ]
-
-const HIDDEN_OTHER_PERMISSIONS = new Set([
-  'magistrales-products',
-  'magistrales-procurement',
-  'magistrales-warehouse',
-  'magistrales-billing',
-  'magistrales-category',
-  'magistrales-incomes',
-  'magistrales-inventory',
-  'magistrales-kardex',
-  'magistrales-laboratory',
-  'magistrales-supplier',
-  'magistrales-responsible',
-  'magistrales-outputs',
-  'magistrales-unit',
-  'magistrales-sales',
-])
 
 const CRITICAL_PERMISSIONS = ['users', 'roles']
 
@@ -207,7 +203,6 @@ const Roles = ({ permissions }) => {
 
     const otherPermissions = permissions
       .filter(permission => !knownPermissionNames.has(permission.name))
-      .filter(permission => !HIDDEN_OTHER_PERMISSIONS.has(permission.name))
       .filter(matchesSearch)
 
     if (otherPermissions.length > 0) {
@@ -230,9 +225,7 @@ const Roles = ({ permissions }) => {
     setIsEditing(!!data?.id)
     idRef.current.value = data?.id ?? ''
     nameRef.current.value = data?.name ?? ''
-    const permissionNames = (data?.permissions ?? [])
-      .map(({ name }) => name)
-      .filter(name => !HIDDEN_OTHER_PERMISSIONS.has(name)) ?? []
+    const permissionNames = data?.permissions?.map(({ name }) => name) ?? []
     setSelectedPermissions(permissionNames)
     setPermissionSearch('')
     $(modalRef.current).modal('show')
@@ -280,9 +273,7 @@ const Roles = ({ permissions }) => {
   }
 
   const handleSelectAllPermissions = () => {
-    setSelectedPermissions(permissions
-      .filter(permission => !HIDDEN_OTHER_PERMISSIONS.has(permission.name))
-      .map(({ name }) => name))
+    setSelectedPermissions(permissions.map(({ name }) => name))
   }
 
   const handleClearAllPermissions = () => {
@@ -365,16 +356,12 @@ const Roles = ({ permissions }) => {
         {
           caption: 'Perfil sugerido',
           width: 150,
-          calculateCellValue: (data) => resolveProfileLabel((data.permissions ?? [])
-            .map(permission => permission.name)
-            .filter(name => !HIDDEN_OTHER_PERMISSIONS.has(name)))
+          calculateCellValue: (data) => resolveProfileLabel((data.permissions ?? []).map(permission => permission.name))
         },
         {
           caption: 'Total permisos',
           width: 120,
-          calculateCellValue: (data) => (data.permissions ?? [])
-            .filter(permission => !HIDDEN_OTHER_PERMISSIONS.has(permission.name))
-            .length
+          calculateCellValue: (data) => data.permissions?.length ?? 0
         },
         {
           dataField: 'permissions',
@@ -383,11 +370,8 @@ const Roles = ({ permissions }) => {
           allowFiltering: false,
           minWidth: 420,
           cellTemplate: (container, { data }) => {
-            const visiblePermissions = (data.permissions ?? [])
-              .filter(permission => !HIDDEN_OTHER_PERMISSIONS.has(permission.name))
-
-            if (visiblePermissions.length) {
-              const badgesHtml = visiblePermissions
+            if (data.permissions && data.permissions.length) {
+              const badgesHtml = data.permissions
                 .map(permission => `<span class="badge badge-soft-primary me-1 mb-1">${permission.beauty_name}</span>`)
                 .join('')
 

@@ -248,7 +248,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/suppliers/ruc/{ruc}', [AdminSupplierController::class, 'lookupByRuc']);
 
         Route::prefix('magistrales')->group(function () {
-            $magistralesAny = 'module.permission:magistrales-dashboard,magistrales-articles,magistrales-formats,magistrales-formulas,magistrales-purchase-order,magistrales-production-order';
+            $magistralesAny = 'module.permission:magistrales-dashboard,magistrales-products,magistrales-procurement,magistrales-warehouse,magistrales-billing,magistrales-articles,magistrales-category,magistrales-formats,magistrales-formulas,magistrales-incomes,magistrales-inventory,magistrales-kardex,magistrales-laboratory,magistrales-purchase-order,magistrales-production-order,magistrales-supplier,magistrales-responsible,magistrales-outputs,magistrales-unit,magistrales-sales';
             $magistralesArticles = 'module.permission:magistrales-articles,magistrales-products';
             $magistralesCategory = 'module.permission:magistrales-category,magistrales-products';
             $magistralesFormats = 'module.permission:magistrales-formats,magistrales-products';
