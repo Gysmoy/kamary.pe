@@ -37,8 +37,9 @@ class PurchaseOrderController extends BasicController
                 'warehouse:id,name',
                 'supplier:id,ruc,business_name',
                 'items:id,purchase_order_id,article_id,presentation_id,presentation_label,presentation_units,last_price,requested_quantity,received_quantity,price_unit,total,status',
-                'items.article:id,code,name,article_type,magistral_presentation,laboratory_id,active_principle_id,unit_id',
+                'items.article:id,code,name,article_type,magistral_presentation,laboratory_id,magistral_laboratory_id,active_principle_id,unit_id',
                 'items.article.laboratory:id,name',
+                'items.article.magistralLaboratory:id,description',
                 'items.article.activePrinciple:id,name',
                 'items.article.unit:id,name,symbol',
                 'items.article.presentations:id,article_id,name,units,price,purchase_price_national,purchase_price_foreign,sort_order,status',
@@ -129,7 +130,9 @@ class PurchaseOrderController extends BasicController
         $body['payment_condition'] = $paymentCondition;
         $body['payment_method'] = $paymentMethod;
         $body['document_type'] = $documentType;
-        $body['article_type'] = trim((string)($body['article_type'] ?? '')) ?: null;
+        $body['article_type'] = $this->moduleScope === 'magistrales'
+            ? $this->normalizeMagistralPurchaseArticleType($body['article_type'] ?? null)
+            : (trim((string)($body['article_type'] ?? '')) ?: null);
         if (Schema::hasColumn('purchase_orders', 'affects_igv')) {
             $body['affects_igv'] = $this->moduleScope === 'magistrales'
                 ? $this->toBoolean($body['affects_igv'] ?? true)
@@ -167,6 +170,9 @@ class PurchaseOrderController extends BasicController
                 $articleId = $item['article_id'] ?? null;
                 if (!$articleId) throw new \Exception('Cada linea debe tener articulo');
                 $article = $this->scopedArticleQuery()->findOrFail($articleId);
+                if ($this->moduleScope === 'magistrales') {
+                    $this->assertMagistralArticleMatchesPurchaseType($article, (string)$jpa->article_type);
+                }
                 $presentation = null;
                 $presentationId = $hasPresentationId ? $this->toNullableInt($item['presentation_id'] ?? null) : null;
                 if ($presentationId) {
@@ -251,6 +257,7 @@ class PurchaseOrderController extends BasicController
                 'warehouse',
                 'supplier',
                 'items.article.laboratory',
+                'items.article.magistralLaboratory',
                 'items.article.activePrinciple',
                 'items.article.unit',
                 'items.article.presentations',
@@ -408,6 +415,33 @@ class PurchaseOrderController extends BasicController
         $allowed = ['pending', 'approved', 'rejected'];
         $normalized = mb_strtolower(trim((string)$value));
         return in_array($normalized, $allowed, true) ? $normalized : 'pending';
+    }
+
+    private function normalizeMagistralPurchaseArticleType($value): string
+    {
+        $normalized = mb_strtolower(trim((string)$value));
+        if ($normalized === '') {
+            throw new \Exception('El tipo de articulo es obligatorio');
+        }
+
+        if (str_contains($normalized, 'comercial')) return 'PRODUCTOS COMERCIALES';
+        if (str_contains($normalized, 'insumo') || str_contains($normalized, 'envase')) return 'INSUMOS Y ENVASES';
+
+        throw new \Exception('El tipo de articulo no es valido para ordenes de compra magistrales');
+    }
+
+    private function assertMagistralArticleMatchesPurchaseType(Article $article, string $purchaseType): void
+    {
+        $articleType = mb_strtoupper(trim((string)$article->article_type));
+        $allowed = match ($purchaseType) {
+            'INSUMOS Y ENVASES' => ['INSUMO', 'INSUMOS', 'ENVASE', 'ENVASES'],
+            'PRODUCTOS COMERCIALES' => ['PRODUCTO COMERCIAL', 'PRODUCTOS COMERCIALES'],
+            default => [],
+        };
+
+        if (!in_array($articleType, $allowed, true)) {
+            throw new \Exception("El articulo {$article->code} - {$article->name} no corresponde al tipo {$purchaseType}");
+        }
     }
 
     private function syncAccountsPayable(PurchaseOrder $purchaseOrder): void

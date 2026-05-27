@@ -28,10 +28,8 @@ const purchaseOrdersRest = new PurchaseOrdersRest()
 
 const MAGISTRAL_ARTICLE_TYPES = [
   { value: '', label: 'Seleccione' },
-  { value: 'Insumo', label: 'Insumo' },
-  { value: 'Envase', label: 'Envase' },
-  { value: 'Formula', label: 'Formula' },
-  { value: 'Insumos y Envases', label: 'Insumos y envases' },
+  { value: 'INSUMOS Y ENVASES', label: 'Insumos y envases' },
+  { value: 'PRODUCTOS COMERCIALES', label: 'Productos comerciales' },
 ]
 
 const PAYMENT_METHOD_OPTIONS = [
@@ -51,6 +49,42 @@ const DOCUMENT_TYPE_OPTIONS = [
   'Cotizacion',
   'Proforma',
 ]
+
+const combineDxFilters = (filters) => filters
+  .filter(Boolean)
+  .reduce((carry, filter) => carry ? [carry, 'and', filter] : filter, null)
+
+const canonicalMagistralPurchaseArticleType = (value) => {
+  const normalized = (value ?? '').toString().trim().toLowerCase()
+  if (!normalized) return ''
+  if (normalized.includes('comercial')) return 'PRODUCTOS COMERCIALES'
+  if (normalized.includes('insumo') || normalized.includes('envase')) return 'INSUMOS Y ENVASES'
+  return ''
+}
+
+const magistralArticleFilterByType = (value) => {
+  const type = canonicalMagistralPurchaseArticleType(value)
+  if (type === 'INSUMOS Y ENVASES') {
+    return [
+      ['article_type', '=', 'INSUMO'],
+      'or',
+      ['article_type', '=', 'INSUMOS'],
+      'or',
+      ['article_type', '=', 'ENVASE'],
+      'or',
+      ['article_type', '=', 'ENVASES'],
+    ]
+  }
+  if (type === 'PRODUCTOS COMERCIALES') {
+    return [
+      ['article_type', '=', 'PRODUCTO COMERCIAL'],
+      'or',
+      ['article_type', '=', 'PRODUCTOS COMERCIALES'],
+    ]
+  }
+
+  return ['id', '=', -1]
+}
 
 const formatAuditUser = (user) => {
   if (!user) return ''
@@ -188,6 +222,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
   const observationsRef = useRef()
   const deliveryPlaceRef = useRef()
   const affectsIgvRef = useRef()
+  const listSupplierRef = useRef()
   const articleRefs = useRef({})
 
   const [isEditing, setIsEditing] = useState(false)
@@ -201,6 +236,10 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
   const [taxAmount, setTaxAmount] = useState(0)
   const [currencyCode, setCurrencyCode] = useState('PEN')
   const [affectsIgv, setAffectsIgv] = useState(true)
+  const [listSupplierId, setListSupplierId] = useState('')
+  const [listStartDate, setListStartDate] = useState('')
+  const [listEndDate, setListEndDate] = useState('')
+  const [listFilterValue, setListFilterValue] = useState(null)
 
   const getArticleRef = (uid) => {
     if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
@@ -268,8 +307,9 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     setRefValue(orderStatusRef, data?.order_status ?? 'draft')
     setRefValue(approvalStatusRef, data?.approval_status ?? 'pending')
     setRefValue(deliveryPlaceRef, data?.delivery_place ?? '')
-    setRefValue(articleTypeRef, data?.article_type ?? '')
-    setSelectedArticleType(data?.article_type ?? '')
+    const currentArticleType = canonicalMagistralPurchaseArticleType(data?.article_type)
+    setRefValue(articleTypeRef, currentArticleType)
+    setSelectedArticleType(currentArticleType)
     const currentAffectsIgv = typeof data?.affects_igv === 'boolean' ? data.affects_igv : true
     setAffectsIgv(currentAffectsIgv)
     setSwitchChecked(affectsIgvRef.current, currentAffectsIgv)
@@ -347,7 +387,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
       warehouse_id: isMagistrales ? (fixedWarehouseId || null) : (selectedWarehouseId || null),
       supplier_id: selectedSupplierId || null,
       buyer_name: getRefValue(buyerNameRef).trim(),
-      article_type: isMagistrales ? (getRefValue(articleTypeRef).trim() || null) : null,
+      article_type: isMagistrales ? (canonicalMagistralPurchaseArticleType(getRefValue(articleTypeRef)) || null) : null,
       issue_date: getRefValue(issueDateRef),
       expected_date: getRefValue(expectedDateRef) || null,
       max_delivery_date: isMagistrales ? (getRefValue(maxDeliveryDateRef) || null) : null,
@@ -410,6 +450,14 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     await loadBranches(businessId, null)
   }
 
+  const onMagistralArticleTypeChanged = (e) => {
+    const nextType = canonicalMagistralPurchaseArticleType(e.target.value)
+    setSelectedArticleType(nextType)
+    setRefValue(articleTypeRef, nextType)
+    articleRefs.current = {}
+    setItems([emptyItem()])
+  }
+
   const onItemUpdated = (uid, field, value) => {
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
@@ -462,8 +510,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
 
   const articleFilter = useMemo(() => {
     if (!isMagistrales) return null
-    if (!selectedArticleType || selectedArticleType === 'Insumos y Envases') return null
-    return ['article_type', '=', selectedArticleType]
+    return magistralArticleFilterByType(selectedArticleType)
   }, [isMagistrales, selectedArticleType])
 
   const subtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
@@ -495,11 +542,70 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     setAffectsIgv(next)
   }
 
+  const onListFilterSubmitted = (e) => {
+    e.preventDefault()
+    setListFilterValue(combineDxFilters([
+      listSupplierId ? ['supplier_id', '=', Number(listSupplierId)] : null,
+      listStartDate ? ['created_at', '>=', `${listStartDate} 00:00:00`] : null,
+      listEndDate ? ['created_at', '<=', `${listEndDate} 23:59:59`] : null,
+    ]))
+  }
+
+  const onListFilterCleared = () => {
+    setListSupplierId('')
+    setListStartDate('')
+    setListEndDate('')
+    setListFilterValue(null)
+    if (listSupplierRef.current) $(listSupplierRef.current).empty().trigger('change')
+  }
+
   return (<>
+    {isMagistrales && (
+      <form id='purchase-order-list-filter' className='card mb-3' onSubmit={onListFilterSubmitted}>
+        <div className='card-body'>
+          <h4 className='header-title mb-3'>Consulta de ordenes de compra</h4>
+          <div className='row align-items-end'>
+            <SelectAPIFormGroup
+              eRef={listSupplierRef}
+              label='Proveedor'
+              col='col-md-4'
+              searchAPI={purchaseOrdersRest.suppliersPaginateApi()}
+              searchBy='business_name'
+              dropdownParent='#purchase-order-list-filter'
+              onChange={(e) => setListSupplierId(e.target.value || '')}
+            />
+            <InputFormGroup
+              label='Fecha registro inicio'
+              col='col-md-3'
+              type='date'
+              value={listStartDate}
+              onChange={(e) => setListStartDate(e.target.value)}
+            />
+            <InputFormGroup
+              label='Fecha registro fin'
+              col='col-md-3'
+              type='date'
+              value={listEndDate}
+              onChange={(e) => setListEndDate(e.target.value)}
+            />
+            <div className='col-md-2 mb-2 d-flex gap-2'>
+              <button type='submit' className='btn btn-primary w-100'>
+                <i className='mdi mdi-magnify me-1'></i> Buscar
+              </button>
+              <button type='button' className='btn btn-light' onClick={onListFilterCleared}>
+                Limpiar
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    )}
+
     <Table
       gridRef={gridRef}
       title={moduleTitle}
       rest={purchaseOrdersRest}
+      filterValue={isMagistrales ? listFilterValue : null}
       toolBar={(container) => {
         container.unshift({
           widget: 'dxButton', location: 'after',
@@ -541,7 +647,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
         { dataField: 'payment_condition', caption: 'Condición', width: 110 },
         ...(isMagistrales ? [{ dataField: 'payment_method', caption: 'Forma pago', width: 130 }] : []),
         ...(isMagistrales ? [{ dataField: 'document_type', caption: 'Documento', width: 110 }] : []),
-        { dataField: 'approval_status', caption: 'Aprobación', width: 110, lookup: toLookup(approvalStatusOptions) },
+        { dataField: 'approval_status', caption: isMagistrales ? 'Estado' : 'Aprobación', width: 110, lookup: toLookup(approvalStatusOptions) },
         { dataField: 'order_status', caption: 'Estado OC', width: 110, lookup: toLookup(purchaseOrderStatusOptions) },
         { dataField: 'currency', caption: 'Moneda', width: 90 },
         { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
@@ -563,10 +669,11 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
             </div>)
           }
         },
+        ...(isMagistrales ? [{ dataField: 'created_at', caption: 'Fecha registro', width: 160, dataType: 'datetime' }] : []),
         {
           dataField: 'creator.fullname',
-          caption: 'Creado por',
-          visible: false,
+          caption: isMagistrales ? 'Usuario registro' : 'Creado por',
+          visible: isMagistrales,
           cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
         },
         {
@@ -579,6 +686,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
           dataField: 'status',
           caption: 'Activo',
           dataType: 'boolean',
+          visible: !isMagistrales,
           width: 95,
           cellTemplate: (container, { data }) => {
             $(container).empty()
@@ -689,10 +797,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
             label='Tipo de artículo'
             col='col-md-3'
             value={selectedArticleType}
-            onChange={(e) => {
-              setSelectedArticleType(e.target.value)
-              setRefValue(articleTypeRef, e.target.value)
-            }}
+            onChange={onMagistralArticleTypeChanged}
             effectWith={[selectedArticleType]}
           >
             {MAGISTRAL_ARTICLE_TYPES.map(option => (
@@ -781,7 +886,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
         <div className='col-12 mt-3'>
           <div className='d-flex justify-content-between align-items-center mb-2'>
             <h6 className='mb-0'>Items</h6>
-            <button type='button' className='btn btn-sm btn-soft-primary' onClick={onItemAdded}>
+            <button type='button' className='btn btn-sm btn-soft-primary' onClick={onItemAdded} disabled={isMagistrales && !selectedArticleType}>
               <i className='mdi mdi-plus me-1'></i> Agregar línea
             </button>
           </div>
@@ -810,6 +915,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
                         searchBy='name'
                         dropdownParent='#purchase-order-form-container'
                         filter={articleFilter}
+                        disabled={isMagistrales && !selectedArticleType}
                         onChange={(e) => onItemArticleChanged(item.uid, e)}
                       />
                     </td>
