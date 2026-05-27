@@ -38,6 +38,7 @@ class FormulaController extends BasicController
                 'items:id,magistral_formula_id,article_id,total_units,code,description,quantity,presentation,total_quantity,unit_price,subtotal,status',
                 'items.article:id,code,name,unit_id',
                 'items.article.unit:id,name,symbol',
+                'items.article.presentations:id,article_id,name,units,price,status,sort_order',
                 'lastEditor:id,name,lastname,username,fullname',
                 'histories:id,magistral_formula_id,detail,change_reason,edited_by,created_at',
                 'histories.editor:id,name,lastname,username,fullname',
@@ -117,7 +118,7 @@ class FormulaController extends BasicController
 
         MagistralFormulaHistory::create($history);
 
-        return $jpa->fresh(['article', 'items.article.unit', 'lastEditor', 'histories.editor', 'creator', 'updater']);
+        return $jpa->fresh(['article', 'items.article.unit', 'items.article.presentations', 'lastEditor', 'histories.editor', 'creator', 'updater']);
     }
 
     private function parseItems(array $items): array

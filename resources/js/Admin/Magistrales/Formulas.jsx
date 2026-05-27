@@ -31,6 +31,30 @@ const articleCost = (article) => {
 
   return 0
 }
+const presentationOptionsFromArticle = (article, currentValue = '') => {
+  const options = []
+  const pushOption = (value, units = null) => {
+    const label = (value ?? '').toString().trim()
+    if (!label) return
+    if (options.some(option => normalizeText(option.value) === normalizeText(label))) return
+    const numericUnits = toNumber(units)
+    options.push({
+      value: label,
+      label: numericUnits > 0 ? `${label} (${numericUnits.toFixed(3)})` : label,
+    })
+  }
+
+  ;(article?.presentations ?? [])
+    .filter(row => row?.status !== false && row?.status !== 0 && row?.status !== null)
+    .forEach(row => pushOption(row?.name, row?.units))
+
+  pushOption(article?.magistral_presentation)
+  pushOption(article?.unit?.symbol ?? article?.unit?.name)
+  pushOption(currentValue)
+
+  return options
+}
+const defaultPresentationForArticle = (article) => presentationOptionsFromArticle(article)[0]?.value ?? ''
 
 const emptyItem = () => ({
   uid: nextUid(),
@@ -40,6 +64,8 @@ const emptyItem = () => ({
   description: '',
   quantity: 1,
   presentation: '',
+  article_data: null,
+  presentation_options: [],
   total_quantity: 1,
   unit_price: 0,
   subtotal: 0,
@@ -97,18 +123,25 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
   }, [])
 
   const hydrateItems = (rows = []) => {
-    const next = rows.map(row => ({
-      uid: nextUid(),
-      article_id: row.article_id ?? '',
-      total_units: row.total_units ?? 0,
-      code: row.code ?? row.article?.code ?? '',
-      description: row.description ?? row.article?.name ?? '',
-      quantity: row.quantity ?? 1,
-      presentation: row.presentation ?? row.article?.unit?.symbol ?? row.article?.unit?.name ?? '',
-      total_quantity: row.total_quantity ?? row.quantity ?? 1,
-      unit_price: row.unit_price ?? 0,
-      subtotal: row.subtotal ?? 0,
-    }))
+    const next = rows.map(row => {
+      const article = inputArticles.find(item => `${item.id}` === `${row.article_id}`) ?? row.article ?? null
+      const presentationOptions = presentationOptionsFromArticle(article, row.presentation)
+
+      return {
+        uid: nextUid(),
+        article_id: row.article_id ?? '',
+        total_units: row.total_units ?? 0,
+        code: row.code ?? row.article?.code ?? '',
+        description: row.description ?? row.article?.name ?? '',
+        quantity: row.quantity ?? 1,
+        presentation: row.presentation ?? presentationOptions[0]?.value ?? '',
+        article_data: article,
+        presentation_options: presentationOptions,
+        total_quantity: row.total_quantity ?? row.quantity ?? 1,
+        unit_price: row.unit_price ?? 0,
+        subtotal: row.subtotal ?? 0,
+      }
+    })
     setFormulaItems(next.length ? next : [emptyItem()])
   }
 
@@ -131,11 +164,14 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
 
       if (field === 'article_id') {
         const article = inputArticles.find(row => `${row.id}` === `${value}`)
+        const presentationOptions = presentationOptionsFromArticle(article)
         next = {
           ...next,
           code: article?.code ?? '',
           description: article?.name ?? '',
-          presentation: article?.unit?.symbol ?? article?.unit?.name ?? '',
+          presentation: defaultPresentationForArticle(article),
+          article_data: article ?? null,
+          presentation_options: presentationOptions,
           total_units: article?.units_per_article ?? next.total_units ?? 0,
           unit_price: articleCost(article),
         }
@@ -290,19 +326,29 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
                 </tr>
               </thead>
               <tbody>
-                {formulaItems.map(item => (
-                  <tr key={item.uid}>
-                    <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.total_units} onChange={(e) => updateItem(item.uid, 'total_units', e.target.value)} /></td>
-                    <td><input className='form-control form-control-sm' value={item.code} onChange={(e) => updateItem(item.uid, 'code', e.target.value)} /></td>
-                    <td><select className='form-control form-control-sm' value={item.article_id} onChange={(e) => updateItem(item.uid, 'article_id', e.target.value)}><option value=''>Seleccione</option>{inputArticles.map(article => <option key={`formula-item-article-${article.id}`} value={article.id}>{article.code} - {article.name}</option>)}</select></td>
-                    <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => updateItem(item.uid, 'quantity', e.target.value)} /></td>
-                    <td><input className='form-control form-control-sm' value={item.presentation} onChange={(e) => updateItem(item.uid, 'presentation', e.target.value)} /></td>
-                    <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.total_quantity} onChange={(e) => updateItem(item.uid, 'total_quantity', e.target.value)} /></td>
-                    <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.unit_price} disabled /></td>
-                    <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.subtotal} disabled /></td>
-                    <td><button type='button' className='btn btn-xs btn-soft-danger' onClick={() => removeItem(item.uid)}><i className='mdi mdi-delete'></i></button></td>
-                  </tr>
-                ))}
+                {formulaItems.map(item => {
+                  const article = inputArticles.find(row => `${row.id}` === `${item.article_id}`) ?? item.article_data
+                  const presentationOptions = presentationOptionsFromArticle(article, item.presentation)
+
+                  return (
+                    <tr key={item.uid}>
+                      <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.total_units} onChange={(e) => updateItem(item.uid, 'total_units', e.target.value)} /></td>
+                      <td><input className='form-control form-control-sm' value={item.code} onChange={(e) => updateItem(item.uid, 'code', e.target.value)} /></td>
+                      <td><select className='form-control form-control-sm' value={item.article_id} onChange={(e) => updateItem(item.uid, 'article_id', e.target.value)}><option value=''>Seleccione</option>{inputArticles.map(article => <option key={`formula-item-article-${article.id}`} value={article.id}>{article.code} - {article.name}</option>)}</select></td>
+                      <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => updateItem(item.uid, 'quantity', e.target.value)} /></td>
+                      <td>
+                        <select className='form-control form-control-sm' value={item.presentation} disabled={!item.article_id} onChange={(e) => updateItem(item.uid, 'presentation', e.target.value)}>
+                          <option value=''>Seleccione</option>
+                          {presentationOptions.map(option => <option key={`formula-item-presentation-${item.uid}-${option.value}`} value={option.value}>{option.label}</option>)}
+                        </select>
+                      </td>
+                      <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.total_quantity} onChange={(e) => updateItem(item.uid, 'total_quantity', e.target.value)} /></td>
+                      <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.unit_price} disabled /></td>
+                      <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.subtotal} disabled /></td>
+                      <td><button type='button' className='btn btn-xs btn-soft-danger' onClick={() => removeItem(item.uid)}><i className='mdi mdi-delete'></i></button></td>
+                    </tr>
+                  )
+                })}
               </tbody>
               <tfoot>
                 <tr>
