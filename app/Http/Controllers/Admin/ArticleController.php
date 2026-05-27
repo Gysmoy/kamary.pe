@@ -907,8 +907,12 @@ class ArticleController extends BasicController
         $normalized = mb_strtolower($rawValue);
 
         if ($normalized === '') return '';
-        if (str_contains($normalized, 'insumo')) return 'INSUMOS';
+        if (str_contains($normalized, 'insumo')) return 'INSUMO';
         if (str_contains($normalized, 'envase')) return 'ENVASES';
+        if (str_contains($normalized, 'comercial')) return 'PRODUCTO COMERCIAL';
+        if (str_contains($normalized, 'terminado')) return 'PRODUCTO TERMINADO';
+        if (str_contains($normalized, 'base')) return 'BASE ESTANDARIZADA';
+        if (str_contains($normalized, 'formula')) return 'FORMULA';
         if (str_contains($normalized, 'producto')) return 'PRODUCTO TERMINADO';
 
         return mb_strtoupper($rawValue);

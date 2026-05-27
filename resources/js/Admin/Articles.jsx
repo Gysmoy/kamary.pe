@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
@@ -113,7 +113,15 @@ const getMagistralStatusValue = (data) => {
   return data?.status === false || data?.status === 0 ? 'de_baja' : 'vigente'
 }
 
-const magistralArticleTypeOptions = ['INSUMOS', 'ENVASES', 'PRODUCTO TERMINADO']
+const magistralArticleTypeOptions = [
+  'INSUMO',
+  'ENVASES',
+  'PRODUCTO COMERCIAL',
+  'PRODUCTO TERMINADO',
+  'BASE ESTANDARIZADA',
+  'FORMULA',
+]
+const magistralArticleTypeFilterOptions = ['', ...magistralArticleTypeOptions]
 const magistralAdministrationRouteOptions = [
   'N/A',
   'TOPICO',
@@ -136,14 +144,18 @@ const normalizeMagistralArticleType = (value) => {
     .toUpperCase()
 
   if (!normalized) return ''
-  if (normalized.includes('INSUMO')) return 'INSUMOS'
+  if (normalized.includes('INSUMO')) return 'INSUMO'
   if (normalized.includes('ENVASE')) return 'ENVASES'
+  if (normalized.includes('COMERCIAL')) return 'PRODUCTO COMERCIAL'
+  if (normalized.includes('TERMINADO')) return 'PRODUCTO TERMINADO'
+  if (normalized.includes('BASE')) return 'BASE ESTANDARIZADA'
+  if (normalized.includes('FORMULA')) return 'FORMULA'
   if (normalized.includes('PRODUCTO')) return 'PRODUCTO TERMINADO'
   return rawValue.toUpperCase()
 }
 
 const magistralEquivalenceDefaultsByType = {
-  INSUMOS: [
+  INSUMO: [
     { units: 1, name: 'Kg' },
     { units: 1000, name: 'g' },
     { units: 1000000, name: 'mg' },
@@ -154,6 +166,15 @@ const magistralEquivalenceDefaultsByType = {
     { units: 1000, name: 'MLL' },
   ],
   'PRODUCTO TERMINADO': [
+    { units: 1, name: 'U' },
+  ],
+  'PRODUCTO COMERCIAL': [
+    { units: 1, name: 'U' },
+  ],
+  'BASE ESTANDARIZADA': [
+    { units: 1, name: 'U' },
+  ],
+  FORMULA: [
     { units: 1, name: 'U' },
   ],
 }
@@ -232,6 +253,56 @@ const getMagistralEquivalenceDefaults = (articleType) => {
       purchase_price_foreign: 0,
     }))
 }
+
+const joinDxFilters = (filters, operator) => filters
+  .filter(Boolean)
+  .reduce((current, filter) => current ? [current, operator, filter] : filter, null)
+
+const buildMagistralArticleTypeFilter = (value) => {
+  const normalizedType = normalizeMagistralArticleType(value)
+  if (!normalizedType) return null
+
+  const aliases = {
+    INSUMO: ['INSUMO', 'INSUMOS'],
+    ENVASES: ['ENVASES', 'ENVASE'],
+    'PRODUCTO COMERCIAL': ['PRODUCTO COMERCIAL'],
+    'PRODUCTO TERMINADO': ['PRODUCTO TERMINADO'],
+    'BASE ESTANDARIZADA': ['BASE ESTANDARIZADA'],
+    FORMULA: ['FORMULA'],
+  }
+
+  return joinDxFilters(
+    (aliases[normalizedType] ?? [normalizedType]).map(type => ['article_type', '=', type]),
+    'or'
+  )
+}
+
+const buildMagistralStatusFilter = (value) => {
+  const normalizedStatus = value?.toString?.().trim().toLowerCase().replaceAll(' ', '_').replaceAll('-', '_')
+  if (!normalizedStatus) return null
+
+  if (normalizedStatus === 'vigente') {
+    return joinDxFilters([
+      ['magistral_status', '=', 'vigente'],
+      ['magistral_status', '=', 'active'],
+      ['magistral_status', '=', null],
+    ], 'or')
+  }
+
+  if (normalizedStatus === 'de_baja') {
+    return joinDxFilters([
+      ['magistral_status', '=', 'de_baja'],
+      ['status', '=', false],
+    ], 'or')
+  }
+
+  return ['magistral_status', '=', normalizedStatus]
+}
+
+const buildMagistralFilterValue = (filters) => joinDxFilters([
+  buildMagistralArticleTypeFilter(filters?.articleType),
+  buildMagistralStatusFilter(filters?.status),
+], 'and')
 
 const storageConditionOptions = [
   '-15°C a -25°C',
@@ -315,6 +386,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const statusRef = useRef()
   const costPriceRef = useRef()
   const salePriceRef = useRef()
+  const equivalenceExchangeRateRef = useRef()
   const equivalenceQuantityRef = useRef()
   const equivalenceUnitRef = useRef()
   const salePriceNationalRef = useRef()
@@ -355,6 +427,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const [isLoadingStock, setIsLoadingStock] = useState(false)
   const [stockArticle, setStockArticle] = useState(null)
   const [stockRows, setStockRows] = useState([])
+  const [magistralFilterDraft, setMagistralFilterDraft] = useState({
+    articleType: '',
+    status: 'vigente',
+  })
+  const [magistralAppliedFilters, setMagistralAppliedFilters] = useState({
+    articleType: '',
+    status: 'vigente',
+  })
   const [importRows, setImportRows] = useState([])
   const [importHeaders, setImportHeaders] = useState([])
   const [importFileName, setImportFileName] = useState('')
@@ -449,6 +529,15 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     await loadMagistralSubcategories(e.target.value)
   }
 
+  const onMagistralFilterChanged = (field, value) => {
+    setMagistralFilterDraft(prev => ({ ...prev, [field]: value }))
+  }
+
+  const onMagistralFilterSubmitted = (e) => {
+    e.preventDefault()
+    setMagistralAppliedFilters({ ...magistralFilterDraft })
+  }
+
   const loadStorageProductOptions = async () => {
     const [clients, manufacturers] = await Promise.all([
       articlesRest.getStorageClients(),
@@ -494,7 +583,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     if (volumeRef.current) volumeRef.current.value = data?.volume ?? ''
     if (marginRuleRef.current) marginRuleRef.current.checked = !!data?.margin_rule
     if (igvRuleRef.current) {
-      igvRuleRef.current.checked = !!data?.igv_rule
+      if (isMagistrales) {
+        igvRuleRef.current.value = data?.igv_rule ? '1' : '0'
+      } else {
+        igvRuleRef.current.checked = !!data?.igv_rule
+      }
     }
     if (unitsPerArticleRef.current) unitsPerArticleRef.current.value = data?.units_per_article ?? 1
     if (unitWeightRef.current) unitWeightRef.current.value = data?.unit_weight ?? ''
@@ -505,14 +598,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
     if (stockHasExpirationRef.current) {
       if (isMagistrales) {
-        stockHasExpirationRef.current.checked = !!data?.stock_has_expiration
+        stockHasExpirationRef.current.value = data?.stock_has_expiration ? '1' : '0'
       } else {
         stockHasExpirationRef.current.checked = !!data?.stock_has_expiration
       }
     }
     if (stockHasLotRef.current) {
       if (isMagistrales) {
-        stockHasLotRef.current.checked = !!data?.stock_has_lot
+        stockHasLotRef.current.value = data?.stock_has_lot ? '1' : '0'
       } else {
         stockHasLotRef.current.checked = !!data?.stock_has_lot
       }
@@ -528,6 +621,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     }
     if (costPriceRef.current) costPriceRef.current.value = data?.cost_price ?? ''
     if (salePriceRef.current) salePriceRef.current.value = data?.sale_price ?? ''
+    if (equivalenceExchangeRateRef.current) equivalenceExchangeRateRef.current.value = data?.equivalence_exchange_rate ?? ''
     if (equivalenceQuantityRef.current) equivalenceQuantityRef.current.value = data?.equivalence_quantity ?? ''
     if (salePriceNationalRef.current) salePriceNationalRef.current.value = data?.sale_price_national ?? ''
     if (purchasePriceNationalRef.current) purchasePriceNationalRef.current.value = data?.purchase_price_national ?? ''
@@ -616,7 +710,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       unit_id: selectedUnitId || null,
       volume: volumeRef.current?.value ?? '',
       margin_rule: marginRuleRef.current?.checked ?? false,
-      igv_rule: igvRuleRef.current?.checked ?? false,
+      igv_rule: isMagistrales ? (igvRuleRef.current?.value === '1') : (igvRuleRef.current?.checked ?? false),
       units_per_article: unitsPerArticleRef.current?.value || 1,
       ...(isMagistrales ? {
         magistral_status: statusRef.current?.value || 'vigente',
@@ -642,11 +736,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       stock_min: stockMinRef.current?.value ?? '',
       stock_max: stockMaxRef.current?.value ?? '',
       currency: currencyRef.current?.value ?? '',
-      stock_has_expiration: stockHasExpirationRef.current?.checked ?? false,
-      stock_has_lot: stockHasLotRef.current?.checked ?? false,
+      stock_has_expiration: isMagistrales ? (stockHasExpirationRef.current?.value === '1') : (stockHasExpirationRef.current?.checked ?? false),
+      stock_has_lot: isMagistrales ? (stockHasLotRef.current?.value === '1') : (stockHasLotRef.current?.checked ?? false),
       cost_price: costPriceRef.current?.value ?? '',
       sale_price: salePriceRef.current?.value ?? '',
-      equivalence_exchange_rate: null,
+      equivalence_exchange_rate: equivalenceExchangeRateRef.current?.value ?? '',
       equivalence_quantity: equivalenceQuantityRef.current?.value ?? '',
       equivalence_unit_id: selectedEquivalenceUnitId || null,
       sale_price_national: isMagistrales ? (firstPresentation.price === '' ? 0 : (firstPresentation.price ?? 0)) : (salePriceNationalRef.current?.value ?? ''),
@@ -1255,7 +1349,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       width: '130px',
       cellTemplate: (container, { data }) => container.text(data?.code ?? '')
     },
-    { dataField: 'article_type', caption: 'Tipo', width: '120px' },
+    {
+      dataField: 'article_type',
+      caption: 'Tipo',
+      width: '140px',
+      cellTemplate: (container, { data }) => container.text(normalizeMagistralArticleType(data?.article_type ?? '') || '')
+    },
     { dataField: 'magistral_presentation', caption: 'Presentacion', width: '150px' },
     { dataField: 'administration_route', caption: 'Via adm.', width: '120px' },
     { dataField: 'name', caption: 'Articulo', minWidth: 200 },
@@ -1335,6 +1434,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   ]
 
   const articleColumns = isMagistrales ? magistralesColumns : (isStorageProduct ? storageProductColumns : standardColumns)
+  const magistralesFilterValue = useMemo(
+    () => isMagistrales ? buildMagistralFilterValue(magistralAppliedFilters) : null,
+    [isMagistrales, magistralAppliedFilters.articleType, magistralAppliedFilters.status]
+  )
 
   const renderMagistralesArticleForm = () => (
     <fieldset className='magistrales-article-form' data-select2-local-dropdown disabled={isViewing}>
@@ -1450,10 +1553,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
               <InputFormGroup eRef={stockMinRef} label='Stock mínimo' col='col-md-3' type='number' min='0' step='0.001' />
               <InputFormGroup eRef={stockMaxRef} label='Stock máximo' col='col-md-3' type='number' min='0' step='0.001' />
               <div className='form-group col-md-3 mb-2'>
-                <label className='form-label d-block'>Afecto a IGV</label>
-                <div className='form-check form-switch'>
-                  <input ref={igvRuleRef} className='form-check-input' type='checkbox' />
-                </div>
+                <label className='form-label'>Afecto a IGV</label>
+                <select ref={igvRuleRef} className='form-control' defaultValue='0'>
+                  <option value='0'>NO</option>
+                  <option value='1'>SI</option>
+                </select>
               </div>
               <div className='form-group col-md-3 mb-2'>
                 <label className='form-label'>Moneda</label>
@@ -1463,16 +1567,18 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
                 </select>
               </div>
               <div className='form-group col-md-3 mb-2'>
-                <label className='form-label d-block'>Stock con Vencim.</label>
-                <div className='form-check form-switch'>
-                  <input ref={stockHasExpirationRef} className='form-check-input' type='checkbox' />
-                </div>
+                <label className='form-label'>Stock con Vencim.</label>
+                <select ref={stockHasExpirationRef} className='form-control' defaultValue='0'>
+                  <option value='0'>NO</option>
+                  <option value='1'>SI</option>
+                </select>
               </div>
               <div className='form-group col-md-3 mb-2'>
-                <label className='form-label d-block'>Stock con Lote</label>
-                <div className='form-check form-switch'>
-                  <input ref={stockHasLotRef} className='form-check-input' type='checkbox' />
-                </div>
+                <label className='form-label'>Stock con Lote</label>
+                <select ref={stockHasLotRef} className='form-control' defaultValue='0'>
+                  <option value='0'>NO</option>
+                  <option value='1'>SI</option>
+                </select>
               </div>
               <InputFormGroup eRef={costPriceRef} label='Precio Costo' col='col-md-3' type='number' min='0' step='0.01' />
               <InputFormGroup eRef={salePriceRef} label='Precio Venta' col='col-md-3' type='number' min='0' step='0.01' />
@@ -1481,10 +1587,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
         </div>
       </div>
 
-      <div className='mt-3'>
+      <div className='mt-3 d-flex flex-wrap align-items-end justify-content-between gap-2'>
         <button type='button' className='btn btn-sm btn-soft-primary' onClick={onPresentationAdded}>
           <i className='mdi mdi-plus-circle-outline me-1'></i> Insertar equivalencia
         </button>
+        <div className='magistrales-exchange-rate-field'>
+          <label className='form-label'>Tipo de cambio</label>
+          <input ref={equivalenceExchangeRateRef} className='form-control' type='number' min='0' step='0.0001' />
+        </div>
       </div>
 
       <div className='magistrales-equivalence-wrap mt-3'>
@@ -1769,6 +1879,29 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           text-transform: uppercase;
         }
 
+        .magistrales-exchange-rate-field {
+          flex: 0 1 260px;
+        }
+
+        .magistrales-article-filter-card {
+          background: #fff;
+          border: 1px solid #e6e9ef;
+          border-radius: 0.375rem;
+          margin-bottom: 1rem;
+        }
+
+        .magistrales-article-filter-title {
+          border-bottom: 1px solid #eef1f5;
+          color: #30364d;
+          font-size: 0.88rem;
+          font-weight: 700;
+          padding: 0.8rem 1rem;
+        }
+
+        .magistrales-article-filter-body {
+          padding: 1rem;
+        }
+
         @media (max-width: 991.98px) {
           .magistrales-article-dialog {
             max-width: calc(100vw - 16px);
@@ -1798,6 +1931,45 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
         }
       `}</style>
     )}
+    {isMagistrales && (
+      <form className='magistrales-article-filter-card' onSubmit={onMagistralFilterSubmitted}>
+        <div className='magistrales-article-filter-title'>Consulta por tipo y estado</div>
+        <div className='magistrales-article-filter-body'>
+          <div className='row g-3 align-items-end'>
+            <div className='col-12 col-md-5'>
+              <label className='form-label'>Seleccionar tipo</label>
+              <select
+                className='form-control'
+                value={magistralFilterDraft.articleType}
+                onChange={(e) => onMagistralFilterChanged('articleType', e.target.value)}
+              >
+                {magistralArticleTypeFilterOptions.map(option => (
+                  <option key={`magistral-filter-type-${option || 'all'}`} value={option}>{option || 'TODOS'}</option>
+                ))}
+              </select>
+            </div>
+            <div className='col-12 col-md-5'>
+              <label className='form-label'>Estado del Articulo</label>
+              <select
+                className='form-control'
+                value={magistralFilterDraft.status}
+                onChange={(e) => onMagistralFilterChanged('status', e.target.value)}
+              >
+                {magistralStatusOptions.map(option => (
+                  <option key={`magistral-filter-status-${option.value}`} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className='col-12 col-md-2'>
+              <button type='submit' className='btn btn-outline-primary w-100'>
+                <i className='mdi mdi-magnify me-1'></i> Buscar articulos
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+    )}
+
     <Table
       gridRef={gridRef}
       title={moduleTitle}
@@ -1870,6 +2042,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       }}
       pageSize={25}
       columns={articleColumns}
+      filterValue={magistralesFilterValue}
     />
 
     <Modal
