@@ -31,25 +31,40 @@ const articleCost = (article) => {
 
   return 0
 }
+const activePresentations = (article) => (article?.presentations ?? [])
+  .filter(row => row?.status !== false && row?.status !== 0 && row?.status !== null)
+const findPresentation = (article, value) => {
+  const selected = normalizeText(value)
+  if (!selected) return null
+
+  return activePresentations(article).find(row => normalizeText(row?.name) === selected) ?? null
+}
+const presentationPrice = (article, value) => {
+  const presentation = findPresentation(article, value)
+  const price = toNumber(presentation?.price)
+
+  return price > 0 ? price : articleCost(article)
+}
 const presentationOptionsFromArticle = (article, currentValue = '') => {
   const options = []
-  const pushOption = (value, units = null) => {
+  const pushOption = (value, units = null, price = null) => {
     const label = (value ?? '').toString().trim()
     if (!label) return
     if (options.some(option => normalizeText(option.value) === normalizeText(label))) return
     const numericUnits = toNumber(units)
+    const numericPrice = toNumber(price)
     options.push({
       value: label,
       label: numericUnits > 0 ? `${label} (${numericUnits.toFixed(3)})` : label,
+      price: numericPrice,
     })
   }
 
-  ;(article?.presentations ?? [])
-    .filter(row => row?.status !== false && row?.status !== 0 && row?.status !== null)
-    .forEach(row => pushOption(row?.name, row?.units))
+  activePresentations(article)
+    .forEach(row => pushOption(row?.name, row?.units, row?.price))
 
-  pushOption(article?.magistral_presentation)
-  pushOption(article?.unit?.symbol ?? article?.unit?.name)
+  pushOption(article?.magistral_presentation, null, articleCost(article))
+  pushOption(article?.unit?.symbol ?? article?.unit?.name, null, articleCost(article))
   pushOption(currentValue)
 
   return options
@@ -127,6 +142,7 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
     const next = rows.map(row => {
       const article = inputArticles.find(item => `${item.id}` === `${row.article_id}`) ?? row.article ?? null
       const presentationOptions = presentationOptionsFromArticle(article, row.presentation)
+      const presentation = row.presentation ?? presentationOptions[0]?.value ?? ''
 
       return {
         uid: nextUid(),
@@ -135,11 +151,11 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
         code: row.code ?? row.article?.code ?? '',
         description: row.description ?? row.article?.name ?? '',
         quantity: row.quantity ?? 1,
-        presentation: row.presentation ?? presentationOptions[0]?.value ?? '',
+        presentation,
         article_data: article,
         presentation_options: presentationOptions,
         total_quantity: row.total_quantity ?? row.quantity ?? 1,
-        unit_price: row.unit_price ?? 0,
+        unit_price: row.unit_price ?? presentationPrice(article, presentation),
         subtotal: row.subtotal ?? 0,
       }
     })
@@ -166,19 +182,28 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
       if (field === 'article_id') {
         const article = inputArticles.find(row => `${row.id}` === `${value}`)
         const presentationOptions = presentationOptionsFromArticle(article)
+        const presentation = defaultPresentationForArticle(article)
         next = {
           ...next,
           code: article?.code ?? '',
           description: article?.name ?? '',
-          presentation: defaultPresentationForArticle(article),
+          presentation,
           article_data: article ?? null,
           presentation_options: presentationOptions,
           total_units: article?.units_per_article ?? next.total_units ?? 0,
-          unit_price: articleCost(article),
+          unit_price: presentationPrice(article, presentation),
         }
       }
 
-      if (['article_id', 'quantity', 'total_units', 'unit_price'].includes(field)) {
+      if (field === 'presentation') {
+        const article = inputArticles.find(row => `${row.id}` === `${next.article_id}`) ?? next.article_data
+        next = {
+          ...next,
+          unit_price: presentationPrice(article, value),
+        }
+      }
+
+      if (['article_id', 'quantity', 'total_units', 'unit_price', 'presentation'].includes(field)) {
         return recalculateItem(next)
       }
 

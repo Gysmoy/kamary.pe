@@ -221,7 +221,7 @@ class FormulaController extends BasicController
             $totalUnits = $this->toNullableDecimal($item['total_units'] ?? null) ?? 0;
             $quantity = $this->toNullableDecimal($item['quantity'] ?? null) ?? 0;
             $totalQuantity = $this->toNullableDecimal($item['total_quantity'] ?? null);
-            $unitPrice = $article ? $this->articleCost($article) : 0;
+            $unitPrice = $article ? $this->presentationPrice($article, $presentation) : 0;
 
             if (!$articleId && $code === '' && $description === '' && $presentation === '' && $totalUnits == 0 && $quantity == 0 && ($totalQuantity ?? 0) == 0 && $unitPrice == 0) {
                 continue;
@@ -252,7 +252,11 @@ class FormulaController extends BasicController
     private function findMagistralArticle(int $articleId): Article
     {
         return Article::query()
-            ->with(['unit:id,name,symbol', 'magistralCategory:id,description'])
+            ->with([
+                'unit:id,name,symbol',
+                'magistralCategory:id,description',
+                'presentations:id,article_id,name,price,status,sort_order',
+            ])
             ->when(Schema::hasColumn('articles', 'module_scope'), fn($query) => $query->where('module_scope', 'magistrales'))
             ->findOrFail($articleId);
     }
@@ -277,6 +281,23 @@ class FormulaController extends BasicController
         }
 
         return 0;
+    }
+
+    private function presentationPrice(Article $article, ?string $presentation): float
+    {
+        $selectedPresentation = mb_strtolower(trim((string)$presentation));
+        if ($selectedPresentation !== '') {
+            foreach ($article->presentations ?? [] as $row) {
+                if (($row->status ?? true) === false || (string)($row->status ?? '') === '0') continue;
+                if (mb_strtolower(trim((string)$row->name)) !== $selectedPresentation) continue;
+
+                $price = (float)($row->price ?? 0);
+                if ($price > 0) return round($price, 4);
+                break;
+            }
+        }
+
+        return $this->articleCost($article);
     }
 
     private function structuredFields(): array
