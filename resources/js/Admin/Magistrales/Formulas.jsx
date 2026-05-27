@@ -17,6 +17,20 @@ const formatUser = (user) => user?.fullname || [user?.name, user?.lastname].filt
 const formatDateTime = (value) => value?.toString?.().replace('T', ' ').slice(0, 16) || ''
 const toNumber = (value) => Number.parseFloat(value || 0) || 0
 const nextUid = () => crypto.randomUUID()
+const normalizeText = (value) => (value ?? '').toString().trim().toLowerCase()
+const isInputArticle = (article) => {
+  const type = normalizeText(article?.article_type)
+  const category = normalizeText(article?.magistralCategory?.description ?? article?.magistral_category?.description)
+  return type.includes('insumo') || type.includes('envase') || category === 'insumos'
+}
+const articleCost = (article) => {
+  for (const field of ['cost_price', 'purchase_price_national', 'sale_price_national', 'sale_price']) {
+    const value = toNumber(article?.[field])
+    if (value > 0) return value
+  }
+
+  return 0
+}
 
 const emptyItem = () => ({
   uid: nextUid(),
@@ -63,6 +77,9 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
   const [formulaItems, setFormulaItems] = useState([emptyItem()])
   const [historyRows, setHistoryRows] = useState([])
   const [isEditing, setIsEditing] = useState(false)
+  const formulaArticles = articles.filter(article => !isInputArticle(article))
+  const inputArticles = articles.filter(isInputArticle)
+  const inputCostTotal = formulaItems.reduce((sum, item) => sum + toNumber(item.subtotal), 0)
 
   const structuredFields = [
     { key: 'special_preparation_conditions', label: 'Condiciones Especiales para Preparacion', ref: specialPreparationConditionsRef, rows: 2 },
@@ -113,14 +130,14 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
       let next = { ...item, [field]: value }
 
       if (field === 'article_id') {
-        const article = articles.find(row => `${row.id}` === `${value}`)
+        const article = inputArticles.find(row => `${row.id}` === `${value}`)
         next = {
           ...next,
           code: article?.code ?? '',
           description: article?.name ?? '',
           presentation: article?.unit?.symbol ?? article?.unit?.name ?? '',
           total_units: article?.units_per_article ?? next.total_units ?? 0,
-          unit_price: article?.cost_price ?? article?.purchase_price_national ?? next.unit_price ?? 0,
+          unit_price: articleCost(article),
         }
       }
 
@@ -244,7 +261,7 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
           <label className='form-label'>Articulo</label>
           <select ref={articleRef} className='form-control' required disabled={isEditing}>
             <option value=''>Seleccione</option>
-            {articles.map(row => <option key={`mag-formula-article-${row.id}`} value={row.id}>{row.code} - {row.name}</option>)}
+            {formulaArticles.map(row => <option key={`mag-formula-article-${row.id}`} value={row.id}>{row.code} - {row.name}</option>)}
           </select>
         </div>
         <div className='col-md-4 mb-3'>
@@ -277,16 +294,23 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
                   <tr key={item.uid}>
                     <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.total_units} onChange={(e) => updateItem(item.uid, 'total_units', e.target.value)} /></td>
                     <td><input className='form-control form-control-sm' value={item.code} onChange={(e) => updateItem(item.uid, 'code', e.target.value)} /></td>
-                    <td><select className='form-control form-control-sm' value={item.article_id} onChange={(e) => updateItem(item.uid, 'article_id', e.target.value)}><option value=''>Seleccione</option>{articles.map(article => <option key={`formula-item-article-${article.id}`} value={article.id}>{article.code} - {article.name}</option>)}</select></td>
+                    <td><select className='form-control form-control-sm' value={item.article_id} onChange={(e) => updateItem(item.uid, 'article_id', e.target.value)}><option value=''>Seleccione</option>{inputArticles.map(article => <option key={`formula-item-article-${article.id}`} value={article.id}>{article.code} - {article.name}</option>)}</select></td>
                     <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => updateItem(item.uid, 'quantity', e.target.value)} /></td>
                     <td><input className='form-control form-control-sm' value={item.presentation} onChange={(e) => updateItem(item.uid, 'presentation', e.target.value)} /></td>
                     <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.total_quantity} onChange={(e) => updateItem(item.uid, 'total_quantity', e.target.value)} /></td>
-                    <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.unit_price} onChange={(e) => updateItem(item.uid, 'unit_price', e.target.value)} /></td>
-                    <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.subtotal} onChange={(e) => updateItem(item.uid, 'subtotal', e.target.value)} /></td>
+                    <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.unit_price} disabled /></td>
+                    <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.subtotal} disabled /></td>
                     <td><button type='button' className='btn btn-xs btn-soft-danger' onClick={() => removeItem(item.uid)}><i className='mdi mdi-delete'></i></button></td>
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan='7' className='text-end fw-semibold'>Costo insumos</td>
+                  <td><input className='form-control form-control-sm' value={inputCostTotal.toFixed(2)} disabled /></td>
+                  <td></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>

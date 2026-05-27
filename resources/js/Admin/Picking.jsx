@@ -4,8 +4,10 @@ import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Swal from 'sweetalert2';
 import CommercialOrdersRest from '../Actions/Admin/CommercialOrdersRest';
+import SampleOrdersRest from '../Actions/Admin/SampleOrdersRest';
 
 const commercialOrdersRest = new CommercialOrdersRest()
+const sampleOrdersRest = new SampleOrdersRest()
 
 const boardStatuses = [
   {
@@ -41,6 +43,7 @@ const basePreparationFilter = [
 const customerName = (data) => data?.client?.full_name
   ?? data?.eventual_client?.business_name
   ?? data?.eventualClient?.business_name
+  ?? data?.client_name
   ?? '-'
 
 const textValue = (value, fallback = '') => {
@@ -63,11 +66,14 @@ const itemQuantity = (item) => {
   const quantity = Number(item?.quantity || 0)
   return Number.isInteger(quantity) ? quantity.toFixed(0) : quantity.toFixed(2)
 }
+const orderKey = (order) => `${order?.source_type ?? 'commercial'}:${order?.id ?? ''}`
 
 const PreparationCard = ({ order, status, onMove, updatingId, onDragStart }) => {
   const items = order?.items ?? []
-  const isUpdating = `${updatingId ?? ''}` === `${order.id}`
+  const isUpdating = `${updatingId ?? ''}` === orderKey(order)
   const compact = status === 'pending'
+  const isSampleOrder = order?.source_type === 'sample'
+  const warehouseName = order?.warehouse?.name ?? order?.items?.find?.(item => item?.warehouse)?.warehouse ?? '-'
 
   return (
     <article
@@ -77,7 +83,8 @@ const PreparationCard = ({ order, status, onMove, updatingId, onDragStart }) => 
     >
       <div className='preparation-card-header'>
         <div className='preparation-code'>
-          <strong>{order.code ?? `Pedido ${order.id}`}</strong>
+          <strong>{order.code ?? order.order_number ?? `Pedido ${order.id}`}</strong>
+          {isSampleOrder && <small className='preparation-source'>Muestras</small>}
           <span>{formatDate(order.promised_delivery_at || order.issue_date)}</span>
         </div>
         <button
@@ -92,7 +99,7 @@ const PreparationCard = ({ order, status, onMove, updatingId, onDragStart }) => 
 
       <div className='preparation-meta'>
         <div><span>Cliente:</span> {customerName(order)}</div>
-        <div><span>Almacen:</span> {order?.warehouse?.name ?? '-'}</div>
+        <div><span>Almacen:</span> {warehouseName}</div>
         {!compact && <div><span>Direccion:</span> {textValue(order.delivery_address, '-')}</div>}
         {!compact && <div><span>Contacto:</span> {[order.dispatch_contact_name, order.dispatch_contact_phone].filter(Boolean).join(' | ') || '-'}</div>}
       </div>
@@ -103,10 +110,10 @@ const PreparationCard = ({ order, status, onMove, updatingId, onDragStart }) => 
             <span>Documento:</span> {order.document_type ?? '-'}
           </div>
           <div>
-            <span>Entrega:</span> {formatDate(order.promised_delivery_at) || '-'}
+            <span>Entrega:</span> {formatDate(order.promised_delivery_at || order.delivered_at) || '-'}
           </div>
           <div>
-            <span>Total:</span> {Number(order.total || 0).toFixed(2)}
+            <span>Total:</span> {Number(order.total || order.total_gross_weight || 0).toFixed(2)}
           </div>
         </div>
       )}
@@ -114,7 +121,7 @@ const PreparationCard = ({ order, status, onMove, updatingId, onDragStart }) => 
       <div className='preparation-items'>
         {items.length === 0 && <div className='preparation-item muted'>Sin detalle</div>}
         {items.map((item) => (
-          <div className='preparation-item' key={`preparation-order-${order.id}-item-${item.id}`}>
+          <div className='preparation-item' key={`preparation-order-${order.source_type ?? 'commercial'}-${order.id}-item-${item.id ?? item.stock_key ?? item.code ?? item.name}`}>
             <div>
               <strong>{itemName(item)}</strong>
               {itemPresentation(item) && <small>{itemPresentation(item)}</small>}
@@ -124,7 +131,7 @@ const PreparationCard = ({ order, status, onMove, updatingId, onDragStart }) => 
         ))}
       </div>
 
-      {status.value === 'preparing' && (
+      {status.value === 'preparing' && !isSampleOrder && (
         <div className='preparation-card-footer'>
           <button
             type='button'
@@ -159,7 +166,7 @@ const PreparationColumn = ({ status, orders, onMove, updatingId, onDropOrder, on
       {orders.length === 0 && <div className='preparation-empty'>No hay pedidos en este estado.</div>}
       {orders.map((order) => (
         <PreparationCard
-          key={`preparation-order-${order.id}`}
+          key={`preparation-order-${order.source_type ?? 'commercial'}-${order.id}`}
           order={order}
           status={status}
           onMove={onMove}
@@ -186,14 +193,34 @@ const Picking = () => {
   const loadOrders = async () => {
     setLoading(true)
     try {
-      const result = await commercialOrdersRest.paginate({
-        take: 1000,
-        skip: 0,
-        isLoadingAll: true,
-        filter: basePreparationFilter,
-        sort: [{ selector: 'promised_delivery_at', desc: false }],
-      })
-      setOrders(result?.data ?? [])
+      const [commercialResult, sampleResult] = await Promise.all([
+        commercialOrdersRest.paginate({
+          take: 1000,
+          skip: 0,
+          isLoadingAll: true,
+          filter: basePreparationFilter,
+          sort: [{ selector: 'promised_delivery_at', desc: false }],
+        }),
+        sampleOrdersRest.paginate({
+          take: 1000,
+          skip: 0,
+          isLoadingAll: true,
+          filter: ['order_status', '=', 'preparing'],
+          sort: [{ selector: 'delivered_at', desc: false }],
+        }),
+      ])
+      const commercialRows = (commercialResult?.data ?? []).map(order => ({ ...order, source_type: 'commercial' }))
+      const sampleRows = (sampleResult?.data ?? []).map(order => ({
+        ...order,
+        source_type: 'sample',
+        dispatch_status: 'preparing',
+        code: order.order_number,
+        promised_delivery_at: order.delivered_at,
+        dispatch_contact_name: order.contact_name,
+        dispatch_contact_phone: order.contact_phone,
+      }))
+
+      setOrders([...commercialRows, ...sampleRows])
     } finally {
       setLoading(false)
     }
@@ -203,18 +230,25 @@ const Picking = () => {
 
   const moveOrder = async (order, nextStatus) => {
     if (!order?.id || order.dispatch_status === nextStatus || updatingId) return
-    setUpdatingId(order.id)
+    setUpdatingId(orderKey(order))
     const previousOrders = orders
-    const nextOrders = nextStatus === 'dispatched'
+    const leavesBoard = nextStatus === 'dispatched' || (order.source_type === 'sample' && nextStatus === 'pending')
+    const nextOrders = leavesBoard
       ? orders.filter((item) => `${item.id}` !== `${order.id}`)
       : orders.map((item) => `${item.id}` === `${order.id}` ? { ...item, dispatch_status: nextStatus } : item)
     setOrders(nextOrders)
 
-    const result = await commercialOrdersRest.booleanResult({
-      id: order.id,
-      field: 'dispatch_status',
-      value: nextStatus,
-    })
+    const result = order.source_type === 'sample'
+      ? await sampleOrdersRest.booleanResult({
+        id: order.id,
+        field: 'order_status',
+        value: nextStatus === 'dispatched' ? 'in_route' : nextStatus === 'pending' ? 'approved' : nextStatus,
+      })
+      : await commercialOrdersRest.booleanResult({
+        id: order.id,
+        field: 'dispatch_status',
+        value: nextStatus,
+      })
 
     if (!result?.ok) {
       setOrders(previousOrders)
@@ -230,14 +264,20 @@ const Picking = () => {
   }
 
   const onDragStart = (event, order) => {
-    event.dataTransfer.setData('text/plain', `${order.id}`)
+    event.dataTransfer.setData('text/plain', JSON.stringify({ id: order.id, source_type: order.source_type ?? 'commercial' }))
     event.dataTransfer.effectAllowed = 'move'
   }
 
   const onDropOrder = (event, nextStatus) => {
     event.preventDefault()
-    const orderId = event.dataTransfer.getData('text/plain')
-    const order = orders.find((item) => `${item.id}` === `${orderId}`)
+    const raw = event.dataTransfer.getData('text/plain')
+    let payload = { id: raw, source_type: 'commercial' }
+    try {
+      payload = JSON.parse(raw)
+    } catch {
+      payload = { id: raw, source_type: 'commercial' }
+    }
+    const order = orders.find((item) => `${item.id}` === `${payload.id}` && `${item.source_type ?? 'commercial'}` === `${payload.source_type ?? 'commercial'}`)
     if (!order) return
     moveOrder(order, nextStatus)
   }
@@ -329,6 +369,15 @@ const Picking = () => {
         .preparation-code span {
           color: #98a6ad;
           font-size: 0.82rem;
+        }
+        .preparation-source {
+          background: #e8f3ff;
+          border: 1px solid #b8dcff;
+          border-radius: 999px;
+          color: #1473c9;
+          font-size: 0.72rem;
+          font-weight: 700;
+          padding: 1px 7px;
         }
         .preparation-meta {
           color: #6c7a86;

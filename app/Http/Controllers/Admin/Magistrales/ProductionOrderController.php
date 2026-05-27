@@ -78,16 +78,30 @@ class ProductionOrderController extends BasicController
         $formatId = $this->toNullableInt($body['format_id'] ?? null);
 
         if ($responsibleId) MagistralResponsible::findOrFail($responsibleId);
-        if ($articleId) $this->findMagistralArticle($articleId);
-        if ($formatId) MagistralFormat::findOrFail($formatId);
-
-        $this->parsedItems = $this->parseItems(is_array($request->items) ? $request->items : []);
-        if (count($this->parsedItems) === 0) {
-            throw new \Exception('Debes agregar al menos un articulo a la orden de produccion');
+        $article = $articleId ? $this->findMagistralArticle($articleId) : null;
+        if ($article && $this->isInputArticle($article)) {
+            throw new \Exception('La orden de produccion debe seleccionar un producto terminado, no un insumo');
         }
+        if ($formatId) MagistralFormat::findOrFail($formatId);
 
         $orderStatus = $this->normalizeStatus($body['order_status'] ?? 'pending');
         $productionQuantity = $this->toNullableDecimal($body['quantity'] ?? null) ?? 0;
+        $formula = $articleId
+            ? MagistralFormula::with(['items.article.unit'])
+                ->where('article_id', $articleId)
+                ->whereNotNull('status')
+                ->first()
+            : null;
+
+        $requestItems = is_array($request->items) ? $request->items : [];
+        $this->parsedItems = $formula
+            ? $this->itemsFromFormula($formula, $productionQuantity, $requestItems)
+            : $this->parseItems($requestItems);
+        if (count($this->parsedItems) === 0) {
+            throw new \Exception($articleId
+                ? 'El producto seleccionado no tiene insumos configurados en su formula'
+                : 'Debes agregar al menos un articulo a la orden de produccion');
+        }
 
         if ($orderStatus === 'finished') {
             if (!$articleId) throw new \Exception('El producto terminado es obligatorio para finalizar la orden de produccion');
@@ -162,6 +176,9 @@ class ProductionOrderController extends BasicController
             $description = trim((string)($item['description'] ?? ''));
             if ($articleId) {
                 $article = $this->findMagistralArticle($articleId);
+                if (!$this->isInputArticle($article)) {
+                    throw new \Exception('El item ' . ($index + 1) . ' debe ser un insumo de Magistrales');
+                }
                 if ($description === '') $description = $article->name;
             }
 
@@ -185,6 +202,44 @@ class ProductionOrderController extends BasicController
         }
 
         return $parsed;
+    }
+
+    private function itemsFromFormula(MagistralFormula $formula, float $productionQuantity, array $requestItems = []): array
+    {
+        if ($productionQuantity <= 0) {
+            return [];
+        }
+
+        $datesByArticle = collect($requestItems)
+            ->filter(fn($item) => is_array($item) && !empty($item['article_id']))
+            ->mapWithKeys(fn($item) => [
+                (int)$item['article_id'] => $this->normalizeDate($item['expiration_date'] ?? null),
+            ]);
+
+        return $formula->items
+            ->filter(fn($item) => $item->article_id && $item->article)
+            ->map(function (MagistralFormulaItem $item) use ($formula, $productionQuantity, $datesByArticle) {
+                $article = $item->article;
+                if (!$this->isInputArticle($article)) {
+                    throw new \Exception('La formula contiene un articulo que no es insumo: ' . ($article->code ?? $article->id));
+                }
+
+                $baseQuantity = (float)($item->total_quantity ?: $item->quantity ?: 0);
+                if ($baseQuantity <= 0) {
+                    throw new \Exception('La formula contiene un insumo sin cantidad: ' . ($article->code ?? $article->id));
+                }
+
+                return [
+                    'article_id' => (int)$article->id,
+                    'description' => $item->description ?: $article->name,
+                    'expiration_date' => $datesByArticle[(int)$article->id] ?? null,
+                    'quantity' => round($baseQuantity, 3),
+                    'magistral_formula_id' => (int)$formula->id,
+                    'total' => round($baseQuantity * $productionQuantity, 3),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     private function assertStockAvailable(array $items, ?int $warehouseId, ?int $productionOrderId): void
@@ -228,8 +283,19 @@ class ProductionOrderController extends BasicController
     private function findMagistralArticle(int $articleId): Article
     {
         return Article::query()
+            ->with('magistralCategory:id,description')
             ->when(Schema::hasColumn('articles', 'module_scope'), fn($query) => $query->where('module_scope', 'magistrales'))
             ->findOrFail($articleId);
+    }
+
+    private function isInputArticle(Article $article): bool
+    {
+        $type = mb_strtolower(trim((string)($article->article_type ?? '')));
+        $category = mb_strtolower(trim((string)($article->magistralCategory?->description ?? '')));
+
+        return str_contains($type, 'insumo')
+            || str_contains($type, 'envase')
+            || $category === 'insumos';
     }
 
     private function nextCode(): string

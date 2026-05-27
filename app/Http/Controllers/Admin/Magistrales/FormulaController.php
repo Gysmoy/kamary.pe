@@ -56,7 +56,10 @@ class FormulaController extends BasicController
         $id = $body['id'] ?? null;
         $articleId = $this->toNullableInt($body['article_id'] ?? null);
         if (!$articleId) throw new \Exception('El articulo es obligatorio');
-        $this->findMagistralArticle($articleId);
+        $formulaArticle = $this->findMagistralArticle($articleId);
+        if ($this->isInputArticle($formulaArticle)) {
+            throw new \Exception('La formula debe asociarse a un producto terminado, no a un insumo');
+        }
 
         $exists = MagistralFormula::where('article_id', $articleId)
             ->when($id, fn($query) => $query->where('id', '!=', $id))
@@ -131,16 +134,21 @@ class FormulaController extends BasicController
             $presentation = trim((string)($item['presentation'] ?? ''));
 
             if ($article) {
+                if (!$this->isInputArticle($article)) {
+                    throw new \Exception('El item ' . ($index + 1) . ' debe ser un insumo o envase de Magistrales');
+                }
+
                 if ($code === '') $code = (string)$article->code;
                 if ($description === '') $description = (string)$article->name;
                 if ($presentation === '') $presentation = $article->unit?->symbol ?: $article->unit?->name ?: null;
+            } elseif ($code !== '' || $description !== '') {
+                throw new \Exception('Debes seleccionar un articulo de insumo para costear la formula');
             }
 
             $totalUnits = $this->toNullableDecimal($item['total_units'] ?? null) ?? 0;
             $quantity = $this->toNullableDecimal($item['quantity'] ?? null) ?? 0;
             $totalQuantity = $this->toNullableDecimal($item['total_quantity'] ?? null);
-            $unitPrice = $this->toNullableDecimal($item['unit_price'] ?? null) ?? 0;
-            $subtotal = $this->toNullableDecimal($item['subtotal'] ?? null);
+            $unitPrice = $article ? $this->articleCost($article) : 0;
 
             if (!$articleId && $code === '' && $description === '' && $presentation === '' && $totalUnits == 0 && $quantity == 0 && ($totalQuantity ?? 0) == 0 && $unitPrice == 0) {
                 continue;
@@ -148,7 +156,6 @@ class FormulaController extends BasicController
 
             if ($quantity <= 0) throw new \Exception('La cantidad del insumo ' . ($index + 1) . ' debe ser mayor a 0');
             if ($totalUnits < 0) throw new \Exception('Las unidades totales del insumo ' . ($index + 1) . ' no pueden ser negativas');
-            if ($unitPrice < 0) throw new \Exception('El precio del insumo ' . ($index + 1) . ' no puede ser negativo');
 
             $resolvedTotalQuantity = $totalQuantity ?? (($totalUnits > 0 ? $totalUnits : 1) * $quantity);
             if ($resolvedTotalQuantity < 0) throw new \Exception('La cantidad total del insumo ' . ($index + 1) . ' no puede ser negativa');
@@ -162,7 +169,7 @@ class FormulaController extends BasicController
                 'presentation' => $presentation ?: null,
                 'total_quantity' => $resolvedTotalQuantity,
                 'unit_price' => $unitPrice,
-                'subtotal' => $subtotal ?? ($resolvedTotalQuantity * $unitPrice),
+                'subtotal' => $resolvedTotalQuantity * $unitPrice,
             ];
         }
 
@@ -172,9 +179,31 @@ class FormulaController extends BasicController
     private function findMagistralArticle(int $articleId): Article
     {
         return Article::query()
-            ->with('unit:id,name,symbol')
+            ->with(['unit:id,name,symbol', 'magistralCategory:id,description'])
             ->when(Schema::hasColumn('articles', 'module_scope'), fn($query) => $query->where('module_scope', 'magistrales'))
             ->findOrFail($articleId);
+    }
+
+    private function isInputArticle(Article $article): bool
+    {
+        $type = mb_strtolower(trim((string)($article->article_type ?? '')));
+        $category = mb_strtolower(trim((string)($article->magistralCategory?->description ?? '')));
+
+        return str_contains($type, 'insumo')
+            || str_contains($type, 'envase')
+            || $category === 'insumos';
+    }
+
+    private function articleCost(Article $article): float
+    {
+        foreach (['cost_price', 'purchase_price_national', 'sale_price_national', 'sale_price'] as $field) {
+            $value = $article->{$field} ?? null;
+            if (is_numeric($value) && (float)$value > 0) {
+                return round((float)$value, 4);
+            }
+        }
+
+        return 0;
     }
 
     private function structuredFields(): array

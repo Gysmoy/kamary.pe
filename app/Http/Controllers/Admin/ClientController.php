@@ -28,7 +28,8 @@ class ClientController extends BasicController
     public function setReactViewProperties(Request $request)
     {
         $prefixes = JSON::parse(File::get(storage_path('app/utils/phone_prefixes.json')));
-        $initialQuickFilter = str_contains($request->path(), 'eventual-clients') ? 'eventual' : 'all';
+        $isEventualPath = str_contains($request->path(), 'eventual-clients');
+        $initialQuickFilter = $isEventualPath ? 'eventual' : 'all';
 
         if (($request->query('kind') ?? '') === 'habitual') {
             $initialQuickFilter = 'habitual';
@@ -36,9 +37,9 @@ class ClientController extends BasicController
 
         return [
             'prefixes' => $prefixes,
-            'sectionTitle' => 'Clientes',
+            'sectionTitle' => $isEventualPath ? 'Cliente eventual' : 'Clientes',
             'defaultClientKind' => $initialQuickFilter === 'eventual' ? 'eventual' : 'regular',
-            'requiredPermission' => 'clients',
+            'requiredPermission' => $isEventualPath ? 'eventual-clients' : 'clients',
             'initialQuickFilter' => $initialQuickFilter,
         ];
     }

@@ -22,7 +22,38 @@ class SampleOrdersRest extends BasicRest {
 
   getClients = async () => await loadAll('/api/admin/clients/paginate')
   getUsers = async () => await loadAll('/api/admin/users/paginate')
-  getArticles = async () => await loadAll('/api/admin/articles/paginate')
+  getArticles = async () => await loadAll('/api/admin/sample-orders/articles')
+
+  booleanResult = async ({ id, field, value }) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/boolean`, {
+        method: 'PATCH',
+        body: JSON.stringify({ id, field, value })
+      })
+      if (!status) {
+        return {
+          ok: false,
+          message: result?.message || 'Ocurrio un error inesperado',
+        }
+      }
+
+      toast.success('Correcto', {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      })
+
+      return {
+        ok: true,
+        result,
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        message: error.message,
+      }
+    }
+  }
 
   saveEvidence = async (id, request) => {
     try {

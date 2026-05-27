@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
 use App\Http\Controllers\Controller;
+use App\Support\ModulePermissions;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -20,7 +21,14 @@ class RoleController extends BasicController
 
     public function setReactViewProperties(Request $request)
     {
-        $permissions = Permission::all(['name', 'beauty_name']);
+        $permissionNames = array_keys(ModulePermissions::assignablePermissions());
+        $permissionOrder = array_flip($permissionNames);
+        $permissions = Permission::query()
+            ->whereIn('name', $permissionNames)
+            ->get(['name', 'beauty_name'])
+            ->sortBy(fn($permission) => $permissionOrder[$permission->name] ?? PHP_INT_MAX)
+            ->values();
+
         return [
             'permissions' => $permissions
         ];
@@ -35,7 +43,8 @@ class RoleController extends BasicController
     {
         $response = Response::simpleTryCatch(function () use ($request) {
             $role = Role::firstOrCreate(['name' => $request->name]);
-            $role->syncPermissions($request->permissions);
+            $assignable = array_keys(ModulePermissions::assignablePermissions());
+            $role->syncPermissions(collect($request->permissions ?? [])->intersect($assignable)->values()->all());
         });
         return response($response->toArray(), $response->status);
     }

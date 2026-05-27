@@ -19,6 +19,11 @@ class TransactionController extends BasicController
     public $reactView = 'Admin/Transactions';
     public $softDeletion = false;
 
+    public function setReactViewProperties(Request $request)
+    {
+        return ['requiredPermission' => 'expenses'];
+    }
+
     public function setPaginationInstance(string $model)
     {
         return $model::where('category', '<>', 'Ventas');

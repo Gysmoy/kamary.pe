@@ -90,7 +90,13 @@ class EnsureAdminPermissionForPath
             'batches' => $readRoute ? ['batches', 'entry-note', 'exit-note', 'purchase-receipts'] : ['batches'],
             'entry-note', 'entry-notes' => ['entry-note'],
             'exit-note', 'exit-notes' => ['exit-note'],
-            'warehouses' => $readRoute ? $this->anyAdminPermission() : ['businesses', 'exit-note'],
+            'warehouses' => $readRoute ? array_unique(array_merge([
+                'businesses',
+                'activity',
+                'dispatch',
+                'driver',
+                'vehicle-zone',
+            ], $this->catalogConsumerPermissions('warehouses'))) : ['warehouses'],
             'suppliers' => $readRoute ? ['suppliers', 'purchase-orders', 'purchase-receipts', 'entry-note'] : ['suppliers'],
             'units', 'units-of-measure' => $readRoute ? $this->catalogConsumerPermissions('units-of-measure') : ['units-of-measure'],
 
@@ -123,21 +129,12 @@ class EnsureAdminPermissionForPath
             'sample-orders' => ['sample-orders'],
 
             'magistrales-dashboard' => ['magistrales-dashboard'],
-            'magistrales-articles' => ['magistrales-products', 'magistrales-articles'],
-            'magistrales-category' => ['magistrales-category', 'magistrales-products'],
-            'magistrales-formats' => ['magistrales-formats', 'magistrales-products'],
-            'magistrales-formulas' => ['magistrales-formulas', 'magistrales-products'],
-            'magistrales-incomes' => ['magistrales-incomes', 'magistrales-procurement'],
-            'magistrales-inventory' => ['magistrales-inventory', 'magistrales-warehouse'],
-            'magistrales-kardex' => ['magistrales-kardex', 'magistrales-warehouse'],
-            'magistrales-laboratory' => ['magistrales-laboratory', 'magistrales-products'],
-            'magistrales-purchase-order' => ['magistrales-purchase-order', 'magistrales-procurement'],
-            'magistrales-production-order' => ['magistrales-production-order', 'magistrales-warehouse'],
-            'magistrales-supplier' => ['magistrales-supplier', 'magistrales-procurement'],
-            'magistrales-responsible' => ['magistrales-responsible', 'magistrales-warehouse'],
-            'magistrales-outputs' => ['magistrales-outputs', 'magistrales-warehouse'],
-            'magistrales-unit' => ['magistrales-unit', 'magistrales-products'],
-            'magistrales-sales' => ['magistrales-sales', 'magistrales-billing'],
+            'magistrales-articles', 'magistrales-category', 'magistrales-laboratory', 'magistrales-unit' => ['magistrales-articles'],
+            'magistrales-formats' => ['magistrales-formats'],
+            'magistrales-formulas' => ['magistrales-formulas'],
+            'magistrales-incomes', 'magistrales-purchase-order', 'magistrales-supplier' => ['magistrales-purchase-order'],
+            'magistrales-inventory', 'magistrales-kardex', 'magistrales-production-order', 'magistrales-responsible', 'magistrales-outputs' => ['magistrales-production-order'],
+            'magistrales-sales' => ['magistrales-dashboard'],
 
             'storage-inventory' => ['storage-inventory'],
             'storage-clients' => ['storage-clients'],
@@ -185,29 +182,17 @@ class EnsureAdminPermissionForPath
         return match ($section) {
             'dashboard' => ['magistrales-dashboard'],
             'articles', 'batches', 'units-of-measure', 'units', 'laboratories', 'categories', 'formats', 'formulas' => [
-                'magistrales-products',
                 'magistrales-articles',
-                'magistrales-unit',
-                'magistrales-laboratory',
-                'magistrales-category',
                 'magistrales-formats',
                 'magistrales-formulas',
             ],
             'entry-note', 'entry-notes', 'incomes', 'purchase-orders', 'accounts-payable', 'suppliers' => [
-                'magistrales-procurement',
-                'magistrales-incomes',
                 'magistrales-purchase-order',
-                'magistrales-supplier',
             ],
             'inventory', 'kardex', 'production-orders', 'responsibles', 'outputs', 'exit-note', 'warehouses' => [
-                'magistrales-warehouse',
-                'magistrales-inventory',
-                'magistrales-kardex',
                 'magistrales-production-order',
-                'magistrales-responsible',
-                'magistrales-outputs',
             ],
-            'sales', 'billing-settings', 'billing-documents' => ['magistrales-billing', 'magistrales-sales'],
+            'sales', 'billing-settings', 'billing-documents' => ['magistrales-dashboard'],
             default => $this->magistralesAnyPermission(),
         };
     }
@@ -237,7 +222,7 @@ class EnsureAdminPermissionForPath
     private function magistralesAnyPermission(): array
     {
         return array_values(array_filter(
-            array_keys(ModulePermissions::permissions()),
+            array_keys(ModulePermissions::assignablePermissions()),
             fn(string $permission) => str_starts_with($permission, 'magistrales-')
         ));
     }

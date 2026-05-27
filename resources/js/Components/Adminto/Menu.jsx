@@ -102,7 +102,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
         </div>
 
         <ul className='side-nav'>
-          {canAccess('dashboard') && <MenuItem href='/admin/home' icon='ti ti-home'>Inicio</MenuItem>}
+          {canAccess('dashboard') && <MenuItem href='/admin/home' icon='ti ti-home'>Dashboard</MenuItem>}
 
           {canAccessAny('businesses', 'users', 'roles', 'generals') && (
             <MenuItemContainer title='Sistemas' icon='ti ti-settings-cog'>
@@ -114,10 +114,10 @@ const Menu = ({ can, hasRole, panel = null }) => {
             </MenuItemContainer>
           )}
 
-          {canAccessAny('businesses', 'articles', 'inventory', 'kardex', 'laboratories', 'batches', 'entry-note', 'exit-note', 'suppliers', 'units-of-measure') && (
+          {canAccessAny('warehouses', 'businesses', 'articles', 'inventory', 'kardex', 'laboratories', 'batches', 'entry-note', 'exit-note', 'suppliers', 'units-of-measure') && (
             <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
               {canAccess('articles') && <MenuItem href='/admin/articles' icon='ti ti-box'>Artículos</MenuItem>}
-              {canAccessAny('businesses', 'exit-note') && <MenuItem href='/admin/warehouses' icon='ti ti-building-store'>Almacenes</MenuItem>}
+              {canAccess('warehouses') && <MenuItem href='/admin/warehouses' icon='ti ti-building-store'>Almacenes</MenuItem>}
               {canAccess('inventory') && <MenuItem href='/admin/inventory' icon='ti ti-stack-2'>Inventario</MenuItem>}
               {canAccess('kardex') && <MenuItem href='/admin/kardex' icon='ti ti-notebook'>Kardex</MenuItem>}
               {canAccess('laboratories') && <MenuItem href='/admin/laboratories' icon='ti ti-flask'>Laboratorios</MenuItem>}
@@ -204,44 +204,19 @@ const Menu = ({ can, hasRole, panel = null }) => {
 
           {canAccessAny(
             'magistrales-dashboard',
-            'magistrales-products',
-            'magistrales-procurement',
-            'magistrales-warehouse',
-            'magistrales-billing',
             'magistrales-articles',
-            'magistrales-category',
             'magistrales-formats',
             'magistrales-formulas',
-            'magistrales-incomes',
-            'magistrales-inventory',
-            'magistrales-kardex',
-            'magistrales-laboratory',
             'magistrales-purchase-order',
             'magistrales-production-order',
-            'magistrales-supplier',
-            'magistrales-responsible',
-            'magistrales-outputs',
-            'magistrales-unit',
-            'magistrales-sales',
           ) && (
             <MenuItemContainer title='Magistrales' icon='ti ti-flask-2'>
               {canAccess('magistrales-dashboard') && <MenuItem href='/admin/magistrales/dashboard' icon='ti ti-dashboard'>Dashboard</MenuItem>}
-              {canAccessAny('magistrales-articles', 'magistrales-products') && <MenuItem href='/admin/magistrales/articles' icon='ti ti-box'>Artículos</MenuItem>}
-              {canAccessAny('magistrales-category', 'magistrales-products') && <MenuItem href='/admin/magistrales-category' icon='ti ti-category'>Categoría</MenuItem>}
-              {canAccessAny('magistrales-formats', 'magistrales-products') && <MenuItem href='/admin/magistrales-formats' icon='ti ti-forms'>Formatos</MenuItem>}
-              {canAccessAny('magistrales-formulas', 'magistrales-products') && <MenuItem href='/admin/magistrales-formulas' icon='ti ti-test-pipe'>Fórmulas</MenuItem>}
-              {canAccessAny('magistrales-incomes', 'magistrales-procurement') && <MenuItem href='/admin/magistrales/entry-note' icon='ti ti-file-import'>Nota de entrada</MenuItem>}
-              {canAccessAny('magistrales-inventory', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales/inventory' icon='ti ti-stack-2'>Inventario</MenuItem>}
-              {canAccessAny('magistrales-kardex', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales/kardex' icon='ti ti-notebook'>Kardex</MenuItem>}
-              {canAccessAny('magistrales-laboratory', 'magistrales-products') && <MenuItem href='/admin/magistrales-laboratory' icon='ti ti-flask'>Laboratorio</MenuItem>}
-              {canAccessAny('magistrales-purchase-order', 'magistrales-procurement') && <MenuItem href='/admin/magistrales/purchase-orders' icon='ti ti-shopping-cart'>O. Compra</MenuItem>}
-              {canAccessAny('magistrales-production-order', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales-production-order' icon='ti ti-clipboard-list'>O. Producción</MenuItem>}
-              {canAccessAny('magistrales-supplier', 'magistrales-procurement') && <MenuItem href='/admin/magistrales/suppliers' icon='ti ti-truck-delivery'>Proveedor</MenuItem>}
-              {canAccessAny('magistrales-responsible', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales-responsible' icon='ti ti-user-check'>Responsable</MenuItem>}
-              {canAccessAny('magistrales-outputs', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales-outputs' icon='ti ti-file-export'>Salidas</MenuItem>}
-              {canAccessAny('magistrales-unit', 'magistrales-products') && <MenuItem href='/admin/magistrales-unit' icon='ti ti-ruler-measure'>Unidad</MenuItem>}
-              {canAccessAny('magistrales-sales', 'magistrales-billing') && <MenuItem href='/admin/magistrales-sales' icon='ti ti-cash'>Ventas</MenuItem>}
-              {canAccess('magistrales-billing') && <MenuItem href='/admin/magistrales/billing-settings' icon='ti ti-file-settings'>Config. facturación</MenuItem>}
+              {canAccess('magistrales-articles') && <MenuItem href='/admin/magistrales/articles' icon='ti ti-box'>Artículos</MenuItem>}
+              {canAccess('magistrales-formats') && <MenuItem href='/admin/magistrales-formats' icon='ti ti-forms'>Formatos</MenuItem>}
+              {canAccess('magistrales-formulas') && <MenuItem href='/admin/magistrales-formulas' icon='ti ti-test-pipe'>Fórmulas</MenuItem>}
+              {canAccess('magistrales-purchase-order') && <MenuItem href='/admin/magistrales/purchase-orders' icon='ti ti-shopping-cart'>O. Compra</MenuItem>}
+              {canAccess('magistrales-production-order') && <MenuItem href='/admin/magistrales-production-order' icon='ti ti-clipboard-list'>O. Producción</MenuItem>}
             </MenuItemContainer>
           )}
         </ul>

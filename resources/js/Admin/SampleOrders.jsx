@@ -40,12 +40,15 @@ const today = () => new Date().toISOString().slice(0, 10)
 
 const emptyItem = () => ({
   uid: crypto.randomUUID(),
+  stock_key: '',
   article_id: '',
+  warehouse_id: '',
   code: '',
   lot_code: '',
   name: '',
   unit: '',
   stock: 0,
+  unit_weight: 0,
   quantity: 1,
   warehouse: '',
   expiration_date: '',
@@ -60,6 +63,7 @@ const emptyForm = () => ({
   email_status: 'delivered',
   referral_guide: '',
   total_gross_weight: '',
+  requested_at: today(),
   request_reason: '',
   supervisor_id: '',
   supervisor_name: '',
@@ -147,17 +151,21 @@ const formatUser = (user) => {
 
 const articleToItem = (article) => {
   const firstLot = article.storage_lots?.[0] ?? article.storageLots?.[0] ?? {}
+  const warehouse = article.warehouse_name ?? article.warehouse?.name ?? firstLot.warehouse?.name ?? ''
   return {
     uid: crypto.randomUUID(),
-    article_id: article.id ?? '',
+    stock_key: article.stock_key ?? '',
+    article_id: article.article_id ?? article.id ?? '',
+    warehouse_id: article.warehouse_id ?? article.warehouse?.id ?? firstLot.warehouse?.id ?? '',
     code: article.code ?? '',
-    lot_code: article.default_lot ?? firstLot.lot ?? '',
+    lot_code: article.default_lot ?? article.lot ?? firstLot.lot ?? '',
     name: article.name ?? '',
     unit: article.unit?.symbol ?? article.unit?.name ?? '',
     stock: Number(article.stock ?? article.stock_available ?? article.stock_min ?? 0),
+    unit_weight: Number(article.unit_weight ?? 0),
     quantity: 1,
-    warehouse: article.warehouse?.name ?? firstLot.warehouse?.name ?? '',
-    expiration_date: asDateText(article.default_expiration_date ?? firstLot.expiration_date),
+    warehouse,
+    expiration_date: asDateText(article.default_expiration_date ?? article.expiration_date ?? firstLot.expiration_date),
     laboratory: article.laboratory?.name ?? '',
     active_principle: article.activePrinciple?.name ?? article.active_principle?.name ?? '',
   }
@@ -166,7 +174,11 @@ const articleToItem = (article) => {
 const articleSearchValues = (article) => [
   article.code,
   article.default_lot,
+  article.lot,
+  article.stock_key,
   article.name,
+  article.warehouse_name,
+  article.warehouse?.name,
   article.category,
   article.category?.name,
   article.category?.description,
@@ -201,9 +213,35 @@ const articleSearchScore = (article, terms) => {
 }
 
 const articleItemKey = (item) => [
+  item.stock_key,
   item.article_id || item.code || item.name,
+  item.warehouse_id || item.warehouse,
   item.lot_code || item.name,
+  item.expiration_date,
 ].map(normalizeText).join('|')
+
+const sampleItems = (data) => Array.isArray(data?.items) ? data.items : []
+const sampleProducts = (data) => sampleItems(data)
+  .map(item => [item?.code, item?.name].filter(Boolean).join(' - '))
+  .filter(Boolean)
+  .join(', ')
+const sampleQuantity = (data) => sampleItems(data)
+  .reduce((sum, item) => sum + Number(item?.quantity || 0), 0)
+const sampleUnitWeight = (data) => {
+  const values = [...new Set(sampleItems(data)
+    .map(item => Number(item?.unit_weight || 0))
+    .filter(value => value > 0)
+    .map(value => formatNumber(value, 3)))]
+
+  return values.join(', ')
+}
+const sampleGrossWeight = (data) => {
+  const stored = Number(data?.total_gross_weight || 0)
+  if (stored > 0) return stored
+
+  return sampleItems(data)
+    .reduce((sum, item) => sum + (Number(item?.quantity || 0) * Number(item?.unit_weight || 0)), 0)
+}
 
 const SampleSelect = ({ label, value, options = [], onChange, placeholder = 'Seleccione', addButton = false, disabled = false }) => (
   <div className='sample-field'>
@@ -287,6 +325,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   }, [articles, articleQuery, articlePageSize])
 
   const itemTotal = useMemo(() => items.reduce((sum, item) => sum + Number(item.quantity || 0), 0), [items])
+  const computedGrossWeight = useMemo(
+    () => items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unit_weight || 0)), 0),
+    [items]
+  )
   const selectedArticleKeys = useMemo(() => new Set(
     items
       .filter(item => normalizeText(item.article_id) || normalizeText(item.code) || normalizeText(item.name))
@@ -454,12 +496,15 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       .filter(item => normalizeText(item.code) || normalizeText(item.name) || normalizeText(item.lot_code))
       .map(item => ({
         article_id: item.article_id || null,
+        warehouse_id: item.warehouse_id || null,
+        stock_key: normalizeText(item.stock_key),
         code: normalizeText(item.code),
         lot_code: normalizeText(item.lot_code),
         name: normalizeText(item.name),
         unit: normalizeText(item.unit),
         stock: Number(item.stock || 0),
         quantity: Number(item.quantity || 0),
+        unit_weight: Number(item.unit_weight || 0),
         warehouse: normalizeText(item.warehouse),
         expiration_date: item.expiration_date || null,
         laboratory: normalizeText(item.laboratory),
@@ -472,6 +517,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       order_number: form.id ? form.order_number : '',
       requested_at: form.requested_at || today(),
       delivered_at: form.delivered_at || null,
+      total_gross_weight: Number(form.total_gross_weight || computedGrossWeight || 0),
       channel: form.sales_channel,
       document_type: form.document_type || 'RUC',
       order_complete: cleanItems.length > 0 && cleanItems.every(item => Number(item.quantity || 0) > 0),
@@ -487,10 +533,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     const currentStatus = normalizeOrderStatus(trackingOrder.order_status)
     const rows = [{ date: trackingOrder.created_at, status: 'La orden se registro en el sistema' }]
     if (['approved', 'preparing', 'in_route', 'delivered'].includes(currentStatus)) {
-      rows.push({ date: trackingOrder.updated_at, status: 'La orden fue aprobada' })
+      rows.push({ date: trackingOrder.approved_at ?? trackingOrder.updated_at, status: 'La orden fue aprobada' })
     }
     if (['preparing', 'in_route', 'delivered'].includes(currentStatus)) {
-      rows.push({ date: trackingOrder.updated_at, status: 'La orden esta en preparacion' })
+      rows.push({ date: trackingOrder.updated_at, status: 'La guia fue enviada a picking para preparacion' })
     }
     if (['in_route', 'delivered'].includes(currentStatus)) {
       rows.push({ date: trackingOrder.updated_at, status: 'La orden esta en ruta' })
@@ -578,13 +624,27 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
             if (!['approved', 'preparing', 'in_route', 'delivered', 'cancelled'].includes(currentStatus)) {
               actions.append(DxButton({ className: 'btn btn-xs btn-outline-success tippy-here', title: 'Aprobar pedido', icon: 'mdi mdi-check', onClick: () => changeOrderStatus(data, 'approved', 'Aprobar pedido') }))
             }
-            actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'En ruta', icon: 'mdi mdi-truck-fast-outline', onClick: () => changeOrderStatus(data, 'in_route', 'Marcar pedido en ruta') }))
+            if (currentStatus === 'approved') {
+              actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'Enviar a picking', icon: 'mdi mdi-package-variant-closed', onClick: () => changeOrderStatus(data, 'preparing', 'Enviar pedido a picking') }))
+            }
+            if (currentStatus === 'preparing') {
+              actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'En ruta', icon: 'mdi mdi-truck-fast-outline', onClick: () => changeOrderStatus(data, 'in_route', 'Marcar pedido en ruta') }))
+            }
+            if (currentStatus === 'in_route') {
+              actions.append(DxButton({ className: 'btn btn-xs btn-outline-success tippy-here', title: 'Entregado', icon: 'mdi mdi-check-all', onClick: () => changeOrderStatus(data, 'delivered', 'Marcar pedido entregado') }))
+            }
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-info tippy-here', title: 'Ver evidencia', icon: 'mdi mdi-eye', onClick: () => openEvidence(data) }))
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-dark tippy-here', title: 'Tracking pedido', icon: 'mdi mdi-map-marker-path', onClick: () => openTracking(data) }))
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-danger tippy-here', title: 'Imprimir guia de remision', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.sampleOrder(data)) }))
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-danger tippy-here', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data) }))
             container.empty().append(actions)
           }
+        },
+        {
+          dataField: 'order_number',
+          caption: 'Nro pedido',
+          minWidth: 120,
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.order_number, () => openModal(data), 'Editar pedido')
         },
         {
           dataField: 'order_status',
@@ -597,27 +657,15 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
             renderBadge(container, option.label, option.className)
           }
         },
-        {
-          dataField: 'email_status',
-          caption: 'E. Email',
-          minWidth: 115,
-          lookup: { dataSource: emailStatusOptions, valueExpr: 'value', displayExpr: 'label' },
-          calculateCellValue: data => getOptionLabel(emailStatusOptions, data.email_status, normalizeEmailStatus),
-          cellTemplate: (container, { data }) => {
-            const option = getStatusOption(emailStatusOptions, data.email_status, normalizeEmailStatus)
-            renderBadge(container, option.label, option.className)
-          }
-        },
         { dataField: 'referral_guide', caption: 'Guia Remision', minWidth: 130 },
-        { dataField: 'total_gross_weight', caption: 'Peso bruto total', dataType: 'number', minWidth: 140, format: { type: 'fixedPoint', precision: 2 } },
-        {
-          dataField: 'order_number',
-          caption: 'Nro pedido',
-          minWidth: 120,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.order_number, () => openModal(data), 'Editar pedido')
-        },
+        { dataField: 'products', caption: 'Producto', minWidth: 300, calculateCellValue: sampleProducts, allowFiltering: false, allowSorting: false },
+        { dataField: 'quantity_total', caption: 'Cantidad', dataType: 'number', minWidth: 105, calculateCellValue: sampleQuantity, format: { type: 'fixedPoint', precision: 0 }, allowFiltering: false, allowSorting: false },
+        { dataField: 'unit_weight_total', caption: 'Peso Unitario (Kg)', minWidth: 155, calculateCellValue: sampleUnitWeight, allowFiltering: false, allowSorting: false },
+        { dataField: 'total_gross_weight', caption: 'Peso bruto total', dataType: 'number', minWidth: 140, calculateCellValue: sampleGrossWeight, format: { type: 'fixedPoint', precision: 3 }, allowFiltering: false, allowSorting: false },
+        { dataField: 'requested_at', caption: 'Fecha solicitada', dataType: 'date', minWidth: 145 },
+        { dataField: 'approved_at', caption: 'Fecha aprobacion', dataType: 'datetime', minWidth: 155 },
+        { dataField: 'delivered_at', caption: 'Fecha entrega', dataType: 'date', minWidth: 130 },
         { dataField: 'sales_channel', caption: 'Canal', minWidth: 110, calculateCellValue: row => row.sales_channel ?? row.channel ?? '' },
-        { dataField: 'document_number', caption: 'Nro documento', minWidth: 130 },
         { dataField: 'client_name', caption: 'Cliente', minWidth: 260 },
         {
           dataField: 'order_complete',
@@ -626,8 +674,6 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           calculateCellValue: data => data.order_complete ? 'COMPLETO' : 'INCOMPLETO',
           cellTemplate: (container, { data }) => renderBadge(container, data.order_complete ? 'COMPLETO' : 'INCOMPLETO', data.order_complete ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-warning border border-warning')
         },
-        { dataField: 'requested_at', caption: 'Fecha solicitada', dataType: 'date', minWidth: 145 },
-        { dataField: 'delivered_at', caption: 'Fecha entrega', dataType: 'date', minWidth: 130 },
         { dataField: 'supervisor_name', caption: 'Supervisor', minWidth: 200 },
       ]}
     />
@@ -659,7 +705,9 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         <SampleInput label='Referencia' value={form.delivery_reference} onChange={value => setField('delivery_reference', value)} />
         <SampleSelect label='Tipo servicio' value={form.service_type} onChange={value => setField('service_type', value)} options={serviceTypeOptions} addButton />
 
+        <SampleInput label='Fecha solicitada' value={form.requested_at} onChange={value => setField('requested_at', value)} type='date' />
         <SampleInput label='Fecha Entrega' value={form.delivered_at} onChange={value => setField('delivered_at', value)} type='date' />
+        <SampleInput label='Peso bruto total (Kg)' value={formatNumber(computedGrossWeight, 3)} onChange={() => { }} disabled />
         <SampleInput label='DNI' value={form.contact_document} onChange={value => setField('contact_document', value)} />
         <SampleInput label='Persona de contacto' value={form.contact_name} onChange={value => setField('contact_name', value)} />
         <SampleInput label='Celular' value={form.contact_phone} onChange={value => setField('contact_phone', value)} />
@@ -699,7 +747,9 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
               <th style={{ minWidth: 320 }}>Nombre</th>
               <th style={{ minWidth: 120 }}>Unidad</th>
               <th style={{ minWidth: 120 }}>Stock</th>
+              <th style={{ minWidth: 140 }}>Peso Unitario (Kg)</th>
               <th style={{ minWidth: 120 }}>Cantidad</th>
+              <th style={{ minWidth: 140 }}>Peso bruto (Kg)</th>
               <th style={{ width: 58 }}></th>
             </tr>
           </thead>
@@ -711,13 +761,16 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
                 <td><input value={item.name} onChange={e => updateItem(item.uid, 'name', e.target.value)} /></td>
                 <td><input value={item.unit} onChange={e => updateItem(item.uid, 'unit', e.target.value)} /></td>
                 <td><input type='number' step='0.001' value={item.stock} onChange={e => updateItem(item.uid, 'stock', e.target.value)} /></td>
+                <td><input type='number' step='0.001' value={item.unit_weight} onChange={e => updateItem(item.uid, 'unit_weight', e.target.value)} /></td>
                 <td><input type='number' step='1' value={item.quantity} onChange={e => updateItem(item.uid, 'quantity', e.target.value)} /></td>
+                <td><input value={formatNumber(Number(item.quantity || 0) * Number(item.unit_weight || 0), 3)} disabled /></td>
                 <td><button type='button' className='btn btn-sm btn-outline-danger' onClick={() => removeItem(item.uid)}><i className='mdi mdi-close'></i></button></td>
               </tr>
             ))}
             <tr>
-              <td colSpan='5' className='text-end fw-semibold fst-italic'>Total</td>
+              <td colSpan='6' className='text-end fw-semibold fst-italic'>Total</td>
               <td><input value={formatNumber(itemTotal, 0)} disabled /></td>
+              <td><input value={formatNumber(computedGrossWeight, 3)} disabled /></td>
               <td></td>
             </tr>
           </tbody>
@@ -766,16 +819,17 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
               <th>Fecha vencimiento</th>
               <th>Nombre</th>
               <th>Unidad</th>
+              <th>Peso Unitario (Kg)</th>
               <th>Laboratorio</th>
               <th>Principio activo</th>
             </tr>
           </thead>
           <tbody>
-            {articleRows.length === 0 && <tr><td colSpan='10' className='text-center text-muted py-3'>No existen elementos</td></tr>}
+            {articleRows.length === 0 && <tr><td colSpan='11' className='text-center text-muted py-3'>No existen elementos</td></tr>}
             {articleRows.map(article => {
               const item = articleToItem(article)
               const isSelected = selectedArticleKeys.has(articleItemKey(item))
-              return <tr key={`sample-article-${article.id}`}>
+              return <tr key={`sample-article-${article.stock_key ?? article.id}`}>
                 <td>
                   <button
                     type='button'
@@ -794,6 +848,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
                 <td>{item.expiration_date}</td>
                 <td>{item.name}</td>
                 <td>{item.unit}</td>
+                <td>{formatNumber(item.unit_weight, 3)}</td>
                 <td>{item.laboratory}</td>
                 <td>{item.active_principle}</td>
               </tr>

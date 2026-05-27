@@ -14,6 +14,13 @@ import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magi
 
 const rest = new ProductionOrdersRest()
 const statusLabels = { pending: 'Pendiente', in_process: 'En proceso', finished: 'Finalizado', cancelled: 'Cancelado' }
+const toNumber = (value) => Number.parseFloat(value || 0) || 0
+const normalizeText = (value) => (value ?? '').toString().trim().toLowerCase()
+const isInputArticle = (article) => {
+  const type = normalizeText(article?.article_type)
+  const category = normalizeText(article?.magistralCategory?.description ?? article?.magistral_category?.description)
+  return type.includes('insumo') || type.includes('envase') || category === 'insumos'
+}
 
 const emptyItem = () => ({
   uid: crypto.randomUUID(),
@@ -23,6 +30,7 @@ const emptyItem = () => ({
   quantity: 1,
   magistral_formula_id: '',
   total: 1,
+  formula_label: '',
 })
 
 const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWarehouse = null }) => {
@@ -46,8 +54,13 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
   const [formulas, setFormulas] = useState([])
   const [items, setItems] = useState([emptyItem()])
   const [isEditing, setIsEditing] = useState(false)
+  const [selectedArticleId, setSelectedArticleId] = useState('')
+  const [productionQuantity, setProductionQuantity] = useState(1)
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
   const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
+  const productArticles = articles.filter(article => !isInputArticle(article))
+  const inputArticles = articles.filter(isInputArticle)
+  const selectedFormula = formulas.find(formula => `${formula.article_id}` === `${selectedArticleId}`)
 
   useEffect(() => {
     Promise.all([
@@ -63,6 +76,39 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
     })
   }, [])
 
+  const formulaRowsForQuantity = (articleId, quantity, currentItems = items) => {
+    const formula = formulas.find(row => `${row.article_id}` === `${articleId}`)
+    if (!formula?.items?.length) return [emptyItem()]
+
+    const datesByArticle = new Map(currentItems.map(item => [`${item.article_id}`, item.expiration_date ?? '']))
+    const multiplier = Math.max(0, toNumber(quantity))
+    return formula.items
+      .filter(item => item.article_id)
+      .map(item => {
+        const article = inputArticles.find(row => `${row.id}` === `${item.article_id}`) ?? item.article
+        const baseQuantity = toNumber(item.total_quantity || item.quantity)
+        return {
+          uid: crypto.randomUUID(),
+          article_id: item.article_id ?? '',
+          description: item.description ?? article?.name ?? '',
+          expiration_date: datesByArticle.get(`${item.article_id}`) ?? '',
+          quantity: Number(baseQuantity.toFixed(3)),
+          magistral_formula_id: formula.id,
+          total: Number((baseQuantity * multiplier).toFixed(3)),
+          formula_label: `${formula.article?.code ?? formula.id} - ${formula.article?.name ?? 'Formula'}`,
+        }
+      })
+  }
+
+  const applyFormula = (articleId, quantity, currentItems = items) => {
+    const formula = formulas.find(row => `${row.article_id}` === `${articleId}`)
+    if (!formula) {
+      setItems([emptyItem()])
+      return
+    }
+    setItems(formulaRowsForQuantity(articleId, quantity, currentItems))
+  }
+
   const openModal = (data = null) => {
     setIsEditing(!!data?.id)
     idRef.current.value = data?.id ?? ''
@@ -70,10 +116,12 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
     statusRef.current.value = data?.order_status ?? 'pending'
     responsibleRef.current.value = data?.responsible_id ?? ''
     warehouseRef.current.value = data?.destination_warehouse_id ?? fixedWarehouseId
-    articleRef.current.value = data?.article_id ?? ''
+    const nextArticleId = data?.article_id ? `${data.article_id}` : ''
+    setSelectedArticleId(nextArticleId)
     formatRef.current.value = data?.format_id ?? ''
     batchQuantityRef.current.value = data?.batch_quantity ?? 0
-    quantityRef.current.value = data?.quantity ?? 1
+    const nextQuantity = data?.quantity ?? 1
+    setProductionQuantity(nextQuantity)
     deliveryDateRef.current.value = data?.delivery_date?.toString?.().slice?.(0, 10) ?? ''
     dateRef.current.value = data?.registration_date?.toString?.().slice?.(0, 10) ?? new Date().toISOString().slice(0, 10)
     observationsRef.current.value = data?.observations ?? ''
@@ -85,9 +133,20 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
       quantity: item.quantity ?? 1,
       magistral_formula_id: item.magistral_formula_id ?? '',
       total: item.total ?? item.quantity ?? 1,
+      formula_label: item.formula?.article?.name ?? '',
     }))
     setItems(nextItems.length ? nextItems : [emptyItem()])
     $(modalRef.current).modal('show')
+  }
+
+  const onProductChange = (value) => {
+    setSelectedArticleId(value)
+    applyFormula(value, productionQuantity)
+  }
+
+  const onProductionQuantityChange = (value) => {
+    setProductionQuantity(value)
+    applyFormula(selectedArticleId, value)
   }
 
   const updateItem = (uid, field, value) => {
@@ -95,7 +154,7 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
       if (item.uid !== uid) return item
       const next = { ...item, [field]: value }
       if (field === 'article_id') {
-        const article = articles.find(row => `${row.id}` === `${value}`)
+        const article = inputArticles.find(row => `${row.id}` === `${value}`)
         if (article && !next.description) next.description = article.name
       }
       if (field === 'quantity') next.total = value
@@ -119,10 +178,10 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
       responsible_id: responsibleRef.current.value || null,
       destination: fixedWarehouse?.name ?? fixedWarehouseLabel,
       destination_warehouse_id: warehouseRef.current.value || fixedWarehouseId || null,
-      article_id: articleRef.current.value || null,
+      article_id: selectedArticleId || null,
       format_id: formatRef.current.value || null,
       batch_quantity: batchQuantityRef.current.value,
-      quantity: quantityRef.current.value,
+      quantity: productionQuantity,
       delivery_date: deliveryDateRef.current.value || null,
       registration_date: dateRef.current.value || null,
       observations: observationsRef.current.value.trim(),
@@ -204,16 +263,16 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
         <div className='col-md-4 mb-3'><label className='form-label'>Responsable</label><select ref={responsibleRef} className='form-control'><option value=''>Seleccione</option>{responsibles.map(row => <option key={`mag-po-resp-${row.id}`} value={row.id}>{row.document_number} - {row.name}</option>)}</select></div>
         <input ref={warehouseRef} hidden />
         <div className='col-md-4 mb-3'><label className='form-label'>Almacen fijo</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Producto</label><select ref={articleRef} className='form-control'><option value=''>Seleccione</option>{articles.map(row => <option key={`mag-po-article-${row.id}`} value={row.id}>{row.code} - {row.name}</option>)}</select></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Producto</label><select ref={articleRef} className='form-control' value={selectedArticleId} onChange={(e) => onProductChange(e.target.value)}><option value=''>Seleccione</option>{productArticles.map(row => <option key={`mag-po-article-${row.id}`} value={row.id}>{row.code} - {row.name}</option>)}</select></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Formato</label><select ref={formatRef} className='form-control'><option value=''>Seleccione</option>{formats.map(row => <option key={`mag-po-format-${row.id}`} value={row.id}>{row.description} ({row.quantity})</option>)}</select></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Cantidad tanda</label><input ref={batchQuantityRef} type='number' min='0' step='0.001' className='form-control' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Cantidad producto</label><input ref={quantityRef} type='number' min='0' step='0.001' className='form-control' /></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Cantidad producto</label><input ref={quantityRef} type='number' min='0' step='0.001' className='form-control' value={productionQuantity} onChange={(e) => onProductionQuantityChange(e.target.value)} /></div>
         <div className='col-12 mb-2'><label className='form-label'>Observaciones generales</label><textarea ref={observationsRef} className='form-control' rows='2' /></div>
 
         <div className='col-12 mt-2'>
           <div className='d-flex justify-content-between align-items-center mb-2'>
             <h6 className='mb-0'>Detalle de articulos</h6>
-            <button type='button' className='btn btn-sm btn-soft-primary' onClick={() => setItems(prev => [...prev, emptyItem()])}><i className='mdi mdi-plus me-1'></i> Insertar articulo</button>
+            <button type='button' className='btn btn-sm btn-soft-primary' disabled={!!selectedFormula} onClick={() => setItems(prev => [...prev, emptyItem()])}><i className='mdi mdi-plus me-1'></i> Insertar articulo</button>
           </div>
           <div className='table-responsive border rounded'>
             <table className='table table-sm table-striped mb-0'>
@@ -230,12 +289,12 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
               <tbody>
                 {items.map(item => (
                   <tr key={item.uid}>
-                    <td><select className='form-control form-control-sm' value={item.article_id} onChange={(e) => updateItem(item.uid, 'article_id', e.target.value)}><option value=''>Articulo</option>{articles.map(article => <option key={`po-item-article-${article.id}`} value={article.id}>{article.code} - {article.name}</option>)}</select></td>
+                    <td><select className='form-control form-control-sm' value={item.article_id} disabled={!!selectedFormula} onChange={(e) => updateItem(item.uid, 'article_id', e.target.value)}><option value=''>Articulo</option>{inputArticles.map(article => <option key={`po-item-article-${article.id}`} value={article.id}>{article.code} - {article.name}</option>)}</select></td>
                     <td><input className='form-control form-control-sm' type='date' value={item.expiration_date} onChange={(e) => updateItem(item.uid, 'expiration_date', e.target.value)} /></td>
-                    <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => updateItem(item.uid, 'quantity', e.target.value)} /></td>
-                    <td><select className='form-control form-control-sm' value={item.magistral_formula_id} onChange={(e) => updateItem(item.uid, 'magistral_formula_id', e.target.value)}><option value=''>Sin formula</option>{formulas.map(formula => <option key={`po-formula-${formula.id}`} value={formula.id}>{formula.article?.code ?? formula.id} - {formula.article?.name ?? 'Formula'}</option>)}</select></td>
-                    <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.total} onChange={(e) => updateItem(item.uid, 'total', e.target.value)} /></td>
-                    <td><button type='button' className='btn btn-xs btn-soft-danger' onClick={() => removeItem(item.uid)}><i className='mdi mdi-delete'></i></button></td>
+                    <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} disabled={!!selectedFormula} onChange={(e) => updateItem(item.uid, 'quantity', e.target.value)} /></td>
+                    <td><input className='form-control form-control-sm' value={item.formula_label || (selectedFormula ? `${selectedFormula.article?.code ?? selectedFormula.id} - ${selectedFormula.article?.name ?? 'Formula'}` : '')} disabled /></td>
+                    <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.total} disabled={!!selectedFormula} onChange={(e) => updateItem(item.uid, 'total', e.target.value)} /></td>
+                    <td><button type='button' className='btn btn-xs btn-soft-danger' disabled={!!selectedFormula} onClick={() => removeItem(item.uid)}><i className='mdi mdi-delete'></i></button></td>
                   </tr>
                 ))}
               </tbody>

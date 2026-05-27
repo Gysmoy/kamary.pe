@@ -20,6 +20,7 @@ class WarehouseController extends BasicController
     public function setReactViewProperties(Request $request)
     {
         return [
+            'requiredPermission' => 'warehouses',
             'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }

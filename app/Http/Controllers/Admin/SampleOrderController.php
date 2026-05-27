@@ -4,10 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
 use App\Models\SampleOrder;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use SoDe\Extend\Response;
 
 class SampleOrderController extends BasicController
 {
@@ -57,6 +61,11 @@ class SampleOrderController extends BasicController
             ['registered', 'approved', 'preparing', 'in_route', 'delivered', 'cancelled'],
             'registered'
         );
+        if (Schema::hasColumn('sample_orders', 'approved_at') && in_array($body['order_status'], ['approved', 'preparing', 'in_route', 'delivered'], true)) {
+            $body['approved_at'] = $this->normalizeDateTime($body['approved_at'] ?? null)
+                ?? ($id ? SampleOrder::query()->whereKey($id)->value('approved_at') : null)
+                ?? now();
+        }
         $body['email_status'] = $this->normalizeOption(
             $this->normalizeStatusAlias($body['email_status'] ?? 'pending', ['sent' => 'delivered']),
             ['pending', 'delivered', 'failed'],
@@ -85,6 +94,9 @@ class SampleOrderController extends BasicController
         $body['order_complete'] = $this->toBoolean($body['order_complete'] ?? false);
         $body['requested_at'] = $this->normalizeDate($body['requested_at'] ?? now()->toDateString());
         $body['delivered_at'] = $this->normalizeDate($body['delivered_at'] ?? null);
+        if ($body['order_status'] === 'delivered' && !$body['delivered_at']) {
+            $body['delivered_at'] = now()->toDateString();
+        }
         $body['supervisor_name'] = trim((string)($body['supervisor_name'] ?? '')) ?: null;
         $body['cancellation_reason'] = trim((string)($body['cancellation_reason'] ?? '')) ?: null;
         $body['observations'] = trim((string)($body['observations'] ?? '')) ?: null;
@@ -93,13 +105,81 @@ class SampleOrderController extends BasicController
         $body['evidence_url'] = trim((string)($body['evidence_url'] ?? '')) ?: null;
         $body['evidence_notes'] = trim((string)($body['evidence_notes'] ?? '')) ?: null;
         $body['items'] = $this->normalizeItems($body['items'] ?? []);
+        $this->assertItemsFromSampleWarehouse($body['items']);
 
         return $body;
     }
 
+    public function articles(Request $request)
+    {
+        $response = new Response();
+
+        try {
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = $this->sampleStockRows(
+                (string)($request->input('search') ?? ''),
+                (int)($request->input('take') ?? 1000)
+            );
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function boolean(Request $request)
+    {
+        $field = trim((string)$request->field);
+        if ($field !== 'order_status') {
+            return parent::boolean($request);
+        }
+
+        $response = new Response();
+        try {
+            $orderStatus = $this->normalizeOption(
+                $this->normalizeStatusAlias($request->value ?? 'registered', [
+                    'processing' => 'preparing',
+                    'completed' => 'delivered',
+                ]),
+                ['registered', 'approved', 'preparing', 'in_route', 'delivered', 'cancelled'],
+                'registered'
+            );
+
+            $order = SampleOrder::query()->whereKey($request->id)->whereNotNull('status')->firstOrFail();
+            $updates = [
+                'order_status' => $orderStatus,
+                'updated_by' => Auth::id(),
+            ];
+
+            if (
+                Schema::hasColumn('sample_orders', 'approved_at')
+                && in_array($orderStatus, ['approved', 'preparing', 'in_route', 'delivered'], true)
+                && !$order->approved_at
+            ) {
+                $updates['approved_at'] = now();
+            }
+            if ($orderStatus === 'delivered' && !$order->delivered_at) {
+                $updates['delivered_at'] = now()->toDateString();
+            }
+
+            $order->update($updates);
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = $order->fresh();
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
     public function evidence(Request $request, string $id)
     {
-        $response = new \SoDe\Extend\Response();
+        $response = new Response();
 
         try {
             $order = SampleOrder::query()->whereKey($id)->whereNotNull('status')->firstOrFail();
@@ -186,6 +266,17 @@ class SampleOrderController extends BasicController
         return date('Y-m-d', $timestamp);
     }
 
+    private function normalizeDateTime($value): ?string
+    {
+        if ($value === null) return null;
+        $text = trim((string)$value);
+        if ($text === '') return null;
+        $timestamp = strtotime($text);
+        if ($timestamp === false) throw new \Exception("Fecha invalida: {$value}");
+
+        return date('Y-m-d H:i:s', $timestamp);
+    }
+
     private function toNullableDecimal($value): ?float
     {
         if ($value === null) return null;
@@ -219,19 +310,245 @@ class SampleOrderController extends BasicController
             ->filter(fn ($item) => is_array($item))
             ->map(function ($item) {
                 return [
+                    'stock_key' => trim((string)($item['stock_key'] ?? '')) ?: null,
                     'article_id' => $this->toNullableInt($item['article_id'] ?? null),
+                    'warehouse_id' => $this->toNullableInt($item['warehouse_id'] ?? null),
                     'code' => trim((string)($item['code'] ?? '')) ?: null,
                     'lot_code' => trim((string)($item['lot_code'] ?? '')) ?: null,
                     'name' => trim((string)($item['name'] ?? '')) ?: null,
                     'unit' => trim((string)($item['unit'] ?? '')) ?: null,
                     'stock' => $this->toNullableDecimal($item['stock'] ?? 0) ?? 0,
                     'quantity' => $this->toNullableDecimal($item['quantity'] ?? 0) ?? 0,
+                    'unit_weight' => $this->toNullableDecimal($item['unit_weight'] ?? 0) ?? 0,
                     'warehouse' => trim((string)($item['warehouse'] ?? '')) ?: null,
                     'expiration_date' => $this->normalizeDate($item['expiration_date'] ?? null),
                     'laboratory' => trim((string)($item['laboratory'] ?? '')) ?: null,
                     'active_principle' => trim((string)($item['active_principle'] ?? '')) ?: null,
                 ];
             })
+            ->values()
+            ->all();
+    }
+
+    private function assertItemsFromSampleWarehouse(array $items): void
+    {
+        if (count($items) === 0) return;
+
+        $requested = [];
+        foreach ($items as $index => $item) {
+            $articleId = $this->toNullableInt($item['article_id'] ?? null);
+            if (!$articleId) {
+                throw new \Exception('El item ' . ($index + 1) . ' debe seleccionarse desde el almacen de Muestras');
+            }
+
+            $requested[$articleId] = ($requested[$articleId] ?? 0) + (float)($item['quantity'] ?? 0);
+        }
+
+        $stockByArticle = collect($this->sampleStockRows('', 5000))
+            ->groupBy('article_id')
+            ->map(fn($rows) => $rows->sum('stock'));
+
+        foreach ($requested as $articleId => $quantity) {
+            $available = (float)($stockByArticle[$articleId] ?? 0);
+            if ($available <= 0) {
+                throw new \Exception("El articulo {$articleId} no pertenece al almacen de Muestras o no tiene stock disponible");
+            }
+            if ($quantity > ($available + 0.0005)) {
+                throw new \Exception("Stock insuficiente en almacen de Muestras para el articulo {$articleId}. Disponible: " . round($available, 3));
+            }
+        }
+    }
+
+    private function sampleStockRows(string $search = '', int $take = 1000): array
+    {
+        if (
+            !Schema::hasTable('warehouses')
+            || !Schema::hasTable('articles')
+            || !Schema::hasTable('entry_note_items')
+            || !Schema::hasTable('entry_notes')
+        ) {
+            return [];
+        }
+
+        $warehouseIds = $this->sampleWarehouseIds();
+        if (count($warehouseIds) === 0) return [];
+
+        $entryMovements = DB::table('entry_note_items as item')
+            ->join('entry_notes as note', 'note.id', '=', 'item.entry_note_id')
+            ->join('businesses as business', 'business.id', '=', 'note.business_id')
+            ->where('business.business_key', BusinessScope::KAMARY_PERU)
+            ->where('note.status', 1)
+            ->where('item.status', 1)
+            ->when(Schema::hasColumn('entry_notes', 'entry_status'), fn($query) => $query->where('note.entry_status', 'approved'))
+            ->where(function ($query) use ($warehouseIds) {
+                $query->whereIn('item.warehouse_id', $warehouseIds)
+                    ->orWhere(function ($fallback) use ($warehouseIds) {
+                        $fallback->whereNull('item.warehouse_id')->whereIn('note.warehouse_id', $warehouseIds);
+                    });
+            })
+            ->selectRaw("
+                item.article_id,
+                COALESCE(item.warehouse_id, note.warehouse_id) as warehouse_id,
+                COALESCE(NULLIF(item.lot, ''), NULLIF(item.batch_code, ''), '') as lot,
+                item.expiration_date,
+                item.quantity
+            ");
+
+        if (Schema::hasTable('purchase_receipt_items') && Schema::hasTable('purchase_receipts')) {
+            $receiptMovements = DB::table('purchase_receipt_items as item')
+                ->join('purchase_receipts as receipt', 'receipt.id', '=', 'item.purchase_receipt_id')
+                ->join('businesses as business', 'business.id', '=', 'receipt.business_id')
+                ->where('business.business_key', BusinessScope::KAMARY_PERU)
+                ->where('receipt.status', 1)
+                ->when(Schema::hasColumn('purchase_receipts', 'receipt_status'), fn($query) => $query->where('receipt.receipt_status', 'confirmed'))
+                ->where('item.status', 1)
+                ->where(function ($query) use ($warehouseIds) {
+                    $query->whereIn('item.warehouse_id', $warehouseIds)
+                        ->orWhere(function ($fallback) use ($warehouseIds) {
+                            $fallback->whereNull('item.warehouse_id')->whereIn('receipt.warehouse_id', $warehouseIds);
+                        });
+                })
+                ->selectRaw("
+                    item.article_id,
+                    COALESCE(item.warehouse_id, receipt.warehouse_id) as warehouse_id,
+                    COALESCE(NULLIF(item.lot, ''), NULLIF(item.batch_code, ''), '') as lot,
+                    item.expiration_date,
+                    item.quantity
+                ");
+
+            $entryMovements->unionAll($receiptMovements);
+        }
+
+        $incomingTotals = DB::query()
+            ->fromSub($entryMovements, 'incoming')
+            ->selectRaw("
+                incoming.article_id,
+                incoming.warehouse_id,
+                incoming.lot,
+                incoming.expiration_date,
+                COALESCE(SUM(incoming.quantity), 0) as qty_in
+            ")
+            ->groupBy('incoming.article_id', 'incoming.warehouse_id', 'incoming.lot', 'incoming.expiration_date');
+
+        $outgoingTotals = Schema::hasTable('exit_note_items') && Schema::hasTable('exit_notes')
+            ? DB::table('exit_note_items as item')
+                ->join('exit_notes as note', 'note.id', '=', 'item.exit_note_id')
+                ->join('businesses as business', 'business.id', '=', 'note.business_id')
+                ->where('business.business_key', BusinessScope::KAMARY_PERU)
+                ->where('note.status', 1)
+                ->where('item.status', 1)
+                ->when(Schema::hasColumn('exit_notes', 'exit_status'), fn($query) => $query->where('note.exit_status', 'approved'))
+                ->where(function ($query) use ($warehouseIds) {
+                    $query->whereIn('item.warehouse_id', $warehouseIds)
+                        ->orWhere(function ($fallback) use ($warehouseIds) {
+                            $fallback->whereNull('item.warehouse_id')->whereIn('note.warehouse_id', $warehouseIds);
+                        });
+                })
+                ->selectRaw("
+                    item.article_id,
+                    COALESCE(item.warehouse_id, note.warehouse_id) as warehouse_id,
+                    COALESCE(NULLIF(item.batch_code, ''), '') as lot,
+                    item.expiration_date,
+                    COALESCE(SUM(item.quantity), 0) as qty_out
+                ")
+                ->groupBy('item.article_id', 'warehouse_id', 'lot', 'item.expiration_date')
+            : DB::query()
+                ->selectRaw("
+                    NULL as article_id,
+                    NULL as warehouse_id,
+                    '' as lot,
+                    NULL as expiration_date,
+                    0 as qty_out
+                ")
+                ->whereRaw('1 = 0');
+
+        $needle = mb_strtolower(trim($search));
+        $query = DB::query()
+            ->fromSub($incomingTotals, 'stock')
+            ->join('articles as article', 'article.id', '=', 'stock.article_id')
+            ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
+            ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'article.laboratory_id')
+            ->leftJoin('active_principles as principle', 'principle.id', '=', 'article.active_principle_id')
+            ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'stock.warehouse_id')
+            ->leftJoinSub($outgoingTotals, 'outgoing', function ($join) {
+                $join->on('outgoing.article_id', '=', 'stock.article_id')
+                    ->on('outgoing.warehouse_id', '=', 'stock.warehouse_id')
+                    ->whereRaw("COALESCE(outgoing.lot, '') = COALESCE(stock.lot, '')")
+                    ->whereRaw("COALESCE(outgoing.expiration_date, '1000-01-01') = COALESCE(stock.expiration_date, '1000-01-01')");
+            })
+            ->when(Schema::hasColumn('articles', 'status'), fn($query) => $query->whereNotNull('article.status'))
+            ->whereRaw('(COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0)) > 0')
+            ->when($needle !== '', function ($query) use ($needle) {
+                $like = '%' . $needle . '%';
+                $query->where(function ($inner) use ($like) {
+                    $inner->whereRaw("LOWER(COALESCE(article.code, '')) LIKE ?", [$like])
+                        ->orWhereRaw("LOWER(COALESCE(article.name, '')) LIKE ?", [$like])
+                        ->orWhereRaw("LOWER(COALESCE(stock.lot, '')) LIKE ?", [$like])
+                        ->orWhereRaw("LOWER(COALESCE(warehouse.name, '')) LIKE ?", [$like]);
+                });
+            })
+            ->orderBy('article.name')
+            ->orderBy('stock.expiration_date')
+            ->limit(max(1, min($take ?: 1000, 5000)))
+            ->get([
+                'stock.article_id',
+                'stock.warehouse_id',
+                'stock.lot',
+                'stock.expiration_date',
+                DB::raw('COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0) as stock'),
+                'article.code',
+                'article.name',
+                'article.unit_weight',
+                DB::raw('COALESCE(unit.symbol, unit.name, "") as unit_label'),
+                DB::raw('COALESCE(laboratory.name, "") as laboratory_name'),
+                DB::raw('COALESCE(principle.name, "") as principle_name'),
+                DB::raw('COALESCE(warehouse.name, "") as warehouse_name'),
+            ]);
+
+        return $query->map(function ($row) {
+            $expirationDate = $row->expiration_date ? substr((string)$row->expiration_date, 0, 10) : '';
+            $stockKey = implode('|', [
+                $row->article_id,
+                $row->warehouse_id,
+                (string)$row->lot,
+                $expirationDate,
+            ]);
+
+            return [
+                'id' => (int)$row->article_id,
+                'stock_key' => $stockKey,
+                'article_id' => (int)$row->article_id,
+                'warehouse_id' => $row->warehouse_id ? (int)$row->warehouse_id : null,
+                'code' => (string)$row->code,
+                'default_lot' => (string)$row->lot,
+                'name' => (string)$row->name,
+                'unit_weight' => (float)($row->unit_weight ?? 0),
+                'unit' => ['symbol' => (string)$row->unit_label, 'name' => (string)$row->unit_label],
+                'stock' => round((float)$row->stock, 3),
+                'warehouse' => ['id' => $row->warehouse_id, 'name' => (string)$row->warehouse_name],
+                'warehouse_name' => (string)$row->warehouse_name,
+                'default_expiration_date' => $expirationDate,
+                'laboratory' => ['name' => (string)$row->laboratory_name],
+                'activePrinciple' => ['name' => (string)$row->principle_name],
+            ];
+        })->values()->all();
+    }
+
+    private function sampleWarehouseIds(): array
+    {
+        if (!Schema::hasTable('warehouses')) return [];
+
+        return DB::table('warehouses')
+            ->leftJoin('business_branches as branch', 'branch.id', '=', 'warehouses.business_branch_id')
+            ->leftJoin('businesses as business', 'business.id', '=', 'branch.business_id')
+            ->whereNotNull('warehouses.status')
+            ->where('business.business_key', BusinessScope::KAMARY_PERU)
+            ->where(function ($query) {
+                $query->whereRaw('LOWER(warehouses.name) LIKE ?', ['%muestra%'])
+                    ->orWhereRaw("LOWER(COALESCE(warehouses.description, '')) LIKE ?", ['%muestra%']);
+            })
+            ->pluck('warehouses.id')
+            ->map(fn($id) => (int)$id)
             ->values()
             ->all();
     }
