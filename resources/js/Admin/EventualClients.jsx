@@ -11,6 +11,7 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import EventualClientsRest from '../Actions/Admin/EventualClientsRest';
 import renderGridEditLink from '../Utils/renderGridEditLink';
 import { getCommercialOrderStatusLabel } from '../Utils/statusLabels';
+import * as XLSX from 'xlsx';
 
 const eventualClientsRest = new EventualClientsRest()
 
@@ -22,6 +23,7 @@ const setRefValue = (ref, value) => {
 const getRefValue = (ref) => ref?.current?.value ?? ''
 const normalizePrefix = (value) => (value ?? '').toString().replace(/\D+/g, '')
 const normalizeDocumentType = (value) => `${value ?? ''}`.trim().toUpperCase()
+const clientExportHeaders = ['TIPO DOCUMENTO', 'N° DOCUMENTO', 'RAZÓN SOCIAL', 'EMAIL', 'DIRECCION', 'DÍAS VCTO. CONTRATO', 'ESTADO']
 
 const formatAuditUser = (user) => {
   if (!user) return ''
@@ -117,6 +119,7 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
   const [lastLookedDocumentKey, setLastLookedDocumentKey] = useState('')
   const [selectedClient, setSelectedClient] = useState(null)
   const [ordersRest, setOrdersRest] = useState(null)
+  const [isExporting, setIsExporting] = useState(false)
 
   const docMaxLength = documentType === 'dni' ? 8 : (documentType === 'ruc' ? 11 : 20)
 
@@ -276,10 +279,52 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
     $(ordersModalRef.current).modal('show')
   }
 
-  const exportGrid = () => {
-    const instance = $(gridRef.current).dxDataGrid('instance')
-    if (!instance) return
-    instance.exportToExcel(false)
+  const exportGrid = async () => {
+    if (isExporting) return
+
+    setIsExporting(true)
+    try {
+      const response = await eventualClientsRest.paginate({
+        skip: 0,
+        take: 0,
+        isLoadingAll: true,
+        requireTotalCount: false,
+        sort: [{ selector: 'id', desc: true }],
+      })
+
+      if (response?.status && response.status !== 200) {
+        throw new Error(response.message || 'No se pudo generar el reporte')
+      }
+
+      const rows = (response?.data ?? []).map((client) => [
+        normalizeDocumentType(client.document_type),
+        `${client.document_number ?? ''}`,
+        client.business_name ?? '',
+        client.email ?? '',
+        client.address ?? '',
+        contractDueLabel(client.contract_due_days),
+        client.status === false || client.status === 0 || client.status === '0' ? 'Inactivo' : 'Activo',
+      ])
+
+      const worksheet = XLSX.utils.aoa_to_sheet([clientExportHeaders, ...rows])
+      worksheet['!cols'] = [
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 65 },
+        { wch: 28 },
+        { wch: 95 },
+        { wch: 24 },
+        { wch: 12 },
+      ]
+
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte')
+      XLSX.writeFile(workbook, 'reporte-clientes-eventuales.xlsx')
+    } catch (error) {
+      Swal.fire('No se pudo exportar', error.message || 'Ocurrio un error al generar el Excel', 'error')
+    } finally {
+      setIsExporting(false)
+    }
   }
 
   useEffect(() => () => {
@@ -295,8 +340,8 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
         </button>
       </div>
       <div className='col-md-4'>
-        <button type='button' className='btn btn-success w-100 d-flex align-items-center justify-content-between' onClick={exportGrid}>
-          <span><i className='mdi mdi-file-excel-outline me-1'></i> Exportar Clientes</span>
+        <button type='button' className='btn btn-success w-100 d-flex align-items-center justify-content-between' onClick={exportGrid} disabled={isExporting}>
+          <span><i className={`mdi ${isExporting ? 'mdi-loading mdi-spin' : 'mdi-file-excel-outline'} me-1`}></i> {isExporting ? 'Exportando...' : 'Exportar Clientes'}</span>
           <i className='mdi mdi-download-outline'></i>
         </button>
       </div>
