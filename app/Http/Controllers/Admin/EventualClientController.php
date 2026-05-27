@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
 use App\Http\Classes\dxResponse;
-use App\Models\CommercialOrder;
 use App\Models\dxDataGrid;
 use App\Models\EventualClient;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\File;
@@ -212,20 +212,21 @@ class EventualClientController extends BasicController
         try {
             EventualClient::whereKey($id)->whereNotNull('status')->firstOrFail();
 
-            $query = CommercialOrder::query()
-                ->select('commercial_orders.*')
-                ->selectRaw("COALESCE(NULLIF(businesses.name, ''), '') AS business_label")
+            $commercialOrders = DB::table('commercial_orders')
+                ->selectRaw("'commercial_order' AS source")
+                ->selectRaw("'Pedido' AS source_label")
+                ->selectRaw('commercial_orders.id AS source_id')
+                ->selectRaw('commercial_orders.code')
+                ->selectRaw('commercial_orders.order_status')
+                ->selectRaw("COALESCE((SELECT billing_documents.code FROM billing_documents WHERE billing_documents.commercial_order_id = commercial_orders.id AND billing_documents.status IS NOT NULL ORDER BY billing_documents.id DESC LIMIT 1), '-') AS voucher_label")
+                ->selectRaw('commercial_orders.document_type')
                 ->selectRaw("COALESCE(NULLIF(TRIM(CONCAT(COALESCE(eventual_clients.document_number, ''), ' | ', COALESCE(eventual_clients.business_name, ''))), '|'), COALESCE(eventual_clients.business_name, ''), '') AS customer_label")
-                ->selectRaw("COALESCE(NULLIF(users_seller.fullname, ''), NULLIF(TRIM(CONCAT(COALESCE(users_seller.name, ''), ' ', COALESCE(users_seller.lastname, ''))), ''), users_seller.username, '') AS seller_label")
-                ->selectRaw("COALESCE(NULLIF(users_creator.username, ''), NULLIF(users_creator.fullname, ''), NULLIF(TRIM(CONCAT(COALESCE(users_creator.name, ''), ' ', COALESCE(users_creator.lastname, ''))), ''), '') AS creator_label")
+                ->selectRaw('commercial_orders.total')
                 ->selectRaw("TRIM(CONCAT(COALESCE(NULLIF(commercial_orders.payment_method, ''), '-'), CASE WHEN commercial_orders.payment_condition IS NULL OR commercial_orders.payment_condition = '' THEN '' ELSE CONCAT(' [', commercial_orders.payment_condition, ']') END)) AS payment_label")
-                ->selectRaw("(SELECT billing_documents.code FROM billing_documents WHERE billing_documents.commercial_order_id = commercial_orders.id AND billing_documents.status IS NOT NULL ORDER BY billing_documents.id DESC LIMIT 1) AS voucher_label")
-                ->with([
-                    'business:id,name',
-                    'eventualClient:id,document_type,document_number,business_name',
-                    'seller:id,name,lastname,username,fullname',
-                    'creator:id,name,lastname,username,fullname',
-                ])
+                ->selectRaw("COALESCE(NULLIF(users_seller.fullname, ''), NULLIF(TRIM(CONCAT(COALESCE(users_seller.name, ''), ' ', COALESCE(users_seller.lastname, ''))), ''), users_seller.username, '') AS seller_label")
+                ->selectRaw('commercial_orders.created_at')
+                ->selectRaw("COALESCE(NULLIF(users_creator.username, ''), NULLIF(users_creator.fullname, ''), NULLIF(TRIM(CONCAT(COALESCE(users_creator.name, ''), ' ', COALESCE(users_creator.lastname, ''))), ''), '') AS creator_label")
+                ->selectRaw("COALESCE(NULLIF(businesses.name, ''), '') AS business_label")
                 ->leftJoin('businesses', 'businesses.id', '=', 'commercial_orders.business_id')
                 ->leftJoin('eventual_clients', 'eventual_clients.id', '=', 'commercial_orders.eventual_client_id')
                 ->leftJoin('users as users_seller', 'users_seller.id', '=', 'commercial_orders.seller_id')
@@ -233,20 +234,37 @@ class EventualClientController extends BasicController
                 ->where('commercial_orders.eventual_client_id', $id)
                 ->whereNotNull('commercial_orders.status');
 
+            $takeOrders = DB::table('take_orders')
+                ->selectRaw("'take_order' AS source")
+                ->selectRaw("'Toma pedido' AS source_label")
+                ->selectRaw('take_orders.id AS source_id')
+                ->selectRaw('take_orders.code')
+                ->selectRaw('take_orders.order_status')
+                ->selectRaw("COALESCE(NULLIF(take_orders.referral_guide, ''), NULLIF(take_orders.purchase_order, ''), '-') AS voucher_label")
+                ->selectRaw('take_orders.document_type')
+                ->selectRaw("COALESCE(NULLIF(TRIM(CONCAT(COALESCE(eventual_clients.document_number, ''), ' | ', COALESCE(eventual_clients.business_name, ''))), '|'), COALESCE(eventual_clients.business_name, ''), '') AS customer_label")
+                ->selectRaw('take_orders.total')
+                ->selectRaw("TRIM(CONCAT(COALESCE(NULLIF(take_orders.payment_method, ''), '-'), CASE WHEN take_orders.payment_condition IS NULL OR take_orders.payment_condition = '' THEN '' ELSE CONCAT(' [', take_orders.payment_condition, ']') END)) AS payment_label")
+                ->selectRaw("COALESCE(NULLIF(users_seller.fullname, ''), NULLIF(TRIM(CONCAT(COALESCE(users_seller.name, ''), ' ', COALESCE(users_seller.lastname, ''))), ''), users_seller.username, '') AS seller_label")
+                ->selectRaw('take_orders.created_at')
+                ->selectRaw("COALESCE(NULLIF(users_creator.username, ''), NULLIF(users_creator.fullname, ''), NULLIF(TRIM(CONCAT(COALESCE(users_creator.name, ''), ' ', COALESCE(users_creator.lastname, ''))), ''), '') AS creator_label")
+                ->selectRaw("COALESCE(NULLIF(businesses.name, ''), '') AS business_label")
+                ->leftJoin('businesses', 'businesses.id', '=', 'take_orders.business_id')
+                ->leftJoin('eventual_clients', 'eventual_clients.id', '=', 'take_orders.eventual_client_id')
+                ->leftJoin('users as users_seller', 'users_seller.id', '=', 'take_orders.seller_id')
+                ->leftJoin('users as users_creator', 'users_creator.id', '=', 'take_orders.created_by')
+                ->where('take_orders.eventual_client_id', $id)
+                ->whereNotNull('take_orders.status');
+
+            $query = DB::query()->fromSub($commercialOrders->unionAll($takeOrders), 'customer_orders');
+
             if ($request->filter) {
-                dxDataGrid::filter($query, $request->filter ?? [], false, 'commercial_orders', [
-                    'business_label',
-                    'customer_label',
-                    'seller_label',
-                    'creator_label',
-                    'payment_label',
-                    'voucher_label',
-                ]);
+                dxDataGrid::filter($query, $request->filter ?? [], false, 'customer_orders');
             }
 
             $totalCount = 0;
             if ($request->requireTotalCount) {
-                $totalCount = (clone $query)->distinct()->count('commercial_orders.id');
+                $totalCount = (clone $query)->count();
             }
 
             if ($request->sort != null) {
@@ -254,25 +272,14 @@ class EventualClientController extends BasicController
                     $selector = $sorting['selector'];
                     $direction = $sorting['desc'] ? 'DESC' : 'ASC';
 
-                    if (in_array($selector, [
-                        'business_label',
-                        'customer_label',
-                        'seller_label',
-                        'creator_label',
-                        'payment_label',
-                        'voucher_label',
-                    ], true)) {
-                        $query->orderBy($selector, $direction);
-                        continue;
-                    }
-
                     if (!str_contains($selector, '.')) {
-                        $selector = "commercial_orders.{$selector}";
+                        $selector = "customer_orders.{$selector}";
                     }
                     $query->orderBy($selector, $direction);
                 }
             } else {
-                $query->orderBy('commercial_orders.id', 'DESC');
+                $query->orderBy('customer_orders.created_at', 'DESC');
+                $query->orderBy('customer_orders.source_id', 'DESC');
             }
 
             $orders = $request->isLoadingAll

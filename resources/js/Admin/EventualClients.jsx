@@ -523,6 +523,7 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
         rest={ordersRest}
         pageSize={10}
         columns={[
+          { dataField: 'source_label', caption: 'Origen', width: 120 },
           {
             dataField: 'order_status',
             caption: 'Estado',
