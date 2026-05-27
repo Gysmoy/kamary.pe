@@ -329,27 +329,35 @@ const EventualClients = ({ prefixes = [], sectionTitle = 'Clientes Eventuales', 
       columns={[
         {
           caption: 'Acciones',
-          width: 120,
+          width: 150,
+          minWidth: 150,
           cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({
+            container.css({
+              overflow: 'visible',
+              textOverflow: 'unset',
+              whiteSpace: 'nowrap',
+            })
+
+            const actions = $('<div class="d-flex align-items-center gap-1"></div>')
+            actions.append(DxButton({
               className: 'btn btn-xs btn-soft-primary',
               title: 'Editar',
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)
             }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger ms-1',
+            actions.append(DxButton({
+              className: 'btn btn-xs btn-soft-danger',
               title: 'Eliminar',
               icon: 'mdi mdi-delete',
               onClick: () => onDeleteClicked(data.id)
             }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-info ms-1',
+            actions.append(DxButton({
+              className: 'btn btn-xs btn-soft-info',
               title: 'Ver pedidos del cliente',
               icon: 'mdi mdi-view-grid-outline',
               onClick: () => onOrdersOpen(data)
             }))
+            container.append(actions)
           },
           allowFiltering: false,
           allowSorting: false,
