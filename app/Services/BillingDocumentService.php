@@ -730,7 +730,13 @@ class BillingDocumentService
     private function prepareIfNeeded(BillingDocument $document): BillingDocument
     {
         $document->loadMissing('items');
-        if ($document->items->isEmpty()) {
+        if (
+            $document->items->isEmpty()
+            || (
+                $document->local_status === 'pending'
+                && in_array($document->source_type, ['commercial_order', 'service_order'], true)
+            )
+        ) {
             return $this->prepareDocument($document);
         }
 

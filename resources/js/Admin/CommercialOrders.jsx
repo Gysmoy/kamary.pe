@@ -1692,7 +1692,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   }
 
   const printBillingDocument = async (document) => {
-    const row = await loadBillingDocument(document)
+    const refreshed = `${document?.local_status ?? 'pending'}` === 'pending'
+      ? (await billingDocumentsRest.prepareVoucher(document.id))?.data ?? document
+      : document
+    const row = await loadBillingDocument(refreshed)
     if (!hasPreparedBillingDocument(row)) {
       await Swal.fire({
         title: 'Comprobante no preparado',
