@@ -21,6 +21,8 @@ import {
   billingStatusOptions,
   commercialOrderStatusOptions,
   dispatchStatusOptions,
+  getCommercialOrderStatusLabel,
+  getDispatchStatusLabel,
   getReferralGuideStatusLabel,
   paymentStatusOptions,
   toLookup,
@@ -52,6 +54,20 @@ const appendGridActionButton = (container, { variant, title, icon, onClick }) =>
     })
 
   container.append(button)
+}
+
+const statusBadgeClass = (value) => {
+  const key = `${value ?? 'empty'}`.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-')
+  return `commercial-order-status-badge commercial-order-status-${key || 'empty'}`
+}
+
+const appendStatusBadge = (container, value, labelResolver) => {
+  container.addClass('commercial-order-status-cell')
+  ReactAppend(container, (
+    <span className={statusBadgeClass(value)}>
+      {labelResolver(value)}
+    </span>
+  ))
 }
 
 const emptyItem = () => ({
@@ -1398,6 +1414,74 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         font-size: 16px;
         line-height: 1;
       }
+      .commercial-order-status-cell {
+        overflow: visible !important;
+      }
+      .commercial-order-status-badge {
+        align-items: center;
+        border: 1px solid transparent;
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: 0.78rem;
+        font-weight: 700;
+        justify-content: center;
+        line-height: 1.15;
+        max-width: 100%;
+        min-height: 24px;
+        padding: 4px 9px;
+        white-space: nowrap;
+      }
+      .commercial-order-status-draft {
+        background: #f1f5f9;
+        border-color: #cbd5e1;
+        color: #475569;
+      }
+      .commercial-order-status-pending {
+        background: #fff7ed;
+        border-color: #fed7aa;
+        color: #9a3412;
+      }
+      .commercial-order-status-confirmed {
+        background: #eff6ff;
+        border-color: #bfdbfe;
+        color: #1d4ed8;
+      }
+      .commercial-order-status-preparing {
+        background: #fef3c7;
+        border-color: #fbbf24;
+        color: #92400e;
+      }
+      .commercial-order-status-dispatched {
+        background: #ede9fe;
+        border-color: #c4b5fd;
+        color: #6d28d9;
+      }
+      .commercial-order-status-in_route {
+        background: #e0f2fe;
+        border-color: #7dd3fc;
+        color: #0369a1;
+      }
+      .commercial-order-status-delivered {
+        background: #dcfce7;
+        border-color: #86efac;
+        color: #166534;
+      }
+      .commercial-order-status-cancelled {
+        background: #fee2e2;
+        border-color: #fca5a5;
+        color: #b91c1c;
+      }
+      .commercial-order-status-billed,
+      .commercial-order-status-closed {
+        background: #ecfdf5;
+        border-color: #6ee7b7;
+        color: #047857;
+      }
+      .commercial-order-status-empty {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+        color: #64748b;
+      }
       .commercial-order-action-btn:hover,
       .commercial-order-action-btn:focus,
       .commercial-order-action-btn:active {
@@ -1728,8 +1812,20 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
           minWidth: 160,
           calculateCellValue: (data) => data.distribution_network?.name ?? data.distributionNetwork?.name ?? '-'
         },
-        { dataField: 'order_status', caption: 'Estado comercial', width: 120, lookup: toLookup(commercialOrderStatusOptions) },
-        { dataField: 'dispatch_status', caption: 'Estado entrega', width: 120, lookup: toLookup(dispatchStatusOptions) },
+        {
+          dataField: 'order_status',
+          caption: 'Estado comercial',
+          width: 140,
+          lookup: toLookup(commercialOrderStatusOptions),
+          cellTemplate: (container, { value }) => appendStatusBadge(container, value, getCommercialOrderStatusLabel)
+        },
+        {
+          dataField: 'dispatch_status',
+          caption: 'Estado entrega',
+          width: 140,
+          lookup: toLookup(dispatchStatusOptions),
+          cellTemplate: (container, { value }) => appendStatusBadge(container, value, getDispatchStatusLabel)
+        },
         { dataField: 'billing_status', caption: 'Facturacion', width: 110, lookup: toLookup(billingStatusOptions) },
         { dataField: 'payment_status', caption: 'Cobranza', width: 110, lookup: toLookup(paymentStatusOptions) },
         { dataField: 'document_type', caption: 'Doc. venta', width: 120, calculateCellValue: (data) => normalizeDocumentType(data?.document_type) },

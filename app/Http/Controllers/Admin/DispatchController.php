@@ -383,12 +383,32 @@ class DispatchController extends BasicController
     private function normalizeLocationText($value): string
     {
         $text = mb_strtolower(trim((string) ($value ?? '')));
-        return strtr($text, [
+        if ($text === '') {
+            return '';
+        }
+        $normalized = strtr($text, [
             'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u',
             'à' => 'a', 'è' => 'e', 'ì' => 'i', 'ò' => 'o', 'ù' => 'u',
             'ä' => 'a', 'ë' => 'e', 'ï' => 'i', 'ö' => 'o', 'ü' => 'u',
             'ñ' => 'n',
         ]);
+
+        $normalized = strtr($normalized, [
+            "\u{00E1}" => 'a', "\u{00E0}" => 'a', "\u{00E2}" => 'a', "\u{00E4}" => 'a', "\u{00E3}" => 'a',
+            "\u{00E9}" => 'e', "\u{00E8}" => 'e', "\u{00EA}" => 'e', "\u{00EB}" => 'e',
+            "\u{00ED}" => 'i', "\u{00EC}" => 'i', "\u{00EE}" => 'i', "\u{00EF}" => 'i',
+            "\u{00F3}" => 'o', "\u{00F2}" => 'o', "\u{00F4}" => 'o', "\u{00F6}" => 'o', "\u{00F5}" => 'o',
+            "\u{00FA}" => 'u', "\u{00F9}" => 'u', "\u{00FB}" => 'u', "\u{00FC}" => 'u',
+            "\u{00F1}" => 'n',
+            "\u{00E3}\u{00A1}" => 'a', "\u{00E3}\u{00A0}" => 'a', "\u{00E3}\u{00A2}" => 'a', "\u{00E3}\u{00A4}" => 'a',
+            "\u{00E3}\u{00A9}" => 'e', "\u{00E3}\u{00A8}" => 'e', "\u{00E3}\u{00AA}" => 'e', "\u{00E3}\u{00AB}" => 'e',
+            "\u{00E3}\u{00AD}" => 'i', "\u{00E3}\u{00AC}" => 'i', "\u{00E3}\u{00AE}" => 'i', "\u{00E3}\u{00AF}" => 'i',
+            "\u{00E3}\u{00B3}" => 'o', "\u{00E3}\u{00B2}" => 'o', "\u{00E3}\u{00B4}" => 'o', "\u{00E3}\u{00B6}" => 'o',
+            "\u{00E3}\u{00BA}" => 'u', "\u{00E3}\u{00B9}" => 'u', "\u{00E3}\u{00BB}" => 'u', "\u{00E3}\u{00BC}" => 'u',
+            "\u{00E3}\u{00B1}" => 'n',
+        ]);
+
+        return trim(preg_replace('/\s+/', ' ', $normalized) ?? $normalized);
     }
 
     private function zoneDistrictTokens(Zone $zone): array
