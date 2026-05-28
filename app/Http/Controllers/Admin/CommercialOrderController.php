@@ -71,6 +71,9 @@ class CommercialOrderController extends BasicController
                 'seller:id,name,lastname,username,fullname',
                 'priceList:id,code',
                 'accountsReceivable:id,source_id,code,total,paid_amount,balance_amount,payment_status,status',
+                'billingDocuments' => fn ($documents) => $documents
+                    ->select('id', 'commercial_order_id', 'code', 'document_type', 'series', 'sequence', 'status')
+                    ->whereNotNull('status'),
                 $itemColumns,
                 'items.article:id,code,name,default_lot,laboratory_id,active_principle_id,unit_id',
                 'items.article.laboratory:id,name',

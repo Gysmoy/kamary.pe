@@ -7,7 +7,6 @@ import Global from '../Utils/Global';
 import Table from '../Components/Adminto/Table';
 import Modal from '../Components/Adminto/Modal';
 import ReactAppend from '../Utils/ReactAppend';
-import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import SelectFormGroup from '@Adminto/form/SelectFormGroup';
@@ -15,18 +14,11 @@ import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import CommercialOrdersRest from '../Actions/Admin/CommercialOrdersRest';
 import ReferralGuidesRest from '../Actions/Admin/ReferralGuidesRest';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
-  billingStatusOptions,
   commercialOrderStatusOptions,
-  dispatchStatusOptions,
-  getBillingStatusLabel,
   getCommercialOrderStatusLabel,
-  getDispatchStatusLabel,
-  getPaymentStatusLabel,
   getReferralGuideStatusLabel,
-  paymentStatusOptions,
   toLookup,
 } from '../Utils/statusLabels';
 
@@ -110,6 +102,22 @@ const formatAuditUser = (user) => {
   return ''
 }
 
+const formatPlainUser = (user) => {
+  if (!user) return '-'
+  const fullname = (user.fullname ?? '').toString().trim()
+  if (fullname) return fullname
+  const full = `${user.name ?? ''} ${user.lastname ?? ''}`.trim()
+  return full || (user.username ?? '').toString().trim() || '-'
+}
+
+const formatUserRegistry = (user) => {
+  if (!user) return '-'
+  return (user.username ?? '').toString().trim()
+    || (user.fullname ?? '').toString().trim()
+    || `${user.name ?? ''} ${user.lastname ?? ''}`.trim()
+    || '-'
+}
+
 const roundMoney = (value) => Number((Number(value || 0)).toFixed(2))
 const escapeHtml = (value) => $('<div>').text(value ?? '').html()
 const formatQuantity = (value) => {
@@ -178,6 +186,28 @@ const normalizeDocumentType = (value) => {
   if (normalized === 'boleta') return 'Boleta'
   if (['nota de pedido', 'nota_pedido', 'note_order'].includes(normalized)) return 'Nota de pedido'
   return 'Factura'
+}
+
+const orderBillingDocuments = (order) => order?.billing_documents ?? order?.billingDocuments ?? []
+const latestBillingDocument = (order) => orderBillingDocuments(order)[0] ?? null
+const orderVoucherLabel = (order) => {
+  const document = latestBillingDocument(order)
+  const documentNumber = document?.code || [document?.series, document?.sequence].filter(Boolean).join('-')
+  return documentNumber || order?.referral_guide || order?.guide_number || order?.purchase_order || '-'
+}
+const orderDocumentTypeLabel = (order) => normalizeDocumentType(latestBillingDocument(order)?.document_type ?? order?.document_type)
+const orderCustomerLabel = (order) => {
+  const customer = order?.client ?? order?.eventual_client ?? order?.eventualClient ?? null
+  const documentNumber = `${customer?.document_number ?? ''}`.trim()
+  const name = `${customer?.full_name ?? customer?.business_name ?? ''}`.trim()
+  return [documentNumber, name].filter(Boolean).join(' | ') || '-'
+}
+const orderPaymentLabel = (order) => {
+  const method = `${order?.payment_method ?? ''}`.trim()
+  const condition = `${order?.payment_condition ?? ''}`.trim()
+  if (!method && !condition) return '-'
+  if (!condition || method.includes('[')) return method || '-'
+  return `${method || '-'} [${condition.toUpperCase()}]`
 }
 
 const textValue = (value, fallback = '') => {
@@ -1806,136 +1836,11 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       }}
       pageSize={25}
       columns={[
-        { dataField: 'id', caption: 'ID', width: 80 },
-        {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: 170,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar pedido')
-        },
-        { dataField: 'external_source', caption: 'Origen externo', visible: false, showInColumnChooser: false },
-        { dataField: 'external_order_id', caption: 'Pedido VTEX', width: 150, visible: !!externalSource },
-        { dataField: 'external_ecommerce', caption: 'Ecommerce', width: 140, visible: !!externalSource },
-        { dataField: 'external_channel', caption: 'Canal', width: 130, visible: !!externalSource },
-        { dataField: 'external_subservice', caption: 'Subservicio', width: 130, visible: !!externalSource },
-        { dataField: 'external_sync_status', caption: 'Sync', width: 110, visible: !!externalSource },
-        { dataField: 'issue_date', caption: 'F. emision', width: 110, dataType: 'date' },
-        { dataField: 'promised_delivery_at', caption: 'F. entrega', width: 110, dataType: 'date' },
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 140 },
-        { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 120 },
-        {
-          dataField: 'customer',
-          caption: 'Cliente',
-          minWidth: 240,
-          calculateCellValue: (data) => data.client?.full_name ?? data.eventual_client?.business_name ?? '-'
-        },
-        {
-          dataField: 'order_status',
-          caption: 'Estado comercial',
-          width: 140,
-          lookup: toLookup(commercialOrderStatusOptions),
-          cellTemplate: (container, { value }) => appendStatusBadge(container, value, getCommercialOrderStatusLabel)
-        },
-        {
-          dataField: 'dispatch_status',
-          caption: 'Estado entrega',
-          width: 140,
-          lookup: toLookup(dispatchStatusOptions),
-          cellTemplate: (container, { value }) => appendStatusBadge(container, value, getDispatchStatusLabel)
-        },
-        {
-          dataField: 'billing_status',
-          caption: 'Facturacion',
-          width: 110,
-          lookup: toLookup(billingStatusOptions),
-          cellTemplate: (container, { value }) => appendStatusBadge(container, value, getBillingStatusLabel)
-        },
-        {
-          dataField: 'payment_status',
-          caption: 'Cobranza',
-          width: 110,
-          lookup: toLookup(paymentStatusOptions),
-          cellTemplate: (container, { value }) => appendStatusBadge(container, value, getPaymentStatusLabel)
-        },
-        {
-          dataField: 'document_type',
-          caption: 'Doc. venta',
-          width: 120,
-          calculateCellValue: (data) => normalizeDocumentType(data?.document_type),
-          cellTemplate: (container, { value }) => appendStatusBadge(container, value, (label) => label || '-')
-        },
-        {
-          caption: 'Guia',
-          width: 140,
-          calculateCellValue: (data) => {
-            const guides = orderGuides(data)
-            if (guides.length === 0) return '-'
-            if (guides.length === 1) return guideNumber(guides[0])
-            return `${guides.length} guias`
-          }
-        },
-        {
-          caption: 'Evidencia',
-          width: 150,
-          calculateCellValue: (data) => {
-            const evidence = latestEvidence(data)
-            if (!evidence) return '-'
-            return evidence.recipient_name || evidence.code || 'Registrada'
-          }
-        },
-        { dataField: 'currency', caption: 'Moneda', width: 90 },
-        { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        {
-          dataField: 'accounts_receivable_code',
-          caption: 'CXC',
-          width: 140,
-          calculateCellValue: (data) => data.accounts_receivable?.code ?? data.accountsReceivable?.code ?? '-'
-        },
-        {
-          dataField: 'items.id',
-          caption: 'Detalle',
-          minWidth: 280,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => {
-            const lines = (data?.items ?? []).map(item => `${item?.article?.name || 'Articulo'} | Cant. ${Number(item?.quantity || 0).toFixed(2)} | ${data.currency} ${Number(item?.total || 0).toFixed(2)}`)
-            ReactAppend(container, <div>
-              {lines.length === 0 && <small className='text-muted'>Sin detalle</small>}
-              {lines.map((line, idx) => <div key={`commercial-order-${data.id}-${idx}`}><small>{line}</small></div>)}
-            </div>)
-          }
-        },
-        {
-          dataField: 'creator.fullname',
-          caption: 'Creado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
-        },
-        {
-          dataField: 'updater.fullname',
-          caption: 'Actualizado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
-        },
-        {
-          dataField: 'status',
-          caption: 'Activo',
-          dataType: 'boolean',
-          width: 95,
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-              id: data.id,
-              field: 'status',
-              value: !data.status
-            })} />)
-          }
-        },
         {
           caption: 'Acciones',
-          width: 360,
+          width: 300,
           fixed: true,
-          fixedPosition: 'right',
+          fixedPosition: 'left',
           allowFiltering: false,
           allowExporting: false,
           cellTemplate: (container, { data }) => {
@@ -1992,7 +1897,55 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               onClick: () => onDeleteClicked(data.id)
             })
           }
-        }
+        },
+        {
+          dataField: 'order_status',
+          caption: 'Estado',
+          width: 140,
+          lookup: toLookup(commercialOrderStatusOptions),
+          cellTemplate: (container, { value }) => appendStatusBadge(container, value, getCommercialOrderStatusLabel)
+        },
+        {
+          dataField: 'voucher_label',
+          caption: 'Comprobante',
+          width: 130,
+          calculateCellValue: orderVoucherLabel
+        },
+        {
+          dataField: 'document_type',
+          caption: 'Tipo documento',
+          width: 130,
+          calculateCellValue: orderDocumentTypeLabel,
+          cellTemplate: (container, { value }) => appendStatusBadge(container, value, (label) => label || '-')
+        },
+        {
+          dataField: 'customer_label',
+          caption: 'Cliente',
+          minWidth: 320,
+          calculateCellValue: orderCustomerLabel
+        },
+        { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+        {
+          dataField: 'payment_label',
+          caption: 'Tipo de pago',
+          width: 170,
+          calculateCellValue: orderPaymentLabel
+        },
+        {
+          dataField: 'seller.fullname',
+          caption: 'Usuario',
+          width: 190,
+          cellTemplate: (container, { data }) => container.text(formatPlainUser(data.seller))
+        },
+        { dataField: 'created_at', caption: 'Fecha registro', width: 130, dataType: 'date' },
+        {
+          dataField: 'creator.username',
+          caption: 'Usuario registro',
+          width: 150,
+          cellTemplate: (container, { data }) => container.text(formatUserRegistry(data.creator))
+        },
+        { dataField: 'code', caption: 'Código', width: 130 },
+        { dataField: 'business.name', caption: 'Empresa', minWidth: 150 }
       ]}
     />
 
