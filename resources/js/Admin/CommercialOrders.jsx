@@ -13,6 +13,7 @@ import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import CommercialOrdersRest from '../Actions/Admin/CommercialOrdersRest';
+import DeliveryDelayReasonsRest from '../Actions/Admin/DeliveryDelayReasonsRest';
 import ReferralGuidesRest from '../Actions/Admin/ReferralGuidesRest';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
@@ -23,6 +24,7 @@ import {
 } from '../Utils/statusLabels';
 
 const commercialOrdersRest = new CommercialOrdersRest()
+const deliveryDelayReasonsRest = new DeliveryDelayReasonsRest()
 const referralGuidesRest = new ReferralGuidesRest()
 const regularClientFilter = ['client_kind', '=', 'regular']
 const lineDiscountOptions = [1, 2, 3, 4, 5]
@@ -208,6 +210,18 @@ const orderPaymentLabel = (order) => {
   if (!method && !condition) return '-'
   if (!condition || method.includes('[')) return method || '-'
   return `${method || '-'} [${condition.toUpperCase()}]`
+}
+const formatDelayReasonDate = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return `${value}`
+  return date.toLocaleString('es-PE', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 
 const textValue = (value, fallback = '') => {
@@ -626,6 +640,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const modalRef = useRef()
   const multivendeModalRef = useRef()
   const multivendeCheckoutRef = useRef()
+  const delayReasonModalRef = useRef()
+  const delayReasonIdRef = useRef()
+  const delayReasonDescriptionRef = useRef()
+  const delayReasonStatusRef = useRef()
   const trackingModalRef = useRef()
   const evidenceModalRef = useRef()
   const evidenceFileRef = useRef()
@@ -682,6 +700,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const [evidenceOrder, setEvidenceOrder] = useState(null)
   const [evidenceFile, setEvidenceFile] = useState(null)
   const [evidencePreview, setEvidencePreview] = useState('')
+  const [delayReasons, setDelayReasons] = useState([])
+  const [delayReasonFilter, setDelayReasonFilter] = useState('')
+  const [delayReasonsLoading, setDelayReasonsLoading] = useState(false)
   const [evidenceForm, setEvidenceForm] = useState({
     recipient_name: '',
     recipient_document_type: 'DNI',
@@ -1300,6 +1321,64 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     })
   }
 
+  const resetDelayReasonForm = () => {
+    if (delayReasonIdRef.current) delayReasonIdRef.current.value = ''
+    if (delayReasonDescriptionRef.current) delayReasonDescriptionRef.current.value = ''
+    if (delayReasonStatusRef.current) delayReasonStatusRef.current.value = '1'
+  }
+
+  const loadDelayReasons = async () => {
+    setDelayReasonsLoading(true)
+    try {
+      const response = await deliveryDelayReasonsRest.paginate({
+        take: 100,
+        skip: 0,
+        requireTotalCount: true,
+        sort: [{ selector: 'id', desc: false }],
+      })
+      setDelayReasons(response?.data ?? [])
+    } finally {
+      setDelayReasonsLoading(false)
+    }
+  }
+
+  const openDelayReasonModal = async () => {
+    resetDelayReasonForm()
+    setDelayReasonFilter('')
+    $(delayReasonModalRef.current).modal('show')
+    await loadDelayReasons()
+    setTimeout(() => delayReasonDescriptionRef.current?.focus(), 150)
+  }
+
+  const editDelayReason = (reason) => {
+    if (delayReasonIdRef.current) delayReasonIdRef.current.value = reason?.id ?? ''
+    if (delayReasonDescriptionRef.current) delayReasonDescriptionRef.current.value = reason?.description ?? ''
+    if (delayReasonStatusRef.current) delayReasonStatusRef.current.value = reason?.status ? '1' : '0'
+    delayReasonDescriptionRef.current?.focus()
+  }
+
+  const saveDelayReason = async () => {
+    const description = delayReasonDescriptionRef.current?.value?.trim() || ''
+    if (!description) {
+      await Swal.fire({
+        title: 'Motivo requerido',
+        text: 'Ingresa la descripcion del motivo de retraso.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido'
+      })
+      return
+    }
+
+    const result = await deliveryDelayReasonsRest.save({
+      id: delayReasonIdRef.current?.value || undefined,
+      description,
+      status: delayReasonStatusRef.current?.value === '1',
+    })
+    if (!result) return
+    resetDelayReasonForm()
+    await loadDelayReasons()
+  }
+
   const onItemArticleChanged = async (uid, e) => {
     if ($(e.target).data('select2')) $(e.target).select2('close')
 
@@ -1448,6 +1527,16 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const grossSubtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
   const orderTotals = useMemo(() => deriveDocumentTotals(grossSubtotal, selectedDocumentType), [grossSubtotal, selectedDocumentType])
   const trackingRows = useMemo(() => buildTrackingRows(trackingOrder), [trackingOrder])
+  const filteredDelayReasons = useMemo(() => {
+    const query = delayReasonFilter.trim().toLowerCase()
+    if (!query) return delayReasons
+    return delayReasons.filter(reason => [
+      reason.description,
+      reason.status ? 'Activo' : 'Inactivo',
+      formatUserRegistry(reason.creator),
+      formatDelayReasonDate(reason.created_at),
+    ].some(value => `${value ?? ''}`.toLowerCase().includes(query)))
+  }, [delayReasons, delayReasonFilter])
 
   return (<>
     <style>{`
@@ -1618,10 +1707,13 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       }
       .commercial-order-top-actions {
         display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
         justify-content: flex-end;
         margin-bottom: 12px;
       }
-      .commercial-order-multivende-action {
+      .commercial-order-multivende-action,
+      .commercial-order-delay-action {
         min-height: 46px;
         min-width: min(100%, 360px);
         display: inline-flex;
@@ -1632,7 +1724,19 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         padding: 0 16px;
         font-weight: 600;
       }
-      .commercial-order-multivende-action span {
+      .commercial-order-delay-action {
+        background: #f7b84b;
+        border-color: #f7b84b;
+        color: #fff;
+      }
+      .commercial-order-delay-action:hover,
+      .commercial-order-delay-action:focus {
+        background: #eba934;
+        border-color: #eba934;
+        color: #fff;
+      }
+      .commercial-order-multivende-action span,
+      .commercial-order-delay-action span {
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -1652,6 +1756,43 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       }
       .commercial-order-multivende-form {
         padding: 8px 2px 0;
+      }
+      .commercial-order-delay-maintainer {
+        padding: 4px 4px 0;
+      }
+      .commercial-order-delay-actions {
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        margin-bottom: 22px;
+      }
+      .commercial-order-delay-filter {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+      .commercial-order-delay-filter .form-control {
+        max-width: 220px;
+      }
+      .commercial-order-delay-table {
+        max-height: 380px;
+        overflow: auto;
+      }
+      .commercial-order-delay-table table {
+        min-width: 780px;
+      }
+      .commercial-order-delay-table th {
+        color: var(--ct-gray-700);
+        font-size: 0.78rem;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      .commercial-order-delay-summary {
+        color: var(--ct-gray-700);
+        font-size: 0.86rem;
+        margin-top: 10px;
       }
       .commercial-order-modal-dialog {
         width: calc(100vw - 10px);
@@ -1878,7 +2019,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         .commercial-order-top-actions {
           justify-content: stretch;
         }
-        .commercial-order-multivende-action {
+        .commercial-order-multivende-action,
+        .commercial-order-delay-action {
           width: 100%;
         }
       }
@@ -1892,6 +2034,15 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       >
         <span><i className='mdi mdi-plus-circle-outline'></i> Ingresar pedido multivende</span>
         <i className='mdi mdi-calendar-month-outline'></i>
+      </button>
+      <button
+        type='button'
+        className='btn commercial-order-delay-action'
+        title='Abrir mantenedor de motivos de retraso de entrega'
+        onClick={openDelayReasonModal}
+      >
+        <span>Mantenedor Retraso Entrega</span>
+        <i className='mdi mdi-cog'></i>
       </button>
     </div>
     <Table
@@ -2405,6 +2556,104 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             />
           </div>
         </section>
+      </div>
+    </Modal>
+
+    <Modal
+      modalRef={delayReasonModalRef}
+      title={<><i className='mdi mdi-menu'></i> Mantenedor motivo retraso entrega</>}
+      size='lg'
+      headerClass='commercial-order-modal-header-primary'
+      closeButtonClass='btn-close-white'
+      hideFooter
+      onSubmit={(e) => {
+        e.preventDefault()
+        saveDelayReason()
+      }}
+    >
+      <div className='commercial-order-delay-maintainer'>
+        <div className='commercial-order-delay-actions'>
+          <button type='button' className='btn btn-sm btn-light' data-bs-dismiss='modal'>
+            <i className='mdi mdi-close me-1'></i> Cerrar
+          </button>
+          <button type='submit' className='btn btn-sm btn-outline-primary'>
+            <i className='mdi mdi-plus me-1'></i> Registrar
+          </button>
+        </div>
+
+        <input ref={delayReasonIdRef} type='hidden' />
+
+        <div className='row'>
+          <div className='col-12 mb-3'>
+            <label className='form-label'>Descripcion:</label>
+            <input ref={delayReasonDescriptionRef} className='form-control' autoComplete='off' />
+          </div>
+          <div className='col-12 mb-3'>
+            <label className='form-label'>Estado:</label>
+            <select ref={delayReasonStatusRef} className='form-control' defaultValue='1'>
+              <option value='1'>Activo</option>
+              <option value='0'>Inactivo</option>
+            </select>
+          </div>
+        </div>
+
+        <hr />
+
+        <div className='commercial-order-delay-filter'>
+          <label className='form-label mb-0'>Filtrar :</label>
+          <input className='form-control form-control-sm' value={delayReasonFilter} onChange={(e) => setDelayReasonFilter(e.target.value)} />
+        </div>
+
+        <div className='table-responsive commercial-order-delay-table'>
+          <table className='table table-sm table-bordered table-striped align-middle mb-0'>
+            <thead>
+              <tr>
+                <th className='text-center'>Acciones</th>
+                <th className='text-center'>Estado</th>
+                <th>Motivo</th>
+                <th>Fecha registro</th>
+                <th>Usuario registro</th>
+              </tr>
+            </thead>
+            <tbody>
+              {delayReasonsLoading && (
+                <tr>
+                  <td colSpan='5' className='text-center text-muted py-3'>Cargando motivos...</td>
+                </tr>
+              )}
+              {!delayReasonsLoading && filteredDelayReasons.length === 0 && (
+                <tr>
+                  <td colSpan='5' className='text-center text-muted py-3'>No existen elementos</td>
+                </tr>
+              )}
+              {!delayReasonsLoading && filteredDelayReasons.map(reason => (
+                <tr key={`delivery-delay-reason-${reason.id}`}>
+                  <td className='text-center'>
+                    <button
+                      type='button'
+                      className='btn btn-xs btn-outline-info'
+                      title='Editar motivo de retraso'
+                      onClick={() => editDelayReason(reason)}
+                    >
+                      <i className='mdi mdi-pencil'></i>
+                    </button>
+                  </td>
+                  <td className='text-center'>
+                    <span className={statusBadgeClass(reason.status ? 'billed' : 'cancelled')}>
+                      {reason.status ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td>{reason.description}</td>
+                  <td>{formatDelayReasonDate(reason.created_at)}</td>
+                  <td>{formatUserRegistry(reason.creator)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className='commercial-order-delay-summary'>
+          {filteredDelayReasons.length} elementos (Pagina 1 de 1)
+        </div>
       </div>
     </Modal>
 

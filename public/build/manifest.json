@@ -639,7 +639,7 @@
     ]
   },
   "resources/js/Admin/CommercialOrders.jsx": {
-    "file": "assets/CommercialOrders-WAekPtXS.js",
+    "file": "assets/CommercialOrders-DLWFvqga.js",
     "name": "CommercialOrders",
     "src": "resources/js/Admin/CommercialOrders.jsx",
     "isEntry": true,
@@ -654,10 +654,10 @@
       "_SelectFormGroup-CC2pGrXt.js",
       "_TextareaFormGroup-CdYAyehd.js",
       "_CommercialOrdersRest-DKg4Dgc7.js",
+      "_BasicRest-EXKW_n5g.js",
       "_ReferralGuidesRest-DPUoCWFG.js",
       "_magistralesRecordPdf-BLh28TRb.js",
       "_statusLabels-DafAwaKR.js",
-      "_BasicRest-EXKW_n5g.js",
       "_tippy-react.esm-DZzWNIYv.js",
       "_ubigeoInei-D0FnAslC.js"
     ]

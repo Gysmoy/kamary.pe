@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\BusinessController as AdminBusinessController;
 use App\Http\Controllers\Admin\ClientDistributionNetworkController as AdminClientDistributionNetworkController;
 use App\Http\Controllers\Admin\ClientController as AdminClientController;
 use App\Http\Controllers\Admin\CommercialOrderController as AdminCommercialOrderController;
+use App\Http\Controllers\Admin\DeliveryDelayReasonController as AdminDeliveryDelayReasonController;
 use App\Http\Controllers\Admin\DeliveryEvidenceController as AdminDeliveryEvidenceController;
 use App\Http\Controllers\Admin\TakeOrderController as AdminTakeOrderController;
 use App\Http\Controllers\Admin\DispatchController as AdminDispatchController;
@@ -586,6 +587,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/commercial-orders/articles', [AdminCommercialOrderController::class, 'articles']);
         Route::post('/commercial-orders/{id}/delivery-evidence', [AdminDeliveryEvidenceController::class, 'saveForCommercialOrder']);
         Route::get('/delivery-evidence-media/{filename}', [AdminDeliveryEvidenceController::class, 'media'])->where('filename', '.*');
+        Route::post('/delivery-delay-reasons', [AdminDeliveryDelayReasonController::class, 'save']);
+        Route::post('/delivery-delay-reasons/paginate', [AdminDeliveryDelayReasonController::class, 'paginate']);
+        Route::patch('/delivery-delay-reasons/status', [AdminDeliveryDelayReasonController::class, 'status']);
+        Route::patch('/delivery-delay-reasons/{field}', [AdminDeliveryDelayReasonController::class, 'boolean']);
+        Route::delete('/delivery-delay-reasons/{id}', [AdminDeliveryDelayReasonController::class, 'delete']);
 
         Route::post('/take-orders', [AdminTakeOrderController::class, 'save']);
         Route::post('/take-orders/paginate', [AdminTakeOrderController::class, 'paginate']);
