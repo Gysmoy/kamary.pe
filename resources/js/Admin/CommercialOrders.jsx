@@ -1741,19 +1741,6 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         align-items: center;
         gap: 6px;
       }
-      .commercial-order-modal-header-primary {
-        background: #28285b;
-        border-bottom: 0;
-        color: #fff;
-      }
-      .commercial-order-modal-header-primary .modal-title {
-        align-items: center;
-        display: flex;
-        gap: 6px;
-        font-size: 0.9rem;
-        font-weight: 700;
-        text-transform: uppercase;
-      }
       .commercial-order-multivende-form {
         padding: 8px 2px 0;
       }
@@ -2533,10 +2520,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
     <Modal
       modalRef={multivendeModalRef}
-      title={<><i className='mdi mdi-plus-circle-outline'></i> Ingresar pedido multivende</>}
+      title='Ingresar pedido multivende'
       size='lg'
-      headerClass='commercial-order-modal-header-primary'
-      closeButtonClass='btn-close-white'
       btnSubmitText='Registrar'
       onSubmit={onMultivendeSubmit}
     >
@@ -2561,10 +2546,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
     <Modal
       modalRef={delayReasonModalRef}
-      title={<><i className='mdi mdi-menu'></i> Mantenedor motivo retraso entrega</>}
+      title='Mantenedor motivo retraso entrega'
       size='lg'
-      headerClass='commercial-order-modal-header-primary'
-      closeButtonClass='btn-close-white'
       hideFooter
       onSubmit={(e) => {
         e.preventDefault()
