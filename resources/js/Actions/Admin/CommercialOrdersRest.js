@@ -6,21 +6,56 @@ import xsrfToken from "../../Utils/xsrfToken";
 class CommercialOrdersRest extends BasicRest {
   path = 'admin/commercial-orders'
   externalSource = null
+  filters = {}
 
   constructor() {
     super()
     const basePaginate = this.paginate.bind(this)
 
     this.paginate = async (params = {}) => {
-      if (!this.externalSource) return basePaginate(params)
+      const scopedParams = Object.entries(this.filters).reduce((carry, [key, value]) => {
+        if (value === undefined || value === null || value === '') return carry
+        return { ...carry, [key]: value }
+      }, params)
+
+      if (!this.externalSource) return basePaginate(scopedParams)
 
       const externalSourceFilter = ['external_source', '=', this.externalSource]
       return basePaginate({
-        ...params,
-        filter: params?.filter
-          ? [externalSourceFilter, 'and', params.filter]
+        ...scopedParams,
+        filter: scopedParams?.filter
+          ? [externalSourceFilter, 'and', scopedParams.filter]
           : externalSourceFilter,
       })
+    }
+  }
+
+  setFilters = (filters = {}) => {
+    this.filters = {
+      ...this.filters,
+      ...filters,
+    }
+  }
+
+  getLaboratories = async () => {
+    try {
+      const { status, result } = await Fetch('/api/admin/laboratories/paginate', {
+        method: 'POST',
+        body: JSON.stringify({
+          isLoadingAll: true,
+          take: 1000,
+          sort: [{ selector: 'name', desc: false }],
+        })
+      })
+      if (!status) throw new Error(result?.message || 'No se pudieron cargar laboratorios')
+      return result?.data ?? []
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return []
     }
   }
 

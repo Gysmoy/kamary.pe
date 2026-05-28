@@ -105,6 +105,13 @@ class CommercialOrderController extends BasicController
             if ($scopeKey) $business->where('business_key', $scopeKey);
         });
 
+        $laboratoryId = (int) request('laboratory_id');
+        if ($laboratoryId) {
+            $query->whereHas('items.article', function ($article) use ($laboratoryId) {
+                $article->where('laboratory_id', $laboratoryId);
+            });
+        }
+
         return $query;
     }
 

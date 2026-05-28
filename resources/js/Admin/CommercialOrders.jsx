@@ -307,7 +307,7 @@ const emptyListingFilters = () => ({
   orders: {
     businessId: '',
     dateRange: defaultDateRange(),
-    laboratory: '',
+    laboratoryId: '',
     dispatchStatus: '',
   },
   issued: {
@@ -971,6 +971,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const [delayReasonsLoading, setDelayReasonsLoading] = useState(false)
   const [activeListingTab, setActiveListingTab] = useState(externalSource ? 'multivende' : 'orders')
   const [businessOptions, setBusinessOptions] = useState([])
+  const [laboratoryOptions, setLaboratoryOptions] = useState([])
   const [listingFilters, setListingFilters] = useState(emptyListingFilters())
   const [appliedListingFilters, setAppliedListingFilters] = useState(emptyAppliedListingFilters())
   const [evidenceForm, setEvidenceForm] = useState({
@@ -1026,8 +1027,13 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
   useEffect(() => {
     let mounted = true
-    billingDocumentsRest.getBusinesses().then(rows => {
-      if (mounted) setBusinessOptions(rows)
+    Promise.all([
+      billingDocumentsRest.getBusinesses(),
+      commercialOrdersRest.getLaboratories(),
+    ]).then(([businesses, laboratories]) => {
+      if (!mounted) return
+      setBusinessOptions(businesses)
+      setLaboratoryOptions(laboratories)
     })
     return () => {
       mounted = false
@@ -1479,9 +1485,15 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   }
 
   const applyListingFiltersForTab = (tabId = activeListingTab) => {
+    const nextFilters = listingFilters[tabId] ?? {}
+    if (tabId === 'orders') {
+      commercialOrdersRest.setFilters({
+        laboratory_id: nextFilters.laboratoryId || '',
+      })
+    }
     setAppliedListingFilters(current => ({
       ...current,
-      [tabId]: listingFilters[tabId] ?? {},
+      [tabId]: nextFilters,
     }))
     setTimeout(() => refreshActiveListingGrid(tabId), 0)
   }
@@ -1877,11 +1889,19 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   }, [delayReasons, delayReasonFilter])
   const renderListingFilterField = (tabId, field) => (
     <div className={`commercial-order-filter-field commercial-order-filter-${field.key}`} key={`commercial-order-main-filter-${tabId}-${field.key}`}>
-      <label className='form-label'>{field.label}</label>
+      <label className='form-label'>
+        {field.label}
+        {field.helper && <span className='commercial-order-filter-helper'> {field.helper}</span>}
+      </label>
       {field.type === 'business' ? (
         <select className='form-select' value={activeFilters[field.key] ?? ''} onChange={(event) => updateListingFilter(tabId, field.key, event.target.value)}>
           <option value=''>Todos</option>
           {businessOptions.map(business => <option key={`commercial-order-filter-business-${business.id}`} value={business.id}>{business.name}</option>)}
+        </select>
+      ) : field.type === 'laboratory' ? (
+        <select className='form-select' value={activeFilters[field.key] ?? ''} onChange={(event) => updateListingFilter(tabId, field.key, event.target.value)}>
+          <option value=''>Todos</option>
+          {laboratoryOptions.map(laboratory => <option key={`commercial-order-filter-laboratory-${laboratory.id}`} value={laboratory.id}>{laboratory.name}</option>)}
         </select>
       ) : field.type === 'select' ? (
         <select className='form-select' value={activeFilters[field.key] ?? ''} onChange={(event) => updateListingFilter(tabId, field.key, event.target.value)}>
@@ -1906,6 +1926,12 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     orders: [
       { key: 'businessId', label: 'Empresa', type: 'business' },
       { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
+      {
+        key: 'laboratoryId',
+        label: 'Laboratorio',
+        helper: '(Solo para Reporte con Visitadores)',
+        type: 'laboratory',
+      },
       {
         key: 'dispatchStatus',
         label: 'Despachado',
@@ -2454,6 +2480,11 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         margin-bottom: 6px;
         font-weight: 600;
       }
+      .commercial-order-filter-helper {
+        color: var(--ct-success);
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
       .commercial-order-filter-actions {
         display: flex;
         flex-wrap: wrap;
@@ -2470,9 +2501,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       @media (min-width: 1200px) {
         .commercial-order-filter-form {
           grid-template-columns:
-            minmax(230px, 1.1fr)
+            minmax(190px, 0.95fr)
+            minmax(250px, 1fr)
             minmax(260px, 1fr)
-            minmax(210px, 1fr)
+            minmax(180px, 0.85fr)
             auto;
         }
         .commercial-order-filter-actions {
