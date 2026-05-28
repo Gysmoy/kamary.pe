@@ -35,6 +35,15 @@
       "_CreateReactScript-DQLVjp0V.js"
     ]
   },
+  "_BillingDocumentsRest-BxeZz_F6.js": {
+    "file": "assets/BillingDocumentsRest-BxeZz_F6.js",
+    "name": "BillingDocumentsRest",
+    "imports": [
+      "_BasicRest-EXKW_n5g.js",
+      "_CreateReactScript-DQLVjp0V.js",
+      "_permissionScope-Be8AULz2.js"
+    ]
+  },
   "_BusinessesRest-C_mpi8Hq.js": {
     "file": "assets/BusinessesRest-C_mpi8Hq.js",
     "name": "BusinessesRest",
@@ -443,7 +452,7 @@
     ]
   },
   "resources/js/Admin/BillingDocuments.jsx": {
-    "file": "assets/BillingDocuments-CNUZW3ob.js",
+    "file": "assets/BillingDocuments-GDZx5P03.js",
     "name": "BillingDocuments",
     "src": "resources/js/Admin/BillingDocuments.jsx",
     "isEntry": true,
@@ -453,9 +462,10 @@
       "_Table-7ynWM9VR.js",
       "_Modal-CAfsOhZN.js",
       "_DxButton-CsjWvhyj.js",
-      "_BasicRest-EXKW_n5g.js",
+      "_BillingDocumentsRest-BxeZz_F6.js",
+      "_statusLabels-DafAwaKR.js",
       "_permissionScope-Be8AULz2.js",
-      "_statusLabels-DafAwaKR.js"
+      "_BasicRest-EXKW_n5g.js"
     ]
   },
   "resources/js/Admin/BillingSettings.jsx": {
@@ -639,7 +649,7 @@
     ]
   },
   "resources/js/Admin/CommercialOrders.jsx": {
-    "file": "assets/CommercialOrders-Dqmbvz6W.js",
+    "file": "assets/CommercialOrders-CRBg0Grv.js",
     "name": "CommercialOrders",
     "src": "resources/js/Admin/CommercialOrders.jsx",
     "isEntry": true,
@@ -653,12 +663,14 @@
       "_SetSelectValue-DfDyTYyl.js",
       "_SelectFormGroup-CC2pGrXt.js",
       "_TextareaFormGroup-CdYAyehd.js",
+      "_BillingDocumentsRest-BxeZz_F6.js",
       "_CommercialOrdersRest-DKg4Dgc7.js",
       "_BasicRest-EXKW_n5g.js",
       "_ReferralGuidesRest-DPUoCWFG.js",
       "_magistralesRecordPdf-BLh28TRb.js",
       "_statusLabels-DafAwaKR.js",
       "_tippy-react.esm-DZzWNIYv.js",
+      "_permissionScope-Be8AULz2.js",
       "_ubigeoInei-D0FnAslC.js"
     ]
   },

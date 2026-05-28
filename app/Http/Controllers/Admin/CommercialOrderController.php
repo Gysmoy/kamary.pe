@@ -72,7 +72,7 @@ class CommercialOrderController extends BasicController
                 'priceList:id,code',
                 'accountsReceivable:id,source_id,code,total,paid_amount,balance_amount,payment_status,status',
                 'billingDocuments' => fn ($documents) => $documents
-                    ->select('id', 'commercial_order_id', 'code', 'document_type', 'series', 'sequence', 'status')
+                    ->select('id', 'commercial_order_id', 'code', 'document_type', 'series', 'sequence', 'external_status', 'external_reference', 'status')
                     ->whereNotNull('status'),
                 $itemColumns,
                 'items.article:id,code,name,default_lot,laboratory_id,active_principle_id,unit_id',
