@@ -1908,45 +1908,49 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             container.addClass('commercial-order-actions')
             appendGridActionButton(container, {
               variant: 'primary',
-              title: 'Editar pedido',
+              title: 'Editar datos, cliente, entrega y productos del pedido comercial',
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)
             })
             if (canSendToPreparation(data)) {
               appendGridActionButton(container, {
                 variant: 'success',
-                title: 'Mandar a Preparacion',
+                title: 'Enviar este pedido a preparacion para iniciar picking',
                 icon: 'mdi mdi-clipboard-check-outline',
                 onClick: () => onBooleanChange({ id: data.id, field: 'dispatch_status', value: 'preparing' })
               })
             }
             appendGridActionButton(container, {
               variant: 'info',
-              title: 'Tracking pedido',
+              title: 'Ver historial de estados, guia, ruta y entrega del pedido',
               icon: 'mdi mdi-map-marker-path',
               onClick: () => openTracking(data)
             })
             appendGridActionButton(container, {
               variant: 'warning',
-              title: orderGuides(data).length ? 'Ver guia' : 'Generar guia',
+              title: orderGuides(data).length
+                ? 'Ver, emitir o descargar la guia de remision asociada al pedido'
+                : 'Generar guia de remision para este pedido',
               icon: 'mdi mdi-file-document',
               onClick: () => onOpenReferralGuide(data)
             })
             appendGridActionButton(container, {
               variant: 'success',
-              title: latestEvidence(data) ? 'Ver evidencia' : 'Registrar evidencia',
+              title: latestEvidence(data)
+                ? 'Ver o actualizar foto y datos de evidencia de entrega'
+                : 'Registrar foto y datos de evidencia de entrega',
               icon: 'mdi mdi-camera',
               onClick: () => openEvidence(data)
             })
             appendGridActionButton(container, {
               variant: 'danger',
-              title: 'Imprimir PDF',
+              title: 'Imprimir o descargar PDF resumen del pedido comercial',
               icon: 'mdi mdi-file-pdf-box',
               onClick: () => openMagistralesRecordPdf(buildMagistralesRows.commercialOrder(data))
             })
             appendGridActionButton(container, {
               variant: 'danger',
-              title: 'Eliminar pedido',
+              title: 'Eliminar este pedido comercial del listado',
               icon: 'mdi mdi-delete',
               onClick: () => onDeleteClicked(data.id)
             })
