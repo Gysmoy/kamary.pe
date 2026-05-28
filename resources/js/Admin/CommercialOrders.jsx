@@ -235,9 +235,13 @@ const normalizeDocumentType = (value) => {
 
 const orderBillingDocuments = (order) => order?.billing_documents ?? order?.billingDocuments ?? []
 const latestBillingDocument = (order) => orderBillingDocuments(order)[0] ?? null
+const billingDocumentNumber = (document) => {
+  if (!document) return ''
+  return [document?.series, document?.sequence].filter(Boolean).join('-') || document?.code || ''
+}
 const orderVoucherLabel = (order) => {
   const document = latestBillingDocument(order)
-  const documentNumber = document?.code || [document?.series, document?.sequence].filter(Boolean).join('-')
+  const documentNumber = billingDocumentNumber(document)
   return documentNumber || order?.referral_guide || order?.guide_number || order?.purchase_order || '-'
 }
 const orderDocumentTypeLabel = (order) => normalizeDocumentType(latestBillingDocument(order)?.document_type ?? order?.document_type)
@@ -775,6 +779,37 @@ const canSendToPreparation = (order) => {
   if (!order || order.status === null) return false
   if (`${order.order_status ?? ''}` === 'cancelled') return false
   return `${order.dispatch_status ?? 'pending'}` === 'pending'
+}
+
+const canCreateBillingDocumentFromOrder = (order) => {
+  if (!order || order.status === null || order.status === false || order.status === 0) return false
+  return !['draft', 'cancelled'].includes(`${order.order_status ?? ''}`)
+}
+
+const canDownloadBillingDocument = (document) => {
+  if (!document) return false
+  const status = `${document.local_status ?? ''}`
+  return ['accepted', 'observed', 'cancelled'].includes(status) || !!document.external_id
+}
+
+const billingDocumentActionMeta = (order) => {
+  const document = latestBillingDocument(order)
+  if (!document) {
+    return {
+      icon: 'mdi mdi-file-send-outline',
+      title: 'Generar comprobante de venta para este pedido',
+    }
+  }
+  if (canDownloadBillingDocument(document)) {
+    return {
+      icon: 'mdi mdi-file-document-check-outline',
+      title: `Descargar PDF del comprobante ${billingDocumentNumber(document) || document.code}`,
+    }
+  }
+  return {
+    icon: 'mdi mdi-send',
+    title: `Emitir comprobante ${billingDocumentNumber(document) || document.code}`,
+  }
 }
 
 const buildTrackingRows = (order) => {
@@ -1629,6 +1664,72 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     await openMagistralesRecordPdf(buildMagistralesRows.referralGuide(result.data))
   }
 
+  const onOpenBillingDocument = async (order) => {
+    let document = latestBillingDocument(order)
+
+    if (document && canDownloadBillingDocument(document)) {
+      window.open(billingDocumentsRest.downloadUrl(document.id, 'pdf'), '_blank', 'noopener')
+      return
+    }
+
+    if (!document) {
+      if (!canCreateBillingDocumentFromOrder(order)) {
+        await Swal.fire({
+          title: 'Comprobante no disponible',
+          text: 'Primero envia el pedido a preparacion o confirma el pedido. Los pedidos en borrador no se pueden facturar.',
+          icon: 'warning',
+          confirmButtonText: 'Entendido',
+        })
+        return
+      }
+
+      const documentType = orderDocumentTypeLabel(order)
+      const createResult = await Swal.fire({
+        title: 'Generar comprobante',
+        text: `Se generara un comprobante ${documentType} para el pedido ${order.code}.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Generar',
+        cancelButtonText: 'Cancelar',
+      })
+      if (!createResult.isConfirmed) return
+
+      const saved = await billingDocumentsRest.save({
+        commercial_order_id: order.id,
+        document_type: documentType,
+      })
+      if (!saved?.data?.id) return
+
+      const prepared = await billingDocumentsRest.prepareVoucher(saved.data.id)
+      document = prepared?.data ?? saved.data
+      $(gridRef.current).dxDataGrid('instance').refresh()
+
+      const issueNow = await Swal.fire({
+        title: 'Comprobante generado',
+        text: `Se genero ${billingDocumentNumber(document) || document.code}. Deseas emitirlo ahora?`,
+        icon: 'success',
+        showCancelButton: true,
+        confirmButtonText: 'Emitir',
+        cancelButtonText: 'Cerrar',
+      })
+      if (!issueNow.isConfirmed) return
+    } else {
+      const issueResult = await Swal.fire({
+        title: 'Emitir comprobante',
+        text: `Se emitira ${billingDocumentNumber(document) || document.code} usando el conector configurado.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Emitir',
+        cancelButtonText: 'Cancelar',
+      })
+      if (!issueResult.isConfirmed) return
+    }
+
+    const issued = await billingDocumentsRest.issue(document.id)
+    if (!issued) return
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
   const onDeleteClicked = async (id) => {
     const { isConfirmed } = await Swal.fire({
       title: 'Eliminar pedido comercial',
@@ -2226,7 +2327,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         display: flex;
         align-items: center;
         gap: 6px;
-        min-width: 312px;
+        min-width: 352px;
         white-space: nowrap;
         overflow: visible !important;
       }
@@ -2808,7 +2909,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         ...orderFilterColumns,
         {
           caption: 'Acciones',
-          width: 300,
+          width: 340,
           fixed: true,
           fixedPosition: 'left',
           allowFiltering: false,
@@ -2837,6 +2938,13 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               title: 'Ver historial de estados, guia, ruta y entrega del pedido',
               icon: 'mdi mdi-map-marker-path',
               onClick: () => openTracking(data)
+            })
+            const billingMeta = billingDocumentActionMeta(data)
+            appendGridActionButton(container, {
+              variant: 'secondary',
+              title: billingMeta.title,
+              icon: billingMeta.icon,
+              onClick: () => onOpenBillingDocument(data)
             })
             appendGridActionButton(container, {
               variant: hasReferralGuide ? 'dark' : 'warning',
