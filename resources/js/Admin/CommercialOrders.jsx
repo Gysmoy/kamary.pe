@@ -1942,8 +1942,26 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       })
     }
   }
+  const orderFilterColumns = [
+    { dataField: 'external_source', visible: false, showInColumnChooser: false },
+    { dataField: 'business_id', visible: false, showInColumnChooser: false },
+    { dataField: 'dispatch_status', visible: false, showInColumnChooser: false },
+  ]
+  const billingFilterColumns = [
+    { dataField: 'source_type', visible: false, showInColumnChooser: false },
+    { dataField: 'local_status', visible: false, showInColumnChooser: false },
+    { dataField: 'document_type', visible: false, showInColumnChooser: false },
+    { dataField: 'business_id', visible: false, showInColumnChooser: false },
+    { dataField: 'created_at', visible: false, showInColumnChooser: false },
+  ]
+  const multivendeFilterColumns = [
+    { dataField: 'external_source', visible: false, showInColumnChooser: false },
+    { dataField: 'external_order_id', visible: false, showInColumnChooser: false },
+    { dataField: 'external_checkout_id', visible: false, showInColumnChooser: false },
+  ]
   const billingColumnsByTab = {
     issued: [
+      ...billingFilterColumns,
       billingActionColumn,
       { dataField: 'series', caption: 'Serie', width: 90 },
       { dataField: 'sequence', caption: 'Secuencia', width: 110 },
@@ -1957,6 +1975,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       { dataField: 'issue_date', caption: 'Fecha Facturacion', dataType: 'date', width: 150 },
     ],
     cancelled: [
+      ...billingFilterColumns,
       billingActionColumn,
       { dataField: 'series', caption: 'Serie', width: 90 },
       { dataField: 'sequence', caption: 'Secuencia', width: 110 },
@@ -1971,6 +1990,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       { dataField: 'cancelled_at', caption: 'F. Anulacion', dataType: 'datetime', width: 160 },
     ],
     'credit-notes': [
+      ...billingFilterColumns,
       billingActionColumn,
       { dataField: 'series', caption: 'Serie', width: 90 },
       { dataField: 'sequence', caption: 'Secuencia', width: 110 },
@@ -1986,6 +2006,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     ],
   }
   const multivendeColumns = [
+    ...multivendeFilterColumns,
     {
       caption: 'Acciones',
       width: 230,
@@ -2584,6 +2605,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       }}
       pageSize={25}
       columns={[
+        ...orderFilterColumns,
         {
           caption: 'Acciones',
           width: 300,
