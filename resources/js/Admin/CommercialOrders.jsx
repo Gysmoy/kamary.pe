@@ -274,7 +274,7 @@ const defaultDateRange = () => {
 const emptyListingFilters = () => ({
   orders: {
     businessId: '',
-    dateRange: defaultDateRange(),
+    dateRange: '',
     laboratory: '',
     dispatchStatus: '',
   },
@@ -346,7 +346,6 @@ const buildBillingFilter = (tab, filters) => combineDxFilters([
   dateRangeFilter(filters?.dateRange, 'created_at'),
 ])
 const buildOrderFilter = (filters) => combineDxFilters([
-  ['external_source', '=', null],
   filters?.businessId ? ['business_id', '=', Number(filters.businessId)] : null,
   filters?.dispatchStatus ? ['dispatch_status', '=', filters.dispatchStatus] : null,
   dateRangeFilter(filters?.dateRange, 'created_at'),
