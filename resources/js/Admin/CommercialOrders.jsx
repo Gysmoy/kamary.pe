@@ -56,7 +56,7 @@ const staticListingTabs = {
     exports: ['Copiar', 'Excel'],
     filters: [
       { key: 'visitor', label: 'Visitador', type: 'select', options: ['ALICIA ASTO ASTO'] },
-      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'text' },
+      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
     ],
     headers: ['ACCIONES', 'ESTADO', 'COMPROBANTE', 'TIPO DOCUMENTO', 'CLIENTE', 'TOTAL', 'TIPO DE PAGO', 'F.E COMPROBANTE', 'F.E GUIA', 'USUARIO', 'FECHA REGISTRO', 'USUARIO REGISTRO', 'CODIGO', 'EMPRESA'],
   },
@@ -65,7 +65,7 @@ const staticListingTabs = {
     exports: ['Copiar', 'Excel'],
     filters: [
       { key: 'visitor', label: 'Visitador', type: 'select', options: ['Todos', 'ALICIA ASTO ASTO'] },
-      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'text' },
+      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
     ],
     headers: ['ACCIONES', 'ESTADO', 'COMPROBANTE', 'TIPO DOCUMENTO', 'CLIENTE', 'TOTAL', 'TIPO DE PAGO', 'F.E COMPROBANTE', 'F.E GUIA', 'USUARIO', 'FECHA REGISTRO', 'USUARIO REGISTRO', 'CODIGO', 'EMPRESA'],
   },
@@ -74,7 +74,7 @@ const staticListingTabs = {
     exports: ['Copiar', 'Excel'],
     filters: [
       { key: 'businessId', label: 'Empresa', type: 'business' },
-      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'text' },
+      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
     ],
     headers: ['ACCIONES', 'ESTADO', 'COMPROBANTE', 'TIPO DOCUMENTO', 'CLIENTE', 'TOTAL', 'TIPO DE PAGO', 'USUARIO', 'FECHA REGISTRO', 'USUARIO REGISTRO', 'CODIGO', 'EMPRESA'],
   },
@@ -271,10 +271,42 @@ const defaultDateRange = () => {
   const today = todayPathDate()
   return `${today} - ${today}`
 }
+const loadScriptOnce = (id, src) => new Promise((resolve, reject) => {
+  const current = document.getElementById(id)
+  if (current) {
+    if (current.dataset.loaded === 'true') resolve()
+    else current.addEventListener('load', resolve, { once: true })
+    return
+  }
+
+  const script = document.createElement('script')
+  script.id = id
+  script.src = src
+  script.async = true
+  script.onload = () => {
+    script.dataset.loaded = 'true'
+    resolve()
+  }
+  script.onerror = reject
+  document.body.appendChild(script)
+})
+const loadStyleOnce = (id, href) => {
+  if (document.getElementById(id)) return
+  const link = document.createElement('link')
+  link.id = id
+  link.rel = 'stylesheet'
+  link.href = href
+  document.head.appendChild(link)
+}
+const loadDateRangePickerAssets = async () => {
+  loadStyleOnce('commercial-order-daterangepicker-css', '/lte-v1/assets/libs/admin-resources/bootstrap-datepicker/css/daterangepicker.css')
+  if (!window.moment) await loadScriptOnce('commercial-order-moment-js', '/lte-v1/assets/libs/admin-resources/bootstrap-datepicker/js/moment.min.js')
+  if (!window.$?.fn?.daterangepicker) await loadScriptOnce('commercial-order-daterangepicker-js', '/lte-v1/assets/libs/admin-resources/bootstrap-datepicker/js/daterangepicker.js')
+}
 const emptyListingFilters = () => ({
   orders: {
     businessId: '',
-    dateRange: '',
+    dateRange: defaultDateRange(),
     laboratory: '',
     dispatchStatus: '',
   },
@@ -307,6 +339,16 @@ const emptyListingFilters = () => ({
     orderVtex: '',
   },
 })
+const emptyAppliedListingFilters = () => {
+  const filters = emptyListingFilters()
+  return {
+    ...filters,
+    orders: {
+      ...filters.orders,
+      dateRange: '',
+    },
+  }
+}
 const normalizeDateText = (value) => {
   const text = `${value ?? ''}`.trim()
   if (!text) return ''
@@ -930,7 +972,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const [activeListingTab, setActiveListingTab] = useState(externalSource ? 'multivende' : 'orders')
   const [businessOptions, setBusinessOptions] = useState([])
   const [listingFilters, setListingFilters] = useState(emptyListingFilters())
-  const [appliedListingFilters, setAppliedListingFilters] = useState(emptyListingFilters())
+  const [appliedListingFilters, setAppliedListingFilters] = useState(emptyAppliedListingFilters())
   const [evidenceForm, setEvidenceForm] = useState({
     recipient_name: '',
     recipient_document_type: 'DNI',
@@ -1422,23 +1464,41 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     }))
   }
 
-  const refreshActiveListingGrid = (tabId = activeListingTab) => {
+  const getActiveListingGridInstance = (tabId = activeListingTab) => {
     const ref = tabId === 'multivende'
       ? multivendeGridRef
       : listingTabs.find(tab => tab.id === tabId)?.kind === 'billing'
         ? billingGridRef
         : gridRef
-    const instance = ref.current ? $(ref.current).dxDataGrid('instance') : null
+    return ref.current ? $(ref.current).dxDataGrid('instance') : null
+  }
+
+  const refreshActiveListingGrid = (tabId = activeListingTab) => {
+    const instance = getActiveListingGridInstance(tabId)
     if (instance) instance.refresh()
+  }
+
+  const applyListingFiltersForTab = (tabId = activeListingTab) => {
+    setAppliedListingFilters(current => ({
+      ...current,
+      [tabId]: listingFilters[tabId] ?? {},
+    }))
+    setTimeout(() => refreshActiveListingGrid(tabId), 0)
   }
 
   const applyListingFilters = (event) => {
     event?.preventDefault?.()
-    setAppliedListingFilters(current => ({
-      ...current,
-      [activeListingTab]: listingFilters[activeListingTab] ?? {},
-    }))
-    setTimeout(() => refreshActiveListingGrid(activeListingTab), 0)
+    applyListingFiltersForTab(activeListingTab)
+  }
+
+  const exportActiveListingGrid = (applyFiltersFirst = false) => {
+    const tabId = activeListingTab
+    if (applyFiltersFirst) applyListingFiltersForTab(tabId)
+
+    setTimeout(() => {
+      const instance = getActiveListingGridInstance(tabId)
+      if (instance?.exportToExcel) instance.exportToExcel(false)
+    }, applyFiltersFirst ? 350 : 0)
   }
 
   const onBooleanChange = async ({ id, field, value }) => {
@@ -1816,7 +1876,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     ].some(value => `${value ?? ''}`.toLowerCase().includes(query)))
   }, [delayReasons, delayReasonFilter])
   const renderListingFilterField = (tabId, field) => (
-    <div className='col-12 col-md-6 col-xl-4' key={`commercial-order-main-filter-${tabId}-${field.key}`}>
+    <div className={`commercial-order-filter-field commercial-order-filter-${field.key}`} key={`commercial-order-main-filter-${tabId}-${field.key}`}>
       <label className='form-label'>{field.label}</label>
       {field.type === 'business' ? (
         <select className='form-select' value={activeFilters[field.key] ?? ''} onChange={(event) => updateListingFilter(tabId, field.key, event.target.value)}>
@@ -1829,6 +1889,14 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             <option key={`commercial-order-filter-${field.key}-${option.value ?? option}`} value={option.value ?? option}>{option.label ?? option}</option>
           ))}
         </select>
+      ) : field.type === 'dateRange' ? (
+        <input
+          className='form-control commercial-order-date-range-input'
+          data-tab-id={tabId}
+          value={activeFilters[field.key] ?? ''}
+          onChange={(event) => updateListingFilter(tabId, field.key, event.target.value)}
+          placeholder={field.placeholder ?? 'YYYY/MM/DD - YYYY/MM/DD'}
+        />
       ) : (
         <input className='form-control' value={activeFilters[field.key] ?? ''} onChange={(event) => updateListingFilter(tabId, field.key, event.target.value)} placeholder={field.placeholder ?? ''} />
       )}
@@ -1837,7 +1905,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const listingFilterFields = {
     orders: [
       { key: 'businessId', label: 'Empresa', type: 'business' },
-      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'text' },
+      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
       {
         key: 'dispatchStatus',
         label: 'Despachado',
@@ -1851,22 +1919,83 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     ],
     issued: [
       { key: 'businessId', label: 'Empresa', type: 'business' },
-      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'text' },
+      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
     ],
     cancelled: [
       { key: 'businessId', label: 'Empresa', type: 'business' },
-      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'text' },
+      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
     ],
     'credit-notes': [
       { key: 'businessId', label: 'Empresa', type: 'business' },
-      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'text' },
+      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
     ],
     multivende: [
-      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'text' },
+      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
       { key: 'orderVtex', label: 'Pedido VTEX', type: 'text', placeholder: 'Numero de pedido' },
     ],
   }
   const activeFilterFields = listingFilterFields[activeListingTab] ?? staticListingTabs[activeListingTab]?.filters ?? []
+  const hasDateRangeFilter = activeFilterFields.some(field => field.type === 'dateRange')
+  useEffect(() => {
+    if (!hasDateRangeFilter) return undefined
+
+    let mounted = true
+    loadDateRangePickerAssets().then(() => {
+      if (!mounted || !window.$?.fn?.daterangepicker || !window.moment) return
+      window.moment.locale('es')
+
+      $('.commercial-order-date-range-input').each(function () {
+        const $input = $(this)
+        const tabId = $input.data('tab-id') || activeListingTab
+        const value = `${$input.val() || defaultDateRange()}`.trim()
+        const { start, end } = dateRangeParts(value)
+        const startDate = window.moment(start || todayPathDate().replaceAll('/', '-'), 'YYYY-MM-DD')
+        const endDate = window.moment(end || start || todayPathDate().replaceAll('/', '-'), 'YYYY-MM-DD')
+        const existing = $input.data('daterangepicker')
+
+        if (existing) existing.remove()
+        $input.off('.commercialOrderDateRange')
+        $input.daterangepicker({
+          startDate,
+          endDate,
+          autoUpdateInput: false,
+          alwaysShowCalendars: true,
+          linkedCalendars: false,
+          opens: 'center',
+          locale: {
+            format: 'YYYY/MM/DD',
+            separator: ' - ',
+            applyLabel: 'Aplicar',
+            cancelLabel: 'Limpiar',
+            fromLabel: 'Desde',
+            toLabel: 'Hasta',
+            customRangeLabel: 'Personalizado',
+            weekLabel: 'S',
+            daysOfWeek: ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'],
+            monthNames: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Setiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+            firstDay: 1,
+          },
+        }, (selectedStart, selectedEnd) => {
+          const nextValue = `${selectedStart.format('YYYY/MM/DD')} - ${selectedEnd.format('YYYY/MM/DD')}`
+          $input.val(nextValue)
+          updateListingFilter(tabId, 'dateRange', nextValue)
+        })
+        $input.on('cancel.daterangepicker.commercialOrderDateRange', () => {
+          $input.val('')
+          updateListingFilter(tabId, 'dateRange', '')
+        })
+      })
+    }).catch(() => {})
+
+    return () => {
+      mounted = false
+      $('.commercial-order-date-range-input').each(function () {
+        const picker = $(this).data('daterangepicker')
+        if (picker) picker.remove()
+        $(this).off('.commercialOrderDateRange')
+      })
+    }
+  }, [activeListingTab, hasDateRangeFilter])
   const listingHeader = (
     <div className='commercial-order-listing-header'>
       <div className='d-flex align-items-center justify-content-between gap-2 mb-2'>
@@ -1889,27 +2018,28 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         ))}
       </ul>
       {activeFilterFields.length > 0 && (
-        <form className='row g-3 align-items-end mb-2' onSubmit={applyListingFilters}>
+        <form className='commercial-order-filter-form mb-2' onSubmit={applyListingFilters}>
           {activeFilterFields.map(field => renderListingFilterField(activeListingTab, field))}
-          <div className='col-12 col-md-auto'>
+          <div className='commercial-order-filter-actions'>
             <button type='submit' className='btn btn-outline-primary'>
               <i className='mdi mdi-magnify me-1'></i>Filtrar
             </button>
-          </div>
-          {activeListingTab === 'issued' && (
-            <div className='col-12 col-md-auto'>
-              <button type='button' className='btn btn-outline-danger'>
-                <i className='mdi mdi-file-pdf-box me-1'></i>Generar reporte
+            {activeTab.kind !== 'static' && (
+              <button type='button' className='btn btn-outline-danger' onClick={() => exportActiveListingGrid(true)}>
+                <i className='mdi mdi-file-excel-box me-1'></i>Filtrar a Excel
               </button>
-            </div>
-          )}
-          {activeListingTab === 'multivende' && (
-            <div className='col-12 col-md-auto'>
+            )}
+            {activeTab.kind !== 'static' && (
+              <button type='button' className='btn btn-outline-success' onClick={() => exportActiveListingGrid(false)}>
+                <i className='mdi mdi-file-excel-box me-1'></i>Reporte
+              </button>
+            )}
+            {activeListingTab === 'multivende' && (
               <button type='button' className='btn btn-outline-success'>
                 <i className='mdi mdi-calendar-refresh me-1'></i>Actualizar fechas de entrega
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </form>
       )}
       {activeListingTab === 'issued' && (
@@ -2311,6 +2441,44 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         background: transparent;
         border: 0;
       }
+      .commercial-order-filter-form {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 12px 16px;
+        align-items: end;
+      }
+      .commercial-order-filter-field {
+        min-width: 0;
+      }
+      .commercial-order-filter-field .form-label {
+        margin-bottom: 6px;
+        font-weight: 600;
+      }
+      .commercial-order-filter-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .commercial-order-filter-actions .btn {
+        min-height: 38px;
+        white-space: nowrap;
+      }
+      .daterangepicker {
+        z-index: 1080;
+      }
+      @media (min-width: 1200px) {
+        .commercial-order-filter-form {
+          grid-template-columns:
+            minmax(230px, 1.1fr)
+            minmax(260px, 1fr)
+            minmax(210px, 1fr)
+            auto;
+        }
+        .commercial-order-filter-actions {
+          justify-content: flex-start;
+        }
+      }
       .commercial-order-page-size {
         width: 76px;
       }
@@ -2603,6 +2771,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         });
       }}
       pageSize={25}
+      exportable
       columns={[
         ...orderFilterColumns,
         {
@@ -2746,6 +2915,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       rest={multivendeOrdersRest}
       filterValue={multivendeFilterValue}
       pageSize={10}
+      exportable
       columns={multivendeColumns}
       toolBar={(container) => {
         container.unshift({
