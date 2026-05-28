@@ -624,6 +624,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
   const gridRef = useRef()
   const modalRef = useRef()
+  const multivendeModalRef = useRef()
+  const multivendeCheckoutRef = useRef()
   const trackingModalRef = useRef()
   const evidenceModalRef = useRef()
   const evidenceFileRef = useRef()
@@ -1271,6 +1273,33 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
+  const openMultivendeModal = () => {
+    if (multivendeCheckoutRef.current) multivendeCheckoutRef.current.value = ''
+    $(multivendeModalRef.current).modal('show')
+    setTimeout(() => multivendeCheckoutRef.current?.focus(), 150)
+  }
+
+  const onMultivendeSubmit = async (e) => {
+    e.preventDefault()
+    const checkoutId = multivendeCheckoutRef.current?.value?.trim() || ''
+    if (!checkoutId) {
+      await Swal.fire({
+        title: 'CHECK OUT ID requerido',
+        text: 'Ingresa el CHECK OUT ID del pedido Multivende.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido'
+      })
+      return
+    }
+
+    await Swal.fire({
+      title: 'Integracion pendiente',
+      text: `El formulario ya captura el CHECK OUT ID ${checkoutId}. Falta conectar el servicio de Multivende para registrar el pedido automaticamente.`,
+      icon: 'info',
+      confirmButtonText: 'Aceptar'
+    })
+  }
+
   const onItemArticleChanged = async (uid, e) => {
     if ($(e.target).data('select2')) $(e.target).select2('close')
 
@@ -1587,6 +1616,43 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       .commercial-order-action-btn:active i {
         color: inherit !important;
       }
+      .commercial-order-top-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 12px;
+      }
+      .commercial-order-multivende-action {
+        min-height: 46px;
+        min-width: min(100%, 360px);
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        border-radius: 4px;
+        padding: 0 16px;
+        font-weight: 600;
+      }
+      .commercial-order-multivende-action span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .commercial-order-modal-header-primary {
+        background: #28285b;
+        border-bottom: 0;
+        color: #fff;
+      }
+      .commercial-order-modal-header-primary .modal-title {
+        align-items: center;
+        display: flex;
+        gap: 6px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+      .commercial-order-multivende-form {
+        padding: 8px 2px 0;
+      }
       .commercial-order-modal-dialog {
         width: calc(100vw - 10px);
         max-width: calc(100vw - 10px);
@@ -1809,8 +1875,25 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         .commercial-order-map-search {
           grid-template-columns: 1fr;
         }
+        .commercial-order-top-actions {
+          justify-content: stretch;
+        }
+        .commercial-order-multivende-action {
+          width: 100%;
+        }
       }
     `}</style>
+    <div className='commercial-order-top-actions'>
+      <button
+        type='button'
+        className='btn btn-success commercial-order-multivende-action'
+        title='Ingresar pedido Multivende por CHECK OUT ID'
+        onClick={openMultivendeModal}
+      >
+        <span><i className='mdi mdi-plus-circle-outline'></i> Ingresar pedido multivende</span>
+        <i className='mdi mdi-calendar-month-outline'></i>
+      </button>
+    </div>
     <Table
       gridRef={gridRef}
       title={pageTitle}
@@ -2293,6 +2376,34 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             <span>Observaciones</span>
           </div>
           <TextareaFormGroup eRef={observationsRef} label='Observaciones' rows={3} />
+        </section>
+      </div>
+    </Modal>
+
+    <Modal
+      modalRef={multivendeModalRef}
+      title={<><i className='mdi mdi-plus-circle-outline'></i> Ingresar pedido multivende</>}
+      size='lg'
+      headerClass='commercial-order-modal-header-primary'
+      closeButtonClass='btn-close-white'
+      btnSubmitText='Registrar'
+      onSubmit={onMultivendeSubmit}
+    >
+      <div className='commercial-order-multivende-form'>
+        <section className='commercial-order-form-section'>
+          <div className='commercial-order-section-title'>
+            <i className='mdi mdi-file-document-plus-outline'></i>
+            <span>General</span>
+          </div>
+          <div className='mb-2'>
+            <label className='form-label'>Ingrese el <strong>CHECK OUT ID</strong></label>
+            <input
+              ref={multivendeCheckoutRef}
+              name='external_checkout_id'
+              className='form-control'
+              autoComplete='off'
+            />
+          </div>
         </section>
       </div>
     </Modal>
