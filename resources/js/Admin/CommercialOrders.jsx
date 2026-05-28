@@ -239,11 +239,20 @@ const billingDocumentNumber = (document) => {
   if (!document) return ''
   return [document?.series, document?.sequence].filter(Boolean).join('-') || document?.code || ''
 }
+const hasPreparedBillingDocument = (document) => !!(`${document?.series ?? ''}`.trim() && `${document?.sequence ?? ''}`.trim())
 const orderVoucherLabel = (order) => {
   const document = latestBillingDocument(order)
   const documentNumber = billingDocumentNumber(document)
   return documentNumber || order?.referral_guide || order?.guide_number || order?.purchase_order || '-'
 }
+const billingDocumentCustomerLabel = (document) => document?.client?.full_name
+  ?? document?.eventual_client?.business_name
+  ?? document?.eventualClient?.business_name
+  ?? '-'
+const billingDocumentSourceCode = (document) => document?.commercial_order?.code
+  ?? document?.commercialOrder?.code
+  ?? document?.metadata?.source_code
+  ?? '-'
 const orderDocumentTypeLabel = (order) => normalizeDocumentType(latestBillingDocument(order)?.document_type ?? order?.document_type)
 const orderCustomerLabel = (order) => {
   const customer = order?.client ?? order?.eventual_client ?? order?.eventualClient ?? null
@@ -804,6 +813,12 @@ const billingDocumentActionMeta = (order) => {
     return {
       icon: 'mdi mdi-file-document-check-outline',
       title: `Descargar PDF del comprobante ${billingDocumentNumber(document) || document.code}`,
+    }
+  }
+  if (hasPreparedBillingDocument(document)) {
+    return {
+      icon: 'mdi mdi-printer',
+      title: `Emitir o imprimir comprobante ${billingDocumentNumber(document) || document.code}`,
     }
   }
   return {
@@ -1664,6 +1679,120 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     await openMagistralesRecordPdf(buildMagistralesRows.referralGuide(result.data))
   }
 
+  const loadBillingDocument = async (document) => {
+    if (!document?.id) return document
+    if (document.items && (document.business || document.commercial_order || document.commercialOrder)) return document
+    const response = await billingDocumentsRest.paginate({
+      skip: 0,
+      take: 1,
+      isLoadingAll: true,
+      filter: ['id', '=', Number(document.id)],
+    })
+    return response?.data?.[0] ?? document
+  }
+
+  const printBillingDocument = async (document) => {
+    const row = await loadBillingDocument(document)
+    if (!hasPreparedBillingDocument(row)) {
+      await Swal.fire({
+        title: 'Comprobante no preparado',
+        text: 'Primero genera serie y correlativo del comprobante.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+      })
+      return
+    }
+
+    const popup = window.open('', '_blank')
+    if (!popup) {
+      await Swal.fire({
+        title: 'Impresion bloqueada',
+        text: 'El navegador bloqueo la ventana de impresion.',
+        icon: 'warning',
+        confirmButtonText: 'Entendido',
+      })
+      return
+    }
+
+    const formatDateText = (value) => value?.toString?.().slice?.(0, 10) ?? ''
+    const items = row?.items ?? []
+    const itemsHtml = items.length
+      ? items.map(item => `
+        <tr>
+          <td>${escapeHtml(item.description)}</td>
+          <td class="right">${Number(item.quantity ?? 0).toFixed(2)}</td>
+          <td class="right">${Number(item.unit_price ?? 0).toFixed(2)}</td>
+          <td class="right">${Number(item.total ?? 0).toFixed(2)}</td>
+        </tr>
+      `).join('')
+      : '<tr><td colspan="4" class="muted">Sin detalle de items</td></tr>'
+
+    popup.document.write(`<!doctype html>
+      <html>
+        <head>
+          <title>${escapeHtml(row.code)} - ${escapeHtml(row.series)}-${escapeHtml(row.sequence)}</title>
+          <style>
+            body { font-family: Arial, sans-serif; color: #222; margin: 28px; font-size: 12px; }
+            h1 { font-size: 20px; margin: 0 0 4px; }
+            h2 { font-size: 15px; margin: 20px 0 8px; }
+            .muted { color: #666; }
+            .header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 1px solid #ddd; padding-bottom: 14px; }
+            .number { text-align: right; font-size: 16px; font-weight: 700; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px; margin-top: 18px; }
+            .label { color: #666; font-size: 11px; text-transform: uppercase; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
+            th { background: #f5f5f5; text-align: left; }
+            .right { text-align: right; }
+            .totals { width: 260px; margin-left: auto; margin-top: 14px; }
+            @media print { button { display: none; } body { margin: 0; } }
+          </style>
+        </head>
+        <body>
+          <button onclick="window.print()">Imprimir</button>
+          <div class="header">
+            <div>
+              <h1>${escapeHtml(row?.business?.name ?? 'Empresa')}</h1>
+              <div class="muted">${escapeHtml(row?.branch?.address ?? '')}</div>
+              <div class="muted">${escapeHtml(row?.business?.tax_number ?? '')}</div>
+            </div>
+            <div class="number">
+              ${escapeHtml(row.document_type ?? 'Comprobante')}<br>
+              ${escapeHtml(row.series)}-${escapeHtml(row.sequence)}
+            </div>
+          </div>
+          <div class="grid">
+            <div><div class="label">Comprobante interno</div>${escapeHtml(row.code)}</div>
+            <div><div class="label">Fecha</div>${escapeHtml(formatDateText(row.issue_date))}</div>
+            <div><div class="label">Cliente</div>${escapeHtml(billingDocumentCustomerLabel(row))}</div>
+            <div><div class="label">Moneda</div>${escapeHtml(currencyLabel(row.currency))}</div>
+            <div><div class="label">Pedido comercial</div>${escapeHtml(billingDocumentSourceCode(row))}</div>
+            <div><div class="label">Condicion</div>${escapeHtml(row.payment_condition ?? '-')}</div>
+          </div>
+          <h2>Detalle</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Descripcion</th>
+                <th class="right">Cantidad</th>
+                <th class="right">P. Unitario</th>
+                <th class="right">Total</th>
+              </tr>
+            </thead>
+            <tbody>${itemsHtml}</tbody>
+          </table>
+          <table class="totals">
+            <tr><th>Subtotal</th><td class="right">${Number(row.subtotal ?? 0).toFixed(2)}</td></tr>
+            <tr><th>IGV</th><td class="right">${Number(row.tax_amount ?? 0).toFixed(2)}</td></tr>
+            <tr><th>Total</th><td class="right">${Number(row.total ?? 0).toFixed(2)}</td></tr>
+          </table>
+        </body>
+      </html>`)
+    popup.document.close()
+    popup.focus()
+    popup.print()
+  }
+
   const onOpenBillingDocument = async (order) => {
     let document = latestBillingDocument(order)
 
@@ -1706,22 +1835,36 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
       const issueNow = await Swal.fire({
         title: 'Comprobante generado',
-        text: `Se genero ${billingDocumentNumber(document) || document.code}. Deseas emitirlo ahora?`,
+        text: `Se genero ${billingDocumentNumber(document) || document.code}. Puedes emitirlo o imprimirlo ahora.`,
         icon: 'success',
         showCancelButton: true,
+        showDenyButton: true,
         confirmButtonText: 'Emitir',
+        denyButtonText: 'Imprimir',
         cancelButtonText: 'Cerrar',
       })
+      if (issueNow.isDenied) {
+        await printBillingDocument(document)
+        return
+      }
       if (!issueNow.isConfirmed) return
     } else {
       const issueResult = await Swal.fire({
         title: 'Emitir comprobante',
-        text: `Se emitira ${billingDocumentNumber(document) || document.code} usando el conector configurado.`,
+        text: hasPreparedBillingDocument(document)
+          ? `El comprobante ${billingDocumentNumber(document) || document.code} ya esta preparado. Puedes emitirlo o imprimirlo.`
+          : `Se emitira ${billingDocumentNumber(document) || document.code} usando el conector configurado.`,
         icon: 'question',
         showCancelButton: true,
+        showDenyButton: hasPreparedBillingDocument(document),
         confirmButtonText: 'Emitir',
+        denyButtonText: 'Imprimir',
         cancelButtonText: 'Cancelar',
       })
+      if (issueResult.isDenied) {
+        await printBillingDocument(document)
+        return
+      }
       if (!issueResult.isConfirmed) return
     }
 
