@@ -33,7 +33,7 @@ class BillingDocumentController extends BasicController
     {
         $query = $model::select('billing_documents.*')
             ->with([
-                'business:id,name,tax_number,soap_send_id,soap_type_id,soap_username,soap_password,detraction_account,facturador_company_id,facturador_sync_status,status',
+                'business:id,name,tax_number,soap_send_id,soap_type_id,soap_username,soap_password,detraction_account,payment_accounts,facturador_company_id,facturador_sync_status,status',
                 'branch:id,business_id,name,establishment_code,ubigeo,address,email,telephone,facturador_establishment_id,facturador_sync_status,facturador_sync_message,facturador_last_sync_at,series_factura,series_boleta,series_nota_credito,status',
                 'warehouse:id,name',
                 'client:id,full_name,document_type,document_number,email,billing_email,phone,ubigeo,full_address',

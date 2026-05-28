@@ -73,6 +73,7 @@ class BusinessController extends BasicController
         $body['soap_password'] = array_key_exists('soap_password', $body) ? $this->nullableTrim($body['soap_password']) : $existing?->soap_password;
         $body['soap_url'] = array_key_exists('soap_url', $body) ? $this->nullableTrim($body['soap_url']) : $existing?->soap_url;
         $body['detraction_account'] = array_key_exists('detraction_account', $body) ? $this->nullableTrim($body['detraction_account']) : $existing?->detraction_account;
+        $body['payment_accounts'] = array_key_exists('payment_accounts', $body) ? $this->normalizePaymentAccounts($body['payment_accounts']) : $existing?->payment_accounts;
         $body['certificate_due'] = array_key_exists('certificate_due', $body) ? $this->normalizeDate($body['certificate_due']) : optional($existing?->certificate_due)->format('Y-m-d');
         $body['operation_amazonia'] = array_key_exists('operation_amazonia', $body) ? $this->toBoolean($body['operation_amazonia']) : (bool) $existing?->operation_amazonia;
         $body['send_document_to_pse'] = array_key_exists('send_document_to_pse', $body) ? $this->toBoolean($body['send_document_to_pse']) : (bool) $existing?->send_document_to_pse;
@@ -555,6 +556,39 @@ class BusinessController extends BasicController
 
         $text = trim((string) $value);
         return $text === '' ? null : $text;
+    }
+
+    private function normalizePaymentAccounts($value): ?array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : ['lines' => preg_split('/\r\n|\r|\n/', $value)];
+        }
+
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $title = $this->nullableTrim($value['title'] ?? null);
+        $subtitle = $this->nullableTrim($value['subtitle'] ?? null);
+        $lines = [];
+
+        foreach (($value['lines'] ?? []) as $line) {
+            $line = trim((string) $line);
+            if ($line !== '') {
+                $lines[] = $line;
+            }
+        }
+
+        if (!$title && !$subtitle && empty($lines)) {
+            return null;
+        }
+
+        return [
+            'title' => $title,
+            'subtitle' => $subtitle,
+            'lines' => array_values($lines),
+        ];
     }
 
     private function hasBusinessFiscalChanges(Business $existing, array $payload, bool $certificatePasswordChanged): bool

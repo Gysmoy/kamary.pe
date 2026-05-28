@@ -43,6 +43,9 @@ const BillingSettings = ({ can }) => {
   const soapPasswordRef = useRef()
   const soapUrlRef = useRef()
   const detractionAccountRef = useRef()
+  const paymentAccountsTitleRef = useRef()
+  const paymentAccountsSubtitleRef = useRef()
+  const paymentAccountsLinesRef = useRef()
   const certificateDueRef = useRef()
   const operationAmazoniaRef = useRef()
   const sendDocumentToPseRef = useRef()
@@ -85,6 +88,18 @@ const BillingSettings = ({ can }) => {
     setSelectedFacturadorMode(data.mode || 'demo')
   }
 
+  const normalizePaymentAccounts = (value) => {
+    if (!value) return {}
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value) || {}
+      } catch (error) {
+        return { lines: value.split(/\r?\n/).map(line => line.trim()).filter(Boolean) }
+      }
+    }
+    return value
+  }
+
   const onSaveFacturadorMode = async () => {
     const nextMode = selectedFacturadorMode || 'demo'
 
@@ -117,6 +132,10 @@ const BillingSettings = ({ can }) => {
     soapPasswordRef.current.value = business?.soap_password ?? ''
     soapUrlRef.current.value = business?.soap_url ?? ''
     detractionAccountRef.current.value = business?.detraction_account ?? ''
+    const paymentAccounts = normalizePaymentAccounts(business?.payment_accounts)
+    paymentAccountsTitleRef.current.value = paymentAccounts?.title ?? ''
+    paymentAccountsSubtitleRef.current.value = paymentAccounts?.subtitle ?? ''
+    paymentAccountsLinesRef.current.value = (paymentAccounts?.lines ?? []).join('\n')
     certificateDueRef.current.value = business?.certificate_due?.toString?.().slice?.(0, 10) ?? ''
     operationAmazoniaRef.current.checked = business?.operation_amazonia ?? false
     sendDocumentToPseRef.current.checked = business?.send_document_to_pse ?? false
@@ -148,6 +167,11 @@ const BillingSettings = ({ can }) => {
       soap_password: soapPasswordRef.current.value.trim(),
       soap_url: soapUrlRef.current.value.trim(),
       detraction_account: detractionAccountRef.current.value.trim(),
+      payment_accounts: {
+        title: paymentAccountsTitleRef.current.value.trim(),
+        subtitle: paymentAccountsSubtitleRef.current.value.trim(),
+        lines: paymentAccountsLinesRef.current.value.split(/\r?\n/).map(line => line.trim()).filter(Boolean),
+      },
       certificate_due: certificateDueRef.current.value || null,
       operation_amazonia: operationAmazoniaRef.current.checked,
       send_document_to_pse: sendDocumentToPseRef.current.checked,
@@ -522,6 +546,24 @@ const BillingSettings = ({ can }) => {
         <div className='col-md-4 mb-3'><label className='form-label'>SOAP clave</label><input ref={soapPasswordRef} className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>SOAP URL</label><input ref={soapUrlRef} className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Cuenta detracción</label><input ref={detractionAccountRef} className='form-control' /></div>
+        <div className='col-12'>
+          <hr className='my-2' />
+          <h5 className='mb-1'>Datos bancarios para comprobantes</h5>
+          <small className='text-muted'>Estos datos se guardan por empresa y salen en la previsualizacion PDF local.</small>
+        </div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Titulo</label><input ref={paymentAccountsTitleRef} className='form-control' placeholder='KAMARY PERU SAC' /></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Subtitulo</label><input ref={paymentAccountsSubtitleRef} className='form-control' placeholder='Cuentas Soles' /></div>
+        <div className='col-md-4 mb-3'></div>
+        <div className='col-12 mb-3'>
+          <label className='form-label'>Cuentas bancarias</label>
+          <textarea
+            ref={paymentAccountsLinesRef}
+            className='form-control'
+            rows={5}
+            placeholder={'Banco Continental 0011-0341-0100042961\nCCI 011-341-000100042961-51\nBanco Crédito 191-8971815-0-91\nCCI 002-191-008971815091-58'}
+          />
+          <small className='text-muted'>Ingresa una linea por cada cuenta o CCI.</small>
+        </div>
         <div className='col-md-4 mb-3'><label className='form-label'>Vence certificado</label><input ref={certificateDueRef} type='date' className='form-control' /></div>
         <div className='col-md-4 mb-3 d-flex align-items-end'><div className='form-check mb-2'><input ref={operationAmazoniaRef} type='checkbox' className='form-check-input' id='operation-amazonia-settings' /><label className='form-check-label' htmlFor='operation-amazonia-settings'>Operación amazonia</label></div></div>
         <div className='col-md-4 mb-3 d-flex align-items-end'><div className='form-check mb-2'><input ref={sendDocumentToPseRef} type='checkbox' className='form-check-input' id='send-document-to-pse-settings' /><label className='form-check-label' htmlFor='send-document-to-pse-settings'>Enviar a PSE</label></div></div>

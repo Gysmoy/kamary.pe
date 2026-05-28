@@ -20,6 +20,7 @@ class Business extends Model
         'soap_password',
         'soap_url',
         'detraction_account',
+        'payment_accounts',
         'certificate_due',
         'operation_amazonia',
         'send_document_to_pse',
@@ -46,6 +47,7 @@ class Business extends Model
     protected $casts = [
         'status' => 'boolean',
         'certificate_due' => 'date',
+        'payment_accounts' => 'array',
         'operation_amazonia' => 'boolean',
         'send_document_to_pse' => 'boolean',
         'facturador_last_sync_at' => 'datetime',

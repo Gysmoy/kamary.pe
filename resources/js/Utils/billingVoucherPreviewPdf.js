@@ -148,6 +148,27 @@ const amountInWords = (amount, currency = 'PEN') => {
   return `IMPORTE EN LETRAS: ${numberToWords(integer).toUpperCase()} CON ${String(cents).padStart(2, '0')}/100 ${currencyLabel}`
 }
 
+const normalizePaymentAccounts = (value) => {
+  if (!value) return null
+  if (typeof value === 'string') {
+    try {
+      value = JSON.parse(value)
+    } catch (error) {
+      value = { lines: value.split(/\r?\n/) }
+    }
+  }
+  if (!value || typeof value !== 'object') return null
+
+  const title = asText(value.title, '').trim()
+  const subtitle = asText(value.subtitle, '').trim()
+  const lines = (Array.isArray(value.lines) ? value.lines : [])
+    .map(line => asText(line, '').trim())
+    .filter(Boolean)
+
+  if (!title && !subtitle && lines.length === 0) return null
+  return { title, subtitle, lines }
+}
+
 const ensurePdf = () => {
   const JsPDF = window.jspdf?.jsPDF || window.jsPDF
   if (!JsPDF) throw new Error('jsPDF no esta disponible')
@@ -344,6 +365,32 @@ const drawTotals = (doc, document, y) => {
   return doc.lastAutoTable.finalY + 12
 }
 
+const drawPaymentAccounts = (doc, document, y) => {
+  const accounts = normalizePaymentAccounts(
+    nested(document, 'business.payment_accounts') || nested(document, 'business.paymentAccounts')
+  )
+  if (!accounts?.lines?.length) return y
+
+  const margin = 28
+  const title = [accounts.title, accounts.subtitle].filter(Boolean).join(' - ')
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  if (title) {
+    doc.text(title, margin, y)
+    y += 11
+  }
+
+  doc.setFont('helvetica', 'normal')
+  accounts.lines.forEach((line) => {
+    const wrapped = doc.splitTextToSize(line, 520)
+    doc.text(wrapped, margin, y)
+    y += Math.max(9, wrapped.length * 9)
+  })
+
+  return y + 10
+}
+
 const drawFooter = (doc, document, y) => {
   const margin = 28
   const currency = document.currency || 'PEN'
@@ -359,7 +406,9 @@ const drawFooter = (doc, document, y) => {
   doc.setFont('helvetica', 'normal')
   doc.text(asText(document.observations, ''), margin + 76, y)
 
-  y += 32
+  y += 28
+  y = drawPaymentAccounts(doc, document, y)
+  y += 4
   doc.setFont('helvetica', 'bold')
   doc.text('DATOS DE ENTREGA', margin, y)
   y += 14
