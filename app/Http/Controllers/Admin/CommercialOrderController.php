@@ -99,7 +99,7 @@ class CommercialOrderController extends BasicController
             ->join('users as creator', 'creator.id', '=', 'commercial_orders.created_by')
             ->join('users as updater', 'updater.id', '=', 'commercial_orders.updated_by');
 
-        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $scopeKey = BusinessScope::scopedKeyForRequest(request(), $this->neutralBusinessScopePaths());
         $query->whereHas('business', function ($business) use ($scopeKey) {
             $business->whereIn('business_key', BusinessScope::fixedKeys());
             if ($scopeKey) $business->where('business_key', $scopeKey);
@@ -133,7 +133,7 @@ class CommercialOrderController extends BasicController
         if (!$clientId && !$eventualClientId) throw new \Exception('Debes seleccionar un cliente regular o eventual');
         if ($clientId && $eventualClientId) throw new \Exception('No puedes mezclar cliente regular y eventual en el mismo pedido');
 
-        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
+        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request, $this->neutralBusinessScopePaths());
         $warehouse = Warehouse::findOrFail($warehouseId);
         User::findOrFail($sellerId);
 
@@ -446,7 +446,7 @@ class CommercialOrderController extends BasicController
     {
         $response = new Response();
         try {
-            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
+            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request, $this->neutralBusinessScopePaths());
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = $business->branches()->whereNotNull('status')->orderBy('name')->get(['id', 'business_id', 'name', 'status']);
@@ -560,7 +560,7 @@ class CommercialOrderController extends BasicController
                 $warehouseId,
                 $search,
                 0,
-                BusinessScope::scopedKeyForRequest($request) ?: BusinessScope::KAMARY_PERU
+                $this->scopeKeyForArticleRequest($request)
             );
             $articleIds = collect($stockRows)
                 ->pluck('article_id')
@@ -618,6 +618,25 @@ class CommercialOrderController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    private function neutralBusinessScopePaths(): array
+    {
+        return ['/admin/commercial-orders'];
+    }
+
+    private function scopeKeyForArticleRequest(Request $request): string
+    {
+        $businessId = $this->toNullableInt($request->query('business_id', $request->input('business_id')));
+        if ($businessId) {
+            try {
+                return BusinessScope::findFixedBusiness($businessId)->business_key;
+            } catch (\Throwable) {
+                return BusinessScope::KAMARY_PERU;
+            }
+        }
+
+        return BusinessScope::scopedKeyForRequest($request, $this->neutralBusinessScopePaths()) ?: BusinessScope::KAMARY_PERU;
     }
 
     public function boolean(Request $request)
