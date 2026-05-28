@@ -1904,6 +1904,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
           allowFiltering: false,
           allowExporting: false,
           cellTemplate: (container, { data }) => {
+            const hasReferralGuide = orderGuides(data).length > 0
+
             container.css('text-overflow', 'unset')
             container.addClass('commercial-order-actions')
             appendGridActionButton(container, {
@@ -1927,11 +1929,11 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               onClick: () => openTracking(data)
             })
             appendGridActionButton(container, {
-              variant: 'warning',
-              title: orderGuides(data).length
+              variant: hasReferralGuide ? 'dark' : 'warning',
+              title: hasReferralGuide
                 ? 'Ver, emitir o descargar la guia de remision asociada al pedido'
                 : 'Generar guia de remision para este pedido',
-              icon: 'mdi mdi-file-document',
+              icon: hasReferralGuide ? 'mdi mdi-eye' : 'mdi mdi-file-document',
               onClick: () => onOpenReferralGuide(data)
             })
             appendGridActionButton(container, {
