@@ -621,16 +621,29 @@ class FacturadorPro5Service
 
     private function buildItemsPayload(BillingDocument $document, float $effectiveTaxRate): array
     {
+        $pricesIncludeTax = $document->source_type === 'commercial_order' && $effectiveTaxRate > 0;
+
         return $document->items
             ->where('status', true)
             ->values()
-            ->map(function ($item) use ($effectiveTaxRate) {
+            ->map(function ($item) use ($effectiveTaxRate, $pricesIncludeTax) {
                 $quantity = round((float) $item->quantity, 3);
-                $unitValue = round((float) $item->unit_price, 2);
-                $lineValue = round((float) $item->total, 2);
-                $lineTax = round($lineValue * $effectiveTaxRate, 2);
-                $lineTotal = round($lineValue + $lineTax, 2);
-                $unitPrice = $quantity === 0 ? $unitValue : round($lineTotal / $quantity, 6);
+                $storedUnitPrice = round((float) $item->unit_price, 2);
+                $storedLineTotal = round((float) $item->total, 2);
+
+                if ($pricesIncludeTax) {
+                    $lineTotal = $storedLineTotal;
+                    $lineValue = round($lineTotal / (1 + $effectiveTaxRate), 2);
+                    $lineTax = round($lineTotal - $lineValue, 2);
+                    $unitValue = $quantity === 0 ? round($storedUnitPrice / (1 + $effectiveTaxRate), 6) : round($lineValue / $quantity, 6);
+                    $unitPrice = $quantity === 0 ? $storedUnitPrice : round($lineTotal / $quantity, 6);
+                } else {
+                    $unitValue = $storedUnitPrice;
+                    $lineValue = $storedLineTotal;
+                    $lineTax = round($lineValue * $effectiveTaxRate, 2);
+                    $lineTotal = round($lineValue + $lineTax, 2);
+                    $unitPrice = $quantity === 0 ? $unitValue : round($lineTotal / $quantity, 6);
+                }
 
                 return [
                     'codigo_interno' => $item->item_code ?: ('ITEM-' . $item->id),

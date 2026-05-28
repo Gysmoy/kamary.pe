@@ -576,7 +576,7 @@ const formatCoordinate = (value) => {
 
 const hasMapPosition = (position) => parseCoordinate(position?.lat) !== null && parseCoordinate(position?.lng) !== null
 
-const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionChange, onSearchTextChange, onAddressSelected, googleMapsApiKey }) => {
+const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionChange, onSearchTextChange, onAddressSelected, googleMapsApiKey, disabled = false }) => {
   const mapRef = useRef()
   const [loading, setLoading] = useState(false)
   const [mapError, setMapError] = useState('')
@@ -596,6 +596,7 @@ const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionCha
   }
 
   const handlePointSelected = (nextPosition) => {
+    if (disabled) return
     onPositionChange(nextPosition)
     applyPosition(nextPosition)
   }
@@ -625,6 +626,7 @@ const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionCha
   }, [modalRef, position?.lat, position?.lng])
 
   const searchAddress = async () => {
+    if (disabled) return
     const query = `${searchText ?? ''}`.trim()
     if (!query) {
       setResults([])
@@ -668,6 +670,7 @@ const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionCha
   }
 
   const selectResult = (result) => {
+    if (disabled) return
     const nextPosition = { lat: parseCoordinate(result.lat), lng: parseCoordinate(result.lng) }
     onPositionChange(nextPosition)
     onSearchTextChange(result.display_name ?? '')
@@ -686,6 +689,7 @@ const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionCha
               type='text'
               className='form-control'
               value={searchText}
+              disabled={disabled}
               onChange={(event) => onSearchTextChange(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') {
@@ -695,7 +699,7 @@ const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionCha
               }}
               placeholder='Ej. Av. Javier Prado 123, San Isidro'
             />
-            <button type='button' className='btn btn-outline-primary' onClick={searchAddress} disabled={loading}>
+            <button type='button' className='btn btn-outline-primary' onClick={searchAddress} disabled={loading || disabled}>
               {loading ? 'Buscando...' : 'Buscar'}
             </button>
           </div>
@@ -716,6 +720,7 @@ const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionCha
               type='button'
               key={`${result.place_id}-${result.lat}-${result.lng}`}
               className='commercial-order-map-result'
+              disabled={disabled}
               onClick={() => selectResult(result)}
             >
               {result.display_name}
@@ -736,11 +741,11 @@ const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionCha
           center={resolvedPosition}
           zoom={hasMapPosition(position) ? 17 : 13}
           options={{
-            clickableIcons: true,
+            clickableIcons: !disabled,
             fullscreenControl: true,
-            gestureHandling: 'greedy',
+            gestureHandling: disabled ? 'none' : 'greedy',
             mapTypeControl: true,
-            scrollwheel: true,
+            scrollwheel: !disabled,
             streetViewControl: false,
           }}
           onLoad={(map) => {
@@ -751,6 +756,7 @@ const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionCha
             }, 120)
           }}
           onClick={(event) => {
+            if (disabled) return
             const nextPosition = { lat: event.latLng.lat(), lng: event.latLng.lng() }
             handlePointSelected(nextPosition)
           }}
@@ -758,7 +764,7 @@ const GoogleDeliveryMapPicker = ({ modalRef, position, searchText, onPositionCha
           {hasMapPosition(position) && (
             <Marker
               position={resolvedPosition}
-              draggable
+              draggable={!disabled}
               onDragEnd={(event) => handlePointSelected({ lat: event.latLng.lat(), lng: event.latLng.lng() })}
             />
           )}
@@ -799,6 +805,22 @@ const canDownloadBillingDocument = (document) => {
   if (!document) return false
   const status = `${document.local_status ?? ''}`
   return ['accepted', 'observed', 'cancelled'].includes(status) || !!document.external_id
+}
+
+const isIssuedBillingDocument = (document) => {
+  if (!document) return false
+  const status = `${document.local_status ?? ''}`
+  return ['accepted', 'sent', 'observed'].includes(status) || !!document.external_id
+}
+
+const commercialOrderEditLockReason = (order) => {
+  if (!order?.id) return ''
+  const document = latestBillingDocument(order)
+  if (isIssuedBillingDocument(document) || `${order.billing_status ?? ''}` === 'billed') {
+    const documentLabel = billingDocumentNumber(document) || document?.code || 'emitido'
+    return `Este pedido ya tiene comprobante ${documentLabel}. No se pueden modificar datos ni productos despues de emitir.`
+  }
+  return ''
 }
 
 const billingDocumentActionMeta = (order) => {
@@ -1024,6 +1046,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const [laboratoryOptions, setLaboratoryOptions] = useState([])
   const [listingFilters, setListingFilters] = useState(emptyListingFilters())
   const [appliedListingFilters, setAppliedListingFilters] = useState(emptyAppliedListingFilters())
+  const [formLockReason, setFormLockReason] = useState('')
   const [evidenceForm, setEvidenceForm] = useState({
     recipient_name: '',
     recipient_document_type: 'DNI',
@@ -1268,6 +1291,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
   const onModalOpen = async (data = null) => {
     setIsEditing(!!data?.id)
+    setFormLockReason(commercialOrderEditLockReason(data))
 
     if (idRef.current) idRef.current.value = data?.id ?? ''
     if (codeRef.current) codeRef.current.value = data?.code ?? 'Se genera al guardar'
@@ -1375,6 +1399,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
   const onModalSubmit = async (e) => {
     e.preventDefault()
+    if (formLockReason) {
+      Swal.fire('Pedido bloqueado', formLockReason, 'info')
+      return
+    }
 
     const request = {
       id: idRef.current?.value || undefined,
@@ -2123,6 +2151,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
   const grossSubtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
   const orderTotals = useMemo(() => deriveDocumentTotals(grossSubtotal, selectedDocumentType), [grossSubtotal, selectedDocumentType])
+  const isFormLocked = formLockReason !== ''
   const trackingRows = useMemo(() => buildTrackingRows(trackingOrder), [trackingOrder])
   const filteredDelayReasons = useMemo(() => {
     const query = delayReasonFilter.trim().toLowerCase()
@@ -2492,6 +2521,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         display: inline-flex;
         font-size: 16px;
         line-height: 1;
+      }
+      .commercial-order-form-readonly {
+        pointer-events: none;
       }
       .commercial-order-status-cell {
         overflow: visible !important;
@@ -3062,13 +3094,14 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
           allowExporting: false,
           cellTemplate: (container, { data }) => {
             const hasReferralGuide = orderGuides(data).length > 0
+            const editLockReason = commercialOrderEditLockReason(data)
 
             container.css('text-overflow', 'unset')
             container.addClass('commercial-order-actions')
             appendGridActionButton(container, {
               variant: 'primary',
-              title: 'Editar datos, cliente, entrega y productos del pedido comercial',
-              icon: 'mdi mdi-pencil',
+              title: editLockReason || 'Editar datos, cliente, entrega y productos del pedido comercial',
+              icon: editLockReason ? 'mdi mdi-eye-outline' : 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)
             })
             if (canSendToPreparation(data)) {
@@ -3222,12 +3255,13 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
     <Modal
       modalRef={modalRef}
-      title={isEditing ? 'Editar pedido comercial' : 'Agregar pedido comercial'}
+      title={isFormLocked ? 'Ver pedido comercial' : (isEditing ? 'Editar pedido comercial' : 'Agregar pedido comercial')}
       size='xl'
       dialogClass='commercial-order-modal-dialog modal-dialog-scrollable'
       bodyClass='commercial-order-modal-body'
       bodyStyle={{ maxHeight: 'calc(100vh - 150px)', overflowY: 'auto', overflowX: 'hidden' }}
       btnSubmitText='Guardar'
+      hideButtonSubmit={isFormLocked}
       onSubmit={onModalSubmit}
     >
       <div id='commercial-orders-form-container'>
@@ -3244,6 +3278,13 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         <input ref={taxAmountRef} type='hidden' value={orderTotals.taxAmount} readOnly />
         <input ref={deliveryReferenceRef} type='hidden' />
 
+        {isFormLocked && (
+          <div className='alert alert-warning py-2 mb-2'>
+            <i className='mdi mdi-lock-outline me-1'></i>{formLockReason}
+          </div>
+        )}
+
+        <fieldset className={isFormLocked ? 'commercial-order-form-readonly' : ''} disabled={isFormLocked} style={{ border: 0, margin: 0, padding: 0, minWidth: 0 }}>
         <section className='commercial-order-form-section'>
           <div className='commercial-order-section-title'>
             <i className='mdi mdi-file-document'></i>
@@ -3349,6 +3390,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                 onAddressSelected={(address) => {
                   if (deliveryAddressRef.current) deliveryAddressRef.current.value = address
                 }}
+                disabled={isFormLocked}
               />
             </div>
             <div className='col-12 col-md-6 col-xl-5'>
@@ -3539,13 +3581,18 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               </tbody>
               <tfoot>
                 <tr>
-                  <th colSpan='12' className='text-end'>Sub total</th>
-                  <th>{grossSubtotal.toFixed(2)}</th>
+                  <th colSpan='12' className='text-end'>{isTaxableDocumentType(selectedDocumentType) ? 'Total gravada' : 'Sub total'}</th>
+                  <th>{orderTotals.subtotal.toFixed(2)}</th>
                   <th></th>
                 </tr>
                 <tr>
                   <th colSpan='12' className='text-end'>Descuento global</th>
                   <th>0.00</th>
+                  <th></th>
+                </tr>
+                <tr>
+                  <th colSpan='12' className='text-end'>IGV</th>
+                  <th>{orderTotals.taxAmount.toFixed(2)}</th>
                   <th></th>
                 </tr>
                 <tr>
@@ -3563,8 +3610,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             <i className='mdi mdi-note-text'></i>
             <span>Observaciones</span>
           </div>
-          <TextareaFormGroup eRef={observationsRef} label='Observaciones' rows={3} />
+          <TextareaFormGroup eRef={observationsRef} label='Observaciones' rows={3} disabled={isFormLocked} />
         </section>
+        </fieldset>
       </div>
     </Modal>
 

@@ -121,6 +121,9 @@ class CommercialOrderController extends BasicController
         $userId = Auth::id();
         $orderId = $body['id'] ?? null;
         $persistedOrder = $orderId ? CommercialOrder::find($orderId) : null;
+        if ($persistedOrder && $this->hasIssuedBillingDocument($persistedOrder)) {
+            throw new \Exception('No se puede modificar el pedido porque ya tiene un comprobante emitido.');
+        }
 
         $businessId = $this->toNullableInt($body['business_id'] ?? null);
         $branchId = $this->toNullableInt($body['business_branch_id'] ?? null);
@@ -630,6 +633,21 @@ class CommercialOrderController extends BasicController
     private function neutralBusinessScopePaths(): array
     {
         return ['/admin/commercial-orders'];
+    }
+
+    private function hasIssuedBillingDocument(CommercialOrder $order): bool
+    {
+        if ($order->billing_status === 'billed') {
+            return true;
+        }
+
+        return $order->billingDocuments()
+            ->where('status', 1)
+            ->where(function ($query) {
+                $query->whereIn('local_status', ['accepted', 'sent', 'observed'])
+                    ->orWhereNotNull('external_id');
+            })
+            ->exists();
     }
 
     private function scopeKeyForArticleRequest(Request $request): string
