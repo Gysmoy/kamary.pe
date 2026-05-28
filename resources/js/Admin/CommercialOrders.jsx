@@ -1830,12 +1830,6 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
           calculateCellValue: (data) => data.client?.full_name ?? data.eventual_client?.business_name ?? '-'
         },
         {
-          dataField: 'distribution_network_name',
-          caption: 'Red',
-          minWidth: 160,
-          calculateCellValue: (data) => data.distribution_network?.name ?? data.distributionNetwork?.name ?? '-'
-        },
-        {
           dataField: 'order_status',
           caption: 'Estado comercial',
           width: 140,
