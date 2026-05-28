@@ -21,8 +21,10 @@ import {
   billingStatusOptions,
   commercialOrderStatusOptions,
   dispatchStatusOptions,
+  getBillingStatusLabel,
   getCommercialOrderStatusLabel,
   getDispatchStatusLabel,
+  getPaymentStatusLabel,
   getReferralGuideStatusLabel,
   paymentStatusOptions,
   toLookup,
@@ -1446,6 +1448,11 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         border-color: #bfdbfe;
         color: #1d4ed8;
       }
+      .commercial-order-status-partial {
+        background: #f5f3ff;
+        border-color: #c4b5fd;
+        color: #6d28d9;
+      }
       .commercial-order-status-preparing {
         background: #fef3c7;
         border-color: #fbbf24;
@@ -1472,10 +1479,26 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         color: #b91c1c;
       }
       .commercial-order-status-billed,
-      .commercial-order-status-closed {
+      .commercial-order-status-closed,
+      .commercial-order-status-paid {
         background: #ecfdf5;
         border-color: #6ee7b7;
         color: #047857;
+      }
+      .commercial-order-status-factura {
+        background: #eef2ff;
+        border-color: #a5b4fc;
+        color: #3730a3;
+      }
+      .commercial-order-status-boleta {
+        background: #ccfbf1;
+        border-color: #5eead4;
+        color: #0f766e;
+      }
+      .commercial-order-status-nota-de-pedido {
+        background: #f8fafc;
+        border-color: #94a3b8;
+        color: #334155;
       }
       .commercial-order-status-empty {
         background: #f8fafc;
@@ -1826,9 +1849,27 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
           lookup: toLookup(dispatchStatusOptions),
           cellTemplate: (container, { value }) => appendStatusBadge(container, value, getDispatchStatusLabel)
         },
-        { dataField: 'billing_status', caption: 'Facturacion', width: 110, lookup: toLookup(billingStatusOptions) },
-        { dataField: 'payment_status', caption: 'Cobranza', width: 110, lookup: toLookup(paymentStatusOptions) },
-        { dataField: 'document_type', caption: 'Doc. venta', width: 120, calculateCellValue: (data) => normalizeDocumentType(data?.document_type) },
+        {
+          dataField: 'billing_status',
+          caption: 'Facturacion',
+          width: 110,
+          lookup: toLookup(billingStatusOptions),
+          cellTemplate: (container, { value }) => appendStatusBadge(container, value, getBillingStatusLabel)
+        },
+        {
+          dataField: 'payment_status',
+          caption: 'Cobranza',
+          width: 110,
+          lookup: toLookup(paymentStatusOptions),
+          cellTemplate: (container, { value }) => appendStatusBadge(container, value, getPaymentStatusLabel)
+        },
+        {
+          dataField: 'document_type',
+          caption: 'Doc. venta',
+          width: 120,
+          calculateCellValue: (data) => normalizeDocumentType(data?.document_type),
+          cellTemplate: (container, { value }) => appendStatusBadge(container, value, (label) => label || '-')
+        },
         {
           caption: 'Guia',
           width: 140,
