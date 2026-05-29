@@ -68,7 +68,7 @@ const Drivers = () => {
         { caption: 'Acciones', width: 125, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           container.css('text-overflow', 'unset')
           container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-info ms-1', title: 'Ver ruta', icon: 'mdi mdi-map-marker-path', onClick: () => { window.location.href = `/admin/driver-routes?driver_id=${data.id}` } }))
+          container.append(DxButton({ className: 'btn btn-xs btn-soft-info ms-1', title: 'Ver despachos', icon: 'mdi mdi-truck-delivery-outline', onClick: () => { window.location.href = '/admin/dispatch' } }))
         } },
         { dataField: 'id', caption: 'ID', width: 70 },
         { dataField: 'document_type', caption: 'Tipo documento', width: 130 },

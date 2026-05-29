@@ -71,14 +71,13 @@ Este seeder crea:
    - Ver PDF local.
    - Emitir solo si el facturador demo/produccion esta configurado.
 
-7. Entrar a `Ruta conductor`.
-   - Ruta: `/admin/driver-routes`.
-   - Filtro conductor: `DRV-DEMO-001`.
-   - Estado: `En ruta`.
-   - Debe listar el manifiesto, pedidos, direccion, contacto, boton `Mapa`, boton `PDF`.
+7. Entrar a `Despacho`.
+   - Ruta: `/admin/dispatch`.
+   - Filtrar estado `En ruta` o ubicar el despacho del conductor.
+   - Debe listar el manifiesto, pedidos, direccion, contacto, boton `Mapa`, boton `PDF` y boton de evidencias.
 
 8. Registrar entrega.
-   - En `Ruta conductor`, pulsar `Entregar`.
+   - En `Despacho`, abrir `Evidencias` del despacho y pulsar `Registrar` en el pedido.
    - Recibido por: `Recepcion Demo`.
    - Tipo doc.: `DNI`.
    - Numero: `70000002`.

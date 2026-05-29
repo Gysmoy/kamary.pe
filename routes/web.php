@@ -50,7 +50,6 @@ use App\Http\Controllers\Admin\EventualClientController as AdminEventualClientCo
 use App\Http\Controllers\Admin\TakeOrderController as AdminTakeOrderController;
 use App\Http\Controllers\Admin\DispatchController as AdminDispatchController;
 use App\Http\Controllers\Admin\DailySummaryController as AdminDailySummaryController;
-use App\Http\Controllers\Admin\DriverRouteController as AdminDriverRouteController;
 use App\Http\Controllers\Admin\DriverController as AdminDriverController;
 use App\Http\Controllers\Admin\EntryNoteController as AdminEntryNoteController;
 use App\Http\Controllers\Admin\ExitNoteController as AdminExitNoteController;
@@ -187,7 +186,7 @@ Route::middleware('auth')->group(function () {
         // Despacho
         Route::get('/activity', [AdminActivityController::class, 'reactView']);
         Route::get('/driver', [AdminDriverController::class, 'reactView']);
-        Route::get('/driver-routes', [AdminDriverRouteController::class, 'reactView']);
+        Route::redirect('/driver-routes', '/admin/dispatch');
         Route::get('/picking', [AdminPickingController::class, 'reactView']);
         Route::get('/dispatch', [AdminDispatchController::class, 'reactView']);
         Route::get('/vehicle-zone', [AdminVehicleZoneController::class, 'reactView']);
