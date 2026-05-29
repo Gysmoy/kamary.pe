@@ -8,6 +8,8 @@ use App\Models\Article;
 use App\Models\MagistralFormula;
 use App\Models\MagistralFormulaHistory;
 use App\Models\MagistralFormulaItem;
+use App\Support\MagistralesInputWarehouse;
+use App\Support\MagistralesStock;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -31,6 +33,7 @@ class FormulaController extends BasicController
         return [
             'moduleTitle' => 'Magistrales - Formulas',
             'requiredPermission' => ['magistrales-formulas', 'magistrales-products'],
+            'inputWarehouse' => MagistralesInputWarehouse::summary(),
         ];
     }
 
@@ -273,6 +276,12 @@ class FormulaController extends BasicController
 
     private function articleCost(Article $article): float
     {
+        $warehouseId = MagistralesInputWarehouse::idOrNull();
+        if ($warehouseId && $article->id) {
+            $warehouseCost = MagistralesStock::averageCost((int)$article->id, $warehouseId);
+            if ($warehouseCost > 0) return round($warehouseCost, 4);
+        }
+
         foreach (['cost_price', 'purchase_price_national', 'sale_price_national', 'sale_price'] as $field) {
             $value = $article->{$field} ?? null;
             if (is_numeric($value) && (float)$value > 0) {

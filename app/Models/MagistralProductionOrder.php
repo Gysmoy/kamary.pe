@@ -17,6 +17,7 @@ class MagistralProductionOrder extends Model
         'responsible_id',
         'destination',
         'destination_warehouse_id',
+        'source_warehouse_id',
         'article_id',
         'format_id',
         'batch_quantity',
@@ -39,6 +40,7 @@ class MagistralProductionOrder extends Model
 
     public function responsible() { return $this->belongsTo(MagistralResponsible::class, 'responsible_id'); }
     public function destinationWarehouse() { return $this->belongsTo(Warehouse::class, 'destination_warehouse_id'); }
+    public function sourceWarehouse() { return $this->belongsTo(Warehouse::class, 'source_warehouse_id'); }
     public function article() { return $this->belongsTo(Article::class); }
     public function format() { return $this->belongsTo(MagistralFormat::class, 'format_id'); }
     public function items() { return $this->hasMany(MagistralProductionOrderItem::class, 'magistral_production_order_id')->with(['article:id,code,name,unit_id', 'formula:id,article_id']); }

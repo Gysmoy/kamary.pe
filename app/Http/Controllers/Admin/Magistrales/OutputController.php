@@ -8,6 +8,7 @@ use App\Models\Article;
 use App\Models\MagistralOutput;
 use App\Models\MagistralOutputItem;
 use App\Models\Warehouse;
+use App\Support\MagistralesInputWarehouse;
 use App\Support\MagistralesWarehouse;
 use App\Support\MagistralesStock;
 use Illuminate\Http\Request;
@@ -43,7 +44,8 @@ class OutputController extends BasicController
         return [
             'moduleTitle' => 'Magistrales - Salidas',
             'requiredPermission' => ['magistrales-outputs', 'magistrales-warehouse'],
-            'fixedWarehouse' => MagistralesWarehouse::summary(),
+            'fixedWarehouse' => MagistralesInputWarehouse::summary(),
+            'productWarehouse' => MagistralesWarehouse::summary(),
             'reasonOptions' => self::REASON_OPTIONS,
         ];
     }
@@ -78,7 +80,7 @@ class OutputController extends BasicController
             ->exists();
         if ($exists) throw new \Exception('Ya existe una salida magistral con este codigo');
 
-        $warehouse = MagistralesWarehouse::warehouse();
+        $warehouse = MagistralesInputWarehouse::warehouse();
         $warehouseId = (int) $warehouse->id;
         $reason = $this->normalizeReason($body['reason'] ?? null);
         if ($reason === null) throw new \Exception('Debes seleccionar un motivo para la salida');
@@ -144,7 +146,7 @@ class OutputController extends BasicController
     {
         $response = new Response();
         try {
-            $warehouse = MagistralesWarehouse::warehouse();
+            $warehouse = MagistralesInputWarehouse::warehouse();
             $search = trim((string)$request->input('q', ''));
             $outputId = $this->toNullableInt($request->input('output_id')) ?? 0;
 

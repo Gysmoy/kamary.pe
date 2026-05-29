@@ -15,25 +15,11 @@ const rolesRest = new RolesRest()
 
 const MAGISTRALES_MENU_PERMISSIONS = [
   'magistrales-dashboard',
-  'magistrales-products',
-  'magistrales-procurement',
-  'magistrales-warehouse',
-  'magistrales-billing',
   'magistrales-articles',
-  'magistrales-category',
   'magistrales-formats',
   'magistrales-formulas',
-  'magistrales-incomes',
-  'magistrales-inventory',
-  'magistrales-kardex',
-  'magistrales-laboratory',
   'magistrales-purchase-order',
-  'magistrales-production-order',
-  'magistrales-supplier',
-  'magistrales-responsible',
-  'magistrales-outputs',
-  'magistrales-unit',
-  'magistrales-sales'
+  'magistrales-production-order'
 ]
 
 const HIDDEN_PERMISSION_NAMES = ['client-distribution']

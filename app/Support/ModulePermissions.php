@@ -152,9 +152,8 @@ class ModulePermissions
 
             ['permission' => 'magistrales-dashboard', 'web' => '/admin/magistrales/dashboard', 'label' => 'Dashboard Magistrales'],
             ['permission' => 'magistrales-products', 'web' => '/admin/magistrales/articles', 'label' => 'Productos Magistrales'],
-            ['permission' => 'magistrales-procurement', 'web' => '/admin/magistrales/entry-note', 'label' => 'Proveedores y Compras Magistrales'],
-            ['permission' => 'magistrales-warehouse', 'web' => '/admin/magistrales/inventory', 'label' => 'Almacen Magistrales'],
-            ['permission' => 'magistrales-billing', 'web' => '/admin/magistrales-sales', 'label' => 'Facturacion Magistrales'],
+            ['permission' => 'magistrales-procurement', 'web' => '/admin/magistrales/purchase-orders', 'label' => 'Compras Magistrales'],
+            ['permission' => 'magistrales-warehouse', 'web' => '/admin/magistrales-production-order', 'label' => 'Produccion Magistrales'],
             ...self::magistralesModules(),
         ];
     }
@@ -225,20 +224,10 @@ class ModulePermissions
         return [
             ['permission' => 'magistrales-dashboard', 'web' => '/admin/magistrales/dashboard', 'api' => null, 'label' => 'Dashboard'],
             ['permission' => 'magistrales-articles', 'web' => '/admin/magistrales/articles', 'api' => '/api/admin/magistrales/articles/paginate', 'label' => 'Articulos'],
-            ['permission' => 'magistrales-category', 'web' => '/admin/magistrales-category', 'api' => '/api/admin/magistrales/categories/paginate', 'label' => 'Categoria'],
             ['permission' => 'magistrales-formats', 'web' => '/admin/magistrales-formats', 'api' => '/api/admin/magistrales/formats/paginate', 'label' => 'Formatos'],
             ['permission' => 'magistrales-formulas', 'web' => '/admin/magistrales-formulas', 'api' => '/api/admin/magistrales/formulas/paginate', 'label' => 'Formulas'],
-            ['permission' => 'magistrales-incomes', 'web' => '/admin/magistrales/entry-note', 'api' => '/api/admin/magistrales/entry-notes/paginate', 'label' => 'Nota de entrada'],
-            ['permission' => 'magistrales-inventory', 'web' => '/admin/magistrales/inventory', 'api' => '/api/admin/magistrales/inventory/paginate', 'label' => 'Inventario'],
-            ['permission' => 'magistrales-kardex', 'web' => '/admin/magistrales/kardex', 'api' => '/api/admin/magistrales/kardex/paginate', 'label' => 'Kardex'],
-            ['permission' => 'magistrales-laboratory', 'web' => '/admin/magistrales-laboratory', 'api' => '/api/admin/magistrales/laboratories/paginate', 'label' => 'Laboratorio'],
             ['permission' => 'magistrales-purchase-order', 'web' => '/admin/magistrales/purchase-orders', 'api' => '/api/admin/magistrales/purchase-orders/paginate', 'label' => 'O. Compra'],
             ['permission' => 'magistrales-production-order', 'web' => '/admin/magistrales-production-order', 'api' => '/api/admin/magistrales/production-orders/paginate', 'label' => 'O. Produccion'],
-            ['permission' => 'magistrales-supplier', 'web' => '/admin/magistrales/suppliers', 'api' => '/api/admin/magistrales/suppliers/paginate', 'label' => 'Proveedor'],
-            ['permission' => 'magistrales-responsible', 'web' => '/admin/magistrales-responsible', 'api' => '/api/admin/magistrales/responsibles/paginate', 'label' => 'Responsable'],
-            ['permission' => 'magistrales-outputs', 'web' => '/admin/magistrales-outputs', 'api' => '/api/admin/magistrales/outputs/paginate', 'label' => 'Salidas'],
-            ['permission' => 'magistrales-unit', 'web' => '/admin/magistrales-unit', 'api' => '/api/admin/magistrales/units/paginate', 'label' => 'Unidad'],
-            ['permission' => 'magistrales-sales', 'web' => '/admin/magistrales-sales', 'api' => '/api/admin/magistrales/sales/paginate', 'label' => 'Ventas'],
         ];
     }
 

@@ -10,6 +10,7 @@ use App\Models\MagistralFormula;
 use App\Models\MagistralProductionOrder;
 use App\Models\MagistralProductionOrderItem;
 use App\Models\MagistralResponsible;
+use App\Support\MagistralesInputWarehouse;
 use App\Support\MagistralesWarehouse;
 use App\Support\MagistralesStock;
 use Illuminate\Http\Request;
@@ -33,30 +34,42 @@ class ProductionOrderController extends BasicController
             'moduleTitle' => 'Magistrales - O. Produccion',
             'requiredPermission' => ['magistrales-production-order', 'magistrales-warehouse'],
             'fixedWarehouse' => MagistralesWarehouse::summary(),
+            'inputWarehouse' => MagistralesInputWarehouse::summary(),
         ];
     }
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('magistral_production_orders.*')
-            ->with([
-                'responsible:id,document_number,name',
-                'destinationWarehouse:id,name',
-                'article:id,code,name,unit_id',
-                'article.unit:id,name,symbol',
-                'format:id,description,quantity',
-                'items:id,magistral_production_order_id,article_id,description,expiration_date,quantity,magistral_formula_id,total,status',
-                'items.article:id,code,name,unit_id',
-                'items.formula:id,article_id',
-                'creator:id,name,lastname,username,fullname',
-                'updater:id,name,lastname,username,fullname',
-            ])
+        $with = [
+            'responsible:id,document_number,name',
+            'destinationWarehouse:id,name',
+            'article:id,code,name,unit_id',
+            'article.unit:id,name,symbol',
+            'format:id,description,quantity',
+            'items:id,magistral_production_order_id,article_id,description,expiration_date,quantity,magistral_formula_id,total,status',
+            'items.article:id,code,name,unit_id',
+            'items.formula:id,article_id',
+            'creator:id,name,lastname,username,fullname',
+            'updater:id,name,lastname,username,fullname',
+        ];
+        if (Schema::hasColumn('magistral_production_orders', 'source_warehouse_id')) {
+            $with[] = 'sourceWarehouse:id,name';
+        }
+
+        $query = $model::select('magistral_production_orders.*')
+            ->with($with)
             ->leftJoin('magistral_responsibles as responsible', 'responsible.id', '=', 'magistral_production_orders.responsible_id')
             ->leftJoin('warehouses as destination_warehouse', 'destination_warehouse.id', '=', 'magistral_production_orders.destination_warehouse_id')
             ->leftJoin('articles as article', 'article.id', '=', 'magistral_production_orders.article_id')
             ->leftJoin('magistral_formats as format', 'format.id', '=', 'magistral_production_orders.format_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'magistral_production_orders.created_by')
             ->leftJoin('users as updater', 'updater.id', '=', 'magistral_production_orders.updated_by');
+
+        if (Schema::hasColumn('magistral_production_orders', 'source_warehouse_id')) {
+            $query->leftJoin('warehouses as source_warehouse', 'source_warehouse.id', '=', 'magistral_production_orders.source_warehouse_id');
+        }
+
+        return $query;
     }
 
     public function beforeSave(Request $request)
@@ -75,6 +88,8 @@ class ProductionOrderController extends BasicController
         $articleId = $this->toNullableInt($body['article_id'] ?? null);
         $warehouse = MagistralesWarehouse::warehouse();
         $warehouseId = (int) $warehouse->id;
+        $inputWarehouse = MagistralesInputWarehouse::warehouse();
+        $inputWarehouseId = (int) $inputWarehouse->id;
         $formatId = $this->toNullableInt($body['format_id'] ?? null);
 
         if ($responsibleId) MagistralResponsible::findOrFail($responsibleId);
@@ -106,8 +121,9 @@ class ProductionOrderController extends BasicController
         if ($orderStatus === 'finished') {
             if (!$articleId) throw new \Exception('El producto terminado es obligatorio para finalizar la orden de produccion');
             if (!$warehouseId) throw new \Exception('El almacen destino es obligatorio para finalizar la orden de produccion');
+            if (!$inputWarehouseId) throw new \Exception('El almacen de insumos es obligatorio para finalizar la orden de produccion');
             if ($productionQuantity <= 0) throw new \Exception('La cantidad producto debe ser mayor a 0 para finalizar la orden de produccion');
-            $this->assertStockAvailable($this->parsedItems, $warehouseId, $id ? (int)$id : null);
+            $this->assertStockAvailable($this->parsedItems, $inputWarehouseId, $id ? (int)$id : null);
         }
 
         if (!$id) {
@@ -121,6 +137,7 @@ class ProductionOrderController extends BasicController
         $body['responsible_id'] = $responsibleId;
         $body['destination'] = $warehouse->name;
         $body['destination_warehouse_id'] = $warehouseId;
+        $body['source_warehouse_id'] = $inputWarehouseId;
         $body['article_id'] = $articleId;
         $body['format_id'] = $formatId;
         $body['batch_quantity'] = $this->toNullableDecimal($body['batch_quantity'] ?? null) ?? 0;
@@ -131,7 +148,7 @@ class ProductionOrderController extends BasicController
 
         unset($body['items']);
 
-        foreach (['destination_warehouse_id', 'format_id', 'batch_quantity', 'delivery_date'] as $column) {
+        foreach (['destination_warehouse_id', 'source_warehouse_id', 'format_id', 'batch_quantity', 'delivery_date'] as $column) {
             if (!Schema::hasColumn('magistral_production_orders', $column)) unset($body[$column]);
         }
 
@@ -158,7 +175,7 @@ class ProductionOrderController extends BasicController
             }
 
             DB::commit();
-            return $jpa->fresh(['responsible', 'destinationWarehouse', 'article.unit', 'format', 'items.article', 'items.formula', 'creator', 'updater']);
+            return $jpa->fresh(['responsible', 'destinationWarehouse', 'sourceWarehouse', 'article.unit', 'format', 'items.article', 'items.formula', 'creator', 'updater']);
         } catch (\Throwable $th) {
             DB::rollBack();
             throw $th;
@@ -276,7 +293,19 @@ class ProductionOrderController extends BasicController
             ->where('production.order_status', 'finished')
             ->whereNotNull('production.status')
             ->whereNotNull('item.status')
-            ->when($warehouseId && Schema::hasColumn('magistral_production_orders', 'destination_warehouse_id'), fn($query) => $query->where('production.destination_warehouse_id', $warehouseId))
+            ->when($warehouseId, function ($query) use ($warehouseId) {
+                if (Schema::hasColumn('magistral_production_orders', 'source_warehouse_id')) {
+                    $query->where(function ($source) use ($warehouseId) {
+                        $source->where('production.source_warehouse_id', $warehouseId)
+                            ->orWhere(function ($fallback) use ($warehouseId) {
+                                $fallback->whereNull('production.source_warehouse_id')
+                                    ->where('production.destination_warehouse_id', $warehouseId);
+                            });
+                    });
+                } elseif (Schema::hasColumn('magistral_production_orders', 'destination_warehouse_id')) {
+                    $query->where('production.destination_warehouse_id', $warehouseId);
+                }
+            })
             ->sum(DB::raw('COALESCE(item.total, item.quantity)'));
     }
 

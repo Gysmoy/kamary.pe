@@ -36,7 +36,7 @@ class MagistralesProductionSeederTest extends TestCase
         $this->assertTrue((bool) $warehouse->status);
     }
 
-    public function test_magistrales_production_seeder_cleans_temporary_catalog_data_and_is_idempotent(): void
+    public function test_magistrales_production_seeder_preserves_catalog_data_and_is_idempotent(): void
     {
         Unit::create([
             'module_scope' => 'magistrales',
@@ -53,8 +53,19 @@ class MagistralesProductionSeederTest extends TestCase
         $this->seed(MagistralesProductionSeeder::class);
         $firstCounts = $this->scopeCounts();
 
-        $this->assertSame(0, Unit::where('module_scope', 'magistrales')->count());
-        $this->assertSame(0, MagistralLaboratory::count());
+        $this->assertDatabaseHas('units', [
+            'module_scope' => 'magistrales',
+            'symbol' => 'TMP',
+        ]);
+        $this->assertDatabaseHas('magistral_laboratories', [
+            'code' => 'TEMP-LAB',
+        ]);
+        foreach (['MAG-UND', 'MAG-G', 'MAG-ML'] as $symbol) {
+            $this->assertDatabaseHas('units', [
+                'module_scope' => 'magistrales',
+                'symbol' => $symbol,
+            ]);
+        }
 
         $this->seed(MagistralesProductionSeeder::class);
 
