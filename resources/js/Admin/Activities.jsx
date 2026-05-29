@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
@@ -13,6 +14,8 @@ import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistr
 import {
   activityStatusOptions,
   activityTypeOptions,
+  getActivityStatusLabel,
+  getActivityTypeLabel,
   toLookup,
 } from '../Utils/statusLabels';
 
@@ -121,6 +124,35 @@ const formatAuditUser = (user) => {
   if (!user) return ''
   return [user.name, user.lastname].filter(Boolean).join(' ').trim() || user.fullname || ''
 }
+const formatReportDate = (value, withTime = false) => {
+  const text = `${value ?? ''}`.trim()
+  if (!text) return ''
+  return text.replace('T', ' ').slice(0, withTime ? 19 : 10)
+}
+const activityReportHeaders = [
+  'E. Pedido',
+  'Código',
+  'Manifiesto',
+  'Cliente',
+  'Tipo',
+  'Ubigeo',
+  'Dirección',
+  'Fecha Traslado',
+  'Fecha Registro',
+  'Usuario Registro',
+]
+const activityReportColumns = [
+  { wpx: 160 },
+  { wpx: 112 },
+  { wpx: 176 },
+  { wpx: 128 },
+  { wpx: 80 },
+  { wpx: 112 },
+  { wpx: 160 },
+  { wpx: 240 },
+  { wpx: 240 },
+  { wpx: 272 },
+]
 
 const Activities = () => {
   const gridRef = useRef()
@@ -171,6 +203,7 @@ const Activities = () => {
   const [mapPreview, setMapPreview] = useState({ lat: '', lng: '', address: defaultOriginAddress })
   const [dateFilters, setDateFilters] = useState(emptyDateFilters())
   const [appliedDateFilters, setAppliedDateFilters] = useState(emptyDateFilters())
+  const [isExportingReport, setIsExportingReport] = useState(false)
 
   const orderMap = useMemo(() => Object.fromEntries(orders.map(row => [`${row.id}`, row])), [orders])
   const dispatchMap = useMemo(() => Object.fromEntries(dispatches.map(row => [`${row.id}`, row])), [dispatches])
@@ -450,9 +483,50 @@ const Activities = () => {
     setAppliedDateFilters({ ...dateFilters })
   }
 
-  const exportActivityReport = () => {
-    const instance = $(gridRef.current).dxDataGrid('instance')
-    if (instance?.exportToExcel) instance.exportToExcel(false)
+  const exportActivityReport = async () => {
+    if (isExportingReport) return
+
+    setIsExportingReport(true)
+    try {
+      const reportFilter = buildDateFilter(dateFilters)
+
+      const response = await activitiesRest.paginate({
+        skip: 0,
+        take: 0,
+        isLoadingAll: true,
+        requireTotalCount: false,
+        filter: reportFilter || undefined,
+        sort: [{ selector: 'created_at', desc: true }],
+      })
+
+      if (response?.status && response.status !== 200) {
+        throw new Error(response.message || 'No se pudo generar el reporte')
+      }
+
+      const rows = (response?.data ?? []).map(row => [
+        getActivityStatusLabel(row.activity_status, ''),
+        row.code ?? '',
+        row.manifest_code ?? '',
+        row.customer_name ?? '',
+        getActivityTypeLabel(row.activity_type, ''),
+        row.ubigeo ?? '',
+        row.destination_address ?? '',
+        formatReportDate(row.transfer_date),
+        formatReportDate(row.created_at, true),
+        formatAuditUser(row.creator),
+      ])
+
+      const worksheet = XLSX.utils.aoa_to_sheet([activityReportHeaders, ...rows])
+      worksheet['!cols'] = activityReportColumns
+
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Reporte')
+      XLSX.writeFile(workbook, `${Math.floor(Date.now() / 1000)}_reporte_pedidos_actividad.xlsx`)
+    } catch (error) {
+      Swal.fire('No se pudo exportar', error.message || 'Ocurrio un error al generar el Excel', 'error')
+    } finally {
+      setIsExportingReport(false)
+    }
   }
 
   const listTitle = (
@@ -488,8 +562,8 @@ const Activities = () => {
           <button type='submit' className='btn btn-outline-primary w-100'>
             <i className='mdi mdi-magnify me-1'></i>Filtrar
           </button>
-          <button type='button' className='btn btn-outline-success w-100' onClick={exportActivityReport}>
-            <i className='mdi mdi-file-excel-box me-1'></i>Reporte
+          <button type='button' className='btn btn-outline-success w-100' onClick={exportActivityReport} disabled={isExportingReport}>
+            <i className={`mdi ${isExportingReport ? 'mdi-loading mdi-spin' : 'mdi-file-excel-box'} me-1`}></i>{isExportingReport ? 'Generando...' : 'Reporte'}
           </button>
         </div>
       </form>
