@@ -26,6 +26,28 @@ class DispatchesRest extends BasicRest {
   getDrivers = async () => await loadAll('/api/admin/drivers/paginate')
   getVehicles = async () => await loadAll('/api/admin/vehicles/paginate')
   getZones = async () => await loadAll('/api/admin/zones/paginate')
+  confirmManifestConformity = async (id) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${id}/manifest-conformity`, {
+        method: 'PATCH'
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo dar conformidad al manifiesto')
+
+      toast.success('Correcto', {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      })
+      return result
+    } catch (error) {
+      toast.error('Error', {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      })
+      return null
+    }
+  }
 }
 
 export default DispatchesRest

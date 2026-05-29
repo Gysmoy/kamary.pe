@@ -114,6 +114,10 @@ const guideProviderLink = (guide, type) => guideResponsePayload(guide)?.links?.[
 const orFilters = (filters) => filters.filter(Boolean).reduce((acc, filter) => acc ? [acc, 'or', filter] : filter, null)
 const andFilters = (filters) => filters.filter(Boolean).reduce((acc, filter) => acc ? [acc, 'and', filter] : filter, null)
 const manifestStatusFilter = (tab) => orFilters((tab === 'approved' ? approvedManifestStatuses : pendingManifestStatuses).map(status => ['dispatch_status', '=', status]))
+const manifestStatus = (dispatch) => `${dispatch?.dispatch_status ?? ''}`.trim()
+const isPendingManifest = (dispatch) => pendingManifestStatuses.includes(manifestStatus(dispatch))
+const isClosedManifest = (dispatch) => manifestStatus(dispatch) === 'closed'
+const canConfirmManifest = (dispatch) => approvedManifestStatuses.includes(manifestStatus(dispatch)) && !isClosedManifest(dispatch)
 const formatAuditUser = (user) => {
   if (!user) return ''
   return [user.name, user.lastname].filter(Boolean).join(' ').trim() || user.fullname || user.username || ''
@@ -598,6 +602,22 @@ const Dispatches = ({ session }) => {
     await openDispatchManifestPdf(result.data)
   }
 
+  const onConfirmManifestConformity = async (dispatch) => {
+    const { isConfirmed } = await Swal.fire({
+      title: 'Conformidad de manifiesto',
+      text: `Se cerrara el manifiesto ${manifestCode(dispatch)}. Luego solo se podra previsualizar/imprimir el PDF.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Dar conformidad',
+      cancelButtonText: 'Cancelar',
+    })
+    if (!isConfirmed) return
+
+    const result = await dispatchesRest.confirmManifestConformity(dispatch.id)
+    if (!result?.data) return
+    await refreshGrid()
+  }
+
   const openDispatchManifestPdf = async (dispatch) => {
     const detail = dispatch?.id ? await dispatchesRest.get(dispatch.id) : null
     await openMagistralesRecordPdf(buildMagistralesRows.dispatch(detail ?? dispatch))
@@ -987,26 +1007,41 @@ const Dispatches = ({ session }) => {
       filterValue={dispatchGridFilter}
       toolBar={(items) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
-        if (!isDriverSession) {
+        if (!isDriverSession && activeManifestTab === 'pending') {
           items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
         }
       }}
       columns={[
-        { caption: 'ACCIONES', width: isDriverSession ? 120 : 200, fixed: true, fixedPosition: 'left', allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
+        { caption: 'ACCIONES', width: isDriverSession ? 120 : 260, fixed: true, fixedPosition: 'left', allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           container.css({ overflow: 'visible', textOverflow: 'unset' })
           const actions = $('<div>').addClass('dispatch-grid-actions')
-          if (!isDriverSession) {
+
+          if (isClosedManifest(data)) {
+            actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Previsualizar o imprimir manifiesto PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openDispatchManifestPdf(data) }))
+            container.append(actions)
+            return
+          }
+
+          if (isPendingManifest(data) && !isDriverSession) {
             actions.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar manifiesto', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
           }
-          if (isDriverSession) {
+          if (isPendingManifest(data) || isDriverSession) {
             actions.append(DxButton({ className: 'btn btn-xs btn-soft-info', title: 'Abrir ruta en mapa', icon: 'mdi mdi-map-marker-path', onClick: () => onOpenRoute(data) }))
           }
-          if (!isDriverSession && !['in_route', 'delivered', 'closed', 'cancelled'].includes(data.dispatch_status)) {
+          if (isPendingManifest(data) && !isDriverSession) {
             actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Aprobar manifiesto y poner en ruta', icon: 'mdi mdi-check', onClick: () => onStartRoute(data) }))
           }
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Previsualizar manifiesto PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openDispatchManifestPdf(data) }))
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Registrar o ver evidencias de entrega', icon: 'mdi mdi-camera', onClick: () => onShowEvidences(data) }))
-          if (!isDriverSession) {
+          if (isPendingManifest(data) && !isDriverSession) {
+            actions.append(DxButton({ className: 'btn btn-xs btn-soft-warning', title: dispatchGuides(data).length ? 'Ver guias' : 'Generar guias', icon: 'mdi mdi-file-document', onClick: () => onShowGuides(data) }))
+          }
+          if (canConfirmManifest(data) && !isDriverSession) {
+            actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Dar conformidad de manifiesto', icon: 'mdi mdi-check-decagram', onClick: () => onConfirmManifestConformity(data) }))
+          }
+          actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Previsualizar o imprimir manifiesto PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openDispatchManifestPdf(data) }))
+          if (isPendingManifest(data) || isDriverSession) {
+            actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Registrar o ver evidencias de entrega', icon: 'mdi mdi-camera', onClick: () => onShowEvidences(data) }))
+          }
+          if (isPendingManifest(data) && !isDriverSession) {
             actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
           }
           container.append(actions)
@@ -1027,7 +1062,7 @@ const Dispatches = ({ session }) => {
           width: 125,
           calculateCellValue: manifestCode,
           cellTemplate: (container, { data }) => {
-            if (isDriverSession) {
+            if (isDriverSession || !isPendingManifest(data)) {
               container.text(manifestCode(data))
               return
             }

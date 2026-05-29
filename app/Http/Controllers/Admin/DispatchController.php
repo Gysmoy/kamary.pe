@@ -321,6 +321,68 @@ class DispatchController extends BasicController
         return parent::status($request);
     }
 
+    public function manifestConformity(Request $request, string $id)
+    {
+        $response = new Response();
+        DB::beginTransaction();
+        try {
+            if ($this->authenticatedDriverId() !== null) {
+                throw new \Exception('Los conductores no pueden dar conformidad de manifiesto');
+            }
+
+            $dispatch = Dispatch::with(['assignments', 'driver', 'vehicle', 'zoneMaster'])->findOrFail($id);
+            if (!$dispatch->status) throw new \Exception('El manifiesto no esta activo');
+            if ($dispatch->dispatch_status === 'closed') {
+                DB::commit();
+                $response->status = 200;
+                $response->message = 'El manifiesto ya se encuentra cerrado';
+                $response->data = $dispatch->fresh($this->with4get);
+                return response($response->toArray(), $response->status);
+            }
+            if (!in_array($dispatch->dispatch_status, ['approved', 'in_route', 'delivered'], true)) {
+                throw new \Exception('Solo se puede dar conformidad a manifiestos aprobados');
+            }
+
+            $this->assertRouteAssets('closed', $dispatch->driver, $dispatch->vehicle, $dispatch->zoneMaster);
+            $orderIds = $dispatch->assignments
+                ->where('status', true)
+                ->pluck('commercial_order_id')
+                ->filter()
+                ->map(fn($value) => (int)$value)
+                ->unique()
+                ->values()
+                ->all();
+            if (empty($orderIds)) throw new \Exception('El manifiesto no tiene pedidos asignados');
+
+            $dispatch->update([
+                'manifest_code' => $dispatch->manifest_code ?: $this->nextManifestCode(),
+                'dispatch_status' => 'closed',
+                'departed_at' => $dispatch->departed_at ?: now(),
+                'delivered_at' => $dispatch->delivered_at ?: now(),
+                'updated_by' => Auth::id(),
+            ]);
+
+            DispatchAssignment::where('dispatch_id', $dispatch->id)
+                ->where('status', true)
+                ->update(['assignment_status' => 'closed']);
+
+            $freshDispatch = $dispatch->fresh(['assignments.commercialOrder.items', 'exitNote.items']);
+            app(DispatchService::class)->syncExitNote($freshDispatch);
+            app(DispatchService::class)->syncCommercialOrderStatuses($orderIds);
+
+            DB::commit();
+            $response->status = 200;
+            $response->message = 'Conformidad registrada correctamente';
+            $response->data = $dispatch->fresh($this->with4get);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
     public function boolean(Request $request)
     {
         $response = new Response();
