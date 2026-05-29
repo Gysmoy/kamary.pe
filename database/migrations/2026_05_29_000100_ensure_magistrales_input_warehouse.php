@@ -10,7 +10,7 @@ return new class extends Migration
     private string $businessKey = 'kamary_medicals';
     private string $businessName = 'Kamary Medicals';
     private string $branchName = 'Principal Magistrales';
-    private string $inputWarehouseName = 'Almacen Magistrales Insumos';
+    private string $warehouseName = 'Almacen Magistrales Principal';
 
     public function up(): void
     {
@@ -111,8 +111,8 @@ return new class extends Migration
     {
         if (!Schema::hasTable('warehouses')) return null;
 
-        $name = trim((string) config('magistrales.input_warehouse_name', $this->inputWarehouseName));
-        if ($name === '') $name = $this->inputWarehouseName;
+        $name = trim((string) config('magistrales.default_warehouse_name', $this->warehouseName));
+        if ($name === '') $name = $this->warehouseName;
 
         $id = DB::table('warehouses')
             ->where('business_branch_id', $branchId)
@@ -120,7 +120,7 @@ return new class extends Migration
             ->value('id');
 
         $payload = $this->payload('warehouses', [
-            'description' => 'Almacen de insumos y envases para formulas magistrales.',
+            'description' => 'Almacen fijo del modulo Magistrales.',
             'status' => true,
             'updated_at' => now(),
         ]);

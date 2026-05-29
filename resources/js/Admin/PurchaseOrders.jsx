@@ -191,14 +191,13 @@ const hydrateItemFromArticle = (item, article, currency) => {
   })
 }
 
-const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedWarehouse = null, inputWarehouse = null }) => {
+const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedWarehouse = null }) => {
   const isMagistrales = moduleScope === 'magistrales'
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
   const fixedBusinessId = fixedWarehouse?.business_id ? `${fixedWarehouse.business_id}` : ''
   const fixedBranchId = fixedWarehouse?.business_branch_id ? `${fixedWarehouse.business_branch_id}` : ''
   const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
   const fixedBusinessLabel = fixedWarehouse?.business_name || 'KAMARY PERU SAC'
-  const inputWarehouseLabel = [inputWarehouse?.branch_name, inputWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen Magistrales Insumos'
   const gridRef = useRef()
   const modalRef = useRef()
 
@@ -241,16 +240,12 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
   const [listStartDate, setListStartDate] = useState('')
   const [listEndDate, setListEndDate] = useState('')
   const [listFilterValue, setListFilterValue] = useState(null)
-  const warehouseForArticleType = (articleType) => canonicalMagistralPurchaseArticleType(articleType) === 'INSUMOS Y ENVASES'
-    ? (inputWarehouse ?? fixedWarehouse)
-    : fixedWarehouse
+  const warehouseForArticleType = () => fixedWarehouse
   const activeWarehouse = warehouseForArticleType(selectedArticleType)
   const activeWarehouseId = activeWarehouse?.id ? `${activeWarehouse.id}` : fixedWarehouseId
   const activeBusinessId = activeWarehouse?.business_id ? `${activeWarehouse.business_id}` : fixedBusinessId
   const activeBranchId = activeWarehouse?.business_branch_id ? `${activeWarehouse.business_branch_id}` : fixedBranchId
-  const activeWarehouseLabel = canonicalMagistralPurchaseArticleType(selectedArticleType) === 'INSUMOS Y ENVASES'
-    ? inputWarehouseLabel
-    : fixedWarehouseLabel
+  const activeWarehouseLabel = fixedWarehouseLabel
 
   const getArticleRef = (uid) => {
     if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()

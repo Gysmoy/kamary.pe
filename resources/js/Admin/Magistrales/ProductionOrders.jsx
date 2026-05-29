@@ -33,7 +33,7 @@ const emptyItem = () => ({
   formula_label: '',
 })
 
-const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWarehouse = null, inputWarehouse = null }) => {
+const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWarehouse = null }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
@@ -58,8 +58,6 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
   const [productionQuantity, setProductionQuantity] = useState(1)
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
   const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
-  const inputWarehouseId = inputWarehouse?.id ? `${inputWarehouse.id}` : ''
-  const inputWarehouseLabel = [inputWarehouse?.branch_name, inputWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen de insumos Magistrales'
   const productArticles = articles.filter(article => !isInputArticle(article))
   const inputArticles = articles.filter(isInputArticle)
   const selectedFormula = formulas.find(formula => `${formula.article_id}` === `${selectedArticleId}`)
@@ -180,7 +178,7 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
       responsible_id: responsibleRef.current.value || null,
       destination: fixedWarehouse?.name ?? fixedWarehouseLabel,
       destination_warehouse_id: warehouseRef.current.value || fixedWarehouseId || null,
-      source_warehouse_id: inputWarehouseId || null,
+      source_warehouse_id: fixedWarehouseId || null,
       article_id: selectedArticleId || null,
       format_id: formatRef.current.value || null,
       batch_quantity: batchQuantityRef.current.value,
@@ -228,8 +226,7 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
         },
         { dataField: 'order_status', caption: 'Estado', width: 120, calculateCellValue: row => statusLabels[row.order_status] ?? row.order_status },
         { dataField: 'responsible.name', caption: 'Responsable', minWidth: 170 },
-        { dataField: 'sourceWarehouse.name', caption: 'Almacen insumos', minWidth: 160, visible: false },
-        { dataField: 'destinationWarehouse.name', caption: 'Destino producto', minWidth: 160 },
+        { dataField: 'destinationWarehouse.name', caption: 'Almacen Magistrales', minWidth: 160 },
         { dataField: 'article.name', caption: 'Producto', minWidth: 220 },
         { dataField: 'created_at', caption: 'Fecha Registro', dataType: 'date', width: 130 },
         {
@@ -266,8 +263,7 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha registro</label><input ref={dateRef} type='date' className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Responsable</label><select ref={responsibleRef} className='form-control'><option value=''>Seleccione</option>{responsibles.map(row => <option key={`mag-po-resp-${row.id}`} value={row.id}>{row.document_number} - {row.name}</option>)}</select></div>
         <input ref={warehouseRef} hidden />
-        <div className='col-md-4 mb-3'><label className='form-label'>Almacen insumos</label><input className='form-control' value={inputWarehouseLabel} disabled /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Almacen producto terminado</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Almacen Magistrales</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Producto</label><select ref={articleRef} className='form-control' value={selectedArticleId} onChange={(e) => onProductChange(e.target.value)}><option value=''>Seleccione</option>{productArticles.map(row => <option key={`mag-po-article-${row.id}`} value={row.id}>{row.code} - {row.name}</option>)}</select></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Formato</label><select ref={formatRef} className='form-control'><option value=''>Seleccione</option>{formats.map(row => <option key={`mag-po-format-${row.id}`} value={row.id}>{row.description} ({row.quantity})</option>)}</select></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Cantidad tanda</label><input ref={batchQuantityRef} type='number' min='0' step='0.001' className='form-control' /></div>

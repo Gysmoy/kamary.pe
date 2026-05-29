@@ -121,7 +121,7 @@ class ProductionOrderController extends BasicController
         if ($orderStatus === 'finished') {
             if (!$articleId) throw new \Exception('El producto terminado es obligatorio para finalizar la orden de produccion');
             if (!$warehouseId) throw new \Exception('El almacen destino es obligatorio para finalizar la orden de produccion');
-            if (!$inputWarehouseId) throw new \Exception('El almacen de insumos es obligatorio para finalizar la orden de produccion');
+            if (!$inputWarehouseId) throw new \Exception('El almacen Magistrales es obligatorio para finalizar la orden de produccion');
             if ($productionQuantity <= 0) throw new \Exception('La cantidad producto debe ser mayor a 0 para finalizar la orden de produccion');
             $this->assertStockAvailable($this->parsedItems, $inputWarehouseId, $id ? (int)$id : null);
         }
