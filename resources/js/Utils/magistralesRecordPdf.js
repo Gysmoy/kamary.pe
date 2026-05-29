@@ -1560,7 +1560,7 @@ export const buildMagistralesRows = {
       ['Estado', getActivityStatusLabel(data?.activity_status)],
       ['Fecha', asDate(data?.transfer_date)],
       ['Cliente', data?.customer_name],
-      ['Documento', data?.document_number],
+      ['Documento', [data?.recipient_document_type, data?.document_number].filter(Boolean).join(' ')],
       ['Conductor', nested(data, 'driver.full_name')],
       ['Vehiculo', nested(data, 'vehicle.plate')],
       ['Zona', nested(data, 'zone.name')],

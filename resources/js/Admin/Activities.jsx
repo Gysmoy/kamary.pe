@@ -33,6 +33,14 @@ const emptyItem = (withDefaults = false) => ({
 })
 const defaultOriginAddress = 'CAL.YEN ESCOBEDO GARRO NRO. 830 URB. LA VINA LIMA - LIMA - SAN LUIS'
 
+const emptyDateFilters = () => ({ start: '', end: '' })
+const buildDateFilter = ({ start, end }) => {
+  const filters = []
+  if (start) filters.push(['created_at', '>=', `${start} 00:00:00`])
+  if (end) filters.push(['created_at', '<=', `${end} 23:59:59`])
+  return filters.reduce((acc, filter) => acc ? [acc, 'and', filter] : filter, null)
+}
+
 const cleanCustomerText = (value) => `${value ?? ''}`.trim().toLowerCase()
 const clientLabel = (row) => [row?.document_number, row?.full_name || row?.display_name].filter(Boolean).join(' - ') || row?.full_name || row?.display_name || ''
 const eventualClientLabel = (row) => [row?.document_number, row?.business_name || row?.display_name].filter(Boolean).join(' - ') || row?.business_name || row?.display_name || ''
@@ -124,6 +132,7 @@ const Activities = () => {
   const activityStatusRef = useRef()
   const manifestCodeRef = useRef()
   const customerNameRef = useRef()
+  const recipientDocumentTypeRef = useRef()
   const documentNumberRef = useRef()
   const originAddressRef = useRef()
   const destinationAddressRef = useRef()
@@ -160,6 +169,8 @@ const Activities = () => {
   const [selectedZoneId, setSelectedZoneId] = useState('')
   const [items, setItems] = useState([emptyItem(true)])
   const [mapPreview, setMapPreview] = useState({ lat: '', lng: '', address: defaultOriginAddress })
+  const [dateFilters, setDateFilters] = useState(emptyDateFilters())
+  const [appliedDateFilters, setAppliedDateFilters] = useState(emptyDateFilters())
 
   const orderMap = useMemo(() => Object.fromEntries(orders.map(row => [`${row.id}`, row])), [orders])
   const dispatchMap = useMemo(() => Object.fromEntries(dispatches.map(row => [`${row.id}`, row])), [dispatches])
@@ -173,6 +184,7 @@ const Activities = () => {
   const mapUrl = googleMapsApiKey
     ? `https://www.google.com/maps/embed/v1/place?key=${googleMapsApiKey}&q=${encodeURIComponent(mapQuery)}&zoom=12`
     : ''
+  const activityGridFilter = useMemo(() => buildDateFilter(appliedDateFilters), [appliedDateFilters])
 
   const loadCatalogs = async () => {
     const [businessRows, warehouseRows, orderRows, dispatchRows, driverRows, vehicleRows, zoneRows, clientRows, eventualRows, articleRows] = await Promise.all([
@@ -317,6 +329,7 @@ const Activities = () => {
     activityStatusRef.current.value = data?.activity_status ?? 'scheduled'
     manifestCodeRef.current.value = data?.manifest_code ?? ''
     customerNameRef.current.value = data?.customer_name ?? ''
+    recipientDocumentTypeRef.current.value = data?.recipient_document_type ?? 'DNI'
     documentNumberRef.current.value = data?.document_number ?? ''
     originAddressRef.current.value = data?.origin_address ?? defaultOriginAddress
     destinationAddressRef.current.value = data?.destination_address ?? ''
@@ -396,6 +409,7 @@ const Activities = () => {
       activity_status: activityStatusRef.current.value,
       transfer_date: transferDateRef.current.value,
       customer_name: customerNameRef.current.value.trim(),
+      recipient_document_type: recipientDocumentTypeRef.current.value,
       document_number: documentNumberRef.current.value.trim(),
       manifest_code: manifestCodeRef.current.value.trim(),
       origin_address: originAddressRef.current.value.trim(),
@@ -431,12 +445,59 @@ const Activities = () => {
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
+  const applyDateFilters = (e) => {
+    e.preventDefault()
+    setAppliedDateFilters({ ...dateFilters })
+  }
+
+  const exportActivityReport = () => {
+    const instance = $(gridRef.current).dxDataGrid('instance')
+    if (instance?.exportToExcel) instance.exportToExcel(false)
+  }
+
+  const listTitle = (
+    <div className='activity-list-header'>
+      <div className='d-flex justify-content-between align-items-center'>
+        <h4 className='header-title mb-0'>Listado</h4>
+      </div>
+      <ul className='nav nav-tabs nav-bordered mt-3'>
+        <li className='nav-item'>
+          <span className='nav-link active'>Actividades</span>
+        </li>
+      </ul>
+      <form className='row g-3 align-items-end mt-2' onSubmit={applyDateFilters}>
+        <div className='col-12 col-md-5'>
+          <label className='form-label'>F. Registro Inicio</label>
+          <input
+            type='date'
+            className='form-control'
+            value={dateFilters.start}
+            onChange={(e) => setDateFilters(prev => ({ ...prev, start: e.target.value }))}
+          />
+        </div>
+        <div className='col-12 col-md-5'>
+          <label className='form-label'>F. Registro Fin</label>
+          <input
+            type='date'
+            className='form-control'
+            value={dateFilters.end}
+            onChange={(e) => setDateFilters(prev => ({ ...prev, end: e.target.value }))}
+          />
+        </div>
+        <div className='col-12 col-md-2 d-flex gap-2'>
+          <button type='submit' className='btn btn-outline-primary w-100'>
+            <i className='mdi mdi-magnify me-1'></i>Filtrar
+          </button>
+          <button type='button' className='btn btn-outline-success w-100' onClick={exportActivityReport}>
+            <i className='mdi mdi-file-excel-box me-1'></i>Reporte
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+
   return <>
     <style>{`
-      .activity-modal-content { border-radius: 0; }
-      .activity-modal-header { background: #272954; color: #fff; padding: 0.45rem 1rem; }
-      .activity-modal-header .modal-title { color: #fff; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; }
-      .activity-modal-header .btn-close { filter: invert(1) grayscale(100%) brightness(200%); opacity: .8; }
       .activity-modal-dialog { width: calc(100vw - 32px); max-width: calc(100vw - 32px); }
       .activity-modal-dialog.modal-dialog-centered { align-items: flex-start; margin-top: 1rem; }
       .activity-modal-content { max-height: calc(100vh - 32px); overflow: auto; }
@@ -459,9 +520,11 @@ const Activities = () => {
     `}</style>
     <Table
       gridRef={gridRef}
-      title='Actividades'
+      title={listTitle}
       rest={activitiesRest}
-      pageSize={25}
+      pageSize={10}
+      filterValue={activityGridFilter}
+      exportable
       toolBar={(items) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
@@ -499,7 +562,6 @@ const Activities = () => {
       hideFooter
       dialogClass='activity-modal-dialog'
       contentClass='activity-modal-content'
-      headerClass='activity-modal-header'
       bodyClass='activity-modal-body'
     >
       <div>
@@ -601,10 +663,11 @@ const Activities = () => {
           </div>
           <div className='col-md-3'>
             <label>Tipo documento - DESTINATARIO</label>
-            <select className='form-select' defaultValue='DNI'>
+            <select ref={recipientDocumentTypeRef} className='form-select' defaultValue='DNI'>
               <option>DNI</option>
               <option>RUC</option>
               <option>CE</option>
+              <option>OTRO</option>
             </select>
           </div>
           <div className='col-md-3'>

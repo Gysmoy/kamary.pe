@@ -25,6 +25,7 @@ class Activity extends Model
         'activity_status',
         'transfer_date',
         'customer_name',
+        'recipient_document_type',
         'document_number',
         'manifest_code',
         'origin_address',

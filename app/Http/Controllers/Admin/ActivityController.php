@@ -142,6 +142,7 @@ class ActivityController extends BasicController
         }
 
         $customerName = trim((string) ($body['customer_name'] ?? ''));
+        $recipientDocumentType = $this->normalizeDocumentType($body['recipient_document_type'] ?? 'DNI');
         $documentNumber = trim((string) ($body['document_number'] ?? ''));
         if ($order) {
             $customerName = $customerName ?: ($order->client?->full_name ?: $order->eventualClient?->business_name ?: '');
@@ -165,6 +166,7 @@ class ActivityController extends BasicController
         $body['activity_status'] = $activityStatus;
         $body['transfer_date'] = $transferDate;
         $body['customer_name'] = $customerName ?: null;
+        $body['recipient_document_type'] = $recipientDocumentType;
         $body['document_number'] = $documentNumber ?: null;
         $body['manifest_code'] = trim((string) ($body['manifest_code'] ?? ($dispatch?->manifest_code ?? ''))) ?: null;
         $body['origin_address'] = trim((string) ($body['origin_address'] ?? '')) ?: null;
@@ -356,6 +358,13 @@ class ActivityController extends BasicController
         $allowed = ['scheduled', 'assigned', 'in_progress', 'completed', 'incident', 'cancelled'];
         $normalized = mb_strtolower(trim((string) $value));
         return in_array($normalized, $allowed, true) ? $normalized : 'scheduled';
+    }
+
+    private function normalizeDocumentType($value): string
+    {
+        $allowed = ['DNI', 'RUC', 'CE', 'OTRO'];
+        $normalized = mb_strtoupper(trim((string) $value));
+        return in_array($normalized, $allowed, true) ? $normalized : 'DNI';
     }
 
     private function nextCode(): string
