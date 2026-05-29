@@ -37,10 +37,12 @@ const documentNumber = (document) => (
 
 const documentTitle = (documentType) => {
   const normalized = `${documentType ?? ''}`.trim().toLowerCase()
-  if (normalized.includes('boleta')) return 'BOLETA DE VENTA\nELECTRONICA'
-  if (normalized.includes('nota')) return 'NOTA DE CREDITO\nELECTRONICA'
-  return 'FACTURA\nELECTRONICA'
+  if (normalized.includes('boleta')) return 'BOLETA DE VENTA\nELECTRÓNICA'
+  if (normalized.includes('nota')) return 'NOTA DE CRÉDITO\nELECTRÓNICA'
+  return 'FACTURA\nELECTRÓNICA'
 }
+
+const documentTitleSingleLine = (documentType) => documentTitle(documentType).replace('\n', ' ')
 
 const customerName = (document) => (
   nested(document, 'client.full_name')
@@ -261,56 +263,70 @@ const addTextRow = (doc, label, value, x, y, width) => {
   return Math.max(11, lines.length * 9)
 }
 
+const drawBoxField = (doc, label, value, x, y, labelWidth = 82, valueWidth = 200) => {
+  doc.setFont('helvetica', 'bold')
+  doc.text(label, x, y)
+  doc.text(':', x + labelWidth - 8, y)
+  doc.setFont('helvetica', 'normal')
+  const lines = doc.splitTextToSize(asText(value, ''), valueWidth)
+  doc.text(lines, x + labelWidth, y)
+  return Math.max(11, lines.length * 9)
+}
+
 const drawHeader = (doc, document) => {
   const pageWidth = doc.internal.pageSize.getWidth()
-  const margin = 28
-  const boxWidth = 182
+  const margin = 40
+  const boxWidth = 178
   const companyName = nested(document, 'business.name', 'KAMARY PERU SAC')
   const companyAddress = nested(document, 'branch.address') || nested(document, 'business.address') || ''
   const companyRuc = nested(document, 'business.tax_number')
 
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.text(companyName, margin, 35)
+  doc.setFontSize(13)
+  doc.text(companyName, margin, 45)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(8)
-  if (companyAddress) doc.text(doc.splitTextToSize(companyAddress, 300), margin, 49)
-  if (companyRuc) {
-    doc.setFont('helvetica', 'bold')
-    doc.text(`RUC ${companyRuc}`, margin, 78)
-  }
+  if (companyAddress) doc.text(doc.splitTextToSize(companyAddress, 330), margin, 65)
 
   doc.setDrawColor(0, 0, 0)
   doc.setLineWidth(0.8)
-  doc.rect(pageWidth - margin - boxWidth, 24, boxWidth, 78)
+  doc.rect(pageWidth - margin - boxWidth, 28, boxWidth, 78)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(13)
-  doc.text(documentTitle(document.document_type), pageWidth - margin - (boxWidth / 2), 48, { align: 'center' })
-  doc.setFontSize(11)
-  doc.text(documentNumber(document), pageWidth - margin - (boxWidth / 2), 86, { align: 'center' })
+  doc.setFontSize(12)
+  if (companyRuc) doc.text(`RUC ${companyRuc}`, pageWidth - margin - (boxWidth / 2), 45, { align: 'center' })
+  doc.text(documentTitle(document.document_type), pageWidth - margin - (boxWidth / 2), 64, { align: 'center' })
+  doc.text(documentNumber(document), pageWidth - margin - (boxWidth / 2), 94, { align: 'center' })
 }
 
 const drawCustomerBlock = (doc, document) => {
-  const margin = 28
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const margin = 40
   const startY = 124
+  const leftWidth = 354
+  const rightX = margin + leftWidth + 10
+  const rightWidth = pageWidth - rightX - margin
+
+  doc.setDrawColor(0, 0, 0)
+  doc.rect(margin, startY, leftWidth, 76)
+  doc.rect(rightX, startY, rightWidth, 76)
+
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9)
-  doc.text('DATOS DEL CLIENTE', margin, startY)
+  doc.setFontSize(8)
+  doc.text('DATOS DEL CLIENTE', margin + 5, startY + 13)
   doc.setFontSize(8)
 
-  let y = startY + 18
-  y += addTextRow(doc, 'DOCUMENTO', customerDocument(document), margin, y, 392)
-  y += addTextRow(doc, 'DENOMINACION', customerName(document), margin, y, 392)
-  y += addTextRow(doc, 'DIRECCION', customerAddress(document), margin, y, 392)
+  let y = startY + 26
+  y += drawBoxField(doc, 'DOCUMENTO', customerDocument(document), margin + 5, y, 84, leftWidth - 96)
+  y += drawBoxField(doc, 'DENOMINACIÓN', customerName(document), margin + 5, y, 84, leftWidth - 96)
+  drawBoxField(doc, 'DIRECCIÓN', customerAddress(document), margin + 5, y, 84, leftWidth - 96)
 
-  const rightX = 360
   y = startY + 18
-  y += addTextRow(doc, 'FECHA EMISION', asDate(document.issue_date), rightX, y, 130)
-  y += addTextRow(doc, 'MONEDA', document.currency === 'PEN' ? 'Soles' : document.currency, rightX, y, 130)
-  y += addTextRow(doc, 'FECHA VENCIMIENTO', asDate(document.due_date || document.issue_date), rightX, y, 130)
-  addTextRow(doc, 'ORDEN DE COMPRA', nested(document, 'metadata.purchase_order', ''), rightX, y, 130)
+  y += drawBoxField(doc, 'FECHA EMISIÓN', asDate(document.issue_date), rightX + 5, y, 92, rightWidth - 104)
+  y += drawBoxField(doc, 'MONEDA', document.currency === 'PEN' ? 'Soles' : document.currency, rightX + 5, y, 92, rightWidth - 104)
+  y += drawBoxField(doc, 'FECHA VENCIMIENTO', asDate(document.due_date || document.issue_date), rightX + 5, y, 92, rightWidth - 104)
+  drawBoxField(doc, 'ORDEN DE COMPRA', nested(document, 'metadata.purchase_order', ''), rightX + 5, y, 92, rightWidth - 104)
 
-  return 202
+  return 224
 }
 
 const tableRows = (document) => {
@@ -341,111 +357,171 @@ const tableRows = (document) => {
 
 const drawTotals = (doc, document, y) => {
   const pageWidth = doc.internal.pageSize.getWidth()
+  const margin = 40
   const currency = document.currency || 'PEN'
+  const rate = Number(document.subtotal || 0) ? (Number(document.tax_amount || 0) / Number(document.subtotal || 1)) * 100 : 0
   const rows = [
-    ['DESCUENTO GLOBAL', money(0, currency)],
-    ['INAFECTO', money(0, currency)],
-    ['GRAVADA', money(document.subtotal, currency)],
-    [`IGV ${asNumber(Number(document.subtotal || 0) ? (Number(document.tax_amount || 0) / Number(document.subtotal || 1)) * 100 : 0)} %`, money(document.tax_amount, currency)],
-    ['TOTAL', money(document.total, currency)],
+    ['DESCUENTO GLOBAL', 0],
+    ['INAFECTO', 0],
+    ['GRAVADA', document.subtotal],
+    [`IGV ${asNumber(rate)} %`, document.tax_amount],
+    ['TOTAL', document.total],
   ]
 
-  doc.autoTable({
-    startY: y,
-    body: rows,
-    theme: 'plain',
-    margin: { left: pageWidth - 210, right: 28 },
-    styles: { fontSize: 8, cellPadding: 2 },
-    columnStyles: {
-      0: { fontStyle: 'bold', halign: 'right', cellWidth: 110 },
-      1: { halign: 'right', cellWidth: 72 },
-    },
+  const labelX = pageWidth - margin - 152
+  const symbolX = pageWidth - margin - 72
+  const amountX = pageWidth - margin - 8
+
+  doc.setFontSize(8)
+  rows.forEach(([label, amount], index) => {
+    const rowY = y + (index * 11)
+    doc.setFont('helvetica', 'bold')
+    doc.text(label, labelX, rowY, { align: 'right' })
+    doc.text(currencySymbol(currency), symbolX, rowY)
+    doc.text(asNumber(amount), amountX, rowY, { align: 'right' })
   })
 
-  return doc.lastAutoTable.finalY + 12
+  return y + rows.length * 11
 }
 
-const drawPaymentAccounts = (doc, document, y) => {
+const drawBankLine = (doc, line, x, y, width) => {
+  const bankMatch = line.match(/^((?:Banco|Interbank)[^\d:]*)(.*)$/i)
+  if (!bankMatch) {
+    doc.setFont('helvetica', 'normal')
+    const wrapped = doc.splitTextToSize(line, width)
+    doc.text(wrapped, x, y)
+    return Math.max(9, wrapped.length * 9)
+  }
+
+  const [, bank, number] = bankMatch
+  doc.setFont('helvetica', 'bold')
+  doc.text(bank.trim(), x, y)
+  const bankWidth = doc.getTextWidth(bank.trim())
+  doc.setFont('helvetica', 'normal')
+  doc.text(number.trim(), x + bankWidth + 3, y)
+  return 9
+}
+
+const drawPaymentAccountsBox = (doc, document, x, y, width, height) => {
   const accounts = normalizePaymentAccounts(
     nested(document, 'business.payment_accounts') || nested(document, 'business.paymentAccounts')
   )
-  if (!accounts?.lines?.length) return y
+  doc.rect(x, y, width, height)
+  if (!accounts?.lines?.length) return
 
-  const margin = 28
-  const title = [accounts.title, accounts.subtitle].filter(Boolean).join(' - ')
+  let cursorY = y + 14
 
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)
-  if (title) {
-    doc.text(title, margin, y)
-    y += 11
+  if (accounts.title) {
+    doc.text(accounts.title, x + 5, cursorY)
+    cursorY += 10
+  }
+  if (accounts.subtitle) {
+    doc.text(accounts.subtitle, x + 5, cursorY)
+    cursorY += 10
   }
 
-  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7.5)
   accounts.lines.forEach((line) => {
-    const wrapped = doc.splitTextToSize(line, 520)
-    doc.text(wrapped, margin, y)
-    y += Math.max(9, wrapped.length * 9)
+    cursorY += drawBankLine(doc, line, x + 5, cursorY, width - 10)
   })
-
-  return y + 10
 }
 
-const drawFooter = (doc, document, y) => {
-  const margin = 28
-  const currency = document.currency || 'PEN'
+const drawDeliveryBox = (doc, document, x, y, width, height, paymentLabel) => {
+  doc.rect(x, y, width, height)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.text('DATOS DE ENTREGA', x + (width / 2), y + 14, { align: 'center' })
+
+  let cursorY = y + 30
+  cursorY += drawBoxField(doc, 'NOMBRE', deliveryContactName(document), x + 5, cursorY, 92, width - 104)
+  cursorY += drawBoxField(doc, 'CELULAR', deliveryContactPhone(document), x + 5, cursorY, 92, width - 104)
+  cursorY += drawBoxField(doc, 'DIRECCIÓN', customerAddress(document), x + 5, cursorY, 92, width - 104)
+  cursorY += drawBoxField(doc, 'REFERENCIA', deliveryReference(document), x + 5, cursorY, 92, width - 104)
+  drawBoxField(doc, 'FORMA DE PAGO (REF)', paymentLabel, x + 5, cursorY, 92, width - 104)
+}
+
+const drawPaymentAndObservations = (doc, document, y) => {
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const margin = 40
   const paymentLabel = [document.payment_method, document.payment_condition].filter(Boolean).join(' | ') || '-'
+  const currency = document.currency || 'PEN'
 
+  doc.rect(margin, y, pageWidth - (margin * 2), 20)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)
-  doc.text(amountInWords(document.total, currency), margin, y)
-  y += 15
-  doc.text(`FORMA DE PAGO AL FACTURAR: ${paymentLabel} ${money(document.total, currency)}`, margin, y)
-  y += 18
-  doc.text('OBSERVACIONES:', margin, y)
+  doc.text('FORMA DE PAGO AL FACTURAR:', margin + 5, y + 13)
   doc.setFont('helvetica', 'normal')
-  doc.text(asText(document.observations, ''), margin + 76, y)
+  doc.text(`${paymentLabel} ${money(document.total, currency)}`, margin + 160, y + 13)
 
-  y += 28
-  y = drawPaymentAccounts(doc, document, y)
-  y += 4
+  y += 32
+  const observations = asText(document.observations, '')
+  const observationLines = doc.splitTextToSize(observations, pageWidth - (margin * 2) - 92)
+  const observationHeight = Math.max(20, observationLines.length * 10 + 10)
+  doc.rect(margin, y, pageWidth - (margin * 2), observationHeight)
   doc.setFont('helvetica', 'bold')
-  doc.text('DATOS DE ENTREGA', margin, y)
-  y += 14
-  doc.setFontSize(8)
-  y += addTextRow(doc, 'NOMBRE', deliveryContactName(document), margin, y, 410)
-  y += addTextRow(doc, 'CELULAR', deliveryContactPhone(document), margin, y, 410)
-  y += addTextRow(doc, 'DIRECCION', customerAddress(document), margin, y, 410)
-  y += addTextRow(doc, 'REFERENCIA', deliveryReference(document), margin, y, 410)
-  y += addTextRow(doc, 'FORMA DE PAGO (REF)', paymentLabel, margin, y, 410)
+  doc.text('OBSERVACIONES:', margin + 5, y + 13)
+  doc.setFont('helvetica', 'normal')
+  if (observations) doc.text(observationLines, margin + 92, y + 13)
 
-  y += 14
+  return y + observationHeight + 12
+}
+
+const paymentAccountsBoxHeight = (document) => {
+  const accounts = normalizePaymentAccounts(
+    nested(document, 'business.payment_accounts') || nested(document, 'business.paymentAccounts')
+  )
+  return Math.max(92, 22 + ((accounts?.title ? 1 : 0) + (accounts?.subtitle ? 1 : 0) + (accounts?.lines?.length ?? 0)) * 10)
+}
+
+const drawFooterBoxes = (doc, document, y) => {
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const margin = 40
+  const paymentLabel = [document.payment_method, document.payment_condition].filter(Boolean).join(' | ') || '-'
+  const boxGap = 10
+  const boxWidth = (pageWidth - (margin * 2) - boxGap) / 2
+  const boxHeight = Math.max(92, paymentAccountsBoxHeight(document))
+
+  drawPaymentAccountsBox(doc, document, margin, y, boxWidth, boxHeight)
+  drawDeliveryBox(doc, document, margin + boxWidth + boxGap, y, boxWidth, boxHeight, paymentLabel)
+
+  y += boxHeight + 12
+  const legendHeight = 54
+  doc.rect(margin, y, pageWidth - (margin * 2), legendHeight)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7)
+  doc.text('Representacion impresa de la ', margin + 5, y + 18)
+  doc.setFont('helvetica', 'bold')
+  doc.text(documentTitleSingleLine(document.document_type), margin + 122, y + 18)
+  doc.setFont('helvetica', 'normal')
   doc.text(
-    `Representacion impresa de la ${documentTitle(document.document_type).replace('\n', ' ')}, pedido ${sourceCode(document)}`,
-    margin,
-    y,
+    `, pedido ${sourceCode(document)}`,
+    margin + 122 + doc.getTextWidth(documentTitleSingleLine(document.document_type)),
+    y + 18,
   )
+
+  return y + legendHeight
 }
 
 export const openBillingVoucherPreviewPdf = (document) => {
   const doc = ensurePdf()
   const pageWidth = doc.internal.pageSize.getWidth()
-  const margin = 28
+  const margin = 40
 
   drawHeader(doc, document)
   const tableStartY = drawCustomerBlock(doc, document)
+  const tableWidth = pageWidth - (margin * 2)
   doc.autoTable({
     startY: tableStartY,
     head: [['PRODUCTO', 'DESCRIPCION', 'MEDIDA', 'LOTE', 'F.V.', 'CANT.', 'P. SIN IGV', 'P. CON IGV', 'IMPORTE']],
     body: tableRows(document),
-    theme: 'grid',
+    theme: 'plain',
     margin: { left: margin, right: margin },
-    styles: { fontSize: 6.7, cellPadding: 3, lineColor: [170, 170, 170], lineWidth: 0.25, overflow: 'linebreak' },
-    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', lineColor: [120, 120, 120] },
+    styles: { fontSize: 6.7, cellPadding: 3, lineColor: [120, 120, 120], lineWidth: 0, overflow: 'linebreak' },
+    headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', lineWidth: { bottom: 0.5 } },
     columnStyles: {
-      0: { cellWidth: 48 },
+      0: { cellWidth: 52 },
       1: { cellWidth: 126 },
       2: { cellWidth: 48 },
       3: { cellWidth: 52 },
@@ -457,12 +533,30 @@ export const openBillingVoucherPreviewPdf = (document) => {
     },
   })
 
-  let y = drawTotals(doc, document, doc.lastAutoTable.finalY + 8)
-  if (y > 640) {
+  const tableEndY = doc.lastAutoTable.finalY
+  const totalsStartY = Math.max(tableEndY + 18, tableStartY + 72)
+  const totalsEndY = drawTotals(doc, document, totalsStartY)
+  const tableBoxBottom = Math.max(totalsEndY + 26, tableEndY + 44)
+  doc.setDrawColor(0, 0, 0)
+  doc.setLineWidth(0.8)
+  doc.rect(margin, tableStartY, tableWidth, tableBoxBottom - tableStartY)
+  doc.line(margin + 5, tableEndY + 5, margin + tableWidth - 5, tableEndY + 5)
+
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.text(amountInWords(document.total, document.currency || 'PEN'), margin, tableBoxBottom - 9)
+
+  let y = tableBoxBottom + 12
+  if (y > 620) {
     doc.addPage()
     y = 40
   }
-  drawFooter(doc, document, y)
+  y = drawPaymentAndObservations(doc, document, y)
+  if (y + Math.max(92, paymentAccountsBoxHeight(document)) + 75 > doc.internal.pageSize.getHeight()) {
+    doc.addPage()
+    y = 40
+  }
+  drawFooterBoxes(doc, document, y)
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7)
