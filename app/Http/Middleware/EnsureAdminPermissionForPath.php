@@ -106,7 +106,8 @@ class EnsureAdminPermissionForPath
                 ? ['client-distribution', 'clients', 'orders', 'take-orders', 'pricing']
                 : ['client-distribution'],
             'accounts-receivable' => ['accounts-receivable'],
-            'commercial-orders', 'orders', 'sales-report' => ['orders'],
+            'commercial-orders' => in_array('delivery-evidence', $segments, true) ? ['orders', 'dispatch'] : ['orders'],
+            'orders', 'sales-report' => ['orders'],
             'reports' => $second === 'inventory' ? ['inventory'] : ['orders'],
             'take-orders', 'comercial' => ['take-orders'],
             'pricing', 'price-lists' => ['pricing'],

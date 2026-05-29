@@ -84,7 +84,29 @@ class DispatchController extends BasicController
             if ($scopeKey) $business->where('business_key', $scopeKey);
         });
 
+        $driverScopeId = $this->authenticatedDriverId();
+        if ($driverScopeId !== null) {
+            $query->where('dispatches.driver_id', $driverScopeId);
+        }
+
         return $query;
+    }
+
+    public function get(Request $request, string $id)
+    {
+        $response = Response::simpleTryCatch(function () use ($id) {
+            $query = Dispatch::with($this->with4get)->whereKey($id);
+            $driverScopeId = $this->authenticatedDriverId();
+            if ($driverScopeId !== null) {
+                $query->where('driver_id', $driverScopeId);
+            }
+
+            $dispatch = $query->first();
+            if (!$dispatch) throw new \Exception('El registro que buscas no existe');
+            return $dispatch;
+        });
+
+        return response($response->toArray(), $response->status);
     }
 
     public function beforeSave(Request $request)
@@ -100,6 +122,13 @@ class DispatchController extends BasicController
         $driverId = $this->toNullableInt($body['driver_id'] ?? null);
         $vehicleId = $this->toNullableInt($body['vehicle_id'] ?? null);
         $zoneId = $this->toNullableInt($body['zone_id'] ?? null);
+        $driverScopeId = $this->authenticatedDriverId();
+
+        if ($driverScopeId !== null) {
+            if ($driverScopeId <= 0) throw new \Exception('Tu usuario no tiene un conductor vinculado');
+            if (!$id) throw new \Exception('Los conductores solo pueden gestionar despachos asignados');
+            $driverId = $driverScopeId;
+        }
 
         if ($businessId <= 0) throw new \Exception('La empresa es obligatoria');
         if ($warehouseId <= 0) throw new \Exception('El almacen es obligatorio');
@@ -130,6 +159,9 @@ class DispatchController extends BasicController
 
         if ($id) {
             $persisted = Dispatch::with('assignments')->findOrFail($id);
+            if ($driverScopeId !== null && (int)$persisted->driver_id !== $driverScopeId) {
+                throw new \Exception('No puedes modificar despachos de otro conductor');
+            }
             $this->previousOrderIds = $persisted->assignments->pluck('commercial_order_id')->filter()->map(fn($value) => (int) $value)->all();
         }
 
@@ -254,6 +286,7 @@ class DispatchController extends BasicController
         DB::beginTransaction();
         try {
             $dispatch = Dispatch::with('assignments')->findOrFail($id);
+            $this->assertDispatchBelongsToAuthenticatedDriver($dispatch);
             $orderIds = $dispatch->assignments->pluck('commercial_order_id')->filter()->map(fn($value) => (int) $value)->all();
 
             DispatchAssignment::where('dispatch_id', $dispatch->id)->delete();
@@ -270,6 +303,58 @@ class DispatchController extends BasicController
             $response->message = $th->getMessage();
         } finally {
             return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function status(Request $request)
+    {
+        $response = new Response();
+        try {
+            $dispatch = Dispatch::findOrFail($request->id);
+            $this->assertDispatchBelongsToAuthenticatedDriver($dispatch);
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+            return response($response->toArray(), $response->status);
+        }
+
+        return parent::status($request);
+    }
+
+    public function boolean(Request $request)
+    {
+        $response = new Response();
+        try {
+            $dispatch = Dispatch::findOrFail($request->id);
+            $this->assertDispatchBelongsToAuthenticatedDriver($dispatch);
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+            return response($response->toArray(), $response->status);
+        }
+
+        return parent::boolean($request);
+    }
+
+    private function authenticatedDriverId(): ?int
+    {
+        $user = Auth::user();
+        if (!$user || $user->isAdmin() || !$user->is_driver) {
+            return null;
+        }
+
+        return (int)($user->driver_id ?? 0);
+    }
+
+    private function assertDispatchBelongsToAuthenticatedDriver(Dispatch $dispatch): void
+    {
+        $driverScopeId = $this->authenticatedDriverId();
+        if ($driverScopeId === null) {
+            return;
+        }
+
+        if ($driverScopeId <= 0 || (int)$dispatch->driver_id !== $driverScopeId) {
+            throw new \Exception('No puedes acceder a despachos de otro conductor');
         }
     }
 

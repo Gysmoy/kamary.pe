@@ -21,7 +21,7 @@ const scopes = {
   'kamary-medicals': 'Kamary Medicals'
 }
 
-const Users = ({ prefixes, roles }) => {
+const Users = ({ prefixes, roles, drivers = [] }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const passwordModalRef = useRef()
@@ -45,6 +45,8 @@ const Users = ({ prefixes, roles }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [phonePrefix, setPhonePrefix] = useState('51')
   const [selectedRoles, setSelectedRoles] = useState([])
+  const [isDriver, setIsDriver] = useState(false)
+  const [selectedDriverId, setSelectedDriverId] = useState('')
 
   const onModalOpen = (data) => {
     if (data?.uuid) setIsEditing(true)
@@ -59,6 +61,8 @@ const Users = ({ prefixes, roles }) => {
     phoneRef.current.value = data?.phone ?? ''
     setPhonePrefix(data?.phone_prefix ?? '51')
     setScope(Array.isArray(data?.scope) ? data.scope : [])
+    setIsDriver(Boolean(data?.is_driver))
+    setSelectedDriverId(data?.driver_id ? `${data.driver_id}` : '')
 
     const roleNames = data?.roles?.map(({ name }) => name) ?? []
     setSelectedRoles(roleNames)
@@ -88,6 +92,8 @@ const Users = ({ prefixes, roles }) => {
       phone_prefix: phonePrefix,
       phone: phoneRef.current.value,
       scope,
+      is_driver: isDriver,
+      driver_id: isDriver ? (selectedDriverId || null) : null,
       roles: selectedRoles
     }
 
@@ -142,6 +148,12 @@ const Users = ({ prefixes, roles }) => {
   const handleRoleRemove = (roleName) => {
     setSelectedRoles(selectedRoles.filter(r => r !== roleName))
   }
+
+  const driverOptionLabel = (driver) => [
+    driver.code,
+    driver.full_name,
+    driver.license_number ? `Lic. ${driver.license_number}` : '',
+  ].filter(Boolean).join(' - ')
 
   return (<>
     <Table gridRef={gridRef} title='Usuarios' rest={usersRest}
@@ -224,6 +236,22 @@ const Users = ({ prefixes, roles }) => {
             const badges = data.scope.map(s => `<span class="badge badge-soft-secondary me-1">${labels[s] || s}</span>`).join('');
             container.html(`<div class="d-flex gap-1">${badges}</div>`);
           }
+        },
+        {
+          dataField: 'is_driver',
+          caption: 'Chofer',
+          width: 95,
+          allowFiltering: true,
+          cellTemplate: (container, { data }) => {
+            container.html(data.is_driver
+              ? '<span class="badge badge-soft-success">Si</span>'
+              : '<span class="badge badge-soft-secondary">No</span>')
+          }
+        },
+        {
+          caption: 'Conductor vinculado',
+          minWidth: 190,
+          calculateCellValue: (data) => data.driver?.full_name ?? '-'
         },
         {
           dataField: 'roles',
@@ -309,6 +337,37 @@ const Users = ({ prefixes, roles }) => {
           }
         </SelectFormGroup>
         <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-8' />
+        <div className='col-12 mb-2'>
+          <div className='form-check form-switch'>
+            <input
+              className='form-check-input'
+              type='checkbox'
+              id='user-is-driver'
+              checked={isDriver}
+              onChange={(e) => {
+                setIsDriver(e.target.checked)
+                if (!e.target.checked) setSelectedDriverId('')
+              }}
+            />
+            <label className='form-check-label' htmlFor='user-is-driver'>
+              Es chofer
+            </label>
+          </div>
+        </div>
+        {isDriver && (
+          <SelectFormGroup
+            label='Conductor vinculado'
+            col='col-12'
+            value={selectedDriverId}
+            onChange={(e) => setSelectedDriverId(e.target.value)}
+            specification='Si lo dejas vacio, se vinculara o creara un conductor usando el nombre del usuario.'
+          >
+            <option value=''>Crear o vincular por nombre del usuario</option>
+            {drivers.map((driver) => (
+              <option key={`user-driver-${driver.id}`} value={driver.id}>{driverOptionLabel(driver)}</option>
+            ))}
+          </SelectFormGroup>
+        )}
         <div className='col-md-4 mb-2'>
           <label className='form-label'>Con acceso a</label>
           <div className='d-flex gap-2'>

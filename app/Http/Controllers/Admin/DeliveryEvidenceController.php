@@ -28,6 +28,7 @@ class DeliveryEvidenceController extends BasicController
             $closingWarning = null;
             $order = CommercialOrder::with(['dispatchAssignments.dispatch', 'deliveryEvidences'])->whereKey($id)->whereNotNull('status')->firstOrFail();
             $dispatch = $this->resolveDispatch($order, $this->toNullableInt($request->input('dispatch_id')));
+            $this->assertDispatchBelongsToAuthenticatedDriver($dispatch);
             $evidence = DeliveryEvidence::query()
                 ->where('commercial_order_id', $order->id)
                 ->where(function ($query) use ($dispatch) {
@@ -232,6 +233,19 @@ class DeliveryEvidenceController extends BasicController
         if ($covered < $assignmentOrderIds->unique()->count()) return false;
 
         return true;
+    }
+
+    private function assertDispatchBelongsToAuthenticatedDriver(?Dispatch $dispatch): void
+    {
+        $user = Auth::user();
+        if (!$user || $user->isAdmin() || !$user->is_driver) {
+            return;
+        }
+
+        $driverId = (int)($user->driver_id ?? 0);
+        if (!$dispatch || $driverId <= 0 || (int)$dispatch->driver_id !== $driverId) {
+            throw new \Exception('No puedes registrar evidencias de otro conductor');
+        }
     }
 
     private function nextCode(): string

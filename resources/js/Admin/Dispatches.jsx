@@ -100,7 +100,7 @@ const googleMapsRouteUrl = (dispatch) => {
   return `https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=${encodeURIComponent(destination)}&waypoints=${encodeURIComponent(waypoints)}`
 }
 
-const Dispatches = () => {
+const Dispatches = ({ session }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const zoneModalRef = useRef()
@@ -160,6 +160,7 @@ const Dispatches = () => {
     latitude: '',
     longitude: '',
   })
+  const isDriverSession = Boolean(session?.is_driver)
 
   const orderMap = useMemo(() => Object.fromEntries(orders.map(order => [`${order.id}`, order])), [orders])
   const warehouseMap = useMemo(() => Object.fromEntries(warehouses.map(row => [`${row.id}`, row])), [warehouses])
@@ -231,6 +232,8 @@ const Dispatches = () => {
   }
 
   const loadCatalogs = async () => {
+    if (isDriverSession) return
+
     const [businessList, warehouseList, orderList, driverList, vehicleList, zoneList] = await Promise.all([
       dispatchesRest.getBusinesses(),
       dispatchesRest.getWarehouses(),
@@ -247,7 +250,7 @@ const Dispatches = () => {
     setZones(zoneList ?? [])
   }
 
-  useEffect(() => { loadCatalogs() }, [])
+  useEffect(() => { loadCatalogs() }, [isDriverSession])
   useEffect(() => () => {
     if (evidencePreview?.startsWith('blob:')) URL.revokeObjectURL(evidencePreview)
   }, [evidencePreview])
@@ -779,21 +782,29 @@ const Dispatches = () => {
           }
         })
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
+        if (!isDriverSession) {
+          items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
+        }
       }}
       columns={[
         { caption: 'Acciones', width: 380, fixed: true, fixedPosition: 'left', allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           container.css({ overflow: 'visible', textOverflow: 'unset' })
           const actions = $('<div>').addClass('dispatch-grid-actions')
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+          if (!isDriverSession) {
+            actions.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+          }
           actions.append(DxButton({ className: 'btn btn-xs btn-soft-info', title: 'Abrir ruta', icon: 'mdi mdi-map-marker-path', onClick: () => onOpenRoute(data) }))
-          if (!['in_route', 'delivered', 'closed', 'cancelled'].includes(data.dispatch_status)) {
+          if (!isDriverSession && !['in_route', 'delivered', 'closed', 'cancelled'].includes(data.dispatch_status)) {
             actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Generar manifiesto y poner en ruta', icon: 'mdi mdi-truck-fast-outline', onClick: () => onStartRoute(data) }))
           }
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-warning', title: dispatchGuides(data).length ? 'Ver guias' : 'Generar guias', icon: 'mdi mdi-file-document', onClick: () => onShowGuides(data) }))
+          if (!isDriverSession) {
+            actions.append(DxButton({ className: 'btn btn-xs btn-soft-warning', title: dispatchGuides(data).length ? 'Ver guias' : 'Generar guias', icon: 'mdi mdi-file-document', onClick: () => onShowGuides(data) }))
+          }
           actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Ver evidencias', icon: 'mdi mdi-camera', onClick: () => onShowEvidences(data) }))
           actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Manifiesto PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openDispatchManifestPdf(data) }))
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
+          if (!isDriverSession) {
+            actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
+          }
           container.append(actions)
         } },
         { dataField: 'id', caption: 'ID', width: 70 },
@@ -801,7 +812,13 @@ const Dispatches = () => {
           dataField: 'code',
           caption: 'Codigo',
           width: 175,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar despacho')
+          cellTemplate: (container, { data }) => {
+            if (isDriverSession) {
+              container.text(data?.code ?? '-')
+              return
+            }
+            renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar despacho')
+          }
         },
         { dataField: 'scheduled_date', caption: 'Fecha', dataType: 'date', width: 110 },
         { dataField: 'shift', caption: 'Turno', width: 90, calculateCellValue: (data) => getShiftLabel(data.shift) },

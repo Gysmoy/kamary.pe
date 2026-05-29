@@ -29,6 +29,8 @@ class User extends Authenticatable
         'password',
         'scope',
         'storage_client_id',
+        'is_driver',
+        'driver_id',
         'document_type',
         'document_number',
         'phone_prefix',
@@ -56,6 +58,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'scope' => 'array',
         'password' => 'hashed',
+        'is_driver' => 'boolean',
         'status' => 'boolean',
         'verified' => 'boolean'
     ];
@@ -107,5 +110,10 @@ class User extends Authenticatable
     public function storageClient()
     {
         return $this->belongsTo(Client::class, 'storage_client_id');
+    }
+
+    public function driver()
+    {
+        return $this->belongsTo(Driver::class, 'driver_id');
     }
 }
