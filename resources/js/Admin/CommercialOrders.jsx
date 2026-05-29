@@ -2377,8 +2377,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         })
         appendGridActionButton(container, {
           variant: 'info',
-          title: 'Ver historial del pedido Multivende',
-          icon: 'mdi mdi-map-marker-path',
+          title: 'Ver tracking del pedido Multivende',
+          icon: 'mdi mdi-timeline-clock-outline',
           onClick: () => openTracking(data)
         })
         appendGridActionButton(container, {
@@ -3034,8 +3034,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             }
             appendGridActionButton(container, {
               variant: 'info',
-              title: 'Ver historial de estados, guia, ruta y entrega del pedido',
-              icon: 'mdi mdi-map-marker-path',
+              title: 'Ver tracking del pedido: estados, guia, ruta y entrega',
+              icon: 'mdi mdi-timeline-clock-outline',
               onClick: () => openTracking(data)
             })
             const billingMeta = billingDocumentActionMeta(data)
