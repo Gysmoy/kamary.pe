@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
@@ -17,6 +18,7 @@ import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistr
 import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
 import {
   dispatchStatusOptions,
+  getDispatchStatusLabel,
   getShiftLabel,
   getReferralGuideStatusLabel,
   shiftOptions,
@@ -29,13 +31,35 @@ const referralGuidesRest = new ReferralGuidesRest()
 const zonesRest = new ZonesRest()
 const emptyAssignment = () => ({ uid: crypto.randomUUID(), commercial_order_id: '', customer_name: '', total: 0 })
 const operationalDispatchStatuses = ['pending', 'preparing', 'dispatched', 'in_route', 'delivered', 'cancelled']
-const dispatchFilterOptions = [
-  { value: 'all', label: 'Todos' },
-  { value: 'pending', label: 'Pendientes' },
-  { value: 'preparing', label: 'En preparacion' },
-  { value: 'dispatched', label: 'Despacho' },
-  { value: 'in_route', label: 'En ruta' },
-  { value: 'delivered', label: 'Entregados' },
+const manifestTabs = [
+  { value: 'pending', label: 'Manifiestos de carga' },
+  { value: 'approved', label: 'Manifiestos de carga Aprobados' },
+]
+const pendingManifestStatuses = ['pending', 'preparing', 'dispatched', 'waiting', 'assigned']
+const approvedManifestStatuses = ['approved', 'in_route', 'delivered', 'closed']
+const manifestReportHeaders = [
+  'ACCIONES',
+  'ESTADO',
+  'CODIGO',
+  'FECHA ENTREGA',
+  'TURNO',
+  'VEHICULO',
+  'CONDUCTORES',
+  'ZONA',
+  'USUARIO REGISTRO',
+  'FECHA REGISTRO',
+]
+const manifestReportColumns = [
+  { wpx: 110 },
+  { wpx: 110 },
+  { wpx: 110 },
+  { wpx: 110 },
+  { wpx: 90 },
+  { wpx: 190 },
+  { wpx: 260 },
+  { wpx: 150 },
+  { wpx: 150 },
+  { wpx: 170 },
 ]
 const dispatchAssignments = (dispatch) => dispatch?.assignments ?? []
 const dispatchGuides = (dispatch) => dispatch?.referral_guides ?? dispatch?.referralGuides ?? []
@@ -87,6 +111,49 @@ const guideResponsePayload = (guide) => {
   }
 }
 const guideProviderLink = (guide, type) => guideResponsePayload(guide)?.links?.[type]
+const orFilters = (filters) => filters.filter(Boolean).reduce((acc, filter) => acc ? [acc, 'or', filter] : filter, null)
+const andFilters = (filters) => filters.filter(Boolean).reduce((acc, filter) => acc ? [acc, 'and', filter] : filter, null)
+const manifestStatusFilter = (tab) => orFilters((tab === 'approved' ? approvedManifestStatuses : pendingManifestStatuses).map(status => ['dispatch_status', '=', status]))
+const formatAuditUser = (user) => {
+  if (!user) return ''
+  return [user.name, user.lastname].filter(Boolean).join(' ').trim() || user.fullname || user.username || ''
+}
+const formatDateText = (value, withTime = false) => {
+  const text = `${value ?? ''}`.trim()
+  if (!text) return ''
+  return text.replace('T', ' ').slice(0, withTime ? 19 : 10)
+}
+const manifestCode = (dispatch) => dispatch?.manifest_code || dispatch?.code || '-'
+const manifestShift = (dispatch) => {
+  const shift = dispatch?.shift
+  if (`${shift ?? ''}` === 'Manana') return 'MANANA'
+  return getShiftLabel(shift, '').toUpperCase()
+}
+const manifestVehicle = (dispatch) => [
+  dispatch?.vehicle?.plate ?? dispatch?.vehicle_plate,
+  dispatch?.vehicle?.label ?? dispatch?.vehicle_label,
+].filter(Boolean).join(' - ') || '-'
+const manifestDrivers = (dispatch) => {
+  const mainDriver = dispatch?.driver?.full_name ?? dispatch?.driver_name
+  const copilot = dispatch?.copilot_name
+  return [mainDriver, copilot].filter(Boolean).join(' - ') || '-'
+}
+const manifestZone = (dispatch) => dispatch?.zone_master?.name ?? dispatch?.zoneMaster?.name ?? dispatch?.zone ?? '-'
+const manifestStatusMeta = (status) => {
+  if (['waiting', 'assigned', 'pending', 'preparing', 'dispatched'].includes(status)) {
+    return { label: 'En espera', className: 'badge border border-warning text-warning bg-warning-subtle' }
+  }
+  if (['approved', 'in_route', 'delivered'].includes(status)) {
+    return { label: 'Aprobado', className: 'badge border border-success text-success bg-success-subtle' }
+  }
+  if (status === 'closed') {
+    return { label: 'Cerrado', className: 'badge border border-info text-info bg-info-subtle' }
+  }
+  if (status === 'cancelled') {
+    return { label: 'Cancelado', className: 'badge border border-danger text-danger bg-danger-subtle' }
+  }
+  return { label: getDispatchStatusLabel(status), className: 'badge border border-secondary text-secondary bg-light' }
+}
 const googleMapsRouteUrl = (dispatch) => {
   const stops = [...new Set(dispatchAssignments(dispatch)
     .map((assignment) => orderDeliveryAddress(assignmentOrder(assignment)))
@@ -136,7 +203,10 @@ const Dispatches = ({ session }) => {
   const [selectedDriverId, setSelectedDriverId] = useState('')
   const [selectedVehicleId, setSelectedVehicleId] = useState('')
   const [selectedZoneId, setSelectedZoneId] = useState('')
-  const [selectedDispatchFilter, setSelectedDispatchFilter] = useState('all')
+  const [activeManifestTab, setActiveManifestTab] = useState('pending')
+  const [manifestFilters, setManifestFilters] = useState({ businessId: '', startDate: '', endDate: '' })
+  const [appliedManifestFilters, setAppliedManifestFilters] = useState({ businessId: '', startDate: '', endDate: '' })
+  const [isExportingManifest, setIsExportingManifest] = useState(false)
   const [currentDispatchId, setCurrentDispatchId] = useState('')
   const [assignments, setAssignments] = useState([emptyAssignment()])
   const [isEditing, setIsEditing] = useState(false)
@@ -200,9 +270,12 @@ const Dispatches = ({ session }) => {
   const canAddAssignment = useMemo(() => (
     !!selectedWarehouseId && availableOrders.some(order => !selectedAssignmentOrderIds.has(`${order.id}`))
   ), [availableOrders, selectedAssignmentOrderIds, selectedWarehouseId])
-  const dispatchGridFilter = useMemo(() => (
-    selectedDispatchFilter === 'all' ? null : ['dispatch_status', '=', selectedDispatchFilter]
-  ), [selectedDispatchFilter])
+  const dispatchGridFilter = useMemo(() => andFilters([
+    manifestStatusFilter(activeManifestTab),
+    appliedManifestFilters.businessId ? ['business_id', '=', Number(appliedManifestFilters.businessId)] : null,
+    appliedManifestFilters.startDate ? ['scheduled_date', '>=', appliedManifestFilters.startDate] : null,
+    appliedManifestFilters.endDate ? ['scheduled_date', '<=', appliedManifestFilters.endDate] : null,
+  ]), [activeManifestTab, appliedManifestFilters])
 
   const refreshZones = async () => {
     const zoneList = await dispatchesRest.getZones()
@@ -232,7 +305,11 @@ const Dispatches = ({ session }) => {
   }
 
   const loadCatalogs = async () => {
-    if (isDriverSession) return
+    if (isDriverSession) {
+      const businessList = await dispatchesRest.getBusinesses()
+      setBusinesses(businessList ?? [])
+      return
+    }
 
     const [businessList, warehouseList, orderList, driverList, vehicleList, zoneList] = await Promise.all([
       dispatchesRest.getBusinesses(),
@@ -684,9 +761,149 @@ const Dispatches = ({ session }) => {
     await refreshGrid()
   }
 
+  const applyManifestFilters = (e) => {
+    e.preventDefault()
+    if (manifestFilters.startDate && manifestFilters.endDate && manifestFilters.startDate > manifestFilters.endDate) {
+      Swal.fire('Fechas invalidas', 'La fecha inicio no puede ser mayor que la fecha fin.', 'warning')
+      return
+    }
+    setAppliedManifestFilters({ ...manifestFilters })
+  }
+
+  const manifestReportRow = (dispatch) => [
+    '',
+    manifestStatusMeta(dispatch?.dispatch_status).label,
+    manifestCode(dispatch),
+    formatDateText(dispatch?.scheduled_date),
+    manifestShift(dispatch),
+    manifestVehicle(dispatch),
+    manifestDrivers(dispatch),
+    manifestZone(dispatch),
+    formatAuditUser(dispatch?.creator),
+    formatDateText(dispatch?.created_at, true),
+  ]
+
+  const fetchManifestRowsForExport = async () => {
+    const response = await dispatchesRest.paginate({
+      skip: 0,
+      take: 0,
+      isLoadingAll: true,
+      requireTotalCount: false,
+      filter: dispatchGridFilter || undefined,
+      sort: [{ selector: 'scheduled_date', desc: true }, { selector: 'id', desc: true }],
+    })
+
+    if (response?.status && response.status !== 200) {
+      throw new Error(response.message || 'No se pudo obtener el listado')
+    }
+
+    return response?.data ?? []
+  }
+
+  const copyManifestRows = async () => {
+    try {
+      const rows = await fetchManifestRowsForExport()
+      const text = [manifestReportHeaders, ...rows.map(manifestReportRow)]
+        .map(row => row.map(value => `${value ?? ''}`).join('\t'))
+        .join('\n')
+      await navigator.clipboard.writeText(text)
+      Swal.fire('Copiado', 'El listado filtrado fue copiado al portapapeles.', 'success')
+    } catch (error) {
+      Swal.fire('No se pudo copiar', error.message || 'Ocurrio un error al copiar el listado', 'error')
+    }
+  }
+
+  const exportManifestExcel = async () => {
+    if (isExportingManifest) return
+
+    setIsExportingManifest(true)
+    try {
+      const rows = await fetchManifestRowsForExport()
+      const worksheet = XLSX.utils.aoa_to_sheet([manifestReportHeaders, ...rows.map(manifestReportRow)])
+      worksheet['!cols'] = manifestReportColumns
+
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Manifiestos')
+      XLSX.writeFile(workbook, `${Math.floor(Date.now() / 1000)}_reporte_manifiestos_despacho.xlsx`)
+    } catch (error) {
+      Swal.fire('No se pudo exportar', error.message || 'Ocurrio un error al generar el Excel', 'error')
+    } finally {
+      setIsExportingManifest(false)
+    }
+  }
+
   const currentDriver = driverMap[selectedDriverId]
   const currentVehicle = vehicleMap[selectedVehicleId]
   const currentZone = zoneMap[selectedZoneId]
+  const manifestListTitle = (
+    <div className='dispatch-manifest-list-header'>
+      <div className='d-flex justify-content-between align-items-center'>
+        <h4 className='header-title mb-0'>Listado</h4>
+      </div>
+      <ul className='nav nav-tabs nav-bordered mt-3 flex-nowrap overflow-auto'>
+        {manifestTabs.map((tab) => (
+          <li className='nav-item' key={`dispatch-manifest-tab-${tab.value}`}>
+            <a
+              href='#'
+              className={`nav-link ${activeManifestTab === tab.value ? 'active' : ''}`}
+              onClick={(e) => {
+                e.preventDefault()
+                setActiveManifestTab(tab.value)
+              }}
+            >
+              {tab.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+      <form className='mt-3' onSubmit={applyManifestFilters}>
+        <div className='row g-3 align-items-end'>
+          <div className='col-12 col-lg-4'>
+            <label className='form-label'>Empresa</label>
+            <select
+              className='form-select'
+              value={manifestFilters.businessId}
+              onChange={(e) => setManifestFilters(prev => ({ ...prev, businessId: e.target.value }))}
+            >
+              <option value=''>Todas</option>
+              {businesses.map(row => <option key={`manifest-filter-business-${row.id}`} value={row.id}>{row.name}</option>)}
+            </select>
+          </div>
+          <div className='col-12 col-lg-4'>
+            <label className='form-label'>Fecha Inicio</label>
+            <input
+              type='date'
+              className='form-control'
+              value={manifestFilters.startDate}
+              onChange={(e) => setManifestFilters(prev => ({ ...prev, startDate: e.target.value }))}
+            />
+          </div>
+          <div className='col-12 col-lg-4'>
+            <label className='form-label'>Fecha Fin</label>
+            <input
+              type='date'
+              className='form-control'
+              value={manifestFilters.endDate}
+              onChange={(e) => setManifestFilters(prev => ({ ...prev, endDate: e.target.value }))}
+            />
+          </div>
+        </div>
+        <div className='d-flex justify-content-center mt-3'>
+          <button type='submit' className='btn btn-outline-primary px-4'>
+            <i className='mdi mdi-magnify me-1'></i>Filtrar
+          </button>
+        </div>
+      </form>
+      <div className='d-flex flex-wrap gap-2 mt-4'>
+        <button type='button' className='btn btn-sm btn-light border' onClick={copyManifestRows}>
+          Copiar
+        </button>
+        <button type='button' className='btn btn-sm btn-light border' onClick={exportManifestExcel} disabled={isExportingManifest}>
+          {isExportingManifest ? 'Generando...' : 'Excel'}
+        </button>
+      </div>
+    </div>
+  )
 
   return <>
     <style>{`
@@ -764,87 +981,71 @@ const Dispatches = ({ session }) => {
     `}</style>
     <Table
       gridRef={gridRef}
-      title='Despachos'
+      title={manifestListTitle}
       rest={dispatchesRest}
-      pageSize={25}
+      pageSize={10}
       filterValue={dispatchGridFilter}
       toolBar={(items) => {
-        items.unshift({
-          widget: 'dxSelectBox',
-          location: 'after',
-          options: {
-            dataSource: dispatchFilterOptions,
-            valueExpr: 'value',
-            displayExpr: 'label',
-            value: selectedDispatchFilter,
-            width: 170,
-            onValueChanged: (e) => setSelectedDispatchFilter(e.value),
-          }
-        })
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
         if (!isDriverSession) {
           items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
         }
       }}
       columns={[
-        { caption: 'Acciones', width: 380, fixed: true, fixedPosition: 'left', allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
+        { caption: 'ACCIONES', width: isDriverSession ? 120 : 200, fixed: true, fixedPosition: 'left', allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
           container.css({ overflow: 'visible', textOverflow: 'unset' })
           const actions = $('<div>').addClass('dispatch-grid-actions')
           if (!isDriverSession) {
-            actions.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
+            actions.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar manifiesto', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
           }
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-info', title: 'Abrir ruta', icon: 'mdi mdi-map-marker-path', onClick: () => onOpenRoute(data) }))
+          if (isDriverSession) {
+            actions.append(DxButton({ className: 'btn btn-xs btn-soft-info', title: 'Abrir ruta en mapa', icon: 'mdi mdi-map-marker-path', onClick: () => onOpenRoute(data) }))
+          }
           if (!isDriverSession && !['in_route', 'delivered', 'closed', 'cancelled'].includes(data.dispatch_status)) {
-            actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Generar manifiesto y poner en ruta', icon: 'mdi mdi-truck-fast-outline', onClick: () => onStartRoute(data) }))
+            actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Aprobar manifiesto y poner en ruta', icon: 'mdi mdi-check', onClick: () => onStartRoute(data) }))
           }
-          if (!isDriverSession) {
-            actions.append(DxButton({ className: 'btn btn-xs btn-soft-warning', title: dispatchGuides(data).length ? 'Ver guias' : 'Generar guias', icon: 'mdi mdi-file-document', onClick: () => onShowGuides(data) }))
-          }
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Ver evidencias', icon: 'mdi mdi-camera', onClick: () => onShowEvidences(data) }))
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Manifiesto PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openDispatchManifestPdf(data) }))
+          actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Previsualizar manifiesto PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openDispatchManifestPdf(data) }))
+          actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Registrar o ver evidencias de entrega', icon: 'mdi mdi-camera', onClick: () => onShowEvidences(data) }))
           if (!isDriverSession) {
             actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
           }
           container.append(actions)
         } },
-        { dataField: 'id', caption: 'ID', width: 70 },
         {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: 175,
+          dataField: 'dispatch_status',
+          caption: 'ESTADO',
+          width: 130,
+          lookup: toLookup(dispatchStatusOptions),
+          cellTemplate: (container, { data }) => {
+            const meta = manifestStatusMeta(data?.dispatch_status)
+            container.append($('<span>').addClass(meta.className).text(meta.label))
+          }
+        },
+        {
+          dataField: 'manifest_code',
+          caption: 'CODIGO',
+          width: 125,
+          calculateCellValue: manifestCode,
           cellTemplate: (container, { data }) => {
             if (isDriverSession) {
-              container.text(data?.code ?? '-')
+              container.text(manifestCode(data))
               return
             }
-            renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar despacho')
+            renderGridEditLink(container, manifestCode(data), () => onModalOpen(data), 'Editar manifiesto')
           }
         },
-        { dataField: 'scheduled_date', caption: 'Fecha', dataType: 'date', width: 110 },
-        { dataField: 'shift', caption: 'Turno', width: 90, calculateCellValue: (data) => getShiftLabel(data.shift) },
-        { caption: 'Placa', width: 110, calculateCellValue: (data) => data.vehicle?.plate ?? data.vehicle_plate ?? '-' },
-        { caption: 'Conductor', minWidth: 180, calculateCellValue: (data) => data.driver?.full_name ?? data.driver_name ?? '-' },
-        { caption: 'Zona', minWidth: 140, calculateCellValue: (data) => data.zone_master?.name ?? data.zoneMaster?.name ?? data.zone ?? '-' },
-        { dataField: 'dispatch_status', caption: 'Estado', width: 110, lookup: toLookup(dispatchStatusOptions) },
-        { caption: 'Pedidos', width: 90, cellTemplate: (container, { data }) => container.text((data.assignments ?? []).length) },
+        { dataField: 'scheduled_date', caption: 'FECHA ENTREGA', dataType: 'date', width: 140 },
+        { dataField: 'shift', caption: 'TURNO', width: 100, calculateCellValue: manifestShift },
+        { caption: 'VEHICULO', minWidth: 185, calculateCellValue: manifestVehicle },
+        { caption: 'CONDUCTORES', minWidth: 250, calculateCellValue: manifestDrivers },
+        { caption: 'ZONA', minWidth: 150, calculateCellValue: manifestZone },
+        { dataField: 'creator.fullname', caption: 'USUARIO REGISTRO', width: 170, cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator) || '-') },
         {
-          caption: 'Guias',
-          width: 150,
-          calculateCellValue: (data) => {
-            const guides = dispatchGuides(data)
-            if (guides.length === 0) return '-'
-            if (guides.length === 1) return guideNumber(guides[0])
-            return `${guides.length} guias`
-          }
-        },
-        {
-          caption: 'Evidencias',
-          width: 110,
-          calculateCellValue: (data) => {
-            const progress = evidenceProgress(data)
-            if (progress.total === 0) return '-'
-            return `${progress.covered}/${progress.total}`
-          }
+          dataField: 'created_at',
+          caption: 'FECHA REGISTRO',
+          dataType: 'datetime',
+          width: 170,
+          cellTemplate: (container, { data }) => container.text(formatDateText(data?.created_at, true) || '-')
         }
       ]}
     />
