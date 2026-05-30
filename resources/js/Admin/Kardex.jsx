@@ -54,6 +54,8 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
   const [laboratoryId, setLaboratoryId] = useState('')
   const [articleId, setArticleId] = useState('')
   const [warehouseId, setWarehouseId] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [movementRows, setMovementRows] = useState([])
   const [movementTitle, setMovementTitle] = useState('')
   const isMagistrales = isMagistralesPath()
@@ -66,7 +68,7 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
         kardexRest.getBusinesses(),
         kardexRest.getLaboratories(),
         kardexRest.getArticles(),
-        isMagistrales && !fixedWarehouseId ? kardexRest.getWarehouses() : Promise.resolve([]),
+        (!isMagistrales || !fixedWarehouseId) ? kardexRest.getWarehouses() : Promise.resolve([]),
       ])
       setBusinesses((businessesData ?? []).filter(item => item.status !== null))
       setLaboratories((labsData ?? []).filter(item => item.status !== null))
@@ -100,18 +102,23 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
       laboratory_id: laboratoryId || '',
       article_id: articleId || '',
       warehouse_id: warehouseId || '',
-      section: 'kardex',
+      section: isMagistrales ? 'kardex' : 'products',
       client_id: '',
       stock_mode: 'with_stock',
     })
     refreshGrid(gridRef)
-  }, [businessId, branchId, laboratoryId, articleId, warehouseId])
+  }, [businessId, branchId, laboratoryId, articleId, warehouseId, isMagistrales])
 
   const openMovements = async (row) => {
-    const rows = await kardexRest.getMovements({
+    const request = {
       article_id: row.article_id,
       warehouse_id: row.warehouse_id || warehouseId || null,
-    })
+    }
+    if (!isMagistrales) {
+      request.start_date = startDate || null
+      request.end_date = endDate || null
+    }
+    const rows = await kardexRest.getMovements(request)
     setMovementRows(rows)
     setMovementTitle(`${row.article_code ?? ''} ${row.article_name ?? ''}`.trim())
     $(movementModalRef.current).modal('show')
@@ -207,6 +214,55 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
     },
   ]
 
+  const standardProductColumns = [
+    {
+      caption: 'Acciones',
+      width: 95,
+      allowFiltering: false,
+      allowExporting: false,
+      cellTemplate: (container, { data }) => {
+        container.css('text-overflow', 'unset')
+        container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Movimientos', icon: 'mdi mdi-format-list-bulleted', onClick: () => openMovements(data) }))
+      }
+    },
+    { dataField: 'article_code', caption: 'Codigo', minWidth: 110 },
+    { dataField: 'article_name', caption: 'Nombre', minWidth: 260 },
+    { dataField: 'laboratory_name', caption: 'Laboratorio', minWidth: 160 },
+    { dataField: 'principle_name', caption: 'Principio activo', minWidth: 180 },
+    { dataField: 'unit_label', caption: 'Und', minWidth: 80 },
+    {
+      dataField: 'qty_in',
+      caption: 'Entradas',
+      minWidth: 100,
+      cellTemplate: (container, { data }) => container.text(Number(data.qty_in ?? 0).toFixed(3))
+    },
+    {
+      dataField: 'qty_out',
+      caption: 'Salidas',
+      minWidth: 100,
+      cellTemplate: (container, { data }) => container.text(Number(data.qty_out ?? 0).toFixed(3))
+    },
+    {
+      dataField: 'stock',
+      caption: 'Stock',
+      minWidth: 100,
+      cellTemplate: (container, { data }) => container.text(Number(data.stock ?? 0).toFixed(3))
+    },
+    {
+      dataField: 'cost_unit',
+      caption: 'Costo Unit.',
+      minWidth: 120,
+      cellTemplate: (container, { data }) => container.text(Number(data.cost_unit ?? 0).toFixed(4))
+    },
+    {
+      dataField: 'total_cost',
+      caption: 'Total Val.',
+      minWidth: 120,
+      cellTemplate: (container, { data }) => container.text(Number(data.total_cost ?? 0).toFixed(2))
+    },
+    { dataField: 'warehouse_name', caption: 'Almacen', minWidth: 150 },
+  ]
+
   return (
     <div className='row'>
       <div className='col-12'>
@@ -214,17 +270,10 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
           <div className='card-body'>
             <div className='row'>
               {!isMagistrales && <div className='col-md-3'>
-                <label className='form-label'>Empresa</label>
-                <select className='form-control' value={businessId} onChange={(e) => setBusinessId(e.target.value)}>
-                  <option value=''>-- Seleccionar empresa --</option>
-                  {businesses.map(item => <option key={`kardex-business-${item.id}`} value={item.id}>{item.name}</option>)}
-                </select>
-              </div>}
-              {!isMagistrales && <div className='col-md-3'>
-                <label className='form-label'>Sede</label>
-                <select className='form-control' value={branchId} onChange={(e) => setBranchId(e.target.value)}>
-                  <option value=''>-- Seleccionar sede --</option>
-                  {branches.map(item => <option key={`kardex-branch-${item.id}`} value={item.id}>{item.name}</option>)}
+                <label className='form-label'>Almacen</label>
+                <select className='form-control' value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
+                  <option value=''>-- Seleccionar almacen --</option>
+                  {warehouses.map(item => <option key={`kardex-warehouse-${item.id}`} value={item.id}>{item.name}</option>)}
                 </select>
               </div>}
               {!isMagistrales && <div className='col-md-3'>
@@ -247,6 +296,14 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
                     .map(item => <option key={`kardex-article-${item.id}`} value={item.id}>{item.code} - {item.name}</option>)}
                 </select>
               </div>
+              {!isMagistrales && <div className='col-md-3'>
+                <label className='form-label'>Desde</label>
+                <input className='form-control' type='date' value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+              </div>}
+              {!isMagistrales && <div className='col-md-3 mt-2'>
+                <label className='form-label'>Hasta</label>
+                <input className='form-control' type='date' value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+              </div>}
             </div>
           </div>
         </div>
@@ -265,21 +322,22 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
               options: { icon: 'refresh', hint: 'Refrescar tabla', onClick: () => refreshGrid(gridRef) }
             })
           }}
-          columns={isMagistrales ? magistralesColumns : movementColumns}
+          columns={isMagistrales ? magistralesColumns : standardProductColumns}
         />
       </div>
 
-      {isMagistrales && <Modal modalRef={movementModalRef} title={`Transacciones ${movementTitle}`} size='xl' hideFooter>
+      <Modal modalRef={movementModalRef} title={`${isMagistrales ? 'Transacciones' : 'Kardex mensual'} ${movementTitle}`} size='xl' hideFooter>
         <div className='table-responsive border rounded'>
           <table className='table table-sm table-striped mb-0'>
             <thead>
               <tr>
-                <th style={{ minWidth: 170 }}>Transaccion</th>
                 <th style={{ width: 140 }}>Fecha</th>
-                <th style={{ width: 140 }}>Documento</th>
                 <th style={{ width: 120 }}>Operacion</th>
+                <th style={{ width: 140 }}>Documento</th>
+                <th style={{ minWidth: 170 }}>Proveedor/Cliente</th>
                 <th style={{ width: 110 }}>Lote</th>
                 <th style={{ width: 130 }}>F. Vencimiento</th>
+                <th style={{ width: 130 }}>Ubicacion</th>
                 <th style={{ width: 100 }}>Entrada</th>
                 <th style={{ width: 100 }}>Salida</th>
                 <th style={{ width: 100 }}>Saldo</th>
@@ -287,15 +345,16 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
               </tr>
             </thead>
             <tbody>
-              {movementRows.length === 0 && <tr><td colSpan='10' className='text-center text-muted py-3'>Sin movimientos</td></tr>}
+              {movementRows.length === 0 && <tr><td colSpan='11' className='text-center text-muted py-3'>Sin movimientos</td></tr>}
               {movementRows.map(row => (
                 <tr key={row.id}>
-                  <td>{row.transaction}</td>
                   <td>{row.movement_date?.toString?.().slice(0, 16)}</td>
-                  <td>{row.document}</td>
                   <td>{row.operation}</td>
+                  <td>{row.document}</td>
+                  <td>{row.partner ?? row.transaction ?? ''}</td>
                   <td>{row.lot}</td>
                   <td>{row.expiration_date?.toString?.().slice(0, 10)}</td>
+                  <td>{row.location}</td>
                   <td>{Number(row.quantity_in ?? 0).toFixed(3)}</td>
                   <td>{Number(row.quantity_out ?? 0).toFixed(3)}</td>
                   <td>{Number(row.balance ?? 0).toFixed(3)}</td>
@@ -305,7 +364,7 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
             </tbody>
           </table>
         </div>
-      </Modal>}
+      </Modal>
     </div>
   )
 }

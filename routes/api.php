@@ -218,9 +218,17 @@ Route::middleware('auth')->group(function () {
         Route::delete('/exit-notes/{id}', [AdminExitNoteController::class, 'delete']);
         Route::get('/exit-notes/businesses/{id}/branches', [AdminExitNoteController::class, 'branches']);
 
+        Route::get('/inventory/options', [AdminInventoryController::class, 'options']);
+        Route::post('/inventory/preview', [AdminInventoryController::class, 'preview']);
+        Route::post('/inventory', [AdminInventoryController::class, 'save']);
         Route::post('/inventory/paginate', [AdminInventoryController::class, 'paginate']);
+        Route::post('/inventory/{id}/apply', [AdminInventoryController::class, 'apply']);
+        Route::get('/inventory/{id}', [AdminInventoryController::class, 'get']);
+        Route::get('/inventory/{id}/format', [AdminInventoryController::class, 'format']);
+        Route::post('/inventory/{id}/import', [AdminInventoryController::class, 'import']);
         Route::post('/inventory-report/paginate', [AdminInventoryReportController::class, 'paginate']);
         Route::post('/kardex/paginate', [AdminKardexController::class, 'paginate']);
+        Route::post('/kardex/movements', [AdminKardexController::class, 'movements']);
 
         Route::post('/purchase-orders', [AdminPurchaseOrderController::class, 'save']);
         Route::post('/purchase-orders/paginate', [AdminPurchaseOrderController::class, 'paginate']);
@@ -716,6 +724,9 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/warehouses', [AdminWarehouseController::class, 'save']);
         Route::post('/warehouses/paginate', [AdminWarehouseController::class, 'paginate']);
+        Route::get('/warehouses/{id}/locations', [AdminWarehouseController::class, 'locations']);
+        Route::post('/warehouses/{id}/locations', [AdminWarehouseController::class, 'saveLocation']);
+        Route::delete('/warehouses/{id}/locations/{locationId}', [AdminWarehouseController::class, 'deleteLocation']);
         Route::patch('/warehouses/status', [AdminWarehouseController::class, 'status']);
         Route::patch('/warehouses/{field}', [AdminWarehouseController::class, 'boolean']);
         Route::delete('/warehouses/{id}', [AdminWarehouseController::class, 'delete']);

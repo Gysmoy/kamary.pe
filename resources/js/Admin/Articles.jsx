@@ -409,7 +409,9 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const [units, setUnits] = useState([])
   const [presentations, setPresentations] = useState([emptyPresentation()])
   const [businesses, setBusinesses] = useState([])
+  const [warehouses, setWarehouses] = useState([])
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
   const [selectedLaboratoryId, setSelectedLaboratoryId] = useState('')
   const [selectedPrincipleId, setSelectedPrincipleId] = useState('')
   const [selectedUnitId, setSelectedUnitId] = useState('')
@@ -442,6 +444,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const [mapping, setMapping] = useState({
     code: '',
     name: '',
+    warehouse: '',
     laboratory: '',
     active_principle: '',
     unit: '',
@@ -457,6 +460,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const loadBusinesses = async () => {
     const rows = (await articlesRest.getBusinesses()).filter(item => item.status !== null)
     setBusinesses(rows)
+    return rows
+  }
+
+  const loadWarehouses = async () => {
+    const rows = (await articlesRest.getWarehouses()).filter(item => item.status !== null)
+    setWarehouses(rows)
     return rows
   }
 
@@ -558,6 +567,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   useEffect(() => {
     if (isStorageProduct || isMagistrales) return
     loadBusinesses()
+    loadWarehouses()
   }, [isStorageProduct, isMagistrales])
 
   const onModalOpen = async (data = null, mode = 'edit') => {
@@ -569,8 +579,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     }
     if (!isStorageProduct && !isMagistrales) {
       setSelectedBusinessId(data?.business_id ? `${data.business_id}` : defaultBusinessId(availableBusinesses))
+      if (warehouses.length === 0) await loadWarehouses()
+      setSelectedWarehouseId(data?.warehouse_id ? `${data.warehouse_id}` : '')
     } else {
       setSelectedBusinessId('')
+      setSelectedWarehouseId('')
     }
 
     idRef.current.value = data?.id ?? ''
@@ -705,6 +718,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       magistral_presentation: selectedMagistralPresentation || magistralPresentationRef.current?.value || null,
       health_registration: healthRegistrationRef.current?.value?.trim() ?? '',
       business_id: (!isStorageProduct && !isMagistrales) ? (selectedBusinessId || null) : null,
+      warehouse_id: (!isStorageProduct && !isMagistrales) ? (selectedWarehouseId || null) : null,
       laboratory_id: isMagistrales ? null : (selectedLaboratoryId || null),
       magistral_laboratory_id: isMagistrales ? (selectedLaboratoryId || null) : null,
       active_principle_id: isMagistrales ? null : (selectedPrincipleId || null),
@@ -813,6 +827,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     setMapping({
       code: '',
       name: '',
+      warehouse: '',
       laboratory: '',
       active_principle: '',
       unit: '',
@@ -832,6 +847,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     return {
       code: findByNames(['codigo', 'code', 'codigodearticulo', 'sku']),
       name: findByNames(['descripcion', 'description', 'name', 'nombre', 'articulo', 'producto']),
+      warehouse: findByNames(['almacen', 'warehouse']),
       laboratory: findByNames(['laboratorio', 'laboratory']),
       active_principle: findByNames(['principioactivo', 'activeprinciple', 'principio']),
       unit: findByNames(['unidad', 'unit', 'unidadmedida']),
@@ -864,6 +880,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       setMapping({
         code: '',
         name: '',
+        warehouse: '',
         laboratory: '',
         active_principle: '',
         unit: '',
@@ -886,6 +903,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     }
     if (!mapping.code) {
       Swal.fire({ icon: 'warning', title: 'Campo obligatorio', text: 'Debes mapear el campo codigo' })
+      return
+    }
+    if (!isStorageProduct && !isMagistrales && !mapping.warehouse) {
+      Swal.fire({ icon: 'warning', title: 'Campo obligatorio', text: 'Debes mapear el campo almacen' })
       return
     }
 
@@ -1050,6 +1071,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     row: idx + 1,
     code: mapping.code ? (row[mapping.code] ?? '') : '',
     name: mapping.name ? (row[mapping.name] ?? '') : '',
+    warehouse: mapping.warehouse ? (row[mapping.warehouse] ?? '') : '',
     laboratory: mapping.laboratory ? (row[mapping.laboratory] ?? '') : '',
     principle: mapping.active_principle ? (row[mapping.active_principle] ?? '') : '',
     unit: mapping.unit ? (row[mapping.unit] ?? '') : '',
@@ -1381,10 +1403,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar articulo')
     },
     {
-      dataField: 'business.name',
-      caption: 'Empresa',
-      width: '170px',
-      cellTemplate: (container, { data }) => container.text(data?.business?.name ?? '-')
+      dataField: 'warehouse.name',
+      caption: 'Almacen',
+      width: '180px',
+      cellTemplate: (container, { data }) => container.text(data?.warehouse?.name ?? '-')
     },
     { dataField: 'name', caption: 'Articulo', minWidth: 180 },
     { dataField: 'laboratory.name', caption: 'Laboratorio', width: '150px' },
@@ -2243,17 +2265,17 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
         <fieldset className='row p-0 m-0' disabled={isViewing}>
         {!isMagistrales && !isStorageProduct && (
           <div className='form-group col-md-4 mb-2'>
-            <label className='form-label'>Empresa <span className='text-danger'>*</span></label>
+            <label className='form-label'>Almacen <span className='text-danger'>*</span></label>
             <select
               className='form-control'
-              value={selectedBusinessId}
-              onChange={(e) => setSelectedBusinessId(e.target.value)}
+              value={selectedWarehouseId}
+              onChange={(e) => setSelectedWarehouseId(e.target.value)}
               required
             >
-              <option value=''>Seleccione empresa</option>
-              {businesses.map(business => (
-                <option key={`article-business-${business.id}`} value={business.id}>
-                  {business.name}
+              <option value=''>Seleccione almacen</option>
+              {warehouses.map(warehouse => (
+                <option key={`article-warehouse-${warehouse.id}`} value={warehouse.id}>
+                  {warehouse.name}
                 </option>
               ))}
             </select>
@@ -2572,6 +2594,13 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
             {importHeaders.map(header => <option key={`name-${header}`} value={header}>{header}</option>)}
           </select>
         </div>
+        {!isStorageProduct && !isMagistrales && <div className='col-md-4 mb-2'>
+          <label className='form-label'>Almacen *</label>
+          <select className='form-control' value={mapping.warehouse} onChange={(e) => setMapping(prev => ({ ...prev, warehouse: e.target.value }))}>
+            <option value=''>Seleccionar...</option>
+            {importHeaders.map(header => <option key={`warehouse-${header}`} value={header}>{header}</option>)}
+          </select>
+        </div>}
         <div className='col-md-4 mb-2'>
           <label className='form-label'>Laboratorio</label>
           <select className='form-control' value={mapping.laboratory} onChange={(e) => setMapping(prev => ({ ...prev, laboratory: e.target.value }))}>
@@ -2610,6 +2639,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
                   <th>#</th>
                   <th>Codigo</th>
                   <th>Descripcion</th>
+                  {!isStorageProduct && !isMagistrales && <th>Almacen</th>}
                   <th>Laboratorio</th>
                   <th>Principio activo</th>
                   <th>Unidad</th>
@@ -2619,7 +2649,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
               <tbody>
                 {previewRows.length === 0 && (
                   <tr>
-                    <td colSpan={7} className='text-center text-muted'>Sin datos para previsualizar</td>
+                    <td colSpan={!isStorageProduct && !isMagistrales ? 8 : 7} className='text-center text-muted'>Sin datos para previsualizar</td>
                   </tr>
                 )}
                 {previewRows.map(item => (
@@ -2627,6 +2657,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
                     <td>{item.row}</td>
                     <td>{item.code?.toString?.() ?? ''}</td>
                     <td>{item.name?.toString?.() ?? ''}</td>
+                    {!isStorageProduct && !isMagistrales && <td>{item.warehouse?.toString?.() ?? ''}</td>}
                     <td>{item.laboratory?.toString?.() ?? ''}</td>
                     <td>{item.principle?.toString?.() ?? ''}</td>
                     <td>{item.unit?.toString?.() ?? ''}</td>

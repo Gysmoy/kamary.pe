@@ -36,4 +36,9 @@ class Warehouse extends Model
     {
         return $this->belongsTo(User::class, 'updated_by');
     }
+
+    public function locations()
+    {
+        return $this->hasMany(WarehouseLocation::class)->orderBy('code')->orderBy('id');
+    }
 }

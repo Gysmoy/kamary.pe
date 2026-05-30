@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Classes\dxResponse;
 use App\Http\Controllers\BasicController;
-use App\Services\StockService;
 use App\Models\dxDataGrid;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use SoDe\Extend\Response;
 
 class KardexController extends BasicController
 {
@@ -20,135 +21,125 @@ class KardexController extends BasicController
 
     public function paginate(Request $request): HttpResponse|ResponseFactory
     {
-        $response = new dxResponse();
-        try {
-            $stockService = app(StockService::class);
-            $entryMovements = $stockService->incomingKardexMovementsQuery();
+        return $this->paginateProductSelection($request);
+    }
 
-            $exitMovements = DB::table('exit_note_items as movement_item')
-                ->join('exit_notes as movement_note', 'movement_note.id', '=', 'movement_item.exit_note_id')
-                ->join('articles as article', 'article.id', '=', 'movement_item.article_id')
+    public function movements(Request $request): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+
+        try {
+            $articleId = $this->toNullableInt($request->input('article_id'));
+            if (!$articleId) throw new \Exception('El articulo es obligatorio');
+
+            $warehouseId = $this->toNullableInt($request->input('warehouse_id'));
+            $startDate = $this->normalizeDate($request->input('start_date'));
+            $endDate = $this->normalizeDate($request->input('end_date'));
+
+            $priorBalance = 0.0;
+            if ($startDate) {
+                $prior = $this->standardMovementUnion($articleId, $warehouseId, null, $startDate);
+                $priorBalance = (float)DB::query()
+                    ->fromSub($prior, 'prior_kardex')
+                    ->selectRaw('COALESCE(SUM(quantity_in - quantity_out), 0) as balance')
+                    ->value('balance');
+            }
+
+            $union = $this->standardMovementUnion($articleId, $warehouseId, $startDate, null);
+            $query = DB::query()->fromSub($union, 'kardex')
+                ->when($endDate, fn($inner) => $inner->whereDate('movement_date', '<=', $endDate))
+                ->orderBy('movement_date')
+                ->orderBy('id');
+
+            $rows = $query->get();
+            $balance = round($priorBalance, 3);
+            $mapped = $rows->map(function ($row) use (&$balance) {
+                $qtyIn = round((float)$row->quantity_in, 3);
+                $qtyOut = round((float)$row->quantity_out, 3);
+                $balance = round($balance + $qtyIn - $qtyOut, 3);
+
+                return [
+                    'id' => (string)$row->id,
+                    'movement_date' => $row->movement_date,
+                    'operation' => (string)$row->operation,
+                    'document' => (string)$row->document,
+                    'partner' => (string)$row->partner,
+                    'warehouse_name' => (string)$row->warehouse_name,
+                    'location' => (string)$row->location,
+                    'lot' => (string)$row->lot,
+                    'quantity_in' => $qtyIn,
+                    'quantity_out' => $qtyOut,
+                    'balance' => $balance,
+                    'unit_label' => (string)$row->unit_label,
+                ];
+            })->values();
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = $mapped;
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function paginateProductSelection(Request $request): HttpResponse|ResponseFactory
+    {
+        $response = new dxResponse();
+
+        try {
+            $warehouseId = $this->toNullableInt($request->input('warehouse_id'));
+            $laboratoryId = $this->toNullableInt($request->input('laboratory_id'));
+            $articleId = $this->toNullableInt($request->input('article_id'));
+            $stockMode = trim((string)$request->input('stock_mode', 'with_stock'));
+
+            $incoming = $this->incomingTotalsByArticleQuery();
+            $outgoing = $this->outgoingTotalsByArticleQuery();
+
+            $instance = DB::query()
+                ->fromSub($incoming, 'stock')
+                ->join('articles as article', 'article.id', '=', 'stock.article_id')
                 ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'article.laboratory_id')
                 ->leftJoin('active_principles as active_principle', 'active_principle.id', '=', 'article.active_principle_id')
                 ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
-                ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'movement_item.warehouse_id')
-                ->leftJoin('businesses as business', 'business.id', '=', 'movement_note.business_id')
-                ->leftJoin('business_branches as branch', 'branch.id', '=', 'movement_note.business_branch_id')
-                ->where('movement_note.status', 1)
-                ->where('movement_item.status', 1)
+                ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'stock.warehouse_id')
+                ->leftJoinSub($outgoing, 'outgoing', function ($join) {
+                    $join->on('outgoing.article_id', '=', 'stock.article_id')
+                        ->on('outgoing.warehouse_id', '=', 'stock.warehouse_id');
+                })
+                ->when($warehouseId, fn($query) => $query->where('stock.warehouse_id', $warehouseId))
+                ->when($laboratoryId, fn($query) => $query->where('article.laboratory_id', $laboratoryId))
+                ->when($articleId, fn($query) => $query->where('article.id', $articleId))
+                ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
+                    $query->where(function ($scope) {
+                        $scope->where('article.module_scope', $this->moduleScope)
+                            ->orWhereNull('article.module_scope');
+                    });
+                })
                 ->selectRaw("
-                    CONCAT('exit-', movement_item.id) as id,
-                    movement_note.id as note_id,
-                    movement_note.created_at as movement_date,
-                    'Salida' as movement_type,
-                    movement_note.business_id as business_id,
-                    COALESCE(business.name, '') as business_name,
-                    movement_note.business_branch_id as business_branch_id,
-                    COALESCE(branch.name, '') as branch_name,
-                    article.id as article_id,
+                    CONCAT(stock.article_id, '-', stock.warehouse_id) as id,
+                    stock.article_id,
+                    stock.warehouse_id,
                     COALESCE(article.code, '') as article_code,
                     COALESCE(article.name, '') as article_name,
-                    article.laboratory_id as laboratory_id,
+                    article.laboratory_id,
                     COALESCE(laboratory.name, '') as laboratory_name,
                     COALESCE(active_principle.name, '') as principle_name,
                     COALESCE(unit.symbol, unit.name, '') as unit_label,
                     COALESCE(warehouse.name, '') as warehouse_name,
-                    COALESCE(movement_item.batch_code, '') as batch_code,
-                    COALESCE(movement_item.location, '') as location,
-                    COALESCE(movement_item.destination_location, '') as destination_location,
-                    0 as quantity_in,
-                    movement_item.quantity as quantity_out,
-                    movement_item.total as total
+                    COALESCE(stock.qty_in, 0) as qty_in,
+                    COALESCE(outgoing.qty_out, 0) as qty_out,
+                    COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0) as stock,
+                    CASE WHEN COALESCE(stock.qty_in, 0) > 0 THEN COALESCE(stock.total_in, 0) / stock.qty_in ELSE 0 END as cost_unit,
+                    (COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0)) *
+                        CASE WHEN COALESCE(stock.qty_in, 0) > 0 THEN COALESCE(stock.total_in, 0) / stock.qty_in ELSE 0 END as total_cost
                 ");
 
-            $reservationMovements = null;
-            if (Schema::hasTable('commercial_order_stock_movements')) {
-                $reservationMovements = DB::table('commercial_order_stock_movements as movement_item')
-                    ->join('commercial_orders as movement_note', 'movement_note.id', '=', 'movement_item.commercial_order_id')
-                    ->join('articles as article', 'article.id', '=', 'movement_item.article_id')
-                    ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'article.laboratory_id')
-                    ->leftJoin('active_principles as active_principle', 'active_principle.id', '=', 'article.active_principle_id')
-                    ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
-                    ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'movement_item.warehouse_id')
-                    ->leftJoin('businesses as business', 'business.id', '=', 'movement_item.business_id')
-                    ->leftJoin('business_branches as branch', 'branch.id', '=', 'movement_item.business_branch_id')
-                    ->where('movement_item.status', 1)
-                    ->selectRaw("
-                        CONCAT('commercial-stock-', movement_item.id) as id,
-                        movement_note.id as note_id,
-                        movement_item.created_at as movement_date,
-                        CASE
-                            WHEN movement_item.movement_type = 'released' THEN 'Liberacion reserva'
-                            ELSE 'Reserva pedido'
-                        END as movement_type,
-                        movement_item.business_id as business_id,
-                        COALESCE(business.name, '') as business_name,
-                        movement_item.business_branch_id as business_branch_id,
-                        COALESCE(branch.name, '') as branch_name,
-                        article.id as article_id,
-                        COALESCE(article.code, '') as article_code,
-                        COALESCE(article.name, '') as article_name,
-                        article.laboratory_id as laboratory_id,
-                        COALESCE(laboratory.name, '') as laboratory_name,
-                        COALESCE(active_principle.name, '') as principle_name,
-                        COALESCE(unit.symbol, unit.name, '') as unit_label,
-                        COALESCE(warehouse.name, '') as warehouse_name,
-                        '' as batch_code,
-                        '' as location,
-                        COALESCE(movement_item.reference_code, '') as destination_location,
-                        CASE WHEN movement_item.movement_type = 'released' THEN movement_item.quantity ELSE 0 END as quantity_in,
-                        CASE WHEN movement_item.movement_type = 'released' THEN 0 ELSE movement_item.quantity END as quantity_out,
-                        0 as total
-                    ");
+            if ($stockMode === 'with_stock') {
+                $instance->whereRaw('(COALESCE(stock.qty_in, 0) - COALESCE(outgoing.qty_out, 0)) > 0');
             }
-
-            $businessId = trim((string)($request->business_id ?? ''));
-            $branchId = trim((string)($request->business_branch_id ?? ''));
-            $laboratoryId = trim((string)($request->laboratory_id ?? ''));
-            $articleId = trim((string)($request->article_id ?? ''));
-
-            if (Schema::hasColumn('articles', 'module_scope')) {
-                $entryMovements->where('article.module_scope', $this->moduleScope);
-                $exitMovements->where('article.module_scope', $this->moduleScope);
-                if ($reservationMovements) {
-                    $reservationMovements->where('article.module_scope', $this->moduleScope);
-                }
-            }
-
-            if ($businessId !== '') {
-                $entryMovements->where('movement_note.business_id', $businessId);
-                $exitMovements->where('movement_note.business_id', $businessId);
-                if ($reservationMovements) {
-                    $reservationMovements->where('movement_item.business_id', $businessId);
-                }
-            }
-            if ($branchId !== '') {
-                $entryMovements->where('movement_note.business_branch_id', $branchId);
-                $exitMovements->where('movement_note.business_branch_id', $branchId);
-                if ($reservationMovements) {
-                    $reservationMovements->where('movement_item.business_branch_id', $branchId);
-                }
-            }
-            if ($laboratoryId !== '') {
-                $entryMovements->where('article.laboratory_id', $laboratoryId);
-                $exitMovements->where('article.laboratory_id', $laboratoryId);
-                if ($reservationMovements) {
-                    $reservationMovements->where('article.laboratory_id', $laboratoryId);
-                }
-            }
-            if ($articleId !== '') {
-                $entryMovements->where('movement_item.article_id', $articleId);
-                $exitMovements->where('movement_item.article_id', $articleId);
-                if ($reservationMovements) {
-                    $reservationMovements->where('movement_item.article_id', $articleId);
-                }
-            }
-
-            $union = $entryMovements->unionAll($exitMovements);
-            if ($reservationMovements) {
-                $union->unionAll($reservationMovements);
-            }
-            $instance = DB::query()->fromSub($union, 'kardex');
 
             if ($request->filter) {
                 $instance->where(function ($query) use ($request) {
@@ -157,18 +148,16 @@ class KardexController extends BasicController
             }
 
             $sortMap = [
-                'movement_date' => 'movement_date',
-                'movement_type' => 'movement_type',
-                'business_name' => 'business_name',
-                'branch_name' => 'branch_name',
                 'article_code' => 'article_code',
                 'article_name' => 'article_name',
                 'laboratory_name' => 'laboratory_name',
+                'principle_name' => 'principle_name',
                 'warehouse_name' => 'warehouse_name',
-                'batch_code' => 'batch_code',
-                'quantity_in' => 'quantity_in',
-                'quantity_out' => 'quantity_out',
-                'total' => 'total',
+                'qty_in' => 'qty_in',
+                'qty_out' => 'qty_out',
+                'stock' => 'stock',
+                'cost_unit' => 'cost_unit',
+                'total_cost' => 'total_cost',
             ];
 
             if ($request->sort) {
@@ -178,7 +167,7 @@ class KardexController extends BasicController
                     $instance->orderBy($sortMap[$selector], ($sorting['desc'] ?? false) ? 'DESC' : 'ASC');
                 }
             } else {
-                $instance->orderBy('movement_date', 'DESC')->orderBy('id', 'DESC');
+                $instance->orderBy('article_name')->orderBy('warehouse_name');
             }
 
             $totalCount = 0;
@@ -200,5 +189,202 @@ class KardexController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    private function incomingTotalsByArticleQuery()
+    {
+        return DB::query()
+            ->fromSub($this->incomingMovementsQuery(), 'incoming')
+            ->selectRaw('
+                incoming.article_id,
+                incoming.warehouse_id,
+                COALESCE(SUM(incoming.quantity), 0) as qty_in,
+                COALESCE(SUM(incoming.total), 0) as total_in
+            ')
+            ->groupBy('incoming.article_id', 'incoming.warehouse_id');
+    }
+
+    private function outgoingTotalsByArticleQuery()
+    {
+        return DB::query()
+            ->fromSub($this->outgoingMovementsQuery(), 'outgoing_base')
+            ->selectRaw('
+                outgoing_base.article_id,
+                outgoing_base.warehouse_id,
+                COALESCE(SUM(outgoing_base.quantity), 0) as qty_out
+            ')
+            ->groupBy('outgoing_base.article_id', 'outgoing_base.warehouse_id');
+    }
+
+    private function standardMovementUnion(int $articleId, ?int $warehouseId = null, ?string $startDate = null, ?string $beforeDate = null)
+    {
+        $incoming = DB::query()
+            ->fromSub($this->incomingMovementsQuery(), 'movement')
+            ->where('article_id', $articleId)
+            ->when($warehouseId, fn($query) => $query->where('warehouse_id', $warehouseId))
+            ->when($startDate, fn($query) => $query->whereDate('movement_date', '>=', $startDate))
+            ->when($beforeDate, fn($query) => $query->whereDate('movement_date', '<', $beforeDate))
+            ->selectRaw("
+                id,
+                movement_date,
+                operation,
+                document,
+                partner,
+                article_id,
+                warehouse_id,
+                warehouse_name,
+                unit_label,
+                lot,
+                expiration_date,
+                location,
+                quantity as quantity_in,
+                0 as quantity_out
+            ");
+
+        $outgoing = DB::query()
+            ->fromSub($this->outgoingMovementsQuery(), 'movement')
+            ->where('article_id', $articleId)
+            ->when($warehouseId, fn($query) => $query->where('warehouse_id', $warehouseId))
+            ->when($startDate, fn($query) => $query->whereDate('movement_date', '>=', $startDate))
+            ->when($beforeDate, fn($query) => $query->whereDate('movement_date', '<', $beforeDate))
+            ->selectRaw("
+                id,
+                movement_date,
+                operation,
+                document,
+                partner,
+                article_id,
+                warehouse_id,
+                warehouse_name,
+                unit_label,
+                lot,
+                expiration_date,
+                location,
+                0 as quantity_in,
+                quantity as quantity_out
+            ");
+
+        return $incoming->unionAll($outgoing);
+    }
+
+    private function incomingMovementsQuery()
+    {
+        $entryMovements = DB::table('entry_note_items as movement_item')
+            ->join('entry_notes as movement_note', 'movement_note.id', '=', 'movement_item.entry_note_id')
+            ->join('businesses as business', 'business.id', '=', 'movement_note.business_id')
+            ->join('articles as article', 'article.id', '=', 'movement_item.article_id')
+            ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
+            ->leftJoin('warehouses as warehouse', function ($join) {
+                $join->on('warehouse.id', '=', DB::raw('COALESCE(movement_item.warehouse_id, movement_note.warehouse_id)'));
+            })
+            ->leftJoin('suppliers as supplier', 'supplier.id', '=', 'movement_note.supplier_id')
+            ->where('movement_note.status', 1)
+            ->where('movement_note.entry_status', 'approved')
+            ->where('movement_item.status', 1)
+            ->where('business.business_key', BusinessScope::KAMARY_PERU)
+            ->selectRaw("
+                CONCAT('entry-', movement_item.id) as id,
+                COALESCE(movement_note.entry_date, DATE(movement_note.created_at)) as movement_date,
+                'Entrada' as operation,
+                CONCAT(COALESCE(movement_note.document_type, 'Entrada'), ' ', COALESCE(movement_note.document_series, ''), '-', COALESCE(movement_note.document_sequence, movement_note.code, movement_note.id)) as document,
+                COALESCE(supplier.business_name, supplier.trade_name, '') as partner,
+                movement_item.article_id,
+                COALESCE(movement_item.warehouse_id, movement_note.warehouse_id) as warehouse_id,
+                COALESCE(warehouse.name, '') as warehouse_name,
+                COALESCE(unit.symbol, unit.name, '') as unit_label,
+                COALESCE(NULLIF(movement_item.lot, ''), NULLIF(movement_item.batch_code, ''), '') as lot,
+                movement_item.expiration_date,
+                COALESCE(NULLIF(movement_item.location, ''), '') as location,
+                movement_item.quantity,
+                COALESCE(movement_item.total, movement_item.quantity * movement_item.cost_unit, 0) as total
+            ");
+
+        $receiptMovements = DB::table('purchase_receipt_items as movement_item')
+            ->join('purchase_receipts as movement_note', 'movement_note.id', '=', 'movement_item.purchase_receipt_id')
+            ->join('businesses as business', 'business.id', '=', 'movement_note.business_id')
+            ->join('articles as article', 'article.id', '=', 'movement_item.article_id')
+            ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
+            ->leftJoin('warehouses as warehouse', function ($join) {
+                $join->on('warehouse.id', '=', DB::raw('COALESCE(movement_item.warehouse_id, movement_note.warehouse_id)'));
+            })
+            ->leftJoin('suppliers as supplier', 'supplier.id', '=', 'movement_note.supplier_id')
+            ->where('movement_note.status', 1)
+            ->where('movement_note.receipt_status', 'confirmed')
+            ->where('movement_item.status', 1)
+            ->where('business.business_key', BusinessScope::KAMARY_PERU)
+            ->selectRaw("
+                CONCAT('receipt-', movement_item.id) as id,
+                COALESCE(movement_note.issue_date, DATE(movement_note.created_at)) as movement_date,
+                'Entrada' as operation,
+                CONCAT(COALESCE(movement_note.document_type, 'Recepcion'), ' ', COALESCE(movement_note.document_series, ''), '-', COALESCE(movement_note.document_sequence, movement_note.code, movement_note.id)) as document,
+                COALESCE(supplier.business_name, supplier.trade_name, '') as partner,
+                movement_item.article_id,
+                COALESCE(movement_item.warehouse_id, movement_note.warehouse_id) as warehouse_id,
+                COALESCE(warehouse.name, '') as warehouse_name,
+                COALESCE(unit.symbol, unit.name, '') as unit_label,
+                COALESCE(NULLIF(movement_item.lot, ''), NULLIF(movement_item.batch_code, ''), '') as lot,
+                movement_item.expiration_date,
+                COALESCE(NULLIF(movement_item.location, ''), '') as location,
+                movement_item.quantity,
+                COALESCE(movement_item.total, movement_item.quantity * movement_item.cost_unit, 0) as total
+            ");
+
+        return $entryMovements->unionAll($receiptMovements);
+    }
+
+    private function outgoingMovementsQuery()
+    {
+        $query = DB::table('exit_note_items as movement_item')
+            ->join('exit_notes as movement_note', 'movement_note.id', '=', 'movement_item.exit_note_id')
+            ->join('businesses as business', 'business.id', '=', 'movement_note.business_id')
+            ->join('articles as article', 'article.id', '=', 'movement_item.article_id')
+            ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
+            ->leftJoin('warehouses as warehouse', function ($join) {
+                $join->on('warehouse.id', '=', DB::raw('COALESCE(movement_item.warehouse_id, movement_note.warehouse_id)'));
+            })
+            ->where('movement_note.status', 1)
+            ->where('movement_item.status', 1)
+            ->where('business.business_key', BusinessScope::KAMARY_PERU)
+            ->selectRaw("
+                CONCAT('exit-', movement_item.id) as id,
+                COALESCE(movement_note.exit_date, DATE(movement_note.created_at)) as movement_date,
+                'Salida' as operation,
+                CONCAT(COALESCE(movement_note.document_type, 'Salida'), ' ', COALESCE(movement_note.document_series, ''), '-', COALESCE(movement_note.document_sequence, movement_note.id)) as document,
+                COALESCE(movement_note.client_name, '') as partner,
+                movement_item.article_id,
+                COALESCE(movement_item.warehouse_id, movement_note.warehouse_id) as warehouse_id,
+                COALESCE(warehouse.name, '') as warehouse_name,
+                COALESCE(unit.symbol, unit.name, '') as unit_label,
+                COALESCE(NULLIF(movement_item.batch_code, ''), '') as lot,
+                movement_item.expiration_date,
+                COALESCE(NULLIF(movement_item.location, ''), '') as location,
+                movement_item.quantity,
+                movement_item.total
+            ");
+
+        if (Schema::hasColumn('exit_notes', 'exit_status')) {
+            $query->where('movement_note.exit_status', 'approved');
+        }
+
+        return $query;
+    }
+
+    private function toNullableInt($value): ?int
+    {
+        if ($value === null) return null;
+        $text = trim((string)$value);
+        if ($text === '') return null;
+        if (!ctype_digit(ltrim($text, '+'))) throw new \Exception("Valor entero invalido: {$value}");
+        return (int)$text;
+    }
+
+    private function normalizeDate($value): ?string
+    {
+        if ($value === null) return null;
+        $text = trim((string)$value);
+        if ($text === '') return null;
+        $timestamp = strtotime($text);
+        if ($timestamp === false) throw new \Exception("Fecha invalida: {$value}");
+        return date('Y-m-d', $timestamp);
     }
 }

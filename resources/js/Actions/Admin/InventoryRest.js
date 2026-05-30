@@ -68,6 +68,107 @@ class InventoryRest extends BasicRest {
     return result ?? []
   }
 
+  getStandardOptions = async () => {
+    if (isStoragePath() || isMagistralesPath()) return null
+    return await this.simpleGet('/api/admin/inventory/options')
+  }
+
+  previewStandardInventory = async (request) => {
+    try {
+      const { status, result } = await Fetch('/api/admin/inventory/preview', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo cargar el detalle de inventario')
+      return result.data ?? []
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return []
+    }
+  }
+
+  saveStandardInventory = async (request) => {
+    try {
+      const { status, result } = await Fetch('/api/admin/inventory', {
+        method: 'POST',
+        body: JSON.stringify(request)
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo registrar el inventario')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
+  getStandardInventory = async (id) => {
+    if (!id) return null
+    return await this.simpleGet(`/api/admin/inventory/${id}`)
+  }
+
+  importStandardFormat = async (id, formData) => {
+    try {
+      const res = await fetch(`/api/admin/inventory/${id}/import`, {
+        method: 'POST',
+        headers: {
+          'X-Xsrf-Token': xsrfToken()
+        },
+        body: formData
+      })
+      const result = JSON.parseable(await res.text())
+      if (!res.ok) throw new Error(result?.message || 'No se pudo subir el formato')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
+  applyStandardInventory = async (id) => {
+    try {
+      const { status, result } = await Fetch(`/api/admin/inventory/${id}/apply`, {
+        method: 'POST',
+        body: JSON.stringify({})
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo aplicar el inventario')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
   getStorageOptions = async () => {
     if (!isStoragePath()) return null
     return await this.simpleGet('/api/admin/storage/inventory/options')

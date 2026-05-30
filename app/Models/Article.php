@@ -26,6 +26,7 @@ class Article extends Model
         'code',
         'module_scope',
         'business_id',
+        'warehouse_id',
         'client_id',
         'name',
         'composition',
@@ -97,6 +98,11 @@ class Article extends Model
     public function business()
     {
         return $this->belongsTo(Business::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function magistralLaboratory()

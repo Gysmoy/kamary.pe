@@ -29,37 +29,60 @@ const formatAuditUser = (user) => {
   return ''
 }
 
-const Warehouses = ({ fixedWarehouse = null }) => {
+const Warehouses = ({ fixedWarehouse = null, fixedBusiness = null, defaultBranch = null }) => {
   const gridRef = useRef()
   const modalRef = useRef()
+  const locationModalRef = useRef()
 
   const idRef = useRef()
   const businessRef = useRef()
   const branchRef = useRef()
   const nameRef = useRef()
   const descriptionRef = useRef()
+  const locationIdRef = useRef()
+  const locationCodeRef = useRef()
+  const locationDescriptionRef = useRef()
+  const locationStatusRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
   const [businesses, setBusinesses] = useState([])
   const [branches, setBranches] = useState([])
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
+  const [selectedWarehouse, setSelectedWarehouse] = useState(null)
+  const [locations, setLocations] = useState([])
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
+  const fixedBusinessId = fixedBusiness?.id ? `${fixedBusiness.id}` : ''
+  const fixedBranchId = defaultBranch?.id ? `${defaultBranch.id}` : ''
 
   const isLockedWarehouse = (warehouse) => `${warehouse?.id ?? ''}` === fixedWarehouseId
 
   useEffect(() => {
     const load = async () => {
+      if (fixedBusiness?.id) {
+        setBusinesses([fixedBusiness])
+        setSelectedBusinessId(`${fixedBusiness.id}`)
+        if (defaultBranch?.id) {
+          setBranches([defaultBranch])
+          setSelectedBranchId(`${defaultBranch.id}`)
+        }
+        return
+      }
       const data = await warehousesRest.getBusinesses()
       setBusinesses((data ?? []).filter(item => item.status !== null))
     }
     load()
-  }, [])
+  }, [fixedBusiness?.id, defaultBranch?.id])
 
   const loadBranches = async (businessId, preferredBranchId = null) => {
     if (!businessId) {
       setBranches([])
       setSelectedBranchId('')
+      return
+    }
+    if (fixedBusinessId && `${businessId}` === fixedBusinessId && defaultBranch?.id) {
+      setBranches([defaultBranch])
+      setSelectedBranchId(`${preferredBranchId || defaultBranch.id}`)
       return
     }
     const data = await warehousesRest.getBranches(businessId)
@@ -90,9 +113,9 @@ const Warehouses = ({ fixedWarehouse = null }) => {
     idRef.current.value = data?.id ?? ''
     nameRef.current.value = data?.name ?? ''
     descriptionRef.current.value = data?.description ?? ''
-    const businessId = data?.branch?.business_id ? `${data.branch.business_id}` : ''
+    const businessId = data?.branch?.business_id ? `${data.branch.business_id}` : fixedBusinessId
     setSelectedBusinessId(businessId)
-    await loadBranches(businessId, data?.business_branch_id ?? null)
+    await loadBranches(businessId, data?.business_branch_id ?? fixedBranchId)
 
     $(modalRef.current).modal('show')
   }
@@ -104,7 +127,7 @@ const Warehouses = ({ fixedWarehouse = null }) => {
       id: idRef.current.value || undefined,
       name: nameRef.current.value.trim(),
       description: descriptionRef.current.value.trim(),
-      business_branch_id: selectedBranchId || null,
+      business_branch_id: selectedBranchId || fixedBranchId || null,
     }
 
     const result = await warehousesRest.save(request)
@@ -145,6 +168,59 @@ const Warehouses = ({ fixedWarehouse = null }) => {
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
+  const openLocationsModal = async (warehouse) => {
+    setSelectedWarehouse(warehouse)
+    setLocations(await warehousesRest.getLocations(warehouse.id))
+    clearLocationForm()
+    $(locationModalRef.current).modal('show')
+  }
+
+  const clearLocationForm = () => {
+    if (locationIdRef.current) locationIdRef.current.value = ''
+    if (locationCodeRef.current) locationCodeRef.current.value = ''
+    if (locationDescriptionRef.current) locationDescriptionRef.current.value = ''
+    if (locationStatusRef.current) locationStatusRef.current.checked = true
+  }
+
+  const editLocation = (location) => {
+    locationIdRef.current.value = location?.id ?? ''
+    locationCodeRef.current.value = location?.code ?? ''
+    locationDescriptionRef.current.value = location?.description ?? ''
+    locationStatusRef.current.checked = location?.status !== false && location?.status !== 0
+  }
+
+  const saveLocation = async (e) => {
+    e?.preventDefault?.()
+    if (!selectedWarehouse?.id) return
+    const result = await warehousesRest.saveLocation(selectedWarehouse.id, {
+      id: locationIdRef.current.value || undefined,
+      code: locationCodeRef.current.value.trim(),
+      description: locationDescriptionRef.current.value.trim(),
+      status: locationStatusRef.current.checked,
+    })
+    if (!result) return
+    setLocations(await warehousesRest.getLocations(selectedWarehouse.id))
+    clearLocationForm()
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
+  const deleteLocation = async (locationId) => {
+    if (!selectedWarehouse?.id) return
+    const { isConfirmed } = await Swal.fire({
+      title: 'Eliminar ubicacion',
+      text: 'Esta ubicacion se dara de baja.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar'
+    })
+    if (!isConfirmed) return
+    const result = await warehousesRest.deleteLocation(selectedWarehouse.id, locationId)
+    if (!result) return
+    setLocations(await warehousesRest.getLocations(selectedWarehouse.id))
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }
+
   const onBusinessChange = async (e) => {
     const businessId = e.target.value || ''
     setSelectedBusinessId(businessId)
@@ -181,12 +257,14 @@ const Warehouses = ({ fixedWarehouse = null }) => {
         {
           dataField: 'branch.business.name',
           caption: 'Empresa',
-          minWidth: 180
+          minWidth: 180,
+          visible: false
         },
         {
           dataField: 'branch.name',
           caption: 'Sede',
-          minWidth: 160
+          minWidth: 160,
+          visible: false
         },
         {
           dataField: 'name',
@@ -207,6 +285,15 @@ const Warehouses = ({ fixedWarehouse = null }) => {
           }
         },
         { dataField: 'description', caption: 'Descripcion', minWidth: 260 },
+        {
+          dataField: 'locations',
+          caption: 'Ubicaciones',
+          width: 120,
+          allowFiltering: false,
+          cellTemplate: (container, { data }) => {
+            container.text((data?.locations ?? []).filter(item => item.status !== null).length)
+          }
+        },
         {
           dataField: 'creator.fullname',
           caption: 'Creado por',
@@ -260,6 +347,13 @@ const Warehouses = ({ fixedWarehouse = null }) => {
             }))
 
             container.append(DxButton({
+              className: 'btn btn-xs btn-soft-secondary',
+              title: 'Ubicaciones',
+              icon: 'mdi mdi-map-marker',
+              onClick: () => openLocationsModal(data)
+            }))
+
+            container.append(DxButton({
               className: 'btn btn-xs btn-soft-danger',
               title: 'Eliminar almacen',
               icon: 'mdi mdi-delete',
@@ -275,7 +369,7 @@ const Warehouses = ({ fixedWarehouse = null }) => {
     <Modal modalRef={modalRef} title={isEditing ? 'Editar almacen' : 'Agregar almacen'} onSubmit={onModalSubmit} size='md'>
       <input ref={idRef} type='hidden' />
       <div className='row' id='warehouse-form-container'>
-        <SelectFormGroup
+        {!fixedBusinessId && <SelectFormGroup
           eRef={businessRef}
           label='Empresa'
           col='col-12'
@@ -289,8 +383,8 @@ const Warehouses = ({ fixedWarehouse = null }) => {
           {businesses.map(item => (
             <option key={`warehouse-business-${item.id}`} value={item.id}>{item.name}</option>
           ))}
-        </SelectFormGroup>
-        <SelectFormGroup
+        </SelectFormGroup>}
+        {!fixedBusinessId && <SelectFormGroup
           eRef={branchRef}
           label='Sede'
           col='col-12'
@@ -304,9 +398,60 @@ const Warehouses = ({ fixedWarehouse = null }) => {
           {branches.map(item => (
             <option key={`warehouse-branch-${item.id}`} value={item.id}>{item.name}</option>
           ))}
-        </SelectFormGroup>
+        </SelectFormGroup>}
         <InputFormGroup eRef={nameRef} label='Nombre' col='col-12' required />
         <TextareaFormGroup eRef={descriptionRef} label='Descripcion' col='col-12' rows={3} />
+      </div>
+    </Modal>
+
+    <Modal modalRef={locationModalRef} title={`Ubicaciones - ${selectedWarehouse?.name ?? ''}`} size='lg' hideFooter>
+      <div className='row align-items-end mb-3'>
+        <input ref={locationIdRef} type='hidden' />
+        <InputFormGroup eRef={locationCodeRef} label='Ubicacion' col='col-md-4' required />
+        <InputFormGroup eRef={locationDescriptionRef} label='Descripcion' col='col-md-5' />
+        <div className='form-group col-md-1 mb-2'>
+          <label className='form-label d-block'>Activo</label>
+          <div className='form-check form-switch'>
+            <input ref={locationStatusRef} className='form-check-input' type='checkbox' defaultChecked />
+          </div>
+        </div>
+        <div className='col-md-2 mb-2 d-grid'>
+          <button type='button' className='btn btn-primary' onClick={saveLocation}>
+            Guardar
+          </button>
+        </div>
+      </div>
+      <div className='table-responsive border rounded'>
+        <table className='table table-sm table-striped mb-0'>
+          <thead>
+            <tr>
+              <th style={{ width: 90 }}>ID</th>
+              <th>Ubicacion</th>
+              <th>Descripcion</th>
+              <th style={{ width: 110 }}>Estado</th>
+              <th style={{ width: 110 }}>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {locations.length === 0 && <tr><td colSpan='5' className='text-center text-muted py-3'>Sin ubicaciones</td></tr>}
+            {locations.map(location => (
+              <tr key={`warehouse-location-${location.id}`}>
+                <td>{location.id}</td>
+                <td>{location.code}</td>
+                <td>{location.description || '-'}</td>
+                <td>{location.status === null ? 'Eliminado' : (location.status ? 'Activo' : 'Inactivo')}</td>
+                <td>
+                  <button type='button' className='btn btn-xs btn-soft-primary me-1' onClick={() => editLocation(location)}>
+                    <i className='mdi mdi-pencil'></i>
+                  </button>
+                  <button type='button' className='btn btn-xs btn-soft-danger' onClick={() => deleteLocation(location.id)}>
+                    <i className='mdi mdi-delete'></i>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </Modal>
   </>)

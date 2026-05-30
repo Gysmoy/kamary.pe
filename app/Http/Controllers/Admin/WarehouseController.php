@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\BasicController;
 use App\Models\BusinessBranch;
 use App\Models\Warehouse;
+use App\Models\WarehouseLocation;
 use App\Support\BusinessScope;
 use App\Support\MagistralesWarehouse;
 use Illuminate\Http\Request;
@@ -19,8 +20,24 @@ class WarehouseController extends BasicController
 
     public function setReactViewProperties(Request $request)
     {
+        $business = BusinessScope::businessForKey(BusinessScope::KAMARY_PERU);
+        $branch = $business
+            ? BusinessBranch::query()
+                ->where('business_id', $business->id)
+                ->whereNotNull('status')
+                ->orderBy('id')
+                ->first(['id', 'business_id', 'name', 'status'])
+            : null;
+
         return [
             'fixedWarehouse' => MagistralesWarehouse::summary(),
+            'businessScopeKey' => BusinessScope::KAMARY_PERU,
+            'fixedBusiness' => $business ? [
+                'id' => $business->id,
+                'name' => $business->name,
+                'business_key' => $business->business_key,
+            ] : null,
+            'defaultBranch' => $branch,
         ];
     }
 
@@ -30,6 +47,7 @@ class WarehouseController extends BasicController
             ->with([
                 'branch:id,business_id,name,status',
                 'branch.business:id,name,status',
+                'locations:id,warehouse_id,code,description,status',
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ])
@@ -37,10 +55,7 @@ class WarehouseController extends BasicController
             ->join('users as creator', 'creator.id', '=', 'warehouses.created_by')
             ->join('users as updater', 'updater.id', '=', 'warehouses.updated_by');
 
-        $scopeKey = BusinessScope::scopedKeyForRequest(request(), [
-            '/admin/entry-note',
-            '/admin/warehouses',
-        ]);
+        $scopeKey = BusinessScope::scopedKeyForRequest(request()) ?: BusinessScope::KAMARY_PERU;
         $query->whereHas('branch.business', function ($business) use ($scopeKey) {
             $business->whereIn('business_key', BusinessScope::fixedKeys());
             if ($scopeKey) $business->where('business_key', $scopeKey);
@@ -64,13 +79,15 @@ class WarehouseController extends BasicController
         if ($name === '') {
             throw new \Exception('El nombre del almacen es obligatorio');
         }
-        if ($branchId === '' || is_null($branchId)) {
-            throw new \Exception('La sede es obligatoria');
-        }
 
-        $branch = BusinessScope::findFixedBranchForRequest($branchId, $request, [
-            '/admin/warehouses',
-        ]);
+        if ($branchId === '' || is_null($branchId)) {
+            $branch = $this->defaultKamaryPeruBranch();
+        } else {
+            $branch = BusinessScope::findFixedBranchForRequest($branchId, $request);
+            if ($branch->business?->business_key !== BusinessScope::KAMARY_PERU) {
+                throw new \Exception('El almacen debe pertenecer a Kamary Peru');
+            }
+        }
 
         if (!isset($body['id']) || !$body['id']) {
             $body['created_by'] = $userId;
@@ -147,5 +164,119 @@ class WarehouseController extends BasicController
         }
 
         return parent::delete($request, $id);
+    }
+
+    public function locations(Request $request, string $warehouseId)
+    {
+        $response = new Response();
+        try {
+            $this->assertKamaryPeruWarehouse((int)$warehouseId);
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = WarehouseLocation::query()
+                ->where('warehouse_id', $warehouseId)
+                ->orderBy('code')
+                ->get();
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function saveLocation(Request $request, string $warehouseId)
+    {
+        $response = new Response();
+        try {
+            $warehouse = $this->assertKamaryPeruWarehouse((int)$warehouseId);
+            $id = $request->input('id');
+            $code = trim((string)$request->input('code', ''));
+            if ($code === '') throw new \Exception('La ubicacion es obligatoria');
+
+            $duplicate = WarehouseLocation::query()
+                ->where('warehouse_id', $warehouse->id)
+                ->whereRaw('LOWER(TRIM(code)) = ?', [mb_strtolower($code)])
+                ->when($id, fn($query) => $query->where('id', '!=', $id))
+                ->exists();
+            if ($duplicate) throw new \Exception('La ubicacion ya existe en este almacen');
+
+            $payload = [
+                'warehouse_id' => $warehouse->id,
+                'code' => $code,
+                'description' => trim((string)$request->input('description', '')) ?: null,
+                'status' => $request->has('status') ? (bool)$request->input('status') : true,
+                'updated_by' => Auth::id(),
+            ];
+            if (!$id) $payload['created_by'] = Auth::id();
+
+            $location = WarehouseLocation::query()->updateOrCreate(
+                ['id' => $id],
+                $payload
+            );
+
+            $response->status = 200;
+            $response->message = 'Ubicacion guardada correctamente';
+            $response->data = $location;
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function deleteLocation(Request $request, string $warehouseId, string $locationId)
+    {
+        $response = new Response();
+        try {
+            $this->assertKamaryPeruWarehouse((int)$warehouseId);
+            $updated = WarehouseLocation::query()
+                ->where('warehouse_id', $warehouseId)
+                ->whereKey($locationId)
+                ->update([
+                    'status' => null,
+                    'updated_by' => Auth::id(),
+                ]);
+            if (!$updated) throw new \Exception('Ubicacion no encontrada');
+
+            $response->status = 200;
+            $response->message = 'Ubicacion eliminada correctamente';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function defaultKamaryPeruBranch(): BusinessBranch
+    {
+        $business = BusinessScope::businessForKey(BusinessScope::KAMARY_PERU);
+        if (!$business) throw new \Exception('No existe empresa Kamary Peru activa');
+
+        $branch = BusinessBranch::query()
+            ->where('business_id', $business->id)
+            ->whereNotNull('status')
+            ->orderBy('id')
+            ->first();
+        if (!$branch) throw new \Exception('No existe sede activa para Kamary Peru');
+
+        return $branch;
+    }
+
+    private function assertKamaryPeruWarehouse(int $warehouseId): Warehouse
+    {
+        $warehouse = Warehouse::query()
+            ->with('branch.business')
+            ->whereKey($warehouseId)
+            ->whereNotNull('status')
+            ->first();
+        if (!$warehouse || $warehouse->branch?->business?->business_key !== BusinessScope::KAMARY_PERU) {
+            throw new \Exception('El almacen no pertenece a Kamary Peru');
+        }
+
+        return $warehouse;
     }
 }

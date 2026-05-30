@@ -65,6 +65,28 @@ class ArticlesRest extends BasicRest {
     }
   }
 
+  getWarehouses = async () => {
+    try {
+      const { status, result } = await Fetch('/api/admin/warehouses/paginate', {
+        method: 'POST',
+        body: JSON.stringify({
+          isLoadingAll: true,
+          take: 500,
+          sort: [{ selector: 'name', desc: false }]
+        })
+      })
+      if (!status) throw new Error(result?.message || 'No se pudieron cargar los almacenes')
+      return result.data ?? []
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return []
+    }
+  }
+
   getUnits = async () => {
     try {
       const { status, result } = await Fetch(`/api/${this.unitsPath()}/paginate`, {

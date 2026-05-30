@@ -32,6 +32,56 @@ class WarehousesRest extends BasicRest {
     const result = await this.simpleGet(`/api/admin/businesses/${businessId}/branches`)
     return result ?? []
   }
+
+  getLocations = async (warehouseId) => {
+    if (!warehouseId) return []
+    return await this.simpleGet(`/api/admin/warehouses/${warehouseId}/locations`) ?? []
+  }
+
+  saveLocation = async (warehouseId, request) => {
+    try {
+      const { status, result } = await Fetch(`/api/admin/warehouses/${warehouseId}/locations`, {
+        method: 'POST',
+        body: JSON.stringify(request)
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo guardar la ubicacion')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return result.data
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
+  deleteLocation = async (warehouseId, locationId) => {
+    try {
+      const { status, result } = await Fetch(`/api/admin/warehouses/${warehouseId}/locations/${locationId}`, {
+        method: 'DELETE'
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo eliminar la ubicacion')
+      toast.success("Correcto", {
+        description: result.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return true
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return false
+    }
+  }
 }
 
 export default WarehousesRest

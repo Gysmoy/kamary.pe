@@ -37,6 +37,7 @@ class ArticleController extends BasicController
     public function setPaginationInstance(string $model)
     {
         $hasBusinessColumn = Schema::hasColumn('articles', 'business_id');
+        $hasWarehouseColumn = Schema::hasColumn('articles', 'warehouse_id');
         $with = [
             'laboratory:id,name,code',
             'magistralLaboratory:id,description,code',
@@ -54,6 +55,9 @@ class ArticleController extends BasicController
         if ($hasBusinessColumn) {
             $with[] = 'business:id,business_key,name,trade_name,status';
         }
+        if ($hasWarehouseColumn) {
+            $with[] = 'warehouse:id,business_branch_id,name,status';
+        }
 
         $query = $model::select('articles.*')
             ->distinct()
@@ -65,6 +69,9 @@ class ArticleController extends BasicController
 
         if ($hasBusinessColumn) {
             $query->leftJoin('businesses as business', 'business.id', '=', 'articles.business_id');
+        }
+        if ($hasWarehouseColumn) {
+            $query->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'articles.warehouse_id');
         }
 
         if ($this->moduleScope === 'magistrales') {
@@ -101,6 +108,7 @@ class ArticleController extends BasicController
             $userId = Auth::id();
             $hasArticleModuleScope = Schema::hasColumn('articles', 'module_scope');
             $hasArticleBusiness = Schema::hasColumn('articles', 'business_id');
+            $hasArticleWarehouse = Schema::hasColumn('articles', 'warehouse_id');
             $defaultBusinessId = $hasArticleBusiness ? $this->defaultBusinessIdForScope() : null;
             $hasMagistralStatus = Schema::hasColumn('articles', 'magistral_status');
 
@@ -118,6 +126,11 @@ class ArticleController extends BasicController
             $principleKey = $mapping['active_principle'] ?? null;
             $unitKey = $mapping['unit'] ?? null;
             $statusKey = $mapping['status'] ?? null;
+            $warehouseKey = $mapping['warehouse'] ?? null;
+
+            if ($this->moduleScope === 'standard' && $hasArticleWarehouse && !$warehouseKey) {
+                throw new \Exception('Debes mapear el campo almacen');
+            }
 
             $created = 0;
             $updated = 0;
@@ -172,6 +185,18 @@ class ArticleController extends BasicController
                 $principleByLabAndName[$key] = $principle->id;
             }
 
+            $warehouseByName = [];
+            if ($this->moduleScope === 'standard' && $hasArticleWarehouse) {
+                $warehouses = $this->kamaryPeruWarehouses()->get(['warehouses.id', 'warehouses.name']);
+                foreach ($warehouses as $warehouse) {
+                    $normalizedWarehouseName = $this->normalizeText($warehouse->name);
+                    if ($normalizedWarehouseName !== '') $warehouseByName[$normalizedWarehouseName] = $warehouse->id;
+                }
+                if (count($warehouseByName) === 0) {
+                    throw new \Exception('Debes registrar al menos un almacen de Kamary Peru antes de importar articulos');
+                }
+            }
+
             foreach ($rows as $idx => $row) {
                 if (!is_array($row)) {
                     $skipped++;
@@ -197,6 +222,23 @@ class ArticleController extends BasicController
 
                 $unitName = $unitKey ? trim((string)($row[$unitKey] ?? '')) : '';
                 if ($unitName === '') $unitName = 'UNIDAD';
+
+                $warehouseId = null;
+                if ($this->moduleScope === 'standard' && $hasArticleWarehouse) {
+                    $warehouseName = trim((string)($row[$warehouseKey] ?? ''));
+                    if ($warehouseName === '') {
+                        $skipped++;
+                        $errors[] = "Fila " . ($idx + 1) . ": almacen vacio";
+                        continue;
+                    }
+
+                    $warehouseId = $warehouseByName[$this->normalizeText($warehouseName)] ?? null;
+                    if (!$warehouseId) {
+                        $skipped++;
+                        $errors[] = "Fila " . ($idx + 1) . ": almacen no existe en Kamary Peru ({$warehouseName})";
+                        continue;
+                    }
+                }
 
                 $status = true;
                 $magistralStatus = 'vigente';
@@ -292,6 +334,7 @@ class ArticleController extends BasicController
                     }
                     if ($hasArticleModuleScope) $updateData['module_scope'] = $this->moduleScope;
                     if ($hasArticleBusiness) $updateData['business_id'] = $defaultBusinessId;
+                    if ($hasArticleWarehouse) $updateData['warehouse_id'] = $warehouseId;
                     if ($hasMagistralStatus && $this->moduleScope === 'magistrales') {
                         $updateData['magistral_status'] = $magistralStatus;
                     }
@@ -316,6 +359,7 @@ class ArticleController extends BasicController
                     ];
                     if ($hasArticleModuleScope) $createData['module_scope'] = $this->moduleScope;
                     if ($hasArticleBusiness) $createData['business_id'] = $defaultBusinessId;
+                    if ($hasArticleWarehouse) $createData['warehouse_id'] = $warehouseId;
                     if ($hasMagistralStatus && $this->moduleScope === 'magistrales') {
                         $createData['magistral_status'] = $magistralStatus;
                     }
@@ -369,6 +413,7 @@ class ArticleController extends BasicController
         $activePrincipleId = $body['active_principle_id'] ?? null;
         $unitId = $this->toNullableInt($body['unit_id'] ?? null);
         $businessId = $this->toNullableInt($body['business_id'] ?? null);
+        $warehouseId = $this->toNullableInt($body['warehouse_id'] ?? null);
         $magistralCategoryId = $this->toNullableInt($body['magistral_category_id'] ?? null);
         $requestedSubCategory = trim((string)($body['sub_category'] ?? ''));
         $magistralPresentation = $this->canonicalMagistralPresentation($body['magistral_presentation'] ?? null);
@@ -438,6 +483,14 @@ class ArticleController extends BasicController
 
         if ($this->moduleScope === 'standard' && $code === '') {
             $code = $this->nextStandardArticleCode($id);
+        }
+
+        if ($this->moduleScope === 'standard' && Schema::hasColumn('articles', 'warehouse_id')) {
+            if (!$warehouseId) throw new \Exception('El almacen es obligatorio');
+            $warehouse = $this->assertKamaryPeruWarehouse($warehouseId);
+            $businessId = (int)$warehouse->branch->business_id;
+        } else {
+            $warehouseId = null;
         }
 
         if ($code === '') throw new \Exception('El codigo de articulo es obligatorio');
@@ -519,6 +572,7 @@ class ArticleController extends BasicController
         $body['code'] = $code;
         $body['module_scope'] = $this->moduleScope;
         $body['business_id'] = $resolvedBusinessId;
+        $body['warehouse_id'] = $warehouseId;
         $body['name'] = $name;
         $body['unit_id'] = $unitId;
         $body['composition'] = trim((string)($body['composition'] ?? '')) ?: null;
@@ -596,6 +650,7 @@ class ArticleController extends BasicController
         foreach ([
             'module_scope',
             'business_id',
+            'warehouse_id',
             'client_id',
             'magistral_status',
             'composition',
@@ -1138,6 +1193,32 @@ class ArticleController extends BasicController
             : BusinessScope::KAMARY_PERU;
 
         return BusinessScope::businessForKey($scopeKey)?->id;
+    }
+
+    private function kamaryPeruWarehouses()
+    {
+        return Warehouse::query()
+            ->with('branch.business')
+            ->join('business_branches as branch', 'branch.id', '=', 'warehouses.business_branch_id')
+            ->join('businesses as business', 'business.id', '=', 'branch.business_id')
+            ->where('business.business_key', BusinessScope::KAMARY_PERU)
+            ->whereNotNull('business.status')
+            ->whereNotNull('branch.status')
+            ->whereNotNull('warehouses.status');
+    }
+
+    private function assertKamaryPeruWarehouse(int $warehouseId): Warehouse
+    {
+        $warehouse = Warehouse::query()
+            ->with('branch.business')
+            ->whereKey($warehouseId)
+            ->whereNotNull('status')
+            ->first();
+        if (!$warehouse || $warehouse->branch?->business?->business_key !== BusinessScope::KAMARY_PERU) {
+            throw new \Exception('El almacen seleccionado no pertenece a Kamary Peru');
+        }
+
+        return $warehouse;
     }
 
     private function nextMagistralArticleCode($articleType = null, $currentId = null): string
