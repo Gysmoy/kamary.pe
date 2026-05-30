@@ -8,12 +8,15 @@ use App\Models\Business;
 use App\Models\BusinessBranch;
 use App\Models\Client;
 use App\Models\ServiceOrder;
+use App\Models\StorageInventoryCount;
+use App\Models\StorageInventoryCountItem;
 use App\Models\StorageLocation;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Support\BusinessScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class StorageServiceKmFlowTest extends TestCase
@@ -168,6 +171,62 @@ class StorageServiceKmFlowTest extends TestCase
 
         $this->assertContains('PRE-001', $codes);
         $this->assertNotContains('PRE-002', $codes);
+    }
+
+    public function test_storage_inventory_imports_km_adjustment_format(): void
+    {
+        $user = $this->user();
+        $context = $this->storageContext($user);
+
+        $count = StorageInventoryCount::create([
+            'code' => 'INV-KM-001',
+            'business_branch_id' => $context['branch']->id,
+            'warehouse_id' => $context['warehouse']->id,
+            'client_id' => $context['clientA']->id,
+            'location' => 'A-01',
+            'count_date' => now()->toDateString(),
+            'inventory_status' => 'En espera',
+            'status' => true,
+            'created_by' => $user->id,
+            'updated_by' => $user->id,
+        ]);
+
+        $item = StorageInventoryCountItem::create([
+            'storage_inventory_count_id' => $count->id,
+            'warehouse_id' => $context['warehouse']->id,
+            'lot' => 'L001',
+            'expiration_date' => '2027-11-30',
+            'article_name' => 'Producto KM',
+            'client_name' => $context['clientA']->full_name,
+            'unit_label' => 'UNIDAD',
+            'location' => 'A-01',
+            'temperature_range' => '15°C a 25°C',
+            'system_stock' => 10,
+            'real_stock' => 0,
+            'difference' => -10,
+            'status' => true,
+        ]);
+
+        $csv = implode("\n", [
+            'Formato de ajuste de inventario - Camara 01',
+            '',
+            'ID,LOTE,F. VENCIMIENTO,ARTÍCULO,CLIENTE,U. MEDIDA,UBICACION,TEMPERATURA,STOCK SISTEMA,STOCK REAL',
+            "{$item->id},L001,2027-11-30,Producto KM,{$context['clientA']->full_name},UNIDAD,A-01,15°C a 25°C,10,12.5",
+        ]);
+        $path = tempnam(sys_get_temp_dir(), 'km_inventory_');
+        file_put_contents($path, "\xEF\xBB\xBF" . $csv);
+
+        $this->actingAs($user)->withoutMiddleware()
+            ->post("/api/admin/storage/inventory/{$count->id}/import", [
+                'format_file' => new UploadedFile($path, 'formato_km.csv', 'text/csv', null, true),
+            ])
+            ->assertStatus(200)
+            ->assertJson(['status' => 200]);
+
+        $item->refresh();
+        $this->assertEquals(12.5, (float) $item->real_stock);
+        $this->assertEquals(2.5, (float) $item->difference);
+        $this->assertEquals('Con diferencias', $count->fresh()->inventory_status);
     }
 
     private function serviceOrder(array $context, User $user, string $orderType, string $code): ServiceOrder

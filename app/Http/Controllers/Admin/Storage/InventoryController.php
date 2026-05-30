@@ -221,24 +221,29 @@ class InventoryController extends BasicController
 
     public function format(Request $request, string $id)
     {
-        $count = $this->storageInventoryQuery()->with(['items' => fn($query) => $query->whereNotNull('status')->orderBy('id')])
+        $count = $this->storageInventoryQuery()->with([
+            'warehouse:id,name',
+            'items' => fn($query) => $query->whereNotNull('status')->orderBy('id'),
+        ])
             ->findOrFail($id);
-        $filename = "{$count->code}_inventario.csv";
+        $filename = "{$count->code}_formato_ajuste_inventario.csv";
 
         return response()->streamDownload(function () use ($count) {
             $output = fopen('php://output', 'w');
             fwrite($output, "\xEF\xBB\xBF");
+            fputcsv($output, ['Formato de ajuste de inventario - ' . ($count->warehouse?->name ?: 'Almacen')]);
+            fputcsv($output, []);
             fputcsv($output, [
                 'ID',
                 'LOTE',
-                'F_VENCIMIENTO',
-                'ARTICULO',
+                'F. VENCIMIENTO',
+                'ARTÍCULO',
                 'CLIENTE',
-                'U_MEDIDA',
+                'U. MEDIDA',
                 'UBICACION',
                 'TEMPERATURA',
-                'STOCK_SISTEMA',
-                'STOCK_REAL',
+                'STOCK SISTEMA',
+                'STOCK REAL',
             ]);
 
             foreach ($count->items as $item) {
@@ -252,7 +257,7 @@ class InventoryController extends BasicController
                     $item->location,
                     $item->temperature_range,
                     number_format((float)$item->system_stock, 3, '.', ''),
-                    number_format((float)$item->real_stock, 3, '.', ''),
+                    '',
                 ]);
             }
             fclose($output);
@@ -273,19 +278,29 @@ class InventoryController extends BasicController
             $handle = fopen($path, 'r');
             if (!$handle) throw new \Exception('No se pudo leer el archivo');
 
+            $headerMap = null;
             $updated = 0;
             $rowNumber = 0;
 
             DB::beginTransaction();
             while (($row = fgetcsv($handle)) !== false) {
                 $rowNumber++;
-                if ($rowNumber === 1) continue;
-                if (count($row) < 10) continue;
+                if ($this->isInventoryFormatEmptyRow($row)) continue;
 
-                $itemId = $this->toNullableInt($row[0] ?? null);
+                if (!$headerMap) {
+                    $headerMap = $this->inventoryFormatHeaderMap($row);
+                    continue;
+                }
+
+                $itemId = $this->toNullableInt($row[$headerMap['id']] ?? null);
                 if (!$itemId) continue;
 
-                $realStock = $this->toNullableDecimal($row[9] ?? null) ?? 0;
+                $realStockRaw = trim((string)($row[$headerMap['real_stock']] ?? ''));
+                if ($realStockRaw === '') {
+                    throw new \Exception("Debes ingresar STOCK REAL en la fila {$rowNumber}");
+                }
+
+                $realStock = $this->toNullableDecimal($realStockRaw) ?? 0;
                 if ($realStock < 0) throw new \Exception("El stock real de la fila {$rowNumber} no puede ser negativo");
 
                 $item = StorageInventoryCountItem::where('storage_inventory_count_id', $count->id)
@@ -300,6 +315,13 @@ class InventoryController extends BasicController
                 $updated++;
             }
             fclose($handle);
+
+            if (!$headerMap) {
+                throw new \Exception('El formato no tiene cabecera valida. Debe incluir ID y STOCK REAL');
+            }
+            if ($updated === 0) {
+                throw new \Exception('No se actualizo ningun item del inventario');
+            }
 
             $hasDifferences = StorageInventoryCountItem::where('storage_inventory_count_id', $count->id)
                 ->whereNotNull('status')
@@ -802,7 +824,51 @@ class InventoryController extends BasicController
         if ($value === null) return null;
         $text = trim((string)$value);
         if ($text === '') return null;
+        if (substr_count($text, ',') === 1 && substr_count($text, '.') === 0) {
+            $text = str_replace(',', '.', $text);
+        }
         if (!is_numeric($text)) throw new \Exception("Valor numerico invalido: {$value}");
         return (float)$text;
+    }
+
+    private function inventoryFormatHeaderMap(array $row): ?array
+    {
+        $normalized = array_map(fn($value) => $this->normalizeInventoryFormatHeader($value), $row);
+        $idIndex = array_search('ID', $normalized, true);
+        $realStockIndex = array_search('STOCKREAL', $normalized, true);
+
+        if ($idIndex === false || $realStockIndex === false) {
+            return null;
+        }
+
+        return [
+            'id' => $idIndex,
+            'real_stock' => $realStockIndex,
+        ];
+    }
+
+    private function normalizeInventoryFormatHeader($value): string
+    {
+        $text = mb_strtoupper(trim((string)$value), 'UTF-8');
+        $text = strtr($text, [
+            'Á' => 'A',
+            'É' => 'E',
+            'Í' => 'I',
+            'Ó' => 'O',
+            'Ú' => 'U',
+            'Ü' => 'U',
+            'Ñ' => 'N',
+        ]);
+
+        return preg_replace('/[^A-Z0-9]+/', '', $text) ?? '';
+    }
+
+    private function isInventoryFormatEmptyRow(array $row): bool
+    {
+        foreach ($row as $value) {
+            if (trim((string)$value) !== '') return false;
+        }
+
+        return true;
     }
 }

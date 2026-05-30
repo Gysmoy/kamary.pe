@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
@@ -26,6 +27,9 @@ const formatDate = (value) => {
   return date.toLocaleDateString('es-PE', { year: 'numeric', month: '2-digit', day: '2-digit' })
 }
 const formatQty = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 3 })
+const storageInventoryHeaders = ['ID', 'LOTE', 'F. VENCIMIENTO', 'ARTÍCULO', 'CLIENTE', 'U. MEDIDA', 'UBICACION', 'TEMPERATURA', 'STOCK SISTEMA', 'STOCK REAL']
+
+const safeExcelFileName = (value) => `${value || 'inventario'}`.replace(/[\\/:*?"<>|]+/g, '-')
 
 const mapStoredItem = (item) => ({
   id: item.id,
@@ -299,20 +303,72 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
 
   const downloadFormat = () => {
     if (!selectedCount?.id) return
-    window.open(`/api/admin/storage/inventory/${selectedCount.id}/format`, '_blank', 'noopener,noreferrer')
+    const warehouseName = selectedCount?.warehouse?.name
+      || warehouses.find(warehouse => `${warehouse.id}` === `${warehouseId}`)?.name
+      || 'Almacen'
+    const worksheetRows = [
+      [`Formato de ajuste de inventario - ${warehouseName}`],
+      [],
+      storageInventoryHeaders,
+      ...rows.map(row => [
+        row.id ?? '',
+        row.lot ?? '',
+        row.expiration_date ?? '',
+        row.article_name ?? '',
+        row.client_name || selectedClientName || '',
+        row.unit_label ?? '',
+        row.location ?? '',
+        row.temperature_range ?? '',
+        Number(row.system_stock ?? 0),
+        '',
+      ]),
+    ]
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetRows)
+    worksheet['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: storageInventoryHeaders.length - 1 } }]
+    worksheet['!cols'] = [
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 16 },
+      { wch: 44 },
+      { wch: 28 },
+      { wch: 12 },
+      { wch: 14 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 14 },
+    ]
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Inventario')
+    XLSX.writeFile(workbook, `${safeExcelFileName(selectedCountCode)}_formato_ajuste_inventario.xlsx`)
   }
 
   const uploadFormat = async (event) => {
     const file = event.target.files?.[0]
     event.target.value = ''
     if (!file || !selectedCount?.id) return
-    const formData = new FormData()
-    formData.append('format_file', file)
-    const result = await inventoryRest.importStorageFormat(selectedCount.id, formData)
-    if (!result) return
-    setSelectedCount(result)
-    setRows((result.items ?? []).map(mapStoredItem))
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    try {
+      const extension = file.name.split('.').pop()?.toLowerCase()
+      let csvContent = ''
+      if (extension === 'csv') {
+        csvContent = await file.text()
+      } else {
+        const content = await file.arrayBuffer()
+        const workbook = XLSX.read(content, { type: 'array' })
+        const firstSheet = workbook.SheetNames?.[0]
+        if (!firstSheet) throw new Error('El archivo no contiene hojas para procesar')
+        csvContent = XLSX.utils.sheet_to_csv(workbook.Sheets[firstSheet], { FS: ',', blankrows: false })
+      }
+      const csvFile = new File([`\ufeff${csvContent}`], `${safeExcelFileName(selectedCountCode)}_formato_ajuste_inventario.csv`, { type: 'text/csv;charset=utf-8' })
+      const formData = new FormData()
+      formData.append('format_file', csvFile)
+      const result = await inventoryRest.importStorageFormat(selectedCount.id, formData)
+      if (!result) return
+      setSelectedCount(result)
+      setRows((result.items ?? []).map(mapStoredItem))
+      $(gridRef.current).dxDataGrid('instance').refresh()
+    } catch (error) {
+      await Swal.fire({ icon: 'error', title: 'Formato invalido', text: error.message })
+    }
   }
 
   const applyInventory = async () => {
@@ -499,7 +555,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           .storage-inventory-template-body { padding: 0 1rem 1rem; }
         }
       `}</style>
-      <input ref={fileRef} type='file' accept='.csv' hidden onChange={uploadFormat} />
+      <input ref={fileRef} type='file' accept='.xlsx,.xls,.csv' hidden onChange={uploadFormat} />
       <div className='d-flex flex-wrap justify-content-center gap-4 storage-inventory-modal-actions'>
         {!selectedCount && <button type='button' className='btn btn-primary' onClick={registerInventory}>
           <i className='mdi mdi-plus me-1'></i>
@@ -566,10 +622,10 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
 
       <div className='d-flex flex-wrap gap-4 storage-inventory-toolbar'>
         <button type='button' className='btn btn-outline-success px-4' disabled={!selectedCount?.id} onClick={downloadFormat}>
-          Descargar Formato
+          Descargar Excel
         </button>
         <button type='button' className='btn btn-outline-success px-4' disabled={!selectedCount?.id || selectedCountApplied} onClick={() => fileRef.current?.click()}>
-          Subir Formato
+          Subir Excel
         </button>
       </div>
 
