@@ -14,6 +14,28 @@ class ArticlesRest extends BasicRest {
 
   laboratoriesPaginateApi = () => `/api/${this.laboratoriesPath()}/paginate`
 
+  getLaboratories = async () => {
+    try {
+      const { status, result } = await Fetch(this.laboratoriesPaginateApi(), {
+        method: 'POST',
+        body: JSON.stringify({
+          isLoadingAll: true,
+          take: 1000,
+          sort: [{ selector: this.laboratoriesSearchBy(), desc: false }],
+        })
+      })
+      if (!status) throw new Error(result?.message || 'No se pudieron cargar los laboratorios')
+      return result.data ?? []
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message,
+        duration: 3000,
+        richColors: true,
+      });
+      return []
+    }
+  }
+
   unitsPath = () => isMagistralesPath()
     ? 'admin/magistrales/units'
     : (isStoragePath() ? 'admin/storage/units' : 'admin/units')

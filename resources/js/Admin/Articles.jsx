@@ -355,6 +355,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const stockModalRef = useRef()
   const importModalRef = useRef()
   const importFileRef = useRef()
+  const importLaboratoryRef = useRef()
   const principleCreateModalRef = useRef()
   const unitCreateModalRef = useRef()
   const manufacturerCreateModalRef = useRef()
@@ -441,6 +442,21 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const [importRows, setImportRows] = useState([])
   const [importHeaders, setImportHeaders] = useState([])
   const [importFileName, setImportFileName] = useState('')
+  const [filterLaboratories, setFilterLaboratories] = useState([])
+  const [filterPrinciples, setFilterPrinciples] = useState([])
+  const [standardFilterDraft, setStandardFilterDraft] = useState({
+    laboratoryId: '',
+    principleId: '',
+    code: '',
+  })
+  const [standardAppliedFilters, setStandardAppliedFilters] = useState({
+    laboratoryId: '',
+    principleId: '',
+    code: '',
+  })
+  const [selectedImportBusinessId, setSelectedImportBusinessId] = useState('')
+  const [selectedImportLaboratoryName, setSelectedImportLaboratoryName] = useState('')
+  const [selectedImportType, setSelectedImportType] = useState('upsert')
   const [mapping, setMapping] = useState({
     code: '',
     name: '',
@@ -466,6 +482,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const loadWarehouses = async () => {
     const rows = (await articlesRest.getWarehouses()).filter(item => item.status !== null)
     setWarehouses(rows)
+    return rows
+  }
+
+  const loadStandardFilterOptions = async () => {
+    const rows = (await articlesRest.getLaboratories()).filter(item => item.status !== null)
+    setFilterLaboratories(rows)
     return rows
   }
 
@@ -548,6 +570,19 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     setMagistralAppliedFilters({ ...magistralFilterDraft })
   }
 
+  const onStandardFilterLaboratoryChanged = async (value) => {
+    setStandardFilterDraft(prev => ({ ...prev, laboratoryId: value, principleId: '' }))
+    setFilterPrinciples([])
+    if (!value) return
+    const rows = await articlesRest.getPrinciplesByLaboratory(value)
+    setFilterPrinciples((rows ?? []).filter(item => item.status !== null))
+  }
+
+  const onStandardFilterSubmitted = (e) => {
+    e.preventDefault()
+    setStandardAppliedFilters({ ...standardFilterDraft })
+  }
+
   const loadStorageProductOptions = async () => {
     const [clients, manufacturers] = await Promise.all([
       articlesRest.getStorageClients(),
@@ -568,6 +603,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     if (isStorageProduct || isMagistrales) return
     loadBusinesses()
     loadWarehouses()
+    loadStandardFilterOptions()
   }, [isStorageProduct, isMagistrales])
 
   const onModalOpen = async (data = null, mode = 'edit') => {
@@ -820,10 +856,21 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     setIsLoadingStock(false)
   }
 
-  const onImportModalOpen = () => {
+  const onImportModalOpen = async () => {
+    let availableBusinesses = businesses
+    if (!isStorageProduct && !isMagistrales && availableBusinesses.length === 0) {
+      availableBusinesses = await loadBusinesses()
+    }
+    if (!isStorageProduct && !isMagistrales && warehouses.length === 0) {
+      await loadWarehouses()
+    }
+
     setImportRows([])
     setImportHeaders([])
     setImportFileName('')
+    setSelectedImportBusinessId(defaultBusinessId(availableBusinesses))
+    setSelectedImportLaboratoryName('')
+    setSelectedImportType('upsert')
     setMapping({
       code: '',
       name: '',
@@ -835,6 +882,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     })
     if (importFileRef.current) importFileRef.current.value = ''
     $(importModalRef.current).modal('show')
+    setTimeout(() => {
+      if (importLaboratoryRef.current && $(importLaboratoryRef.current).data('select2')) {
+        $(importLaboratoryRef.current).val(null).trigger('change.select2')
+      }
+    }, 0)
   }
 
   const autoMapHeaders = (headers) => {
@@ -894,6 +946,91 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     }
   }
 
+  const selectedImportWarehouseName = () => {
+    if (isStorageProduct || isMagistrales) return ''
+    const activeWarehouses = warehouses.filter(item => item.status !== null)
+    const byBusiness = selectedImportBusinessId
+      ? activeWarehouses.find(item => `${item?.branch?.business?.id ?? item?.branch?.business_id ?? ''}` === `${selectedImportBusinessId}`)
+      : null
+    return (byBusiness ?? activeWarehouses[0])?.name ?? ''
+  }
+
+  const rowsPreparedForImport = () => {
+    let preparedRows = importRows
+    const preparedMapping = { ...mapping }
+
+    if (!isStorageProduct && !isMagistrales && !preparedMapping.warehouse) {
+      const warehouseName = selectedImportWarehouseName()
+      if (!warehouseName) {
+        throw new Error('No hay almacen activo para la empresa seleccionada')
+      }
+      preparedRows = preparedRows.map(row => ({ ...row, __warehouse__: warehouseName }))
+      preparedMapping.warehouse = '__warehouse__'
+    }
+
+    if (selectedImportLaboratoryName && !preparedMapping.laboratory) {
+      preparedRows = preparedRows.map(row => ({ ...row, __laboratory__: selectedImportLaboratoryName }))
+      preparedMapping.laboratory = '__laboratory__'
+    }
+
+    return { preparedRows, preparedMapping }
+  }
+
+  const articleImportHeaders = () => isMagistrales
+    ? ['Codigo', 'Laboratorio', 'Descripcion', 'Unidad', 'Estado']
+    : ['Codigo', 'Almacen', 'Laboratorio', 'Principio activo', 'Descripcion', 'Unidad', 'Estado']
+
+  const articleExportRow = (row) => {
+    const common = [
+      row?.code ?? '',
+      getArticleLaboratoryLabel(row, isMagistrales) || row?.laboratory_name || '',
+      row?.name ?? '',
+      row?.unit?.symbol || row?.unit?.name || '',
+      row?.status === false || row?.status === 0 ? 'Inactivo' : 'Activo',
+    ]
+
+    if (isMagistrales) return common
+
+    return [
+      row?.code ?? '',
+      row?.warehouse?.name ?? '',
+      row?.laboratory?.name ?? '',
+      row?.activePrinciple?.name ?? row?.active_principle?.name ?? '',
+      row?.name ?? '',
+      row?.unit?.symbol || row?.unit?.name || '',
+      row?.status === false || row?.status === 0 ? 'Inactivo' : 'Activo',
+    ]
+  }
+
+  const onArticleExport = async () => {
+    let rows = []
+    try {
+      const result = await articlesRest.paginate({
+        isLoadingAll: true,
+        take: 10000,
+        sort: [{ selector: 'code', desc: false }],
+        filter: isMagistrales ? magistralesFilterValue : (!isStorageProduct ? standardFilterValue : null),
+      })
+      rows = Array.isArray(result?.data) ? result.data : []
+    } catch (error) {
+      rows = []
+    }
+
+    if (!rows.length) {
+      const instance = $(gridRef.current).dxDataGrid('instance')
+      rows = instance?.getDataSource()?.items?.() ?? []
+    }
+
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      articleImportHeaders(),
+      ...rows.map(articleExportRow),
+    ])
+    worksheet['!cols'] = articleImportHeaders().map(header => ({ wch: Math.max(14, header.length + 4) }))
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Articulos')
+    XLSX.writeFile(workbook, isMagistrales ? 'articulos_magistrales.xlsx' : 'articulos_kamary_peru.xlsx')
+  }
+
   const onImportSubmit = async (e) => {
     e.preventDefault()
 
@@ -905,16 +1042,18 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       Swal.fire({ icon: 'warning', title: 'Campo obligatorio', text: 'Debes mapear el campo codigo' })
       return
     }
-    if (!isStorageProduct && !isMagistrales && !mapping.warehouse) {
-      Swal.fire({ icon: 'warning', title: 'Campo obligatorio', text: 'Debes mapear el campo almacen' })
-      return
-    }
 
     setIsImporting(true)
-    const result = await articlesRest.importRows({
-      rows: importRows,
-      mapping
-    })
+    let result = null
+    try {
+      const { preparedRows, preparedMapping } = rowsPreparedForImport()
+      result = await articlesRest.importRows({
+        rows: preparedRows,
+        mapping: preparedMapping
+      })
+    } catch (error) {
+      await Swal.fire({ icon: 'warning', title: 'Dato obligatorio', text: error.message })
+    }
     setIsImporting(false)
     if (!result) return
 
@@ -1255,7 +1394,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     caption: 'Acciones',
     width: isStorageProduct ? '135px' : (isMagistrales ? '95px' : '120px'),
     minWidth: isStorageProduct ? 135 : undefined,
-    fixed: isStorageProduct,
+    fixed: true,
     fixedPosition: 'left',
     cellTemplate: (container, { data }) => {
       container.css({ overflow: 'visible', textOverflow: 'unset', whiteSpace: 'nowrap' })
@@ -1395,6 +1534,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
   const standardColumns = [
     { dataField: 'id', caption: 'ID', visible: false },
+    actionsColumn,
     {
       dataField: 'code',
       caption: 'Codigo',
@@ -1434,7 +1574,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     presentationsColumn,
     ...auditColumns,
     statusColumn,
-    actionsColumn,
   ]
 
   const storageProductColumns = [
@@ -1461,6 +1600,15 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     () => isMagistrales ? buildMagistralFilterValue(magistralAppliedFilters) : null,
     [isMagistrales, magistralAppliedFilters.articleType, magistralAppliedFilters.status]
   )
+  const standardFilterValue = useMemo(() => {
+    if (isStorageProduct || isMagistrales) return null
+    return joinDxFilters([
+      standardAppliedFilters.laboratoryId ? ['laboratory_id', '=', Number(standardAppliedFilters.laboratoryId)] : null,
+      standardAppliedFilters.principleId ? ['active_principle_id', '=', Number(standardAppliedFilters.principleId)] : null,
+      standardAppliedFilters.code?.trim() ? ['code', 'contains', standardAppliedFilters.code.trim()] : null,
+    ], 'and')
+  }, [isStorageProduct, isMagistrales, standardAppliedFilters.laboratoryId, standardAppliedFilters.principleId, standardAppliedFilters.code])
+  const articleFilterValue = isMagistrales ? magistralesFilterValue : standardFilterValue
 
   const renderMagistralesArticleForm = () => (
     <fieldset className='magistrales-article-form' data-select2-local-dropdown disabled={isViewing}>
@@ -1681,6 +1829,108 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   )
 
   return (<>
+    <style>{`
+      .article-quick-actions {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+        margin-bottom: 1.25rem;
+      }
+
+      .article-quick-action {
+        align-items: center;
+        background: #252851;
+        border: 0;
+        border-radius: 0;
+        color: #fff;
+        display: flex;
+        font-size: 1rem;
+        font-weight: 600;
+        justify-content: space-between;
+        min-height: 68px;
+        padding: 0 1.25rem;
+        text-align: left;
+        width: 100%;
+      }
+
+      .article-quick-action:hover,
+      .article-quick-action:focus {
+        background: #1d2148;
+        color: #fff;
+      }
+
+      .article-quick-action-main {
+        align-items: center;
+        display: inline-flex;
+        gap: 0.55rem;
+        min-width: 0;
+      }
+
+      .article-quick-action-main span {
+        overflow-wrap: anywhere;
+      }
+
+      .article-quick-action-icon {
+        flex: 0 0 auto;
+        font-size: 1.65rem;
+        opacity: 0.95;
+      }
+
+      .article-filter-card {
+        background: #fff;
+        border: 1px solid #e6e9ef;
+        border-radius: 0;
+        margin-bottom: 1rem;
+        padding: 1rem 1.25rem 1.15rem;
+      }
+
+      .article-filter-card .form-label,
+      .article-import-form .form-label {
+        color: #30364d;
+        font-size: 0.84rem;
+        font-weight: 600;
+      }
+
+      .article-import-modal {
+        border: 0;
+        border-radius: 0;
+      }
+
+      .article-import-header {
+        background: #252851;
+        color: #fff;
+        min-height: 46px;
+        padding: 0.65rem 1rem;
+      }
+
+      .article-import-header .modal-title {
+        color: #fff;
+        font-size: 0.86rem;
+        font-weight: 700;
+        text-transform: uppercase;
+      }
+
+      .article-import-actions {
+        border-top: 1px solid #e6e9ef;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.85rem;
+        justify-content: center;
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+      }
+
+      .article-import-mapping summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
+
+      @media (max-width: 767.98px) {
+        .article-quick-actions {
+          grid-template-columns: 1fr;
+        }
+      }
+    `}</style>
     {isStorageProduct && (
       <style>{`
         .storage-product-dialog {
@@ -1936,6 +2186,70 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
         }
       `}</style>
     )}
+    {!isStorageProduct && (
+      <div className='article-quick-actions'>
+        <button type='button' className='article-quick-action' onClick={() => onModalOpen()}>
+          <span className='article-quick-action-main'>
+            <i className='mdi mdi-plus-circle-outline'></i>
+            <span>Registrar Articulo/Pack</span>
+          </span>
+          <i className='mdi mdi-account-plus-outline article-quick-action-icon'></i>
+        </button>
+        <button type='button' className='article-quick-action' onClick={() => onImportModalOpen()}>
+          <span className='article-quick-action-main'>
+            <i className='mdi mdi-plus-circle-outline'></i>
+            <span>Importar Articulo/Pack</span>
+          </span>
+          <i className='mdi mdi-file-document-outline article-quick-action-icon'></i>
+        </button>
+      </div>
+    )}
+    {!isStorageProduct && !isMagistrales && (
+      <form className='article-filter-card' onSubmit={onStandardFilterSubmitted}>
+        <div className='row g-3 align-items-end'>
+          <div className='col-12 col-lg-4'>
+            <label className='form-label'>Seleccionar Laboratorio</label>
+            <select
+              className='form-control'
+              value={standardFilterDraft.laboratoryId}
+              onChange={(e) => onStandardFilterLaboratoryChanged(e.target.value)}
+            >
+              <option value=''>TODOS</option>
+              {filterLaboratories.map(item => (
+                <option key={`article-filter-lab-${item.id}`} value={item.id}>{item.name ?? item.description}</option>
+              ))}
+            </select>
+          </div>
+          <div className='col-12 col-lg-4'>
+            <label className='form-label'>Seleccionar Principio activo</label>
+            <select
+              className='form-control'
+              value={standardFilterDraft.principleId}
+              disabled={!standardFilterDraft.laboratoryId}
+              onChange={(e) => setStandardFilterDraft(prev => ({ ...prev, principleId: e.target.value }))}
+            >
+              <option value=''>TODOS</option>
+              {filterPrinciples.map(item => (
+                <option key={`article-filter-principle-${item.id}`} value={item.id}>{item.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className='col-12 col-lg-2'>
+            <label className='form-label'>Codigo</label>
+            <input
+              className='form-control'
+              value={standardFilterDraft.code}
+              onChange={(e) => setStandardFilterDraft(prev => ({ ...prev, code: e.target.value }))}
+            />
+          </div>
+          <div className='col-12 col-lg-2 d-grid'>
+            <button type='submit' className='btn btn-outline-primary'>
+              <i className='mdi mdi-magnify me-1'></i> Buscar
+            </button>
+          </div>
+        </div>
+      </form>
+    )}
     {isMagistrales && (
       <form className='magistrales-article-filter-card' onSubmit={onMagistralFilterSubmitted}>
         <div className='magistrales-article-filter-title'>Consulta por tipo y estado</div>
@@ -2021,33 +2335,15 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
         container.unshift({
           widget: 'dxButton', location: 'after',
           options: {
-            icon: 'upload',
-            title: 'Importar',
-            hint: 'Importar masivamente',
-            onClick: () => onImportModalOpen()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
             icon: 'refresh',
             hint: 'Refrescar tabla',
             onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
           }
         });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar articulo',
-            onClick: () => onModalOpen()
-          }
-        });
       }}
       pageSize={25}
       columns={articleColumns}
-      filterValue={magistralesFilterValue}
+      filterValue={articleFilterValue}
     />
 
     <Modal
@@ -2562,110 +2858,171 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
     <Modal
       modalRef={importModalRef}
-      title='Importacion masiva de articulos'
+      title={<h4 className='modal-title'><i className='mdi mdi-plus-circle-outline me-1'></i> Importar/Exportar Articulo / Pack</h4>}
       onSubmit={onImportSubmit}
       size='xl'
-      btnSubmitText={isImporting ? 'Importando...' : 'Importar'}
+      hideFooter
+      contentClass='article-import-modal'
+      headerClass='article-import-header'
+      closeButtonClass='btn-close-white'
     >
-      <div className='row'>
-        <div className='col-12 mb-3'>
-          <label className='form-label'>Archivo (JSON, XLSX, XLS o CSV)</label>
-          <input
-            ref={importFileRef}
-            type='file'
-            className='form-control'
-            accept='.xlsx,.xls,.csv,.json'
-            onChange={onImportFileChanged}
-          />
-          {importFileName && <div className='mt-1'><small className='text-muted'>Archivo: {importFileName} ({importRows.length} filas)</small></div>}
-        </div>
-
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Codigo *</label>
-          <select className='form-control' value={mapping.code} onChange={(e) => setMapping(prev => ({ ...prev, code: e.target.value }))}>
-            <option value=''>Seleccionar...</option>
-            {importHeaders.map(header => <option key={`code-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Descripcion</label>
-          <select className='form-control' value={mapping.name} onChange={(e) => setMapping(prev => ({ ...prev, name: e.target.value }))}>
-            <option value=''>Seleccionar...</option>
-            {importHeaders.map(header => <option key={`name-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        {!isStorageProduct && !isMagistrales && <div className='col-md-4 mb-2'>
-          <label className='form-label'>Almacen *</label>
-          <select className='form-control' value={mapping.warehouse} onChange={(e) => setMapping(prev => ({ ...prev, warehouse: e.target.value }))}>
-            <option value=''>Seleccionar...</option>
-            {importHeaders.map(header => <option key={`warehouse-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>}
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Laboratorio</label>
-          <select className='form-control' value={mapping.laboratory} onChange={(e) => setMapping(prev => ({ ...prev, laboratory: e.target.value }))}>
-            <option value=''>Seleccionar...</option>
-            {importHeaders.map(header => <option key={`lab-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Principio activo</label>
-          <select className='form-control' value={mapping.active_principle} onChange={(e) => setMapping(prev => ({ ...prev, active_principle: e.target.value }))}>
-            <option value=''>Seleccionar...</option>
-            {importHeaders.map(header => <option key={`principle-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Unidad</label>
-          <select className='form-control' value={mapping.unit} onChange={(e) => setMapping(prev => ({ ...prev, unit: e.target.value }))}>
-            <option value=''>Seleccionar...</option>
-            {importHeaders.map(header => <option key={`unit-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Estado</label>
-          <select className='form-control' value={mapping.status} onChange={(e) => setMapping(prev => ({ ...prev, status: e.target.value }))}>
-            <option value=''>Seleccionar...</option>
-            {importHeaders.map(header => <option key={`status-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-
-        <div className='col-12 mt-3'>
-          <h6 className='mb-2'>Vista previa (primeras 5 filas)</h6>
-          <div className='table-responsive border rounded'>
-            <table className='table table-sm table-striped mb-0'>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Codigo</th>
-                  <th>Descripcion</th>
-                  {!isStorageProduct && !isMagistrales && <th>Almacen</th>}
-                  <th>Laboratorio</th>
-                  <th>Principio activo</th>
-                  <th>Unidad</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {previewRows.length === 0 && (
-                  <tr>
-                    <td colSpan={!isStorageProduct && !isMagistrales ? 8 : 7} className='text-center text-muted'>Sin datos para previsualizar</td>
-                  </tr>
-                )}
-                {previewRows.map(item => (
-                  <tr key={`preview-${item.row}`}>
-                    <td>{item.row}</td>
-                    <td>{item.code?.toString?.() ?? ''}</td>
-                    <td>{item.name?.toString?.() ?? ''}</td>
-                    {!isStorageProduct && !isMagistrales && <td>{item.warehouse?.toString?.() ?? ''}</td>}
-                    <td>{item.laboratory?.toString?.() ?? ''}</td>
-                    <td>{item.principle?.toString?.() ?? ''}</td>
-                    <td>{item.unit?.toString?.() ?? ''}</td>
-                    <td>{item.status?.toString?.() ?? ''}</td>
-                  </tr>
+      <div id='article-import-form-container' className='article-import-form'>
+        <div className='row g-3'>
+          {!isStorageProduct && !isMagistrales && (
+            <div className='col-md-6'>
+              <label className='form-label'>Empresa</label>
+              <select
+                className='form-control'
+                value={selectedImportBusinessId}
+                onChange={(e) => setSelectedImportBusinessId(e.target.value)}
+              >
+                {businesses.map(item => (
+                  <option key={`import-business-${item.id}`} value={item.id}>{item.name}</option>
                 ))}
-              </tbody>
-            </table>
+              </select>
+            </div>
+          )}
+          <SelectAPIFormGroup
+            eRef={importLaboratoryRef}
+            label='Laboratorio'
+            col={!isStorageProduct && !isMagistrales ? 'col-md-6' : 'col-md-12'}
+            searchAPI={articlesRest.laboratoriesPaginateApi()}
+            searchBy={articlesRest.laboratoriesSearchBy()}
+            dropdownParent='#article-import-form-container'
+            onChange={(e) => {
+              const data = $(e.target).select2('data')?.[0]
+              setSelectedImportLaboratoryName(data?.text ?? '')
+            }}
+          />
+          <div className='col-md-6'>
+            <label className='form-label'>Tipo de carga</label>
+            <select
+              className='form-control'
+              value={selectedImportType}
+              onChange={(e) => setSelectedImportType(e.target.value)}
+            >
+              <option value='upsert'>CREACION / ACTUALIZACION DE ARTICULOS</option>
+            </select>
+          </div>
+          <div className='col-md-6'>
+            <label className='form-label'>Subir archivo</label>
+            <input
+              ref={importFileRef}
+              type='file'
+              className='form-control'
+              accept='.xlsx,.xls,.csv,.json'
+              onChange={onImportFileChanged}
+            />
+            {importFileName && <div className='mt-1'><small className='text-muted'>Archivo: {importFileName} ({importRows.length} filas)</small></div>}
+          </div>
+
+          {importHeaders.length > 0 && (
+            <div className='col-12'>
+              <details className='article-import-mapping'>
+                <summary>Ajustar columnas detectadas</summary>
+                <div className='row g-2 mt-2'>
+                  <div className='col-md-4'>
+                    <label className='form-label'>Codigo *</label>
+                    <select className='form-control' value={mapping.code} onChange={(e) => setMapping(prev => ({ ...prev, code: e.target.value }))}>
+                      <option value=''>Seleccionar...</option>
+                      {importHeaders.map(header => <option key={`code-${header}`} value={header}>{header}</option>)}
+                    </select>
+                  </div>
+                  <div className='col-md-4'>
+                    <label className='form-label'>Descripcion</label>
+                    <select className='form-control' value={mapping.name} onChange={(e) => setMapping(prev => ({ ...prev, name: e.target.value }))}>
+                      <option value=''>Seleccionar...</option>
+                      {importHeaders.map(header => <option key={`name-${header}`} value={header}>{header}</option>)}
+                    </select>
+                  </div>
+                  {!isStorageProduct && !isMagistrales && <div className='col-md-4'>
+                    <label className='form-label'>Almacen</label>
+                    <select className='form-control' value={mapping.warehouse} onChange={(e) => setMapping(prev => ({ ...prev, warehouse: e.target.value }))}>
+                      <option value=''>Usar almacen por empresa</option>
+                      {importHeaders.map(header => <option key={`warehouse-${header}`} value={header}>{header}</option>)}
+                    </select>
+                  </div>}
+                  <div className='col-md-4'>
+                    <label className='form-label'>Laboratorio</label>
+                    <select className='form-control' value={mapping.laboratory} onChange={(e) => setMapping(prev => ({ ...prev, laboratory: e.target.value }))}>
+                      <option value=''>Usar laboratorio seleccionado</option>
+                      {importHeaders.map(header => <option key={`lab-${header}`} value={header}>{header}</option>)}
+                    </select>
+                  </div>
+                  <div className='col-md-4'>
+                    <label className='form-label'>Principio activo</label>
+                    <select className='form-control' value={mapping.active_principle} onChange={(e) => setMapping(prev => ({ ...prev, active_principle: e.target.value }))}>
+                      <option value=''>Seleccionar...</option>
+                      {importHeaders.map(header => <option key={`principle-${header}`} value={header}>{header}</option>)}
+                    </select>
+                  </div>
+                  <div className='col-md-4'>
+                    <label className='form-label'>Unidad</label>
+                    <select className='form-control' value={mapping.unit} onChange={(e) => setMapping(prev => ({ ...prev, unit: e.target.value }))}>
+                      <option value=''>Seleccionar...</option>
+                      {importHeaders.map(header => <option key={`unit-${header}`} value={header}>{header}</option>)}
+                    </select>
+                  </div>
+                  <div className='col-md-4'>
+                    <label className='form-label'>Estado</label>
+                    <select className='form-control' value={mapping.status} onChange={(e) => setMapping(prev => ({ ...prev, status: e.target.value }))}>
+                      <option value=''>Seleccionar...</option>
+                      {importHeaders.map(header => <option key={`status-${header}`} value={header}>{header}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </details>
+            </div>
+          )}
+
+          <div className='col-12'>
+            <div className='table-responsive border'>
+              <table className='table table-sm table-striped mb-0'>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Codigo</th>
+                    <th>Descripcion</th>
+                    {!isStorageProduct && !isMagistrales && <th>Almacen</th>}
+                    <th>Laboratorio</th>
+                    <th>Principio activo</th>
+                    <th>Unidad</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewRows.length === 0 && (
+                    <tr>
+                      <td colSpan={!isStorageProduct && !isMagistrales ? 8 : 7} className='text-center text-muted'>Sin datos para previsualizar</td>
+                    </tr>
+                  )}
+                  {previewRows.map(item => (
+                    <tr key={`preview-${item.row}`}>
+                      <td>{item.row}</td>
+                      <td>{item.code?.toString?.() ?? ''}</td>
+                      <td>{item.name?.toString?.() ?? ''}</td>
+                      {!isStorageProduct && !isMagistrales && <td>{item.warehouse?.toString?.() || selectedImportWarehouseName()}</td>}
+                      <td>{item.laboratory?.toString?.() || selectedImportLaboratoryName}</td>
+                      <td>{item.principle?.toString?.() ?? ''}</td>
+                      <td>{item.unit?.toString?.() ?? ''}</td>
+                      <td>{item.status?.toString?.() ?? ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className='col-12 article-import-actions'>
+            <button type='button' className='btn btn-light' data-bs-dismiss='modal'>
+              <i className='mdi mdi-close me-1'></i> Cerrar
+            </button>
+            <button type='submit' className='btn btn-primary' disabled={isImporting}>
+              <i className='mdi mdi-plus me-1'></i> {isImporting ? 'Importando...' : 'Importar'}
+            </button>
+            <button type='button' className='btn btn-outline-warning' onClick={onArticleExport}>
+              <i className='mdi mdi-plus me-1'></i> Exportar
+            </button>
           </div>
         </div>
       </div>
