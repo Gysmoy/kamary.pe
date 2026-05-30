@@ -296,21 +296,23 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   }
   const findStorageWarehouse = (warehouseName, warehouseRows = storageWarehouses) => warehouseRows.find(row => normalizeStorageText(storageWarehouseName(row)) === normalizeStorageText(warehouseName))
   const blockWarehouseId = (block, warehouseRows = storageWarehouses) => block.warehouse_id || findStorageWarehouse(block.warehouse_name, warehouseRows)?.id || ''
-  const locationOptionsForBlock = (block, locationRows = storageLocations, warehouseRows = storageWarehouses) => {
+  const locationOptionsForBlock = (block, locationRows = storageLocations, warehouseRows = storageWarehouses, clientValue = selectedClientId) => {
     const warehouseId = blockWarehouseId(block, warehouseRows)
+    const currentClientId = normalizeClientIdValue(clientValue)
     return locationRows.filter(location => {
+      if (!currentClientId || `${location.client_id ?? ''}` !== `${currentClientId}`) return false
       if (warehouseId && `${location.warehouse_id}` === `${warehouseId}`) return true
       return normalizeStorageText(location.warehouse_name) === normalizeStorageText(block.warehouse_name)
     })
   }
-  const findStorageLocation = (block, locationRows = storageLocations, warehouseRows = storageWarehouses) => {
-    const options = locationOptionsForBlock(block, locationRows, warehouseRows)
+  const findStorageLocation = (block, locationRows = storageLocations, warehouseRows = storageWarehouses, clientValue = selectedClientId) => {
+    const options = locationOptionsForBlock(block, locationRows, warehouseRows, clientValue)
     return options.find(location => `${location.id}` === `${block.location_id}`)
       ?? options.find(location => normalizeStorageText(storageLocationLabel(location)) === normalizeStorageText(block.location_label))
       ?? null
   }
-  const findStorageLocations = (block, locationRows = storageLocations, warehouseRows = storageWarehouses) => {
-    const options = locationOptionsForBlock(block, locationRows, warehouseRows)
+  const findStorageLocations = (block, locationRows = storageLocations, warehouseRows = storageWarehouses, clientValue = selectedClientId) => {
+    const options = locationOptionsForBlock(block, locationRows, warehouseRows, clientValue)
     const selectedIds = blockLocationIds(block)
     const byId = selectedIds.length
       ? options.filter(location => selectedIds.includes(`${location.id}`))
@@ -324,7 +326,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       .map(label => options.find(location => normalizeStorageText(storageLocationLabel(location)) === normalizeStorageText(label)))
       .filter(Boolean)
   }
-  const buildStorageBlocksFromItems = (itemRows = [], warehouseRows = storageWarehouses, locationRows = storageLocations) => {
+  const buildStorageBlocksFromItems = (itemRows = [], warehouseRows = storageWarehouses, locationRows = storageLocations, clientValue = selectedClientId) => {
     const blocks = emptyStorageBlocks(warehouseRows)
     itemRows.forEach(row => {
       const parsed = parseStorageDescription(row.description ?? '')
@@ -344,7 +346,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         tariff: Number(row.unit_price || 0) || '',
         monthly_amount: Number(row.total || 0) || '',
       }
-      const locations = findStorageLocations(next, locationRows, warehouseRows)
+      const locations = findStorageLocations(next, locationRows, warehouseRows, clientValue)
       blocks[index] = {
         ...next,
         location_id: locations[0]?.id ? `${locations[0].id}` : '',
@@ -359,11 +361,13 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       const patchLocationIds = 'location_ids' in patch
         ? (Array.isArray(patch.location_ids) ? patch.location_ids : [patch.location_ids]).filter(Boolean).map(value => `${value}`)
         : null
+      const currentClientId = normalizeClientIdValue(selectedClientId)
+      const scopedStorageLocations = storageLocations.filter(row => currentClientId && `${row.client_id ?? ''}` === `${currentClientId}`)
       const location = patch.location_id
-        ? storageLocations.find(row => `${row.id}` === `${patch.location_id}`)
+        ? scopedStorageLocations.find(row => `${row.id}` === `${patch.location_id}`)
         : null
       const locations = patchLocationIds
-        ? storageLocations.filter(row => patchLocationIds.includes(`${row.id}`))
+        ? scopedStorageLocations.filter(row => patchLocationIds.includes(`${row.id}`))
         : null
       const next = {
         ...block,
@@ -452,7 +456,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       warehouseRows = catalog.warehouseRows
       locationRows = catalog.locationRows
     }
-    setStorageBlocks(isStorageService ? buildStorageBlocksFromItems(data?.items ?? [], warehouseRows, locationRows) : emptyStorageBlocks())
+    setStorageBlocks(isStorageService ? buildStorageBlocksFromItems(data?.items ?? [], warehouseRows, locationRows, data?.client_id ? `${data.client_id}` : selectedClientId) : emptyStorageBlocks())
     setItems(itemRows.length ? itemRows : (isStorageGeneral ? [] : [emptyItem()]))
     $(modalRef.current).modal('show')
   }
@@ -1286,7 +1290,19 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           </div>
           <div className='col-12 col-md-6 col-xl-4'>
             <label className='form-label'>Cliente</label>
-            <select ref={clientSelectRef} className='form-select' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required>
+            <select ref={clientSelectRef} className='form-select' value={selectedClientId} onChange={(e) => {
+              setSelectedClientId(e.target.value)
+              if (isStorageService) {
+                setOpenLocationPickerKey('')
+                setStorageBlocks(prev => prev.map(block => ({
+                  ...block,
+                  location_id: '',
+                  location_ids: [],
+                  location_label: '',
+                  location_labels: [],
+                })))
+              }
+            }} required>
               <option value=''>Seleccione</option>
               {clients.map(row => <option key={`storage-order-client-${row.id}`} value={row.entity_id ?? row.id}>{row.document_number ? `${row.document_number} | ` : ''}{row.full_name}</option>)}
             </select>
@@ -1323,7 +1339,8 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           {storageBlocks.map(block => {
             const locationOptions = locationOptionsForBlock(block)
             const locationsLoading = isStorageService && !isStorageCatalogLoaded
-            const disabled = !block.enabled || locationsLoading
+            const clientMissing = !normalizeClientIdValue(selectedClientId)
+            const disabled = !block.enabled || locationsLoading || clientMissing
             const selectedLocationIds = blockLocationIds(block)
             const selectedLocations = locationOptions.filter(location => selectedLocationIds.includes(`${location.id}`))
             const pickerOpen = openLocationPickerKey === block.key
@@ -1353,7 +1370,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
                       >
                         <span className='storage-location-picker-values'>
                           {locationsLoading && <span className='storage-location-picker-placeholder'>Cargando ubicaciones...</span>}
-                          {!locationsLoading && !selectedLocations.length && <span className='storage-location-picker-placeholder'>{locationOptions.length ? 'Seleccione ubicaciones' : 'Sin ubicaciones'}</span>}
+                          {!locationsLoading && !selectedLocations.length && <span className='storage-location-picker-placeholder'>{clientMissing ? 'Seleccione cliente primero' : (locationOptions.length ? 'Seleccione ubicaciones' : 'Sin ubicaciones')}</span>}
                           {selectedLocations.map(location => (
                             <span className='storage-location-chip' key={`storage-order-location-chip-${block.key}-${location.id}`}>{storageLocationLabel(location)}</span>
                           ))}

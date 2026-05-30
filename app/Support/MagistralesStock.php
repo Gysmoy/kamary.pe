@@ -28,13 +28,7 @@ class MagistralesStock
 
     public static function valuationRows(?int $articleId = null, ?int $warehouseId = null): Collection
     {
-        $warehouseIds = $warehouseId
-            ? [$warehouseId]
-            : collect([MagistralesWarehouse::idOrNull(), MagistralesInputWarehouse::idOrNull()])
-                ->filter()
-                ->unique()
-                ->values()
-                ->all();
+        $warehouseId = $warehouseId ?: MagistralesWarehouse::id();
 
         $articles = Article::query()
             ->select('articles.*')
@@ -48,7 +42,7 @@ class MagistralesStock
         $warehouses = Warehouse::query()
             ->select('warehouses.*')
             ->with('branch:id,name,business_id')
-            ->whereIn('id', $warehouseIds ?: [MagistralesWarehouse::id()])
+            ->where('id', $warehouseId)
             ->whereNotNull('status')
             ->orderBy('name')
             ->get();
@@ -80,15 +74,10 @@ class MagistralesStock
 
     public static function stockByWarehouseRows(int $articleId): Collection
     {
-        $warehouseIds = collect([
-            MagistralesWarehouse::idOrNull(),
-            MagistralesInputWarehouse::idOrNull(),
-        ])->filter()->unique()->values()->all();
-
         $warehouse = Warehouse::query()
             ->select('warehouses.*')
             ->with('branch.business:id,name')
-            ->whereIn('warehouses.id', $warehouseIds ?: [MagistralesWarehouse::id()])
+            ->whereKey(MagistralesWarehouse::id())
             ->whereNotNull('warehouses.status')
             ->orderBy('name')
             ->get()
@@ -213,27 +202,13 @@ class MagistralesStock
                 ->where('production.order_status', 'finished')
                 ->whereNotNull('production.status')
                 ->whereNotNull('item.status')
-                ->when($warehouseId, function ($query) use ($warehouseId) {
-                    if (Schema::hasColumn('magistral_production_orders', 'source_warehouse_id')) {
-                        $query->where(function ($source) use ($warehouseId) {
-                            $source->where('production.source_warehouse_id', $warehouseId)
-                                ->orWhere(function ($fallback) use ($warehouseId) {
-                                    $fallback->whereNull('production.source_warehouse_id')
-                                        ->where('production.destination_warehouse_id', $warehouseId);
-                                });
-                        });
-                    } elseif (Schema::hasColumn('magistral_production_orders', 'destination_warehouse_id')) {
-                        $query->where('production.destination_warehouse_id', $warehouseId);
-                    }
-                })
+                ->when($warehouseId && Schema::hasColumn('magistral_production_orders', 'destination_warehouse_id'), fn($query) => $query->where('production.destination_warehouse_id', $warehouseId))
                 ->get([
                     'item.id',
                     'production.code as document',
                     'production.registration_date as document_date',
                     'production.created_at',
-                    Schema::hasColumn('magistral_production_orders', 'source_warehouse_id')
-                        ? DB::raw('COALESCE(production.source_warehouse_id, production.destination_warehouse_id) as warehouse_id')
-                        : 'production.destination_warehouse_id as warehouse_id',
+                    'production.destination_warehouse_id as warehouse_id',
                     DB::raw('NULL as lot'),
                     'item.expiration_date',
                     DB::raw('COALESCE(item.total, item.quantity) as quantity'),
@@ -354,24 +329,12 @@ class MagistralesStock
             ->where('production.order_status', 'finished')
             ->whereNotNull('production.status')
             ->whereNotNull('item.status')
-            ->when($warehouseId, function ($query) use ($warehouseId) {
-                if (Schema::hasColumn('magistral_production_orders', 'source_warehouse_id')) {
-                    $query->where(function ($source) use ($warehouseId) {
-                        $source->where('production.source_warehouse_id', $warehouseId)
-                            ->orWhere(function ($fallback) use ($warehouseId) {
-                                $fallback->whereNull('production.source_warehouse_id')
-                                    ->where('production.destination_warehouse_id', $warehouseId);
-                            });
-                    });
-                } elseif (Schema::hasColumn('magistral_production_orders', 'destination_warehouse_id')) {
-                    $query->where('production.destination_warehouse_id', $warehouseId);
-                }
-            })
+            ->when($warehouseId && Schema::hasColumn('magistral_production_orders', 'destination_warehouse_id'), fn($query) => $query->where('production.destination_warehouse_id', $warehouseId))
             ->when($expirationDate !== null, fn($query) => $query->whereDate('item.expiration_date', $expirationDate))
             ->sum(DB::raw('COALESCE(item.total, item.quantity)'));
     }
 
-    public static function averageCost(int $articleId, ?int $warehouseId): float
+    private static function averageCost(int $articleId, ?int $warehouseId): float
     {
         if (!Schema::hasTable('magistral_income_items') || !Schema::hasTable('magistral_incomes')) return 0;
 

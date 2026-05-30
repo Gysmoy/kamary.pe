@@ -4,12 +4,10 @@ namespace App\Http\Controllers\Admin\Magistrales;
 
 use App\Http\Controllers\Admin\ArticleController as BaseArticleController;
 use App\Models\Article;
-use App\Support\MagistralesInputWarehouse;
 use App\Support\MagistralesStock;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\Response;
 
@@ -17,38 +15,12 @@ class ArticleController extends BaseArticleController
 {
     protected string $moduleScope = 'magistrales';
 
-    public function setPaginationInstance(string $model)
-    {
-        $query = parent::setPaginationInstance($model);
-        $warehouseId = MagistralesInputWarehouse::idOrNull();
-
-        if ($warehouseId && Schema::hasTable('magistral_income_items') && Schema::hasTable('magistral_incomes')) {
-            $query->selectRaw(
-                '(
-                    SELECT COALESCE(SUM(item.quantity * item.price_without_igv) / NULLIF(SUM(item.quantity), 0), 0)
-                    FROM magistral_income_items item
-                    INNER JOIN magistral_incomes income ON income.id = item.magistral_income_id
-                    WHERE item.article_id = articles.id
-                      AND income.warehouse_id = ?
-                      AND income.status IS NOT NULL
-                      AND item.status IS NOT NULL
-                ) as magistral_input_cost',
-                [$warehouseId]
-            );
-        } else {
-            $query->addSelect(DB::raw('0 as magistral_input_cost'));
-        }
-
-        return $query;
-    }
-
     public function setReactViewProperties(Request $request)
     {
         return [
             'moduleScope' => 'magistrales',
             'moduleTitle' => 'Magistrales - Articulos',
             'requiredPermission' => ['magistrales-articles', 'magistrales-products'],
-            'inputWarehouse' => MagistralesInputWarehouse::summary(),
         ];
     }
 

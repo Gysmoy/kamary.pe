@@ -95,11 +95,13 @@ class InventoryController extends BasicController
             if (!$clientId) throw new \Exception('El cliente es obligatorio');
             StorageScope::assertClient($clientId);
 
-            $rows = $this->stockRows(
-                $this->toNullableInt($request->input('warehouse_id')),
-                trim((string)($request->input('location') ?? '')),
-                $clientId
-            );
+            $warehouseId = $this->toNullableInt($request->input('warehouse_id'));
+            $location = trim((string)($request->input('location') ?? ''));
+            if ($warehouseId && $location !== '') {
+                $this->assertLocationBelongsToClient($warehouseId, $location, $clientId);
+            }
+
+            $rows = $this->stockRows($warehouseId, $location, $clientId);
 
             $response->status = 200;
             $response->message = 'Operacion correcta';
@@ -151,6 +153,9 @@ class InventoryController extends BasicController
             StorageScope::assertClient($clientId);
 
             $location = trim((string)($request->input('location') ?? '')) ?: null;
+            if ($location !== null) {
+                $this->assertLocationBelongsToClient($warehouseId, $location, $clientId);
+            }
             $rows = $this->stockRows($warehouseId, $location ?? '', $clientId);
             if (count($rows) === 0) {
                 throw new \Exception('No hay stock para registrar con los filtros seleccionados');
@@ -492,6 +497,7 @@ class InventoryController extends BasicController
             ->leftJoin('storage_locations as storage_location', function ($join) {
                 $join->on('storage_location.warehouse_id', '=', 'stock.warehouse_id')
                     ->whereRaw('storage_location.code = stock.location')
+                    ->whereRaw('COALESCE(storage_location.client_id, 0) = COALESCE(stock.client_id, 0)')
                     ->whereNotNull('storage_location.status');
             })
             ->leftJoinSub($outgoingTotals, 'outgoing', function ($join) {
@@ -558,40 +564,41 @@ class InventoryController extends BasicController
             ->selectRaw("
                 storage_location.code as location,
                 storage_location.warehouse_id,
-                storage_location.temperature_range,
-                1 as priority
-            ");
-
-        $entryLocations = DB::table('entry_note_items')
-            ->join('entry_notes', 'entry_notes.id', '=', 'entry_note_items.entry_note_id')
-            ->join('businesses', 'businesses.id', '=', 'entry_notes.business_id')
-            ->whereNotNull('entry_note_items.location')
-            ->where('entry_note_items.location', '!=', '')
-            ->where('businesses.business_key', BusinessScope::KAMARY_MEDICALS)
-            ->selectRaw("
-                entry_note_items.location as location,
-                COALESCE(entry_note_items.warehouse_id, entry_notes.warehouse_id) as warehouse_id,
-                CAST(NULL AS CHAR) as temperature_range,
-                2 as priority
+                storage_location.client_id,
+                storage_location.temperature_range
             ");
 
         $rows = DB::query()
-            ->fromSub($registeredLocations->union($entryLocations), 'locations')
+            ->fromSub($registeredLocations, 'locations')
             ->distinct()
             ->whereNotNull('location')
             ->orderBy('location')
-            ->orderBy('priority')
             ->get();
 
         return $rows
             ->map(fn($row) => [
                 'location' => (string)$row->location,
                 'warehouse_id' => $row->warehouse_id ? (int)$row->warehouse_id : null,
+                'client_id' => $row->client_id ? (int)$row->client_id : null,
                 'temperature_range' => $row->temperature_range,
             ])
-            ->unique(fn($row) => ($row['warehouse_id'] ?? 'all') . '|' . $row['location'])
+            ->unique(fn($row) => ($row['warehouse_id'] ?? 'all') . '|' . ($row['client_id'] ?? 'all') . '|' . $row['location'])
             ->values()
             ->all();
+    }
+
+    private function assertLocationBelongsToClient(int $warehouseId, string $location, int $clientId): void
+    {
+        $exists = DB::table('storage_locations')
+            ->where('warehouse_id', $warehouseId)
+            ->where('client_id', $clientId)
+            ->whereRaw('LOWER(TRIM(code)) = ?', [mb_strtolower($location)])
+            ->whereNotNull('status')
+            ->exists();
+
+        if (!$exists) {
+            throw new \Exception('La ubicacion seleccionada no pertenece al cliente');
+        }
     }
 
     public function status(Request $request)

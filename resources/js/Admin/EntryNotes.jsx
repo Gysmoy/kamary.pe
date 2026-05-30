@@ -590,8 +590,9 @@ const EntryNotes = () => {
   const storageLocationsForWarehouse = (warehouseId, selectedLocation = '') => {
     if (!warehouseId) return []
     const selectedCode = locationCodeFromValue(selectedLocation)
+    const clientId = currentStorageClientId()
     return (storageOptions.locations ?? [])
-      .filter(location => `${location.warehouse_id}` === `${warehouseId}` && (location.status === true || location.status === 1 || location.status === '1'))
+      .filter(location => `${location.warehouse_id}` === `${warehouseId}` && `${location.client_id ?? ''}` === `${clientId}` && (location.status === true || location.status === 1 || location.status === '1'))
       .filter(location => location.occupancy_status !== 'Ocupado' || `${location.code}` === selectedCode)
   }
 

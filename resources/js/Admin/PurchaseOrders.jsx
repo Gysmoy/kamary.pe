@@ -240,12 +240,6 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
   const [listStartDate, setListStartDate] = useState('')
   const [listEndDate, setListEndDate] = useState('')
   const [listFilterValue, setListFilterValue] = useState(null)
-  const warehouseForArticleType = () => fixedWarehouse
-  const activeWarehouse = warehouseForArticleType(selectedArticleType)
-  const activeWarehouseId = activeWarehouse?.id ? `${activeWarehouse.id}` : fixedWarehouseId
-  const activeBusinessId = activeWarehouse?.business_id ? `${activeWarehouse.business_id}` : fixedBusinessId
-  const activeBranchId = activeWarehouse?.business_branch_id ? `${activeWarehouse.business_branch_id}` : fixedBranchId
-  const activeWarehouseLabel = fixedWarehouseLabel
 
   const getArticleRef = (uid) => {
     if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
@@ -254,10 +248,10 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
 
   useEffect(() => {
     if (!isMagistrales) return
-    setSelectedBusinessId(activeBusinessId)
-    setSelectedBranchId(activeBranchId)
-    setSelectedWarehouseId(activeWarehouseId)
-  }, [activeBranchId, activeBusinessId, activeWarehouseId, isMagistrales])
+    setSelectedBusinessId(fixedBusinessId)
+    setSelectedBranchId(fixedBranchId)
+    setSelectedWarehouseId(fixedWarehouseId)
+  }, [fixedBranchId, fixedBusinessId, fixedWarehouseId, isMagistrales])
 
   useEffect(() => {
     items.forEach(item => {
@@ -324,10 +318,9 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     setRefValue(taxAmountRef, Number(data?.tax_amount ?? 0))
     setRefValue(observationsRef, data?.observations ?? '')
 
-    const modalWarehouse = warehouseForArticleType(currentArticleType)
-    const businessId = isMagistrales ? (modalWarehouse?.business_id ? `${modalWarehouse.business_id}` : fixedBusinessId) : (data?.business_id ? `${data.business_id}` : '')
-    const branchId = isMagistrales ? (modalWarehouse?.business_branch_id ? `${modalWarehouse.business_branch_id}` : fixedBranchId) : (data?.business_branch_id ? `${data.business_branch_id}` : '')
-    const warehouseId = isMagistrales ? (modalWarehouse?.id ? `${modalWarehouse.id}` : fixedWarehouseId) : (data?.warehouse_id ? `${data.warehouse_id}` : '')
+    const businessId = isMagistrales ? fixedBusinessId : (data?.business_id ? `${data.business_id}` : '')
+    const branchId = isMagistrales ? fixedBranchId : (data?.business_branch_id ? `${data.business_branch_id}` : '')
+    const warehouseId = isMagistrales ? fixedWarehouseId : (data?.warehouse_id ? `${data.warehouse_id}` : '')
     const supplierId = data?.supplier_id ? `${data.supplier_id}` : ''
     setSelectedBusinessId(businessId)
     setSelectedBranchId(branchId)
@@ -387,16 +380,14 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
   const onModalSubmit = async (e) => {
     e.preventDefault()
 
-    const requestArticleType = canonicalMagistralPurchaseArticleType(getRefValue(articleTypeRef))
-    const requestWarehouse = warehouseForArticleType(requestArticleType)
     const request = {
       id: getRefValue(idRef) || undefined,
-      business_id: isMagistrales ? (requestWarehouse?.business_id || null) : (selectedBusinessId || null),
-      business_branch_id: isMagistrales ? (requestWarehouse?.business_branch_id || null) : (selectedBranchId || null),
-      warehouse_id: isMagistrales ? (requestWarehouse?.id || null) : (selectedWarehouseId || null),
+      business_id: isMagistrales ? (fixedBusinessId || null) : (selectedBusinessId || null),
+      business_branch_id: isMagistrales ? (fixedBranchId || null) : (selectedBranchId || null),
+      warehouse_id: isMagistrales ? (fixedWarehouseId || null) : (selectedWarehouseId || null),
       supplier_id: selectedSupplierId || null,
       buyer_name: getRefValue(buyerNameRef).trim(),
-      article_type: isMagistrales ? (requestArticleType || null) : null,
+      article_type: isMagistrales ? (canonicalMagistralPurchaseArticleType(getRefValue(articleTypeRef)) || null) : null,
       issue_date: getRefValue(issueDateRef),
       expected_date: getRefValue(expectedDateRef) || null,
       max_delivery_date: isMagistrales ? (getRefValue(maxDeliveryDateRef) || null) : null,
@@ -749,7 +740,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
             </div>
             <div className='col-md-3 mb-2'>
               <label className='form-label'>Almacén fijo</label>
-              <input className='form-control' value={activeWarehouseLabel} disabled />
+              <input className='form-control' value={fixedWarehouseLabel} disabled />
             </div>
           </>
         ) : (
@@ -907,7 +898,6 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
                   {isMagistrales ? <th>Presentación</th> : <th>Lab. | Principio</th>}
                   {!isMagistrales && <th>Unidad</th>}
                   <th>{isMagistrales ? 'Cantidad' : 'Cant. solicitada'}</th>
-                  {isMagistrales && <th>Recibido</th>}
                   {isMagistrales && <th>Últ. precio</th>}
                   <th>{isMagistrales ? 'Precio con IGV' : 'P. Unit.'}</th>
                   <th>Subtotal</th>
@@ -960,18 +950,6 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
                         onChange={(e) => onItemUpdated(item.uid, 'requested_quantity', e.target.value)}
                       />
                     </td>
-                    {isMagistrales && (
-                      <td>
-                        <input
-                          className='form-control form-control-sm'
-                          type='number'
-                          min='0'
-                          step='0.001'
-                          value={item.received_quantity}
-                          onChange={(e) => onItemUpdated(item.uid, 'received_quantity', e.target.value)}
-                        />
-                      </td>
-                    )}
                     {isMagistrales && (
                       <td>
                         <input className='form-control form-control-sm' type='number' value={Number(item.last_price || 0).toFixed(2)} readOnly />

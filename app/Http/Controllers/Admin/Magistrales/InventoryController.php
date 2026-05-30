@@ -7,8 +7,6 @@ use App\Http\Controllers\Admin\Magistrales\Concerns\RunsMagistralSaveInTransacti
 use App\Models\Article;
 use App\Models\MagistralInventoryCount;
 use App\Models\MagistralInventoryCountItem;
-use App\Models\Warehouse;
-use App\Support\MagistralesInputWarehouse;
 use App\Support\MagistralesWarehouse;
 use App\Support\MagistralesStock;
 use Illuminate\Http\Request;
@@ -33,7 +31,6 @@ class InventoryController extends BasicController
             'moduleTitle' => 'Magistrales - Inventario',
             'requiredPermission' => ['magistrales-inventory', 'magistrales-warehouse'],
             'fixedWarehouse' => MagistralesWarehouse::summary(),
-            'inputWarehouse' => MagistralesInputWarehouse::summary(),
         ];
     }
 
@@ -67,10 +64,7 @@ class InventoryController extends BasicController
             ->exists();
         if ($exists) throw new \Exception('Ya existe un inventario magistral con este codigo');
 
-        $requestedWarehouseId = $this->toNullableInt($body['warehouse_id'] ?? null);
-        $warehouse = $requestedWarehouseId
-            ? Warehouse::query()->whereNotNull('status')->findOrFail($requestedWarehouseId)
-            : MagistralesWarehouse::warehouse();
+        $warehouse = MagistralesWarehouse::warehouse();
         $warehouseId = (int) $warehouse->id;
         $branchId = $warehouse->business_branch_id ? (int) $warehouse->business_branch_id : null;
 
@@ -135,7 +129,7 @@ class InventoryController extends BasicController
                 ->when(Schema::hasColumn('articles', 'module_scope'), fn($query) => $query->where('module_scope', 'magistrales'))
                 ->findOrFail($articleId);
 
-            $warehouseId = $this->toNullableInt($request->input('warehouse_id')) ?: MagistralesWarehouse::id();
+            $warehouseId = MagistralesWarehouse::id();
 
             $lot = trim((string)($request->input('lot') ?? '')) ?: null;
             $expirationDate = $this->normalizeDate($request->input('expiration_date'));

@@ -68,6 +68,8 @@ class KardexController extends BasicController
                     'status',
                     'warehouse_id',
                     'warehouse_name',
+                    'client_id',
+                    'client_name',
                     'code',
                     'temperature_range',
                     'occupancy_status',
@@ -215,9 +217,14 @@ class KardexController extends BasicController
 
         try {
             $warehouse = $this->storageWarehouse($request->input('warehouse_id'));
+            $clientId = $this->nullableInt($request->input('client_id'));
             $code = trim((string) $request->input('code'));
             $temperature = trim((string) $request->input('temperature_range'));
 
+            if (!$clientId) {
+                throw new \Exception('El cliente es obligatorio');
+            }
+            StorageScope::assertClient($clientId);
             if ($code === '') {
                 throw new \Exception('La codificacion es obligatoria');
             }
@@ -231,6 +238,9 @@ class KardexController extends BasicController
 
             $locationId = $this->nullableInt($request->input('id'));
             $location = $locationId ? $this->storageLocation($locationId) : new StorageLocation();
+            if ($location->exists && $location->client_id && (int) $location->client_id !== $clientId) {
+                throw new \Exception('No se puede cambiar el cliente de una ubicacion registrada');
+            }
 
             $duplicatedLocation = StorageLocation::query()
                 ->where('warehouse_id', $warehouse->id)
@@ -249,7 +259,7 @@ class KardexController extends BasicController
 
             $location->fill([
                 'warehouse_id' => $warehouse->id,
-                'client_id' => null,
+                'client_id' => $clientId,
                 'code' => $code,
                 'temperature_range' => $temperature,
                 'service_order_code' => null,
@@ -301,6 +311,7 @@ class KardexController extends BasicController
                 'ESTADO',
                 'OCUPACION',
                 'ALMACEN',
+                'CLIENTE_ASIGNADO',
                 'UBICACION',
                 'TEMPERATURA',
                 'CLIENTE_OCUPANTE',
@@ -316,6 +327,7 @@ class KardexController extends BasicController
                     $row->status ? 'Activo' : 'Inactivo',
                     $row->occupancy_status,
                     $row->warehouse_name,
+                    $row->client_name,
                     $row->code,
                     $row->temperature_range,
                     $row->occupied_clients,
@@ -497,10 +509,12 @@ class KardexController extends BasicController
             ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'location.warehouse_id')
             ->leftJoin('business_branches as branch', 'branch.id', '=', 'warehouse.business_branch_id')
             ->leftJoin('businesses as business', 'business.id', '=', 'branch.business_id')
+            ->leftJoin('clients as assigned_client', 'assigned_client.id', '=', 'location.client_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'location.created_by')
             ->leftJoinSub($this->locationOccupancySummaryQuery(), 'occupancy', function ($join) {
                 $join->on('occupancy.warehouse_id', '=', 'location.warehouse_id')
-                    ->whereRaw('occupancy.location = location.code');
+                    ->whereRaw('occupancy.location = location.code')
+                    ->whereRaw('COALESCE(occupancy.client_id, 0) = COALESCE(location.client_id, 0)');
             })
             ->whereNotNull('location.status')
             ->whereIn('business.business_key', $this->listBusinessKeys())
@@ -510,6 +524,8 @@ class KardexController extends BasicController
                 location.status,
                 location.warehouse_id,
                 warehouse.name as warehouse_name,
+                location.client_id,
+                COALESCE(assigned_client.full_name, '') as client_name,
                 location.code,
                 location.temperature_range,
                 CASE WHEN COALESCE(occupancy.occupied_stock, 0) > 0 THEN 'Ocupado' ELSE 'Libre' END as occupancy_status,
@@ -596,6 +612,7 @@ class KardexController extends BasicController
             ->selectRaw("
                 stock.warehouse_id,
                 COALESCE(stock.location, '') as location,
+                stock.client_id,
                 COALESCE(stock.client_name, '') as client_name,
                 CONCAT(
                     COALESCE(article.name, ''),
@@ -614,13 +631,14 @@ class KardexController extends BasicController
             ->selectRaw("
                 current.warehouse_id,
                 current.location,
+                current.client_id,
                 SUM(current.current_stock) as occupied_stock,
                 MIN(current.occupied_from) as occupied_from,
                 MAX(current.occupied_until) as occupied_until,
                 GROUP_CONCAT(DISTINCT NULLIF(current.client_name, '') SEPARATOR ', ') as occupied_clients,
                 GROUP_CONCAT(DISTINCT current.product_label SEPARATOR '; ') as occupied_products
             ")
-            ->groupBy('current.warehouse_id', 'current.location');
+            ->groupBy('current.warehouse_id', 'current.location', 'current.client_id');
     }
 
     private function kardexQuery(Request $request)
@@ -692,6 +710,7 @@ class KardexController extends BasicController
             ->leftJoin('storage_locations as storage_location', function ($join) {
                 $join->on('storage_location.warehouse_id', '=', 'stock.warehouse_id')
                     ->whereRaw("storage_location.code = stock.location")
+                    ->whereRaw("COALESCE(storage_location.client_id, 0) = COALESCE(stock.client_id, 0)")
                     ->whereNotNull('storage_location.status');
             })
             ->leftJoin('clients as client', 'client.id', '=', 'stock.client_id')

@@ -7,7 +7,6 @@ use App\Http\Controllers\Admin\Magistrales\Concerns\RunsMagistralSaveInTransacti
 use App\Models\Article;
 use App\Models\MagistralIncome;
 use App\Models\MagistralIncomeItem;
-use App\Support\MagistralesInputWarehouse;
 use App\Support\MagistralesWarehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,8 +29,7 @@ class IncomeController extends BasicController
         return [
             'moduleTitle' => 'Magistrales - Nota de Entrada',
             'requiredPermission' => ['magistrales-incomes', 'magistrales-procurement'],
-            'fixedWarehouse' => MagistralesInputWarehouse::summary(),
-            'productWarehouse' => MagistralesWarehouse::summary(),
+            'fixedWarehouse' => MagistralesWarehouse::summary(),
         ];
     }
 
@@ -83,7 +81,7 @@ class IncomeController extends BasicController
         $body['guide_ruc'] = trim((string)($body['guide_ruc'] ?? '')) ?: null;
         $body['guide_file_path'] = trim((string)($body['guide_file_path'] ?? '')) ?: null;
         $body['business_id'] = $this->toNullableInt($body['business_id'] ?? null);
-        $body['warehouse_id'] = MagistralesInputWarehouse::id();
+        $body['warehouse_id'] = MagistralesWarehouse::id();
         $body['supplier_id'] = $this->toNullableInt($body['supplier_id'] ?? null);
         $body['payment_method'] = trim((string)($body['payment_method'] ?? '')) ?: null;
         $body['file_path'] = trim((string)($body['file_path'] ?? '')) ?: null;

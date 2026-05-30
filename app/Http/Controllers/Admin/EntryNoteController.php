@@ -551,13 +551,14 @@ class EntryNoteController extends BasicController
 
             $locationRow = DB::table('storage_locations as location')
                 ->where('location.warehouse_id', $warehouseId)
+                ->where('location.client_id', (int)$entryNote->client_id)
                 ->where('location.status', 1)
                 ->whereRaw("LOWER(location.code) = ?", [mb_strtolower($location)])
                 ->first(['location.id', 'location.code']);
 
             if (!$locationRow) {
                 $warehouseName = optional(Warehouse::find($warehouseId))->name ?: 'seleccionado';
-                throw new \Exception("La ubicacion {$location} no esta registrada o activa para el almacen {$warehouseName}");
+                throw new \Exception("La ubicacion {$location} no esta registrada o activa para el cliente en el almacen {$warehouseName}");
             }
 
             $locationKey = $warehouseId . '|' . mb_strtolower((string)$locationRow->code);

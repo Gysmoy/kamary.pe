@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 
 class BillingControlController extends BaseBillingDocumentController
 {
-    private array $storageOrderTypes = ['storage_service', 'storage_general'];
+    private array $storageOrderTypes = ['storage_service'];
 
     public function setReactViewProperties(Request $request)
     {

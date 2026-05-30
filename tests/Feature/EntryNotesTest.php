@@ -9,8 +9,10 @@ use App\Models\Laboratory;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
+use Database\Seeders\ModulePermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class EntryNotesTest extends TestCase
@@ -19,7 +21,10 @@ class EntryNotesTest extends TestCase
 
     private function makeUser(): User
     {
-        return User::create([
+        $this->seed(ModulePermissionsSeeder::class);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $user = User::create([
             'name' => 'Entry',
             'lastname' => 'Tester',
             'fullname' => 'Entry Tester',
@@ -28,6 +33,10 @@ class EntryNotesTest extends TestCase
             'password' => Hash::make('secret'),
             'status' => true,
         ]);
+
+        $user->assignRole('Admin');
+
+        return $user;
     }
 
     public function test_can_create_entry_note_with_multiple_items(): void

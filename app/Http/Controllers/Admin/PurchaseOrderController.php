@@ -193,9 +193,6 @@ class PurchaseOrderController extends BasicController
                 if ($receivedQuantity < 0) {
                     throw new \Exception("La cantidad recepcionada no puede ser negativa para {$article->name}");
                 }
-                if ($receivedQuantity > $requestedQuantity) {
-                    throw new \Exception("La cantidad recepcionada no puede superar la solicitada para {$article->name}");
-                }
 
                 $lineTotal = $this->toNullableDecimal($item['total'] ?? null);
                 if (is_null($lineTotal) || $lineTotal < 0) {

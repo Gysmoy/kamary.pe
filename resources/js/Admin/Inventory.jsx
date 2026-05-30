@@ -226,9 +226,10 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
   const currentTablePage = Math.min(tablePage, tablePageCount)
   const paginatedRows = filteredRows.slice((currentTablePage - 1) * tablePageSize, currentTablePage * tablePageSize)
   const filteredLocations = useMemo(() => locations.filter(item => {
-    if (!warehouseId) return false
+    if (!warehouseId || !clientId) return false
     return `${item.warehouse_id}` === `${warehouseId}`
-  }), [locations, warehouseId])
+      && `${item.client_id ?? ''}` === `${clientId}`
+  }), [locations, warehouseId, clientId])
 
   const changeWarehouse = (value) => {
     setWarehouseId(value)
@@ -532,10 +533,10 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         </div>
         <div className='col-12 col-md-6 col-xl-3'>
           <label className='form-label'>Ubicacion</label>
-          <select className='form-select' value={location} disabled={!!selectedCount || !warehouseId} onChange={(e) => setLocation(e.target.value)}>
-            <option value=''>{warehouseId ? 'Seleccione ubicación' : 'Seleccione almacén primero'}</option>
+          <select className='form-select' value={location} disabled={!!selectedCount || !warehouseId || !clientId} onChange={(e) => setLocation(e.target.value)}>
+            <option value=''>{warehouseId && clientId ? 'Seleccione ubicación' : 'Seleccione almacén y cliente primero'}</option>
             {filteredLocations.map(item => (
-              <option key={`storage-inv-location-${item.warehouse_id ?? 'all'}-${item.location}`} value={item.location}>
+              <option key={`storage-inv-location-${item.warehouse_id ?? 'all'}-${item.client_id ?? 'all'}-${item.location}`} value={item.location}>
                 {item.location}
               </option>
             ))}
@@ -543,7 +544,10 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         </div>
         <div className='col-12 col-xl-5'>
           <label className='form-label'>Cliente</label>
-          <select className='form-select' value={clientId} disabled={!!selectedCount} onChange={(e) => setClientId(e.target.value)}>
+          <select className='form-select' value={clientId} disabled={!!selectedCount} onChange={(e) => {
+            setClientId(e.target.value)
+            setLocation('')
+          }}>
             <option value=''>Seleccione cliente</option>
             {clients.map(client => (
               <option key={`storage-inv-client-${client.id}`} value={client.id}>

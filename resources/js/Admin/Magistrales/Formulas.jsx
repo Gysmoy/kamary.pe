@@ -24,9 +24,6 @@ const isInputArticle = (article) => {
   return type.includes('insumo') || type.includes('envase') || category === 'insumos'
 }
 const articleCost = (article) => {
-  const inputCost = toNumber(article?.magistral_input_cost)
-  if (inputCost > 0) return inputCost
-
   for (const field of ['cost_price', 'purchase_price_national', 'sale_price_national', 'sale_price']) {
     const value = toNumber(article?.[field])
     if (value > 0) return value
@@ -146,9 +143,8 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
       const article = inputArticles.find(item => `${item.id}` === `${row.article_id}`) ?? row.article ?? null
       const presentationOptions = presentationOptionsFromArticle(article, row.presentation)
       const presentation = row.presentation ?? presentationOptions[0]?.value ?? ''
-      const currentUnitPrice = presentationPrice(article, presentation)
 
-      return recalculateItem({
+      return {
         uid: nextUid(),
         article_id: row.article_id ?? '',
         total_units: row.total_units ?? 0,
@@ -159,9 +155,9 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
         article_data: article,
         presentation_options: presentationOptions,
         total_quantity: row.total_quantity ?? row.quantity ?? 1,
-        unit_price: currentUnitPrice > 0 ? currentUnitPrice : (row.unit_price ?? 0),
+        unit_price: row.unit_price ?? presentationPrice(article, presentation),
         subtotal: row.subtotal ?? 0,
-      })
+      }
     })
     setFormulaItems(next.length ? next : [emptyItem()])
   }

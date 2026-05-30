@@ -10,7 +10,6 @@ use App\Models\MagistralInventoryCountItem;
 use App\Models\Unit;
 use App\Models\User;
 use App\Support\BusinessScope;
-use App\Support\MagistralesInputWarehouse;
 use App\Support\MagistralesStock;
 use App\Support\MagistralesWarehouse;
 use Database\Seeders\ModulePermissionsSeeder;
@@ -111,7 +110,6 @@ class MagistralesStockFlowsTest extends TestCase
     {
         $user = $this->makeUser();
         [$article, $warehouse] = $this->makeArticle($user);
-        $inputWarehouse = MagistralesInputWarehouse::warehouse();
         $finishedProduct = Article::create([
             'module_scope' => 'magistrales',
             'code' => 'MAG-QA-002',
@@ -134,7 +132,7 @@ class MagistralesStockFlowsTest extends TestCase
 
         Carbon::setTestNow('2026-05-10 10:00:00');
         $income = $this->post('/api/admin/magistrales/incomes', [
-            'warehouse_id' => $inputWarehouse->id,
+            'warehouse_id' => $warehouse->id,
             'document_type' => 'Boleta',
             'affects_igv' => false,
             'items' => [[
@@ -146,11 +144,11 @@ class MagistralesStockFlowsTest extends TestCase
             ]],
         ]);
         $income->assertStatus(200);
-        $this->assertEquals(5.0, MagistralesStock::stock($article->id, $inputWarehouse->id));
+        $this->assertEquals(5.0, MagistralesStock::stock($article->id, $warehouse->id));
 
         Carbon::setTestNow('2026-05-10 10:00:01');
         $output = $this->post('/api/admin/magistrales/outputs', [
-            'origin_warehouse_id' => $inputWarehouse->id,
+            'origin_warehouse_id' => $warehouse->id,
             'reason' => 'QA',
             'items' => [[
                 'article_id' => $article->id,
@@ -158,12 +156,11 @@ class MagistralesStockFlowsTest extends TestCase
             ]],
         ]);
         $output->assertStatus(200);
-        $this->assertEquals(1.0, MagistralesStock::stock($article->id, $inputWarehouse->id));
+        $this->assertEquals(1.0, MagistralesStock::stock($article->id, $warehouse->id));
 
         Carbon::setTestNow('2026-05-10 10:00:02');
         $production = $this->post('/api/admin/magistrales/production-orders', [
             'order_status' => 'finished',
-            'source_warehouse_id' => $inputWarehouse->id,
             'destination_warehouse_id' => $warehouse->id,
             'article_id' => $finishedProduct->id,
             'quantity' => 2,
@@ -175,12 +172,12 @@ class MagistralesStockFlowsTest extends TestCase
             ]],
         ]);
         $production->assertStatus(200);
-        $this->assertEquals(0.0, MagistralesStock::stock($article->id, $inputWarehouse->id));
+        $this->assertEquals(0.0, MagistralesStock::stock($article->id, $warehouse->id));
         $this->assertEquals(2.0, MagistralesStock::stock($finishedProduct->id, $warehouse->id));
 
         Carbon::setTestNow('2026-05-10 10:00:03');
         $blockedOutput = $this->post('/api/admin/magistrales/outputs', [
-            'origin_warehouse_id' => $inputWarehouse->id,
+            'origin_warehouse_id' => $warehouse->id,
             'reason' => 'QA',
             'items' => [[
                 'article_id' => $article->id,
@@ -195,28 +192,43 @@ class MagistralesStockFlowsTest extends TestCase
             'patient' => 'Paciente QA',
             'is_quote' => true,
             'items' => [[
-                'article_id' => $finishedProduct->id,
+                'article_id' => $article->id,
                 'warehouse_id' => $warehouse->id,
                 'quantity' => 10,
                 'unit_price' => 12,
             ]],
         ]);
         $quote->assertStatus(200);
-        $this->assertEquals(2.0, MagistralesStock::stock($finishedProduct->id, $warehouse->id));
+        $this->assertEquals(0.0, MagistralesStock::stock($article->id, $warehouse->id));
 
         $blockedSale = $this->post('/api/admin/magistrales/sales', [
             'payment_status' => 'pending',
             'patient' => 'Paciente QA',
             'is_quote' => false,
             'items' => [[
-                'article_id' => $finishedProduct->id,
+                'article_id' => $article->id,
                 'warehouse_id' => $warehouse->id,
-                'quantity' => 3,
+                'quantity' => 2,
                 'unit_price' => 12,
             ]],
         ]);
         $blockedSale->assertStatus(400);
         $this->assertStringContainsString('Stock insuficiente', $blockedSale->json('message'));
+
+        Carbon::setTestNow('2026-05-10 10:00:04');
+        $replenishment = $this->post('/api/admin/magistrales/incomes', [
+            'warehouse_id' => $warehouse->id,
+            'document_type' => 'Boleta',
+            'affects_igv' => false,
+            'items' => [[
+                'article_id' => $article->id,
+                'quantity' => 1,
+                'presentation' => 'UND',
+                'price_without_igv' => 8,
+                'price_with_igv' => 8,
+            ]],
+        ]);
+        $replenishment->assertStatus(200);
 
         Carbon::setTestNow('2026-05-10 10:00:05');
         $sale = $this->post('/api/admin/magistrales/sales', [
@@ -224,24 +236,24 @@ class MagistralesStockFlowsTest extends TestCase
             'patient' => 'Paciente QA',
             'is_quote' => false,
             'items' => [[
-                'article_id' => $finishedProduct->id,
+                'article_id' => $article->id,
                 'warehouse_id' => $warehouse->id,
                 'quantity' => 1,
                 'unit_price' => 12,
             ]],
         ]);
         $sale->assertStatus(200);
-        $this->assertEquals(1.0, MagistralesStock::stock($finishedProduct->id, $warehouse->id));
+        $this->assertEquals(0.0, MagistralesStock::stock($article->id, $warehouse->id));
 
         $movements = $this->post('/api/admin/magistrales/kardex/movements', [
             'article_id' => $article->id,
-            'warehouse_id' => $inputWarehouse->id,
+            'warehouse_id' => $warehouse->id,
         ]);
         $movements->assertStatus(200);
 
         $rows = collect($movements->json('data'));
-        $this->assertSame(['Ingreso', 'Salida', 'Consumo produccion'], $rows->pluck('operation')->values()->all());
-        $this->assertEquals([5.0, 1.0, 0.0], $rows->pluck('balance')->map(fn($value) => (float)$value)->values()->all());
+        $this->assertSame(['Ingreso', 'Salida', 'Consumo produccion', 'Ingreso', 'Venta'], $rows->pluck('operation')->values()->all());
+        $this->assertEquals([5.0, 1.0, 0.0, 1.0, 0.0], $rows->pluck('balance')->map(fn($value) => (float)$value)->values()->all());
 
         $productMovements = $this->post('/api/admin/magistrales/kardex/movements', [
             'article_id' => $finishedProduct->id,
@@ -249,8 +261,8 @@ class MagistralesStockFlowsTest extends TestCase
         ]);
         $productMovements->assertStatus(200);
         $productRows = collect($productMovements->json('data'));
-        $this->assertSame(['Produccion', 'Venta'], $productRows->pluck('operation')->values()->all());
-        $this->assertEquals([2.0, 1.0], $productRows->pluck('balance')->map(fn($value) => (float)$value)->values()->all());
+        $this->assertSame(['Produccion'], $productRows->pluck('operation')->values()->all());
+        $this->assertEquals([2.0], $productRows->pluck('balance')->map(fn($value) => (float)$value)->values()->all());
         Carbon::setTestNow();
     }
 
@@ -258,12 +270,11 @@ class MagistralesStockFlowsTest extends TestCase
     {
         $user = $this->makeUser();
         [$article, $warehouse] = $this->makeArticle($user);
-        $inputWarehouse = MagistralesInputWarehouse::warehouse();
         $this->actingAs($user);
 
         Carbon::setTestNow('2026-05-10 11:00:00');
         $income = $this->post('/api/admin/magistrales/incomes', [
-            'warehouse_id' => $inputWarehouse->id,
+            'warehouse_id' => $warehouse->id,
             'document_type' => 'Boleta',
             'affects_igv' => false,
             'items' => [
@@ -289,12 +300,12 @@ class MagistralesStockFlowsTest extends TestCase
         ]);
         $income->assertStatus(200);
 
-        $this->assertEquals(5.0, MagistralesStock::stock($article->id, $inputWarehouse->id));
-        $this->assertEquals(2.0, MagistralesStock::stock($article->id, $inputWarehouse->id, 'L-001', '2027-01-31'));
-        $this->assertEquals(3.0, MagistralesStock::stock($article->id, $inputWarehouse->id, 'L-002', '2027-02-28'));
+        $this->assertEquals(5.0, MagistralesStock::stock($article->id, $warehouse->id));
+        $this->assertEquals(2.0, MagistralesStock::stock($article->id, $warehouse->id, 'L-001', '2027-01-31'));
+        $this->assertEquals(3.0, MagistralesStock::stock($article->id, $warehouse->id, 'L-002', '2027-02-28'));
 
         $blockedOutput = $this->post('/api/admin/magistrales/outputs', [
-            'origin_warehouse_id' => $inputWarehouse->id,
+            'origin_warehouse_id' => $warehouse->id,
             'reason' => 'QA lote',
             'items' => [[
                 'article_id' => $article->id,
@@ -307,7 +318,7 @@ class MagistralesStockFlowsTest extends TestCase
         $this->assertStringContainsString('Stock insuficiente', $blockedOutput->json('message'));
 
         $output = $this->post('/api/admin/magistrales/outputs', [
-            'origin_warehouse_id' => $inputWarehouse->id,
+            'origin_warehouse_id' => $warehouse->id,
             'reason' => 'QA lote',
             'items' => [[
                 'article_id' => $article->id,
@@ -318,12 +329,12 @@ class MagistralesStockFlowsTest extends TestCase
         ]);
         $output->assertStatus(200);
 
-        $this->assertEquals(4.0, MagistralesStock::stock($article->id, $inputWarehouse->id));
-        $this->assertEquals(1.0, MagistralesStock::stock($article->id, $inputWarehouse->id, 'L-001', '2027-01-31'));
+        $this->assertEquals(4.0, MagistralesStock::stock($article->id, $warehouse->id));
+        $this->assertEquals(1.0, MagistralesStock::stock($article->id, $warehouse->id, 'L-001', '2027-01-31'));
 
         $stockLookup = $this->post('/api/admin/magistrales/inventory/stock', [
             'article_id' => $article->id,
-            'warehouse_id' => $inputWarehouse->id,
+            'warehouse_id' => $warehouse->id,
             'lot' => 'L-001',
             'expiration_date' => '2027-01-31',
         ]);
@@ -331,7 +342,7 @@ class MagistralesStockFlowsTest extends TestCase
         $this->assertEquals(1.0, (float)$stockLookup->json('data.stock'));
 
         $inventory = $this->post('/api/admin/magistrales/inventory', [
-            'warehouse_id' => $inputWarehouse->id,
+            'warehouse_id' => $warehouse->id,
             'count_date' => '2026-05-10',
             'items' => [[
                 'article_id' => $article->id,

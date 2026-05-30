@@ -349,6 +349,7 @@ const StorageKardex = () => {
   const [locationForm, setLocationForm] = useState({
     id: '',
     warehouse_id: '',
+    client_id: '',
     code: '',
     temperature_range: '',
     status: '1',
@@ -485,6 +486,7 @@ const StorageKardex = () => {
     setLocationForm({
       id: row?.id ? `${row.id}` : '',
       warehouse_id: row?.warehouse_id ? `${row.warehouse_id}` : '',
+      client_id: row?.client_id ? `${row.client_id}` : '',
       code: row?.code ?? '',
       temperature_range: row?.temperature_range ?? '',
       status: row?.status === false || row?.status === 0 ? '0' : '1',
@@ -866,6 +868,7 @@ const StorageKardex = () => {
       cellTemplate: (container, { data }) => occupancyBadge(container, data.occupancy_status)
     },
     { dataField: 'warehouse_name', caption: 'Almacen', minWidth: 160 },
+    { dataField: 'client_name', caption: 'Cliente asignado', minWidth: 230 },
     { dataField: 'code', caption: 'Ubicacion', minWidth: 120 },
     { dataField: 'temperature_range', caption: 'Temperatura', minWidth: 130 },
     {
@@ -1234,6 +1237,13 @@ const StorageKardex = () => {
           <select className='form-select' value={locationForm.warehouse_id} onChange={(e) => setLocationForm(prev => ({ ...prev, warehouse_id: e.target.value }))}>
             <option value=''>Seleccione almacén</option>
             {warehouses.map(warehouse => <option key={`storage-location-wh-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
+          </select>
+        </div>
+        <div className='col-12 col-md-6'>
+          <label className='form-label'>Cliente</label>
+          <select className='form-select' value={locationForm.client_id} disabled={!!locationForm.id && !!locationForm.client_id} onChange={(e) => setLocationForm(prev => ({ ...prev, client_id: e.target.value }))}>
+            <option value=''>Seleccione cliente</option>
+            {clients.map(client => <option key={`storage-location-client-${client.id}`} value={client.id}>{client.document_number ? `${client.document_number} | ` : ''}{client.full_name}</option>)}
           </select>
         </div>
         <div className='col-12 col-md-6'>

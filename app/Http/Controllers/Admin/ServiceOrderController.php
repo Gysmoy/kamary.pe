@@ -217,6 +217,7 @@ class ServiceOrderController extends BasicController
             $inserted = 0;
             $subtotal = 0;
             $storageBillingItems = [];
+            $storageClientId = (int) $jpa->client_id;
 
             foreach ($this->itemsPayload as $item) {
                 if (!is_array($item)) continue;
@@ -228,6 +229,9 @@ class ServiceOrderController extends BasicController
                     && ($service->service_scope ?? null) !== $this->serviceScopeForOrder()
                 ) {
                     throw new \Exception('El servicio seleccionado no pertenece a este modulo');
+                }
+                if ($this->orderType() === 'storage_service') {
+                    $this->assertStorageLocationsBelongToClient((string)($item['description'] ?? ''), $storageClientId);
                 }
                 $quantity = $this->toDecimal($item['quantity'] ?? 0, 3);
                 if ($quantity <= 0) throw new \Exception("La cantidad debe ser mayor a 0 para {$service->name}");
@@ -473,6 +477,42 @@ class ServiceOrderController extends BasicController
         }
 
         return array_values(array_unique(array_filter($dates)));
+    }
+
+    private function assertStorageLocationsBelongToClient(string $description, int $clientId): void
+    {
+        $parts = explode(';', $description);
+        $warehouseName = trim((string)($parts[0] ?? ''));
+        $locationText = trim((string)($parts[1] ?? ''));
+        $locationLabels = array_values(array_filter(array_map('trim', explode(',', $locationText))));
+
+        if ($warehouseName === '' || empty($locationLabels)) {
+            throw new \Exception('Cada linea de almacenamiento debe tener almacen y ubicacion');
+        }
+
+        foreach ($locationLabels as $label) {
+            $locationCode = trim(explode('|', $label)[0] ?? '');
+            if ($locationCode === '') {
+                throw new \Exception('La ubicacion de almacenamiento es invalida');
+            }
+
+            $exists = DB::table('storage_locations as location')
+                ->join('warehouses as warehouse', 'warehouse.id', '=', 'location.warehouse_id')
+                ->join('business_branches as branch', 'branch.id', '=', 'warehouse.business_branch_id')
+                ->join('businesses as business', 'business.id', '=', 'branch.business_id')
+                ->where('business.business_key', BusinessScope::KAMARY_MEDICALS)
+                ->whereNotNull('business.status')
+                ->whereNotNull('warehouse.status')
+                ->whereNotNull('location.status')
+                ->where('location.client_id', $clientId)
+                ->whereRaw('LOWER(TRIM(warehouse.name)) = ?', [mb_strtolower($warehouseName)])
+                ->whereRaw('LOWER(TRIM(location.code)) = ?', [mb_strtolower($locationCode)])
+                ->exists();
+
+            if (!$exists) {
+                throw new \Exception('La ubicacion seleccionada no pertenece al cliente de almacenamiento');
+            }
+        }
     }
 
     private function syncStoragePrefactures(ServiceOrder $order, array $storageBillingItems): int
