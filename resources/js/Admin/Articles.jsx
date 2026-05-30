@@ -995,7 +995,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       row?.code ?? '',
       row?.warehouse?.name ?? '',
       row?.laboratory?.name ?? '',
-      row?.activePrinciple?.name ?? row?.active_principle?.name ?? '',
+      row?.active_principle?.name ?? row?.activePrinciple?.name ?? '',
       row?.name ?? '',
       row?.unit?.symbol || row?.unit?.name || '',
       row?.status === false || row?.status === 0 ? 'Inactivo' : 'Activo',
@@ -1392,12 +1392,19 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
   const actionsColumn = {
     caption: 'Acciones',
-    width: isStorageProduct ? '135px' : (isMagistrales ? '95px' : '120px'),
-    minWidth: isStorageProduct ? 135 : undefined,
+    width: isStorageProduct ? '135px' : (isMagistrales ? '95px' : '160px'),
+    minWidth: isStorageProduct ? 135 : (isMagistrales ? 95 : 160),
     fixed: true,
     fixedPosition: 'left',
     cellTemplate: (container, { data }) => {
-      container.css({ overflow: 'visible', textOverflow: 'unset', whiteSpace: 'nowrap' })
+      container.css({
+        alignItems: 'center',
+        display: 'flex',
+        gap: '6px',
+        overflow: 'hidden',
+        textOverflow: 'unset',
+        whiteSpace: 'nowrap',
+      })
       if (isMagistrales) {
         container.append(DxButton({
           className: 'btn btn-xs btn-soft-success',
@@ -1546,11 +1553,16 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       dataField: 'warehouse.name',
       caption: 'Almacen',
       width: '180px',
-      cellTemplate: (container, { data }) => container.text(data?.warehouse?.name ?? '-')
+      cellTemplate: (container, { data }) => container.text(data?.warehouse?.name ?? '')
     },
     { dataField: 'name', caption: 'Articulo', minWidth: 180 },
     { dataField: 'laboratory.name', caption: 'Laboratorio', width: '150px' },
-    { dataField: 'activePrinciple.name', caption: 'Principio activo', width: '180px' },
+    {
+      dataField: 'active_principle.name',
+      caption: 'Principio activo',
+      width: '180px',
+      cellTemplate: (container, { data }) => container.text(data?.active_principle?.name ?? data?.activePrinciple?.name ?? '')
+    },
     unitColumn,
     { dataField: 'volume', caption: 'Volumen', width: '100px' },
     { dataField: 'units_per_article', caption: 'Und x articulo', width: '110px' },
@@ -1833,8 +1845,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       .article-quick-actions {
         display: grid;
         gap: 1rem;
-        grid-template-columns: repeat(2, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
         margin-bottom: 1.25rem;
+        max-width: 100%;
+        min-width: 0;
       }
 
       .article-quick-action {
@@ -1851,6 +1865,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
         padding: 0 1.25rem;
         text-align: left;
         width: 100%;
+        min-width: 0;
       }
 
       .article-quick-action:hover,
