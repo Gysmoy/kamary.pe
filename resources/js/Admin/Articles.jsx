@@ -1842,89 +1842,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
   return (<>
     <style>{`
-      .article-quick-actions {
-        display: grid;
-        gap: 1rem;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-        margin-bottom: 1.25rem;
-        max-width: 100%;
-        min-width: 0;
-      }
-
-      .article-quick-action {
-        align-items: center;
-        background: #252851;
-        border: 0;
-        border-radius: 0;
-        color: #fff;
-        display: flex;
-        font-size: 1rem;
-        font-weight: 600;
-        justify-content: space-between;
-        min-height: 68px;
-        padding: 0 1.25rem;
-        text-align: left;
-        width: 100%;
-        min-width: 0;
-      }
-
-      .article-quick-action:hover,
-      .article-quick-action:focus {
-        background: #1d2148;
-        color: #fff;
-      }
-
-      .article-quick-action-main {
-        align-items: center;
-        display: inline-flex;
-        gap: 0.55rem;
-        min-width: 0;
-      }
-
-      .article-quick-action-main span {
-        overflow-wrap: anywhere;
-      }
-
-      .article-quick-action-icon {
-        flex: 0 0 auto;
-        font-size: 1.65rem;
-        opacity: 0.95;
-      }
-
-      .article-filter-card {
-        background: #fff;
-        border: 1px solid #e6e9ef;
-        border-radius: 0;
-        margin-bottom: 1rem;
-        padding: 1rem 1.25rem 1.15rem;
-      }
-
-      .article-filter-card .form-label,
-      .article-import-form .form-label {
-        color: #30364d;
-        font-size: 0.84rem;
-        font-weight: 600;
-      }
-
-      .article-import-modal {
-        border: 0;
-        border-radius: 0;
-      }
-
-      .article-import-header {
-        background: #252851;
-        color: #fff;
-        min-height: 46px;
-        padding: 0.65rem 1rem;
-      }
-
-      .article-import-header .modal-title {
-        color: #fff;
-        font-size: 0.86rem;
-        font-weight: 700;
-        text-transform: uppercase;
-      }
-
       .article-import-actions {
         border-top: 1px solid #e6e9ef;
         display: flex;
@@ -1938,12 +1855,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       .article-import-mapping summary {
         cursor: pointer;
         font-weight: 600;
-      }
-
-      @media (max-width: 767.98px) {
-        .article-quick-actions {
-          grid-template-columns: 1fr;
-        }
       }
     `}</style>
     {isStorageProduct && (
@@ -2202,65 +2113,63 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       `}</style>
     )}
     {!isStorageProduct && (
-      <div className='article-quick-actions'>
-        <button type='button' className='article-quick-action' onClick={() => onModalOpen()}>
-          <span className='article-quick-action-main'>
+      <div className='card mb-3'>
+        <div className='card-body d-flex flex-wrap gap-2'>
+          <button type='button' className='btn btn-primary d-inline-flex align-items-center gap-1' onClick={() => onModalOpen()}>
             <i className='mdi mdi-plus-circle-outline'></i>
-            <span>Registrar Articulo/Pack</span>
-          </span>
-          <i className='mdi mdi-account-plus-outline article-quick-action-icon'></i>
-        </button>
-        <button type='button' className='article-quick-action' onClick={() => onImportModalOpen()}>
-          <span className='article-quick-action-main'>
-            <i className='mdi mdi-plus-circle-outline'></i>
-            <span>Importar Articulo/Pack</span>
-          </span>
-          <i className='mdi mdi-file-document-outline article-quick-action-icon'></i>
-        </button>
+            Registrar Articulo/Pack
+          </button>
+          <button type='button' className='btn btn-outline-primary d-inline-flex align-items-center gap-1' onClick={() => onImportModalOpen()}>
+            <i className='mdi mdi-file-upload-outline'></i>
+            Importar Articulo/Pack
+          </button>
+        </div>
       </div>
     )}
     {!isStorageProduct && !isMagistrales && (
-      <form className='article-filter-card' onSubmit={onStandardFilterSubmitted}>
-        <div className='row g-3 align-items-end'>
-          <div className='col-12 col-lg-4'>
-            <label className='form-label'>Seleccionar Laboratorio</label>
-            <select
-              className='form-control'
-              value={standardFilterDraft.laboratoryId}
-              onChange={(e) => onStandardFilterLaboratoryChanged(e.target.value)}
-            >
-              <option value=''>TODOS</option>
-              {filterLaboratories.map(item => (
-                <option key={`article-filter-lab-${item.id}`} value={item.id}>{item.name ?? item.description}</option>
-              ))}
-            </select>
-          </div>
-          <div className='col-12 col-lg-4'>
-            <label className='form-label'>Seleccionar Principio activo</label>
-            <select
-              className='form-control'
-              value={standardFilterDraft.principleId}
-              disabled={!standardFilterDraft.laboratoryId}
-              onChange={(e) => setStandardFilterDraft(prev => ({ ...prev, principleId: e.target.value }))}
-            >
-              <option value=''>TODOS</option>
-              {filterPrinciples.map(item => (
-                <option key={`article-filter-principle-${item.id}`} value={item.id}>{item.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className='col-12 col-lg-2'>
-            <label className='form-label'>Codigo</label>
-            <input
-              className='form-control'
-              value={standardFilterDraft.code}
-              onChange={(e) => setStandardFilterDraft(prev => ({ ...prev, code: e.target.value }))}
-            />
-          </div>
-          <div className='col-12 col-lg-2 d-grid'>
-            <button type='submit' className='btn btn-outline-primary'>
-              <i className='mdi mdi-magnify me-1'></i> Buscar
-            </button>
+      <form className='card mb-3' onSubmit={onStandardFilterSubmitted}>
+        <div className='card-body'>
+          <div className='row g-3 align-items-end'>
+            <div className='col-12 col-lg-4'>
+              <label className='form-label'>Seleccionar Laboratorio</label>
+              <select
+                className='form-control'
+                value={standardFilterDraft.laboratoryId}
+                onChange={(e) => onStandardFilterLaboratoryChanged(e.target.value)}
+              >
+                <option value=''>TODOS</option>
+                {filterLaboratories.map(item => (
+                  <option key={`article-filter-lab-${item.id}`} value={item.id}>{item.name ?? item.description}</option>
+                ))}
+              </select>
+            </div>
+            <div className='col-12 col-lg-4'>
+              <label className='form-label'>Seleccionar Principio activo</label>
+              <select
+                className='form-control'
+                value={standardFilterDraft.principleId}
+                disabled={!standardFilterDraft.laboratoryId}
+                onChange={(e) => setStandardFilterDraft(prev => ({ ...prev, principleId: e.target.value }))}
+              >
+                <option value=''>TODOS</option>
+                {filterPrinciples.map(item => (
+                  <option key={`article-filter-principle-${item.id}`} value={item.id}>{item.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className='col-12 col-lg-2'>
+              <label className='form-label'>Codigo</label>
+              <input
+                className='form-control'
+                value={standardFilterDraft.code}
+                onChange={(e) => setStandardFilterDraft(prev => ({ ...prev, code: e.target.value }))}
+              />
+            </div>
+            <div className='col-12 col-lg-2 d-grid'>
+              <button type='submit' className='btn btn-outline-primary'>
+                <i className='mdi mdi-magnify me-1'></i> Buscar
+              </button>
+            </div>
           </div>
         </div>
       </form>
@@ -2873,13 +2782,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
     <Modal
       modalRef={importModalRef}
-      title={<h4 className='modal-title'><i className='mdi mdi-plus-circle-outline me-1'></i> Importar/Exportar Articulo / Pack</h4>}
+      title={<span><i className='mdi mdi-file-upload-outline me-1'></i> Importar/exportar articulo / pack</span>}
       onSubmit={onImportSubmit}
       size='xl'
       hideFooter
-      contentClass='article-import-modal'
-      headerClass='article-import-header'
-      closeButtonClass='btn-close-white'
     >
       <div id='article-import-form-container' className='article-import-form'>
         <div className='row g-3'>
