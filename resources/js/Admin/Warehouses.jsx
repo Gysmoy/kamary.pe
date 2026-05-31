@@ -404,13 +404,17 @@ const Warehouses = ({ fixedWarehouse = null, fixedBusiness = null, defaultBranch
       </div>
     </Modal>
 
-    <Modal modalRef={locationModalRef} title={`Ubicaciones - ${selectedWarehouse?.name ?? ''}`} size='lg' hideFooter>
+    <Modal modalRef={locationModalRef} title='Formulario ubicacion' size='lg' hideFooter>
       <div className='row align-items-end mb-3'>
         <input ref={locationIdRef} type='hidden' />
-        <InputFormGroup eRef={locationCodeRef} label='Ubicacion' col='col-md-4' required />
-        <InputFormGroup eRef={locationDescriptionRef} label='Descripcion' col='col-md-5' />
-        <div className='form-group col-md-1 mb-2'>
-          <label className='form-label d-block'>Activo</label>
+        <div className='form-group col-12 mb-2'>
+          <label className='form-label'>Almacen</label>
+          <input className='form-control' value={selectedWarehouse?.name ?? ''} disabled />
+        </div>
+        <InputFormGroup eRef={locationCodeRef} label='Codificacion' col='col-md-4' required />
+        <InputFormGroup eRef={locationDescriptionRef} label='Descripcion' col='col-md-4' />
+        <div className='form-group col-md-2 mb-2'>
+          <label className='form-label d-block'>Estado</label>
           <div className='form-check form-switch'>
             <input ref={locationStatusRef} className='form-check-input' type='checkbox' defaultChecked />
           </div>
@@ -426,7 +430,7 @@ const Warehouses = ({ fixedWarehouse = null, fixedBusiness = null, defaultBranch
           <thead>
             <tr>
               <th style={{ width: 90 }}>ID</th>
-              <th>Ubicacion</th>
+              <th>Codificacion</th>
               <th>Descripcion</th>
               <th style={{ width: 110 }}>Estado</th>
               <th style={{ width: 110 }}>Acciones</th>

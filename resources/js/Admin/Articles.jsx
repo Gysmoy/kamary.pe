@@ -39,9 +39,7 @@ const normalizeHeader = (value) => (value ?? '')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g, '')
   .toLowerCase()
-  .replaceAll('_', '')
-  .replaceAll('-', '')
-  .replaceAll(' ', '')
+  .replace(/[^a-z0-9]/g, '')
 
 const parseFileRows = async (file) => {
   const extension = (file.name.split('.').pop() || '').toLowerCase()
@@ -897,7 +895,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     const findByNames = (candidates) => withNorm.find(({ norm }) => candidates.includes(norm))?.header ?? ''
 
     return {
-      code: findByNames(['codigo', 'code', 'codigodearticulo', 'sku']),
+      code: findByNames(['loteean', 'codigolote', 'codigo', 'code', 'codigodearticulo', 'sku', 'ean', 'lote']),
       name: findByNames(['descripcion', 'description', 'name', 'nombre', 'articulo', 'producto']),
       warehouse: findByNames(['almacen', 'warehouse']),
       laboratory: findByNames(['laboratorio', 'laboratory']),
@@ -978,7 +976,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
   const articleImportHeaders = () => isMagistrales
     ? ['Codigo', 'Laboratorio', 'Descripcion', 'Unidad', 'Estado']
-    : ['Codigo', 'Almacen', 'Laboratorio', 'Principio activo', 'Descripcion', 'Unidad', 'Estado']
+    : ['LOTE (EAN)', 'LABORATORIO', 'PRINCIPIO ACTIVO', 'NOMBRE', 'UNIDAD']
 
   const articleExportRow = (row) => {
     const common = [
@@ -993,12 +991,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
     return [
       row?.code ?? '',
-      row?.warehouse?.name ?? '',
       row?.laboratory?.name ?? '',
       row?.active_principle?.name ?? row?.activePrinciple?.name ?? '',
       row?.name ?? '',
       row?.unit?.symbol || row?.unit?.name || '',
-      row?.status === false || row?.status === 0 ? 'Inactivo' : 'Activo',
     ]
   }
 
@@ -2843,14 +2839,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
                 <summary>Ajustar columnas detectadas</summary>
                 <div className='row g-2 mt-2'>
                   <div className='col-md-4'>
-                    <label className='form-label'>Codigo *</label>
+                    <label className='form-label'>{!isStorageProduct && !isMagistrales ? 'LOTE (EAN) *' : 'Codigo *'}</label>
                     <select className='form-control' value={mapping.code} onChange={(e) => setMapping(prev => ({ ...prev, code: e.target.value }))}>
                       <option value=''>Seleccionar...</option>
                       {importHeaders.map(header => <option key={`code-${header}`} value={header}>{header}</option>)}
                     </select>
                   </div>
                   <div className='col-md-4'>
-                    <label className='form-label'>Descripcion</label>
+                    <label className='form-label'>{!isStorageProduct && !isMagistrales ? 'Nombre' : 'Descripcion'}</label>
                     <select className='form-control' value={mapping.name} onChange={(e) => setMapping(prev => ({ ...prev, name: e.target.value }))}>
                       <option value=''>Seleccionar...</option>
                       {importHeaders.map(header => <option key={`name-${header}`} value={header}>{header}</option>)}
@@ -2902,8 +2898,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Codigo</th>
-                    <th>Descripcion</th>
+                    <th>{!isStorageProduct && !isMagistrales ? 'LOTE (EAN)' : 'Codigo'}</th>
+                    <th>{!isStorageProduct && !isMagistrales ? 'Nombre' : 'Descripcion'}</th>
                     {!isStorageProduct && !isMagistrales && <th>Almacen</th>}
                     <th>Laboratorio</th>
                     <th>Principio activo</th>
