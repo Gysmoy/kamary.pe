@@ -181,14 +181,21 @@ class FacturadorPro5Service
             throw new \InvalidArgumentException('Tipo de archivo no soportado');
         }
 
+        $stored = $this->decodeJson($document->response_payload);
+        if ($type === 'pdf' && $this->shouldServeLocalPdf($document, $stored)) {
+            return $this->buildLocalPdfFile($document);
+        }
+
         $status = $this->status($document);
         $downloadUrl = Arr::get($status, "links.{$type}");
         if (!$downloadUrl) {
-            $stored = $this->decodeJson($document->response_payload);
             $downloadUrl = Arr::get($stored, "links.{$type}");
         }
 
         if (!$downloadUrl) {
+            if ($type === 'pdf' && $this->shouldServeLocalPdf($document, $stored, $status)) {
+                return $this->buildLocalPdfFile($document);
+            }
             throw new \RuntimeException("El proveedor no devolvio enlace para {$type}");
         }
 
@@ -1140,6 +1147,126 @@ class FacturadorPro5Service
 
         $reference = $guide->external_reference ?: $guide->code;
         return preg_replace('/[^A-Za-z0-9._-]/', '_', $reference) . '.' . $type;
+    }
+
+    private function shouldServeLocalPdf(BillingDocument $document, array $stored = [], array $status = []): bool
+    {
+        return $document->provider_mode === 'demo'
+            || Arr::get($document->metadata ?? [], 'document_origin') === 'storage_billing_control_demo'
+            || Arr::get($stored, 'mode') === 'demo'
+            || Arr::get($status, 'mode') === 'demo';
+    }
+
+    private function buildLocalPdfFile(BillingDocument $document): array
+    {
+        $document->loadMissing('business', 'branch', 'client', 'eventualClient', 'serviceOrder', 'commercialOrder', 'referenceDocument', 'items');
+
+        $lines = [
+            'Comprobante demo de facturacion',
+            'Documento: ' . trim(($document->series ?: '-') . ' - ' . ($document->sequence ?: '-')),
+            'Codigo interno: ' . ($document->code ?: '-'),
+            'Tipo: ' . ($document->document_type ?: '-'),
+            'Estado: ' . ($document->external_status ?: $document->local_status ?: '-'),
+            'Empresa: ' . ($document->business?->name ?: '-'),
+            'Sede: ' . ($document->branch?->name ?: '-'),
+            'Cliente: ' . $this->resolveCustomerName($document),
+            'Documento cliente: ' . ($document->client?->document_number ?: $document->eventualClient?->document_number ?: '-'),
+            'Origen: ' . ($document->serviceOrder?->code ?: $document->commercialOrder?->code ?: Arr::get($document->metadata, 'source_code', '-')),
+            'Fecha emision: ' . $this->formatPdfDate($document->issue_date),
+            'Fecha vencimiento: ' . $this->formatPdfDate($document->due_date),
+            'Moneda: ' . ($document->currency ?: 'PEN'),
+            'Subtotal: ' . number_format((float) $document->subtotal, 2, '.', ''),
+            'IGV: ' . number_format((float) $document->tax_amount, 2, '.', ''),
+            'Total: ' . number_format((float) $document->total, 2, '.', ''),
+        ];
+
+        if ($document->referenceDocument) {
+            $lines[] = 'Documento afecto: ' . trim(($document->referenceDocument->series ?: '-') . ' - ' . ($document->referenceDocument->sequence ?: '-'));
+        }
+
+        $lines[] = '';
+        $lines[] = 'Detalle';
+        foreach ($document->items as $item) {
+            $lines[] = '- ' . ($item->description ?: $item->item_code ?: 'Item') . ' | Cant: ' . number_format((float) $item->quantity, 2, '.', '') . ' | Total: ' . number_format((float) $item->total, 2, '.', '');
+        }
+
+        if ($document->observations) {
+            $lines[] = '';
+            $lines[] = 'Observaciones: ' . $document->observations;
+        }
+
+        $lines[] = '';
+        $lines[] = 'Archivo generado localmente para datos demo sin enlace PDF del proveedor.';
+
+        return [
+            'content' => $this->pdfFromLines($lines),
+            'content_type' => 'application/pdf',
+            'filename' => preg_replace('/[^A-Za-z0-9._-]/', '_', ($document->external_reference ?: $document->code ?: 'comprobante-demo')) . '.pdf',
+        ];
+    }
+
+    private function formatPdfDate($value): string
+    {
+        if (!$value) {
+            return '-';
+        }
+
+        try {
+            return Carbon::parse($value)->format('Y-m-d');
+        } catch (\Throwable) {
+            return (string) $value;
+        }
+    }
+
+    private function pdfFromLines(array $lines): string
+    {
+        $content = "BT\n/F1 11 Tf\n50 760 Td\n16 TL\n";
+        foreach ($lines as $index => $line) {
+            if ($index > 0) {
+                $content .= "T*\n";
+            }
+            $content .= '(' . $this->pdfEscape($this->pdfText((string) $line)) . ") Tj\n";
+        }
+        $content .= "ET\n";
+
+        $objects = [
+            '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
+            '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
+            '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj',
+            '4 0 obj << /Length ' . strlen($content) . " >> stream\n" . $content . 'endstream endobj',
+            '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
+        ];
+
+        $pdf = "%PDF-1.4\n";
+        $offsets = [0];
+        foreach ($objects as $object) {
+            $offsets[] = strlen($pdf);
+            $pdf .= $object . "\n";
+        }
+
+        $xref = strlen($pdf);
+        $pdf .= "xref\n0 " . count($offsets) . "\n";
+        $pdf .= "0000000000 65535 f \n";
+        for ($i = 1; $i < count($offsets); $i++) {
+            $pdf .= str_pad((string) $offsets[$i], 10, '0', STR_PAD_LEFT) . " 00000 n \n";
+        }
+
+        $pdf .= "trailer << /Size " . count($offsets) . " /Root 1 0 R >>\n";
+        $pdf .= "startxref\n{$xref}\n%%EOF\n";
+
+        return $pdf;
+    }
+
+    private function pdfText(string $value): string
+    {
+        $text = strip_tags($value);
+        $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+        return $converted !== false ? $converted : preg_replace('/[^\x20-\x7E]/', '', $text);
+    }
+
+    private function pdfEscape(string $value): string
+    {
+        return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $value);
     }
 
     private function fallbackContentType(string $type): string
