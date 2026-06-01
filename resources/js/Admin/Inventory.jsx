@@ -29,7 +29,7 @@ const formatDate = (value) => {
 const formatQty = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 3 })
 const formatMoney = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const standardInventoryHeaders = ['ID', 'CODIGO LOTE', 'NOMBRE', 'LABORATORIO', 'UBICACION', 'STOCK SISTEMA', 'STOCK REAL']
-const storageInventoryHeaders = ['ID', 'LOTE', 'F. VENCIMIENTO', 'ARTÍCULO', 'CLIENTE', 'U. MEDIDA', 'UBICACION', 'TEMPERATURA', 'STOCK SISTEMA', 'STOCK REAL']
+const storageInventoryHeaders = ['ID', 'LOTE', 'F. VENCIMIENTO', 'ARTICULO', 'CLIENTE', 'U. MEDIDA', 'UBICACION', 'TEMPERATURA', 'STOCK SISTEMA', 'STOCK REAL']
 
 const safeExcelFileName = (value) => `${value || 'inventario'}`.replace(/[\\/:*?"<>|]+/g, '-')
 const warehouseName = (warehouse) => `${warehouse?.name ?? ''}`.trim()
@@ -536,7 +536,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
         </button>
       </div>
 
-      <h3 className='storage-inventory-heading mb-4'>INVENTARIO NÂ° {selectedCountCode}</h3>
+      <h3 className='storage-inventory-heading mb-4'>INVENTARIO Nro. {selectedCountCode}</h3>
       <div className='d-flex flex-wrap justify-content-end gap-2 mb-2'>
         {selectedWarehouseName && <span className='badge badge-soft-secondary fs-14'>{selectedWarehouseName}</span>}
         {selectedLaboratoryName && <span className='badge badge-soft-info fs-14'>{selectedLaboratoryName}</span>}
@@ -1031,7 +1031,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         <div className='col-12 col-md-6 col-xl-3'>
           <label className='form-label'>Ubicacion</label>
           <select className='form-select' value={location} disabled={!!selectedCount || !warehouseId || !clientId} onChange={(e) => setLocation(e.target.value)}>
-            <option value=''>{warehouseId && clientId ? 'Seleccione ubicación' : 'Seleccione almacén y cliente primero'}</option>
+            <option value=''>{warehouseId && clientId ? 'Seleccione ubicacion' : 'Seleccione almacen y cliente primero'}</option>
             {filteredLocations.map(item => (
               <option key={`storage-inv-location-${item.warehouse_id ?? 'all'}-${item.client_id ?? 'all'}-${item.location}`} value={item.location}>
                 {item.location}
@@ -1070,7 +1070,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         </button>
       </div>
 
-      <h3 className='storage-inventory-heading mb-4'>INVENTARIO N° {selectedCountCode}</h3>
+      <h3 className='storage-inventory-heading mb-4'>INVENTARIO Nro. {selectedCountCode}</h3>
       {selectedClientName && <div className='d-flex justify-content-end mb-2'><span className='badge badge-soft-secondary fs-14'>{selectedClientName}</span></div>}
       <div className='d-flex flex-wrap justify-content-between align-items-center gap-3 mb-2'>
         <label className='d-inline-flex align-items-center gap-2 mb-0'>
@@ -1129,7 +1129,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       <div className='d-flex flex-wrap justify-content-between align-items-center gap-3 mt-2'>
         <div>
           {filteredRows.length} elementos
-          {filteredRows.length > 0 && ` (Página ${currentTablePage} de ${tablePageCount})`}
+          {filteredRows.length > 0 && ` (Pagina ${currentTablePage} de ${tablePageCount})`}
         </div>
         <div className='d-inline-flex align-items-center gap-2'>
           <button type='button' className='btn btn-link p-0 text-muted text-decoration-none' disabled={currentTablePage <= 1} onClick={() => setTablePage(page => Math.max(1, page - 1))}>
