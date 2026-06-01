@@ -223,6 +223,19 @@ const formatFileSize = (bytes = 0) => {
 const fileIdentity = (file) => `${file.name}-${file.size}-${file.lastModified}`
 const contractFileUrl = (id, download = false) => `/api/admin/storage/client-contracts/${id}/file${download ? '?download=1' : ''}`
 const contractAnnexFileUrl = (id, download = false) => `/api/admin/storage/client-contract-annexes/${id}/file${download ? '?download=1' : ''}`
+const storageContractConfirm = (options) => Swal.fire({
+  ...options,
+  heightAuto: false,
+  customClass: {
+    ...(options.customClass ?? {}),
+    container: ['storage-contract-swal-container', options.customClass?.container].filter(Boolean).join(' ')
+  },
+  didOpen: (...args) => {
+    options.didOpen?.(...args)
+    const container = Swal.getContainer()
+    if (container) container.style.zIndex = '20000'
+  }
+})
 
 const resolveQuickFilterValue = (quickFilter) => {
   switch (quickFilter) {
@@ -960,7 +973,7 @@ const Clients = ({
     const contractId = contractEditingData?.id || getRefValue(contractIdRef)
     if (!contractId) return
 
-    const { isConfirmed } = await Swal.fire({
+    const { isConfirmed } = await storageContractConfirm({
       title: 'Eliminar documento oficial',
       text: 'El documento oficial se quitara del contrato.',
       icon: 'warning',
@@ -985,7 +998,7 @@ const Clients = ({
   const onContractAnnexDeleteClicked = async (annex) => {
     if (!annex?.id) return
 
-    const { isConfirmed } = await Swal.fire({
+    const { isConfirmed } = await storageContractConfirm({
       title: 'Eliminar anexo',
       text: 'El anexo se quitara del contrato.',
       icon: 'warning',
@@ -1835,6 +1848,9 @@ const Clients = ({
             align-items: center;
             justify-content: center;
             padding: 0;
+          }
+          .storage-contract-swal-container {
+            z-index: 20000 !important;
           }
         `}</style>
         <div className='row'>
