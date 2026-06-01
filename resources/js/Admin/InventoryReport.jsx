@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
@@ -6,14 +6,35 @@ import Table from '../Components/Adminto/Table';
 import InventoryReportRest from '../Actions/Admin/InventoryReportRest';
 
 const inventoryReportRest = new InventoryReportRest()
+const warehouseName = (warehouse) => `${warehouse?.name ?? ''}`.trim()
+const uniqueWarehouseNameOptions = (warehouses = []) => {
+  const grouped = new Map()
+
+  warehouses.forEach(warehouse => {
+    const name = warehouseName(warehouse)
+    if (!name || warehouse?.id == null) return
+
+    const key = name.toLocaleLowerCase('es-PE')
+    const current = grouped.get(key)
+    const ids = [...(current?.ids ?? []), `${warehouse.id}`]
+    grouped.set(key, {
+      ids,
+      name: current?.name ?? name,
+      value: ids.join(','),
+    })
+  })
+
+  return Array.from(grouped.values()).sort((a, b) => a.name.localeCompare(b.name, 'es-PE'))
+}
 
 const InventoryReport = ({ businessScopes = {}, businessScopeKey = 'kamary_peru' }) => {
   const gridRef = useRef()
   const [warehouses, setWarehouses] = useState([])
   const [laboratories, setLaboratories] = useState([])
-  const [warehouseId, setWarehouseId] = useState('')
+  const [warehouseIds, setWarehouseIds] = useState('')
   const [laboratoryId, setLaboratoryId] = useState('')
   const fixedBusinessLabel = (businessScopes?.[businessScopeKey] || 'KAMARY PERU').toUpperCase()
+  const warehouseOptions = useMemo(() => uniqueWarehouseNameOptions(warehouses), [warehouses])
 
   useEffect(() => {
     inventoryReportRest.getInventoryOptions().then((options) => {
@@ -26,12 +47,13 @@ const InventoryReport = ({ businessScopes = {}, businessScopeKey = 'kamary_peru'
     inventoryReportRest.setFilters({
       business_id: '',
       business_branch_id: '',
-      warehouse_id: warehouseId || '',
+      warehouse_id: '',
+      warehouse_ids: warehouseIds || '',
       laboratory_id: laboratoryId || '',
     })
     if (!gridRef.current) return
     $(gridRef.current).dxDataGrid('instance').refresh()
-  }, [warehouseId, laboratoryId])
+  }, [warehouseIds, laboratoryId])
 
   return <div className='row'>
     <div className='col-12'>
@@ -44,9 +66,9 @@ const InventoryReport = ({ businessScopes = {}, businessScopeKey = 'kamary_peru'
             </div>
             <div className='col-md-4 mb-3'>
               <label className='form-label'>Almacen</label>
-              <select className='form-control' value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
+              <select className='form-control' value={warehouseIds} onChange={(e) => setWarehouseIds(e.target.value)}>
                 <option value=''>Todos</option>
-                {warehouses.map(row => <option key={`inventory-report-warehouse-${row.id}`} value={row.id}>{row.name}</option>)}
+                {warehouseOptions.map(row => <option key={`inventory-report-warehouse-${row.value}`} value={row.value}>{row.name}</option>)}
               </select>
             </div>
             <div className='col-md-4 mb-3'>

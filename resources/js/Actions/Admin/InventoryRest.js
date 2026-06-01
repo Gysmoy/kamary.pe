@@ -12,6 +12,7 @@ class InventoryRest extends BasicRest {
     business_id: '',
     business_branch_id: '',
     warehouse_id: '',
+    warehouse_ids: '',
   }
 
   setFilters = (filters = {}) => {

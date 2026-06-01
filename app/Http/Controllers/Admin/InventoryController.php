@@ -38,7 +38,10 @@ class InventoryController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
+        $warehouseIds = $this->toNullableIntList(request('warehouse_ids'));
         $warehouseId = $this->toNullableInt(request('warehouse_id'));
+        if ($warehouseId) $warehouseIds[] = $warehouseId;
+        $warehouseIds = array_values(array_unique($warehouseIds));
 
         return $this->inventoryCountQuery()
             ->select('inventory_counts.*')
@@ -55,7 +58,7 @@ class InventoryController extends BasicController
             ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'inventory_counts.laboratory_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'inventory_counts.created_by')
             ->leftJoin('users as updater', 'updater.id', '=', 'inventory_counts.updated_by')
-            ->when($warehouseId, fn($query) => $query->where('inventory_counts.warehouse_id', $warehouseId));
+            ->when(count($warehouseIds) > 0, fn($query) => $query->whereIn('inventory_counts.warehouse_id', $warehouseIds));
     }
 
     public function options(Request $request): HttpResponse|ResponseFactory
@@ -901,6 +904,23 @@ class InventoryController extends BasicController
         if ($text === '') return null;
         if (!ctype_digit(ltrim($text, '+'))) throw new \Exception("Valor entero invalido: {$value}");
         return (int)$text;
+    }
+
+    private function toNullableIntList($value): array
+    {
+        if ($value === null) return [];
+
+        $parts = is_array($value)
+            ? $value
+            : preg_split('/[,\s]+/', trim((string)$value), -1, PREG_SPLIT_NO_EMPTY);
+
+        $ids = [];
+        foreach ($parts ?: [] as $part) {
+            $id = $this->toNullableInt($part);
+            if ($id) $ids[] = $id;
+        }
+
+        return array_values(array_unique($ids));
     }
 
     private function toNullableDecimal($value): ?float

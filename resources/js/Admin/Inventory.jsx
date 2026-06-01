@@ -32,6 +32,27 @@ const standardInventoryHeaders = ['ID', 'CODIGO LOTE', 'NOMBRE', 'LABORATORIO', 
 const storageInventoryHeaders = ['ID', 'LOTE', 'F. VENCIMIENTO', 'ARTÍCULO', 'CLIENTE', 'U. MEDIDA', 'UBICACION', 'TEMPERATURA', 'STOCK SISTEMA', 'STOCK REAL']
 
 const safeExcelFileName = (value) => `${value || 'inventario'}`.replace(/[\\/:*?"<>|]+/g, '-')
+const warehouseName = (warehouse) => `${warehouse?.name ?? ''}`.trim()
+const warehouseNameKey = (warehouse) => warehouseName(warehouse).toLocaleLowerCase('es-PE')
+const uniqueWarehouseNameOptions = (warehouses = []) => {
+  const grouped = new Map()
+
+  warehouses.forEach(warehouse => {
+    const name = warehouseName(warehouse)
+    if (!name || warehouse?.id == null) return
+
+    const key = warehouseNameKey(warehouse)
+    const current = grouped.get(key)
+    const ids = [...(current?.ids ?? []), `${warehouse.id}`]
+    grouped.set(key, {
+      ids,
+      name: current?.name ?? name,
+      value: ids.join(','),
+    })
+  })
+
+  return Array.from(grouped.values()).sort((a, b) => a.name.localeCompare(b.name, 'es-PE'))
+}
 
 const mapStoredItem = (item) => ({
   id: item.id,
@@ -80,7 +101,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
   const fileRef = useRef()
   const [warehouses, setWarehouses] = useState([])
   const [laboratories, setLaboratories] = useState([])
-  const [filterWarehouseId, setFilterWarehouseId] = useState('')
+  const [filterWarehouseIds, setFilterWarehouseIds] = useState('')
   const [warehouseId, setWarehouseId] = useState('')
   const [laboratoryId, setLaboratoryId] = useState('')
   const [rows, setRows] = useState([])
@@ -98,12 +119,14 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
   }, [])
 
   useEffect(() => {
-    inventoryRest.setFilters({ warehouse_id: filterWarehouseId || '' })
+    inventoryRest.setFilters({ warehouse_id: '', warehouse_ids: filterWarehouseIds || '' })
     if (!gridRef.current) return
     $(gridRef.current).dxDataGrid('instance').refresh()
-  }, [filterWarehouseId])
+  }, [filterWarehouseIds])
 
   const fixedBusinessLabel = (businessScopes?.[businessScopeKey] || 'KAMARY PERU').toUpperCase()
+  const filterWarehouseOptions = useMemo(() => uniqueWarehouseNameOptions(warehouses), [warehouses])
+  const firstFilterWarehouseId = filterWarehouseIds.split(',').filter(Boolean)[0] || ''
   const selectedCountCode = selectedCount?.code ?? ''
   const selectedWarehouseName = selectedCount?.warehouse?.name || warehouses.find(warehouse => `${warehouse.id}` === `${warehouseId}`)?.name || ''
   const selectedLaboratoryName = selectedCount?.laboratory?.name || laboratories.find(lab => `${lab.id}` === `${laboratoryId}`)?.name || ''
@@ -146,7 +169,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
   }
 
   const openNewModal = () => {
-    resetModal(filterWarehouseId)
+    resetModal(firstFilterWarehouseId)
     $(modalRef.current).modal('show')
   }
 
@@ -294,10 +317,10 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
           </div>
           <div className='col-12 col-md-4'>
             <label className='form-label'>Almacen</label>
-            <select className='form-control' value={filterWarehouseId} onChange={(e) => setFilterWarehouseId(e.target.value)}>
+            <select className='form-control' value={filterWarehouseIds} onChange={(e) => setFilterWarehouseIds(e.target.value)}>
               <option value=''>Todos</option>
-              {warehouses.map(warehouse => (
-                <option key={`standard-inv-filter-wh-${warehouse.id}`} value={warehouse.id}>
+              {filterWarehouseOptions.map(warehouse => (
+                <option key={`standard-inv-filter-wh-${warehouse.value}`} value={warehouse.value}>
                   {warehouse.name}
                 </option>
               ))}

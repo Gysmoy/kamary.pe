@@ -127,7 +127,10 @@ class InventoryReportController extends ReportController
             ]);
 
         $kamaryBusiness = BusinessScope::businessForKey(BusinessScope::KAMARY_PERU);
-        $warehouseId = trim((string) request('warehouse_id', ''));
+        $warehouseIds = $this->toNullableIntList(request('warehouse_ids'));
+        $warehouseId = $this->toNullableInt(request('warehouse_id'));
+        if ($warehouseId) $warehouseIds[] = $warehouseId;
+        $warehouseIds = array_values(array_unique($warehouseIds));
         $laboratoryId = trim((string) request('laboratory_id', ''));
         $articleId = trim((string) request('article_id', ''));
 
@@ -136,10 +139,36 @@ class InventoryReportController extends ReportController
         } else {
             $movements->whereRaw('1 = 0');
         }
-        if ($warehouseId !== '') $movements->where('warehouse_id', $warehouseId);
+        if (count($warehouseIds) > 0) $movements->whereIn('warehouse_id', $warehouseIds);
         if ($laboratoryId !== '') $movements->where('laboratory_id', $laboratoryId);
         if ($articleId !== '') $movements->where('article_id', $articleId);
 
         return $movements;
+    }
+
+    private function toNullableInt($value): ?int
+    {
+        if ($value === null) return null;
+        $text = trim((string)$value);
+        if ($text === '') return null;
+        if (!ctype_digit(ltrim($text, '+'))) throw new \Exception("Valor entero invalido: {$value}");
+        return (int)$text;
+    }
+
+    private function toNullableIntList($value): array
+    {
+        if ($value === null) return [];
+
+        $parts = is_array($value)
+            ? $value
+            : preg_split('/[,\s]+/', trim((string)$value), -1, PREG_SPLIT_NO_EMPTY);
+
+        $ids = [];
+        foreach ($parts ?: [] as $part) {
+            $id = $this->toNullableInt($part);
+            if ($id) $ids[] = $id;
+        }
+
+        return array_values(array_unique($ids));
     }
 }

@@ -9,6 +9,7 @@ class InventoryReportRest extends BasicRest {
     business_id: '',
     business_branch_id: '',
     warehouse_id: '',
+    warehouse_ids: '',
     laboratory_id: '',
     article_id: '',
   }
