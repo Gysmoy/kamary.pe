@@ -213,6 +213,15 @@ const formatDateTime = (value) => {
   return value.toString().replace('T', ' ').slice(0, 19)
 }
 
+const formatFileSize = (bytes = 0) => {
+  const size = Number(bytes || 0)
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1024 / 1024).toFixed(1)} MB`
+}
+
+const fileIdentity = (file) => `${file.name}-${file.size}-${file.lastModified}`
+
 const resolveQuickFilterValue = (quickFilter) => {
   switch (quickFilter) {
     case 'regular':
@@ -347,6 +356,7 @@ const Clients = ({
   const [selectedClientForTariff, setSelectedClientForTariff] = useState(null)
   const [selectedClientForContracts, setSelectedClientForContracts] = useState(null)
   const [isContractEditing, setIsContractEditing] = useState(false)
+  const [contractAnnexFiles, setContractAnnexFiles] = useState([])
   const [userStatus, setUserStatus] = useState('1')
   const [notificationValue, setNotificationValue] = useState('')
   const [tariffTemperature, setTariffTemperature] = useState('')
@@ -913,7 +923,25 @@ const Clients = ({
     setRefValue(contractEndRef, '')
     setRefValue(contractFileRef, '')
     setRefValue(contractAnnexesRef, '')
+    setContractAnnexFiles([])
     setIsContractEditing(false)
+  }
+
+  const onContractAnnexesChanged = (e) => {
+    const selectedFiles = Array.from(e.target.files ?? [])
+    if (!selectedFiles.length) return
+
+    setContractAnnexFiles((currentFiles) => {
+      const knownFiles = new Set(currentFiles.map(fileIdentity))
+      const newFiles = selectedFiles.filter((file) => !knownFiles.has(fileIdentity(file)))
+      return [...currentFiles, ...newFiles]
+    })
+
+    e.target.value = ''
+  }
+
+  const removeContractAnnexFile = (index) => {
+    setContractAnnexFiles((currentFiles) => currentFiles.filter((_, fileIndex) => fileIndex !== index))
   }
 
   const onContractsModalOpen = (data) => {
@@ -951,7 +979,7 @@ const Clients = ({
     const endsAt = getRefValue(contractEndRef)
     const id = getRefValue(contractIdRef)
     const file = contractFileRef.current?.files?.[0] ?? null
-    const annexFiles = Array.from(contractAnnexesRef.current?.files ?? [])
+    const annexFiles = contractAnnexFiles
     const oversizedFile = [file, ...annexFiles].filter(Boolean).find((item) => item.size > MAX_CONTRACT_FILE_BYTES)
 
     if (!code || !startsAt || !endsAt || (!id && !file)) {
@@ -1738,8 +1766,27 @@ const Clients = ({
               className='form-control'
               accept='.pdf,.doc,.docx,.jpg,.jpeg,.png'
               multiple
+              onChange={onContractAnnexesChanged}
             />
           </div>
+          {contractAnnexFiles.length > 0 && <div className='col-12 mb-2'>
+            <div className='border rounded p-2 bg-light'>
+              <div className='d-flex justify-content-between align-items-center mb-2'>
+                <span className='fw-semibold'>Anexos seleccionados</span>
+                <span className='badge bg-primary'>{contractAnnexFiles.length}</span>
+              </div>
+              <div className='d-flex flex-column gap-1'>
+                {contractAnnexFiles.map((annex, index) => (
+                  <div key={`${fileIdentity(annex)}-${index}`} className='d-flex align-items-center justify-content-between gap-2 bg-white border rounded px-2 py-1'>
+                    <span className='text-truncate'>{annex.name} <small className='text-muted'>({formatFileSize(annex.size)})</small></span>
+                    <button type='button' className='btn btn-xs btn-soft-danger flex-shrink-0' title='Quitar anexo' onClick={() => removeContractAnnexFile(index)}>
+                      <i className='mdi mdi-close'></i>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>}
         </div>
       </Modal>
 
