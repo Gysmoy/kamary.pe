@@ -823,8 +823,8 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
             className={`nav-link ${activeStorageTab === tab.id ? 'active' : ''}`}
             onClick={() => {
               setActiveStorageTab(tab.id)
-              setStorageFilters(tab.id === 'prefactures' ? emptyFilters() : reportFilters())
-              setAppliedStorageFilters(tab.id === 'prefactures' ? emptyFilters() : reportFilters())
+              setStorageFilters(emptyFilters())
+              setAppliedStorageFilters(emptyFilters())
             }}
           >
             {tab.label}
@@ -887,6 +887,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       rest={billingDocumentsRest}
       pageSize={isStorageBilling ? 20 : 25}
       filterValue={storageFilterValue}
+      allowQueryBuilder={!isStorageBilling}
       exportable={isStorageBilling}
       toolBar={(items) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
