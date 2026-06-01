@@ -25,6 +25,8 @@ const usersRest = new UsersRest()
 const storageClientNotificationsRest = new StorageClientNotificationsRest()
 const storageClientTariffsRest = new StorageClientTariffsRest()
 const storageClientContractsRest = new StorageClientContractsRest()
+const MAX_CONTRACT_FILE_BYTES = 20 * 1024 * 1024
+const MAX_CONTRACT_FILE_MB = MAX_CONTRACT_FILE_BYTES / 1024 / 1024
 
 const QUICK_FILTERS = [
   { key: 'all', label: 'Todos' },
@@ -950,12 +952,22 @@ const Clients = ({
     const id = getRefValue(contractIdRef)
     const file = contractFileRef.current?.files?.[0] ?? null
     const annexFiles = Array.from(contractAnnexesRef.current?.files ?? [])
+    const oversizedFile = [file, ...annexFiles].filter(Boolean).find((item) => item.size > MAX_CONTRACT_FILE_BYTES)
 
     if (!code || !startsAt || !endsAt || (!id && !file)) {
       await Swal.fire({
         icon: 'warning',
         title: 'Completa el contrato',
         text: 'Debes ingresar codigo, fechas y documento oficial.'
+      })
+      return
+    }
+
+    if (oversizedFile) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Archivo muy grande',
+        text: `${oversizedFile.name} supera el limite de ${MAX_CONTRACT_FILE_MB}MB.`
       })
       return
     }

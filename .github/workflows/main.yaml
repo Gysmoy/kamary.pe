@@ -100,6 +100,8 @@ jobs:
             docker network prune -f
             docker image prune -f
             docker compose up -d --build
+            docker compose exec --interactive=false -T nginx nginx -t
+            docker compose exec --interactive=false -T nginx nginx -s reload
             docker compose exec --interactive=false -T app php artisan migrate --force
             docker compose exec --interactive=false -T app php artisan db:seed --class=ModulePermissionsSeeder --force
             docker compose exec --interactive=false -T app php artisan db:seed --class=MagistralesProductionSeeder --force
