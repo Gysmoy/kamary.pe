@@ -8,8 +8,18 @@ const DataGrid = ({ gridRef: dataGridRef, rest, columns, toolBar, masterDetail, 
       language: "es",
       dataSource: {
         load: async (params) => {
-          const data = await rest.paginate({ ...params, _token: $('[name="csrf_token"]').attr('content') })
-          return data
+          const response = await rest.paginate({ ...params, _token: $('[name="csrf_token"]').attr('content') })
+          const rows = Array.isArray(response?.data)
+            ? response.data
+            : Array.isArray(response)
+              ? response
+              : []
+          const totalCount = Number.isFinite(Number(response?.totalCount))
+            ? Number(response.totalCount)
+            : rows.length
+          return response && typeof response === 'object' && !Array.isArray(response)
+            ? { ...response, data: rows, totalCount }
+            : { data: rows, totalCount }
         },
       },
       onToolbarPreparing: (e) => {

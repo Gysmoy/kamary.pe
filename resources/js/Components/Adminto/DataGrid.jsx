@@ -16,9 +16,20 @@ const DataGrid = ({ gridRef: dataGridRef, allowQueryBuilder = true, rest, column
               data: []
             }
           }
-          const data = await rest.paginate({
+          const response = await rest.paginate({
             ...params
           })
+          const rows = Array.isArray(response?.data)
+            ? response.data
+            : Array.isArray(response)
+              ? response
+              : []
+          const totalCount = Number.isFinite(Number(response?.totalCount))
+            ? Number(response.totalCount)
+            : rows.length
+          const data = response && typeof response === 'object' && !Array.isArray(response)
+            ? { ...response, data: rows, totalCount }
+            : { data: rows, totalCount }
           onRefresh(data)
           return data
         },
