@@ -63,11 +63,17 @@ php artisan optimize:clear || true
 echo "Fixing legacy images symlink..."
 
 rm -rf public/storage
-mkdir -p public/storage
+mkdir -p storage/app/public
+mkdir -p storage/app/images
 
-ln -s /var/www/html/storage/app/images public/storage/images
+if [ ! -e storage/app/public/images ]; then
+    ln -s ../images storage/app/public/images
+fi
 
-chown -h www-data:www-data public/storage/images
+ln -sfn /var/www/html/storage/app/public public/storage
+
+chown -h www-data:www-data public/storage
+chown -h www-data:www-data storage/app/public/images || true
 
 # 4. Start PHP-FPM
 echo "Starting PHP-FPM..."

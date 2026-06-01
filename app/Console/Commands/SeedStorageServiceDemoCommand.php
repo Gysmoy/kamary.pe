@@ -528,13 +528,19 @@ class SeedStorageServiceDemoCommand extends Command
                 'updated_by' => $this->userId,
             ]);
 
+            $contractCode = 'CTR-STG-' . str_pad((string) $index, 4, '0', STR_PAD_LEFT);
+            $contractStartsAt = now()->subDays(30 + $index)->toDateString();
+            $contractEndsAt = now()->addMonths(12)->addDays($index)->toDateString();
+            $contractFileName = 'contrato-storage-demo-' . $index . '.pdf';
+            $contractFilePath = $this->ensureDemoContractFile($index, $contractCode, $contractStartsAt, $contractEndsAt);
+
             $this->insertRow('client_contracts', [
                 'client_id' => $client->id,
-                'contract_code' => 'CTR-STG-' . str_pad((string) $index, 4, '0', STR_PAD_LEFT),
-                'starts_at' => now()->subDays(30 + $index)->toDateString(),
-                'ends_at' => now()->addMonths(12)->addDays($index)->toDateString(),
-                'file_name' => 'contrato-storage-demo-' . $index . '.pdf',
-                'file_path' => 'storage/contracts/demo-' . $index . '.pdf',
+                'contract_code' => $contractCode,
+                'starts_at' => $contractStartsAt,
+                'ends_at' => $contractEndsAt,
+                'file_name' => $contractFileName,
+                'file_path' => $contractFilePath,
                 'file_mime' => 'application/pdf',
                 'status' => true,
                 'created_by' => $this->userId,
@@ -1170,6 +1176,71 @@ class SeedStorageServiceDemoCommand extends Command
         }
 
         return $this->columnsCache[$table];
+    }
+
+    private function ensureDemoContractFile(int $index, string $code, string $startsAt, string $endsAt): string
+    {
+        $path = 'contracts/demo-' . $index . '.pdf';
+
+        Storage::disk('public')->makeDirectory('contracts');
+        Storage::disk('public')->put($path, $this->demoContractPdf($code, $startsAt, $endsAt));
+
+        return $path;
+    }
+
+    private function demoContractPdf(string $code, string $startsAt, string $endsAt): string
+    {
+        return $this->pdfFromLines([
+            'Contrato demo de almacenamiento',
+            'Codigo: ' . $code,
+            'Inicio: ' . $startsAt,
+            'Fin: ' . $endsAt,
+            'Documento generado automaticamente para los datos demo.',
+        ]);
+    }
+
+    private function pdfFromLines(array $lines): string
+    {
+        $content = "BT\n/F1 12 Tf\n50 760 Td\n18 TL\n";
+        foreach ($lines as $index => $line) {
+            if ($index > 0) {
+                $content .= "T*\n";
+            }
+            $content .= '(' . $this->pdfEscape((string) $line) . ") Tj\n";
+        }
+        $content .= "ET\n";
+
+        $objects = [
+            '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
+            '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
+            '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj',
+            '4 0 obj << /Length ' . strlen($content) . " >> stream\n" . $content . 'endstream endobj',
+            '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
+        ];
+
+        $pdf = "%PDF-1.4\n";
+        $offsets = [0];
+        foreach ($objects as $object) {
+            $offsets[] = strlen($pdf);
+            $pdf .= $object . "\n";
+        }
+
+        $xref = strlen($pdf);
+        $pdf .= "xref\n0 " . count($offsets) . "\n";
+        $pdf .= "0000000000 65535 f \n";
+        for ($i = 1; $i < count($offsets); $i++) {
+            $pdf .= str_pad((string) $offsets[$i], 10, '0', STR_PAD_LEFT) . " 00000 n \n";
+        }
+
+        $pdf .= "trailer << /Size " . count($offsets) . " /Root 1 0 R >>\n";
+        $pdf .= "startxref\n{$xref}\n%%EOF\n";
+
+        return $pdf;
+    }
+
+    private function pdfEscape(string $value): string
+    {
+        return str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $value);
     }
 
     private function resolveUserId(): ?int
