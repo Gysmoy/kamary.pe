@@ -458,7 +458,9 @@ class StockService
             ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'article.laboratory_id')
             ->leftJoin('active_principles as active_principle', 'active_principle.id', '=', 'article.active_principle_id')
             ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
-            ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'movement_item.warehouse_id')
+            ->leftJoin('warehouses as warehouse', function ($join) {
+                $join->on('warehouse.id', '=', DB::raw('COALESCE(movement_item.warehouse_id, movement_note.warehouse_id)'));
+            })
             ->leftJoin('businesses as business', 'business.id', '=', 'movement_note.business_id')
             ->leftJoin('business_branches as branch', 'branch.id', '=', 'movement_note.business_branch_id')
             ->where('movement_note.status', 1)
@@ -472,6 +474,7 @@ class StockService
                 COALESCE(business.name, '') as business_name,
                 movement_note.business_branch_id as business_branch_id,
                 COALESCE(branch.name, '') as branch_name,
+                COALESCE(movement_item.warehouse_id, movement_note.warehouse_id) as warehouse_id,
                 article.id as article_id,
                 COALESCE(article.code, '') as article_code,
                 COALESCE(article.name, '') as article_name,
@@ -494,7 +497,9 @@ class StockService
             ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'article.laboratory_id')
             ->leftJoin('active_principles as active_principle', 'active_principle.id', '=', 'article.active_principle_id')
             ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
-            ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'movement_item.warehouse_id')
+            ->leftJoin('warehouses as warehouse', function ($join) {
+                $join->on('warehouse.id', '=', DB::raw('COALESCE(movement_item.warehouse_id, movement_note.warehouse_id)'));
+            })
             ->leftJoin('businesses as business', 'business.id', '=', 'movement_note.business_id')
             ->leftJoin('business_branches as branch', 'branch.id', '=', 'movement_note.business_branch_id')
             ->where('movement_note.status', 1)
@@ -509,6 +514,7 @@ class StockService
                 COALESCE(business.name, '') as business_name,
                 movement_note.business_branch_id as business_branch_id,
                 COALESCE(branch.name, '') as branch_name,
+                COALESCE(movement_item.warehouse_id, movement_note.warehouse_id) as warehouse_id,
                 article.id as article_id,
                 COALESCE(article.code, '') as article_code,
                 COALESCE(article.name, '') as article_name,

@@ -8,6 +8,7 @@ class InventoryReportRest extends BasicRest {
   filters = {
     business_id: '',
     business_branch_id: '',
+    warehouse_id: '',
     laboratory_id: '',
     article_id: '',
   }
@@ -51,6 +52,10 @@ class InventoryReportRest extends BasicRest {
   }
 
   getBranchesByBusiness = async (businessId) => businessId ? (await this.simpleGet(`/api/admin/businesses/${businessId}/branches`)) ?? [] : []
+
+  getInventoryOptions = async () => {
+    return await this.simpleGet('/api/admin/inventory/options')
+  }
 
   getLaboratories = async () => {
     try {

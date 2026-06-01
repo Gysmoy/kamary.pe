@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Article;
 use App\Services\StockService;
+use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -29,7 +30,9 @@ class InventoryReportController extends ReportController
             ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'article.laboratory_id')
             ->leftJoin('active_principles as active_principle', 'active_principle.id', '=', 'article.active_principle_id')
             ->leftJoin('units as unit', 'unit.id', '=', 'article.unit_id')
-            ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'movement_item.warehouse_id')
+            ->leftJoin('warehouses as warehouse', function ($join) {
+                $join->on('warehouse.id', '=', DB::raw('COALESCE(movement_item.warehouse_id, movement_note.warehouse_id)'));
+            })
             ->leftJoin('businesses as business', 'business.id', '=', 'movement_note.business_id')
             ->leftJoin('business_branches as branch', 'branch.id', '=', 'movement_note.business_branch_id')
             ->where('movement_note.status', 1)
@@ -43,6 +46,7 @@ class InventoryReportController extends ReportController
                 COALESCE(business.name, '') as business_name,
                 movement_note.business_branch_id as business_branch_id,
                 COALESCE(branch.name, '') as branch_name,
+                COALESCE(movement_item.warehouse_id, movement_note.warehouse_id) as warehouse_id,
                 article.id as article_id,
                 COALESCE(article.code, '') as article_code,
                 COALESCE(article.name, '') as article_name,
@@ -64,12 +68,13 @@ class InventoryReportController extends ReportController
             ->selectRaw("
                 CONCAT(
                     COALESCE(business_id, 0), '-', COALESCE(business_branch_id, 0), '-', article_id, '-',
-                    COALESCE(warehouse_name, ''), '-', COALESCE(batch_code, ''), '-', COALESCE(location, '')
+                    COALESCE(warehouse_id, 0), '-', COALESCE(batch_code, ''), '-', COALESCE(location, '')
                 ) as id,
                 business_id,
                 business_name,
                 business_branch_id,
                 branch_name,
+                warehouse_id,
                 article_id,
                 article_code,
                 article_name,
@@ -90,6 +95,14 @@ class InventoryReportController extends ReportController
                     END,
                     2
                 ) as reference_cost_unit,
+                ROUND(
+                    (SUM(quantity_in) - SUM(quantity_out)) *
+                    CASE
+                        WHEN SUM(quantity_in) > 0 THEN SUM(CASE WHEN quantity_in > 0 THEN total ELSE 0 END) / SUM(quantity_in)
+                        ELSE 0
+                    END,
+                    2
+                ) as total_value,
                 CASE
                     WHEN (SUM(quantity_in) - SUM(quantity_out)) > 0 THEN 'Con stock'
                     ELSE 'Sin stock'
@@ -100,6 +113,7 @@ class InventoryReportController extends ReportController
                 'business_name',
                 'business_branch_id',
                 'branch_name',
+                'warehouse_id',
                 'article_id',
                 'article_code',
                 'article_name',
@@ -112,13 +126,17 @@ class InventoryReportController extends ReportController
                 'location',
             ]);
 
-        $businessId = trim((string) request('business_id', ''));
-        $branchId = trim((string) request('business_branch_id', ''));
+        $kamaryBusiness = BusinessScope::businessForKey(BusinessScope::KAMARY_PERU);
+        $warehouseId = trim((string) request('warehouse_id', ''));
         $laboratoryId = trim((string) request('laboratory_id', ''));
         $articleId = trim((string) request('article_id', ''));
 
-        if ($businessId !== '') $movements->where('business_id', $businessId);
-        if ($branchId !== '') $movements->where('business_branch_id', $branchId);
+        if ($kamaryBusiness) {
+            $movements->where('business_id', $kamaryBusiness->id);
+        } else {
+            $movements->whereRaw('1 = 0');
+        }
+        if ($warehouseId !== '') $movements->where('warehouse_id', $warehouseId);
         if ($laboratoryId !== '') $movements->where('laboratory_id', $laboratoryId);
         if ($articleId !== '') $movements->where('article_id', $articleId);
 

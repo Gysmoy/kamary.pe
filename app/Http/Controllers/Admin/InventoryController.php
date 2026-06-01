@@ -38,6 +38,8 @@ class InventoryController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
+        $warehouseId = $this->toNullableInt(request('warehouse_id'));
+
         return $this->inventoryCountQuery()
             ->select('inventory_counts.*')
             ->with([
@@ -52,7 +54,8 @@ class InventoryController extends BasicController
             ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'inventory_counts.warehouse_id')
             ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'inventory_counts.laboratory_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'inventory_counts.created_by')
-            ->leftJoin('users as updater', 'updater.id', '=', 'inventory_counts.updated_by');
+            ->leftJoin('users as updater', 'updater.id', '=', 'inventory_counts.updated_by')
+            ->when($warehouseId, fn($query) => $query->where('inventory_counts.warehouse_id', $warehouseId));
     }
 
     public function options(Request $request): HttpResponse|ResponseFactory

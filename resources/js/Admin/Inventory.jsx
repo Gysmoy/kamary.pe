@@ -74,12 +74,13 @@ const inventoryStatusBadge = (status) => {
   return `<span class="badge ${className}">${normalized}</span>`
 }
 
-const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru' }) => {
+const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessScopes = {}, businessScopeKey = 'kamary_peru' }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const fileRef = useRef()
   const [warehouses, setWarehouses] = useState([])
   const [laboratories, setLaboratories] = useState([])
+  const [filterWarehouseId, setFilterWarehouseId] = useState('')
   const [warehouseId, setWarehouseId] = useState('')
   const [laboratoryId, setLaboratoryId] = useState('')
   const [rows, setRows] = useState([])
@@ -96,6 +97,13 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru' }) => {
     })
   }, [])
 
+  useEffect(() => {
+    inventoryRest.setFilters({ warehouse_id: filterWarehouseId || '' })
+    if (!gridRef.current) return
+    $(gridRef.current).dxDataGrid('instance').refresh()
+  }, [filterWarehouseId])
+
+  const fixedBusinessLabel = (businessScopes?.[businessScopeKey] || 'KAMARY PERU').toUpperCase()
   const selectedCountCode = selectedCount?.code ?? ''
   const selectedWarehouseName = selectedCount?.warehouse?.name || warehouses.find(warehouse => `${warehouse.id}` === `${warehouseId}`)?.name || ''
   const selectedLaboratoryName = selectedCount?.laboratory?.name || laboratories.find(lab => `${lab.id}` === `${laboratoryId}`)?.name || ''
@@ -128,9 +136,9 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru' }) => {
     setTablePage(1)
   }, [rows, tablePageSize, tableSearch])
 
-  const resetModal = () => {
+  const resetModal = (nextWarehouseId = '') => {
     setSelectedCount(null)
-    setWarehouseId('')
+    setWarehouseId(nextWarehouseId)
     setLaboratoryId('')
     setRows([])
     setTableSearch('')
@@ -138,7 +146,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru' }) => {
   }
 
   const openNewModal = () => {
-    resetModal()
+    resetModal(filterWarehouseId)
     $(modalRef.current).modal('show')
   }
 
@@ -279,10 +287,29 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru' }) => {
   return <>
     <div className='card mb-3'>
       <div className='card-body'>
-        <button type='button' className='btn btn-primary d-inline-flex align-items-center gap-2' onClick={openNewModal}>
-          <i className='mdi mdi-plus-circle-outline'></i>
-          Registrar inventario
-        </button>
+        <div className='row g-3 align-items-end'>
+          <div className='col-12 col-md-4'>
+            <label className='form-label'>Empresa</label>
+            <input className='form-control bg-light' value={fixedBusinessLabel} readOnly />
+          </div>
+          <div className='col-12 col-md-4'>
+            <label className='form-label'>Almacen</label>
+            <select className='form-control' value={filterWarehouseId} onChange={(e) => setFilterWarehouseId(e.target.value)}>
+              <option value=''>Todos</option>
+              {warehouses.map(warehouse => (
+                <option key={`standard-inv-filter-wh-${warehouse.id}`} value={warehouse.id}>
+                  {warehouse.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className='col-12 col-md-4'>
+            <button type='button' className='btn btn-primary d-inline-flex align-items-center gap-2' onClick={openNewModal}>
+              <i className='mdi mdi-plus-circle-outline'></i>
+              Registrar inventario
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -360,7 +387,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru' }) => {
       bodyClass='storage-inventory-template-body'
       bodyStyle={{ maxHeight: 'calc(100vh - 120px)', overflowY: 'auto', overflowX: 'hidden' }}
       onSubmit={(e) => e.preventDefault()}
-      onClose={resetModal}
+      onClose={() => resetModal()}
     >
       <style>{`
         .storage-inventory-dialog {
