@@ -141,6 +141,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const creditNoteModalRef = useRef()
   const reportModalRef = useRef()
   const bulkModalRef = useRef()
+  const pdfPreviewModalRef = useRef()
   const idRef = useRef()
   const issueDateRef = useRef()
   const dueDateRef = useRef()
@@ -180,6 +181,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const [bulkRows, setBulkRows] = useState([])
   const [bulkSelected, setBulkSelected] = useState([])
   const [bulkLoading, setBulkLoading] = useState(false)
+  const [pdfPreview, setPdfPreview] = useState({ title: '', url: '', downloadUrl: '' })
 
   useEffect(() => {
     Promise.all([
@@ -231,6 +233,14 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   }
 
   const hasPreparedVoucher = (row) => !!(`${row?.series ?? ''}`.trim() && `${row?.sequence ?? ''}`.trim())
+
+  const canPreviewPdfDocument = (row) => {
+    if (!row) return false
+    return canDownloadDocument(row)
+      || row.provider_mode === 'demo'
+      || row?.metadata?.document_origin === 'storage_billing_control_demo'
+      || hasPreparedVoucher(row)
+  }
 
   const showBlockedAction = async (title, text) => {
     await Swal.fire({
@@ -421,6 +431,11 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   }
 
   const onDownload = (row, type) => {
+    if (type === 'pdf') {
+      onPreviewPdf(row)
+      return
+    }
+
     if (!canDownloadDocument(row)) {
       showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.')
       return
@@ -429,9 +444,29 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     window.open(billingDocumentsRest.downloadUrl(row.id, type), '_blank', 'noopener')
   }
 
+  const onPreviewPdf = (row) => {
+    if (!canPreviewPdfDocument(row)) {
+      showBlockedAction('PDF no disponible', 'El comprobante todavía no tiene PDF disponible.')
+      return
+    }
+
+    const url = billingDocumentsRest.downloadUrl(row.id, 'pdf')
+    setPdfPreview({
+      title: `Vista previa PDF - ${row.code ?? row.series ?? ''}`,
+      url,
+      downloadUrl: `${url}?download=1`,
+    })
+    $(pdfPreviewModalRef.current).modal('show')
+  }
+
+  const downloadPreviewPdf = () => {
+    if (!pdfPreview.downloadUrl) return
+    window.open(pdfPreview.downloadUrl, '_blank', 'noopener')
+  }
+
   const onPrintPreparedVoucher = async (row) => {
-    if (canDownloadDocument(row)) {
-      onDownload(row, 'pdf')
+    if (canPreviewPdfDocument(row)) {
+      onPreviewPdf(row)
       return
     }
 
@@ -699,25 +734,25 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     allowExporting: false,
     allowSorting: false,
     cellTemplate: (container, { data }) => {
-      const canDownload = canDownloadDocument(data)
+      const canPreviewPdf = canPreviewPdfDocument(data)
       const isPrepared = hasPreparedVoucher(data)
       container.css({ textOverflow: 'unset', overflow: 'visible' })
 
       if (activeStorageTab === 'prefactures') {
         container.append(DxButton({
-          className: `btn btn-xs ${isPrepared ? 'btn-outline-success' : 'btn-outline-primary'}`,
-          title: isPrepared ? 'Imprimir comprobante' : 'Facturar',
-          icon: isPrepared ? 'mdi mdi-file-document-outline' : 'mdi mdi-file-send-outline',
+          className: `btn btn-xs ${isPrepared ? 'btn-outline-danger' : 'btn-outline-primary'}`,
+          title: isPrepared ? 'Previsualizar PDF' : 'Facturar',
+          icon: isPrepared ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-send-outline',
           onClick: () => isPrepared ? onPrintPreparedVoucher(data) : onPrepareVoucher(data)
         }))
         return
       }
 
       container.append(DxButton({
-        className: `btn btn-xs ${canDownload ? 'btn-outline-danger' : 'btn-outline-info'}`,
-        title: canDownload ? 'Descargar PDF' : 'Ver validacion fiscal',
-        icon: canDownload ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-document-outline',
-        onClick: () => canDownload ? onDownload(data, 'pdf') : openReadinessModal(data, `Validacion fiscal - ${data.code}`)
+        className: `btn btn-xs ${canPreviewPdf ? 'btn-outline-danger' : 'btn-outline-info'}`,
+        title: canPreviewPdf ? 'Previsualizar PDF' : 'Ver validacion fiscal',
+        icon: canPreviewPdf ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-document-outline',
+        onClick: () => canPreviewPdf ? onPreviewPdf(data) : openReadinessModal(data, `Validacion fiscal - ${data.code}`)
       }))
     }
   }
@@ -930,6 +965,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
           const canCancel = canCancelDocument(data)
           const canCreditNote = canCreditNoteDocument(data)
           const canDownload = canDownloadDocument(data)
+          const canPreviewPdf = canPreviewPdfDocument(data)
           container.css('text-overflow', 'unset')
           container.append(DxButton({ className: `btn btn-xs ${canEdit ? 'btn-soft-primary' : 'btn-soft-secondary'} `, title: canEdit ? 'Editar comprobante' : 'Solo lectura', icon: canEdit ? 'mdi mdi-pencil' : 'mdi mdi-lock-outline', onClick: () => canEdit ? onModalOpen(data) : showBlockedAction('Comprobante bloqueado', 'Solo puedes editar comprobantes pendientes.') }))
           container.append(DxButton({ className: 'btn btn-xs btn-soft-info ms-1', title: 'Ver payload del conector', icon: 'mdi mdi-code-json', onClick: () => onOpenPayload(data) }))
@@ -937,13 +973,30 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
           container.append(DxButton({ className: `btn btn-xs ${canSync ? 'btn-soft-info' : 'btn-soft-secondary'} ms-1`, title: canSync ? 'Sincronizar estado' : 'Sincronización no disponible', icon: canSync ? 'mdi mdi-sync' : 'mdi mdi-sync-off', onClick: () => canSync ? onSyncStatus(data) : showBlockedAction('Sync no disponible', 'El comprobante aún no tiene datos remotos para sincronizar.') }))
           container.append(DxButton({ className: `btn btn-xs ${canCancel ? 'btn-soft-warning' : 'btn-soft-secondary'} ms-1`, title: canCancel ? 'Anular comprobante' : 'Anulación no disponible', icon: canCancel ? 'mdi mdi-close-circle' : 'mdi mdi-lock-outline', onClick: () => canCancel ? onOpenCancel(data) : showBlockedAction('Anulación no disponible', 'Solo puedes anular comprobantes aceptados que no sean notas de crédito.') }))
           container.append(DxButton({ className: `btn btn-xs ${canCreditNote ? 'btn-soft-secondary' : 'btn-soft-secondary'} ms-1`, title: canCreditNote ? 'Generar nota de crédito' : 'Nota de crédito no disponible', icon: canCreditNote ? 'mdi mdi-file-replace' : 'mdi mdi-file-lock-outline', onClick: () => canCreditNote ? onOpenCreditNote(data) : showBlockedAction('Nota de crédito no disponible', 'Solo puedes generar nota de crédito desde comprobantes aceptados que no sean notas de crédito.') }))
-          container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-soft-danger' : 'btn-soft-secondary'} ms-1`, title: canDownload ? 'Descargar PDF' : 'PDF no disponible', icon: canDownload ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-cancel-outline', onClick: () => canDownload ? onDownload(data, 'pdf') : showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.') }))
+          container.append(DxButton({ className: `btn btn-xs ${canPreviewPdf ? 'btn-soft-danger' : 'btn-soft-secondary'} ms-1`, title: canPreviewPdf ? 'Previsualizar PDF' : 'PDF no disponible', icon: canPreviewPdf ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-cancel-outline', onClick: () => canPreviewPdf ? onPreviewPdf(data) : showBlockedAction('PDF no disponible', 'El comprobante todavía no tiene PDF disponible.') }))
           container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-soft-primary' : 'btn-soft-secondary'} ms-1`, title: canDownload ? 'Descargar XML' : 'XML no disponible', icon: canDownload ? 'mdi mdi-code-tags' : 'mdi mdi-file-cancel-outline', onClick: () => canDownload ? onDownload(data, 'xml') : showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.') }))
           container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-soft-success' : 'btn-soft-secondary'} ms-1`, title: canDownload ? 'Descargar CDR' : 'CDR no disponible', icon: canDownload ? 'mdi mdi-shield-check' : 'mdi mdi-file-cancel-outline', onClick: () => canDownload ? onDownload(data, 'cdr') : showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.') }))
           container.append(DxButton({ className: 'btn btn-xs btn-soft-dark ms-1', title: 'Registrar respuesta del proveedor', icon: 'mdi mdi-cloud-check', onClick: () => onOpenProviderModal(data) }))
         } }
       ]}
     />
+
+    <Modal modalRef={pdfPreviewModalRef} title={pdfPreview.title || 'Vista previa PDF'} size='xl' hideFooter asForm={false} bodyClass='p-0' bodyStyle={{ overflow: 'hidden' }}>
+      <div className='d-flex flex-column' style={{ height: 'calc(100vh - 9rem)', minHeight: 520 }}>
+        <div className='d-flex justify-content-end gap-2 p-2 border-bottom bg-light'>
+          <button type='button' className='btn btn-sm btn-outline-secondary' onClick={() => window.open(pdfPreview.url, '_blank', 'noopener')} disabled={!pdfPreview.url}>
+            <i className='mdi mdi-open-in-new me-1'></i>Abrir en pestaña
+          </button>
+          <button type='button' className='btn btn-sm btn-primary' onClick={downloadPreviewPdf} disabled={!pdfPreview.downloadUrl}>
+            <i className='mdi mdi-download me-1'></i>Descargar
+          </button>
+          <button type='button' className='btn btn-sm btn-light' data-bs-dismiss='modal'>Cerrar</button>
+        </div>
+        {pdfPreview.url
+          ? <iframe title='Vista previa PDF' src={`${pdfPreview.url}#toolbar=1&navpanes=0`} className='border-0 w-100 flex-grow-1' />
+          : <div className='d-flex align-items-center justify-content-center flex-grow-1 text-muted'>PDF no disponible</div>}
+      </div>
+    </Modal>
 
     <Modal modalRef={modalRef} title='Documento de facturación' size='xl' onSubmit={onSave}>
       <div className='row'>

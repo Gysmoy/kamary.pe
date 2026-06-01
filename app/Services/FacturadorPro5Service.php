@@ -186,14 +186,23 @@ class FacturadorPro5Service
             return $this->buildLocalPdfFile($document);
         }
 
-        $status = $this->status($document);
+        try {
+            $status = $this->status($document);
+        } catch (\Throwable $th) {
+            if ($type === 'pdf' && $this->canBuildLocalPdf($document, $stored)) {
+                return $this->buildLocalPdfFile($document);
+            }
+
+            throw $th;
+        }
+
         $downloadUrl = Arr::get($status, "links.{$type}");
         if (!$downloadUrl) {
             $downloadUrl = Arr::get($stored, "links.{$type}");
         }
 
         if (!$downloadUrl) {
-            if ($type === 'pdf' && $this->shouldServeLocalPdf($document, $stored, $status)) {
+            if ($type === 'pdf' && $this->canBuildLocalPdf($document, $stored, $status)) {
                 return $this->buildLocalPdfFile($document);
             }
             throw new \RuntimeException("El proveedor no devolvio enlace para {$type}");
@@ -1157,6 +1166,12 @@ class FacturadorPro5Service
             || Arr::get($status, 'mode') === 'demo';
     }
 
+    private function canBuildLocalPdf(BillingDocument $document, array $stored = [], array $status = []): bool
+    {
+        return $this->shouldServeLocalPdf($document, $stored, $status)
+            || (trim((string) $document->series) !== '' && trim((string) $document->sequence) !== '');
+    }
+
     private function buildLocalPdfFile(BillingDocument $document): array
     {
         $document->loadMissing('business', 'branch', 'client', 'eventualClient', 'serviceOrder', 'commercialOrder', 'referenceDocument', 'items');
@@ -1199,7 +1214,7 @@ class FacturadorPro5Service
         $lines[] = 'Archivo generado localmente para datos demo sin enlace PDF del proveedor.';
 
         return [
-            'content' => $this->pdfFromLines($lines),
+            'content' => $this->invoiceLikePdf($document, $lines),
             'content_type' => 'application/pdf',
             'filename' => preg_replace('/[^A-Za-z0-9._-]/', '_', ($document->external_reference ?: $document->code ?: 'comprobante-demo')) . '.pdf',
         ];
@@ -1218,6 +1233,273 @@ class FacturadorPro5Service
         }
     }
 
+    private function invoiceLikePdf(BillingDocument $document, array $fallbackLines): string
+    {
+        $commands = [];
+        $margin = 42.52;
+        $width = 510.24;
+        $rightBoxX = 399.69;
+        $businessName = $document->business?->name ?: 'KAMARY MEDICAL S.A.C.';
+        $businessRuc = $document->business?->tax_number ?: '20604718237';
+        $branchAddress = $document->branch?->address ?: 'CAL.YEN ESCOBEDO GARRO NRO. 800';
+        $documentTitle = $this->pdfDocumentTitle($document->document_type);
+        $number = trim(($document->series ?: '-') . ' - ' . ($document->sequence ?: '-'));
+        $currencyName = $this->pdfCurrencyName($document->currency);
+        $customer = $document->client ?: $document->eventualClient;
+        $customerDocument = $customer?->document_number ?: '-';
+        $customerName = $this->resolveCustomerName($document);
+        $customerAddress = $this->resolveCustomerAddress($document);
+
+        $this->pdfRect($commands, $margin, 745, 331.65, 68);
+        $this->pdfRect($commands, $rightBoxX, 745, 153.07, 68);
+        $this->pdfRect($commands, $margin, 616, $width, 108);
+        $this->pdfRect($commands, $margin, 513, $width, 84);
+
+        $this->pdfText($commands, 'KM', 54, 787, 18, 'F2');
+        $this->pdfText($commands, $businessName, 123, 797, 12, 'F2');
+        $this->pdfText($commands, $branchAddress, 123, 779, 8.5);
+        $this->pdfWrappedText($commands, $document->branch?->address ?: 'LIMA - LIMA - SAN LUIS', 123, 767, 245, 8, 9.5, 2);
+
+        $this->pdfText($commands, 'RUC ' . $businessRuc, $rightBoxX, 797, 10, 'F2', 153.07, 'C');
+        $this->pdfText($commands, $documentTitle, $rightBoxX, 781, 10, 'F2', 153.07, 'C');
+        $this->pdfText($commands, 'ELECTRONICA', $rightBoxX, 766, 10, 'F2', 153.07, 'C');
+        $this->pdfText($commands, $number, $rightBoxX, 751, 10, 'F2', 153.07, 'C');
+
+        $this->pdfText($commands, 'DATOS DEL CLIENTE', 46.52, 707, 8.8, 'F2');
+        $this->pdfLabelValue($commands, 'DOCUMENTO', $customerDocument, 46.52, 692, 10);
+        $this->pdfLabelValue($commands, 'DENOMINACION', $customerName, 46.52, 680, 10);
+        $this->pdfLabelValue($commands, 'DIRECCION', $customerAddress, 46.52, 668, 10, 245, 2);
+        $this->pdfLabelValue($commands, 'FECHA EMISION', $this->formatPdfDate($document->issue_date), 388.38, 707, 10, 70, 1, 88);
+        $this->pdfLabelValue($commands, 'MONEDA', $currencyName, 388.38, 695, 10, 70, 1, 88);
+        $this->pdfLabelValue($commands, 'FECHA VENCIMIENTO', $this->formatPdfDate($document->due_date), 388.38, 683, 10, 70, 1, 88);
+
+        $columns = [
+            ['CODIGO', 50],
+            ['DESCRIPCION', 200],
+            ['SERV / M3', 45],
+            ['P. SIN IGV', 65],
+            ['P. CON IGV', 70],
+            ['IMPORTE', 80.24],
+        ];
+        $this->pdfTableHeader($commands, $margin, 585, $columns);
+        $y = 563;
+        $items = $document->items->take(6);
+        if ($items->isEmpty()) {
+            foreach ($fallbackLines as $index => $line) {
+                if ($index < 3 || trim($line) === '') continue;
+                $this->pdfText($commands, $line, 48, $y, 8);
+                $y -= 13;
+            }
+        } else {
+            foreach ($items as $item) {
+                $description = $item->description ?: $item->item_code ?: 'Servicio';
+                $quantity = max((float) $item->quantity, 1);
+                $lineTotal = (float) $item->total;
+                $unitPrice = (float) $item->unit_price;
+                $grossUnit = $quantity > 0 ? $lineTotal / $quantity : $lineTotal;
+                $rowBottom = $y - 34;
+                $this->pdfLine($commands, $margin, $rowBottom, $margin + $width, $rowBottom);
+                $this->pdfText($commands, $item->item_code ?: 'COD001', 46.52, $y, 8);
+                $this->pdfWrappedText($commands, $description, 96.74, $y, 195, 8, 10, 2);
+                $this->pdfText($commands, number_format($quantity, 2, '.', ''), 297.64, $y, 8);
+                $this->pdfText($commands, number_format($unitPrice, 4, '.', ''), 342.84, $y, 8);
+                $this->pdfText($commands, number_format($grossUnit, 2, '.', ''), 408.13, $y, 8);
+                $this->pdfText($commands, number_format($lineTotal, 2, '.', ''), 478.44, $y, 8);
+                $y -= 34;
+            }
+        }
+
+        $totalsTop = min($y - 8, 486);
+        $this->pdfRect($commands, $margin, $totalsTop - 58, $width, 58);
+        $this->pdfText($commands, 'GRAVADA:', 46.52, $totalsTop - 14, 8, 'F2');
+        $this->pdfText($commands, number_format((float) $document->subtotal, 2, '.', ''), 478.44, $totalsTop - 14, 8, 'F2');
+        $this->pdfText($commands, 'IGV 18.00 %:', 46.52, $totalsTop - 28, 8, 'F2');
+        $this->pdfText($commands, number_format((float) $document->tax_amount, 2, '.', ''), 478.44, $totalsTop - 28, 8, 'F2');
+        $this->pdfText($commands, 'TOTAL:', 46.52, $totalsTop - 42, 8, 'F2');
+        $this->pdfText($commands, number_format((float) $document->total, 2, '.', ''), 478.44, $totalsTop - 42, 8, 'F2');
+
+        $lettersY = $totalsTop - 76;
+        $this->pdfText($commands, 'IMPORTE EN LETRAS:', 46.52, $lettersY, 8, 'F2');
+        $this->pdfWrappedText($commands, $this->amountInWords((float) $document->total, $document->currency), 150, $lettersY, 385, 8, 10, 2);
+
+        $bankY = $lettersY - 42;
+        $this->pdfText($commands, 'KAMARY MEDICAL SAC ' . strtoupper($currencyName), 46.52, $bankY, 8, 'F2');
+        $this->pdfText($commands, 'BBVA CUENTA CORRIENTE 0011-0341-0100042988', 46.52, $bankY - 11, 8);
+        $this->pdfText($commands, 'BBVA CCI 011-341-000100042988-54', 46.52, $bankY - 22, 8);
+
+        $legendY = max($bankY - 64, 122);
+        $this->pdfWrappedText($commands, 'Representacion impresa de la ' . $documentTitle . ' ELECTRONICA, visita ' . url('/'), 46.52, $legendY, 500, 7.5, 9.5, 3);
+        $this->pdfText($commands, 'Autorizado mediante Resolucion de Intendencia No.034-005-0005315', 46.52, $legendY - 30, 7.5);
+        $this->pdfWrappedText($commands, 'Archivo XML: documento demo sin enlace XML del proveedor', 46.52, $legendY - 70, 500, 7.5, 9.5, 2);
+        $this->pdfText($commands, 'PDF generado localmente para datos demo sin enlace del proveedor', 46.52, 42, 7);
+
+        return $this->pdfDocument(implode("\n", $commands) . "\n");
+    }
+
+    private function pdfDocumentTitle(?string $documentType): string
+    {
+        $normalized = mb_strtolower(trim((string) $documentType));
+        return match ($normalized) {
+            'boleta' => 'BOLETA',
+            'nota de credito', 'nota_credito', 'credit_note' => 'NOTA DE CREDITO',
+            default => 'FACTURA',
+        };
+    }
+
+    private function pdfCurrencyName(?string $currency): string
+    {
+        return strtoupper(trim((string) $currency)) === 'USD' ? 'Dolares' : 'Soles';
+    }
+
+    private function pdfLabelValue(array &$commands, string $label, string $value, float $x, float $y, float $lineHeight = 10, float $valueWidth = 250, int $maxLines = 1, float $separatorX = 71): void
+    {
+        $this->pdfText($commands, $label, $x, $y, 8, 'F2');
+        $this->pdfText($commands, ':', $x + $separatorX, $y, 8);
+        $this->pdfWrappedText($commands, $value, $x + $separatorX + 13, $y, $valueWidth, 8, $lineHeight, $maxLines);
+    }
+
+    private function pdfTableHeader(array &$commands, float $x, float $y, array $columns): void
+    {
+        $height = 22;
+        $this->pdfRect($commands, $x, $y - $height, 510.24, $height);
+        $cursor = $x;
+        foreach ($columns as [$label, $width]) {
+            $this->pdfText($commands, $label, $cursor + 4, $y - 14, 7.5, 'F2');
+            if ($cursor > $x) {
+                $this->pdfLine($commands, $cursor, $y, $cursor, $y - $height);
+            }
+            $cursor += $width;
+        }
+    }
+
+    private function amountInWords(float $amount, ?string $currency): string
+    {
+        $integer = (int) floor(abs($amount));
+        $cents = (int) round((abs($amount) - $integer) * 100);
+        $currencyName = strtoupper($this->pdfCurrencyName($currency));
+        return strtoupper(trim($this->numberToSpanish($integer))) . ' CON ' . str_pad((string) $cents, 2, '0', STR_PAD_LEFT) . '/100 ' . $currencyName;
+    }
+
+    private function numberToSpanish(int $number): string
+    {
+        if ($number === 0) return 'cero';
+
+        $units = ['', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciseis', 'diecisiete', 'dieciocho', 'diecinueve'];
+        $tens = ['', '', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
+        $hundreds = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
+
+        if ($number < 20) return $units[$number];
+        if ($number < 30) return $number === 20 ? 'veinte' : 'veinti' . $units[$number - 20];
+        if ($number < 100) return $tens[intdiv($number, 10)] . (($number % 10) ? ' y ' . $units[$number % 10] : '');
+        if ($number === 100) return 'cien';
+        if ($number < 1000) return $hundreds[intdiv($number, 100)] . (($number % 100) ? ' ' . $this->numberToSpanish($number % 100) : '');
+        if ($number < 1000000) {
+            $thousands = intdiv($number, 1000);
+            $rest = $number % 1000;
+            return ($thousands === 1 ? 'mil' : $this->numberToSpanish($thousands) . ' mil') . ($rest ? ' ' . $this->numberToSpanish($rest) : '');
+        }
+
+        return (string) $number;
+    }
+
+    private function pdfRect(array &$commands, float $x, float $y, float $w, float $h): void
+    {
+        $commands[] = $this->pdfNumber($x) . ' ' . $this->pdfNumber($y) . ' ' . $this->pdfNumber($w) . ' ' . $this->pdfNumber($h) . ' re S';
+    }
+
+    private function pdfLine(array &$commands, float $x1, float $y1, float $x2, float $y2): void
+    {
+        $commands[] = $this->pdfNumber($x1) . ' ' . $this->pdfNumber($y1) . ' m ' . $this->pdfNumber($x2) . ' ' . $this->pdfNumber($y2) . ' l S';
+    }
+
+    private function pdfText(array &$commands, string $text, float $x, float $y, float $size = 8, string $font = 'F1', ?float $boxWidth = null, string $align = 'L'): void
+    {
+        $text = $this->pdfTextValue($text);
+        $actualX = $x;
+        if ($boxWidth !== null && $align !== 'L') {
+            $textWidth = $this->pdfApproxTextWidth($text, $size);
+            if ($align === 'C') $actualX = $x + max(0, ($boxWidth - $textWidth) / 2);
+            if ($align === 'R') $actualX = $x + max(0, $boxWidth - $textWidth);
+        }
+
+        $commands[] = 'BT /' . $font . ' ' . $this->pdfNumber($size) . ' Tf ' . $this->pdfNumber($actualX) . ' ' . $this->pdfNumber($y) . ' Td (' . $this->pdfEscape($text) . ') Tj ET';
+    }
+
+    private function pdfWrappedText(array &$commands, string $text, float $x, float $y, float $width, float $size = 8, float $lineHeight = 10, int $maxLines = 2): void
+    {
+        $lines = $this->pdfWrap($text, $width, $size, $maxLines);
+        foreach ($lines as $index => $line) {
+            $this->pdfText($commands, $line, $x, $y - ($index * $lineHeight), $size);
+        }
+    }
+
+    private function pdfWrap(string $text, float $width, float $size, int $maxLines): array
+    {
+        $text = trim(preg_replace('/\s+/', ' ', $this->pdfTextValue($text)));
+        if ($text === '') return ['-'];
+
+        $words = explode(' ', $text);
+        $lines = [];
+        $current = '';
+        foreach ($words as $word) {
+            $candidate = trim($current . ' ' . $word);
+            if ($current !== '' && $this->pdfApproxTextWidth($candidate, $size) > $width) {
+                $lines[] = $current;
+                $current = $word;
+                if (count($lines) >= $maxLines) break;
+            } else {
+                $current = $candidate;
+            }
+        }
+        if ($current !== '' && count($lines) < $maxLines) $lines[] = $current;
+        if (count($lines) === $maxLines && count($words) > 0 && $this->pdfApproxTextWidth(implode(' ', $words), $size) > $width * $maxLines) {
+            $lines[$maxLines - 1] = rtrim(substr($lines[$maxLines - 1], 0, 45)) . '...';
+        }
+
+        return $lines;
+    }
+
+    private function pdfApproxTextWidth(string $text, float $size): float
+    {
+        return strlen($this->pdfTextValue($text)) * $size * 0.48;
+    }
+
+    private function pdfNumber(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 3, '.', ''), '0'), '.');
+    }
+
+    private function pdfDocument(string $content): string
+    {
+        $objects = [
+            '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
+            '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
+            '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >> endobj',
+            '4 0 obj << /Length ' . strlen($content) . " >> stream\n" . $content . 'endstream endobj',
+            '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
+            '6 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj',
+        ];
+
+        $pdf = "%PDF-1.4\n";
+        $offsets = [0];
+        foreach ($objects as $object) {
+            $offsets[] = strlen($pdf);
+            $pdf .= $object . "\n";
+        }
+
+        $xref = strlen($pdf);
+        $pdf .= "xref\n0 " . count($offsets) . "\n";
+        $pdf .= "0000000000 65535 f \n";
+        for ($i = 1; $i < count($offsets); $i++) {
+            $pdf .= str_pad((string) $offsets[$i], 10, '0', STR_PAD_LEFT) . " 00000 n \n";
+        }
+
+        $pdf .= "trailer << /Size " . count($offsets) . " /Root 1 0 R >>\n";
+        $pdf .= "startxref\n{$xref}\n%%EOF\n";
+
+        return $pdf;
+    }
+
     private function pdfFromLines(array $lines): string
     {
         $content = "BT\n/F1 11 Tf\n50 760 Td\n16 TL\n";
@@ -1225,7 +1507,7 @@ class FacturadorPro5Service
             if ($index > 0) {
                 $content .= "T*\n";
             }
-            $content .= '(' . $this->pdfEscape($this->pdfText((string) $line)) . ") Tj\n";
+            $content .= '(' . $this->pdfEscape($this->pdfTextValue((string) $line)) . ") Tj\n";
         }
         $content .= "ET\n";
 
@@ -1257,7 +1539,7 @@ class FacturadorPro5Service
         return $pdf;
     }
 
-    private function pdfText(string $value): string
+    private function pdfTextValue(string $value): string
     {
         $text = strip_tags($value);
         $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);

@@ -404,7 +404,7 @@ class BillingDocumentController extends BasicController
 
             return response($file['content'], 200, [
                 'Content-Type' => $file['content_type'],
-                'Content-Disposition' => 'inline; filename="' . $file['filename'] . '"',
+                'Content-Disposition' => ($request->boolean('download') ? 'attachment' : 'inline') . '; filename="' . $file['filename'] . '"',
                 'Cache-Control' => 'private, max-age=0, must-revalidate',
             ]);
         } catch (\Throwable $th) {
