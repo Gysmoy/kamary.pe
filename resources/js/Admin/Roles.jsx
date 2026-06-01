@@ -36,10 +36,24 @@ const MAGISTRALES_MENU_PERMISSIONS = [
   'magistrales-sales'
 ]
 
+const STORAGE_MENU_PERMISSIONS = [
+  'storage-inventory',
+  'storage-clients',
+  'storage-service-orders',
+  'storage-units',
+  'storage-products',
+  'storage-entry-note',
+  'storage-exit-note',
+  'storage-kardex',
+  'storage-general-service',
+  'storage-billing-control',
+  'storage-general-service-orders'
+]
+
 const HIDDEN_PERMISSION_NAMES = ['client-distribution']
 
 const QUICK_FLAGS = {
-  kamaryMedicals: MAGISTRALES_MENU_PERMISSIONS,
+  kamaryMedicals: STORAGE_MENU_PERMISSIONS,
   kamaryPeru: [
     'dashboard',
     'businesses',
@@ -70,19 +84,9 @@ const QUICK_FLAGS = {
     'entry-note',
     'exit-note',
     'units-of-measure',
-    'storage-inventory',
-    'storage-clients',
-    'storage-service-orders',
-    'storage-units',
-    'storage-products',
-    'storage-entry-note',
-    'storage-exit-note',
-    'storage-kardex',
-    'storage-general-service',
-    'storage-billing-control',
-    'storage-general-service-orders',
     'services-client',
-    'sample-orders'
+    'sample-orders',
+    ...MAGISTRALES_MENU_PERMISSIONS
   ]
 }
 
@@ -462,7 +466,7 @@ const Roles = ({ permissions }) => {
                     <div className='d-flex flex-wrap align-items-center justify-content-between gap-2'>
                       <div>
                         <strong className='text-primary d-block'>Kamary Medicals</strong>
-                        <small className='text-muted'>Preset orientado a magistrales</small>
+                        <small className='text-muted'>Preset orientado a servicios de almacenamiento</small>
                       </div>
                       <div className='d-flex flex-wrap gap-2'>
                         <span className={`badge align-self-center ${hasAll(selectedPermissions, availableFlags.kamaryMedicals) ? 'bg-primary' : 'badge-soft-primary'}`}>
@@ -491,7 +495,7 @@ const Roles = ({ permissions }) => {
                     <div className='d-flex flex-wrap align-items-center justify-content-between gap-2'>
                       <div>
                         <strong className='text-success d-block'>Kamary Peru</strong>
-                        <small className='text-muted'>Preset orientado al negocio principal</small>
+                        <small className='text-muted'>Preset orientado al negocio principal y magistrales</small>
                       </div>
                       <div className='d-flex flex-wrap gap-2'>
                         <span className={`badge align-self-center ${hasAll(selectedPermissions, availableFlags.kamaryPeru) ? 'bg-success' : 'badge-soft-success'}`}>

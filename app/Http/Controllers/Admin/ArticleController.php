@@ -1594,7 +1594,7 @@ class ArticleController extends BasicController
 
     private function defaultBusinessIdForScope(): ?int
     {
-        $scopeKey = in_array($this->moduleScope, ['magistrales', 'storage'], true)
+        $scopeKey = $this->moduleScope === 'storage'
             ? BusinessScope::KAMARY_MEDICALS
             : BusinessScope::KAMARY_PERU;
 

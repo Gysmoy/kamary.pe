@@ -89,16 +89,22 @@ class ProductionModuleDataSeeder extends Seeder
     private function ensureFixedBusinesses(): Collection
     {
         $defaults = [
-            BusinessScope::KAMARY_PERU => 'Kamary Peru',
-            BusinessScope::KAMARY_MEDICALS => 'Kamary Medicals',
+            BusinessScope::KAMARY_PERU => [
+                'name' => 'Kamary Peru',
+                'description' => 'Empresa general y operativa de Kamary Peru.',
+            ],
+            BusinessScope::KAMARY_MEDICALS => [
+                'name' => 'Kamary Medicals',
+                'description' => 'Empresa para servicios de almacenamiento.',
+            ],
         ];
 
-        foreach ($defaults as $key => $name) {
+        foreach ($defaults as $key => $default) {
             Business::query()->updateOrCreate(
                 ['business_key' => $key],
                 [
-                    'name' => $name,
-                    'description' => 'Empresa fija del grupo Kamary',
+                    'name' => $default['name'],
+                    'description' => $default['description'],
                     'status' => true,
                     'updated_by' => $this->userId,
                 ]

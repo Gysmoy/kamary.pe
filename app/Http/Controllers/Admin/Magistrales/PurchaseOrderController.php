@@ -62,7 +62,7 @@ class PurchaseOrderController extends BasePurchaseOrderController
     {
         $warehouse = MagistralesWarehouse::warehouse();
         $request->merge([
-            'business_scope_key' => BusinessScope::KAMARY_MEDICALS,
+            'business_scope_key' => BusinessScope::KAMARY_PERU,
             'warehouse_id' => $warehouse->id,
             'business_branch_id' => $warehouse->business_branch_id,
             'business_id' => $warehouse->branch?->business_id,

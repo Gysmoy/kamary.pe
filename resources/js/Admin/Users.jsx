@@ -60,7 +60,7 @@ const Users = ({ prefixes, roles, drivers = [] }) => {
     passwordRef.current.value = ''
     phoneRef.current.value = data?.phone ?? ''
     setPhonePrefix(data?.phone_prefix ?? '51')
-    setScope(Array.isArray(data?.scope) ? data.scope : [])
+    setScope(data?.uuid && Array.isArray(data?.scope) ? data.scope : ['kamary-peru'])
     setIsDriver(Boolean(data?.is_driver))
     setSelectedDriverId(data?.driver_id ? `${data.driver_id}` : '')
 

@@ -95,7 +95,7 @@ class MagistralesWarehouse
             ->whereNotNull('warehouses.status')
             ->whereHas('branch.business', function (Builder $business) {
                 $business
-                    ->where('business_key', BusinessScope::KAMARY_MEDICALS)
+                    ->where('business_key', BusinessScope::KAMARY_PERU)
                     ->whereNotNull('status');
             });
     }
@@ -118,11 +118,11 @@ class MagistralesWarehouse
     {
         try {
             $business = Business::query()->updateOrCreate(
-                ['business_key' => BusinessScope::KAMARY_MEDICALS],
+                ['business_key' => BusinessScope::KAMARY_PERU],
                 [
-                    'name' => 'Kamary Medicals',
-                    'trade_name' => 'Kamary Medicals',
-                    'description' => 'Unidad operativa para formulas magistrales.',
+                    'name' => 'Kamary Peru',
+                    'trade_name' => 'Kamary Peru',
+                    'description' => 'Empresa general y operativa de Kamary Peru.',
                     'status' => true,
                 ]
             );
@@ -136,7 +136,7 @@ class MagistralesWarehouse
                     'establishment_code' => '0000',
                     'ubigeo' => '150101',
                     'address' => 'Calle Leoncio Prado 830, Urb. La Vina, San Luis, Lima',
-                    'email' => 'magistrales@kamarymedicals.pe',
+                    'email' => 'magistrales@kamary.pe',
                     'telephone' => '014856320',
                     'series_factura' => 'FM01',
                     'series_boleta' => 'BM01',

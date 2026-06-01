@@ -66,7 +66,7 @@ const normalizeEmailList = (value) => {
   return uniqueEmailList(splitEmailList(value)).join(', ')
 }
 const invalidEmailList = (value) => splitEmailList(value).filter(email => !isValidEmail(email))
-const DEFAULT_STORAGE_USER_SCOPES = ['kamary-peru']
+const DEFAULT_STORAGE_USER_SCOPES = ['kamary-medicals']
 const DEFAULT_STORAGE_NOTIFICATION_OPTIONS = [
   {
     value: 'storage_invoice_notification',

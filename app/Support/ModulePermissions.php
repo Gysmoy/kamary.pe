@@ -169,11 +169,48 @@ class ModulePermissions
             return true;
         }
 
+        if (!self::userScopeAllows($user, $permission)) {
+            return false;
+        }
+
         try {
             return $user->can($permission);
         } catch (PermissionDoesNotExist $exception) {
             return false;
         }
+    }
+
+    public static function scopeForPermission(string $permission): string
+    {
+        return str_starts_with($permission, 'storage-') ? 'kamary-medicals' : 'kamary-peru';
+    }
+
+    public static function userScopeAllows(?User $user, string $permission): bool
+    {
+        if (!$user) {
+            return false;
+        }
+
+        if (!Schema::hasColumn('users', 'scope')) {
+            return true;
+        }
+
+        $scope = $user->scope;
+        if (is_string($scope)) {
+            $decoded = json_decode($scope, true);
+            $scope = is_array($decoded) ? $decoded : [];
+        }
+
+        if (!is_array($scope)) {
+            return false;
+        }
+
+        $normalizedScope = array_values(array_unique(array_filter(array_map(
+            fn($value) => mb_strtolower(trim((string) $value)),
+            $scope
+        ))));
+
+        return in_array(self::scopeForPermission($permission), $normalizedScope, true);
     }
 
     public static function isSuperUser(?User $user): bool

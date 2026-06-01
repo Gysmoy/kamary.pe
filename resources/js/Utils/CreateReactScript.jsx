@@ -62,6 +62,7 @@ const CreateReactScript = (render) => {
         }
 
         const superRoles = ['admin', 'root', 'administrador', 'super admin', 'superadmin']
+        const scopeForPermission = (permission) => `${permission ?? ''}`.startsWith('storage-') ? 'kamary-medicals' : 'kamary-peru'
         const hasRole = (role) => {
           const roles = properties?.session?.roles ?? []
           const expectedRole = `${role ?? ''}`.trim().toLowerCase()
@@ -84,10 +85,17 @@ const CreateReactScript = (render) => {
             else keys2validate.push(p)
           }
 
-          if (properties?.session?.permissions?.find(x => keys2validate.includes(x.name) || x.name == 'general.root')) return true
+          const userScopes = Array.isArray(properties?.session?.scope)
+            ? properties.session.scope.map(x => `${x ?? ''}`.trim().toLowerCase()).filter(Boolean)
+            : []
+          const scopedKeys = keys2validate.filter(permission => userScopes.includes(scopeForPermission(permission)))
+
+          if (!scopedKeys.length) return false
+
+          if (properties?.session?.permissions?.find(x => scopedKeys.includes(x.name) || x.name == 'general.root')) return true
           const roles = properties?.session?.roles ?? []
           for (const rol of roles) {
-            if (rol?.permissions?.find(x => keys2validate.includes(x.name) || x.name == 'general.root')) return true
+            if (rol?.permissions?.find(x => scopedKeys.includes(x.name) || x.name == 'general.root')) return true
           }
           return false
         }

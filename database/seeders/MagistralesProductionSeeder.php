@@ -50,11 +50,11 @@ class MagistralesProductionSeeder extends Seeder
     private function ensureBusiness(): Business
     {
         return Business::query()->updateOrCreate(
-            ['business_key' => BusinessScope::KAMARY_MEDICALS],
+            ['business_key' => BusinessScope::KAMARY_PERU],
             [
-                'name' => 'Kamary Medicals',
-                'trade_name' => 'Kamary Medicals',
-                'description' => 'Unidad operativa para formulas magistrales.',
+                'name' => 'Kamary Peru',
+                'trade_name' => 'Kamary Peru',
+                'description' => 'Empresa general y operativa de Kamary Peru.',
                 'facturador_sync_status' => 'pending',
                 'facturador_sync_message' => 'Completar configuracion fiscal antes de emitir comprobantes magistrales.',
                 'status' => true,
@@ -74,7 +74,7 @@ class MagistralesProductionSeeder extends Seeder
                 'establishment_code' => '0000',
                 'ubigeo' => '150101',
                 'address' => 'Calle Leoncio Prado 830, Urb. La Vina, San Luis, Lima',
-                'email' => 'magistrales@kamarymedicals.pe',
+                'email' => 'magistrales@kamary.pe',
                 'telephone' => '014856320',
                 'facturador_sync_status' => 'pending',
                 'facturador_sync_message' => 'Sede base del modulo Magistrales.',

@@ -15,6 +15,8 @@ use Spatie\Permission\Models\Role;
 
 class UserController extends BasicController
 {
+    private const ALLOWED_SCOPES = ['kamary-peru', 'kamary-medicals'];
+
     public $model = User::class;
     public $reactView = 'Admin/Users';
     public $ignoreStatusFilter = true;
@@ -49,6 +51,17 @@ class UserController extends BasicController
     public function beforeSave(Request $request)
     {
         $body = $request->all();
+
+        if (Schema::hasColumn('users', 'scope')) {
+            if (array_key_exists('scope', $body)) {
+                $body['scope'] = $this->normalizeScopeList($body['scope']);
+                if (empty($body['scope'])) {
+                    throw new \Exception('Selecciona al menos una empresa para el usuario');
+                }
+            }
+        } else {
+            unset($body['scope']);
+        }
 
         if (array_key_exists('storage_client_id', $body)) {
             if (Schema::hasColumn('users', 'storage_client_id')) {
@@ -164,6 +177,23 @@ class UserController extends BasicController
     private function normalizeDriverText($value): string
     {
         return mb_strtolower(trim(preg_replace('/\s+/', ' ', (string)$value) ?? (string)$value));
+    }
+
+    private function normalizeScopeList($value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : [$value];
+        }
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(array_map(
+            fn($scope) => mb_strtolower(trim((string)$scope)),
+            $value
+        ), fn($scope) => in_array($scope, self::ALLOWED_SCOPES, true))));
     }
 
     private function toBoolean($value): bool
