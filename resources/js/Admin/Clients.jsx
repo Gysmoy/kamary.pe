@@ -746,16 +746,22 @@ const Clients = ({
 
   const selectedClientId = selectedClientForUsers?.entity_id ?? selectedClientForUsers?.id ?? null
   const selectedClientName = selectedClientForUsers?.display_name ?? selectedClientForUsers?.full_name ?? selectedClientForUsers?.business_name ?? ''
-  const usersFilterValue = selectedClientId ? ['storage_client_id', '=', selectedClientId] : ['storage_client_id', '=', null]
+  const usersFilterValue = useMemo(() => (
+    selectedClientId ? ['storage_client_id', '=', selectedClientId] : ['storage_client_id', '=', null]
+  ), [selectedClientId])
   const selectedNotificationClientId = selectedClientForNotifications?.entity_id ?? selectedClientForNotifications?.id ?? null
   const selectedNotificationClientName = selectedClientForNotifications?.display_name ?? selectedClientForNotifications?.full_name ?? selectedClientForNotifications?.business_name ?? ''
-  const notificationsFilterValue = selectedNotificationClientId ? ['client_id', '=', selectedNotificationClientId] : ['client_id', '=', null]
+  const notificationsFilterValue = useMemo(() => (
+    selectedNotificationClientId ? ['client_id', '=', selectedNotificationClientId] : ['client_id', '=', null]
+  ), [selectedNotificationClientId])
   const selectedTariffClientId = selectedClientForTariff?.entity_id ?? selectedClientForTariff?.id ?? null
   const selectedTariffClientName = selectedClientForTariff?.display_name ?? selectedClientForTariff?.full_name ?? selectedClientForTariff?.business_name ?? ''
   const selectedContractClientId = selectedClientForContracts?.entity_id ?? selectedClientForContracts?.id ?? null
   const selectedContractClientName = selectedClientForContracts?.display_name ?? selectedClientForContracts?.full_name ?? selectedClientForContracts?.business_name ?? ''
   const selectedContractClientDocument = selectedClientForContracts?.document_number ?? ''
-  const contractsFilterValue = selectedContractClientId ? ['client_id', '=', selectedContractClientId] : ['client_id', '=', null]
+  const contractsFilterValue = useMemo(() => (
+    selectedContractClientId ? ['client_id', '=', selectedContractClientId] : ['client_id', '=', null]
+  ), [selectedContractClientId])
   const savedContractAnnexes = Array.isArray(contractEditingData?.annexes) ? contractEditingData.annexes : []
   const hasSavedContractFile = !!(contractEditingData?.id && contractEditingData?.file_path)
 
