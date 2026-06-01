@@ -32,6 +32,9 @@ class BillingDocumentController extends BasicController
     public function setPaginationInstance(string $model)
     {
         $query = $model::select('billing_documents.*')
+            ->selectRaw('source_service_order.issue_date as service_order_issue_date')
+            ->selectRaw('source_service_order.scheduled_at as service_order_scheduled_at')
+            ->selectRaw('source_service_order.created_at as service_order_created_at')
             ->with([
                 'business:id,name,tax_number,soap_send_id,soap_type_id,soap_username,soap_password,detraction_account,payment_accounts,facturador_company_id,facturador_sync_status,status',
                 'branch:id,business_id,name,establishment_code,ubigeo,address,email,telephone,facturador_establishment_id,facturador_sync_status,facturador_sync_message,facturador_last_sync_at,series_factura,series_boleta,series_nota_credito,status',
@@ -39,12 +42,13 @@ class BillingDocumentController extends BasicController
                 'client:id,full_name,document_type,document_number,email,billing_email,phone,ubigeo,full_address',
                 'eventualClient:id,business_name,document_type,document_number,email,phone,address',
                 'commercialOrder:id,code,billing_status,dispatch_status,total,ubigeo,delivery_address,dispatch_contact_phone',
-                'serviceOrder:id,code,order_status,billing_status,total',
+                'serviceOrder:id,code,order_status,billing_status,total,issue_date,scheduled_at,created_at',
                 'referenceDocument:id,code,document_type,series,sequence,local_status,total',
                 'items:id,billing_document_id,commercial_order_item_id,service_order_item_id,item_type,item_code,description,quantity,unit_price,total,metadata,status',
                 'events:id,billing_document_id,event_type,local_status,external_status,message,created_at',
                 'creator:id,name,lastname,username,fullname', 'updater:id,name,lastname,username,fullname',
             ])
+            ->leftJoin('service_orders as source_service_order', 'source_service_order.id', '=', 'billing_documents.service_order_id')
             ->join('users as creator', 'creator.id', '=', 'billing_documents.created_by')
             ->join('users as updater', 'updater.id', '=', 'billing_documents.updated_by');
 

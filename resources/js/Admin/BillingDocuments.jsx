@@ -44,7 +44,7 @@ const formatDate = (value) => value?.toString?.().slice?.(0, 10) ?? ''
 const currencyLabel = (value) => `${value ?? ''}`.toUpperCase() === 'USD' ? 'Dolares' : 'Soles'
 const emptyBulkFilters = () => ({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false, detractionPercent: 12 })
 const billingControlStatusOptions = [
-  { value: 'pending', label: 'Pendiente' },
+  { value: 'pending', label: 'En espera' },
   { value: 'sent', label: 'Facturado' },
   { value: 'accepted', label: 'Facturado' },
   { value: 'observed', label: 'Facturado' },
@@ -68,6 +68,17 @@ const rowSourceCode = (row) => row?.commercial_order?.code
   ?? row?.serviceOrder?.code
   ?? row?.metadata?.source_code
   ?? '-'
+
+const rowServiceOrderDate = (row) => row?.service_order_issue_date
+  ?? row?.service_order?.issue_date
+  ?? row?.serviceOrder?.issue_date
+  ?? row?.service_order_scheduled_at
+  ?? row?.service_order?.scheduled_at
+  ?? row?.serviceOrder?.scheduled_at
+  ?? row?.service_order_created_at
+  ?? row?.service_order?.created_at
+  ?? row?.serviceOrder?.created_at
+  ?? ''
 
 const rowDescription = (row) => row?.items?.[0]?.description
   ?? row?.observations
@@ -99,11 +110,19 @@ const tabFilter = (tab) => {
   }
   if (tab === 'cancelled') return [['local_status', '=', 'cancelled'], 'and', notCreditNote]
   if (tab === 'credit-notes') return ['document_type', '=', 'Nota de credito']
-  return [['local_status', '=', 'pending'], 'and', notCreditNote]
+  return [
+    ['local_status', '=', 'pending'],
+    'and',
+    [['series', '=', null], 'or', ['series', '=', '']],
+    'and',
+    [['sequence', '=', null], 'or', ['sequence', '=', '']],
+    'and',
+    notCreditNote,
+  ]
 }
 
 const buildStorageFilter = (tab, filters) => {
-  const dateField = tab === 'prefactures' ? 'issue_date' : 'created_at'
+  const dateField = tab === 'prefactures' ? 'source_service_order.issue_date' : 'created_at'
   return combineFilters([
     tabFilter(tab),
     filters.businessId ? ['business_id', '=', Number(filters.businessId)] : null,
@@ -664,7 +683,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     if (row?.local_status === 'pending') {
       return hasPreparedVoucher(row)
         ? { label: 'Facturado', className: 'badge bg-soft-success text-success border border-success' }
-        : { label: 'Pendiente', className: 'badge bg-soft-warning text-warning border border-warning' }
+        : { label: 'En espera', className: 'badge bg-soft-warning text-warning border border-warning' }
     }
     if (['sent', 'accepted', 'observed', 'rejected'].includes(row?.local_status)) {
       return { label: 'Facturado', className: 'badge bg-soft-success text-success border border-success' }
@@ -740,7 +759,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       { dataField: 'total', caption: 'Importe', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
       { dataField: 'document_type', caption: 'Tipo comprobante', width: 140 },
       { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (data) => currencyLabel(data.currency) },
-      { dataField: 'issue_date', caption: 'F. Facturacion', dataType: 'date', width: 130 },
+      { caption: 'F. OS', dataType: 'date', width: 120, allowSorting: false, allowFiltering: false, calculateCellValue: rowServiceOrderDate },
       { dataField: 'created_at', caption: 'F. Registro', dataType: 'datetime', width: 160 },
     ],
     issued: [
@@ -826,11 +845,11 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
         </select>
       </div>}
       <div className='col-12 col-md-6 col-lg-2'>
-        <label className='form-label'>{activeStorageTab === 'prefactures' ? 'Fecha Inicio' : 'Fecha Registro Inicio'}</label>
+        <label className='form-label'>{activeStorageTab === 'prefactures' ? 'Fecha OS Inicio' : 'Fecha Registro Inicio'}</label>
         <input type='date' className='form-control' value={storageFilters.startDate} onChange={(e) => updateStorageFilter('startDate', e.target.value)} />
       </div>
       <div className='col-12 col-md-6 col-lg-2'>
-        <label className='form-label'>{activeStorageTab === 'prefactures' ? 'Fecha Fin' : 'Fecha Registro Fin'}</label>
+        <label className='form-label'>{activeStorageTab === 'prefactures' ? 'Fecha OS Fin' : 'Fecha Registro Fin'}</label>
         <input type='date' className='form-control' value={storageFilters.endDate} onChange={(e) => updateStorageFilter('endDate', e.target.value)} />
       </div>
       <div className='col-12 col-lg-1 d-flex gap-2'>
