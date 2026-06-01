@@ -126,6 +126,13 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
 
   const fixedBusinessLabel = (businessScopes?.[businessScopeKey] || 'KAMARY PERU').toUpperCase()
   const filterWarehouseOptions = useMemo(() => uniqueWarehouseNameOptions(warehouses), [warehouses])
+  const modalWarehouseOptions = useMemo(() => {
+    const currentWarehouseId = `${warehouseId || ''}`
+    return filterWarehouseOptions.map(option => ({
+      ...option,
+      value: option.ids.includes(currentWarehouseId) ? currentWarehouseId : option.ids[0],
+    }))
+  }, [filterWarehouseOptions, warehouseId])
   const firstFilterWarehouseId = filterWarehouseIds.split(',').filter(Boolean)[0] || ''
   const selectedCountCode = selectedCount?.code ?? ''
   const selectedWarehouseName = selectedCount?.warehouse?.name || warehouses.find(warehouse => `${warehouse.id}` === `${warehouseId}`)?.name || ''
@@ -496,8 +503,8 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
           <label className='form-label'>Almacen</label>
           <select className='form-select' value={warehouseId} disabled={!!selectedCount} onChange={(e) => setWarehouseId(e.target.value)}>
             <option value=''>Seleccione almacen</option>
-            {warehouses.map(warehouse => (
-              <option key={`standard-inv-wh-${warehouse.id}`} value={warehouse.id}>
+            {modalWarehouseOptions.map(warehouse => (
+              <option key={`standard-inv-wh-${warehouse.ids.join('-')}`} value={warehouse.value}>
                 {warehouse.name}
               </option>
             ))}
