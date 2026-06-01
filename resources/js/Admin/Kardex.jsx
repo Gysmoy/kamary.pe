@@ -81,6 +81,57 @@ const sourceItemTotal = (item) => {
   if (explicit !== null && explicit !== undefined && explicit !== '') return Number(explicit)
   return sourceItemUnitCost(item) * sourceItemQuantity(item)
 }
+const pdfImageCache = new Map()
+const formatPdfDate = (date) => {
+  const day = `${date.getDate()}`.padStart(2, '0')
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  return `${day}-${month}-${date.getFullYear()}`
+}
+const formatPdfTime = (date) => [
+  date.getHours(),
+  date.getMinutes(),
+  date.getSeconds(),
+].map(part => `${part}`.padStart(2, '0')).join(':')
+const loadPdfImageAsPng = (source) => {
+  const url = new URL(source, window.location.href).href
+  if (pdfImageCache.has(url)) return pdfImageCache.get(url)
+
+  const promise = new Promise((resolve, reject) => {
+    const image = new Image()
+    image.crossOrigin = 'anonymous'
+    image.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = image.naturalWidth || image.width
+        canvas.height = image.naturalHeight || image.height
+        const context = canvas.getContext('2d')
+        context.drawImage(image, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/png'))
+      } catch (error) {
+        reject(error)
+      }
+    }
+    image.onerror = reject
+    image.src = url
+  })
+
+  pdfImageCache.set(url, promise)
+  return promise
+}
+const drawKardexDocumentLogo = async (doc, x, y, width, height) => {
+  try {
+    const dataUrl = await loadPdfImageAsPng('/assets/img/grupo-kamary-logo.jpg')
+    doc.addImage(dataUrl, 'PNG', x, y, width, height)
+  } catch {
+    doc.setFillColor(245, 247, 250)
+    doc.rect(x, y, width, height, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.setTextColor(210, 28, 38)
+    doc.text('GRUPO KAMARY', x + (width / 2), y + (height / 2) + 3, { align: 'center' })
+    doc.setTextColor(0, 0, 0)
+  }
+}
 
 const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
   const gridRef = useRef()
@@ -235,39 +286,33 @@ const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
     }
 
     const pageWidth = doc.internal.pageSize.getWidth()
-    const margin = 34
+    const margin = 42
     const now = new Date()
-    const printedAt = now.toLocaleDateString('es-PE') + ' ' + now.toLocaleTimeString('es-PE')
     const userLabel = session?.username || session?.fullname || session?.name || ''
 
-    doc.setFillColor(245, 247, 250)
-    doc.rect(margin + 6, 28, 82, 48, 'F')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8)
-    doc.setTextColor(210, 28, 38)
-    doc.text('GRUPO KAMARY', margin + 47, 56, { align: 'center' })
+    await drawKardexDocumentLogo(doc, margin + 2, 36, 76, 43)
     doc.setTextColor(0, 0, 0)
     doc.setFont('helvetica', 'normal')
-    doc.setFontSize(8)
-    doc.text(`Fecha de impresion: ${printedAt.slice(0, 10)}`, pageWidth - margin, 34, { align: 'right' })
-    doc.text(`Hora de impresion: ${printedAt.slice(11)}`, pageWidth - margin, 46, { align: 'right' })
-    doc.text(`Usuario de impresion: ${userLabel || '-'}`, pageWidth - margin, 58, { align: 'right' })
+    doc.setFontSize(9)
+    doc.text(`Fecha de impresión: ${formatPdfDate(now)}`, pageWidth - margin, 40, { align: 'right' })
+    doc.text(`Hora de impresión: ${formatPdfTime(now)}`, pageWidth - margin, 53, { align: 'right' })
+    doc.text(`Usuario de impresión: ${userLabel || '-'}`, pageWidth - margin, 66, { align: 'right' })
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(11)
-    doc.text(documentPdfTitle(row.source_type, data), pageWidth / 2, 118, { align: 'center' })
+    doc.text(documentPdfTitle(row.source_type, data), pageWidth / 2, 122, { align: 'center' })
 
     const leftRows = row.source_type === 'exit_note'
       ? [
-        ['Fecha Emision', asDate(data?.exit_date || data?.created_at)],
+        ['Fecha Emisión', asDate(data?.exit_date || data?.created_at)],
         ['Tipo Documento', data?.document_type || 'Salida'],
         ['Serie', data?.document_series || '-'],
         ['Observacion', data?.observations || ''],
       ]
       : [
-        ['Fecha Emision', asDate(data?.entry_date || data?.issue_date || data?.created_at)],
+        ['Fecha Emisión', asDate(data?.entry_date || data?.issue_date || data?.created_at)],
         ['Tipo Documento', data?.document_type || '-'],
-        ['Serie Guia', data?.guide_series || data?.document_series || '-'],
+        ['Serie Guía', data?.guide_series || data?.document_series || '-'],
         ['Observacion', data?.observations || ''],
       ]
     const rightRows = row.source_type === 'exit_note'
@@ -279,23 +324,27 @@ const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
       ]
       : [
         ['RUC | Proveedor', [nested(data, 'supplier.ruc'), nested(data, 'supplier.business_name')].filter(Boolean).join(' | ')],
-        ['RUC Guia', data?.guide_ruc || nested(data, 'supplier.ruc')],
-        ['Secuencia Guia', data?.guide_sequence || data?.document_sequence || '-'],
+        ['RUC Guía', data?.guide_ruc || nested(data, 'supplier.ruc')],
+        ['Secuencia Guía', data?.guide_sequence || data?.document_sequence || '-'],
         ['Estado', documentStatusLabel(row.source_type, data)],
       ]
 
-    const drawMetaRows = (rows, x, y) => {
-      rows.forEach(([label, value], index) => {
-        const currentY = y + (index * 12)
+    const drawMetaRows = (rows, x, y, valueWidth) => {
+      let currentY = y
+      rows.forEach(([label, value]) => {
         doc.setFont('helvetica', 'normal')
+        doc.setFontSize(9)
         doc.text(label, x, currentY)
-        doc.text(':', x + 90, currentY)
-        doc.text(`${value ?? '-'}`, x + 100, currentY)
+        doc.text(':', x + 78, currentY)
+        const lines = doc.splitTextToSize(`${value ?? '-'}`, valueWidth)
+        doc.text(lines, x + 86, currentY)
+        currentY += Math.max(13, lines.length * 10)
       })
+      return currentY
     }
-    doc.setFontSize(8)
-    drawMetaRows(leftRows, margin + 6, 146)
-    drawMetaRows(rightRows, 340, 146)
+    const leftBottom = drawMetaRows(leftRows, margin + 2, 150, 164)
+    const rightBottom = drawMetaRows(rightRows, 316, 150, pageWidth - margin - 402)
+    const tableStartY = Math.max(206, leftBottom, rightBottom) + 24
 
     const rows = (data?.items ?? []).map(item => [
       [item?.batch_code || item?.lot || '-', item?.id ? `${item.id}` : ''].filter(Boolean).join('\n'),
@@ -309,23 +358,23 @@ const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
     ])
 
     doc.autoTable({
-      startY: 214,
+      startY: tableStartY,
       head: [['CODIGO LOTE', 'ARTICULO', 'LABORATORIO | PRINCIPIO ACTIVO', 'U. MEDIDA', 'ALMACEN', 'P. COSTO', 'CANT.', 'TOTAL']],
       body: rows.length ? rows : [['Sin detalle', '', '', '', '', '', '', '']],
       theme: 'grid',
-      styles: { fontSize: 7, cellPadding: 3, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.5, valign: 'top' },
-      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.6 },
+      styles: { fontSize: 8, cellPadding: 3, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.55, valign: 'middle', overflow: 'linebreak' },
+      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.85 },
       columnStyles: {
-        0: { cellWidth: 68, halign: 'center' },
-        1: { cellWidth: 106, halign: 'center' },
-        2: { cellWidth: 104, halign: 'center' },
-        3: { cellWidth: 58, halign: 'center' },
-        4: { cellWidth: 82, halign: 'center' },
-        5: { cellWidth: 52, halign: 'right' },
-        6: { cellWidth: 44, halign: 'right' },
-        7: { cellWidth: 54, halign: 'right' },
+        0: { cellWidth: 62, halign: 'center' },
+        1: { cellWidth: 93, halign: 'center' },
+        2: { cellWidth: 100, halign: 'center' },
+        3: { cellWidth: 52, halign: 'center' },
+        4: { cellWidth: 76, halign: 'center' },
+        5: { cellWidth: 50, halign: 'right' },
+        6: { cellWidth: 40, halign: 'right' },
+        7: { cellWidth: 50, halign: 'right' },
       },
-      margin: { left: margin, right: margin },
+      margin: { left: margin, right: 30 },
     })
 
     const url = URL.createObjectURL(doc.output('blob'))
