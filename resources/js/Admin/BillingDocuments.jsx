@@ -725,8 +725,11 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const storageFilterFieldColumns = [
     { dataField: 'local_status', caption: 'Estado local', visible: false, showInColumnChooser: false, lookup: toLookup(billingControlStatusOptions) },
     { dataField: 'document_type', caption: 'Tipo comprobante', visible: false, showInColumnChooser: false },
+    { dataField: 'series', caption: 'Serie', visible: false, showInColumnChooser: false },
+    { dataField: 'sequence', caption: 'Secuencia', visible: false, showInColumnChooser: false },
     { dataField: 'business_id', caption: 'Empresa', dataType: 'number', visible: false, showInColumnChooser: false },
     { dataField: 'client_id', caption: 'Cliente', dataType: 'number', visible: false, showInColumnChooser: false },
+    { dataField: 'source_service_order.issue_date', caption: 'F. OS', dataType: 'date', visible: false, showInColumnChooser: false },
     { dataField: 'created_at', caption: 'F. Registro', dataType: 'datetime', visible: false, showInColumnChooser: false },
   ]
 
