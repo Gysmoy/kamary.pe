@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Classes\dxResponse;
 use App\Http\Controllers\BasicController;
+use App\Models\EntryNote;
+use App\Models\ExitNote;
+use App\Models\PurchaseReceipt;
 use App\Models\dxDataGrid;
 use App\Support\BusinessScope;
 use Illuminate\Http\Request;
@@ -60,13 +63,19 @@ class KardexController extends BasicController
 
                 return [
                     'id' => (string)$row->id,
+                    'source_type' => (string)$row->source_type,
+                    'source_id' => $row->source_id ? (int)$row->source_id : null,
+                    'source_item_id' => $row->source_item_id ? (int)$row->source_item_id : null,
                     'movement_date' => $row->movement_date,
                     'operation' => (string)$row->operation,
                     'document' => (string)$row->document,
+                    'document_url' => $this->documentUrl($row->source_type, $row->source_id, $row->document_file),
                     'partner' => (string)$row->partner,
+                    'branch_name' => (string)$row->branch_name,
                     'warehouse_name' => (string)$row->warehouse_name,
                     'location' => (string)$row->location,
                     'lot' => (string)$row->lot,
+                    'expiration_date' => $row->expiration_date,
                     'quantity_in' => $qtyIn,
                     'quantity_out' => $qtyOut,
                     'balance' => $balance,
@@ -83,6 +92,53 @@ class KardexController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    public function document(Request $request, string $sourceType, string $sourceId): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+
+        try {
+            $document = $this->sourceDocument($sourceType, (int)$sourceId);
+            $documentFile = $this->sourceDocumentFile($sourceType, $document);
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = [
+                'type' => $sourceType,
+                'document' => $document,
+                'file_url' => $this->documentFileExists($sourceType, $documentFile)
+                    ? $this->documentUrl($sourceType, $document->id, $documentFile)
+                    : null,
+            ];
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function documentFile(Request $request, string $sourceType, string $sourceId)
+    {
+        $document = $this->sourceDocument($sourceType, (int)$sourceId);
+        $file = $this->sourceDocumentFile($sourceType, $document);
+        if (!$file) abort(404, 'Documento no encontrado');
+
+        if (preg_match('/^https?:\/\//i', $file)) {
+            return redirect()->away($file);
+        }
+
+        $path = $this->resolveDocumentPath($file, $this->documentFolder($sourceType));
+        if (!$path) abort(404, 'Archivo no encontrado');
+
+        $filename = basename(str_replace('\\', '/', $file));
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+        return response()->file($path, [
+            'Content-Type' => $extension === 'pdf' ? 'application/pdf' : 'application/octet-stream',
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+        ]);
     }
 
     private function paginateProductSelection(Request $request): HttpResponse|ResponseFactory
@@ -226,12 +282,17 @@ class KardexController extends BasicController
             ->when($beforeDate, fn($query) => $query->whereDate('movement_date', '<', $beforeDate))
             ->selectRaw("
                 id,
+                source_type,
+                source_id,
+                source_item_id,
                 movement_date,
                 operation,
                 document,
+                document_file,
                 partner,
                 article_id,
                 warehouse_id,
+                branch_name,
                 warehouse_name,
                 unit_label,
                 lot,
@@ -249,12 +310,17 @@ class KardexController extends BasicController
             ->when($beforeDate, fn($query) => $query->whereDate('movement_date', '<', $beforeDate))
             ->selectRaw("
                 id,
+                source_type,
+                source_id,
+                source_item_id,
                 movement_date,
                 operation,
                 document,
+                document_file,
                 partner,
                 article_id,
                 warehouse_id,
+                branch_name,
                 warehouse_name,
                 unit_label,
                 lot,
@@ -277,6 +343,7 @@ class KardexController extends BasicController
             ->leftJoin('warehouses as warehouse', function ($join) {
                 $join->on('warehouse.id', '=', DB::raw('COALESCE(movement_item.warehouse_id, movement_note.warehouse_id)'));
             })
+            ->leftJoin('business_branches as branch', 'branch.id', '=', 'movement_note.business_branch_id')
             ->leftJoin('suppliers as supplier', 'supplier.id', '=', 'movement_note.supplier_id')
             ->where('movement_note.status', 1)
             ->where('movement_note.entry_status', 'approved')
@@ -284,12 +351,17 @@ class KardexController extends BasicController
             ->where('business.business_key', BusinessScope::KAMARY_PERU)
             ->selectRaw("
                 CONCAT('entry-', movement_item.id) as id,
+                'entry_note' as source_type,
+                movement_note.id as source_id,
+                movement_item.id as source_item_id,
                 COALESCE(movement_note.entry_date, DATE(movement_note.created_at)) as movement_date,
                 'Entrada' as operation,
                 CONCAT(COALESCE(movement_note.document_type, 'Entrada'), ' ', COALESCE(movement_note.document_series, ''), '-', COALESCE(movement_note.document_sequence, movement_note.code, movement_note.id)) as document,
+                movement_note.document_file as document_file,
                 COALESCE(supplier.business_name, supplier.trade_name, '') as partner,
                 movement_item.article_id,
                 COALESCE(movement_item.warehouse_id, movement_note.warehouse_id) as warehouse_id,
+                COALESCE(branch.name, '') as branch_name,
                 COALESCE(warehouse.name, '') as warehouse_name,
                 COALESCE(unit.symbol, unit.name, '') as unit_label,
                 COALESCE(NULLIF(movement_item.lot, ''), NULLIF(movement_item.batch_code, ''), '') as lot,
@@ -307,6 +379,7 @@ class KardexController extends BasicController
             ->leftJoin('warehouses as warehouse', function ($join) {
                 $join->on('warehouse.id', '=', DB::raw('COALESCE(movement_item.warehouse_id, movement_note.warehouse_id)'));
             })
+            ->leftJoin('business_branches as branch', 'branch.id', '=', 'movement_note.business_branch_id')
             ->leftJoin('suppliers as supplier', 'supplier.id', '=', 'movement_note.supplier_id')
             ->where('movement_note.status', 1)
             ->where('movement_note.receipt_status', 'confirmed')
@@ -314,12 +387,17 @@ class KardexController extends BasicController
             ->where('business.business_key', BusinessScope::KAMARY_PERU)
             ->selectRaw("
                 CONCAT('receipt-', movement_item.id) as id,
+                'purchase_receipt' as source_type,
+                movement_note.id as source_id,
+                movement_item.id as source_item_id,
                 COALESCE(movement_note.issue_date, DATE(movement_note.created_at)) as movement_date,
                 'Entrada' as operation,
                 CONCAT(COALESCE(movement_note.document_type, 'Recepcion'), ' ', COALESCE(movement_note.document_series, ''), '-', COALESCE(movement_note.document_sequence, movement_note.code, movement_note.id)) as document,
+                movement_note.document_file as document_file,
                 COALESCE(supplier.business_name, supplier.trade_name, '') as partner,
                 movement_item.article_id,
                 COALESCE(movement_item.warehouse_id, movement_note.warehouse_id) as warehouse_id,
+                COALESCE(branch.name, '') as branch_name,
                 COALESCE(warehouse.name, '') as warehouse_name,
                 COALESCE(unit.symbol, unit.name, '') as unit_label,
                 COALESCE(NULLIF(movement_item.lot, ''), NULLIF(movement_item.batch_code, ''), '') as lot,
@@ -342,17 +420,23 @@ class KardexController extends BasicController
             ->leftJoin('warehouses as warehouse', function ($join) {
                 $join->on('warehouse.id', '=', DB::raw('COALESCE(movement_item.warehouse_id, movement_note.warehouse_id)'));
             })
+            ->leftJoin('business_branches as branch', 'branch.id', '=', 'movement_note.business_branch_id')
             ->where('movement_note.status', 1)
             ->where('movement_item.status', 1)
             ->where('business.business_key', BusinessScope::KAMARY_PERU)
             ->selectRaw("
                 CONCAT('exit-', movement_item.id) as id,
+                'exit_note' as source_type,
+                movement_note.id as source_id,
+                movement_item.id as source_item_id,
                 COALESCE(movement_note.exit_date, DATE(movement_note.created_at)) as movement_date,
                 'Salida' as operation,
                 CONCAT(COALESCE(movement_note.document_type, 'Salida'), ' ', COALESCE(movement_note.document_series, ''), '-', COALESCE(movement_note.document_sequence, movement_note.id)) as document,
+                NULL as document_file,
                 COALESCE(movement_note.client_name, '') as partner,
                 movement_item.article_id,
                 COALESCE(movement_item.warehouse_id, movement_note.warehouse_id) as warehouse_id,
+                COALESCE(branch.name, '') as branch_name,
                 COALESCE(warehouse.name, '') as warehouse_name,
                 COALESCE(unit.symbol, unit.name, '') as unit_label,
                 COALESCE(NULLIF(movement_item.batch_code, ''), '') as lot,
@@ -367,6 +451,110 @@ class KardexController extends BasicController
         }
 
         return $query;
+    }
+
+    private function sourceDocument(string $sourceType, int $sourceId)
+    {
+        if (!$sourceId) throw new \Exception('Documento invalido');
+
+        $relations = [
+            'business:id,name,business_key',
+            'branch:id,business_id,name',
+            'warehouse:id,name',
+            'items.article:id,code,name,laboratory_id,active_principle_id,unit_id',
+            'items.article.laboratory:id,name',
+            'items.article.activePrinciple:id,name',
+            'items.article.unit:id,name,symbol',
+            'items.warehouse:id,name',
+        ];
+
+        $query = match ($sourceType) {
+            'entry_note' => EntryNote::query()
+                ->with(array_merge($relations, [
+                    'supplier:id,ruc,business_name,trade_name',
+                    'client:id,document_number,full_name',
+                    'items:id,entry_note_id,batch_code,lot,expiration_date,article_id,warehouse_id,cost_unit,location,quantity,total,status',
+                ])),
+            'purchase_receipt' => PurchaseReceipt::query()
+                ->with(array_merge($relations, [
+                    'purchaseOrder:id,code',
+                    'supplier:id,ruc,business_name,trade_name',
+                    'items:id,purchase_receipt_id,batch_code,lot,expiration_date,article_id,warehouse_id,cost_unit,location,quantity,total,status',
+                ])),
+            'exit_note' => ExitNote::query()
+                ->with(array_merge($relations, [
+                    'client:id,document_number,full_name',
+                    'items:id,exit_note_id,batch_code,article_id,warehouse_id,expiration_date,location,destination_location,quantity,total,status',
+                ])),
+            default => throw new \Exception('Tipo de documento no soportado'),
+        };
+
+        $document = $query->whereKey($sourceId)->first();
+        if (!$document) throw new \Exception('Documento no encontrado');
+        if ($document->business?->business_key !== BusinessScope::KAMARY_PERU) {
+            throw new \Exception('El documento no pertenece a Kamary Peru');
+        }
+
+        return $document;
+    }
+
+    private function sourceDocumentFile(string $sourceType, object $document): ?string
+    {
+        return match ($sourceType) {
+            'entry_note', 'purchase_receipt' => trim((string)($document->document_file ?? '')) ?: null,
+            default => null,
+        };
+    }
+
+    private function documentUrl(?string $sourceType, $sourceId, $documentFile): ?string
+    {
+        if (!$sourceType || !$sourceId || !trim((string)$documentFile)) return null;
+        return "/api/admin/kardex/documents/{$sourceType}/{$sourceId}/file";
+    }
+
+    private function documentFolder(string $sourceType): ?string
+    {
+        return match ($sourceType) {
+            'entry_note' => 'entry_note',
+            'purchase_receipt' => 'purchase_receipt',
+            default => null,
+        };
+    }
+
+    private function documentFileExists(string $sourceType, ?string $file): bool
+    {
+        if (!$file) return false;
+        if (preg_match('/^https?:\/\//i', $file)) return true;
+        return $this->resolveDocumentPath($file, $this->documentFolder($sourceType)) !== null;
+    }
+
+    private function resolveDocumentPath(string $file, ?string $folder): ?string
+    {
+        $normalized = trim(str_replace('\\', '/', $file));
+        if ($normalized === '') return null;
+
+        $candidates = [];
+        if (str_starts_with($normalized, '/')) {
+            $candidates[] = $normalized;
+        }
+
+        $publicPosition = strpos($normalized, '/public/');
+        if ($publicPosition !== false) {
+            $candidates[] = public_path(substr($normalized, $publicPosition + 8));
+        }
+
+        $relative = ltrim($normalized, '/');
+        $candidates[] = public_path($relative);
+        $candidates[] = storage_path("app/{$relative}");
+        if ($folder) {
+            $candidates[] = storage_path("app/images/{$folder}/" . basename($normalized));
+        }
+
+        foreach (array_unique($candidates) as $candidate) {
+            if ($candidate && is_file($candidate)) return $candidate;
+        }
+
+        return null;
     }
 
     private function toNullableInt($value): ?int

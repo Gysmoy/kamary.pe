@@ -163,6 +163,21 @@ class KardexRest extends BasicRest {
     }
   }
 
+  getDocument = async (sourceType, sourceId) => {
+    if (!sourceType || !sourceId) return null
+    try {
+      const result = await this.simpleGet(`/api/admin/kardex/documents/${sourceType}/${sourceId}`)
+      return result ?? null
+    } catch (error) {
+      toast.error("Error", {
+        description: error.message || 'No se pudo cargar el documento',
+        duration: 3000,
+        richColors: true,
+      });
+      return null
+    }
+  }
+
   getStorageOptions = async () => {
     if (!isStoragePath()) return null
     return await this.simpleGet('/api/admin/storage/kardex/options')

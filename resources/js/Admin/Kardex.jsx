@@ -38,8 +38,51 @@ const refreshGrid = (gridRef) => {
   const instance = $(gridRef.current).dxDataGrid('instance')
   instance?.refresh()
 }
+const currentMonth = () => new Date().toISOString().slice(0, 7)
+const firstMonthOfCurrentYear = () => `${new Date().getFullYear()}-01`
+const monthFromDate = (value, fallback = currentMonth()) => value ? `${value}`.slice(0, 7) : fallback
+const monthStartDate = (month) => month ? `${month}-01` : null
+const monthEndDate = (month) => {
+  if (!month) return null
+  const [year, rawMonth] = month.split('-').map(Number)
+  if (!year || !rawMonth) return null
+  return new Date(year, rawMonth, 0).toISOString().slice(0, 10)
+}
+const nested = (source, path, fallback = '') => {
+  const value = path.split('.').reduce((current, key) => current?.[key], source)
+  return value ?? fallback
+}
+const asDate = (value) => value ? `${value}`.slice(0, 10) : '-'
+const documentStatusLabel = (type, data) => {
+  const status = type === 'entry_note'
+    ? data?.entry_status
+    : (type === 'purchase_receipt' ? data?.receipt_status : data?.exit_status)
+  return {
+    approved: 'Completado',
+    confirmed: 'Completado',
+    pending: 'Pendiente',
+    draft: 'Borrador',
+    cancelled: 'Anulado',
+  }[status] ?? (status || '-')
+}
+const documentPdfTitle = (type, data) => ({
+  entry_note: `NOTA DE ENTRADA: ${data?.code || data?.id || ''}`,
+  purchase_receipt: `RECEPCION DE COMPRA: ${data?.code || data?.id || ''}`,
+  exit_note: `NOTA DE SALIDA: ${data?.code || data?.id || ''}`,
+}[type] || `DOCUMENTO: ${data?.code || data?.id || ''}`)
+const sourceItemQuantity = (item) => Number(item?.quantity ?? item?.received_quantity ?? 0)
+const sourceItemUnitCost = (item) => {
+  const total = Number(item?.total ?? 0)
+  const quantity = sourceItemQuantity(item)
+  return Number(item?.cost_unit ?? (quantity ? total / quantity : 0))
+}
+const sourceItemTotal = (item) => {
+  const explicit = item?.total
+  if (explicit !== null && explicit !== undefined && explicit !== '') return Number(explicit)
+  return sourceItemUnitCost(item) * sourceItemQuantity(item)
+}
 
-const StandardKardex = ({ fixedWarehouse = null }) => {
+const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
   const gridRef = useRef()
   const movementModalRef = useRef()
 
@@ -54,6 +97,10 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
   const [endDate, setEndDate] = useState('')
   const [movementRows, setMovementRows] = useState([])
   const [movementTitle, setMovementTitle] = useState('')
+  const [movementContext, setMovementContext] = useState(null)
+  const [movementStartMonth, setMovementStartMonth] = useState('')
+  const [movementEndMonth, setMovementEndMonth] = useState('')
+  const [movementLoading, setMovementLoading] = useState(false)
   const [detailRows, setDetailRows] = useState([])
   const [detailLoading, setDetailLoading] = useState(false)
   const isMagistrales = isMagistralesPath()
@@ -117,19 +164,173 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
     loadDetailMovements()
   }, [loadDetailMovements])
 
-  const openMovements = async (row) => {
+  const loadMovementRows = async (row = movementContext, startMonth = movementStartMonth, endMonth = movementEndMonth) => {
+    if (!row?.article_id) return
     const request = {
       article_id: row.article_id,
       warehouse_id: row.warehouse_id || warehouseId || null,
     }
     if (!isMagistrales) {
-      request.start_date = startDate || null
-      request.end_date = endDate || null
+      request.start_date = monthStartDate(startMonth) || startDate || null
+      request.end_date = monthEndDate(endMonth) || endDate || null
     }
+    setMovementLoading(true)
     const rows = await kardexRest.getMovements(request)
     setMovementRows(rows)
-    setMovementTitle(`${row.article_code ?? ''} ${row.article_name ?? ''}`.trim())
+    setMovementLoading(false)
+  }
+
+  const openMovements = async (row) => {
+    const nextStartMonth = monthFromDate(startDate, firstMonthOfCurrentYear())
+    const nextEndMonth = monthFromDate(endDate, currentMonth())
+    setMovementRows([])
+    setMovementContext(row)
+    setMovementStartMonth(nextStartMonth)
+    setMovementEndMonth(nextEndMonth)
+    setMovementTitle(`${row.article_code ?? ''} | ${row.article_name ?? ''}`.trim())
     $(movementModalRef.current).modal('show')
+    await loadMovementRows(row, nextStartMonth, nextEndMonth)
+  }
+
+  const openDocument = async (row) => {
+    if (!row?.source_type || !row?.source_id) {
+      if (row?.document_url) window.open(row.document_url, '_blank', 'noopener')
+      return
+    }
+
+    const popup = window.open('', '_blank')
+    if (!popup) {
+      await Swal.fire({ icon: 'warning', title: 'Ventana bloqueada', text: 'Permite ventanas emergentes para abrir el PDF.' })
+      return
+    }
+    popup.opener = null
+    popup.document.write('<p style="font-family: Arial, sans-serif; padding: 24px;">Generando PDF...</p>')
+
+    const detail = await kardexRest.getDocument(row.source_type, row.source_id)
+    const data = detail?.document
+    if (detail?.file_url) {
+      popup.location.href = detail.file_url
+      return
+    }
+    if (!data) {
+      if (row.document_url) {
+        popup.location.href = row.document_url
+      } else {
+        popup.close()
+      }
+      return
+    }
+
+    const JsPDF = window.jspdf?.jsPDF || window.jsPDF
+    if (!JsPDF) {
+      popup.close()
+      await Swal.fire({ icon: 'error', title: 'PDF no disponible', text: 'jsPDF no esta cargado.' })
+      return
+    }
+    const doc = new JsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' })
+    if (!doc.autoTable) {
+      popup.close()
+      await Swal.fire({ icon: 'error', title: 'PDF no disponible', text: 'AutoTable no esta cargado.' })
+      return
+    }
+
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const margin = 34
+    const now = new Date()
+    const printedAt = now.toLocaleDateString('es-PE') + ' ' + now.toLocaleTimeString('es-PE')
+    const userLabel = session?.username || session?.fullname || session?.name || ''
+
+    doc.setFillColor(245, 247, 250)
+    doc.rect(margin + 6, 28, 82, 48, 'F')
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(8)
+    doc.setTextColor(210, 28, 38)
+    doc.text('GRUPO KAMARY', margin + 47, 56, { align: 'center' })
+    doc.setTextColor(0, 0, 0)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.text(`Fecha de impresion: ${printedAt.slice(0, 10)}`, pageWidth - margin, 34, { align: 'right' })
+    doc.text(`Hora de impresion: ${printedAt.slice(11)}`, pageWidth - margin, 46, { align: 'right' })
+    doc.text(`Usuario de impresion: ${userLabel || '-'}`, pageWidth - margin, 58, { align: 'right' })
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(11)
+    doc.text(documentPdfTitle(row.source_type, data), pageWidth / 2, 118, { align: 'center' })
+
+    const leftRows = row.source_type === 'exit_note'
+      ? [
+        ['Fecha Emision', asDate(data?.exit_date || data?.created_at)],
+        ['Tipo Documento', data?.document_type || 'Salida'],
+        ['Serie', data?.document_series || '-'],
+        ['Observacion', data?.observations || ''],
+      ]
+      : [
+        ['Fecha Emision', asDate(data?.entry_date || data?.issue_date || data?.created_at)],
+        ['Tipo Documento', data?.document_type || '-'],
+        ['Serie Guia', data?.guide_series || data?.document_series || '-'],
+        ['Observacion', data?.observations || ''],
+      ]
+    const rightRows = row.source_type === 'exit_note'
+      ? [
+        ['Cliente', data?.client_name || nested(data, 'client.full_name')],
+        ['Documento', [data?.document_series, data?.document_sequence].filter(Boolean).join('-')],
+        ['Almacen', nested(data, 'warehouse.name')],
+        ['Estado', documentStatusLabel(row.source_type, data)],
+      ]
+      : [
+        ['RUC | Proveedor', [nested(data, 'supplier.ruc'), nested(data, 'supplier.business_name')].filter(Boolean).join(' | ')],
+        ['RUC Guia', data?.guide_ruc || nested(data, 'supplier.ruc')],
+        ['Secuencia Guia', data?.guide_sequence || data?.document_sequence || '-'],
+        ['Estado', documentStatusLabel(row.source_type, data)],
+      ]
+
+    const drawMetaRows = (rows, x, y) => {
+      rows.forEach(([label, value], index) => {
+        const currentY = y + (index * 12)
+        doc.setFont('helvetica', 'normal')
+        doc.text(label, x, currentY)
+        doc.text(':', x + 90, currentY)
+        doc.text(`${value ?? '-'}`, x + 100, currentY)
+      })
+    }
+    doc.setFontSize(8)
+    drawMetaRows(leftRows, margin + 6, 146)
+    drawMetaRows(rightRows, 340, 146)
+
+    const rows = (data?.items ?? []).map(item => [
+      [item?.batch_code || item?.lot || '-', item?.id ? `${item.id}` : ''].filter(Boolean).join('\n'),
+      nested(item, 'article.name', 'Articulo'),
+      [nested(item, 'article.laboratory.name'), nested(item, 'article.active_principle.name') || nested(item, 'article.activePrinciple.name')].filter(Boolean).join(' | '),
+      nested(item, 'article.unit.symbol') || nested(item, 'article.unit.name'),
+      nested(item, 'warehouse.name') || nested(data, 'warehouse.name'),
+      sourceItemUnitCost(item).toFixed(6),
+      sourceItemQuantity(item).toFixed(3),
+      sourceItemTotal(item).toFixed(4),
+    ])
+
+    doc.autoTable({
+      startY: 214,
+      head: [['CODIGO LOTE', 'ARTICULO', 'LABORATORIO | PRINCIPIO ACTIVO', 'U. MEDIDA', 'ALMACEN', 'P. COSTO', 'CANT.', 'TOTAL']],
+      body: rows.length ? rows : [['Sin detalle', '', '', '', '', '', '', '']],
+      theme: 'grid',
+      styles: { fontSize: 7, cellPadding: 3, textColor: [0, 0, 0], lineColor: [0, 0, 0], lineWidth: 0.5, valign: 'top' },
+      headStyles: { fillColor: [255, 255, 255], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.6 },
+      columnStyles: {
+        0: { cellWidth: 68, halign: 'center' },
+        1: { cellWidth: 106, halign: 'center' },
+        2: { cellWidth: 104, halign: 'center' },
+        3: { cellWidth: 58, halign: 'center' },
+        4: { cellWidth: 82, halign: 'center' },
+        5: { cellWidth: 52, halign: 'right' },
+        6: { cellWidth: 44, halign: 'right' },
+        7: { cellWidth: 54, halign: 'right' },
+      },
+      margin: { left: margin, right: margin },
+    })
+
+    const url = URL.createObjectURL(doc.output('blob'))
+    popup.location.href = `${url}#toolbar=1&navpanes=0&pagemode=none`
+    setTimeout(() => URL.revokeObjectURL(url), 60000)
   }
 
   const magistralesColumns = [
@@ -354,7 +555,11 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
                     <tr key={`kardex-detail-${row.id}`}>
                       <td>{row.movement_date?.toString?.().slice(0, 16)}</td>
                       <td>{row.operation}</td>
-                      <td>{row.document}</td>
+                      <td>
+                        {row.source_type && row.source_id
+                          ? <button type='button' className='btn btn-link p-0 text-danger text-decoration-none' onClick={() => openDocument(row)}>{row.document || '-'}</button>
+                          : row.document}
+                      </td>
                       <td>{row.partner ?? row.transaction ?? ''}</td>
                       <td>{row.warehouse_name}</td>
                       <td>{row.location}</td>
@@ -387,43 +592,116 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
         />
       </div>
 
-      <Modal modalRef={movementModalRef} title={`${isMagistrales ? 'Transacciones' : 'Kardex mensual'} ${movementTitle}`} size='xl' hideFooter>
-        <div className='table-responsive border rounded'>
-          <table className='table table-sm table-striped mb-0'>
-            <thead>
-              <tr>
-                <th style={{ width: 140 }}>Fecha</th>
-                <th style={{ width: 120 }}>Operacion</th>
-                <th style={{ width: 140 }}>Documento</th>
-                <th style={{ minWidth: 170 }}>Proveedor/Cliente</th>
-                <th style={{ width: 110 }}>Lote</th>
-                <th style={{ width: 130 }}>F. Vencimiento</th>
-                <th style={{ width: 130 }}>Ubicacion</th>
-                <th style={{ width: 100 }}>Entrada</th>
-                <th style={{ width: 100 }}>Salida</th>
-                <th style={{ width: 100 }}>Saldo</th>
-                <th style={{ width: 90 }}>Unidad</th>
-              </tr>
-            </thead>
-            <tbody>
-              {movementRows.length === 0 && <tr><td colSpan='11' className='text-center text-muted py-3'>Sin movimientos</td></tr>}
-              {movementRows.map(row => (
-                <tr key={row.id}>
-                  <td>{row.movement_date?.toString?.().slice(0, 16)}</td>
-                  <td>{row.operation}</td>
-                  <td>{row.document}</td>
-                  <td>{row.partner ?? row.transaction ?? ''}</td>
-                  <td>{row.lot}</td>
-                  <td>{row.expiration_date?.toString?.().slice(0, 10)}</td>
-                  <td>{row.location}</td>
-                  <td>{Number(row.quantity_in ?? 0).toFixed(3)}</td>
-                  <td>{Number(row.quantity_out ?? 0).toFixed(3)}</td>
-                  <td>{Number(row.balance ?? 0).toFixed(3)}</td>
-                  <td>{row.unit_label}</td>
+      <Modal
+        modalRef={movementModalRef}
+        title={<h4 className='modal-title'><i className='mdi mdi-menu me-1'></i> KARDEX MENSUAL POR SELECCION DE CODIGOS</h4>}
+        size='full-width'
+        hideFooter
+        headerClass='standard-kardex-modal-header'
+        closeButtonClass='btn-close-white'
+        contentClass='standard-kardex-modal'
+        bodyClass='standard-kardex-modal-body'
+        onSubmit={(e) => { e.preventDefault(); loadMovementRows() }}
+      >
+        <style>{`
+          .standard-kardex-modal { border-radius: 0; }
+          .standard-kardex-modal-header { background: #272954; color: #fff; padding: 0.45rem 1rem; }
+          .standard-kardex-modal-header .modal-title { color: #fff; font-size: 0.8rem; font-weight: 700; }
+          .standard-kardex-modal-body { padding: 0; }
+          .standard-kardex-month-filter label { color: #666; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; }
+          .standard-kardex-month-filter .form-control { border-radius: 0; min-height: 34px; }
+          .standard-kardex-month-table { min-width: 1100px; }
+          .standard-kardex-month-table th,
+          .standard-kardex-month-table td { vertical-align: middle; border-color: #e7eaef; }
+          .standard-kardex-month-band { background: #079aa3; color: #fff; font-weight: 700; }
+          .standard-kardex-month-head th { background: #079aa3; color: #fff; font-size: 0.76rem; text-transform: uppercase; text-align: center; }
+          .standard-kardex-product-row td { color: #666; font-size: 1rem; font-weight: 700; text-align: center; }
+          .standard-kardex-document-link { color: #c52018; border: 0; background: transparent; padding: 0; font: inherit; }
+        `}</style>
+
+        <div className='px-3 pt-4 pb-3'>
+          <div className='row justify-content-center align-items-end g-3 standard-kardex-month-filter'>
+            <div className='col-md-3'>
+              <label className='form-label d-block text-center'>Seleccionar fecha inicial</label>
+              <input className='form-control' type='month' value={movementStartMonth} onChange={(e) => setMovementStartMonth(e.target.value)} />
+            </div>
+            <div className='col-md-3'>
+              <label className='form-label d-block text-center'>Seleccionar fecha final</label>
+              <input className='form-control' type='month' value={movementEndMonth} onChange={(e) => setMovementEndMonth(e.target.value)} />
+            </div>
+            <div className='col-md-2 text-center'>
+              <button type='submit' className='btn btn-outline-primary' disabled={movementLoading}>
+                <i className={`mdi ${movementLoading ? 'mdi-loading mdi-spin' : 'mdi-magnify'} me-1`}></i> Buscar
+              </button>
+            </div>
+          </div>
+
+          <div className='row align-items-start mt-4 mb-4'>
+            <div className='col-md-6'>
+              <h4 className='mb-0'>
+                <span className='text-muted'>Kardex mensual:</span> <span className='fw-bold text-primary'>{movementTitle}</span>
+              </h4>
+            </div>
+            <div className='col-md-6'>
+              <h4 className='mb-1'><span className='text-muted'>Sede:</span> {movementContext?.branch_name || movementRows[0]?.branch_name || '-'}</h4>
+              <h4 className='mb-0'><span className='text-muted'>Almacen:</span> {movementContext?.warehouse_name || movementRows[0]?.warehouse_name || '-'}</h4>
+            </div>
+          </div>
+
+          <div className='table-responsive'>
+            <table className='table table-bordered table-sm standard-kardex-month-table mb-0'>
+              <thead>
+                <tr>
+                  <th colSpan='10' className='text-center standard-kardex-month-band py-3'>TRANSACCION</th>
+                  <th rowSpan='2' className='standard-kardex-month-band text-center' style={{ width: 80 }}>SALDO</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+                <tr className='standard-kardex-month-head'>
+                  <th style={{ width: 150 }}>Fecha</th>
+                  <th style={{ width: 120 }}>Operacion</th>
+                  <th style={{ width: 150 }}>Documento</th>
+                  <th style={{ minWidth: 240 }}>Proveedor/Cliente</th>
+                  <th style={{ width: 120 }}>Lote</th>
+                  <th style={{ width: 130 }}>F. Vencimiento</th>
+                  <th style={{ width: 140 }}>Ubicacion</th>
+                  <th style={{ width: 110 }}>Entrada</th>
+                  <th style={{ width: 110 }}>Salida</th>
+                  <th style={{ width: 90 }}>Unidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className='standard-kardex-product-row'>
+                  <td colSpan='11'>{movementContext?.article_name || movementTitle}</td>
+                </tr>
+                {movementLoading && <tr><td colSpan='11' className='text-center text-muted py-4'>Cargando movimientos...</td></tr>}
+                {!movementLoading && movementRows.length === 0 && <tr><td colSpan='11' className='text-center text-muted py-4'>No existen movimientos</td></tr>}
+                {!movementLoading && movementRows.map(row => (
+                  <tr key={row.id}>
+                    <td className='text-center'>{row.movement_date?.toString?.().slice(0, 16)}</td>
+                    <td className='text-center'>{row.operation}</td>
+                    <td className='text-center'>
+                      {row.source_type && row.source_id
+                        ? <button type='button' className='standard-kardex-document-link' onClick={() => openDocument(row)}>{row.document || '-'}</button>
+                        : row.document}
+                    </td>
+                    <td>{row.partner ?? row.transaction ?? ''}</td>
+                    <td className='text-center'>{row.lot || '-'}</td>
+                    <td className='text-center'>{row.expiration_date?.toString?.().slice(0, 10) || '-'}</td>
+                    <td className='text-center'>{row.location}</td>
+                    <td className='text-end text-info fw-semibold'>{Number(row.quantity_in ?? 0) ? Number(row.quantity_in ?? 0).toFixed(3) : ''}</td>
+                    <td className='text-end text-danger'>{Number(row.quantity_out ?? 0) ? Number(row.quantity_out ?? 0).toFixed(3) : ''}</td>
+                    <td className='text-center'>{row.unit_label}</td>
+                    <td className='text-end text-info fw-bold'>{Number(row.balance ?? 0).toFixed(3)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className='text-center py-4'>
+            <button type='button' className='btn btn-light' data-bs-dismiss='modal'>
+              <i className='mdi mdi-close me-1'></i> Cerrar
+            </button>
+          </div>
         </div>
       </Modal>
     </div>

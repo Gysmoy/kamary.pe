@@ -229,6 +229,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/inventory-report/paginate', [AdminInventoryReportController::class, 'paginate']);
         Route::post('/kardex/paginate', [AdminKardexController::class, 'paginate']);
         Route::post('/kardex/movements', [AdminKardexController::class, 'movements']);
+        Route::get('/kardex/documents/{sourceType}/{sourceId}', [AdminKardexController::class, 'document']);
+        Route::get('/kardex/documents/{sourceType}/{sourceId}/file', [AdminKardexController::class, 'documentFile']);
 
         Route::post('/purchase-orders', [AdminPurchaseOrderController::class, 'save']);
         Route::post('/purchase-orders/paginate', [AdminPurchaseOrderController::class, 'paginate']);
