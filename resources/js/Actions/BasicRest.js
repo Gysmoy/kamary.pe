@@ -12,6 +12,28 @@ class BasicRest {
     this.controller = new AbortController()
   }
 
+  parseResponseText = (text, statusCode = 0) => {
+    const parsed = JSON.parseable(text)
+    if (parsed && typeof parsed === 'object') return parsed
+
+    const plainText = (text ?? '')
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    const statusMessages = {
+      413: 'Los archivos superan el limite permitido.',
+      419: 'La sesion expiro. Recarga la pagina e intenta nuevamente.',
+      500: 'Error interno del servidor al guardar.',
+    }
+
+    return {
+      message: plainText.slice(0, 220) || statusMessages[statusCode] || 'Ocurrio un error inesperado'
+    }
+  }
+
   simpleGet = async (url, params) => {
     try {
       const { status, result } = await Fetch(url, params);
@@ -103,7 +125,7 @@ class BasicRest {
           body: request
         })
         status = res.ok
-        result = JSON.parseable(await res.text())
+        result = this.parseResponseText(await res.text(), res.status)
       } else {
         const fetchRes = await Fetch(`/api/${this.path}`, {
           method: 'POST',

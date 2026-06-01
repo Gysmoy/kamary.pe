@@ -37,7 +37,7 @@ class ClientContractController extends BasicController
 
     public function beforeSave(Request $request)
     {
-        $body = $request->except(['file', 'annexes']);
+        $body = $request->except(['file', 'annexes', 'annexes[]']);
         $userId = Auth::id();
         $this->oldFilePath = null;
         $id = $body['id'] ?? null;
@@ -270,11 +270,16 @@ class ClientContractController extends BasicController
             return [$files];
         }
 
-        return array_values(array_filter((array)$files, fn($file) => $file instanceof UploadedFile));
+        return $this->flattenUploadedFiles($files);
     }
 
     private function storeContractFile(UploadedFile $file, string $folder): array
     {
+        if (!$file->isValid()) {
+            $fileName = $file->getClientOriginalName() ?: 'archivo';
+            throw new \Exception("No se pudo cargar {$fileName}: {$file->getErrorMessage()}");
+        }
+
         $maxBytes = 20 * 1024 * 1024;
         if ($file->getSize() > $maxBytes) {
             throw new \Exception('Cada archivo no debe superar 20MB');
@@ -319,6 +324,24 @@ class ClientContractController extends BasicController
             'name' => $file->getClientOriginalName(),
             'mime' => $detectedMime ?: $clientMime,
         ];
+    }
+
+    private function flattenUploadedFiles(mixed $files): array
+    {
+        if ($files instanceof UploadedFile) {
+            return [$files];
+        }
+
+        if (!is_array($files)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($files as $file) {
+            array_push($result, ...$this->flattenUploadedFiles($file));
+        }
+
+        return $result;
     }
 
     private function storedFileResponse(?string $path, ?string $name = null, ?string $mime = null, bool $download = false)

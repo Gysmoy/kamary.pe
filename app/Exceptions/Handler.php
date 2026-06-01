@@ -3,6 +3,8 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Http\Exceptions\PostTooLargeException;
+use Illuminate\Http\Request;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -23,6 +25,15 @@ class Handler extends ExceptionHandler
      */
     public function register(): void
     {
+        $this->renderable(function (PostTooLargeException $e, Request $request) {
+            if ($request->expectsJson() || str_starts_with($request->path(), 'api/')) {
+                return response()->json([
+                    'status' => 413,
+                    'message' => 'El total de archivos supera el limite permitido de 64MB.',
+                ], 413);
+            }
+        });
+
         $this->reportable(function (Throwable $e) {
             //
         });

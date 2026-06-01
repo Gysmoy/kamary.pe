@@ -100,6 +100,7 @@ jobs:
             docker network prune -f
             docker image prune -f
             docker compose up -d --build
+            docker compose exec --interactive=false -T app php -r 'echo "upload_max_filesize=".ini_get("upload_max_filesize").PHP_EOL."post_max_size=".ini_get("post_max_size").PHP_EOL;'
             docker compose exec --interactive=false -T nginx nginx -t
             docker compose exec --interactive=false -T nginx nginx -s reload
             docker compose exec --interactive=false -T app php artisan migrate --force
