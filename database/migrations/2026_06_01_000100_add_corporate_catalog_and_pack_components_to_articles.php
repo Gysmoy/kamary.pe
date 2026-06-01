@@ -8,11 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('articles', function (Blueprint $table) {
-            if (!Schema::hasColumn('articles', 'is_corporate_catalog')) {
-                $table->boolean('is_corporate_catalog')->default(false)->after('is_pack');
-            }
-        });
+        if (!Schema::hasColumn('articles', 'is_corporate_catalog')) {
+            Schema::table('articles', function (Blueprint $table) {
+                if (Schema::hasColumn('articles', 'is_pack')) {
+                    $table->boolean('is_corporate_catalog')->default(false)->after('is_pack');
+                    return;
+                }
+
+                $table->boolean('is_corporate_catalog')->default(false);
+            });
+        }
 
         if (!Schema::hasTable('article_pack_components')) {
             Schema::create('article_pack_components', function (Blueprint $table) {
@@ -35,10 +40,10 @@ return new class extends Migration
     {
         Schema::dropIfExists('article_pack_components');
 
-        Schema::table('articles', function (Blueprint $table) {
-            if (Schema::hasColumn('articles', 'is_corporate_catalog')) {
+        if (Schema::hasColumn('articles', 'is_corporate_catalog')) {
+            Schema::table('articles', function (Blueprint $table) {
                 $table->dropColumn('is_corporate_catalog');
-            }
-        });
+            });
+        }
     }
 };
