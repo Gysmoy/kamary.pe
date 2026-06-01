@@ -43,14 +43,10 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
   const gridRef = useRef()
   const movementModalRef = useRef()
 
-  const [businesses, setBusinesses] = useState([])
-  const [branches, setBranches] = useState([])
   const [laboratories, setLaboratories] = useState([])
   const [articles, setArticles] = useState([])
   const [warehouses, setWarehouses] = useState([])
 
-  const [businessId, setBusinessId] = useState('')
-  const [branchId, setBranchId] = useState('')
   const [laboratoryId, setLaboratoryId] = useState('')
   const [articleId, setArticleId] = useState('')
   const [warehouseId, setWarehouseId] = useState('')
@@ -58,19 +54,19 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
   const [endDate, setEndDate] = useState('')
   const [movementRows, setMovementRows] = useState([])
   const [movementTitle, setMovementTitle] = useState('')
+  const [detailRows, setDetailRows] = useState([])
+  const [detailLoading, setDetailLoading] = useState(false)
   const isMagistrales = isMagistralesPath()
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
   const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
 
   useEffect(() => {
     const load = async () => {
-      const [businessesData, labsData, articlesData, warehousesData] = await Promise.all([
-        kardexRest.getBusinesses(),
+      const [labsData, articlesData, warehousesData] = await Promise.all([
         kardexRest.getLaboratories(),
         kardexRest.getArticles(),
         (!isMagistrales || !fixedWarehouseId) ? kardexRest.getWarehouses() : Promise.resolve([]),
       ])
-      setBusinesses((businessesData ?? []).filter(item => item.status !== null))
       setLaboratories((labsData ?? []).filter(item => item.status !== null))
       setArticles((articlesData ?? []).filter(item => item.status !== null))
       setWarehouses(isMagistrales && fixedWarehouseId
@@ -82,23 +78,9 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
   }, [fixedWarehouse, fixedWarehouseId, isMagistrales])
 
   useEffect(() => {
-    const loadBranches = async () => {
-      if (!businessId) {
-        setBranches([])
-        setBranchId('')
-        return
-      }
-      const data = await kardexRest.getBranchesByBusiness(businessId)
-      setBranches((data ?? []).filter(item => item.status !== null))
-      setBranchId('')
-    }
-    loadBranches()
-  }, [businessId])
-
-  useEffect(() => {
     kardexRest.setFilters({
-      business_id: businessId || '',
-      business_branch_id: branchId || '',
+      business_id: '',
+      business_branch_id: '',
       laboratory_id: laboratoryId || '',
       article_id: articleId || '',
       warehouse_id: warehouseId || '',
@@ -107,7 +89,33 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
       stock_mode: 'with_stock',
     })
     refreshGrid(gridRef)
-  }, [businessId, branchId, laboratoryId, articleId, warehouseId, isMagistrales])
+  }, [laboratoryId, articleId, warehouseId, isMagistrales])
+
+  const selectedArticle = useMemo(
+    () => articles.find(item => `${item.id}` === `${articleId}`),
+    [articles, articleId]
+  )
+
+  const loadDetailMovements = useCallback(async () => {
+    if (isMagistrales || !articleId) {
+      setDetailRows([])
+      return
+    }
+
+    setDetailLoading(true)
+    const rows = await kardexRest.getMovements({
+      article_id: articleId,
+      warehouse_id: warehouseId || null,
+      start_date: startDate || null,
+      end_date: endDate || null,
+    })
+    setDetailRows(rows)
+    setDetailLoading(false)
+  }, [articleId, endDate, isMagistrales, startDate, warehouseId])
+
+  useEffect(() => {
+    loadDetailMovements()
+  }, [loadDetailMovements])
 
   const openMovements = async (row) => {
     const request = {
@@ -222,7 +230,7 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
       allowExporting: false,
       cellTemplate: (container, { data }) => {
         container.css('text-overflow', 'unset')
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Movimientos', icon: 'mdi mdi-format-list-bulleted', onClick: () => openMovements(data) }))
+        container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Ver movimientos', icon: 'mdi mdi-format-list-bulleted', onClick: () => openMovements(data) }))
       }
     },
     { dataField: 'article_code', caption: 'Codigo', minWidth: 110 },
@@ -272,14 +280,14 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
               {!isMagistrales && <div className='col-md-3'>
                 <label className='form-label'>Almacen</label>
                 <select className='form-control' value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
-                  <option value=''>-- Seleccionar almacen --</option>
+                  <option value=''>-- Todos los almacenes --</option>
                   {warehouses.map(item => <option key={`kardex-warehouse-${item.id}`} value={item.id}>{item.name}</option>)}
                 </select>
               </div>}
               {!isMagistrales && <div className='col-md-3'>
                 <label className='form-label'>Laboratorio</label>
-                <select className='form-control' value={laboratoryId} onChange={(e) => setLaboratoryId(e.target.value)}>
-                  <option value=''>-- Seleccionar laboratorio --</option>
+                <select className='form-control' value={laboratoryId} onChange={(e) => { setLaboratoryId(e.target.value); setArticleId('') }}>
+                  <option value=''>-- Todos los laboratorios --</option>
                   {laboratories.map(item => <option key={`kardex-lab-${item.id}`} value={item.id}>{item.name}</option>)}
                 </select>
               </div>}
@@ -308,6 +316,59 @@ const StandardKardex = ({ fixedWarehouse = null }) => {
           </div>
         </div>
       </div>
+
+      {!isMagistrales && articleId && <div className='col-12'>
+        <div className='card mb-3'>
+          <div className='card-body'>
+            <div className='d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3'>
+              <div>
+                <h4 className='header-title mb-1'>Movimientos por producto</h4>
+                <div className='text-muted'>
+                  {[selectedArticle?.code, selectedArticle?.name].filter(Boolean).join(' - ')}
+                </div>
+              </div>
+              <button type='button' className='btn btn-sm btn-outline-primary' disabled={detailLoading} onClick={loadDetailMovements}>
+                <i className={`mdi ${detailLoading ? 'mdi-loading mdi-spin' : 'mdi-refresh'} me-1`}></i>
+                Actualizar
+              </button>
+            </div>
+            <div className='table-responsive border rounded'>
+              <table className='table table-sm table-striped mb-0'>
+                <thead>
+                  <tr>
+                    <th style={{ width: 140 }}>Fecha</th>
+                    <th style={{ width: 120 }}>Operacion</th>
+                    <th style={{ width: 140 }}>Documento</th>
+                    <th style={{ minWidth: 180 }}>Proveedor/Cliente</th>
+                    <th style={{ width: 130 }}>Almacen</th>
+                    <th style={{ width: 120 }}>Ubicacion</th>
+                    <th style={{ width: 100 }}>Entrada</th>
+                    <th style={{ width: 100 }}>Salida</th>
+                    <th style={{ width: 100 }}>Saldo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detailLoading && <tr><td colSpan='9' className='text-center text-muted py-3'>Cargando movimientos...</td></tr>}
+                  {!detailLoading && detailRows.length === 0 && <tr><td colSpan='9' className='text-center text-muted py-3'>Sin movimientos</td></tr>}
+                  {!detailLoading && detailRows.map(row => (
+                    <tr key={`kardex-detail-${row.id}`}>
+                      <td>{row.movement_date?.toString?.().slice(0, 16)}</td>
+                      <td>{row.operation}</td>
+                      <td>{row.document}</td>
+                      <td>{row.partner ?? row.transaction ?? ''}</td>
+                      <td>{row.warehouse_name}</td>
+                      <td>{row.location}</td>
+                      <td>{Number(row.quantity_in ?? 0).toFixed(3)}</td>
+                      <td>{Number(row.quantity_out ?? 0).toFixed(3)}</td>
+                      <td>{Number(row.balance ?? 0).toFixed(3)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>}
 
       <div className='col-12'>
         <Table
