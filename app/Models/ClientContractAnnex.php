@@ -5,15 +5,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class ClientContract extends Model
+class ClientContractAnnex extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'client_id',
-        'contract_code',
-        'starts_at',
-        'ends_at',
+        'client_contract_id',
         'file_path',
         'file_name',
         'file_mime',
@@ -23,19 +20,12 @@ class ClientContract extends Model
     ];
 
     protected $casts = [
-        'starts_at' => 'date',
-        'ends_at' => 'date',
         'status' => 'boolean',
     ];
 
-    public function client()
+    public function contract()
     {
-        return $this->belongsTo(Client::class);
-    }
-
-    public function annexes()
-    {
-        return $this->hasMany(ClientContractAnnex::class);
+        return $this->belongsTo(ClientContract::class, 'client_contract_id');
     }
 
     public function creator()

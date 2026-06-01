@@ -257,6 +257,7 @@ const Clients = ({
   const notificationsGridRef = useRef()
   const tariffModalRef = useRef()
   const contractsModalRef = useRef()
+  const contractFormModalRef = useRef()
   const contractsGridRef = useRef()
   const lookupTimeoutRef = useRef()
   const pendingModalDataRef = useRef(null)
@@ -325,6 +326,7 @@ const Clients = ({
   const contractStartRef = useRef()
   const contractEndRef = useRef()
   const contractFileRef = useRef()
+  const contractAnnexesRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
   const [isUserEditing, setIsUserEditing] = useState(false)
@@ -342,6 +344,7 @@ const Clients = ({
   const [selectedClientForNotifications, setSelectedClientForNotifications] = useState(null)
   const [selectedClientForTariff, setSelectedClientForTariff] = useState(null)
   const [selectedClientForContracts, setSelectedClientForContracts] = useState(null)
+  const [isContractEditing, setIsContractEditing] = useState(false)
   const [userStatus, setUserStatus] = useState('1')
   const [notificationValue, setNotificationValue] = useState('')
   const [tariffTemperature, setTariffTemperature] = useState('')
@@ -907,6 +910,8 @@ const Clients = ({
     setRefValue(contractStartRef, '')
     setRefValue(contractEndRef, '')
     setRefValue(contractFileRef, '')
+    setRefValue(contractAnnexesRef, '')
+    setIsContractEditing(false)
   }
 
   const onContractsModalOpen = (data) => {
@@ -918,14 +923,21 @@ const Clients = ({
     }, 0)
   }
 
+  const onContractCreateClicked = () => {
+    clearContractForm()
+    setTimeout(() => $(contractFormModalRef.current).modal('show'), 0)
+  }
+
   const onContractEditClicked = (data = null) => {
     clearContractForm()
     if (!data?.id) return
 
+    setIsContractEditing(true)
     setRefValue(contractIdRef, data.id)
     setRefValue(contractCodeRef, data.contract_code ?? '')
     setRefValue(contractStartRef, data.starts_at ? data.starts_at.toString().slice(0, 10) : '')
     setRefValue(contractEndRef, data.ends_at ? data.ends_at.toString().slice(0, 10) : '')
+    setTimeout(() => $(contractFormModalRef.current).modal('show'), 0)
   }
 
   const onContractSubmit = async (e) => {
@@ -937,12 +949,13 @@ const Clients = ({
     const endsAt = getRefValue(contractEndRef)
     const id = getRefValue(contractIdRef)
     const file = contractFileRef.current?.files?.[0] ?? null
+    const annexFiles = Array.from(contractAnnexesRef.current?.files ?? [])
 
     if (!code || !startsAt || !endsAt || (!id && !file)) {
       await Swal.fire({
         icon: 'warning',
         title: 'Completa el contrato',
-        text: 'Debes ingresar codigo, fechas y archivo.'
+        text: 'Debes ingresar codigo, fechas y documento oficial.'
       })
       return
     }
@@ -954,10 +967,12 @@ const Clients = ({
     request.append('starts_at', startsAt)
     request.append('ends_at', endsAt)
     if (file) request.append('file', file)
+    annexFiles.forEach((annex) => request.append('annexes[]', annex))
 
     const result = await storageClientContractsRest.save(request)
     if (!result) return
 
+    $(contractFormModalRef.current).modal('hide')
     clearContractForm()
     refreshContractsGrid()
   }
@@ -1508,16 +1523,16 @@ const Clients = ({
       <Modal
         id='modal-storage-contracts'
         modalRef={contractsModalRef}
-        title='Contrato cliente'
+        title='Contratos cliente'
         size='xl'
         hideFooter
-        onSubmit={onContractSubmit}
+        onSubmit={(e) => e.preventDefault()}
         onClose={() => {
+          $(contractFormModalRef.current).modal('hide')
           setSelectedClientForContracts(null)
           clearContractForm()
         }}
       >
-        <input ref={contractIdRef} type='hidden' />
         <div className='row'>
           <div className='form-group col-md-4 mb-2'>
             <label className='form-label mb-1'>RUC Cliente</label>
@@ -1527,37 +1542,7 @@ const Clients = ({
             <label className='form-label mb-1'>Razon social</label>
             <input className='form-control' value={selectedContractClientName} readOnly />
           </div>
-          <InputFormGroup eRef={contractCodeRef} label='Codigo Contrato' col='col-md-3' required />
-          <div className='form-group col-md-3 mb-2'>
-            <label htmlFor='storage-contract-start' className='form-label mb-1'>Fecha Inicio Contrato <b className='text-danger'>*</b></label>
-            <input id='storage-contract-start' ref={contractStartRef} type='date' className='form-control' required />
-          </div>
-          <div className='form-group col-md-3 mb-2'>
-            <label htmlFor='storage-contract-end' className='form-label mb-1'>Fecha Fin Contrato <b className='text-danger'>*</b></label>
-            <input id='storage-contract-end' ref={contractEndRef} type='date' className='form-control' required />
-          </div>
-          <div className='form-group col-md-3 mb-2'>
-            <label htmlFor='storage-contract-file' className='form-label mb-1'>File</label>
-            <input
-              id='storage-contract-file'
-              ref={contractFileRef}
-              type='file'
-              className='form-control'
-              accept='.pdf,.doc,.docx,.jpg,.jpeg,.png'
-            />
-          </div>
         </div>
-        <div className='d-flex flex-wrap justify-content-center gap-4 my-3'>
-          <button type='button' className='btn btn-light' data-bs-dismiss='modal'>
-            <i className='mdi mdi-close me-1'></i>
-            Cerrar
-          </button>
-          <button type='submit' className='btn btn-primary' disabled={!selectedContractClientId}>
-            <i className='mdi mdi-plus me-1'></i>
-            Registrar
-          </button>
-        </div>
-        <hr />
         <Table
           gridRef={contractsGridRef}
           title='Contratos registrados'
@@ -1566,6 +1551,15 @@ const Clients = ({
           allowQueryBuilder={false}
           pageSize={10}
           toolBar={(container) => {
+            container.unshift({
+              widget: 'dxButton', location: 'after',
+              options: {
+                icon: 'add',
+                hint: 'Registrar contrato',
+                disabled: !selectedContractClientId,
+                onClick: onContractCreateClicked
+              }
+            })
             container.unshift({
               widget: 'dxButton', location: 'after',
               options: {
@@ -1579,11 +1573,19 @@ const Clients = ({
             { dataField: 'id', caption: '#', width: 70 },
             {
               caption: 'Acciones',
-              width: 110,
+              width: 145,
               allowFiltering: false,
               allowExporting: false,
               cellTemplate: (container, { data }) => {
                 container.css('text-overflow', 'unset')
+                if (data.file_path) {
+                  container.append(DxButton({
+                    className: 'btn btn-xs btn-soft-primary',
+                    title: 'Ver documento oficial',
+                    icon: 'mdi mdi-eye',
+                    onClick: () => window.open(`/api/admin/storage/client-contracts/${data.id}/file`, '_blank', 'noopener,noreferrer')
+                  }))
+                }
                 container.append(DxButton({
                   className: 'btn btn-xs btn-soft-info',
                   title: 'Editar contrato',
@@ -1624,21 +1626,56 @@ const Clients = ({
             },
             {
               dataField: 'file_name',
-              caption: 'File',
+              caption: 'Documento oficial',
               minWidth: 220,
               allowFiltering: false,
               allowSorting: false,
               cellTemplate: (container, { data }) => {
                 container.empty()
                 if (!data.file_path) return container.text('-')
+                const url = `/api/admin/storage/client-contracts/${data.id}/file`
+                const wrapper = $('<div></div>').addClass('d-flex align-items-center gap-1')
                 $('<a></a>')
                   .attr({
-                    href: `/api/admin/storage/client-contracts/${data.id}/file`,
+                    href: url,
                     target: '_blank',
                     rel: 'noopener noreferrer'
                   })
-                  .text(data.file_name || 'Ver archivo')
-                  .appendTo(container)
+                  .addClass('btn btn-xs btn-soft-primary px-2')
+                  .attr('title', 'Ver documento oficial')
+                  .append($('<i></i>').addClass('mdi mdi-eye'))
+                  .appendTo(wrapper)
+                $('<span></span>').text(data.file_name || 'Ver archivo').appendTo(wrapper)
+                wrapper.appendTo(container)
+              }
+            },
+            {
+              dataField: 'annexes_count',
+              caption: 'Anexos',
+              minWidth: 260,
+              allowFiltering: false,
+              allowSorting: false,
+              cellTemplate: (container, { data }) => {
+                container.empty()
+                const annexes = Array.isArray(data.annexes) ? data.annexes : []
+                if (!annexes.length) return container.text('-')
+                const wrapper = $('<div></div>').addClass('d-flex flex-column gap-1')
+                annexes.forEach((annex, index) => {
+                  const row = $('<div></div>').addClass('d-flex align-items-center gap-1')
+                  $('<a></a>')
+                    .attr({
+                      href: `/api/admin/storage/client-contract-annexes/${annex.id}/file`,
+                      target: '_blank',
+                      rel: 'noopener noreferrer',
+                      title: 'Ver anexo'
+                    })
+                    .addClass('btn btn-xs btn-soft-info px-2')
+                    .append($('<i></i>').addClass('mdi mdi-eye'))
+                    .appendTo(row)
+                  $('<span></span>').text(annex.file_name || `Anexo ${index + 1}`).appendTo(row)
+                  row.appendTo(wrapper)
+                })
+                wrapper.appendTo(container)
               }
             },
             {
@@ -1650,6 +1687,61 @@ const Clients = ({
             { dataField: 'creator_label', caption: 'Usuario registro', minWidth: 150, allowFiltering: false, allowSorting: false },
           ]}
         />
+      </Modal>
+
+      <Modal
+        id='modal-storage-contract-form'
+        modalRef={contractFormModalRef}
+        title={isContractEditing ? 'Editar contrato' : 'Registrar contrato'}
+        size='lg'
+        btnSubmitText={isContractEditing ? 'Actualizar' : 'Registrar'}
+        onSubmit={onContractSubmit}
+        onClose={clearContractForm}
+        zIndex={1065}
+      >
+        <input ref={contractIdRef} type='hidden' />
+        <div className='row'>
+          <div className='form-group col-md-4 mb-2'>
+            <label className='form-label mb-1'>RUC Cliente</label>
+            <input className='form-control' value={selectedContractClientDocument} readOnly />
+          </div>
+          <div className='form-group col-md-8 mb-2'>
+            <label className='form-label mb-1'>Razon social</label>
+            <input className='form-control' value={selectedContractClientName} readOnly />
+          </div>
+          <InputFormGroup eRef={contractCodeRef} label='Codigo Contrato' col='col-md-4' required />
+          <div className='form-group col-md-4 mb-2'>
+            <label htmlFor='storage-contract-start' className='form-label mb-1'>Fecha Inicio Contrato <b className='text-danger'>*</b></label>
+            <input id='storage-contract-start' ref={contractStartRef} type='date' className='form-control' required />
+          </div>
+          <div className='form-group col-md-4 mb-2'>
+            <label htmlFor='storage-contract-end' className='form-label mb-1'>Fecha Fin Contrato <b className='text-danger'>*</b></label>
+            <input id='storage-contract-end' ref={contractEndRef} type='date' className='form-control' required />
+          </div>
+          <div className='form-group col-md-6 mb-2'>
+            <label htmlFor='storage-contract-file' className='form-label mb-1'>
+              Documento oficial {!isContractEditing && <b className='text-danger'>*</b>}
+            </label>
+            <input
+              id='storage-contract-file'
+              ref={contractFileRef}
+              type='file'
+              className='form-control'
+              accept='.pdf,.doc,.docx,.jpg,.jpeg,.png'
+            />
+          </div>
+          <div className='form-group col-md-6 mb-2'>
+            <label htmlFor='storage-contract-annexes' className='form-label mb-1'>Anexos</label>
+            <input
+              id='storage-contract-annexes'
+              ref={contractAnnexesRef}
+              type='file'
+              className='form-control'
+              accept='.pdf,.doc,.docx,.jpg,.jpeg,.png'
+              multiple
+            />
+          </div>
+        </div>
       </Modal>
 
       <Modal
