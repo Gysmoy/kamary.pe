@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-const Modal = ({ id, modalRef, title = 'Modal', isStatic = false, size = 'md', children, bodyClass = '', dialogClass = '', contentClass = '', headerClass = '', closeButtonClass = '', btnCancelText, btnSubmitText, hideFooter = false, bodyStyle, zIndex, hideButtonSubmit, onSubmit = (e) => { e.preventDefault(); $(modalRef.current).modal('hide') }, onClose = () => { } }) => {
+const Modal = ({ id, modalRef, title = 'Modal', isStatic = false, size = 'md', children, bodyClass = '', dialogClass = '', contentClass = '', headerClass = '', closeButtonClass = '', btnCancelText, btnSubmitText, hideFooter = false, bodyStyle, zIndex, hideButtonSubmit, asForm = true, onSubmit = (e) => { e.preventDefault(); $(modalRef.current).modal('hide') }, onClose = () => { } }) => {
   const staticProp = isStatic ? { 'data-bs-backdrop': 'static' } : {}
   const contentStyle = {
     boxShadow: '0 0 10px rgba(0,0,0,0.25)',
@@ -26,7 +26,10 @@ const Modal = ({ id, modalRef, title = 'Modal', isStatic = false, size = 'md', c
     return () => $(modalRef.current).off('hidden.bs.modal')
   }, [])
 
-  return (<form id={id} className='modal fade' ref={modalRef} tabIndex='-1' aria-hidden='true' {...staticProp} onSubmit={onSubmit} autoComplete='off' style={{ zIndex }}>
+  const Wrapper = asForm ? 'form' : 'div'
+  const wrapperProps = asForm ? { onSubmit, autoComplete: 'off' } : {}
+
+  return (<Wrapper id={id} className='modal fade' ref={modalRef} tabIndex='-1' aria-hidden='true' {...staticProp} {...wrapperProps} style={{ zIndex }}>
     <div className={`modal-dialog modal-dialog-centered modal-${size ?? 'md'} ${dialogClass ?? ''}`}>
       <div className={`modal-content ${contentClass ?? ''}`} style={contentStyle}>
         <div className={`modal-header ${headerClass ?? ''}`}>
@@ -50,7 +53,7 @@ const Modal = ({ id, modalRef, title = 'Modal', isStatic = false, size = 'md', c
         }
       </div>
     </div>
-  </form >
+  </Wrapper>
   )
 }
 

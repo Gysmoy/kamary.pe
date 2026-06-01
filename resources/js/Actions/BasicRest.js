@@ -96,6 +96,8 @@ class BasicRest {
         const res = await fetch(`/api/${this.path}`, {
           method: 'POST',
           headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
             'X-Xsrf-Token': xsrfToken()
           },
           body: request
@@ -111,7 +113,7 @@ class BasicRest {
         result = fetchRes.result
       }
 
-      if (!status) throw new Error(result?.message || 'Ocurrio un error inesperado')
+      if (!status) throw new Error(result?.message || result?.error || 'Ocurrio un error inesperado')
 
       this.showSavedMessage && toast.success("Correcto", {
         description: result.message,

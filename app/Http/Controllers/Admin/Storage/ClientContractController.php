@@ -9,7 +9,6 @@ use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use SoDe\Extend\Response;
 
@@ -113,8 +112,13 @@ class ClientContractController extends BasicController
 
         if ($this->oldFilePath) {
             $oldFilePath = $this->oldFilePath;
-            DB::afterCommit(fn() => Storage::disk('public')->delete($oldFilePath));
             $this->oldFilePath = null;
+
+            try {
+                Storage::disk('public')->delete($oldFilePath);
+            } catch (\Throwable $th) {
+                report($th);
+            }
         }
 
         return null;

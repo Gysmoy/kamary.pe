@@ -1538,6 +1538,7 @@ const Clients = ({
         title='Contratos cliente'
         size='xl'
         hideFooter
+        asForm={false}
         onSubmit={(e) => e.preventDefault()}
         onClose={() => {
           $(contractFormModalRef.current).modal('hide')
