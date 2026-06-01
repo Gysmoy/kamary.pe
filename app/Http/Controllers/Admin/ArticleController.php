@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\BasicController;
 use App\Models\ActivePrinciple;
 use App\Models\Article;
+use App\Models\ArticlePackComponent;
 use App\Models\ArticlePresentation;
 use App\Models\Laboratory;
 use App\Models\MagistralCategory;
@@ -34,6 +35,10 @@ class ArticleController extends BasicController
     private array $presentationsPayload = [];
     private array $storageLotsPayload = [];
 
+    private const IMPORT_TYPE_UPSERT = 'upsert';
+    private const IMPORT_TYPE_PACK_COMPONENTS = 'pack_components';
+    private const IMPORT_TYPE_CORPORATE_CATALOG = 'corporate_catalog';
+
     public function setPaginationInstance(string $model)
     {
         $hasBusinessColumn = Schema::hasColumn('articles', 'business_id');
@@ -57,6 +62,10 @@ class ArticleController extends BasicController
         }
         if ($hasWarehouseColumn) {
             $with[] = 'warehouse:id,business_branch_id,name,status';
+        }
+        if (Schema::hasTable('article_pack_components')) {
+            $with[] = 'packComponents:id,pack_article_id,component_article_id,quantity,status';
+            $with[] = 'packComponents.component:id,code,name,unit_id,status';
         }
 
         $query = $model::select('articles.*')
@@ -103,12 +112,20 @@ class ArticleController extends BasicController
     {
         $response = new Response();
         try {
+            $importType = $this->normalizeArticleImportType($request->input('import_type', 'upsert'));
+            if ($importType === 'pack_components') {
+                return $this->importPackComponents($request);
+            }
+
             $rows = $request->rows;
             $mapping = $request->mapping ?? [];
             $userId = Auth::id();
             $hasArticleModuleScope = Schema::hasColumn('articles', 'module_scope');
             $hasArticleBusiness = Schema::hasColumn('articles', 'business_id');
             $hasArticleWarehouse = Schema::hasColumn('articles', 'warehouse_id');
+            $hasArticleIsPack = Schema::hasColumn('articles', 'is_pack');
+            $hasArticleCorporateCatalog = Schema::hasColumn('articles', 'is_corporate_catalog');
+            $isCorporateCatalogImport = $importType === 'corporate_catalog';
             $defaultBusinessId = $hasArticleBusiness ? $this->defaultBusinessIdForScope() : null;
             $hasMagistralStatus = Schema::hasColumn('articles', 'magistral_status');
 
@@ -140,7 +157,14 @@ class ArticleController extends BasicController
             DB::beginTransaction();
 
             $existingArticles = Article::whereNotNull('code')
-                ->when($hasArticleModuleScope, fn($query) => $query->where('module_scope', $this->moduleScope))
+                ->when($hasArticleModuleScope, function ($query) {
+                    $query->where(function ($scope) {
+                        $scope->where('module_scope', $this->moduleScope);
+                        if ($this->moduleScope === 'standard') {
+                            $scope->orWhereNull('module_scope');
+                        }
+                    });
+                })
                 ->get(['id', 'code']);
             $articleByCode = [];
             foreach ($existingArticles as $item) {
@@ -335,6 +359,7 @@ class ArticleController extends BasicController
                     if ($hasArticleModuleScope) $updateData['module_scope'] = $this->moduleScope;
                     if ($hasArticleBusiness) $updateData['business_id'] = $defaultBusinessId;
                     if ($hasArticleWarehouse) $updateData['warehouse_id'] = $warehouseId;
+                    if ($hasArticleCorporateCatalog) $updateData['is_corporate_catalog'] = $isCorporateCatalogImport;
                     if ($hasMagistralStatus && $this->moduleScope === 'magistrales') {
                         $updateData['magistral_status'] = $magistralStatus;
                     }
@@ -360,6 +385,8 @@ class ArticleController extends BasicController
                     if ($hasArticleModuleScope) $createData['module_scope'] = $this->moduleScope;
                     if ($hasArticleBusiness) $createData['business_id'] = $defaultBusinessId;
                     if ($hasArticleWarehouse) $createData['warehouse_id'] = $warehouseId;
+                    if ($hasArticleIsPack) $createData['is_pack'] = false;
+                    if ($hasArticleCorporateCatalog) $createData['is_corporate_catalog'] = $isCorporateCatalogImport;
                     if ($hasMagistralStatus && $this->moduleScope === 'magistrales') {
                         $createData['magistral_status'] = $magistralStatus;
                     }
@@ -390,12 +417,391 @@ class ArticleController extends BasicController
                 'errors' => $errors,
             ];
         } catch (\Throwable $th) {
-            DB::rollBack();
+            if (DB::transactionLevel() > 0) DB::rollBack();
             $response->status = 400;
             $response->message = $th->getMessage();
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    private function normalizeArticleImportType($value): string
+    {
+        $type = trim((string)$value);
+        return in_array($type, [
+            self::IMPORT_TYPE_UPSERT,
+            self::IMPORT_TYPE_PACK_COMPONENTS,
+            self::IMPORT_TYPE_CORPORATE_CATALOG,
+        ], true) ? $type : self::IMPORT_TYPE_UPSERT;
+    }
+
+    private function importPackComponents(Request $request): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+
+        try {
+            if ($this->moduleScope !== 'standard') {
+                throw new \Exception('La importacion de componentes de packs solo esta disponible para articulos comerciales');
+            }
+            if (!Schema::hasTable('article_pack_components')) {
+                throw new \Exception('Falta ejecutar la migracion de componentes de packs');
+            }
+
+            $rows = $request->rows;
+            $mapping = $request->mapping ?? [];
+            if (!is_array($rows) || count($rows) === 0) {
+                throw new \Exception('No hay registros para importar');
+            }
+
+            $packCodeKey = $mapping['pack_code'] ?? null;
+            $componentCodeKey = $mapping['component_code'] ?? null;
+            if (!$packCodeKey) {
+                throw new \Exception('Debes mapear el campo codigo pack');
+            }
+            if (!$componentCodeKey) {
+                throw new \Exception('Debes mapear el campo codigo componente');
+            }
+
+            $packNameKey = $mapping['pack_name'] ?? null;
+            $componentNameKey = $mapping['component_name'] ?? null;
+            $quantityKey = $mapping['component_quantity'] ?? null;
+            $userId = Auth::id();
+            $context = $this->buildArticleImportContext((int)$userId);
+
+            $created = 0;
+            $updated = 0;
+            $linked = 0;
+            $skipped = 0;
+            $errors = [];
+
+            DB::beginTransaction();
+
+            foreach ($rows as $idx => $row) {
+                $rowNumber = $idx + 1;
+                if (!is_array($row)) {
+                    $skipped++;
+                    $errors[] = "Fila {$rowNumber}: formato invalido";
+                    continue;
+                }
+
+                try {
+                    $packCode = trim((string)($row[$packCodeKey] ?? ''));
+                    $componentCode = trim((string)($row[$componentCodeKey] ?? ''));
+                    if ($packCode === '') {
+                        throw new \Exception('codigo pack vacio');
+                    }
+                    if ($componentCode === '') {
+                        throw new \Exception('codigo componente vacio');
+                    }
+                    if ($this->normalizeText($packCode) === $this->normalizeText($componentCode)) {
+                        throw new \Exception('el pack no puede ser componente de si mismo');
+                    }
+
+                    $quantity = $quantityKey
+                        ? ($this->toNullableDecimal($row[$quantityKey] ?? null) ?? 1)
+                        : 1;
+                    if ($quantity <= 0) {
+                        throw new \Exception('cantidad de componente debe ser mayor a 0');
+                    }
+
+                    $attributes = $this->resolveImportedArticleAttributes($row, $mapping, $context);
+                    $packName = $packNameKey ? trim((string)($row[$packNameKey] ?? '')) : '';
+                    $componentName = $componentNameKey ? trim((string)($row[$componentNameKey] ?? '')) : '';
+
+                    $packResult = $this->upsertImportedArticle(
+                        $context,
+                        $packCode,
+                        $packName !== '' ? $packName : $packCode,
+                        $attributes,
+                        true,
+                        false
+                    );
+                    $componentResult = $this->upsertImportedArticle(
+                        $context,
+                        $componentCode,
+                        $componentName !== '' ? $componentName : $componentCode,
+                        $attributes,
+                        false,
+                        false
+                    );
+
+                    ArticlePackComponent::updateOrCreate(
+                        [
+                            'pack_article_id' => $packResult['article']->id,
+                            'component_article_id' => $componentResult['article']->id,
+                        ],
+                        [
+                            'quantity' => $quantity,
+                            'status' => true,
+                            'created_by' => $userId,
+                            'updated_by' => $userId,
+                        ]
+                    );
+
+                    $created += ($packResult['created'] ? 1 : 0) + ($componentResult['created'] ? 1 : 0);
+                    $updated += ($packResult['updated'] ? 1 : 0) + ($componentResult['updated'] ? 1 : 0);
+                    $linked++;
+                } catch (\Throwable $th) {
+                    $skipped++;
+                    $errors[] = "Fila {$rowNumber}: {$th->getMessage()}";
+                }
+            }
+
+            DB::commit();
+
+            $response->status = 200;
+            $response->message = 'Importacion de componentes de packs completada';
+            $response->data = [
+                'created' => $created,
+                'updated' => $updated,
+                'linked' => $linked,
+                'skipped' => $skipped,
+                'errors' => $errors,
+            ];
+        } catch (\Throwable $th) {
+            if (DB::transactionLevel() > 0) DB::rollBack();
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function buildArticleImportContext(int $userId): array
+    {
+        $hasArticleModuleScope = Schema::hasColumn('articles', 'module_scope');
+        $hasArticleBusiness = Schema::hasColumn('articles', 'business_id');
+        $hasArticleWarehouse = Schema::hasColumn('articles', 'warehouse_id');
+
+        $articleByCode = [];
+        $existingArticles = Article::whereNotNull('code')
+            ->when($hasArticleModuleScope, function ($query) {
+                $query->where(function ($scope) {
+                    $scope->where('module_scope', $this->moduleScope);
+                    if ($this->moduleScope === 'standard') {
+                        $scope->orWhereNull('module_scope');
+                    }
+                });
+            })
+            ->get(['id', 'code']);
+        foreach ($existingArticles as $item) {
+            $normalizedCode = $this->normalizeText($item->code);
+            if ($normalizedCode !== '') $articleByCode[$normalizedCode] = $item->id;
+        }
+
+        $labByName = [];
+        $labCodeTaken = [];
+        $existingLabs = Laboratory::query()
+            ->whereNotNull('name')
+            ->get(['id', 'name', 'code']);
+        foreach ($existingLabs as $lab) {
+            $normalizedName = $this->normalizeText($lab->name);
+            $normalizedCode = $this->normalizeText($lab->code);
+            if ($normalizedName !== '') $labByName[$normalizedName] = $lab->id;
+            if ($normalizedCode !== '') $labCodeTaken[$normalizedCode] = true;
+        }
+
+        $unitByName = [];
+        $unitBySymbol = [];
+        foreach (Unit::all(['id', 'name', 'symbol']) as $unit) {
+            $normalizedName = $this->normalizeText($unit->name);
+            $normalizedSymbol = $this->normalizeText($unit->symbol);
+            if ($normalizedName !== '') $unitByName[$normalizedName] = $unit->id;
+            if ($normalizedSymbol !== '') $unitBySymbol[$normalizedSymbol] = $unit->id;
+        }
+
+        $principleByLabAndName = [];
+        foreach (ActivePrinciple::all(['id', 'laboratory_id', 'name']) as $principle) {
+            $normalizedName = $this->normalizeText($principle->name);
+            if ($normalizedName === '') continue;
+            $principleByLabAndName[$principle->laboratory_id . ':' . $normalizedName] = $principle->id;
+        }
+
+        $warehouseByName = [];
+        if ($this->moduleScope === 'standard' && $hasArticleWarehouse) {
+            $warehouses = $this->kamaryPeruWarehouses()->get(['warehouses.id', 'warehouses.name']);
+            foreach ($warehouses as $warehouse) {
+                $normalizedWarehouseName = $this->normalizeText($warehouse->name);
+                if ($normalizedWarehouseName !== '') $warehouseByName[$normalizedWarehouseName] = $warehouse->id;
+            }
+            if (count($warehouseByName) === 0) {
+                throw new \Exception('Debes registrar al menos un almacen de Kamary Peru antes de importar articulos');
+            }
+        }
+
+        return [
+            'userId' => $userId,
+            'hasArticleModuleScope' => $hasArticleModuleScope,
+            'hasArticleBusiness' => $hasArticleBusiness,
+            'hasArticleWarehouse' => $hasArticleWarehouse,
+            'hasArticleIsPack' => Schema::hasColumn('articles', 'is_pack'),
+            'hasArticleCorporateCatalog' => Schema::hasColumn('articles', 'is_corporate_catalog'),
+            'defaultBusinessId' => $hasArticleBusiness ? $this->defaultBusinessIdForScope() : null,
+            'articleByCode' => $articleByCode,
+            'labByName' => $labByName,
+            'labCodeTaken' => $labCodeTaken,
+            'unitByName' => $unitByName,
+            'unitBySymbol' => $unitBySymbol,
+            'principleByLabAndName' => $principleByLabAndName,
+            'warehouseByName' => $warehouseByName,
+        ];
+    }
+
+    private function resolveImportedArticleAttributes(array $row, array $mapping, array &$context): array
+    {
+        $laboratoryKey = $mapping['laboratory'] ?? null;
+        $principleKey = $mapping['active_principle'] ?? null;
+        $unitKey = $mapping['unit'] ?? null;
+        $statusKey = $mapping['status'] ?? null;
+        $warehouseKey = $mapping['warehouse'] ?? null;
+
+        $laboratoryName = $laboratoryKey ? trim((string)($row[$laboratoryKey] ?? '')) : '';
+        if ($laboratoryName === '') $laboratoryName = 'LABORATORIO GENERAL';
+
+        $principleName = $principleKey ? trim((string)($row[$principleKey] ?? '')) : '';
+        if ($principleName === '') $principleName = 'PRINCIPIO GENERAL';
+
+        $unitName = $unitKey ? trim((string)($row[$unitKey] ?? '')) : '';
+        if ($unitName === '') $unitName = 'UNIDAD';
+
+        $warehouseId = null;
+        if ($this->moduleScope === 'standard' && $context['hasArticleWarehouse']) {
+            if (!$warehouseKey) {
+                throw new \Exception('Debes mapear el campo almacen');
+            }
+            $warehouseName = trim((string)($row[$warehouseKey] ?? ''));
+            if ($warehouseName === '') {
+                throw new \Exception('almacen vacio');
+            }
+            $warehouseId = $context['warehouseByName'][$this->normalizeText($warehouseName)] ?? null;
+            if (!$warehouseId) {
+                throw new \Exception("almacen no existe en Kamary Peru ({$warehouseName})");
+            }
+        }
+
+        $status = true;
+        if ($statusKey && array_key_exists($statusKey, $row)) {
+            $status = $this->toBoolean($row[$statusKey]);
+        }
+
+        $normalizedLabName = $this->normalizeText($laboratoryName);
+        $laboratoryId = $context['labByName'][$normalizedLabName] ?? null;
+        if (!$laboratoryId) {
+            $newLabCode = $this->generateLaboratoryCode($laboratoryName, $context['labCodeTaken']);
+            $newLab = Laboratory::create([
+                'name' => $laboratoryName,
+                'code' => $newLabCode,
+                'status' => true,
+                'created_by' => $context['userId'],
+                'updated_by' => $context['userId'],
+            ]);
+            $laboratoryId = $newLab->id;
+            $context['labByName'][$normalizedLabName] = $laboratoryId;
+            $context['labCodeTaken'][$this->normalizeText($newLabCode)] = true;
+        }
+
+        $normalizedPrincipleName = $this->normalizeText($principleName);
+        $principleLookup = $laboratoryId . ':' . $normalizedPrincipleName;
+        $activePrincipleId = $context['principleByLabAndName'][$principleLookup] ?? null;
+        if (!$activePrincipleId) {
+            $newPrinciple = ActivePrinciple::create([
+                'laboratory_id' => $laboratoryId,
+                'name' => $principleName,
+                'status' => true,
+                'created_by' => $context['userId'],
+                'updated_by' => $context['userId'],
+            ]);
+            $activePrincipleId = $newPrinciple->id;
+            $context['principleByLabAndName'][$principleLookup] = $activePrincipleId;
+        }
+
+        $normalizedUnitName = $this->normalizeText($unitName);
+        $unitId = $context['unitByName'][$normalizedUnitName]
+            ?? $context['unitBySymbol'][$normalizedUnitName]
+            ?? null;
+        if (!$unitId) {
+            $newUnit = Unit::create([
+                'name' => $unitName,
+                'symbol' => $unitName,
+                'status' => true,
+                'created_by' => $context['userId'],
+                'updated_by' => $context['userId'],
+            ]);
+            $unitId = $newUnit->id;
+            $context['unitByName'][$normalizedUnitName] = $unitId;
+            $context['unitBySymbol'][$normalizedUnitName] = $unitId;
+        } else {
+            $context['unitByName'][$normalizedUnitName] = $unitId;
+        }
+
+        return [
+            'laboratory_id' => $laboratoryId,
+            'active_principle_id' => $activePrincipleId,
+            'unit_id' => $unitId,
+            'warehouse_id' => $warehouseId,
+            'status' => $status,
+        ];
+    }
+
+    private function upsertImportedArticle(
+        array &$context,
+        string $code,
+        string $name,
+        array $attributes,
+        ?bool $isPack,
+        bool $isCorporateCatalog
+    ): array {
+        $normalizedCode = $this->normalizeText($code);
+        $articleId = $context['articleByCode'][$normalizedCode] ?? null;
+        $common = [
+            'code' => $code,
+            'name' => $name,
+            'unit_id' => $attributes['unit_id'],
+            'laboratory_id' => $attributes['laboratory_id'],
+            'active_principle_id' => $attributes['active_principle_id'],
+            'status' => $attributes['status'],
+            'updated_by' => $context['userId'],
+        ];
+        if ($context['hasArticleModuleScope']) $common['module_scope'] = $this->moduleScope;
+        if ($context['hasArticleBusiness']) $common['business_id'] = $context['defaultBusinessId'];
+        if ($context['hasArticleWarehouse']) $common['warehouse_id'] = $attributes['warehouse_id'];
+        if ($context['hasArticleCorporateCatalog']) $common['is_corporate_catalog'] = $isCorporateCatalog;
+
+        if ($articleId) {
+            $updateData = $common;
+            if ($context['hasArticleIsPack'] && $isPack === true) {
+                $updateData['is_pack'] = true;
+            }
+            Article::where('id', $articleId)->update($updateData);
+            $this->ensureDefaultPresentation($articleId);
+
+            return [
+                'article' => Article::findOrFail($articleId),
+                'created' => false,
+                'updated' => true,
+            ];
+        }
+
+        $createData = array_merge($common, [
+            'volume' => null,
+            'margin_rule' => false,
+            'igv_rule' => false,
+            'units_per_article' => 1,
+            'unit_weight' => null,
+            'notes' => null,
+            'created_by' => $context['userId'],
+        ]);
+        if ($context['hasArticleIsPack']) $createData['is_pack'] = $isPack === true;
+
+        $article = Article::create($createData);
+        $context['articleByCode'][$normalizedCode] = $article->id;
+        $this->ensureDefaultPresentation($article->id);
+
+        return [
+            'article' => $article,
+            'created' => true,
+            'updated' => false,
+        ];
     }
 
     public function beforeSave(Request $request)

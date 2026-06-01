@@ -312,6 +312,31 @@ const storageConditionOptions = [
 
 const manufacturerCountryOptions = ['Perú']
 
+const articleImportTypeOptions = [
+  { value: 'upsert', label: 'CREACION / ACTUALIZACION DE ARTICULOS' },
+]
+
+const standardArticleImportTypeOptions = [
+  ...articleImportTypeOptions,
+  { value: 'pack_components', label: 'CREACION / ACTUALIZACION DE COMPONENTES DE PACKS' },
+  { value: 'corporate_catalog', label: 'CREACION / ACTUALIZACION DE ARTICULOS - CATALOGO CORPORATIVO' },
+]
+
+const emptyArticleImportMapping = () => ({
+  code: '',
+  name: '',
+  pack_code: '',
+  pack_name: '',
+  component_code: '',
+  component_name: '',
+  component_quantity: '',
+  warehouse: '',
+  laboratory: '',
+  active_principle: '',
+  unit: '',
+  status: '',
+})
+
 const storageProductExportColumns = [
   { caption: 'ACCIONES', value: () => '' },
   { caption: 'CODIGO', value: (row) => row?.code ?? '' },
@@ -348,6 +373,9 @@ const getStockByPresentation = (stockUnits, presentations) => {
 const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) => {
   const isMagistrales = moduleScope === 'magistrales'
   const isStorageProduct = moduleScope === 'storage'
+  const importTypeOptions = !isStorageProduct && !isMagistrales
+    ? standardArticleImportTypeOptions
+    : articleImportTypeOptions
   const gridRef = useRef()
   const modalRef = useRef()
   const stockModalRef = useRef()
@@ -455,15 +483,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const [selectedImportBusinessId, setSelectedImportBusinessId] = useState('')
   const [selectedImportLaboratoryName, setSelectedImportLaboratoryName] = useState('')
   const [selectedImportType, setSelectedImportType] = useState('upsert')
-  const [mapping, setMapping] = useState({
-    code: '',
-    name: '',
-    warehouse: '',
-    laboratory: '',
-    active_principle: '',
-    unit: '',
-    status: '',
-  })
+  const [mapping, setMapping] = useState(emptyArticleImportMapping())
 
   const defaultBusinessId = (rows = businesses) => {
     const scoped = rows.find(item => item.business_key === businessScopeKey)
@@ -869,15 +889,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     setSelectedImportBusinessId(defaultBusinessId(availableBusinesses))
     setSelectedImportLaboratoryName('')
     setSelectedImportType('upsert')
-    setMapping({
-      code: '',
-      name: '',
-      warehouse: '',
-      laboratory: '',
-      active_principle: '',
-      unit: '',
-      status: '',
-    })
+    setMapping(emptyArticleImportMapping())
     if (importFileRef.current) importFileRef.current.value = ''
     $(importModalRef.current).modal('show')
     setTimeout(() => {
@@ -897,6 +909,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     return {
       code: findByNames(['loteean', 'codigolote', 'codigo', 'code', 'codigodearticulo', 'sku', 'ean', 'lote']),
       name: findByNames(['descripcion', 'description', 'name', 'nombre', 'articulo', 'producto']),
+      pack_code: findByNames(['codigopack', 'packcodigo', 'packcode', 'skupack', 'eanpack', 'loteeanpack']),
+      pack_name: findByNames(['nombrepack', 'packnombre', 'descripcionpack', 'packdescription', 'packname']),
+      component_code: findByNames(['codigocomponente', 'componentecode', 'skucomponente', 'eancomponente', 'codigodecomponente', 'codigocomponentepack']),
+      component_name: findByNames(['nombrecomponente', 'componentename', 'descripcioncomponente', 'componentedescription']),
+      component_quantity: findByNames(['cantidadcomponente', 'componentquantity', 'cantidad', 'quantity', 'qty', 'unidadescomponente']),
       warehouse: findByNames(['almacen', 'warehouse']),
       laboratory: findByNames(['laboratorio', 'laboratory']),
       active_principle: findByNames(['principioactivo', 'activeprinciple', 'principio']),
@@ -927,15 +944,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       setImportRows([])
       setImportHeaders([])
       setImportFileName('')
-      setMapping({
-        code: '',
-        name: '',
-        warehouse: '',
-        laboratory: '',
-        active_principle: '',
-        unit: '',
-        status: '',
-      })
+      setMapping(emptyArticleImportMapping())
       Swal.fire({
         icon: 'error',
         title: 'No se pudo leer el archivo',
@@ -1034,7 +1043,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       Swal.fire({ icon: 'warning', title: 'Falta archivo', text: 'Primero carga un archivo con datos' })
       return
     }
-    if (!mapping.code) {
+    if (selectedImportType === 'pack_components' && (!mapping.pack_code || !mapping.component_code)) {
+      Swal.fire({ icon: 'warning', title: 'Campos obligatorios', text: 'Debes mapear codigo pack y codigo componente' })
+      return
+    }
+    if (selectedImportType !== 'pack_components' && !mapping.code) {
       Swal.fire({ icon: 'warning', title: 'Campo obligatorio', text: 'Debes mapear el campo codigo' })
       return
     }
@@ -1044,6 +1057,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     try {
       const { preparedRows, preparedMapping } = rowsPreparedForImport()
       result = await articlesRest.importRows({
+        import_type: selectedImportType,
         rows: preparedRows,
         mapping: preparedMapping
       })
@@ -1064,6 +1078,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
         <div style="text-align:left">
           <p style="margin:0"><b>Creados:</b> ${result.created}</p>
           <p style="margin:0"><b>Actualizados:</b> ${result.updated}</p>
+          ${result.linked !== undefined ? `<p style="margin:0"><b>Componentes vinculados:</b> ${result.linked}</p>` : ''}
           <p style="margin:0"><b>Omitidos:</b> ${result.skipped}</p>
           ${errorsPreview ? `<pre style="margin-top:8px;white-space:pre-wrap;font-size:12px">${errorsPreview}</pre>` : ''}
         </div>
@@ -1206,6 +1221,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     row: idx + 1,
     code: mapping.code ? (row[mapping.code] ?? '') : '',
     name: mapping.name ? (row[mapping.name] ?? '') : '',
+    packCode: mapping.pack_code ? (row[mapping.pack_code] ?? '') : '',
+    packName: mapping.pack_name ? (row[mapping.pack_name] ?? '') : '',
+    componentCode: mapping.component_code ? (row[mapping.component_code] ?? '') : '',
+    componentName: mapping.component_name ? (row[mapping.component_name] ?? '') : '',
+    componentQuantity: mapping.component_quantity ? (row[mapping.component_quantity] ?? '') : '',
     warehouse: mapping.warehouse ? (row[mapping.warehouse] ?? '') : '',
     laboratory: mapping.laboratory ? (row[mapping.laboratory] ?? '') : '',
     principle: mapping.active_principle ? (row[mapping.active_principle] ?? '') : '',
@@ -2818,7 +2838,9 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
               value={selectedImportType}
               onChange={(e) => setSelectedImportType(e.target.value)}
             >
-              <option value='upsert'>CREACION / ACTUALIZACION DE ARTICULOS</option>
+              {importTypeOptions.map(option => (
+                <option key={`article-import-type-${option.value}`} value={option.value}>{option.label}</option>
+              ))}
             </select>
           </div>
           <div className='col-md-6'>
@@ -2838,20 +2860,62 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
               <details className='article-import-mapping'>
                 <summary>Ajustar columnas detectadas</summary>
                 <div className='row g-2 mt-2'>
-                  <div className='col-md-4'>
-                    <label className='form-label'>{!isStorageProduct && !isMagistrales ? 'LOTE (EAN) *' : 'Codigo *'}</label>
-                    <select className='form-control' value={mapping.code} onChange={(e) => setMapping(prev => ({ ...prev, code: e.target.value }))}>
-                      <option value=''>Seleccionar...</option>
-                      {importHeaders.map(header => <option key={`code-${header}`} value={header}>{header}</option>)}
-                    </select>
-                  </div>
-                  <div className='col-md-4'>
-                    <label className='form-label'>{!isStorageProduct && !isMagistrales ? 'Nombre' : 'Descripcion'}</label>
-                    <select className='form-control' value={mapping.name} onChange={(e) => setMapping(prev => ({ ...prev, name: e.target.value }))}>
-                      <option value=''>Seleccionar...</option>
-                      {importHeaders.map(header => <option key={`name-${header}`} value={header}>{header}</option>)}
-                    </select>
-                  </div>
+                  {selectedImportType === 'pack_components' ? (
+                    <>
+                      <div className='col-md-4'>
+                        <label className='form-label'>Codigo pack *</label>
+                        <select className='form-control' value={mapping.pack_code} onChange={(e) => setMapping(prev => ({ ...prev, pack_code: e.target.value }))}>
+                          <option value=''>Seleccionar...</option>
+                          {importHeaders.map(header => <option key={`pack-code-${header}`} value={header}>{header}</option>)}
+                        </select>
+                      </div>
+                      <div className='col-md-4'>
+                        <label className='form-label'>Nombre pack</label>
+                        <select className='form-control' value={mapping.pack_name} onChange={(e) => setMapping(prev => ({ ...prev, pack_name: e.target.value }))}>
+                          <option value=''>Usar codigo pack</option>
+                          {importHeaders.map(header => <option key={`pack-name-${header}`} value={header}>{header}</option>)}
+                        </select>
+                      </div>
+                      <div className='col-md-4'>
+                        <label className='form-label'>Codigo componente *</label>
+                        <select className='form-control' value={mapping.component_code} onChange={(e) => setMapping(prev => ({ ...prev, component_code: e.target.value }))}>
+                          <option value=''>Seleccionar...</option>
+                          {importHeaders.map(header => <option key={`component-code-${header}`} value={header}>{header}</option>)}
+                        </select>
+                      </div>
+                      <div className='col-md-4'>
+                        <label className='form-label'>Nombre componente</label>
+                        <select className='form-control' value={mapping.component_name} onChange={(e) => setMapping(prev => ({ ...prev, component_name: e.target.value }))}>
+                          <option value=''>Usar codigo componente</option>
+                          {importHeaders.map(header => <option key={`component-name-${header}`} value={header}>{header}</option>)}
+                        </select>
+                      </div>
+                      <div className='col-md-4'>
+                        <label className='form-label'>Cantidad componente</label>
+                        <select className='form-control' value={mapping.component_quantity} onChange={(e) => setMapping(prev => ({ ...prev, component_quantity: e.target.value }))}>
+                          <option value=''>Usar 1</option>
+                          {importHeaders.map(header => <option key={`component-quantity-${header}`} value={header}>{header}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className='col-md-4'>
+                        <label className='form-label'>{!isStorageProduct && !isMagistrales ? 'LOTE (EAN) *' : 'Codigo *'}</label>
+                        <select className='form-control' value={mapping.code} onChange={(e) => setMapping(prev => ({ ...prev, code: e.target.value }))}>
+                          <option value=''>Seleccionar...</option>
+                          {importHeaders.map(header => <option key={`code-${header}`} value={header}>{header}</option>)}
+                        </select>
+                      </div>
+                      <div className='col-md-4'>
+                        <label className='form-label'>{!isStorageProduct && !isMagistrales ? 'Nombre' : 'Descripcion'}</label>
+                        <select className='form-control' value={mapping.name} onChange={(e) => setMapping(prev => ({ ...prev, name: e.target.value }))}>
+                          <option value=''>Seleccionar...</option>
+                          {importHeaders.map(header => <option key={`name-${header}`} value={header}>{header}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  )}
                   {!isStorageProduct && !isMagistrales && <div className='col-md-4'>
                     <label className='form-label'>Almacen</label>
                     <select className='form-control' value={mapping.warehouse} onChange={(e) => setMapping(prev => ({ ...prev, warehouse: e.target.value }))}>
@@ -2896,24 +2960,54 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
             <div className='table-responsive border'>
               <table className='table table-sm table-striped mb-0'>
                 <thead>
-                  <tr>
-                    <th>#</th>
-                    <th>{!isStorageProduct && !isMagistrales ? 'LOTE (EAN)' : 'Codigo'}</th>
-                    <th>{!isStorageProduct && !isMagistrales ? 'Nombre' : 'Descripcion'}</th>
-                    {!isStorageProduct && !isMagistrales && <th>Almacen</th>}
-                    <th>Laboratorio</th>
-                    <th>Principio activo</th>
-                    <th>Unidad</th>
-                    <th>Estado</th>
-                  </tr>
+                  {selectedImportType === 'pack_components' ? (
+                    <tr>
+                      <th>#</th>
+                      <th>Codigo pack</th>
+                      <th>Nombre pack</th>
+                      <th>Codigo componente</th>
+                      <th>Nombre componente</th>
+                      <th>Cantidad</th>
+                      {!isStorageProduct && !isMagistrales && <th>Almacen</th>}
+                      <th>Laboratorio</th>
+                      <th>Principio activo</th>
+                      <th>Unidad</th>
+                      <th>Estado</th>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <th>#</th>
+                      <th>{!isStorageProduct && !isMagistrales ? 'LOTE (EAN)' : 'Codigo'}</th>
+                      <th>{!isStorageProduct && !isMagistrales ? 'Nombre' : 'Descripcion'}</th>
+                      {!isStorageProduct && !isMagistrales && <th>Almacen</th>}
+                      <th>Laboratorio</th>
+                      <th>Principio activo</th>
+                      <th>Unidad</th>
+                      <th>Estado</th>
+                    </tr>
+                  )}
                 </thead>
                 <tbody>
                   {previewRows.length === 0 && (
                     <tr>
-                      <td colSpan={!isStorageProduct && !isMagistrales ? 8 : 7} className='text-center text-muted'>Sin datos para previsualizar</td>
+                      <td colSpan={selectedImportType === 'pack_components' ? (!isStorageProduct && !isMagistrales ? 11 : 10) : (!isStorageProduct && !isMagistrales ? 8 : 7)} className='text-center text-muted'>Sin datos para previsualizar</td>
                     </tr>
                   )}
-                  {previewRows.map(item => (
+                  {previewRows.map(item => selectedImportType === 'pack_components' ? (
+                    <tr key={`preview-${item.row}`}>
+                      <td>{item.row}</td>
+                      <td>{item.packCode?.toString?.() ?? ''}</td>
+                      <td>{item.packName?.toString?.() ?? ''}</td>
+                      <td>{item.componentCode?.toString?.() ?? ''}</td>
+                      <td>{item.componentName?.toString?.() ?? ''}</td>
+                      <td>{item.componentQuantity?.toString?.() || '1'}</td>
+                      {!isStorageProduct && !isMagistrales && <td>{item.warehouse?.toString?.() || selectedImportWarehouseName()}</td>}
+                      <td>{item.laboratory?.toString?.() || selectedImportLaboratoryName}</td>
+                      <td>{item.principle?.toString?.() ?? ''}</td>
+                      <td>{item.unit?.toString?.() ?? ''}</td>
+                      <td>{item.status?.toString?.() ?? ''}</td>
+                    </tr>
+                  ) : (
                     <tr key={`preview-${item.row}`}>
                       <td>{item.row}</td>
                       <td>{item.code?.toString?.() ?? ''}</td>

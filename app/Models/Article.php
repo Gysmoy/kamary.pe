@@ -49,6 +49,7 @@ class Article extends Model
         'units_per_article',
         'unit_weight',
         'is_pack',
+        'is_corporate_catalog',
         'default_lot',
         'default_expiration_date',
         'stock_min',
@@ -74,6 +75,7 @@ class Article extends Model
         'margin_rule' => 'boolean',
         'igv_rule' => 'boolean',
         'is_pack' => 'boolean',
+        'is_corporate_catalog' => 'boolean',
         'stock_has_expiration' => 'boolean',
         'stock_has_lot' => 'boolean',
         'volume' => 'float',
@@ -138,6 +140,16 @@ class Article extends Model
     public function storageLots()
     {
         return $this->hasMany(StorageProductLot::class)->orderBy('id');
+    }
+
+    public function packComponents()
+    {
+        return $this->hasMany(ArticlePackComponent::class, 'pack_article_id')->orderBy('id');
+    }
+
+    public function componentOfPacks()
+    {
+        return $this->hasMany(ArticlePackComponent::class, 'component_article_id')->orderBy('id');
     }
 
     public function magistralCategory()
