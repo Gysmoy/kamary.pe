@@ -101,6 +101,8 @@ jobs:
             docker image prune -f
             docker compose up -d --build
             docker compose exec --interactive=false -T app php artisan migrate --force
+            docker compose exec --interactive=false -T app php artisan db:seed --class=ModulePermissionsSeeder --force
+            docker compose exec --interactive=false -T app php artisan db:seed --class=MagistralesProductionSeeder --force
             docker compose exec --interactive=false -T app php artisan optimize:clear
 
             notify_deploy "success"

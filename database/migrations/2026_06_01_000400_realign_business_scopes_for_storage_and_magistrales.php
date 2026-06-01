@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -60,13 +61,7 @@ return new class extends Migration
 
     private function ensureBusiness(string $key, string $name, string $description): int
     {
-        $business = DB::table('businesses')->where('business_key', $key)->first();
-
-        if (!$business) {
-            $business = DB::table('businesses')
-                ->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])
-                ->first();
-        }
+        $business = $this->findBusiness($key, $name);
 
         $payload = [
             'business_key' => $key,
@@ -81,7 +76,17 @@ return new class extends Migration
             return (int) $business->id;
         }
 
-        return (int) DB::table('businesses')->insertGetId($this->withTimestamps('businesses', $payload));
+        try {
+            return (int) DB::table('businesses')->insertGetId($this->withTimestamps('businesses', $payload));
+        } catch (UniqueConstraintViolationException $exception) {
+            $business = $this->findBusiness($key, $name);
+            if ($business) {
+                DB::table('businesses')->where('id', $business->id)->update($this->withUpdatedAt('businesses', $payload));
+                return (int) $business->id;
+            }
+
+            throw $exception;
+        }
     }
 
     private function ensureMagistralesPeruBranch(int $businessId): ?int
@@ -90,10 +95,7 @@ return new class extends Migration
             return null;
         }
 
-        $branch = DB::table('business_branches')
-            ->where('business_id', $businessId)
-            ->where('name', self::MAGISTRALES_BRANCH)
-            ->first();
+        $branch = $this->findBusinessBranch($businessId, self::MAGISTRALES_BRANCH);
 
         $payload = [
             'business_id' => $businessId,
@@ -116,7 +118,37 @@ return new class extends Migration
             return (int) $branch->id;
         }
 
-        return (int) DB::table('business_branches')->insertGetId($this->withTimestamps('business_branches', $payload));
+        try {
+            return (int) DB::table('business_branches')->insertGetId($this->withTimestamps('business_branches', $payload));
+        } catch (UniqueConstraintViolationException $exception) {
+            $branch = $this->findBusinessBranch($businessId, self::MAGISTRALES_BRANCH);
+            if ($branch) {
+                DB::table('business_branches')->where('id', $branch->id)->update($this->withUpdatedAt('business_branches', $payload));
+                return (int) $branch->id;
+            }
+
+            throw $exception;
+        }
+    }
+
+    private function findBusiness(string $key, string $name): ?object
+    {
+        $business = DB::table('businesses')->where('business_key', $key)->first();
+        if ($business) {
+            return $business;
+        }
+
+        return DB::table('businesses')
+            ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower(trim($name))])
+            ->first();
+    }
+
+    private function findBusinessBranch(int $businessId, string $name): ?object
+    {
+        return DB::table('business_branches')
+            ->where('business_id', $businessId)
+            ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower(trim($name))])
+            ->first();
     }
 
     private function magistralesMedicalBranchIds(int $medicalsId): array

@@ -130,14 +130,7 @@ class ClientContractController extends BasicController
             })
             ->firstOrFail();
 
-        if (!$contract->file_path || !Storage::disk('public')->exists($contract->file_path)) {
-            abort(404, 'Archivo no encontrado');
-        }
-
-        return Storage::disk('public')->response(
-            $contract->file_path,
-            $contract->file_name ?: basename($contract->file_path)
-        );
+        return $this->storedFileResponse($contract->file_path, $contract->file_name, $contract->file_mime);
     }
 
     public function annexFile(Request $request, string $id)
@@ -150,14 +143,7 @@ class ClientContractController extends BasicController
             })
             ->firstOrFail();
 
-        if (!$annex->file_path || !Storage::disk('public')->exists($annex->file_path)) {
-            abort(404, 'Archivo no encontrado');
-        }
-
-        return Storage::disk('public')->response(
-            $annex->file_path,
-            $annex->file_name ?: basename($annex->file_path)
-        );
+        return $this->storedFileResponse($annex->file_path, $annex->file_name, $annex->file_mime);
     }
 
     public function delete(Request $request, string $id)
@@ -266,5 +252,212 @@ class ClientContractController extends BasicController
             'name' => $file->getClientOriginalName(),
             'mime' => $detectedMime ?: $clientMime,
         ];
+    }
+
+    private function storedFileResponse(?string $path, ?string $name = null, ?string $mime = null)
+    {
+        $resolved = $this->resolveStoredFile($path, $name);
+        if (!$resolved) {
+            abort(404, 'Archivo no encontrado');
+        }
+
+        $headers = [];
+        if ($mime) {
+            $headers['Content-Type'] = $mime;
+        }
+
+        if ($resolved['disk'] === 'public') {
+            return Storage::disk('public')->response(
+                $resolved['path'],
+                $name ?: basename($resolved['path']),
+                $headers
+            );
+        }
+
+        return response()->file($resolved['path'], $headers);
+    }
+
+    private function resolveStoredFile(?string $path, ?string $name = null): ?array
+    {
+        foreach ($this->diskPathCandidates($path, $name) as $candidate) {
+            if (Storage::disk('public')->exists($candidate)) {
+                return [
+                    'disk' => 'public',
+                    'path' => $candidate,
+                ];
+            }
+        }
+
+        foreach ($this->absolutePathCandidates($path, $name) as $candidate) {
+            $realPath = realpath($candidate);
+            if ($realPath && is_file($realPath) && $this->isAllowedFilePath($realPath)) {
+                return [
+                    'disk' => 'absolute',
+                    'path' => $realPath,
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    private function diskPathCandidates(?string $path, ?string $name = null): array
+    {
+        $normalized = $this->normalizeFilePath($path);
+        $candidates = [];
+
+        $this->pushDiskPath($candidates, $normalized);
+
+        $trimmed = ltrim($normalized, '/');
+        foreach ([
+            'storage/app/public/',
+            'app/public/',
+            'public/storage/',
+            'storage/',
+            'public/',
+        ] as $prefix) {
+            if (stripos($trimmed, $prefix) === 0) {
+                $this->pushDiskPath($candidates, substr($trimmed, strlen($prefix)));
+            }
+        }
+
+        foreach ([
+            '/storage/app/public/',
+            '/app/public/',
+            '/public/storage/',
+            '/storage/',
+            '/public/',
+        ] as $needle) {
+            $position = stripos($normalized, $needle);
+            if ($position !== false) {
+                $this->pushDiskPath($candidates, substr($normalized, $position + strlen($needle)));
+            }
+        }
+
+        foreach ([$this->safeBasename($normalized), $this->safeBasename($name)] as $baseName) {
+            if (!$baseName) continue;
+            $this->pushDiskPath($candidates, $baseName);
+            foreach ([
+                'client-contracts',
+                'client-contract-annexes',
+                'contracts',
+                'contract',
+                'documents',
+                'documentos',
+            ] as $folder) {
+                $this->pushDiskPath($candidates, "{$folder}/{$baseName}");
+            }
+        }
+
+        return $candidates;
+    }
+
+    private function absolutePathCandidates(?string $path, ?string $name = null): array
+    {
+        $normalized = $this->normalizeFilePath($path);
+        $candidates = [];
+
+        $this->pushAbsolutePath($candidates, $normalized);
+
+        foreach ($this->diskPathCandidates($path, $name) as $candidate) {
+            $this->pushAbsolutePath($candidates, storage_path("app/public/{$candidate}"));
+            $this->pushAbsolutePath($candidates, public_path($candidate));
+            $this->pushAbsolutePath($candidates, public_path("storage/{$candidate}"));
+        }
+
+        return $candidates;
+    }
+
+    private function normalizeFilePath(?string $path): string
+    {
+        $value = trim((string)($path ?? ''));
+        if ($value === '') {
+            return '';
+        }
+
+        if (preg_match('#^https?://#i', $value)) {
+            $urlPath = parse_url($value, PHP_URL_PATH);
+            if (is_string($urlPath) && $urlPath !== '') {
+                $value = $urlPath;
+            }
+        }
+
+        $value = rawurldecode(str_replace('\\', '/', $value));
+
+        return preg_replace('#/+#', '/', $value) ?: '';
+    }
+
+    private function pushDiskPath(array &$candidates, ?string $path): void
+    {
+        $path = trim((string)($path ?? ''));
+        if ($path === '') {
+            return;
+        }
+
+        $path = ltrim($this->normalizeFilePath($path), '/');
+        if ($path === '' || preg_match('#(^|/)\.\.(/|$)#', $path)) {
+            return;
+        }
+
+        if (!in_array($path, $candidates, true)) {
+            $candidates[] = $path;
+        }
+    }
+
+    private function pushAbsolutePath(array &$candidates, ?string $path): void
+    {
+        $path = trim((string)($path ?? ''));
+        if ($path === '') {
+            return;
+        }
+
+        $path = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $path);
+        if (!$this->isAbsolutePath($path) || in_array($path, $candidates, true)) {
+            return;
+        }
+
+        $candidates[] = $path;
+    }
+
+    private function safeBasename(?string $path): ?string
+    {
+        $path = $this->normalizeFilePath($path);
+        if ($path === '') {
+            return null;
+        }
+
+        $baseName = basename($path);
+
+        return $baseName !== '.' && $baseName !== '/' ? $baseName : null;
+    }
+
+    private function isAbsolutePath(string $path): bool
+    {
+        return str_starts_with($path, DIRECTORY_SEPARATOR)
+            || preg_match('#^[A-Z]:[\\\\/]#i', $path) === 1;
+    }
+
+    private function isAllowedFilePath(string $path): bool
+    {
+        $normalizedPath = $this->normalizeRealPath($path);
+
+        foreach ([storage_path('app/public'), public_path()] as $root) {
+            $realRoot = realpath($root);
+            if (!$realRoot) {
+                continue;
+            }
+
+            $normalizedRoot = rtrim($this->normalizeRealPath($realRoot), '/');
+            if ($normalizedPath === $normalizedRoot || str_starts_with($normalizedPath, "{$normalizedRoot}/")) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function normalizeRealPath(string $path): string
+    {
+        return strtolower(str_replace('\\', '/', $path));
     }
 }

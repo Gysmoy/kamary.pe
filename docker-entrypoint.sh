@@ -36,14 +36,24 @@ touch storage/logs/laravel.log
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 777 storage bootstrap/cache
 
-# 1. Run Migrations
-run_artisan_with_retries "Running migrations" migrate --force || true
+# 1. Optional bootstrap tasks. Deploy runs these explicitly to avoid races.
+if [ "${AUTO_RUN_MIGRATIONS:-false}" = "true" ]; then
+    run_artisan_with_retries "Running migrations" migrate --force || true
+else
+    echo "Skipping startup migrations."
+fi
 
-# 1.1 Sync module permissions
-run_artisan_with_retries "Syncing module permissions" db:seed --class=ModulePermissionsSeeder --force || true
+if [ "${AUTO_SYNC_MODULE_PERMISSIONS:-false}" = "true" ]; then
+    run_artisan_with_retries "Syncing module permissions" db:seed --class=ModulePermissionsSeeder --force || true
+else
+    echo "Skipping startup module permission sync."
+fi
 
-# 1.2 Seed Magistrales operational data
-run_artisan_with_retries "Seeding Magistrales initial data" db:seed --class=MagistralesProductionSeeder --force || true
+if [ "${AUTO_SEED_MAGISTRALES:-false}" = "true" ]; then
+    run_artisan_with_retries "Seeding Magistrales initial data" db:seed --class=MagistralesProductionSeeder --force || true
+else
+    echo "Skipping startup Magistrales seed."
+fi
 
 # 2. Clear Caches
 echo "Clearing caches..."

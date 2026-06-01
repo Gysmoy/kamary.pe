@@ -1573,19 +1573,11 @@ const Clients = ({
             { dataField: 'id', caption: '#', width: 70 },
             {
               caption: 'Acciones',
-              width: 145,
+              width: 95,
               allowFiltering: false,
               allowExporting: false,
               cellTemplate: (container, { data }) => {
                 container.css('text-overflow', 'unset')
-                if (data.file_path) {
-                  container.append(DxButton({
-                    className: 'btn btn-xs btn-soft-primary',
-                    title: 'Ver documento oficial',
-                    icon: 'mdi mdi-eye',
-                    onClick: () => window.open(`/api/admin/storage/client-contracts/${data.id}/file`, '_blank', 'noopener,noreferrer')
-                  }))
-                }
                 container.append(DxButton({
                   className: 'btn btn-xs btn-soft-info',
                   title: 'Editar contrato',
@@ -1634,19 +1626,16 @@ const Clients = ({
                 container.empty()
                 if (!data.file_path) return container.text('-')
                 const url = `/api/admin/storage/client-contracts/${data.id}/file`
-                const wrapper = $('<div></div>').addClass('d-flex align-items-center gap-1')
                 $('<a></a>')
                   .attr({
                     href: url,
                     target: '_blank',
-                    rel: 'noopener noreferrer'
+                    rel: 'noopener noreferrer',
+                    title: 'Ver documento oficial'
                   })
-                  .addClass('btn btn-xs btn-soft-primary px-2')
-                  .attr('title', 'Ver documento oficial')
-                  .append($('<i></i>').addClass('mdi mdi-eye'))
-                  .appendTo(wrapper)
-                $('<span></span>').text(data.file_name || 'Ver archivo').appendTo(wrapper)
-                wrapper.appendTo(container)
+                  .addClass('text-primary fw-semibold text-decoration-underline')
+                  .text(data.file_name || 'Ver archivo')
+                  .appendTo(container)
               }
             },
             {
@@ -1661,7 +1650,6 @@ const Clients = ({
                 if (!annexes.length) return container.text('-')
                 const wrapper = $('<div></div>').addClass('d-flex flex-column gap-1')
                 annexes.forEach((annex, index) => {
-                  const row = $('<div></div>').addClass('d-flex align-items-center gap-1')
                   $('<a></a>')
                     .attr({
                       href: `/api/admin/storage/client-contract-annexes/${annex.id}/file`,
@@ -1669,11 +1657,9 @@ const Clients = ({
                       rel: 'noopener noreferrer',
                       title: 'Ver anexo'
                     })
-                    .addClass('btn btn-xs btn-soft-info px-2')
-                    .append($('<i></i>').addClass('mdi mdi-eye'))
-                    .appendTo(row)
-                  $('<span></span>').text(annex.file_name || `Anexo ${index + 1}`).appendTo(row)
-                  row.appendTo(wrapper)
+                    .addClass('text-primary fw-semibold text-decoration-underline')
+                    .text(annex.file_name || `Anexo ${index + 1}`)
+                    .appendTo(wrapper)
                 })
                 wrapper.appendTo(container)
               }
