@@ -221,6 +221,8 @@ const formatFileSize = (bytes = 0) => {
 }
 
 const fileIdentity = (file) => `${file.name}-${file.size}-${file.lastModified}`
+const contractFileUrl = (id, download = false) => `/api/admin/storage/client-contracts/${id}/file${download ? '?download=1' : ''}`
+const contractAnnexFileUrl = (id, download = false) => `/api/admin/storage/client-contract-annexes/${id}/file${download ? '?download=1' : ''}`
 
 const resolveQuickFilterValue = (quickFilter) => {
   switch (quickFilter) {
@@ -356,6 +358,7 @@ const Clients = ({
   const [selectedClientForTariff, setSelectedClientForTariff] = useState(null)
   const [selectedClientForContracts, setSelectedClientForContracts] = useState(null)
   const [isContractEditing, setIsContractEditing] = useState(false)
+  const [contractEditingData, setContractEditingData] = useState(null)
   const [contractAnnexFiles, setContractAnnexFiles] = useState([])
   const [userStatus, setUserStatus] = useState('1')
   const [notificationValue, setNotificationValue] = useState('')
@@ -753,6 +756,8 @@ const Clients = ({
   const selectedContractClientName = selectedClientForContracts?.display_name ?? selectedClientForContracts?.full_name ?? selectedClientForContracts?.business_name ?? ''
   const selectedContractClientDocument = selectedClientForContracts?.document_number ?? ''
   const contractsFilterValue = selectedContractClientId ? ['client_id', '=', selectedContractClientId] : ['client_id', '=', null]
+  const savedContractAnnexes = Array.isArray(contractEditingData?.annexes) ? contractEditingData.annexes : []
+  const hasSavedContractFile = !!(contractEditingData?.id && contractEditingData?.file_path)
 
   const getNotificationLabel = (value) => {
     const option = notificationOptions.find(current => getNotificationOptionValue(current) === `${value ?? ''}`)
@@ -923,6 +928,7 @@ const Clients = ({
     setRefValue(contractEndRef, '')
     setRefValue(contractFileRef, '')
     setRefValue(contractAnnexesRef, '')
+    setContractEditingData(null)
     setContractAnnexFiles([])
     setIsContractEditing(false)
   }
@@ -944,6 +950,56 @@ const Clients = ({
     setContractAnnexFiles((currentFiles) => currentFiles.filter((_, fileIndex) => fileIndex !== index))
   }
 
+  const onContractOfficialFileDeleteClicked = async () => {
+    const contractId = contractEditingData?.id || getRefValue(contractIdRef)
+    if (!contractId) return
+
+    const { isConfirmed } = await Swal.fire({
+      title: 'Eliminar documento oficial',
+      text: 'El documento oficial se quitara del contrato.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar'
+    })
+    if (!isConfirmed) return
+
+    const result = await storageClientContractsRest.deleteFile(contractId)
+    if (!result) return
+
+    setContractEditingData((current) => current ? {
+      ...current,
+      file_path: null,
+      file_name: null,
+      file_mime: null,
+    } : current)
+    refreshContractsGrid()
+  }
+
+  const onContractAnnexDeleteClicked = async (annex) => {
+    if (!annex?.id) return
+
+    const { isConfirmed } = await Swal.fire({
+      title: 'Eliminar anexo',
+      text: 'El anexo se quitara del contrato.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Si, eliminar',
+      cancelButtonText: 'Cancelar'
+    })
+    if (!isConfirmed) return
+
+    const result = await storageClientContractsRest.deleteAnnex(annex.id)
+    if (!result) return
+
+    setContractEditingData((current) => current ? {
+      ...current,
+      annexes: (current.annexes ?? []).filter((item) => item.id !== annex.id),
+      annexes_count: Math.max(0, Number(current.annexes_count ?? 1) - 1),
+    } : current)
+    refreshContractsGrid()
+  }
+
   const onContractsModalOpen = (data) => {
     setSelectedClientForContracts(data)
     clearContractForm()
@@ -963,6 +1019,10 @@ const Clients = ({
     if (!data?.id) return
 
     setIsContractEditing(true)
+    setContractEditingData({
+      ...data,
+      annexes: Array.isArray(data.annexes) ? data.annexes : []
+    })
     setRefValue(contractIdRef, data.id)
     setRefValue(contractCodeRef, data.contract_code ?? '')
     setRefValue(contractStartRef, data.starts_at ? data.starts_at.toString().slice(0, 10) : '')
@@ -1727,6 +1787,50 @@ const Clients = ({
         zIndex={1065}
       >
         <input ref={contractIdRef} type='hidden' />
+        <style>{`
+          .storage-contract-file-manager {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: #f8fafc;
+            padding: 12px;
+          }
+          .storage-contract-file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+          .storage-contract-file-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid #e9edf3;
+            border-radius: 8px;
+            background: #fff;
+            padding: 10px 12px;
+          }
+          .storage-contract-file-name {
+            min-width: 0;
+            font-weight: 600;
+            color: #344054;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .storage-contract-file-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .storage-contract-file-actions .btn {
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+          }
+        `}</style>
         <div className='row'>
           <div className='form-group col-md-4 mb-2'>
             <label className='form-label mb-1'>RUC Cliente</label>
@@ -1769,6 +1873,70 @@ const Clients = ({
               onChange={onContractAnnexesChanged}
             />
           </div>
+          {isContractEditing && <div className='col-12 mb-2'>
+            <div className='storage-contract-file-manager'>
+              <div className='row g-2'>
+                <div className='col-12 col-lg-6'>
+                  <div className='d-flex align-items-center justify-content-between mb-2'>
+                    <span className='fw-semibold'>Documento oficial guardado</span>
+                    <span className='badge bg-secondary'>{hasSavedContractFile ? '1' : '0'}</span>
+                  </div>
+                  {hasSavedContractFile ? (
+                    <div className='storage-contract-file-row'>
+                      <div className='storage-contract-file-name' title={contractEditingData.file_name || 'Documento oficial'}>
+                        <i className='mdi mdi-file-document-outline me-1 text-primary'></i>
+                        {contractEditingData.file_name || 'Documento oficial'}
+                      </div>
+                      <div className='storage-contract-file-actions'>
+                        <a className='btn btn-soft-info' href={contractFileUrl(contractEditingData.id)} target='_blank' rel='noopener noreferrer' title='Ver documento'>
+                          <i className='mdi mdi-eye'></i>
+                        </a>
+                        <a className='btn btn-soft-primary' href={contractFileUrl(contractEditingData.id, true)} title='Descargar documento'>
+                          <i className='mdi mdi-download'></i>
+                        </a>
+                        <button type='button' className='btn btn-soft-danger' title='Eliminar documento' onClick={onContractOfficialFileDeleteClicked}>
+                          <i className='mdi mdi-delete'></i>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className='text-muted border rounded bg-white px-2 py-2'>Sin documento oficial guardado</div>
+                  )}
+                </div>
+                <div className='col-12 col-lg-6'>
+                  <div className='d-flex align-items-center justify-content-between mb-2'>
+                    <span className='fw-semibold'>Anexos guardados</span>
+                    <span className='badge bg-secondary'>{savedContractAnnexes.length}</span>
+                  </div>
+                  {savedContractAnnexes.length > 0 ? (
+                    <div className='storage-contract-file-list'>
+                      {savedContractAnnexes.map((annex, index) => (
+                        <div key={`saved-annex-${annex.id ?? index}`} className='storage-contract-file-row'>
+                          <div className='storage-contract-file-name' title={annex.file_name || `Anexo ${index + 1}`}>
+                            <i className='mdi mdi-paperclip me-1 text-primary'></i>
+                            {annex.file_name || `Anexo ${index + 1}`}
+                          </div>
+                          <div className='storage-contract-file-actions'>
+                            <a className='btn btn-soft-info' href={contractAnnexFileUrl(annex.id)} target='_blank' rel='noopener noreferrer' title='Ver anexo'>
+                              <i className='mdi mdi-eye'></i>
+                            </a>
+                            <a className='btn btn-soft-primary' href={contractAnnexFileUrl(annex.id, true)} title='Descargar anexo'>
+                              <i className='mdi mdi-download'></i>
+                            </a>
+                            <button type='button' className='btn btn-soft-danger' title='Eliminar anexo' onClick={() => onContractAnnexDeleteClicked(annex)}>
+                              <i className='mdi mdi-delete'></i>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className='text-muted border rounded bg-white px-2 py-2'>Sin anexos guardados</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>}
           {contractAnnexFiles.length > 0 && <div className='col-12 mb-2'>
             <div className='border rounded p-2 bg-light'>
               <div className='d-flex justify-content-between align-items-center mb-2'>

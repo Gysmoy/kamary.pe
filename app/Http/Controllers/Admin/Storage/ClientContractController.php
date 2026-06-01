@@ -115,7 +115,7 @@ class ClientContractController extends BasicController
             $this->oldFilePath = null;
 
             try {
-                Storage::disk('public')->delete($oldFilePath);
+                $this->deleteStoredFile($oldFilePath);
             } catch (\Throwable $th) {
                 report($th);
             }
@@ -134,7 +134,7 @@ class ClientContractController extends BasicController
             })
             ->firstOrFail();
 
-        return $this->storedFileResponse($contract->file_path, $contract->file_name, $contract->file_mime);
+        return $this->storedFileResponse($contract->file_path, $contract->file_name, $contract->file_mime, $request->boolean('download'));
     }
 
     public function annexFile(Request $request, string $id)
@@ -147,7 +147,70 @@ class ClientContractController extends BasicController
             })
             ->firstOrFail();
 
-        return $this->storedFileResponse($annex->file_path, $annex->file_name, $annex->file_mime);
+        return $this->storedFileResponse($annex->file_path, $annex->file_name, $annex->file_mime, $request->boolean('download'));
+    }
+
+    public function deleteFile(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $contract = $this->storageContractQuery()
+                ->whereKey($id)
+                ->whereNotNull('status')
+                ->firstOrFail();
+
+            if (!$contract->file_path) {
+                throw new \Exception('El contrato no tiene documento oficial registrado');
+            }
+
+            $filePath = $contract->file_path;
+            $contract->update([
+                'file_path' => null,
+                'file_name' => null,
+                'file_mime' => null,
+                'updated_by' => Auth::id(),
+            ]);
+
+            $this->deleteStoredFile($filePath);
+
+            $response->status = 200;
+            $response->message = 'Documento oficial eliminado';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    public function deleteAnnex(Request $request, string $id)
+    {
+        $response = new Response();
+        try {
+            $annex = ClientContractAnnex::query()
+                ->whereKey($id)
+                ->whereNotNull('status')
+                ->whereHas('contract.client', function ($query) {
+                    StorageScope::applyClientScope($query);
+                })
+                ->firstOrFail();
+
+            $filePath = $annex->file_path;
+            $annex->update([
+                'status' => null,
+                'updated_by' => Auth::id(),
+            ]);
+
+            $this->deleteStoredFile($filePath);
+
+            $response->status = 200;
+            $response->message = 'Anexo eliminado';
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
     }
 
     public function delete(Request $request, string $id)
@@ -258,7 +321,7 @@ class ClientContractController extends BasicController
         ];
     }
 
-    private function storedFileResponse(?string $path, ?string $name = null, ?string $mime = null)
+    private function storedFileResponse(?string $path, ?string $name = null, ?string $mime = null, bool $download = false)
     {
         $resolved = $this->resolveStoredFile($path, $name);
         if (!$resolved) {
@@ -271,6 +334,14 @@ class ClientContractController extends BasicController
         }
 
         if ($resolved['disk'] === 'public') {
+            if ($download) {
+                return Storage::disk('public')->download(
+                    $resolved['path'],
+                    $name ?: basename($resolved['path']),
+                    $headers
+                );
+            }
+
             return Storage::disk('public')->response(
                 $resolved['path'],
                 $name ?: basename($resolved['path']),
@@ -278,7 +349,26 @@ class ClientContractController extends BasicController
             );
         }
 
+        if ($download) {
+            return response()->download($resolved['path'], $name ?: basename($resolved['path']), $headers);
+        }
+
         return response()->file($resolved['path'], $headers);
+    }
+
+    private function deleteStoredFile(?string $path): void
+    {
+        $resolved = $this->resolveStoredFile($path);
+        if (!$resolved) {
+            return;
+        }
+
+        if ($resolved['disk'] === 'public') {
+            Storage::disk('public')->delete($resolved['path']);
+            return;
+        }
+
+        @unlink($resolved['path']);
     }
 
     private function resolveStoredFile(?string $path, ?string $name = null): ?array

@@ -465,6 +465,8 @@ Route::middleware('auth')->group(function () {
                 Route::post('/client-contracts/paginate', [AdminStorageClientContractController::class, 'paginate']);
                 Route::get('/client-contracts/{id}/file', [AdminStorageClientContractController::class, 'file']);
                 Route::get('/client-contract-annexes/{id}/file', [AdminStorageClientContractController::class, 'annexFile']);
+                Route::delete('/client-contracts/{id}/file', [AdminStorageClientContractController::class, 'deleteFile']);
+                Route::delete('/client-contract-annexes/{id}', [AdminStorageClientContractController::class, 'deleteAnnex']);
                 Route::delete('/client-contracts/{id}', [AdminStorageClientContractController::class, 'delete']);
             });
 
