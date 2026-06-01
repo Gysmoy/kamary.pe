@@ -35,6 +35,9 @@ class BillingDocumentController extends BasicController
             ->selectRaw('source_service_order.issue_date as service_order_issue_date')
             ->selectRaw('source_service_order.scheduled_at as service_order_scheduled_at')
             ->selectRaw('source_service_order.created_at as service_order_created_at')
+            ->selectRaw("(SELECT ar.paid_amount FROM accounts_receivable ar WHERE ar.status IS NOT NULL AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_paid_amount")
+            ->selectRaw("(SELECT ar.balance_amount FROM accounts_receivable ar WHERE ar.status IS NOT NULL AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_balance_amount")
+            ->selectRaw("(SELECT ar.payment_status FROM accounts_receivable ar WHERE ar.status IS NOT NULL AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_payment_status")
             ->with([
                 'business:id,name,tax_number,soap_send_id,soap_type_id,soap_username,soap_password,detraction_account,payment_accounts,facturador_company_id,facturador_sync_status,status',
                 'branch:id,business_id,name,establishment_code,ubigeo,address,email,telephone,facturador_establishment_id,facturador_sync_status,facturador_sync_message,facturador_last_sync_at,series_factura,series_boleta,series_nota_credito,status',

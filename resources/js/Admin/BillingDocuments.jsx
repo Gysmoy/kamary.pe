@@ -41,6 +41,11 @@ const reportFilters = () => ({
 
 const formatMoney = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const formatDate = (value) => value?.toString?.().slice?.(0, 10) ?? ''
+const formatDateTime = (value) => {
+  if (!value) return ''
+  const text = value.toString()
+  return text.length > 10 ? text.slice(0, 19).replace('T', ' ') : text
+}
 const currencyLabel = (value) => `${value ?? ''}`.toUpperCase() === 'USD' ? 'Dolares' : 'Soles'
 const emptyBulkFilters = () => ({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false, detractionPercent: 12 })
 const billingControlStatusOptions = [
@@ -61,6 +66,24 @@ const rowClientName = (row) => row?.client?.full_name
   ?? row?.eventualClient?.business_name
   ?? row?.eventual_client?.business_name
   ?? '-'
+
+const rowClientDocument = (row) => row?.client?.document_number
+  ?? row?.eventualClient?.document_number
+  ?? row?.eventual_client?.document_number
+  ?? ''
+
+const rowClientLabel = (row) => {
+  const document = rowClientDocument(row)
+  const name = rowClientName(row)
+  return document ? `${document} | ${name}` : name
+}
+
+const rowCustomerEmail = (row) => row?.customer_email
+  ?? row?.client?.billing_email
+  ?? row?.client?.email
+  ?? row?.eventualClient?.email
+  ?? row?.eventual_client?.email
+  ?? ''
 
 const rowSourceCode = (row) => row?.commercial_order?.code
   ?? row?.commercialOrder?.code
@@ -85,7 +108,46 @@ const rowDescription = (row) => row?.items?.[0]?.description
   ?? row?.document_type
   ?? '-'
 
-const rowSunatLabel = (row) => row?.external_reference || row?.external_id || getBillingDocumentStatusLabel(row?.external_status)
+const normalizedStatus = (value) => `${value ?? ''}`.trim().toLowerCase()
+
+const rowSunatMeta = (row) => {
+  const status = normalizedStatus(row?.external_status || row?.local_status)
+  if (status.includes('acept') || status === 'accepted') return { label: 'Aceptado', className: 'badge bg-soft-success text-success border border-success' }
+  if (status.includes('observ') || status === 'observed') return { label: 'Observado', className: 'badge bg-soft-warning text-warning border border-warning' }
+  if (status.includes('rechaz') || status === 'rejected') return { label: 'Rechazado', className: 'badge bg-soft-danger text-danger border border-danger' }
+  if (status.includes('anulad') || status === 'cancelled') return { label: 'Anulado', className: 'badge bg-soft-danger text-danger border border-danger' }
+  if (status.includes('envi') || status === 'sent') return { label: 'Enviado', className: 'badge bg-soft-info text-info border border-info' }
+  return { label: getBillingDocumentStatusLabel(row?.external_status || row?.local_status), className: 'badge bg-soft-secondary text-secondary border border-secondary' }
+}
+
+const rowSunatLabel = (row) => rowSunatMeta(row).label
+
+const rowPaidAmount = (row) => toNumber(row?.receivable_paid_amount ?? row?.metadata?.paid_amount, 0)
+
+const rowBalanceAmount = (row) => {
+  if (row?.receivable_balance_amount !== null && row?.receivable_balance_amount !== undefined) return toNumber(row.receivable_balance_amount, 0)
+  if (row?.metadata?.balance_amount !== null && row?.metadata?.balance_amount !== undefined) return toNumber(row.metadata.balance_amount, 0)
+  return Math.max(0, roundMoney(toNumber(row?.total, 0) - rowPaidAmount(row)))
+}
+
+const rowPaymentMeta = (row) => {
+  const status = normalizedStatus(row?.receivable_payment_status)
+  const paid = rowPaidAmount(row)
+  const balance = rowBalanceAmount(row)
+  if (status === 'paid' || (toNumber(row?.total, 0) > 0 && balance <= 0)) return { label: 'Cancelado', className: 'badge bg-soft-success text-success border border-success' }
+  if (status === 'partial' || paid > 0) return { label: 'Parcial', className: 'badge bg-soft-info text-info border border-info' }
+  if (status === 'cancelled') return { label: 'Anulado', className: 'badge bg-soft-danger text-danger border border-danger' }
+  return { label: 'Pendiente', className: 'badge bg-soft-warning text-warning border border-warning' }
+}
+
+const rowPaymentLabel = (row) => rowPaymentMeta(row).label
+
+const rowIssuedAt = (row) => row?.sent_at
+  ?? row?.accepted_at
+  ?? row?.issue_date
+  ?? row?.created_at
+  ?? ''
+
 const rowDetractionPercent = (row) => {
   const metadataPercent = toNumber(row?.metadata?.detraction_percent, 0)
   if (metadataPercent > 0) return metadataPercent
@@ -464,6 +526,25 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     window.open(pdfPreview.downloadUrl, '_blank', 'noopener')
   }
 
+  const onEmailDocument = async (row) => {
+    const email = rowCustomerEmail(row)
+    if (!email) {
+      await showBlockedAction('Correo no disponible', 'El cliente no tiene un correo de facturacion registrado.')
+      return
+    }
+
+    const subject = `Comprobante ${row?.series ?? ''}-${row?.sequence ?? ''}`.trim()
+    const recipients = email.split(/[;,]+/).map(item => item.trim()).filter(Boolean)
+    const pdfUrl = `${window.location.origin}${billingDocumentsRest.downloadUrl(row.id, 'pdf')}`
+    const body = [
+      `Estimado cliente,`,
+      '',
+      `Adjuntamos el enlace de su comprobante ${row?.series ?? ''}-${row?.sequence ?? ''}.`,
+      pdfUrl,
+    ].join('\n')
+    window.location.href = `mailto:${recipients.map(item => encodeURIComponent(item)).join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  }
+
   const onPrintPreparedVoucher = async (row) => {
     if (canPreviewPdfDocument(row)) {
       onPreviewPdf(row)
@@ -664,15 +745,15 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     ['Serie', row => row.series ?? ''],
     ['Secuencia', row => row.sequence ?? ''],
     ['SUNAT', row => rowSunatLabel(row)],
-    ['E. Pago', row => row.payment_condition ?? ''],
-    ['Cliente', row => rowClientName(row)],
+    ['E. Pago', row => rowPaymentLabel(row)],
+    ['Cliente', row => rowClientLabel(row)],
     ['Moneda', row => currencyLabel(row.currency)],
     ['Gravada', row => Number(row.subtotal ?? 0)],
     ['IGV', row => Number(row.tax_amount ?? 0)],
     ['Importe', row => Number(row.total ?? 0)],
-    ['A cuenta', () => 0],
-    ['Saldo', () => 0],
-    ['Fecha Facturacion', row => formatDate(row.issue_date)],
+    ['A cuenta', row => rowPaidAmount(row)],
+    ['Saldo', row => rowBalanceAmount(row)],
+    ['Fecha Facturacion', row => formatDateTime(rowIssuedAt(row))],
   ]
   const exportRows = async (rows, fileName, type = 'xlsx') => {
     if (type === 'pdf') {
@@ -727,15 +808,32 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     return { label: getBillingDocumentStatusLabel(row?.local_status), className: 'badge bg-soft-secondary text-secondary' }
   }
 
+  const appendStorageButton = (container, { className, title, icon, text = '', onClick }) => {
+    const button = $('<button>')
+      .attr('type', 'button')
+      .attr('title', title)
+      .addClass(`btn btn-xs ${className} me-1 px-1 py-0 align-middle`)
+      .on('click', onClick)
+
+    button.append($('<i>').addClass(`${icon}${text ? ' me-1' : ''}`))
+    if (text) button.append(document.createTextNode(text))
+    container.append(button)
+  }
+
   const storageActionColumn = {
     caption: 'Acciones',
-    width: 90,
+    width: 245,
+    minWidth: 245,
     allowFiltering: false,
     allowExporting: false,
     allowSorting: false,
     cellTemplate: (container, { data }) => {
       const canPreviewPdf = canPreviewPdfDocument(data)
       const isPrepared = hasPreparedVoucher(data)
+      const canSync = canSyncDocument(data)
+      const canCancel = canCancelDocument(data)
+      const canDownload = canDownloadDocument(data)
+      container.addClass('text-nowrap')
       container.css({ textOverflow: 'unset', overflow: 'visible' })
 
       if (activeStorageTab === 'prefactures') {
@@ -745,6 +843,54 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
           icon: isPrepared ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-send-outline',
           onClick: () => isPrepared ? onPrintPreparedVoucher(data) : onPrepareVoucher(data)
         }))
+        return
+      }
+
+      if (activeStorageTab === 'issued') {
+        appendStorageButton(container, {
+          className: 'btn-outline-warning',
+          title: 'Ver validacion fiscal',
+          icon: 'mdi mdi-card-account-details-outline',
+          onClick: () => openReadinessModal(data, `Validacion fiscal - ${data.code}`)
+        })
+        appendStorageButton(container, {
+          className: 'btn-outline-warning',
+          title: 'Sincronizar estado',
+          icon: 'mdi mdi-refresh',
+          onClick: () => canSync ? onSyncStatus(data) : showBlockedAction('Sync no disponible', 'El comprobante aun no tiene datos remotos para sincronizar.')
+        })
+        appendStorageButton(container, {
+          className: canPreviewPdf ? 'btn-outline-primary' : 'btn-outline-secondary',
+          title: canPreviewPdf ? 'Previsualizar PDF' : 'PDF no disponible',
+          icon: canPreviewPdf ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-cancel-outline',
+          onClick: () => canPreviewPdf ? onPreviewPdf(data) : showBlockedAction('PDF no disponible', 'El comprobante todavia no tiene PDF disponible.')
+        })
+        appendStorageButton(container, {
+          className: canCancel ? 'btn-outline-danger' : 'btn-outline-secondary',
+          title: canCancel ? 'Anular comprobante' : 'Anulacion no disponible',
+          icon: canCancel ? 'mdi mdi-minus-circle' : 'mdi mdi-lock-outline',
+          onClick: () => canCancel ? onOpenCancel(data) : showBlockedAction('Anulacion no disponible', 'Solo puedes anular comprobantes aceptados que no sean notas de credito.')
+        })
+        appendStorageButton(container, {
+          className: rowCustomerEmail(data) ? 'btn-outline-success' : 'btn-outline-secondary',
+          title: rowCustomerEmail(data) ? 'Enviar por correo' : 'Correo no disponible',
+          icon: 'mdi mdi-email-outline',
+          onClick: () => onEmailDocument(data)
+        })
+        appendStorageButton(container, {
+          className: canDownload ? 'btn-outline-success' : 'btn-outline-secondary',
+          title: canDownload ? 'Descargar XML' : 'XML no disponible',
+          icon: canDownload ? 'mdi mdi-file-code-outline' : 'mdi mdi-file-cancel-outline',
+          text: 'XML',
+          onClick: () => canDownload ? onDownload(data, 'xml') : showBlockedAction('XML no disponible', 'El comprobante todavia no tiene XML disponible.')
+        })
+        appendStorageButton(container, {
+          className: canDownload ? 'btn-outline-warning' : 'btn-outline-secondary',
+          title: canDownload ? 'Descargar CDR' : 'CDR no disponible',
+          icon: canDownload ? 'mdi mdi-file-document-outline' : 'mdi mdi-file-cancel-outline',
+          text: 'CDR',
+          onClick: () => canDownload ? onDownload(data, 'cdr') : showBlockedAction('CDR no disponible', 'El comprobante todavia no tiene CDR disponible.')
+        })
         return
       }
 
@@ -804,16 +950,34 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       storageActionColumn,
       { dataField: 'series', caption: 'Serie', width: 90 },
       { dataField: 'sequence', caption: 'Secuencia', width: 110 },
-      { caption: 'SUNAT', width: 140, allowSorting: false, calculateCellValue: rowSunatLabel },
-      { dataField: 'payment_condition', caption: 'E. Pago', width: 110 },
-      { caption: 'Cliente', minWidth: 220, allowSorting: false, calculateCellValue: rowClientName },
+      {
+        caption: 'SUNAT',
+        width: 110,
+        allowSorting: false,
+        calculateCellValue: rowSunatLabel,
+        cellTemplate: (container, { data }) => {
+          const badge = rowSunatMeta(data)
+          container.append($('<span>').addClass(badge.className).text(badge.label))
+        }
+      },
+      {
+        caption: 'E. Pago',
+        width: 110,
+        allowSorting: false,
+        calculateCellValue: rowPaymentLabel,
+        cellTemplate: (container, { data }) => {
+          const badge = rowPaymentMeta(data)
+          container.append($('<span>').addClass(badge.className).text(badge.label))
+        }
+      },
+      { caption: 'Cliente', minWidth: 360, allowSorting: false, calculateCellValue: rowClientLabel },
       { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (data) => currencyLabel(data.currency) },
       { dataField: 'subtotal', caption: 'Gravada', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
       { dataField: 'tax_amount', caption: 'IGV', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
       { dataField: 'total', caption: 'Importe', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { caption: 'A cuenta', width: 100, allowSorting: false, calculateCellValue: () => '0.00' },
-      { caption: 'Saldo', width: 100, allowSorting: false, calculateCellValue: () => '0.00' },
-      { dataField: 'issue_date', caption: 'Fecha Facturacion', dataType: 'date', width: 150 },
+      { caption: 'A cuenta', width: 105, dataType: 'number', allowSorting: false, calculateCellValue: rowPaidAmount, format: { type: 'fixedPoint', precision: 2 } },
+      { caption: 'Saldo', width: 105, dataType: 'number', allowSorting: false, calculateCellValue: rowBalanceAmount, format: { type: 'fixedPoint', precision: 2 } },
+      { caption: 'Fecha Facturacion', dataType: 'datetime', width: 170, allowSorting: false, calculateCellValue: rowIssuedAt, customizeText: ({ value }) => formatDateTime(value) },
     ],
     cancelled: [
       storageActionColumn,
