@@ -1274,20 +1274,21 @@ class FacturadorPro5Service
         $this->pdfLabelValue($commands, 'FECHA VENCIMIENTO', $this->formatPdfDate($document->due_date), 388.38, 683, 10, 70, 1, 88);
 
         $columns = [
-            ['CODIGO', 50],
-            ['DESCRIPCION', 200],
-            ['SERV / M3', 45],
-            ['P. SIN IGV', 65],
-            ['P. CON IGV', 70],
-            ['IMPORTE', 80.24],
+            ['CODIGO', 58, 'L'],
+            ['DESCRIPCION', 210, 'L'],
+            ['SERV / M3', 55, 'R'],
+            ['P. SIN IGV', 65, 'R'],
+            ['P. CON IGV', 72, 'R'],
+            ['IMPORTE', 50.24, 'R'],
         ];
         $this->pdfTableHeader($commands, $margin, 585, $columns);
-        $y = 563;
-        $items = $document->items->take(6);
+        $y = 548;
+        $rowHeight = 40;
+        $items = $document->items->where('status', true)->take(6);
         if ($items->isEmpty()) {
             foreach ($fallbackLines as $index => $line) {
                 if ($index < 3 || trim($line) === '') continue;
-                $this->pdfText($commands, $line, 48, $y, 8);
+                $this->pdfCellText($commands, $line, 46, $y, 500, 8, 'L', 1);
                 $y -= 13;
             }
         } else {
@@ -1297,15 +1298,21 @@ class FacturadorPro5Service
                 $lineTotal = (float) $item->total;
                 $unitPrice = (float) $item->unit_price;
                 $grossUnit = $quantity > 0 ? $lineTotal / $quantity : $lineTotal;
-                $rowBottom = $y - 34;
+                $rowBottom = $y - $rowHeight;
                 $this->pdfLine($commands, $margin, $rowBottom, $margin + $width, $rowBottom);
-                $this->pdfText($commands, $item->item_code ?: 'COD001', 46.52, $y, 8);
-                $this->pdfWrappedText($commands, $description, 96.74, $y, 195, 8, 10, 2);
-                $this->pdfText($commands, number_format($quantity, 2, '.', ''), 297.64, $y, 8);
-                $this->pdfText($commands, number_format($unitPrice, 4, '.', ''), 342.84, $y, 8);
-                $this->pdfText($commands, number_format($grossUnit, 2, '.', ''), 408.13, $y, 8);
-                $this->pdfText($commands, number_format($lineTotal, 2, '.', ''), 478.44, $y, 8);
-                $y -= 34;
+                $cursor = $margin;
+                $this->pdfCellText($commands, $item->item_code ?: 'COD001', $cursor, $y, $columns[0][1], 7.2, 'L', 2);
+                $cursor += $columns[0][1];
+                $this->pdfCellText($commands, $description, $cursor, $y, $columns[1][1], 7.2, 'L', 2);
+                $cursor += $columns[1][1];
+                $this->pdfCellText($commands, number_format($quantity, 2, '.', ''), $cursor, $y, $columns[2][1], 7.2, 'R');
+                $cursor += $columns[2][1];
+                $this->pdfCellText($commands, number_format($unitPrice, 4, '.', ''), $cursor, $y, $columns[3][1], 7.2, 'R');
+                $cursor += $columns[3][1];
+                $this->pdfCellText($commands, number_format($grossUnit, 2, '.', ''), $cursor, $y, $columns[4][1], 7.2, 'R');
+                $cursor += $columns[4][1];
+                $this->pdfCellText($commands, number_format($lineTotal, 2, '.', ''), $cursor, $y, $columns[5][1], 7.2, 'R');
+                $y -= $rowHeight;
             }
         }
 
@@ -1360,15 +1367,34 @@ class FacturadorPro5Service
 
     private function pdfTableHeader(array &$commands, float $x, float $y, array $columns): void
     {
-        $height = 22;
+        $height = 24;
         $this->pdfRect($commands, $x, $y - $height, 510.24, $height);
         $cursor = $x;
-        foreach ($columns as [$label, $width]) {
-            $this->pdfText($commands, $label, $cursor + 4, $y - 14, 7.5, 'F2');
+        foreach ($columns as $column) {
+            [$label, $width] = $column;
+            $align = $column[2] ?? 'L';
+            $this->pdfCellText($commands, $label, $cursor, $y - 14, $width, 6.8, $align, 1, 8, 'F2');
             if ($cursor > $x) {
                 $this->pdfLine($commands, $cursor, $y, $cursor, $y - $height);
             }
             $cursor += $width;
+        }
+    }
+
+    private function pdfCellText(array &$commands, string $text, float $x, float $y, float $width, float $size = 8, string $align = 'L', int $maxLines = 1, float $lineHeight = 9, string $font = 'F1'): void
+    {
+        $availableWidth = max(4, $width - 7);
+        $textX = $x + 3.5;
+
+        if ($align !== 'L' || $maxLines <= 1) {
+            $line = $this->pdfFitText($text, $availableWidth, $size);
+            $this->pdfText($commands, $line, $textX, $y, $size, $font, $availableWidth, $align);
+            return;
+        }
+
+        $lines = $this->pdfWrap($text, $availableWidth, $size, $maxLines);
+        foreach ($lines as $index => $line) {
+            $this->pdfText($commands, $this->pdfFitText($line, $availableWidth, $size), $textX, $y - ($index * $lineHeight), $size, $font);
         }
     }
 
@@ -1457,6 +1483,25 @@ class FacturadorPro5Service
         }
 
         return $lines;
+    }
+
+    private function pdfFitText(string $text, float $width, float $size): string
+    {
+        $text = trim(preg_replace('/\s+/', ' ', $this->pdfTextValue($text)));
+        if ($text === '') {
+            return '-';
+        }
+
+        if ($this->pdfApproxTextWidth($text, $size) <= $width) {
+            return $text;
+        }
+
+        $suffix = '...';
+        while (mb_strlen($text) > 1 && $this->pdfApproxTextWidth($text . $suffix, $size) > $width) {
+            $text = mb_substr($text, 0, -1);
+        }
+
+        return rtrim($text) . $suffix;
     }
 
     private function pdfApproxTextWidth(string $text, float $size): float

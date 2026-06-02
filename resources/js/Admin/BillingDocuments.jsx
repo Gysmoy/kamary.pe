@@ -120,6 +120,7 @@ const rowDocumentNumber = (row) => {
   if (series && sequence) return `${series}-${sequence}`
   return series || sequence || cleanText(row?.code, 'comprobante')
 }
+const rowHasPreparedVoucher = (row) => !!(`${row?.series ?? ''}`.trim() && `${row?.sequence ?? ''}`.trim())
 
 const rowBillingCycleLabel = (row) => {
   const raw = cleanText(rowDescription(row))
@@ -240,6 +241,9 @@ const normalizedStatus = (value) => `${value ?? ''}`.trim().toLowerCase()
 
 const rowSunatMeta = (row) => {
   const status = normalizedStatus(row?.external_status || row?.local_status)
+  if (row?.local_status === 'pending' && rowHasPreparedVoucher(row)) {
+    return { label: 'Pendiente', className: 'badge bg-soft-warning text-warning border border-warning' }
+  }
   if (status.includes('acept') || status === 'accepted') return { label: 'Aceptado', className: 'badge bg-soft-success text-success border border-success' }
   if (status.includes('observ') || status === 'observed') return { label: 'Observado', className: 'badge bg-soft-warning text-warning border border-warning' }
   if (status.includes('rechaz') || status === 'rejected') return { label: 'Rechazado', className: 'badge bg-soft-danger text-danger border border-danger' }
@@ -272,6 +276,7 @@ const rowPaymentLabel = (row) => rowPaymentMeta(row).label
 
 const rowIssuedAt = (row) => row?.sent_at
   ?? row?.accepted_at
+  ?? row?.updated_at
   ?? row?.issue_date
   ?? row?.created_at
   ?? ''
@@ -296,7 +301,17 @@ const combineFilters = (filters) => filters.filter(Boolean).reduce((carry, filte
 const tabFilter = (tab) => {
   const notCreditNote = ['document_type', '<>', 'Nota de credito']
   if (tab === 'issued') {
-    return [[['local_status', '=', 'sent'], 'or', ['local_status', '=', 'accepted'], 'or', ['local_status', '=', 'observed'], 'or', ['local_status', '=', 'rejected']], 'and', notCreditNote]
+    return [[
+      ['local_status', '=', 'sent'],
+      'or',
+      ['local_status', '=', 'accepted'],
+      'or',
+      ['local_status', '=', 'observed'],
+      'or',
+      ['local_status', '=', 'rejected'],
+      'or',
+      "raw:(billing_documents.local_status = 'pending' AND billing_documents.series IS NOT NULL AND billing_documents.series <> '' AND billing_documents.sequence IS NOT NULL AND billing_documents.sequence <> '')",
+    ], 'and', notCreditNote]
   }
   if (tab === 'cancelled') return [['local_status', '=', 'cancelled'], 'and', notCreditNote]
   if (tab === 'credit-notes') return ['document_type', '=', 'Nota de credito']
@@ -312,13 +327,13 @@ const tabFilter = (tab) => {
 }
 
 const buildStorageFilter = (tab, filters) => {
-  const dateField = tab === 'prefactures' ? 'source_service_order.issue_date' : 'created_at'
+  const dateField = tab === 'prefactures' ? 'source_service_order.issue_date' : 'updated_at'
   return combineFilters([
     tabFilter(tab),
     filters.businessId ? ['business_id', '=', Number(filters.businessId)] : null,
     filters.clientId ? ['client_id', '=', Number(filters.clientId)] : null,
     filters.startDate ? [dateField, '>=', filters.startDate] : null,
-    filters.endDate ? [dateField, '<=', dateField === 'created_at' ? `${filters.endDate} 23:59:59` : filters.endDate] : null,
+    filters.endDate ? [dateField, '<=', dateField === 'updated_at' ? `${filters.endDate} 23:59:59` : filters.endDate] : null,
   ])
 }
 
@@ -425,7 +440,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     return ['accepted', 'observed', 'cancelled'].includes(row.local_status) || !!row.external_id
   }
 
-  const hasPreparedVoucher = (row) => !!(`${row?.series ?? ''}`.trim() && `${row?.sequence ?? ''}`.trim())
+  const hasPreparedVoucher = rowHasPreparedVoucher
 
   const canPreviewPdfDocument = (row) => {
     if (!row) return false
@@ -850,7 +865,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     const selectedLabel = selectedRows.length === 1 ? selectedRows[0]?.code : `${bulkSelected.length} prefacturas seleccionadas`
     const { isConfirmed } = await Swal.fire({
       title: selectedRows.length === 1 ? 'Facturar prefactura' : 'Facturar en bloque',
-      text: `Se asignara serie y numero a ${selectedLabel}.`,
+      text: `Se asignara serie y numero a ${selectedLabel} y se enviara al conector configurado.`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonText: 'Facturar',
@@ -858,13 +873,15 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     })
     if (!isConfirmed) return
     for (const row of selectedRows) {
-      const result = await billingDocumentsRest.prepareVoucher(row.id, {
+      const prepared = await billingDocumentsRest.prepareVoucher(row.id, {
         detraction_enabled: bulkFilters.detraction,
         detraction_percent: bulkFilters.detraction ? bulkDetractionPercent : null,
         detraction_amount: bulkFilters.detraction ? rowDetractionAmount(row, bulkDetractionPercent) : null,
         detraction_code: '022',
         detraction_payment_method_code: '001',
       })
+      if (!prepared) return
+      const result = await billingDocumentsRest.issue(row.id)
       if (!result) return
     }
     $(bulkModalRef.current).modal('hide')
@@ -1048,6 +1065,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     { dataField: 'client_id', caption: 'Cliente', dataType: 'number', visible: false, showInColumnChooser: false },
     { dataField: 'source_service_order.issue_date', caption: 'F. OS', dataType: 'date', visible: false, showInColumnChooser: false },
     { dataField: 'created_at', caption: 'F. Registro', dataType: 'datetime', visible: false, showInColumnChooser: false },
+    { dataField: 'updated_at', caption: 'F. Facturacion', dataType: 'datetime', visible: false, showInColumnChooser: false },
   ]
 
   const withStorageFilterFields = (columns) => {
@@ -1113,7 +1131,17 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       { dataField: 'total', caption: 'Importe', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
       { caption: 'A cuenta', width: 105, dataType: 'number', allowSorting: false, calculateCellValue: rowPaidAmount, format: { type: 'fixedPoint', precision: 2 } },
       { caption: 'Saldo', width: 105, dataType: 'number', allowSorting: false, calculateCellValue: rowBalanceAmount, format: { type: 'fixedPoint', precision: 2 } },
-      { caption: 'Fecha Facturacion', dataType: 'datetime', width: 170, allowSorting: false, calculateCellValue: rowIssuedAt, customizeText: ({ value }) => formatDateTime(value) },
+      {
+        dataField: 'updated_at',
+        caption: 'Fecha Facturacion',
+        dataType: 'datetime',
+        width: 170,
+        sortOrder: 'desc',
+        allowFiltering: false,
+        cellTemplate: (container, { data }) => {
+          container.text(formatDateTime(rowIssuedAt(data)))
+        },
+      },
     ],
     cancelled: [
       storageActionColumn,
