@@ -183,6 +183,9 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const isServiceOrderContext = !isStorageOrderList
   const storageServiceTypeOptions = services.filter(service => storageServiceTypeNames.some(name => normalizeStorageText(name) === normalizeStorageText(service.name)))
   const serviceMap = Object.fromEntries(services.map(row => [`${row.id}`, row]))
+  const defaultStorageBusiness = isStorageOrderList ? findDefaultStorageBusiness(businesses) : null
+  const storageGeneralBusinessId = isStorageGeneral ? (defaultStorageBusiness?.id ? `${defaultStorageBusiness.id}` : selectedBusinessId) : selectedBusinessId
+  const storageGeneralBusinessName = isStorageGeneral ? (defaultStorageBusiness?.name ?? defaultStorageBusiness?.trade_name ?? 'Kamary Medicals') : ''
 
   const loadStorageCatalog = async () => {
     if (!isStorageService) return { warehouseRows: [], locationRows: [] }
@@ -447,7 +450,9 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     observationsRef.current.value = data?.observations ?? ''
     setDetractionEnabled(Boolean(data?.detraction_enabled ?? (data?.items ?? []).some(row => Number(row.detraction_percent || 0) > 0)))
     const defaultBusiness = isStorageOrderList ? findDefaultStorageBusiness(businesses) : businesses[0]
-    const nextBusinessId = data?.business_id ? `${data.business_id}` : (selectedBusinessId || (defaultBusiness?.id ? `${defaultBusiness.id}` : ''))
+    const nextBusinessId = isStorageGeneral
+      ? (defaultBusiness?.id ? `${defaultBusiness.id}` : selectedBusinessId)
+      : (data?.business_id ? `${data.business_id}` : (selectedBusinessId || (defaultBusiness?.id ? `${defaultBusiness.id}` : '')))
     setSelectedBusinessId(nextBusinessId)
     setSelectedClientId(data?.client_id ? `${data.client_id}` : '')
     const branchRows = await loadBranches(nextBusinessId, data?.business_branch_id ?? selectedBranchId)
@@ -654,8 +659,10 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
       showSaveSuccess(result)
       return
     }
-    const businessId = currentSelectValue(businessSelectRef, selectedBusinessId)
-    const branchId = currentSelectValue(branchSelectRef, selectedBranchId)
+    const businessId = isStorageGeneral
+      ? currentSelectValue(businessSelectRef, storageGeneralBusinessId)
+      : currentSelectValue(businessSelectRef, selectedBusinessId)
+    let branchId = currentSelectValue(branchSelectRef, selectedBranchId)
     const clientId = normalizeClientIdValue(currentSelectValue(clientSelectRef, selectedClientId))
     const itemPayload = items
       .filter(row => row.service_id)
@@ -671,6 +678,11 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         total: row.total,
       }))
     if (isStorageGeneral) {
+      if (businessId && !branchId) {
+        const branchRows = await loadBranches(businessId)
+        branchId = branchRows[0]?.id ? `${branchRows[0].id}` : ''
+        if (branchId) setSelectedBranchId(branchId)
+      }
       if (!businessId || !branchId || !clientId || !expectedDocumentTypeRef.current.value || !currencyRef.current.value) {
         Swal.fire('Formulario incompleto', 'Completa empresa, cliente, tipo documento y moneda.', 'warning')
         return
@@ -1647,6 +1659,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         <input ref={billingStatusRef} hidden />
         <input ref={taxAmountRef} type='number' hidden />
         <textarea ref={observationsRef} hidden />
+        <input ref={businessSelectRef} type='hidden' value={storageGeneralBusinessId} readOnly />
         <input ref={branchSelectRef} type='hidden' value={selectedBranchId} readOnly />
 
         <div className='row g-3'>
@@ -1655,20 +1668,12 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           </div>
           <div className='col-12 col-md-6 col-xl-3'>
             <label className='form-label'>Empresa</label>
-            <select
-              ref={businessSelectRef}
-              className='form-select'
-              value={selectedBusinessId}
-              onChange={async (e) => {
-                setSelectedBusinessId(e.target.value)
-                const branchRows = await loadBranches(e.target.value)
-                setSelectedBranchId(branchRows[0]?.id ? `${branchRows[0].id}` : '')
-              }}
-              required
-            >
-              <option value=''>Seleccione</option>
-              {businesses.map(row => <option key={`general-order-business-${row.id}`} value={row.id}>{row.name}</option>)}
-            </select>
+            <input
+              className='form-control bg-light'
+              value={storageGeneralBusinessName}
+              disabled
+              readOnly
+            />
           </div>
           <div className='col-12 col-md-6 col-xl-5'>
             <label className='form-label'>Cliente</label>
