@@ -1002,12 +1002,15 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     return { label: getBillingDocumentStatusLabel(row?.local_status), className: 'badge bg-soft-secondary text-secondary' }
   }
 
-  const appendStorageButton = (container, { className, title, icon, text = '', onClick }) => {
+  const appendStorageButton = (container, { className, title, icon, text = '', onClick, disabled = false }) => {
     const button = $('<button>')
       .attr('type', 'button')
       .attr('title', title)
-      .addClass(`btn btn-xs ${className} px-1 py-0 align-middle storage-billing-action-btn`)
-      .on('click', onClick)
+      .attr('aria-disabled', disabled ? 'true' : 'false')
+      .prop('disabled', disabled)
+      .addClass(`btn btn-xs ${disabled ? 'btn-outline-secondary' : className} px-1 py-0 align-middle storage-billing-action-btn`)
+
+    if (!disabled && onClick) button.on('click', onClick)
 
     button.append($('<i>').addClass(`${icon}${text ? ' me-1' : ''}`))
     if (text) button.append(document.createTextNode(text))
@@ -1043,57 +1046,68 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       if (activeStorageTab === 'issued') {
         const canRetryIssue = canRetryIssueDocument(data)
         const canDownloadFiscalFiles = canDownload && !isDemoProviderRow(data)
+        const canEmail = canPreviewPdf
+        const retryTitle = canRetryIssue
+          ? 'Reintentar envio a SUNAT'
+          : (isDemoProviderRow(data)
+            ? 'Envio a SUNAT deshabilitado en modo demo'
+            : (data?.local_status === 'pending' ? 'Envio a SUNAT no disponible' : 'Comprobante ya emitido o cerrado'))
         appendStorageButton(actions, {
           className: 'btn-outline-warning',
           title: 'Ver validacion fiscal',
           icon: 'mdi mdi-card-account-details-outline',
           onClick: () => openReadinessModal(data, `Validacion fiscal - ${data.code}`)
         })
-        if (canRetryIssue) {
-          appendStorageButton(actions, {
-            className: 'btn-outline-success',
-            title: 'Reintentar envio a SUNAT',
-            icon: 'mdi mdi-send',
-            onClick: () => onIssue(data)
-          })
-        }
         appendStorageButton(actions, {
-          className: 'btn-outline-warning',
-          title: 'Sincronizar estado',
-          icon: 'mdi mdi-refresh',
-          onClick: () => canSync ? onSyncStatus(data) : showBlockedAction('Sync no disponible', 'El comprobante aun no tiene datos remotos para sincronizar.')
+          className: 'btn-outline-success',
+          title: retryTitle,
+          icon: 'mdi mdi-send',
+          disabled: !canRetryIssue,
+          onClick: () => onIssue(data)
         })
         appendStorageButton(actions, {
-          className: canPreviewPdf ? 'btn-outline-primary' : 'btn-outline-secondary',
+          className: 'btn-outline-warning',
+          title: canSync ? 'Sincronizar estado' : 'Sync no disponible',
+          icon: 'mdi mdi-refresh',
+          disabled: !canSync,
+          onClick: () => onSyncStatus(data)
+        })
+        appendStorageButton(actions, {
+          className: 'btn-outline-primary',
           title: canPreviewPdf ? 'Previsualizar PDF' : 'PDF no disponible',
           icon: canPreviewPdf ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-cancel-outline',
-          onClick: () => canPreviewPdf ? onPreviewPdf(data) : showBlockedAction('PDF no disponible', 'El comprobante todavia no tiene PDF disponible.')
+          disabled: !canPreviewPdf,
+          onClick: () => onPreviewPdf(data)
         })
         appendStorageButton(actions, {
           className: 'btn-outline-danger',
           title: canCancel ? 'Anular comprobante' : 'Anulacion no disponible',
           icon: 'mdi mdi-minus-circle',
-          onClick: () => canCancel ? onOpenCancel(data) : showBlockedAction('Anulacion no disponible', 'Solo puedes anular comprobantes aceptados que no sean notas de credito.')
+          disabled: !canCancel,
+          onClick: () => onOpenCancel(data)
         })
         appendStorageButton(actions, {
-          className: rowCustomerEmail(data) ? 'btn-outline-success' : 'btn-outline-secondary',
-          title: rowCustomerEmail(data) ? 'Enviar por correo' : 'Correo no disponible',
+          className: rowCustomerEmail(data) ? 'btn-outline-success' : 'btn-outline-warning',
+          title: canEmail ? (rowCustomerEmail(data) ? 'Enviar por correo' : 'Enviar por correo sin destinatario guardado') : 'Correo no disponible',
           icon: 'mdi mdi-email-outline',
+          disabled: !canEmail,
           onClick: () => onEmailDocument(data)
         })
         appendStorageButton(actions, {
-          className: canDownloadFiscalFiles ? 'btn-outline-success' : 'btn-outline-secondary',
+          className: 'btn-outline-success',
           title: canDownloadFiscalFiles ? 'Descargar XML' : 'XML no disponible',
           icon: canDownloadFiscalFiles ? 'mdi mdi-file-code-outline' : 'mdi mdi-file-cancel-outline',
           text: 'XML',
-          onClick: () => canDownloadFiscalFiles ? onDownload(data, 'xml') : showBlockedAction('XML no disponible', isDemoProviderRow(data) ? 'El comprobante fue generado en modo demo y no tiene XML fiscal real.' : 'El comprobante todavia no tiene XML disponible.')
+          disabled: !canDownloadFiscalFiles,
+          onClick: () => onDownload(data, 'xml')
         })
         appendStorageButton(actions, {
-          className: canDownloadFiscalFiles ? 'btn-outline-warning' : 'btn-outline-secondary',
+          className: 'btn-outline-warning',
           title: canDownloadFiscalFiles ? 'Descargar CDR' : 'CDR no disponible',
           icon: canDownloadFiscalFiles ? 'mdi mdi-file-document-outline' : 'mdi mdi-file-cancel-outline',
           text: 'CDR',
-          onClick: () => canDownloadFiscalFiles ? onDownload(data, 'cdr') : showBlockedAction('CDR no disponible', isDemoProviderRow(data) ? 'El comprobante fue generado en modo demo y no tiene CDR fiscal real.' : 'El comprobante todavia no tiene CDR disponible.')
+          disabled: !canDownloadFiscalFiles,
+          onClick: () => onDownload(data, 'cdr')
         })
         return
       }
@@ -1389,6 +1403,13 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       }
       .storage-billing-action-btn {
         gap: 2px;
+      }
+      .storage-billing-action-btn:disabled {
+        background: #f8fafc;
+        border-color: #d1d5db;
+        color: #9ca3af;
+        cursor: not-allowed;
+        opacity: 1;
       }
     `}</style>}
     {isStorageBilling && <div className='row g-3 mb-3'>
