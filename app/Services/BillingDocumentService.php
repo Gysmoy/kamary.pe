@@ -746,6 +746,10 @@ class BillingDocumentService
     private function applyProviderSuccess(BillingDocument $document, array $payload, array $providerResponse, string $eventType, string $endpoint): BillingDocument
     {
         $localStatus = (string) ($providerResponse['local_status'] ?? 'accepted');
+        if ($this->acceptedWithoutFiscalXml($localStatus, $providerResponse)) {
+            throw new \RuntimeException('El proveedor marco el comprobante como aceptado pero no devolvio XML fiscal. Revisa la configuracion del facturador antes de volver a emitir.');
+        }
+
         $sentAt = in_array($localStatus, ['sent', 'accepted', 'observed', 'rejected'], true) ? now() : null;
         $acceptedAt = $localStatus === 'accepted' ? now() : null;
 
@@ -775,6 +779,15 @@ class BillingDocumentService
         $this->syncSourceBillingStatus($fresh);
 
         return $fresh->fresh(['business', 'branch', 'warehouse', 'client', 'eventualClient', 'commercialOrder', 'serviceOrder', 'referenceDocument', 'items', 'events', 'creator', 'updater']);
+    }
+
+    private function acceptedWithoutFiscalXml(string $localStatus, array $providerResponse): bool
+    {
+        $mode = mb_strtolower(trim((string) ($providerResponse['mode'] ?? config('facturadorpro5.mode', 'demo'))));
+
+        return $localStatus === 'accepted'
+            && $mode !== 'demo'
+            && trim((string) Arr::get($providerResponse, 'links.xml', '')) === '';
     }
 
     private function resolveSourceBranchId($business, $branchId, $warehouse = null): int

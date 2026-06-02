@@ -249,6 +249,8 @@ const EmailTagsInput = ({ value, onChange, placeholder }) => {
 const normalizedStatus = (value) => `${value ?? ''}`.trim().toLowerCase()
 
 const rowSunatMeta = (row) => {
+  if (isDemoProviderRow(row)) return { label: 'Demo', className: 'badge bg-soft-warning text-warning border border-warning' }
+
   const status = normalizedStatus(row?.external_status || row?.local_status)
   if (row?.local_status === 'pending' && rowHasPreparedVoucher(row)) {
     return { label: 'Pendiente', className: 'badge bg-soft-warning text-warning border border-warning' }
@@ -300,6 +302,11 @@ const rowDetractionAmount = (row, percent) => {
   const metadataAmount = toNumber(row?.metadata?.detraction_amount, 0)
   if (metadataAmount > 0) return roundMoney(metadataAmount)
   return roundMoney(toNumber(row?.total, 0) * toNumber(percent, 0) / 100)
+}
+const isDemoProviderRow = (row) => {
+  const currentMode = `${row?.fiscal_readiness?.mode ?? ''}`.trim().toLowerCase()
+  if ((row?.local_status ?? 'pending') === 'pending' && currentMode) return currentMode === 'demo'
+  return `${row?.provider_mode ?? currentMode}`.trim().toLowerCase() === 'demo'
 }
 
 const combineFilters = (filters) => filters.filter(Boolean).reduce((carry, filter) => {
@@ -451,7 +458,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
 
   const hasPreparedVoucher = rowHasPreparedVoucher
 
-  const canRetryIssueDocument = (row) => row?.local_status === 'pending' && hasPreparedVoucher(row)
+  const canRetryIssueDocument = (row) => row?.local_status === 'pending' && hasPreparedVoucher(row) && !isDemoProviderRow(row)
 
   const canPreviewPdfDocument = (row) => {
     if (!row) return false
@@ -574,6 +581,11 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   }
 
   const onIssue = async (row) => {
+    if (isDemoProviderRow(row)) {
+      await showBlockedAction('Facturador en modo demo', 'No se enviara a SUNAT hasta configurar el facturador en produccion.')
+      return
+    }
+
     if (row?.fiscal_readiness?.can_issue === false) {
       await openReadinessModal(row, 'El comprobante no está listo para emitir')
       return
@@ -886,6 +898,11 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       return
     }
     const selectedRows = selectedBulkRows
+    if (selectedRows.some(isDemoProviderRow)) {
+      await showBlockedAction('Facturador en modo demo', 'No se enviara a SUNAT hasta configurar el facturador en produccion.')
+      return
+    }
+
     const selectedLabel = selectedRows.length === 1 ? selectedRows[0]?.code : `${bulkSelected.length} prefacturas seleccionadas`
     const { isConfirmed } = await Swal.fire({
       title: selectedRows.length === 1 ? 'Facturar prefactura' : 'Facturar en bloque',
@@ -1025,6 +1042,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
 
       if (activeStorageTab === 'issued') {
         const canRetryIssue = canRetryIssueDocument(data)
+        const canDownloadFiscalFiles = canDownload && !isDemoProviderRow(data)
         appendStorageButton(actions, {
           className: 'btn-outline-warning',
           title: 'Ver validacion fiscal',
@@ -1064,18 +1082,18 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
           onClick: () => onEmailDocument(data)
         })
         appendStorageButton(actions, {
-          className: canDownload ? 'btn-outline-success' : 'btn-outline-secondary',
-          title: canDownload ? 'Descargar XML' : 'XML no disponible',
-          icon: canDownload ? 'mdi mdi-file-code-outline' : 'mdi mdi-file-cancel-outline',
+          className: canDownloadFiscalFiles ? 'btn-outline-success' : 'btn-outline-secondary',
+          title: canDownloadFiscalFiles ? 'Descargar XML' : 'XML no disponible',
+          icon: canDownloadFiscalFiles ? 'mdi mdi-file-code-outline' : 'mdi mdi-file-cancel-outline',
           text: 'XML',
-          onClick: () => canDownload ? onDownload(data, 'xml') : showBlockedAction('XML no disponible', 'El comprobante todavia no tiene XML disponible.')
+          onClick: () => canDownloadFiscalFiles ? onDownload(data, 'xml') : showBlockedAction('XML no disponible', isDemoProviderRow(data) ? 'El comprobante fue generado en modo demo y no tiene XML fiscal real.' : 'El comprobante todavia no tiene XML disponible.')
         })
         appendStorageButton(actions, {
-          className: canDownload ? 'btn-outline-warning' : 'btn-outline-secondary',
-          title: canDownload ? 'Descargar CDR' : 'CDR no disponible',
-          icon: canDownload ? 'mdi mdi-file-document-outline' : 'mdi mdi-file-cancel-outline',
+          className: canDownloadFiscalFiles ? 'btn-outline-warning' : 'btn-outline-secondary',
+          title: canDownloadFiscalFiles ? 'Descargar CDR' : 'CDR no disponible',
+          icon: canDownloadFiscalFiles ? 'mdi mdi-file-document-outline' : 'mdi mdi-file-cancel-outline',
           text: 'CDR',
-          onClick: () => canDownload ? onDownload(data, 'cdr') : showBlockedAction('CDR no disponible', 'El comprobante todavia no tiene CDR disponible.')
+          onClick: () => canDownloadFiscalFiles ? onDownload(data, 'cdr') : showBlockedAction('CDR no disponible', isDemoProviderRow(data) ? 'El comprobante fue generado en modo demo y no tiene CDR fiscal real.' : 'El comprobante todavia no tiene CDR disponible.')
         })
         return
       }
