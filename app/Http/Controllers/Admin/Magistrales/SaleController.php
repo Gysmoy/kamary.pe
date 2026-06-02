@@ -103,6 +103,7 @@ class SaleController extends BasicController
         $body['total'] = $total;
         $body['is_quote'] = $isQuote;
         $body['sale_date'] = $this->normalizeDate($body['sale_date'] ?? now()->toDateString());
+        $body['observations'] = trim((string)($body['observations'] ?? '')) ?: null;
 
         unset($body['items']);
 
@@ -118,6 +119,7 @@ class SaleController extends BasicController
             'subtotal',
             'igv',
             'is_quote',
+            'observations',
         ] as $column) {
             if (!Schema::hasColumn('magistral_sales', $column)) unset($body[$column]);
         }

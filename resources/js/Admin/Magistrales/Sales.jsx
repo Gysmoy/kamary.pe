@@ -1,20 +1,28 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../../Utils/CreateReactScript';
 import Table from '../../Components/Adminto/Table';
 import Modal from '../../Components/Adminto/Modal';
-import ReactAppend from '../../Utils/ReactAppend';
 import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import SalesRest from '../../Actions/Admin/Magistrales/SalesRest';
+import BillingDocumentsRest from '../../Actions/Admin/BillingDocumentsRest';
 import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 import setSwitchChecked from '../../Utils/setSwitchChecked';
+import { getBillingDocumentStatusLabel } from '../../Utils/statusLabels';
 
 const rest = new SalesRest()
+const billingDocumentsRest = new BillingDocumentsRest()
 const paymentLabels = { pending: 'Pendiente', paid: 'Pagado', partial: 'Parcial', cancelled: 'Cancelado' }
+const tabs = [
+  { id: 'quotes', label: 'Cotizacion' },
+  { id: 'sales', label: 'Ventas' },
+  { id: 'issued', label: 'Comprobantes Emitidos' },
+  { id: 'cancelled', label: 'Comprobantes Anulados' },
+]
 
 const emptyItem = (warehouseId = '') => ({
   uid: crypto.randomUUID(),
@@ -30,6 +38,45 @@ const emptyItem = (warehouseId = '') => ({
 const formatUser = (user) => user?.fullname || [user?.name, user?.lastname].filter(Boolean).join(' ') || user?.username || ''
 const formatDocument = (row) => [row?.document_type, row?.document_number].filter(Boolean).join(' ')
 const itemSubtotal = (item) => Math.max(0, (Number(item.quantity || 0) * Number(item.unit_price || 0)) - Number(item.discount || 0))
+const emptyFilters = () => ({ businessId: '', patient: '', startDate: '', endDate: '' })
+const combineFilters = (filters) => filters.filter(Boolean).reduce((carry, filter) => {
+  if (!carry) return filter
+  return [carry, 'and', filter]
+}, null)
+const money = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const billingDocumentNumber = (row) => [row?.series, row?.sequence].filter(Boolean).join(' - ') || row?.code || ''
+const billingClientLabel = (row) => row?.client?.full_name ?? row?.eventualClient?.business_name ?? row?.eventual_client?.business_name ?? '-'
+const billingStatusLabel = (row) => getBillingDocumentStatusLabel(row?.local_status ?? row?.external_status)
+
+const salesFilter = (tab, filters) => combineFilters([
+  ['is_quote', '=', tab === 'quotes'],
+  filters.businessId ? ['business_id', '=', Number(filters.businessId)] : null,
+  filters.patient ? ['patient', 'contains', filters.patient] : null,
+  filters.startDate ? ['sale_date', '>=', filters.startDate] : null,
+  filters.endDate ? ['sale_date', '<=', filters.endDate] : null,
+])
+
+const billingFilter = (tab, filters) => {
+  const statusFilter = tab === 'cancelled'
+    ? ['local_status', '=', 'cancelled']
+    : [
+      ['local_status', '=', 'sent'],
+      'or',
+      ['local_status', '=', 'accepted'],
+      'or',
+      ['local_status', '=', 'observed'],
+      'or',
+      ['local_status', '=', 'rejected'],
+    ]
+
+  return combineFilters([
+    ['source_type', '=', 'magistral_sale'],
+    statusFilter,
+    filters.businessId ? ['business_id', '=', Number(filters.businessId)] : null,
+    filters.startDate ? ['issue_date', '>=', filters.startDate] : null,
+    filters.endDate ? ['issue_date', '<=', filters.endDate] : null,
+  ])
+}
 
 const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) => {
   const gridRef = useRef()
@@ -48,12 +95,23 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const allergyRef = useRef()
   const intoleranceRef = useRef()
   const dateRef = useRef()
+  const observationsRef = useRef()
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
   const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
   const [businesses, setBusinesses] = useState([])
   const [articles, setArticles] = useState([])
   const [items, setItems] = useState([emptyItem(fixedWarehouseId)])
   const [isEditing, setIsEditing] = useState(false)
+  const [activeTab, setActiveTab] = useState('quotes')
+  const [filters, setFilters] = useState(emptyFilters())
+  const [appliedFilters, setAppliedFilters] = useState(emptyFilters())
+  const [modalDefaultQuote, setModalDefaultQuote] = useState(false)
+  const isBillingTab = activeTab === 'issued' || activeTab === 'cancelled'
+  const activeRest = isBillingTab ? billingDocumentsRest : rest
+  const activeFilterValue = useMemo(
+    () => isBillingTab ? billingFilter(activeTab, appliedFilters) : salesFilter(activeTab, appliedFilters),
+    [activeTab, appliedFilters, isBillingTab]
+  )
 
   useEffect(() => {
     Promise.all([rest.getBusinesses(), rest.getArticles()]).then(([businessRows, articleRows]) => {
@@ -70,8 +128,9 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   totals.taxable = totals.total / 1.18
   totals.igv = totals.total - totals.taxable
 
-  const openModal = (data = null) => {
+  const openModal = (data = null, asQuote = activeTab === 'quotes') => {
     setIsEditing(!!data?.id)
+    setModalDefaultQuote(data?.id ? !!data?.is_quote : !!asQuote)
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
     pharmacyRef.current.value = data?.pharmacy ?? ''
@@ -86,6 +145,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     setSwitchChecked(allergyRef.current, !!data?.allergy)
     setSwitchChecked(intoleranceRef.current, !!data?.intolerance)
     dateRef.current.value = data?.sale_date?.toString?.().slice?.(0, 10) ?? new Date().toISOString().slice(0, 10)
+    observationsRef.current.value = data?.observations ?? ''
     const nextItems = (data?.items ?? []).map(item => ({
       uid: crypto.randomUUID(),
       article_id: item.article_id ?? '',
@@ -121,7 +181,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     })
   }
 
-  const save = async (e, asQuote = false) => {
+  const save = async (e, asQuote = modalDefaultQuote) => {
     e.preventDefault()
     const result = await rest.save({
       id: idRef.current.value || undefined,
@@ -139,6 +199,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       intolerance: intoleranceRef.current.checked,
       is_quote: asQuote,
       sale_date: dateRef.current.value || null,
+      observations: observationsRef.current.value.trim(),
       items: items.map(item => ({
         article_id: item.article_id || null,
         warehouse_id: fixedWarehouseId || item.warehouse_id || null,
@@ -161,75 +222,178 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     if (result) $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
+  const applyFilters = (event) => {
+    event?.preventDefault?.()
+    setAppliedFilters({ ...filters })
+  }
+
+  const onTabChange = (tab) => {
+    setActiveTab(tab)
+    requestAnimationFrame(() => $(gridRef.current).dxDataGrid('instance')?.refresh())
+  }
+
+  const openBillingPdf = (row) => {
+    window.open(billingDocumentsRest.downloadUrl(row.id, 'pdf'), '_blank', 'noopener')
+  }
+
+  const saleActionColumn = {
+    caption: 'Acciones',
+    width: 115,
+    allowFiltering: false,
+    allowExporting: false,
+    cellTemplate: (container, { data }) => {
+      container.css('text-overflow', 'unset')
+      container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.sale(data)) }))
+      container.append(DxButton({ className: 'btn btn-xs btn-soft-primary ms-1', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openModal(data) }))
+      container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => remove(data.id) }))
+    }
+  }
+
+  const saleColumns = [
+    saleActionColumn,
+    {
+      dataField: 'business.name',
+      caption: 'Empresa',
+      minWidth: 170,
+      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business?.name, () => openModal(data), 'Editar venta magistral')
+    },
+    { dataField: 'code', caption: activeTab === 'quotes' ? 'Cod. Cotizacion' : 'Codigo', width: 145 },
+    activeTab === 'quotes'
+      ? { dataField: 'sale_type', caption: 'Tipo Venta', width: 130 }
+      : { dataField: 'payment_status', caption: 'Estado Pago', width: 120, calculateCellValue: row => paymentLabels[row.payment_status] ?? row.payment_status },
+    activeTab === 'sales' ? { dataField: 'document_label', caption: 'Documento', width: 160, calculateCellValue: formatDocument } : null,
+    { dataField: 'patient', caption: 'Paciente', minWidth: 170 },
+    { dataField: 'total', caption: 'Total S/', dataType: 'number', width: 110, format: { type: 'fixedPoint', precision: 2 } },
+    { dataField: 'creator_label', caption: 'Usuario Registro', minWidth: 160, calculateCellValue: row => formatUser(row.creator) },
+    { dataField: 'created_at', caption: 'Fecha Registro', dataType: 'date', width: 130 },
+  ].filter(Boolean)
+
+  const billingColumns = [
+    {
+      caption: 'Acciones',
+      width: 80,
+      allowFiltering: false,
+      allowExporting: false,
+      cellTemplate: (container, { data }) => {
+        container.css('text-overflow', 'unset')
+        container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Ver PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openBillingPdf(data) }))
+      }
+    },
+    { dataField: 'business.name', caption: 'Empresa', minWidth: 170 },
+    { dataField: 'local_status', caption: activeTab === 'cancelled' ? 'Est. Anulacion' : 'Est. Comprobante', width: 145, calculateCellValue: billingStatusLabel },
+    { dataField: 'document_number', caption: 'Comprobante', width: 160, calculateCellValue: billingDocumentNumber },
+    { caption: 'Cliente', minWidth: 220, calculateCellValue: billingClientLabel },
+    { dataField: 'subtotal', caption: 'Total Gravada S/', dataType: 'number', width: 140, format: { type: 'fixedPoint', precision: 2 } },
+    { dataField: 'tax_amount', caption: 'IGV', dataType: 'number', width: 110, format: { type: 'fixedPoint', precision: 2 } },
+    { dataField: 'total', caption: 'Importe Factura', dataType: 'number', width: 140, format: { type: 'fixedPoint', precision: 2 } },
+    { dataField: 'issue_date', caption: 'F. Facturacion', dataType: 'date', width: 130 },
+    activeTab === 'cancelled' ? { dataField: 'cancelled_at', caption: 'F. Anulacion', dataType: 'date', width: 130 } : null,
+  ].filter(Boolean)
+
   return <>
+    <div className='row mb-3'>
+      <div className='col-12'>
+        <div className='d-flex gap-2 flex-wrap'>
+          <button type='button' className='btn btn-primary' onClick={() => openModal(null, false)}>
+            <i className='mdi mdi-plus-circle-outline me-1'></i> Crear Venta
+          </button>
+          <button type='button' className='btn btn-outline-primary' onClick={() => openModal(null, true)}>
+            <i className='mdi mdi-file-document-outline me-1'></i> Crear Cotizacion
+          </button>
+          <button type='button' className='btn btn-outline-secondary' disabled title='Pendiente de conectar al modulo de mensajes'>
+            <i className='mdi mdi-message-text-outline me-1'></i> Mensaje
+          </button>
+        </div>
+      </div>
+    </div>
+
     <Table
       gridRef={gridRef}
-      title={moduleTitle}
-      rest={rest}
+      title={<div>
+        <div className='d-flex align-items-center justify-content-between flex-wrap gap-2'>
+          <h4 className='header-title mb-0'>Listado</h4>
+          <span className='text-muted small'>{tabs.find(tab => tab.id === activeTab)?.label}</span>
+        </div>
+        <ul className='nav nav-tabs mt-3'>
+          {tabs.map(tab => (
+            <li className='nav-item' key={`mag-sale-tab-${tab.id}`}>
+              <button type='button' className={`nav-link ${activeTab === tab.id ? 'active' : ''}`} onClick={() => onTabChange(tab.id)}>
+                {tab.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+        <form className='row align-items-end mt-3' onSubmit={applyFilters}>
+          <div className='col-12 col-lg-3 mb-2'>
+            <label className='form-label'>Empresa</label>
+            <select className='form-select' value={filters.businessId} onChange={(event) => setFilters(prev => ({ ...prev, businessId: event.target.value }))}>
+              <option value=''>Todos</option>
+              {businesses.map(row => <option key={`mag-sale-filter-business-${row.id}`} value={row.id}>{row.name}</option>)}
+            </select>
+          </div>
+          {!isBillingTab && <div className='col-12 col-lg-3 mb-2'>
+            <label className='form-label'>Paciente</label>
+            <input className='form-control' value={filters.patient} placeholder='DNI o nombre del paciente' onChange={(event) => setFilters(prev => ({ ...prev, patient: event.target.value }))} />
+          </div>}
+          <div className='col-12 col-md-4 col-lg-2 mb-2'>
+            <label className='form-label'>Fecha Inicio</label>
+            <input type='date' className='form-control' value={filters.startDate} onChange={(event) => setFilters(prev => ({ ...prev, startDate: event.target.value }))} />
+          </div>
+          <div className='col-12 col-md-4 col-lg-2 mb-2'>
+            <label className='form-label'>Fecha Fin</label>
+            <input type='date' className='form-control' value={filters.endDate} onChange={(event) => setFilters(prev => ({ ...prev, endDate: event.target.value }))} />
+          </div>
+          <div className='col-12 col-md-4 col-lg-2 mb-2'>
+            <button type='submit' className='btn btn-outline-primary w-100'>
+              <i className='mdi mdi-magnify me-1'></i> Filtrar
+            </button>
+          </div>
+        </form>
+        {isBillingTab && <div className='alert alert-info py-2 mt-2 mb-0'>
+          Estas pestanas quedan separadas para comprobantes de origen magistral. La emision fiscal de ventas magistrales se conectara sin usar los comprobantes de almacenamiento.
+        </div>}
+      </div>}
+      rest={activeRest}
       pageSize={25}
+      filterValue={activeFilterValue}
       toolBar={(items) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openModal() } })
+        if (!isBillingTab) {
+          items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', hint: activeTab === 'quotes' ? 'Crear cotizacion' : 'Crear venta', onClick: () => openModal(null, activeTab === 'quotes') } })
+        }
       }}
-      columns={[
-        {
-          dataField: 'business.name',
-          caption: 'Empresa',
-          minWidth: 170,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business?.name, () => openModal(data), 'Editar venta magistral')
-        },
-        { dataField: 'code', caption: 'Codigo', width: 145 },
-        { dataField: 'payment_status', caption: 'Estado Pago', width: 120, calculateCellValue: row => paymentLabels[row.payment_status] ?? row.payment_status },
-        { dataField: 'document_label', caption: 'Documento', width: 160, calculateCellValue: formatDocument },
-        { dataField: 'patient', caption: 'Paciente', minWidth: 170 },
-        { dataField: 'total', caption: 'Total S/', dataType: 'number', width: 110, format: { type: 'fixedPoint', precision: 2 } },
-        { dataField: 'creator_label', caption: 'Usuario Registro', minWidth: 160, calculateCellValue: row => formatUser(row.creator) },
-        { dataField: 'created_at', caption: 'Fecha Registro', dataType: 'date', width: 130 },
-        {
-          dataField: 'status',
-          caption: 'Activo',
-          dataType: 'boolean',
-          width: 90,
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => rest.status(data).then(ok => ok && $(gridRef.current).dxDataGrid('instance').refresh())} />)
-          }
-        },
-        {
-          caption: 'Acciones',
-          width: 160,
-          allowFiltering: false,
-          allowExporting: false,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.sale(data)) }))
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary ms-1', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openModal(data) }))
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => remove(data.id) }))
-          }
-        },
-      ]}
+      columns={isBillingTab ? billingColumns : saleColumns}
     />
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar venta magistral' : 'Registrar venta'} onSubmit={(e) => save(e, false)} size='xl'>
+    <Modal
+      modalRef={modalRef}
+      title={isEditing ? (modalDefaultQuote ? 'Editar cotizacion' : 'Editar venta') : (modalDefaultQuote ? 'Registrar cotizacion' : 'Registrar venta')}
+      onSubmit={(e) => save(e, modalDefaultQuote)}
+      size='xl'
+      hideButtonSubmit
+    >
       <div className='row'>
         <input ref={idRef} hidden />
+
+        <div className='col-12'>
+          <h6 className='border-bottom pb-2 mb-3'><i className='mdi mdi-account-circle-outline me-1'></i> Datos del paciente</h6>
+        </div>
         <div className='col-md-3 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' disabled={!isEditing} /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Empresa</label><select ref={businessRef} className='form-control'><option value=''>Seleccione</option>{businesses.map(row => <option key={`mag-sale-business-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Farmacia</label><input ref={pharmacyRef} className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Estado pago</label><select ref={paymentStatusRef} className='form-control'>{Object.entries(paymentLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Fecha</label><input ref={dateRef} type='date' className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Paciente</label><input ref={patientRef} className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Doctor</label><input ref={doctorRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Tipo doc.</label><input ref={documentTypeRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Documento</label><input ref={documentNumberRef} className='form-control' /></div>
-        <div className='col-md-2 mb-3'><label className='form-label'>Fecha</label><input ref={dateRef} type='date' className='form-control' /></div>
+        <div className='col-md-2 mb-3'><label className='form-label'>Estado pago</label><select ref={paymentStatusRef} className='form-control'>{Object.entries(paymentLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Politica descuento</label><input ref={discountPolicyRef} className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Tipo venta</label><input ref={saleTypeRef} className='form-control' /></div>
         <SwitchFormGroup eRef={allergyRef} label='Alergia' col='col-md-3 mt-4' />
         <SwitchFormGroup eRef={intoleranceRef} label='Intolerancia' col='col-md-3 mt-4' />
 
         <div className='col-12 mt-2'>
-          <div className='d-flex justify-content-between align-items-center mb-2'>
-            <h6 className='mb-0'>Detalle de venta</h6>
+          <div className='d-flex justify-content-between align-items-center border-bottom pb-2 mb-3'>
+            <h6 className='mb-0'><i className='mdi mdi-pill me-1'></i> Datos del articulo</h6>
             <button type='button' className='btn btn-sm btn-soft-primary' onClick={() => setItems(prev => [...prev, emptyItem(fixedWarehouseId)])}><i className='mdi mdi-plus me-1'></i> Insertar articulo</button>
           </div>
           <div className='table-responsive border rounded'>
@@ -262,18 +426,28 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
               </tbody>
             </table>
           </div>
-          <div className='d-flex justify-content-end mt-2'>
+          <div className='d-flex justify-content-end mt-3'>
             <div style={{ minWidth: 280 }}>
-              <div className='d-flex justify-content-between'><span>Gravada</span><b>S/ {totals.taxable.toFixed(2)}</b></div>
-              <div className='d-flex justify-content-between'><span>Descuento</span><b>S/ {totals.discount.toFixed(2)}</b></div>
-              <div className='d-flex justify-content-between'><span>IGV</span><b>S/ {totals.igv.toFixed(2)}</b></div>
-              <div className='d-flex justify-content-between'><span>Total</span><b>S/ {totals.total.toFixed(2)}</b></div>
-              <div className='d-flex gap-2 justify-content-end mt-2'>
-                <button type='button' className='btn btn-sm btn-outline-primary' onClick={(e) => save(e, true)}>Registrar cotizacion</button>
-                <button type='button' className='btn btn-sm btn-primary' onClick={(e) => save(e, false)}>Registrar venta</button>
-              </div>
+              <div className='d-flex justify-content-between'><span>Gravada</span><b>S/ {money(totals.taxable)}</b></div>
+              <div className='d-flex justify-content-between'><span>Descuento</span><b>S/ {money(totals.discount)}</b></div>
+              <div className='d-flex justify-content-between'><span>IGV</span><b>S/ {money(totals.igv)}</b></div>
+              <div className='d-flex justify-content-between fs-5'><span>Total</span><b>S/ {money(totals.total)}</b></div>
             </div>
           </div>
+        </div>
+
+        <div className='col-12 mt-3'>
+          <h6 className='border-bottom pb-2 mb-3'><i className='mdi mdi-note-text-outline me-1'></i> Observaciones</h6>
+          <textarea ref={observationsRef} className='form-control' rows='3' placeholder='Comentarios internos de la venta magistral' />
+        </div>
+
+        <div className='col-12 d-flex gap-2 justify-content-center mt-4'>
+          {!isEditing && <button type='button' className='btn btn-outline-primary' onClick={(e) => save(e, !modalDefaultQuote)}>
+            <i className='mdi mdi-file-document-outline me-1'></i> Registrar {modalDefaultQuote ? 'venta' : 'cotizacion'}
+          </button>}
+          <button type='button' className='btn btn-primary' onClick={(e) => save(e, modalDefaultQuote)}>
+            <i className='mdi mdi-check me-1'></i> {isEditing ? 'Guardar cambios' : `Registrar ${modalDefaultQuote ? 'cotizacion' : 'venta'}`}
+          </button>
         </div>
       </div>
     </Modal>

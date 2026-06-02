@@ -32,6 +32,7 @@ class MagistralSale extends Model
         'total',
         'is_quote',
         'sale_date',
+        'observations',
         'status',
         'created_by',
         'updated_by',
