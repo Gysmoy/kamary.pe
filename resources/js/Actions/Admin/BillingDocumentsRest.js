@@ -2,6 +2,7 @@ import BasicRest from "../BasicRest";
 import { Fetch } from "sode-extend-react";
 import { toast } from "sonner";
 import { isStoragePath } from "../../Utils/permissionScope";
+import xsrfToken from "../../Utils/xsrfToken";
 
 const loadAll = async (path) => {
   try {
@@ -81,6 +82,27 @@ class BillingDocumentsRest extends BasicRest {
         body: JSON.stringify(request)
       })
       if (!status) throw new Error(result?.message || 'No se pudo enviar el correo')
+      toast.success('Correcto', { description: result.message, duration: 3000, richColors: true })
+      return result
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
+      return null
+    }
+  }
+
+  registerReceivablePayment = async (id, request) => {
+    try {
+      const res = await fetch(`/api/${this.path}/${id}/receivable-payment`, {
+        method: 'POST',
+        headers: {
+          'X-Xsrf-Token': xsrfToken()
+        },
+        body: request
+      })
+
+      const result = JSON.parseable(await res.text())
+      if (!res.ok) throw new Error(result?.message || 'No se pudo registrar el pago')
+
       toast.success('Correcto', { description: result.message, duration: 3000, richColors: true })
       return result
     } catch (error) {

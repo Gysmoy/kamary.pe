@@ -17,6 +17,17 @@ import { scopedPermission } from '../Utils/permissionScope';
 
 const billingDocumentsRest = new BillingDocumentsRest()
 
+const receivablePaymentMethodOptions = [
+  'Efectivo',
+  'Transferencia',
+  'Deposito',
+  'Yape',
+  'Plin',
+  'POS',
+  'Cheque',
+  'Otro'
+]
+
 const today = () => {
   const date = new Date()
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
@@ -49,6 +60,7 @@ const reportFilters = () => ({
 })
 
 const formatMoney = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const formatPaymentAmount = (value) => Number(value || 0).toFixed(2)
 const formatDate = (value) => value?.toString?.().slice?.(0, 10) ?? ''
 const formatDateTime = (value) => {
   if (!value) return ''
@@ -364,6 +376,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const bulkModalRef = useRef()
   const pdfPreviewModalRef = useRef()
   const emailModalRef = useRef()
+  const receivablePaymentModalRef = useRef()
   const idRef = useRef()
   const issueDateRef = useRef()
   const dueDateRef = useRef()
@@ -385,6 +398,13 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const creditNoteIssueDateRef = useRef()
   const creditNoteReasonRef = useRef()
   const creditNoteNoteRef = useRef()
+  const receivablePaymentAmountRef = useRef()
+  const receivablePaymentDateRef = useRef()
+  const receivablePaymentMethodRef = useRef()
+  const receivablePaymentBankRef = useRef()
+  const receivablePaymentOperationRef = useRef()
+  const receivablePaymentFileRef = useRef()
+  const receivablePaymentObservationsRef = useRef()
   const isStorageBilling = billingMode === 'storage' || requiredPermission === 'storage-billing-control' || location.pathname.includes('storage-billing-control')
 
   const [sourceType, setSourceType] = useState(isStorageBilling ? 'service_order' : 'commercial_order')
@@ -406,6 +426,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const [pdfPreview, setPdfPreview] = useState({ title: '', url: '', downloadUrl: '' })
   const [emailDraft, setEmailDraft] = useState({ to: '', cc: '', subject: '', body: '' })
   const [emailSending, setEmailSending] = useState(false)
+  const [paymentSending, setPaymentSending] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -455,6 +476,8 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     if (!row) return false
     return ['accepted', 'observed', 'cancelled'].includes(row.local_status) || !!row.external_id
   }
+
+  const canPayDocument = (row) => !!row?.receivable_id && rowBalanceAmount(row) > 0
 
   const hasPreparedVoucher = rowHasPreparedVoucher
 
@@ -693,6 +716,56 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const downloadPreviewPdf = () => {
     if (!pdfPreview.downloadUrl) return
     window.open(pdfPreview.downloadUrl, '_blank', 'noopener')
+  }
+
+  const resetReceivablePaymentForm = (row = null) => {
+    if (receivablePaymentAmountRef.current) receivablePaymentAmountRef.current.value = row ? formatPaymentAmount(rowBalanceAmount(row)) : ''
+    if (receivablePaymentDateRef.current) receivablePaymentDateRef.current.value = new Date().toISOString().slice(0, 10)
+    if (receivablePaymentMethodRef.current) receivablePaymentMethodRef.current.value = 'Transferencia'
+    if (receivablePaymentBankRef.current) receivablePaymentBankRef.current.value = ''
+    if (receivablePaymentOperationRef.current) receivablePaymentOperationRef.current.value = ''
+    if (receivablePaymentFileRef.current) receivablePaymentFileRef.current.value = ''
+    if (receivablePaymentObservationsRef.current) receivablePaymentObservationsRef.current.value = ''
+  }
+
+  const onOpenReceivablePayment = (row) => {
+    if (!canPayDocument(row)) {
+      showBlockedAction('Pago no disponible', row?.receivable_id ? 'El comprobante no tiene saldo pendiente.' : 'No se encontro una cuenta por cobrar relacionada.')
+      return
+    }
+
+    setSelectedRow(row)
+    setTimeout(() => {
+      resetReceivablePaymentForm(row)
+      $(receivablePaymentModalRef.current).modal('show')
+    }, 0)
+  }
+
+  const onSubmitReceivablePayment = async (e) => {
+    e.preventDefault()
+    if (!selectedRow || paymentSending) return
+
+    setPaymentSending(true)
+    try {
+      const formData = new FormData()
+      formData.append('amount', receivablePaymentAmountRef.current?.value || '')
+      formData.append('payment_date', receivablePaymentDateRef.current?.value || '')
+      formData.append('payment_method', receivablePaymentMethodRef.current?.value || '')
+      formData.append('bank', receivablePaymentBankRef.current?.value || '')
+      formData.append('operation_number', receivablePaymentOperationRef.current?.value || '')
+      formData.append('observations', receivablePaymentObservationsRef.current?.value || '')
+
+      const file = receivablePaymentFileRef.current?.files?.[0]
+      if (file) formData.append('payment_file', file)
+
+      const result = await billingDocumentsRest.registerReceivablePayment(selectedRow.id, formData)
+      if (!result?.data) return
+
+      $(receivablePaymentModalRef.current).modal('hide')
+      $(gridRef.current).dxDataGrid('instance').refresh()
+    } finally {
+      setPaymentSending(false)
+    }
   }
 
   const onEmailDocument = (row) => {
@@ -1030,6 +1103,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       const canSync = canSyncDocument(data)
       const canCancel = canCancelDocument(data)
       const canDownload = canDownloadDocument(data)
+      const canPay = canPayDocument(data)
       const actions = $('<div>').addClass('storage-billing-actions')
       container.empty().append(actions)
 
@@ -1045,6 +1119,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
 
       if (activeStorageTab === 'issued') {
         const canRetryIssue = canRetryIssueDocument(data)
+        const shouldShowRetryIssue = data?.local_status === 'pending' && hasPreparedVoucher(data)
         const canDownloadFiscalFiles = canDownload && !isDemoProviderRow(data)
         const canEmail = canPreviewPdf
         const retryTitle = canRetryIssue
@@ -1054,17 +1129,20 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
             : (data?.local_status === 'pending' ? 'Envio a SUNAT no disponible' : 'Comprobante ya emitido o cerrado'))
         appendStorageButton(actions, {
           className: 'btn-outline-warning',
-          title: 'Ver validacion fiscal',
-          icon: 'mdi mdi-card-account-details-outline',
-          onClick: () => openReadinessModal(data, `Validacion fiscal - ${data.code}`)
+          title: canPay ? 'Realizar pago' : 'Pago no disponible',
+          icon: 'mdi mdi-cash-plus',
+          disabled: !canPay,
+          onClick: () => onOpenReceivablePayment(data)
         })
-        appendStorageButton(actions, {
-          className: 'btn-outline-success',
-          title: retryTitle,
-          icon: 'mdi mdi-send',
-          disabled: !canRetryIssue,
-          onClick: () => onIssue(data)
-        })
+        if (shouldShowRetryIssue) {
+          appendStorageButton(actions, {
+            className: 'btn-outline-success',
+            title: retryTitle,
+            icon: 'mdi mdi-send',
+            disabled: !canRetryIssue,
+            onClick: () => onIssue(data)
+          })
+        }
         appendStorageButton(actions, {
           className: 'btn-outline-warning',
           title: canSync ? 'Sincronizar estado' : 'Sync no disponible',
@@ -1557,6 +1635,63 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
             value={emailDraft.body}
             onChange={(event) => onEmailDraftChange('body', event.target.value)}
           />
+        </div>
+      </div>
+    </Modal>
+
+    <Modal
+      modalRef={receivablePaymentModalRef}
+      title={selectedRow ? `Realizar pago - ${selectedRow.receivable_code ?? selectedRow.code}` : 'Realizar pago'}
+      size='lg'
+      btnSubmitText={paymentSending ? 'Registrando...' : 'Registrar pago'}
+      onSubmit={onSubmitReceivablePayment}
+      onClose={() => resetReceivablePaymentForm()}
+    >
+      <div className='row'>
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Total</label>
+          <input className='form-control' value={formatMoney(selectedRow?.total)} readOnly />
+        </div>
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Pagado</label>
+          <input className='form-control' value={formatMoney(rowPaidAmount(selectedRow))} readOnly />
+        </div>
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Saldo</label>
+          <input className='form-control' value={formatMoney(rowBalanceAmount(selectedRow))} readOnly />
+        </div>
+
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Monto a pagar</label>
+          <input ref={receivablePaymentAmountRef} type='number' min='0.01' step='0.01' className='form-control' required />
+        </div>
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Fecha de pago</label>
+          <input ref={receivablePaymentDateRef} type='date' className='form-control' required />
+        </div>
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Tipo de pago</label>
+          <select ref={receivablePaymentMethodRef} className='form-control' required>
+            {receivablePaymentMethodOptions.map(option => (
+              <option key={`billing-receivable-payment-method-${option}`} value={option}>{option}</option>
+            ))}
+          </select>
+        </div>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>Banco</label>
+          <input ref={receivablePaymentBankRef} type='text' className='form-control' />
+        </div>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>Nro operacion</label>
+          <input ref={receivablePaymentOperationRef} type='text' className='form-control' />
+        </div>
+        <div className='col-12 mb-3'>
+          <label className='form-label'>Archivo de sustento</label>
+          <input ref={receivablePaymentFileRef} type='file' className='form-control' />
+        </div>
+        <div className='col-12 mb-1'>
+          <label className='form-label'>Observaciones</label>
+          <textarea ref={receivablePaymentObservationsRef} className='form-control' rows='3' />
         </div>
       </div>
     </Modal>

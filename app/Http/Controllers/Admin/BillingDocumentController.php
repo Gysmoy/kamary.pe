@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helpers\EmailConfig;
 use App\Http\Controllers\BasicController;
+use App\Models\AccountsReceivable;
 use App\Models\BillingDocument;
 use App\Models\CommercialOrder;
 use App\Models\ServiceOrder;
@@ -37,9 +38,11 @@ class BillingDocumentController extends BasicController
             ->selectRaw('source_service_order.issue_date as service_order_issue_date')
             ->selectRaw('source_service_order.scheduled_at as service_order_scheduled_at')
             ->selectRaw('source_service_order.created_at as service_order_created_at')
-            ->selectRaw("(SELECT ar.paid_amount FROM accounts_receivable ar WHERE ar.status IS NOT NULL AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_paid_amount")
-            ->selectRaw("(SELECT ar.balance_amount FROM accounts_receivable ar WHERE ar.status IS NOT NULL AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_balance_amount")
-            ->selectRaw("(SELECT ar.payment_status FROM accounts_receivable ar WHERE ar.status IS NOT NULL AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_payment_status")
+            ->selectRaw("(SELECT ar.id FROM accounts_receivable ar WHERE ar.status = 1 AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_id")
+            ->selectRaw("(SELECT ar.code FROM accounts_receivable ar WHERE ar.status = 1 AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_code")
+            ->selectRaw("(SELECT ar.paid_amount FROM accounts_receivable ar WHERE ar.status = 1 AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_paid_amount")
+            ->selectRaw("(SELECT ar.balance_amount FROM accounts_receivable ar WHERE ar.status = 1 AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_balance_amount")
+            ->selectRaw("(SELECT ar.payment_status FROM accounts_receivable ar WHERE ar.status = 1 AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_payment_status")
             ->with([
                 'business:id,name,tax_number,soap_send_id,soap_type_id,soap_username,soap_password,detraction_account,payment_accounts,facturador_company_id,facturador_sync_status,status',
                 'branch:id,business_id,name,establishment_code,ubigeo,address,email,telephone,facturador_establishment_id,facturador_sync_status,facturador_sync_message,facturador_last_sync_at,series_factura,series_boleta,series_nota_credito,status',
@@ -434,6 +437,30 @@ class BillingDocumentController extends BasicController
         );
 
         return $file['filename'];
+    }
+
+    public function registerReceivablePayment(Request $request, string $id): HttpResponse|ResponseFactory
+    {
+        try {
+            $document = $this->findBillingDocumentForRequest($request, $id);
+            $accountsReceivable = AccountsReceivable::query()
+                ->where('status', true)
+                ->where('source_type', $document->source_type)
+                ->where('source_id', $document->source_id)
+                ->orderByDesc('id')
+                ->first();
+
+            if (!$accountsReceivable) {
+                throw new \Exception('No se encontro una cuenta por cobrar relacionada.');
+            }
+
+            return app(AccountsReceivableController::class)->registerPayment($request, (string) $accountsReceivable->id);
+        } catch (\Throwable $th) {
+            return response([
+                'status' => 400,
+                'message' => $th->getMessage(),
+            ], 400);
+        }
     }
 
     public function email(Request $request, string $id): HttpResponse|ResponseFactory
