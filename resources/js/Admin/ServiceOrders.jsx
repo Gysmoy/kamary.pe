@@ -433,7 +433,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     scheduledAtRef.current.value = toInputDate(data?.scheduled_at)
     firstDueDateRef.current.value = toInputDate(data?.first_due_date)
     expectedDocumentTypeRef.current.value = data?.expected_document_type ?? (isStorageOrderList ? '' : 'Factura')
-    const nextCurrency = data?.currency ?? (isStorageOrderList ? '' : 'PEN')
+    const nextCurrency = data?.currency ?? (isStorageGeneral ? 'PEN' : (isStorageOrderList ? '' : 'PEN'))
     currencyRef.current.value = nextCurrency
     setSelectedCurrencyCode(nextCurrency || 'PEN')
     billingCycleRef.current.value = data?.billing_cycle ?? (isServiceOrderContext ? 'Unico' : '')
@@ -1565,139 +1565,74 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     ) : isStorageGeneral ? (
       <Modal
         modalRef={modalRef}
-        title={<span className='storage-service-order-title'><i className='mdi mdi-menu me-1'></i> ORDEN DE SERVICIO</span>}
-        size='full-width'
-        dialogClass='storage-general-order-dialog modal-dialog-scrollable'
-        contentClass='storage-general-order-content'
-        headerClass='storage-service-order-header'
-        closeButtonClass='btn-close-white'
+        title={isEditing ? 'Editar orden de servicio general' : 'Registrar orden de servicio general'}
+        size='xl'
+        dialogClass='modal-dialog-scrollable'
         bodyClass='storage-general-order-body'
-        hideFooter
+        btnCancelText='Cerrar'
+        btnSubmitText='Guardar'
         onSubmit={onSave}
       >
         <style>{`
-          .storage-general-order-dialog {
-            width: calc(100vw - 34px);
-            max-width: calc(100vw - 34px);
-            margin: 7px auto;
-            align-items: flex-start;
-          }
-          .storage-general-order-content {
-            border: 0;
-            border-radius: 0;
-            min-height: auto;
-          }
           .storage-general-order-body {
-            padding: 0 30px 28px;
-            color: #33394a;
-          }
-          .storage-general-order-actions {
-            display: flex;
-            justify-content: center;
-            gap: 16px;
-            padding: 22px 0 14px;
-            border-bottom: 1px solid #e9ecef;
-          }
-          .storage-general-order-actions .btn {
-            border-radius: 0;
-            font-size: 12px;
-            font-weight: 600;
-            padding: 6px 16px;
-            line-height: 1;
-          }
-          .storage-general-order-actions .btn-primary-outline {
-            color: #11184a;
-            background: #fff;
-            border: 1px solid #11184a;
-          }
-          .storage-general-order-actions .btn-muted {
-            color: #8f949a;
-            background: #f0f0f0;
-            border: 1px solid #f0f0f0;
-          }
-          .storage-general-order-heading {
-            text-align: center;
-            font-size: 22px;
-            font-weight: 600;
-            color: #555b66;
-            margin: 32px 0 20px;
+            color: #374151;
           }
           .storage-general-order-body .form-label {
-            color: #26324d;
-            font-size: 12px;
-            margin-bottom: 5px;
+            color: #374151;
+            font-weight: 600;
           }
-          .storage-general-order-body .form-control,
-          .storage-general-order-body .form-select {
-            border-radius: 2px;
-            min-height: 26px;
-            padding: 3px 10px;
-            font-size: 12px;
-          }
-          .storage-general-insert {
-            border-radius: 0;
-            font-size: 11px;
+          .storage-general-section-title {
+            color: #313a46;
+            font-size: 0.9rem;
             font-weight: 700;
-            text-transform: uppercase;
+            margin: 0;
           }
           .storage-general-service-selector {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 34px;
-            gap: 6px;
+            grid-template-columns: minmax(0, 1fr) 38px;
+            gap: .5rem;
             align-items: center;
           }
           .storage-general-service-selector .form-select {
             min-width: 0;
           }
           .storage-general-service-add {
-            width: 34px;
-            height: 26px;
+            width: 38px;
+            min-width: 38px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
             padding: 0;
-            border-radius: 2px;
           }
           .storage-general-lines-wrap {
-            border: 1px solid #e9ecef;
-            border-radius: 4px;
+            border: 1px solid #e6ebf1;
+            border-radius: 6px;
             overflow: auto;
           }
           .storage-general-lines {
-            width: 100%;
             min-width: 980px;
-            border-collapse: collapse;
-            font-size: 12px;
-          }
-          .storage-general-lines th,
-          .storage-general-lines td {
-            border: 1px solid #e9ecef;
-            padding: 8px;
-            vertical-align: middle;
           }
           .storage-general-lines th {
-            font-size: 11px;
-            font-weight: 700;
-            color: #26324d;
+            color: #4b5563;
+            font-size: .72rem;
             text-transform: uppercase;
-            background: #fff;
+            white-space: nowrap;
           }
-          .storage-general-lines tfoot td {
-            background: #fff;
+          .storage-general-lines td {
+            vertical-align: middle;
           }
-          .storage-general-total-label {
-            font-style: italic;
+          .storage-general-lines .form-control,
+          .storage-general-lines .form-select {
+            min-height: 34px;
+          }
+          .storage-general-total-row {
+            max-width: 320px;
+            margin-left: auto;
+          }
+          .storage-general-total-row .storage-general-total-label {
+            color: #313a46;
             font-weight: 700;
             text-align: right;
-          }
-          @media (max-width: 767.98px) {
-            .storage-general-order-dialog {
-              width: calc(100vw - 12px);
-              max-width: calc(100vw - 12px);
-            }
-            .storage-general-order-body {
-              padding: 0 16px 24px;
-            }
           }
         `}</style>
         <input ref={idRef} hidden />
@@ -1714,15 +1649,11 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         <textarea ref={observationsRef} hidden />
         <input ref={branchSelectRef} type='hidden' value={selectedBranchId} readOnly />
 
-        <div className='storage-general-order-actions'>
-          <button type='submit' className='btn btn-primary-outline'><i className='mdi mdi-plus me-1'></i> Guardar</button>
-          <button type='button' className='btn btn-muted' data-bs-dismiss='modal'><i className='mdi mdi-close me-1'></i> Cerrar</button>
-        </div>
-
-        <h3 className='storage-general-order-heading'>Orden de servicio N&deg;</h3>
-
-        <div className='row g-4 align-items-end'>
-          <div className='col-12 col-md-6 col-xl-2'>
+        <div className='row g-3'>
+          <div className='col-12'>
+            <h5 className='storage-general-section-title'>Datos de la orden</h5>
+          </div>
+          <div className='col-12 col-md-6 col-xl-3'>
             <label className='form-label'>Empresa</label>
             <select
               ref={businessSelectRef}
@@ -1739,14 +1670,14 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
               {businesses.map(row => <option key={`general-order-business-${row.id}`} value={row.id}>{row.name}</option>)}
             </select>
           </div>
-          <div className='col-12 col-md-6 col-xl-4'>
+          <div className='col-12 col-md-6 col-xl-5'>
             <label className='form-label'>Cliente</label>
             <select ref={clientSelectRef} className='form-select' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required>
               <option value=''>Seleccione</option>
               {clients.map(row => <option key={`general-order-client-${row.id}`} value={row.entity_id ?? row.id}>{row.document_number ? `${row.document_number} | ` : ''}{row.full_name}</option>)}
             </select>
           </div>
-          <div className='col-12 col-md-6 col-xl-3'>
+          <div className='col-12 col-md-6 col-xl-2'>
             <label className='form-label'>Tipo documento</label>
             <select ref={expectedDocumentTypeRef} className='form-select' required>
               <option value=''>Seleccione</option>
@@ -1755,7 +1686,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
               <option value='Nota de pedido'>Nota de pedido</option>
             </select>
           </div>
-          <div className='col-12 col-md-6 col-xl-3'>
+          <div className='col-12 col-md-6 col-xl-2'>
             <label className='form-label'>Moneda</label>
             <select ref={currencyRef} className='form-select' onChange={(e) => onCurrencyChange(e.target.value)} required>
               <option value=''>Seleccione</option>
@@ -1765,16 +1696,20 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
           </div>
         </div>
 
-        <div className='mt-4 mb-3'>
-          <button type='button' className='btn btn-outline-primary storage-general-insert' onClick={() => setItems(prev => [...prev, emptyItem()])}>
-            <i className='mdi mdi-plus-circle me-1'></i> Insertar servicio general
+        <hr className='my-4' />
+
+        <div className='d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2'>
+          <h5 className='storage-general-section-title'>Detalle de servicios</h5>
+          <button type='button' className='btn btn-sm btn-primary' onClick={() => setItems(prev => [...prev, emptyItem()])}>
+            <i className='mdi mdi-plus me-1'></i> Agregar item
           </button>
         </div>
 
         <div className='storage-general-lines-wrap'>
-          <table className='storage-general-lines'>
-            <thead>
+          <table className='table table-sm table-bordered align-middle storage-general-lines mb-0'>
+            <thead className='table-light'>
               <tr>
+                <th style={{ width: 48 }}>#</th>
                 <th>Servicio</th>
                 <th style={{ width: 115 }}>Tarifa</th>
                 <th style={{ width: 115 }}>Cantidad</th>
@@ -1783,8 +1718,14 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
               </tr>
             </thead>
             <tbody>
-              {items.map(row => (
+              {items.length === 0 && (
+                <tr>
+                  <td colSpan='6' className='text-center text-muted py-4'>Agrega al menos un servicio.</td>
+                </tr>
+              )}
+              {items.map((row, index) => (
                 <tr key={`general-order-item-${row.uid}`}>
+                  <td>{index + 1}</td>
                   <td>
                     <div className='storage-general-service-selector'>
                       <select className='form-select' value={row.service_id} onChange={(e) => onItemChange(row.uid, 'service_id', e.target.value)} required>
@@ -1796,21 +1737,19 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
                       </button>
                     </div>
                   </td>
-                  <td><input type='number' step='0.01' className='form-control' value={row.unit_price} onChange={(e) => onItemChange(row.uid, 'unit_price', e.target.value)} /></td>
-                  <td><input type='number' step='0.001' min='0' className='form-control' value={row.quantity} onChange={(e) => onItemChange(row.uid, 'quantity', e.target.value)} /></td>
-                  <td><input className='form-control' value={Number(row.total || 0).toFixed(2)} disabled /></td>
+                  <td><input type='number' step='0.01' className='form-control text-end' value={row.unit_price} onChange={(e) => onItemChange(row.uid, 'unit_price', e.target.value)} /></td>
+                  <td><input type='number' step='0.001' min='0' className='form-control text-end' value={row.quantity} onChange={(e) => onItemChange(row.uid, 'quantity', e.target.value)} /></td>
+                  <td><input className='form-control text-end' value={Number(row.total || 0).toFixed(2)} disabled /></td>
                   <td><button type='button' className='btn btn-outline-danger btn-sm' onClick={() => setItems(prev => prev.filter(item => item.uid !== row.uid))}><i className='mdi mdi-close'></i></button></td>
                 </tr>
               ))}
             </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan='3' className='storage-general-total-label'>Total</td>
-                <td><input className='form-control' value={generalOrderTotal.toFixed(2)} disabled /></td>
-                <td></td>
-              </tr>
-            </tfoot>
           </table>
+        </div>
+
+        <div className='storage-general-total-row mt-3'>
+          <label className='storage-general-total-label form-label d-block mb-1'>Total</label>
+          <input className='form-control text-end' value={generalOrderTotal.toFixed(2)} disabled />
         </div>
       </Modal>
     ) : (
