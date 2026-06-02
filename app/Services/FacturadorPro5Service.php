@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\BusinessBranch;
 use App\Models\BillingDocument;
+use App\Models\Business;
 use App\Models\ReferralGuide;
 use App\Support\SimpleQrCode;
 use Illuminate\Support\Arr;
@@ -1232,6 +1233,7 @@ class FacturadorPro5Service
     private function buildLocalPdfFile(BillingDocument $document): array
     {
         $document->loadMissing('business', 'branch', 'client', 'eventualClient', 'serviceOrder', 'commercialOrder', 'referenceDocument', 'items');
+        $this->reloadDocumentBusiness($document);
 
         $lines = [
             'Comprobante demo de facturacion',
@@ -1325,7 +1327,7 @@ class FacturadorPro5Service
             $this->pdfText($commands, 'KM', 54, 787, 18, 'F2');
         }
 
-        $this->pdfText($commands, mb_strtoupper($businessName), 134, 797, 14.5, 'F2');
+        $this->pdfText($commands, $businessName, 134, 797, 14.5, 'F2');
         $this->pdfWrappedText($commands, $businessAddress, 134, 779, 260, 9.2, 10, 3);
 
         $this->pdfText($commands, 'RUC ' . $businessRuc, $rightBoxX, 797, 10, 'F2', 153.07, 'C');
@@ -1454,6 +1456,23 @@ class FacturadorPro5Service
             'nota de credito', 'nota_credito', 'credit_note' => 'NOTA DE CREDITO',
             default => 'FACTURA',
         };
+    }
+
+    private function reloadDocumentBusiness(BillingDocument $document): void
+    {
+        if (!$document->business_id) {
+            return;
+        }
+
+        try {
+            $business = Business::query()->find($document->business_id);
+        } catch (\Throwable) {
+            return;
+        }
+
+        if ($business) {
+            $document->setRelation('business', $business);
+        }
     }
 
     private function pdfCurrencyName(?string $currency): string
