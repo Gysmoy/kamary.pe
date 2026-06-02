@@ -12,7 +12,7 @@ class BillingDocumentVerificationController extends Controller
     {
         $document->loadMissing('business', 'branch', 'client', 'eventualClient', 'serviceOrder', 'commercialOrder', 'items');
 
-        abort_unless($verification->isStorageDocument($document), 404);
+        abort_unless($verification->isVerifiableDocument($document), 404);
         abort_unless($verification->isValidToken($document, $token), 404);
 
         $file = $facturador->downloadFile($document, 'pdf');

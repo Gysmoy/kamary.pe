@@ -6,6 +6,7 @@ use App\Models\BusinessBranch;
 use App\Models\BillingDocument;
 use App\Models\Business;
 use App\Models\ReferralGuide;
+use App\Support\BusinessScope;
 use App\Support\SimpleQrCode;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
@@ -792,11 +793,9 @@ class FacturadorPro5Service
             Arr::get($document->metadata, 'delivery_address') ? 'Entrega: ' . Arr::get($document->metadata, 'delivery_address') : null,
         ]);
 
-        if ($this->isStorageBillingDocument($document)) {
-            $paymentAccounts = $this->paymentAccountTextLines($document->business?->payment_accounts);
-            if (!empty($paymentAccounts)) {
-                $lines[] = 'Cuentas bancarias: ' . implode(' / ', array_slice($paymentAccounts, 0, 5));
-            }
+        $paymentAccounts = $this->paymentAccountTextLines($document->business?->payment_accounts);
+        if (!empty($paymentAccounts)) {
+            $lines[] = 'Cuentas bancarias: ' . implode(' / ', array_slice($paymentAccounts, 0, 5));
         }
 
         return implode(' | ', $lines);
@@ -1221,13 +1220,31 @@ class FacturadorPro5Service
         return $document->provider_mode === 'demo'
             || Arr::get($document->metadata ?? [], 'document_origin') === 'storage_billing_control_demo'
             || Arr::get($stored, 'mode') === 'demo'
-            || Arr::get($status, 'mode') === 'demo';
+            || Arr::get($status, 'mode') === 'demo'
+            || $this->usesCompanyLocalPdfFormat($document);
     }
 
     private function canBuildLocalPdf(BillingDocument $document, array $stored = [], array $status = []): bool
     {
         return $this->shouldServeLocalPdf($document, $stored, $status)
             || (trim((string) $document->series) !== '' && trim((string) $document->sequence) !== '');
+    }
+
+    private function usesCompanyLocalPdfFormat(BillingDocument $document): bool
+    {
+        if (trim((string) $document->series) === '' || trim((string) $document->sequence) === '') {
+            return false;
+        }
+
+        if (!$document->relationLoaded('business')) {
+            try {
+                $document->loadMissing('business:id,business_key');
+            } catch (\Throwable) {
+                return false;
+            }
+        }
+
+        return in_array((string) $document->business?->business_key, BusinessScope::fixedKeys(), true);
     }
 
     private function buildLocalPdfFile(BillingDocument $document): array
@@ -1309,11 +1326,9 @@ class FacturadorPro5Service
         $customerDocument = $customer?->document_number ?: '-';
         $customerName = $this->resolveCustomerName($document);
         $customerAddress = $this->resolveCustomerAddress($document);
-        $logoImage = $this->storagePdfLogoImage($document);
+        $logoImage = $this->fiscalPdfLogoImage($document);
         $verificationService = app(BillingDocumentVerificationService::class);
-        $verificationUrl = $this->isStorageBillingDocument($document)
-            ? $verificationService->verificationUrl($document)
-            : url('/');
+        $verificationUrl = $verificationService->verificationUrl($document);
         $xmlUrl = $verificationService->providerXmlUrl($document);
 
         $this->pdfRect($commands, $rightBoxX, 745, 153.07, 68);
@@ -1410,16 +1425,8 @@ class FacturadorPro5Service
 
         $bankLineCount = 0;
         $bankLines = [];
-        if ($this->isStorageBillingDocument($document)) {
-            foreach (array_slice($this->paymentAccountTextLines($document->business?->payment_accounts), 0, 6) as $index => $line) {
-                $bankLines[] = [$line, $index === 0 ? 'F2' : 'F1'];
-            }
-        } else {
-            $bankLines = [
-                ['KAMARY MEDICAL SAC ' . strtoupper($currencyName), 'F2'],
-                ['BBVA CUENTA CORRIENTE 0011-0341-0100042988', 'F1'],
-                ['BBVA CCI 011-341-000100042988-54', 'F1'],
-            ];
+        foreach (array_slice($this->paymentAccountTextLines($document->business?->payment_accounts), 0, 6) as $index => $line) {
+            $bankLines[] = [$line, $index === 0 ? 'F2' : 'F1'];
         }
 
         $bankLineCount = count($bankLines);
@@ -1545,12 +1552,8 @@ class FacturadorPro5Service
         return (string) $number;
     }
 
-    private function storagePdfLogoImage(BillingDocument $document): ?array
+    private function fiscalPdfLogoImage(BillingDocument $document): ?array
     {
-        if (!$this->isStorageBillingDocument($document)) {
-            return null;
-        }
-
         $path = trim((string) $document->business?->fiscal_logo_path);
         if ($path === '' || !Storage::disk('public')->exists($path)) {
             return null;

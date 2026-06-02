@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\BillingDocument;
+use App\Support\BusinessScope;
 use Illuminate\Support\Arr;
 
 class BillingDocumentVerificationService
@@ -29,24 +30,11 @@ class BillingDocumentVerificationService
         return hash_equals($this->verificationToken($document), trim($token));
     }
 
-    public function isStorageDocument(BillingDocument $document): bool
+    public function isVerifiableDocument(BillingDocument $document): bool
     {
-        $origin = (string) Arr::get($document->metadata ?? [], 'document_origin', '');
-        if (in_array($origin, [
-            'storage_service_order',
-            'storage_general_service_order',
-            'storage_billing_control_demo',
-            'storage_demo_seed',
-        ], true)) {
-            return true;
-        }
+        $document->loadMissing('business');
 
-        if (!$document->relationLoaded('serviceOrder') && $document->service_order_id) {
-            $document->loadMissing('serviceOrder');
-        }
-
-        return $document->source_type === 'service_order'
-            && in_array((string) $document->serviceOrder?->order_type, ['storage_service', 'storage_general'], true);
+        return in_array((string) $document->business?->business_key, BusinessScope::fixedKeys(), true);
     }
 
     public function providerXmlUrl(BillingDocument $document): ?string
