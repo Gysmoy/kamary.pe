@@ -830,6 +830,19 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     () => isStorageBilling ? buildStorageFilter(activeStorageTab, appliedStorageFilters) : null,
     [isStorageBilling, activeStorageTab, appliedStorageFilters]
   )
+  const gridRest = useMemo(() => {
+    if (!isStorageBilling) return billingDocumentsRest
+
+    return {
+      paginate: async (params = {}) => billingDocumentsRest.paginate({
+        ...params,
+        filter: combineFilters([storageFilterValue, params.filter]),
+      }),
+    }
+  }, [isStorageBilling, storageFilterValue])
+  const gridKey = isStorageBilling
+    ? `storage-billing-${activeStorageTab}-${JSON.stringify(storageFilterValue)}`
+    : 'billing-documents'
   const prefacturesForBulkFilter = () => combineFilters([
     tabFilter('prefactures'),
     bulkFilters.clientId ? ['client_id', '=', Number(bulkFilters.clientId)] : null,
@@ -1365,12 +1378,12 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     </div>}
 
     <Table
-      key={isStorageBilling ? `storage-billing-${activeStorageTab}` : 'billing-documents'}
+      key={gridKey}
       gridRef={gridRef}
       title={isStorageBilling ? storageTitle : moduleTitle}
-      rest={billingDocumentsRest}
+      rest={gridRest}
       pageSize={isStorageBilling ? 20 : 25}
-      filterValue={storageFilterValue}
+      filterValue={isStorageBilling ? null : storageFilterValue}
       allowQueryBuilder={!isStorageBilling}
       exportable={isStorageBilling}
       toolBar={(items) => {
