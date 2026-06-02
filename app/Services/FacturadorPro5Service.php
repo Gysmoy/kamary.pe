@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\BusinessBranch;
 use App\Models\BillingDocument;
 use App\Models\ReferralGuide;
+use App\Support\SimpleQrCode;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -1307,6 +1308,11 @@ class FacturadorPro5Service
         $customerName = $this->resolveCustomerName($document);
         $customerAddress = $this->resolveCustomerAddress($document);
         $logoImage = $this->storagePdfLogoImage($document);
+        $verificationService = app(BillingDocumentVerificationService::class);
+        $verificationUrl = $this->isStorageBillingDocument($document)
+            ? $verificationService->verificationUrl($document)
+            : url('/');
+        $xmlUrl = $verificationService->providerXmlUrl($document);
 
         $this->pdfRect($commands, $rightBoxX, 745, 153.07, 68);
         $this->pdfRect($commands, $margin, 616, 331.65, 92);
@@ -1427,11 +1433,15 @@ class FacturadorPro5Service
             $bankBoxY = $tableBottom - 30;
         }
 
-        $legendY = max($bankBoxY - 30, 122);
-        $this->pdfWrappedText($commands, 'Representacion impresa de la ' . $documentTitle . ' ELECTRONICA, visita ' . url('/'), 46.52, $legendY, 500, 7.5, 9.5, 3);
-        $this->pdfText($commands, 'Autorizado mediante Resolucion de Intendencia No.034-005-0005315', 46.52, $legendY - 30, 7.5);
-        $this->pdfWrappedText($commands, 'Archivo XML: documento demo sin enlace XML del proveedor', 46.52, $legendY - 70, 500, 7.5, 9.5, 2);
-        $this->pdfText($commands, 'PDF generado localmente para datos demo sin enlace del proveedor', 46.52, 42, 7);
+        $verificationBoxTop = $bankBoxY - 30;
+        $verificationBoxHeight = 150;
+        $verificationBoxY = max(38, $verificationBoxTop - $verificationBoxHeight);
+        $this->pdfRect($commands, $margin, $verificationBoxY, $width, $verificationBoxHeight);
+        $this->pdfWrappedText($commands, 'Representacion impresa de la ' . $documentTitle . ' ELECTRONICA, visita ' . $verificationUrl, 46.52, $verificationBoxTop - 14, 490, 8.5, 10, 2);
+        $this->pdfText($commands, 'Autorizado mediante Resolucion de Intendencia No.034-005-0005315', 46.52, $verificationBoxTop - 36, 8.2);
+        $this->pdfQrCode($commands, $verificationUrl, 50, $verificationBoxY + 42, 66);
+        $this->pdfText($commands, 'Archivo XML:', 46.52, $verificationBoxY + 28, 8.5, 'F2');
+        $this->pdfWrappedText($commands, $xmlUrl ?: 'Disponible cuando el proveedor genere el XML fiscal', 107, $verificationBoxY + 28, 440, 8.5, 10, 2);
 
         return $this->pdfDocument(implode("\n", $commands) . "\n", $logoImage ? [$logoImage] : []);
     }
@@ -1615,6 +1625,33 @@ class FacturadorPro5Service
     {
         $name = preg_replace('/[^A-Za-z0-9]/', '', $name) ?: 'Image';
         $commands[] = 'q ' . $this->pdfNumber($width) . ' 0 0 ' . $this->pdfNumber($height) . ' ' . $this->pdfNumber($x) . ' ' . $this->pdfNumber($y) . ' cm /' . $name . ' Do Q';
+    }
+
+    private function pdfQrCode(array &$commands, string $text, float $x, float $y, float $size): void
+    {
+        try {
+            $matrix = SimpleQrCode::matrix($text);
+        } catch (\Throwable) {
+            return;
+        }
+
+        $count = count($matrix);
+        if ($count === 0) {
+            return;
+        }
+
+        $module = $size / $count;
+        foreach ($matrix as $rowIndex => $row) {
+            foreach ($row as $columnIndex => $dark) {
+                if (!$dark) {
+                    continue;
+                }
+
+                $moduleX = $x + ($columnIndex * $module);
+                $moduleY = $y + (($count - 1 - $rowIndex) * $module);
+                $commands[] = $this->pdfNumber($moduleX) . ' ' . $this->pdfNumber($moduleY) . ' ' . $this->pdfNumber($module + 0.02) . ' ' . $this->pdfNumber($module + 0.02) . ' re f';
+            }
+        }
     }
 
     private function pdfText(array &$commands, string $text, float $x, float $y, float $size = 8, string $font = 'F1', ?float $boxWidth = null, string $align = 'L'): void

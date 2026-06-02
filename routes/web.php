@@ -81,6 +81,7 @@ use App\Http\Controllers\Admin\WarehouseController as AdminWarehouseController;
 
 // Public 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BillingDocumentVerificationController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\MailingController;
 use App\Support\ModulePermissions;
@@ -106,6 +107,7 @@ Route::get('/confirm-email/{token}', [AuthController::class, 'confirmEmailView']
 Route::get('/confirmation/{token}', [AuthController::class, 'loginView'])->name('confirmation');
 
 Route::get('/unsubscribe', [MailingController::class, 'reactView'])->name('Unsubscribe.jsx');
+Route::get('/v/{document}/{token}', [BillingDocumentVerificationController::class, 'show'])->name('billing-documents.verify');
 
 Route::middleware('auth')->group(function () {
     Route::get('/comercial/tomapedido', [AdminTakeOrderController::class, 'reactView'])->middleware('module.permission:take-orders');
