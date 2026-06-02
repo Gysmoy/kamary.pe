@@ -866,9 +866,9 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
           onClick: () => canPreviewPdf ? onPreviewPdf(data) : showBlockedAction('PDF no disponible', 'El comprobante todavia no tiene PDF disponible.')
         })
         appendStorageButton(actions, {
-          className: canCancel ? 'btn-outline-danger' : 'btn-outline-secondary',
+          className: 'btn-outline-danger',
           title: canCancel ? 'Anular comprobante' : 'Anulacion no disponible',
-          icon: canCancel ? 'mdi mdi-minus-circle' : 'mdi mdi-lock-outline',
+          icon: 'mdi mdi-minus-circle',
           onClick: () => canCancel ? onOpenCancel(data) : showBlockedAction('Anulacion no disponible', 'Solo puedes anular comprobantes aceptados que no sean notas de credito.')
         })
         appendStorageButton(actions, {
