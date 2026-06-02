@@ -1296,7 +1296,7 @@ class FacturadorPro5Service
         $margin = 42.52;
         $width = 510.24;
         $rightBoxX = 399.69;
-        $businessName = $document->business?->name ?: 'KAMARY MEDICAL S.A.C.';
+        $businessName = $document->business?->trade_name ?: ($document->business?->name ?: 'KAMARY MEDICAL S.A.C.');
         $businessRuc = $document->business?->tax_number ?: '20604718237';
         $businessAddress = $document->business?->fiscal_address
             ?: ($document->branch?->address ?: 'CAL.YEN ESCOBEDO GARRO NRO. 800');
