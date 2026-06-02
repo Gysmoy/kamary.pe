@@ -35,9 +35,13 @@ const currencyOptions = [
   { value: 'PEN', label: 'Soles' },
   { value: 'USD', label: 'Dolares' },
 ]
+const storageBusinessKey = 'kamary_medicals'
 const storageWarehouseName = (warehouse) => warehouse?.name ?? warehouse?.warehouse_name ?? ''
 const storageWarehouseId = (warehouse) => warehouse?.id ?? warehouse?.warehouse_id ?? ''
 const storageOrderStatusLabel = (value) => value === 'approved' ? 'Aprobado' : getServiceOrderStatusLabel(value)
+const findDefaultStorageBusiness = (rows = []) => rows.find(row => `${row.business_key ?? ''}` === storageBusinessKey)
+  ?? rows.find(row => normalizeStorageText([row.name, row.trade_name].filter(Boolean).join(' ')).includes('kamarymedicals'))
+  ?? rows[0]
 const storageBlockFromWarehouse = (warehouse) => {
   const warehouseId = storageWarehouseId(warehouse)
   const warehouseName = storageWarehouseName(warehouse)
@@ -226,8 +230,8 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         setStorageBlocks(emptyStorageBlocks(storageCatalog.warehouseRows))
       }
 
-      if (isStorageService || isServiceOrderContext) {
-        const defaultBusiness = activeBusinesses[0]
+      if (isStorageOrderList || isServiceOrderContext) {
+        const defaultBusiness = isStorageOrderList ? findDefaultStorageBusiness(activeBusinesses) : activeBusinesses[0]
         if (defaultBusiness) {
           setSelectedBusinessId(`${defaultBusiness.id}`)
           const branchRows = await loadBranches(defaultBusiness.id)
@@ -442,7 +446,8 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     taxAmountRef.current.value = Number(data?.tax_amount ?? 0)
     observationsRef.current.value = data?.observations ?? ''
     setDetractionEnabled(Boolean(data?.detraction_enabled ?? (data?.items ?? []).some(row => Number(row.detraction_percent || 0) > 0)))
-    const nextBusinessId = data?.business_id ? `${data.business_id}` : (selectedBusinessId || (businesses[0]?.id ? `${businesses[0].id}` : ''))
+    const defaultBusiness = isStorageOrderList ? findDefaultStorageBusiness(businesses) : businesses[0]
+    const nextBusinessId = data?.business_id ? `${data.business_id}` : (selectedBusinessId || (defaultBusiness?.id ? `${defaultBusiness.id}` : ''))
     setSelectedBusinessId(nextBusinessId)
     setSelectedClientId(data?.client_id ? `${data.client_id}` : '')
     const branchRows = await loadBranches(nextBusinessId, data?.business_branch_id ?? selectedBranchId)
