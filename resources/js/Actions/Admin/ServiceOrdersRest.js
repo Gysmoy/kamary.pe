@@ -37,6 +37,15 @@ class ServiceOrdersRest extends BasicRest {
     isStoragePath() ? '/api/admin/storage/general-service/paginate' : '/api/admin/services/paginate',
     isStorageServiceOrdersPath() ? { storage_service_types: true } : {}
   )
+  saveStorageGeneralService = async (request) => {
+    const originalPath = this.path
+    this.path = 'admin/storage/general-service-orders/services'
+    try {
+      return await this.save(request)
+    } finally {
+      this.path = originalPath
+    }
+  }
   getStorageOptions = async () => isStoragePath() ? await this.simpleGet('/api/admin/storage/kardex/options') : null
   getStorageWarehouses = async () => isStoragePath()
     ? await loadAll('/api/admin/storage/kardex/paginate', { section: 'warehouses', sort: [{ selector: 'warehouse_name', desc: false }] })

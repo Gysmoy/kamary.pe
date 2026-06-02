@@ -143,6 +143,11 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   const branchSelectRef = useRef()
   const clientSelectRef = useRef()
   const storageServiceSelectRef = useRef()
+  const quickServiceModalRef = useRef()
+  const quickServiceTargetUidRef = useRef('')
+  const quickServiceNameRef = useRef()
+  const quickServiceDescriptionRef = useRef()
+  const quickServicePriceRef = useRef()
 
   const [businesses, setBusinesses] = useState([])
   const [branches, setBranches] = useState([])
@@ -207,16 +212,15 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
   useEffect(() => {
     const loadInitialData = async () => {
       const storageCatalogPromise = isStorageService ? loadStorageCatalog() : Promise.resolve({ warehouseRows: [], locationRows: [] })
-      const [businessList, clientList, serviceList, storageCatalog] = await Promise.all([
+      const [businessList, clientList, , storageCatalog] = await Promise.all([
         serviceOrdersRest.getBusinesses(),
         serviceOrdersRest.getClients(),
-        serviceOrdersRest.getServices(),
+        loadServices(),
         storageCatalogPromise,
       ])
       const activeBusinesses = businessList ?? []
       setBusinesses(activeBusinesses)
       setClients((clientList ?? []).filter(row => row.status !== null))
-      setServices((serviceList ?? []).filter(row => row.status !== null))
 
       if (isStorageService) {
         setStorageBlocks(emptyStorageBlocks(storageCatalog.warehouseRows))
@@ -285,6 +289,13 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     setBranches(branchRows)
     setSelectedBranchId(preferred ? `${preferred}` : '')
     return branchRows
+  }
+
+  const loadServices = async () => {
+    const serviceList = await serviceOrdersRest.getServices()
+    const activeServices = (serviceList ?? []).filter(row => row.status !== null)
+    setServices(activeServices)
+    return activeServices
   }
 
   const recalc = (row) => ({ ...row, total: Number(row.quantity || 0) * Number(row.unit_price || 0) })
@@ -487,6 +498,60 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         unit_price: Number(value === 'USD' ? service?.unit_price_usd : service?.unit_price_pen) || 0,
       })
     }))
+  }
+
+  const onQuickServiceOpen = (uid) => {
+    quickServiceTargetUidRef.current = uid
+    if (quickServiceNameRef.current) quickServiceNameRef.current.value = ''
+    if (quickServiceDescriptionRef.current) quickServiceDescriptionRef.current.value = ''
+    if (quickServicePriceRef.current) quickServicePriceRef.current.value = '0.00'
+    $(quickServiceModalRef.current).modal('show')
+    setTimeout(() => quickServiceNameRef.current?.focus(), 150)
+  }
+
+  const onQuickServiceSave = async (e) => {
+    e.preventDefault()
+    const name = quickServiceNameRef.current.value.trim()
+    const observations = quickServiceDescriptionRef.current.value.trim()
+    const unitPricePen = quickServicePriceRef.current.value || 0
+
+    if (!name) {
+      Swal.fire('Formulario incompleto', 'Ingresa el nombre del servicio general.', 'warning')
+      return
+    }
+
+    const previousIds = new Set(services.map(row => `${row.id}`))
+    const result = await serviceOrdersRest.saveStorageGeneralService({
+      name,
+      category: 'General',
+      service_type: 'General',
+      billing_unit: 'Servicio',
+      unit_price_pen: unitPricePen,
+      unit_price_usd: 0,
+      observations,
+      status: true,
+    })
+    if (!result) return
+
+    const activeServices = await loadServices()
+    const createdService = activeServices.find(row => !previousIds.has(`${row.id}`) && normalizeStorageText(row.name) === normalizeStorageText(name))
+      ?? [...activeServices].reverse().find(row => normalizeStorageText(row.name) === normalizeStorageText(name))
+
+    if (createdService && quickServiceTargetUidRef.current) {
+      setItems(prev => prev.map(row => {
+        if (row.uid !== quickServiceTargetUidRef.current) return row
+        return recalc({
+          ...row,
+          service_id: `${createdService.id}`,
+          scope: row.scope || createdService.category || '',
+          gloss: row.gloss || createdService.name || '',
+          description: row.description || row.gloss || createdService.name || '',
+          unit_price: Number(currencyRef.current?.value === 'USD' ? createdService.unit_price_usd : createdService.unit_price_pen) || 0,
+        })
+      }))
+    }
+
+    $(quickServiceModalRef.current).modal('hide')
   }
 
   const showSaveSuccess = (result) => {
@@ -1570,6 +1635,24 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
             font-weight: 700;
             text-transform: uppercase;
           }
+          .storage-general-service-selector {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 34px;
+            gap: 6px;
+            align-items: center;
+          }
+          .storage-general-service-selector .form-select {
+            min-width: 0;
+          }
+          .storage-general-service-add {
+            width: 34px;
+            height: 26px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            border-radius: 2px;
+          }
           .storage-general-lines-wrap {
             border: 1px solid #e9ecef;
             border-radius: 4px;
@@ -1698,10 +1781,15 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
               {items.map(row => (
                 <tr key={`general-order-item-${row.uid}`}>
                   <td>
-                    <select className='form-select' value={row.service_id} onChange={(e) => onItemChange(row.uid, 'service_id', e.target.value)} required>
-                      <option value=''>Seleccione servicio</option>
-                      {services.map(service => <option key={`general-order-service-${service.id}`} value={service.id}>{service.name}</option>)}
-                    </select>
+                    <div className='storage-general-service-selector'>
+                      <select className='form-select' value={row.service_id} onChange={(e) => onItemChange(row.uid, 'service_id', e.target.value)} required>
+                        <option value=''>Seleccione servicio</option>
+                        {services.map(service => <option key={`general-order-service-${service.id}`} value={service.id}>{service.name}</option>)}
+                      </select>
+                      <button type='button' className='btn btn-outline-primary storage-general-service-add' title='Agregar servicio general' onClick={() => onQuickServiceOpen(row.uid)}>
+                        <i className='mdi mdi-plus'></i>
+                      </button>
+                    </div>
                   </td>
                   <td><input type='number' step='0.01' className='form-control' value={row.unit_price} onChange={(e) => onItemChange(row.uid, 'unit_price', e.target.value)} /></td>
                   <td><input type='number' step='0.001' min='0' className='form-control' value={row.quantity} onChange={(e) => onItemChange(row.uid, 'quantity', e.target.value)} /></td>
@@ -1893,6 +1981,32 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         </div>
       </div>
     </Modal>
+    )}
+    {isStorageGeneral && (
+      <Modal
+        modalRef={quickServiceModalRef}
+        title='Agregar servicio general'
+        size='md'
+        btnCancelText='Cerrar'
+        btnSubmitText='Guardar'
+        zIndex={1070}
+        onSubmit={onQuickServiceSave}
+      >
+        <div className='row g-3'>
+          <div className='col-12'>
+            <label className='form-label'>Nombre</label>
+            <input ref={quickServiceNameRef} className='form-control' required />
+          </div>
+          <div className='col-12'>
+            <label className='form-label'>Descripcion</label>
+            <input ref={quickServiceDescriptionRef} className='form-control' />
+          </div>
+          <div className='col-12'>
+            <label className='form-label'>Tarifa</label>
+            <input ref={quickServicePriceRef} type='number' min='0' step='0.01' className='form-control' defaultValue='0.00' />
+          </div>
+        </div>
+      </Modal>
     )}
   </>
 }

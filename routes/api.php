@@ -553,6 +553,7 @@ Route::middleware('auth')->group(function () {
 
             Route::middleware('module.permission:storage-general-service-orders')->group(function () {
                 Route::post('/general-service-orders', [AdminStorageGeneralServiceOrderController::class, 'save']);
+                Route::post('/general-service-orders/services', [AdminStorageGeneralServiceController::class, 'save']);
                 Route::post('/general-service-orders/paginate', [AdminStorageGeneralServiceOrderController::class, 'paginate']);
                 Route::patch('/general-service-orders/status', [AdminStorageGeneralServiceOrderController::class, 'status']);
                 Route::patch('/general-service-orders/{field}', [AdminStorageGeneralServiceOrderController::class, 'boolean']);
