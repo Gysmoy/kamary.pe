@@ -451,6 +451,8 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
 
   const hasPreparedVoucher = rowHasPreparedVoucher
 
+  const canRetryIssueDocument = (row) => row?.local_status === 'pending' && hasPreparedVoucher(row)
+
   const canPreviewPdfDocument = (row) => {
     if (!row) return false
     return canDownloadDocument(row)
@@ -1022,12 +1024,21 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       }
 
       if (activeStorageTab === 'issued') {
+        const canRetryIssue = canRetryIssueDocument(data)
         appendStorageButton(actions, {
           className: 'btn-outline-warning',
           title: 'Ver validacion fiscal',
           icon: 'mdi mdi-card-account-details-outline',
           onClick: () => openReadinessModal(data, `Validacion fiscal - ${data.code}`)
         })
+        if (canRetryIssue) {
+          appendStorageButton(actions, {
+            className: 'btn-outline-success',
+            title: 'Reintentar envio a SUNAT',
+            icon: 'mdi mdi-send',
+            onClick: () => onIssue(data)
+          })
+        }
         appendStorageButton(actions, {
           className: 'btn-outline-warning',
           title: 'Sincronizar estado',
