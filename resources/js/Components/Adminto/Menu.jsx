@@ -181,7 +181,6 @@ const Menu = ({ can, hasRole, panel = null }) => {
             <MenuItemContainer title='Servicios' icon='ti ti-settings'>
               {canAccess('services-client') && <MenuItem href='/admin/services-client' icon='ti ti-users'>Cliente</MenuItem>}
               {canAccess('services-billing') && <MenuItem href='/admin/services-billing' icon='ti ti-file-invoice'>Facturacion</MenuItem>}
-              {canAccess('services-billing') && <MenuItem href='/admin/billing-settings' icon='ti ti-file-settings'>Config. facturación</MenuItem>}
               {canAccess('services-service-order') && <MenuItem href='/admin/services-service-order' icon='ti ti-file-dollar'>Orden de servicio</MenuItem>}
               {canAccess('services-services') && <MenuItem href='/admin/services-services' icon='ti ti-settings'>Servicios</MenuItem>}
             </MenuItemContainer>
