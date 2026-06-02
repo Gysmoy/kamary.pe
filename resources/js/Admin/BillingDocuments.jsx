@@ -170,6 +170,72 @@ const defaultEmailDraft = (row) => ({
   ].join('\n')
 })
 
+const splitEmailValues = (value) => `${value ?? ''}`
+  .split(/[;,\s]+/)
+  .map(item => item.trim())
+  .filter(Boolean)
+
+const normalizeEmailValues = (values) => Array.from(new Set(values.map(item => item.trim()).filter(Boolean)))
+
+const EmailTagsInput = ({ value, onChange, placeholder }) => {
+  const [draft, setDraft] = useState('')
+  const emails = useMemo(() => splitEmailValues(value), [value])
+
+  const setEmails = (items) => {
+    onChange(normalizeEmailValues(items).join(', '))
+  }
+
+  const commitDraft = (text = draft) => {
+    const nextItems = splitEmailValues(text)
+    if (!nextItems.length) return false
+    setEmails([...emails, ...nextItems])
+    setDraft('')
+    return true
+  }
+
+  const onInputChange = (event) => {
+    const next = event.target.value
+    if (/[;,\s]/.test(next)) {
+      commitDraft(next)
+      return
+    }
+    setDraft(next)
+  }
+
+  const onInputKeyDown = (event) => {
+    if (['Enter', 'Tab', ',', ';', ' '].includes(event.key)) {
+      if (draft.trim()) {
+        event.preventDefault()
+        commitDraft()
+      }
+      return
+    }
+
+    if (event.key === 'Backspace' && !draft && emails.length) {
+      event.preventDefault()
+      setEmails(emails.slice(0, -1))
+    }
+  }
+
+  const removeEmail = (index) => {
+    setEmails(emails.filter((_, itemIndex) => itemIndex !== index))
+  }
+
+  return <div className='billing-email-tags' onClick={(event) => event.currentTarget.querySelector('input')?.focus()}>
+    {emails.map((email, index) => <span className='billing-email-chip' key={`billing-email-chip-${email}-${index}`}>
+      <span>{email}</span>
+      <button type='button' onClick={(event) => { event.stopPropagation(); removeEmail(index) }} aria-label={`Quitar ${email}`}>x</button>
+    </span>)}
+    <input
+      value={draft}
+      onChange={onInputChange}
+      onKeyDown={onInputKeyDown}
+      onBlur={() => commitDraft()}
+      placeholder={emails.length ? '' : placeholder}
+    />
+  </div>
+}
+
 const normalizedStatus = (value) => `${value ?? ''}`.trim().toLowerCase()
 
 const rowSunatMeta = (row) => {
@@ -1142,6 +1208,58 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       .billing-email-form .form-label {
         font-weight: 600;
       }
+      .billing-email-tags {
+        min-height: 38px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+        width: 100%;
+        padding: 5px 8px;
+        border: 1px solid #ced4da;
+        border-radius: .25rem;
+        background: #fff;
+        cursor: text;
+      }
+      .billing-email-tags:focus-within {
+        border-color: #86b7fe;
+        box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .15);
+      }
+      .billing-email-tags input {
+        flex: 1 1 180px;
+        min-width: 160px;
+        border: 0;
+        outline: 0;
+        padding: 4px 6px;
+        color: #4b5563;
+      }
+      .billing-email-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 100%;
+        padding: 4px 8px;
+        border: 1px solid #ced4da;
+        border-radius: 3px;
+        background: #f8f9fa;
+        color: #4b5563;
+        font-size: .82rem;
+        font-weight: 600;
+        line-height: 1.1;
+      }
+      .billing-email-chip span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .billing-email-chip button {
+        border: 0;
+        background: transparent;
+        color: #6c757d;
+        line-height: 1;
+        padding: 0;
+        font-weight: 700;
+      }
       .billing-email-editor {
         border: 1px solid #dee2e6;
         border-radius: 4px;
@@ -1301,19 +1419,17 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       <div className='billing-email-form'>
         <div className='mb-3'>
           <label className='form-label'>Para:</label>
-          <input
-            className='form-control'
+          <EmailTagsInput
             value={emailDraft.to}
-            onChange={(event) => onEmailDraftChange('to', event.target.value)}
+            onChange={(value) => onEmailDraftChange('to', value)}
             placeholder='Para:'
           />
         </div>
         <div className='mb-3'>
           <label className='form-label'>Copia:</label>
-          <input
-            className='form-control'
+          <EmailTagsInput
             value={emailDraft.cc}
-            onChange={(event) => onEmailDraftChange('cc', event.target.value)}
+            onChange={(value) => onEmailDraftChange('cc', value)}
             placeholder='Copia:'
           />
         </div>

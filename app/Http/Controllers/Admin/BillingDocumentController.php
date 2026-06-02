@@ -407,7 +407,7 @@ class BillingDocumentController extends BasicController
         $emails = [];
 
         foreach ($items as $item) {
-            foreach (preg_split('/[;,\r\n]+/', (string) $item, -1, PREG_SPLIT_NO_EMPTY) as $email) {
+            foreach (preg_split('/[;,\s]+/', (string) $item, -1, PREG_SPLIT_NO_EMPTY) as $email) {
                 $email = trim($email);
                 if ($email !== '') $emails[] = $email;
             }
