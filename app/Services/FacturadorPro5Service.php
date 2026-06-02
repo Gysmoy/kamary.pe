@@ -1308,33 +1308,32 @@ class FacturadorPro5Service
         $customerAddress = $this->resolveCustomerAddress($document);
         $logoImage = $this->storagePdfLogoImage($document);
 
-        $this->pdfRect($commands, $margin, 745, 331.65, 68);
         $this->pdfRect($commands, $rightBoxX, 745, 153.07, 68);
-        $this->pdfRect($commands, $margin, 616, $width, 108);
-        $this->pdfRect($commands, $margin, 513, $width, 84);
+        $this->pdfRect($commands, $margin, 616, 331.65, 92);
+        $this->pdfRect($commands, $rightBoxX, 616, 153.07, 92);
 
         if ($logoImage) {
-            [$logoWidth, $logoHeight] = $this->fitPdfImage($logoImage['width'], $logoImage['height'], 68, 44);
-            $this->pdfImage($commands, $logoImage['name'], 54, 756 + ((44 - $logoHeight) / 2), $logoWidth, $logoHeight);
+            [$logoWidth, $logoHeight] = $this->fitPdfImage($logoImage['width'], $logoImage['height'], 70, 56);
+            $this->pdfImage($commands, $logoImage['name'], 54, 754 + ((56 - $logoHeight) / 2), $logoWidth, $logoHeight);
         } else {
             $this->pdfText($commands, 'KM', 54, 787, 18, 'F2');
         }
 
-        $this->pdfText($commands, $businessName, 123, 797, 12, 'F2');
-        $this->pdfWrappedText($commands, $businessAddress, 123, 779, 245, 8.5, 9.5, 2);
+        $this->pdfText($commands, mb_strtoupper($businessName), 111, 797, 14.5, 'F2');
+        $this->pdfWrappedText($commands, $businessAddress, 111, 779, 285, 9.2, 10, 3);
 
         $this->pdfText($commands, 'RUC ' . $businessRuc, $rightBoxX, 797, 10, 'F2', 153.07, 'C');
         $this->pdfText($commands, $documentTitle, $rightBoxX, 781, 10, 'F2', 153.07, 'C');
         $this->pdfText($commands, 'ELECTRONICA', $rightBoxX, 766, 10, 'F2', 153.07, 'C');
         $this->pdfText($commands, $number, $rightBoxX, 751, 10, 'F2', 153.07, 'C');
 
-        $this->pdfText($commands, 'DATOS DEL CLIENTE', 46.52, 707, 8.8, 'F2');
-        $this->pdfLabelValue($commands, 'DOCUMENTO', $customerDocument, 46.52, 692, 10);
-        $this->pdfLabelValue($commands, 'DENOMINACION', $customerName, 46.52, 680, 10);
-        $this->pdfLabelValue($commands, 'DIRECCION', $customerAddress, 46.52, 668, 10, 245, 2);
-        $this->pdfLabelValue($commands, 'FECHA EMISION', $this->formatPdfDate($document->issue_date), 388.38, 707, 10, 70, 1, 88);
-        $this->pdfLabelValue($commands, 'MONEDA', $currencyName, 388.38, 695, 10, 70, 1, 88);
-        $this->pdfLabelValue($commands, 'FECHA VENCIMIENTO', $this->formatPdfDate($document->due_date), 388.38, 683, 10, 70, 1, 88);
+        $this->pdfText($commands, 'DATOS DEL CLIENTE', 46.52, 693, 8.8, 'F2');
+        $this->pdfLabelValue($commands, 'DOCUMENTO', $customerDocument, 46.52, 678, 10);
+        $this->pdfLabelValue($commands, 'DENOMINACION', $customerName, 46.52, 666, 10);
+        $this->pdfLabelValue($commands, 'DIRECCION', $customerAddress, 46.52, 654, 10, 205, 2);
+        $this->pdfLabelValue($commands, 'FECHA EMISION', $this->formatPdfDate($document->issue_date), 407, 693, 10, 67, 1, 88);
+        $this->pdfLabelValue($commands, 'MONEDA', $currencyName, 407, 681, 10, 67, 1, 88);
+        $this->pdfLabelValue($commands, 'FECHA VENCIMIENTO', $this->formatPdfDate($document->due_date), 407, 669, 10, 67, 1, 88);
 
         $columns = [
             ['CODIGO', 68, 'L'],
@@ -1344,14 +1343,17 @@ class FacturadorPro5Service
             ['P. CON IGV', 66, 'R'],
             ['IMPORTE', 66.24, 'R'],
         ];
-        $this->pdfTableHeader($commands, $margin, 585, $columns);
-        $y = 548;
-        $rowHeight = 46;
+        $tableTop = 585;
+        $headerBottom = $tableTop - 28;
+        $y = $headerBottom - 15;
+        $rowHeight = 44;
+        $rowBottom = $headerBottom;
         $items = $document->items->where('status', true)->take(6);
         if ($items->isEmpty()) {
             foreach ($fallbackLines as $index => $line) {
                 if ($index < 3 || trim($line) === '') continue;
                 $this->pdfCellText($commands, $line, 46, $y, 500, 8, 'L', 1);
+                $rowBottom = $y - 12;
                 $y -= 13;
             }
         } else {
@@ -1379,34 +1381,53 @@ class FacturadorPro5Service
             }
         }
 
-        $totalsTop = min($y - 8, 486);
-        $this->pdfRect($commands, $margin, $totalsTop - 58, $width, 58);
-        $this->pdfText($commands, 'GRAVADA:', 46.52, $totalsTop - 14, 8, 'F2');
-        $this->pdfText($commands, number_format((float) $document->subtotal, 2, '.', ''), 478.44, $totalsTop - 14, 8, 'F2');
-        $this->pdfText($commands, 'IGV 18.00 %:', 46.52, $totalsTop - 28, 8, 'F2');
-        $this->pdfText($commands, number_format((float) $document->tax_amount, 2, '.', ''), 478.44, $totalsTop - 28, 8, 'F2');
-        $this->pdfText($commands, 'TOTAL:', 46.52, $totalsTop - 42, 8, 'F2');
-        $this->pdfText($commands, number_format((float) $document->total, 2, '.', ''), 478.44, $totalsTop - 42, 8, 'F2');
+        $tableBottom = max(330, $rowBottom - 88);
+        $this->pdfRect($commands, $margin, $tableBottom, $width, $tableTop - $tableBottom);
+        $this->pdfTableHeader($commands, $margin, $tableTop, $columns);
+        $this->pdfLine($commands, $margin, $headerBottom, $margin + $width, $headerBottom);
 
-        $lettersY = $totalsTop - 76;
-        $this->pdfText($commands, 'IMPORTE EN LETRAS:', 46.52, $lettersY, 8, 'F2');
-        $this->pdfWrappedText($commands, $this->amountInWords((float) $document->total, $document->currency), 150, $lettersY, 385, 8, 10, 2);
+        $totalsY = $rowBottom - 20;
+        $totalsLabelX = $margin + $width - 150;
+        $totalsValueX = $margin + $width - 72;
+        $this->pdfText($commands, 'GRAVADA:', $totalsLabelX, $totalsY, 8.8, 'F2', 80, 'R');
+        $this->pdfText($commands, number_format((float) $document->subtotal, 2, '.', ''), $totalsValueX, $totalsY, 8.8, 'F2', 64, 'R');
+        $this->pdfText($commands, 'IGV 18.00 %:', $totalsLabelX, $totalsY - 13, 8.8, 'F2', 80, 'R');
+        $this->pdfText($commands, number_format((float) $document->tax_amount, 2, '.', ''), $totalsValueX, $totalsY - 13, 8.8, 'F2', 64, 'R');
+        $this->pdfText($commands, 'TOTAL:', $totalsLabelX, $totalsY - 26, 8.8, 'F2', 80, 'R');
+        $this->pdfText($commands, number_format((float) $document->total, 2, '.', ''), $totalsValueX, $totalsY - 26, 8.8, 'F2', 64, 'R');
 
-        $bankY = $lettersY - 42;
+        $lettersY = $tableBottom + 15;
+        $this->pdfText($commands, 'IMPORTE EN LETRAS:', 46.52, $lettersY, 8.8, 'F2');
+        $this->pdfWrappedText($commands, $this->amountInWords((float) $document->total, $document->currency), 147, $lettersY, 395, 8.8, 10, 2);
+
         $bankLineCount = 0;
+        $bankLines = [];
         if ($this->isStorageBillingDocument($document)) {
             foreach (array_slice($this->paymentAccountTextLines($document->business?->payment_accounts), 0, 6) as $index => $line) {
-                $this->pdfCellText($commands, $line, 46.52, $bankY - ($index * 11), 360, 8, 'L', 1, 9, $index === 0 ? 'F2' : 'F1');
-                $bankLineCount++;
+                $bankLines[] = [$line, $index === 0 ? 'F2' : 'F1'];
             }
         } else {
-            $this->pdfText($commands, 'KAMARY MEDICAL SAC ' . strtoupper($currencyName), 46.52, $bankY, 8, 'F2');
-            $this->pdfText($commands, 'BBVA CUENTA CORRIENTE 0011-0341-0100042988', 46.52, $bankY - 11, 8);
-            $this->pdfText($commands, 'BBVA CCI 011-341-000100042988-54', 46.52, $bankY - 22, 8);
-            $bankLineCount = 3;
+            $bankLines = [
+                ['KAMARY MEDICAL SAC ' . strtoupper($currencyName), 'F2'],
+                ['BBVA CUENTA CORRIENTE 0011-0341-0100042988', 'F1'],
+                ['BBVA CCI 011-341-000100042988-54', 'F1'],
+            ];
         }
 
-        $legendY = max($bankY - (($bankLineCount + 3) * 11), 122);
+        $bankLineCount = count($bankLines);
+        if ($bankLineCount > 0) {
+            $bankBoxHeight = max(45, 16 + ($bankLineCount * 11));
+            $bankBoxTop = $tableBottom - 30;
+            $bankBoxY = max(92, $bankBoxTop - $bankBoxHeight);
+            $this->pdfRect($commands, $margin, $bankBoxY, $width, $bankBoxHeight);
+            foreach ($bankLines as $index => [$line, $font]) {
+                $this->pdfCellText($commands, $line, 46.52, $bankBoxTop - 16 - ($index * 11), 440, 8.5, 'L', 1, 9, $font);
+            }
+        } else {
+            $bankBoxY = $tableBottom - 30;
+        }
+
+        $legendY = max($bankBoxY - 30, 122);
         $this->pdfWrappedText($commands, 'Representacion impresa de la ' . $documentTitle . ' ELECTRONICA, visita ' . url('/'), 46.52, $legendY, 500, 7.5, 9.5, 3);
         $this->pdfText($commands, 'Autorizado mediante Resolucion de Intendencia No.034-005-0005315', 46.52, $legendY - 30, 7.5);
         $this->pdfWrappedText($commands, 'Archivo XML: documento demo sin enlace XML del proveedor', 46.52, $legendY - 70, 500, 7.5, 9.5, 2);
@@ -1439,16 +1460,11 @@ class FacturadorPro5Service
 
     private function pdfTableHeader(array &$commands, float $x, float $y, array $columns): void
     {
-        $height = 24;
-        $this->pdfRect($commands, $x, $y - $height, 510.24, $height);
         $cursor = $x;
         foreach ($columns as $column) {
             [$label, $width] = $column;
             $align = $column[2] ?? 'L';
-            $this->pdfCellText($commands, $label, $cursor, $y - 14, $width, 6.8, $align, 1, 8, 'F2');
-            if ($cursor > $x) {
-                $this->pdfLine($commands, $cursor, $y, $cursor, $y - $height);
-            }
+            $this->pdfCellText($commands, $label, $cursor, $y - 17, $width, 7.8, $align, 1, 8, 'F2');
             $cursor += $width;
         }
     }
