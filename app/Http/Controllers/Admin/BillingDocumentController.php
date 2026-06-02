@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\EmailConfig;
 use App\Http\Controllers\BasicController;
 use App\Models\BillingDocument;
 use App\Models\CommercialOrder;
@@ -16,6 +17,7 @@ use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use SoDe\Extend\Response;
 
 class BillingDocumentController extends BasicController
@@ -392,6 +394,108 @@ class BillingDocumentController extends BasicController
             $response->data = $updated;
         } catch (\Throwable $th) {
             DB::rollBack();
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    protected function parseEmailList($value): array
+    {
+        $items = is_array($value) ? $value : [$value];
+        $emails = [];
+
+        foreach ($items as $item) {
+            foreach (preg_split('/[;,\r\n]+/', (string) $item, -1, PREG_SPLIT_NO_EMPTY) as $email) {
+                $email = trim($email);
+                if ($email !== '') $emails[] = $email;
+            }
+        }
+
+        $emails = array_values(array_unique($emails));
+        foreach ($emails as $email) {
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                throw new \Exception("Correo invalido: {$email}");
+            }
+        }
+
+        return $emails;
+    }
+
+    protected function attachBillingFile($mail, FacturadorPro5Service $facturador, BillingDocument $document, string $type): string
+    {
+        $file = $facturador->downloadFile($document, $type);
+        $mail->addStringAttachment(
+            $file['content'],
+            $file['filename'],
+            'base64',
+            $file['content_type']
+        );
+
+        return $file['filename'];
+    }
+
+    public function email(Request $request, string $id): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+
+        try {
+            $to = $this->parseEmailList($request->input('to'));
+            $cc = $this->parseEmailList($request->input('cc'));
+            $subject = trim((string) $request->input('subject'));
+            $body = trim((string) $request->input('body'));
+
+            if (!count($to)) throw new \Exception('Debes ingresar al menos un correo destinatario');
+            if ($subject === '') throw new \Exception('Debes ingresar el asunto del correo');
+            if ($body === '') throw new \Exception('Debes ingresar el cuerpo del correo');
+
+            $document = $this->findBillingDocumentForRequest($request, $id, [
+                'business', 'branch', 'client', 'eventualClient', 'commercialOrder', 'serviceOrder', 'items',
+            ]);
+
+            $facturador = app(FacturadorPro5Service::class);
+            $mail = EmailConfig::config();
+            $mail->Subject = $subject;
+            $mail->isHTML(true);
+            $mail->Body = nl2br(e($body), false);
+            $mail->AltBody = $body;
+
+            foreach ($to as $email) $mail->addAddress($email);
+            foreach ($cc as $email) $mail->addCC($email);
+
+            $attachments = [
+                $this->attachBillingFile($mail, $facturador, $document, 'pdf'),
+            ];
+
+            foreach (['xml', 'cdr'] as $type) {
+                try {
+                    $attachments[] = $this->attachBillingFile($mail, $facturador, $document, $type);
+                } catch (\Throwable $th) {
+                    Log::warning('No se pudo adjuntar archivo fiscal opcional al correo de comprobante', [
+                        'billing_document_id' => $document->id,
+                        'type' => $type,
+                        'message' => $th->getMessage(),
+                    ]);
+                }
+            }
+
+            $mail->send();
+            $mail->smtpClose();
+
+            app(BillingDocumentService::class)->registerEvent($document, 'email_sent', [
+                'request_payload' => [
+                    'to' => $to,
+                    'cc' => $cc,
+                    'subject' => $subject,
+                    'attachments' => $attachments,
+                ],
+                'message' => 'Comprobante enviado por correo',
+            ]);
+
+            $response->status = 200;
+            $response->message = 'Correo enviado correctamente';
+        } catch (\Throwable $th) {
             $response->status = 400;
             $response->message = $th->getMessage();
         } finally {

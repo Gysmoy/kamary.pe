@@ -538,6 +538,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('/billing-control/{id}/credit-note', [AdminStorageBillingControlController::class, 'creditNote']);
                 Route::post('/billing-control/{id}/provider-response', [AdminStorageBillingControlController::class, 'registerProviderResponse']);
                 Route::post('/billing-control/{id}/provider-status', [AdminStorageBillingControlController::class, 'providerStatus']);
+                Route::post('/billing-control/{id}/email', [AdminStorageBillingControlController::class, 'email']);
                 Route::get('/billing-control/{id}/download/{type}', [AdminStorageBillingControlController::class, 'download'])->where('type', 'pdf|xml|cdr');
             });
 
@@ -704,6 +705,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/billing-documents/{id}/credit-note', [AdminBillingDocumentController::class, 'creditNote']);
         Route::post('/billing-documents/{id}/provider-response', [AdminBillingDocumentController::class, 'registerProviderResponse']);
         Route::post('/billing-documents/{id}/provider-status', [AdminBillingDocumentController::class, 'providerStatus']);
+        Route::post('/billing-documents/{id}/email', [AdminBillingDocumentController::class, 'email']);
         Route::get('/billing-documents/{id}/download/{type}', [AdminBillingDocumentController::class, 'download'])->where('type', 'pdf|xml|cdr');
 
         Route::post('/services', [AdminServiceCatalogController::class, 'save']);

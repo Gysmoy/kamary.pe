@@ -74,6 +74,21 @@ class BillingDocumentsRest extends BasicRest {
     }
   }
 
+  email = async (id, request) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${id}/email`, {
+        method: 'POST',
+        body: JSON.stringify(request)
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo enviar el correo')
+      toast.success('Correcto', { description: result.message, duration: 3000, richColors: true })
+      return result
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
+      return null
+    }
+  }
+
   downloadUrl = (id, type) => `/api/${this.path}/${id}/download/${type}`
 
   prepareVoucher = async (id, request = {}) => {

@@ -35,8 +35,8 @@
       "_CreateReactScript-DH4w7JsR.js"
     ]
   },
-  "_BillingDocumentsRest-BuGA31yH.js": {
-    "file": "assets/BillingDocumentsRest-BuGA31yH.js",
+  "_BillingDocumentsRest-Cy1ePJLI.js": {
+    "file": "assets/BillingDocumentsRest-Cy1ePJLI.js",
     "name": "BillingDocumentsRest",
     "imports": [
       "_BasicRest-B3gG22Ns.js",
@@ -434,7 +434,7 @@
     ]
   },
   "resources/js/Admin/BillingDocuments.jsx": {
-    "file": "assets/BillingDocuments-6WUzPSZi.js",
+    "file": "assets/BillingDocuments-C7BCokTo.js",
     "name": "BillingDocuments",
     "src": "resources/js/Admin/BillingDocuments.jsx",
     "isEntry": true,
@@ -444,7 +444,7 @@
       "_Table-Bez8CmE2.js",
       "_Modal-DxCZkDHe.js",
       "_DxButton-CsjWvhyj.js",
-      "_BillingDocumentsRest-BuGA31yH.js",
+      "_BillingDocumentsRest-Cy1ePJLI.js",
       "_permissionScope-Be8AULz2.js",
       "_BasicRest-B3gG22Ns.js"
     ]
@@ -622,7 +622,7 @@
     ]
   },
   "resources/js/Admin/CommercialOrders.jsx": {
-    "file": "assets/CommercialOrders-CK5UKFy1.js",
+    "file": "assets/CommercialOrders-zu8gIhWo.js",
     "name": "CommercialOrders",
     "src": "resources/js/Admin/CommercialOrders.jsx",
     "isEntry": true,
@@ -636,7 +636,7 @@
       "_SetSelectValue-CJKOXUlb.js",
       "_SelectFormGroup-DqCxuW_q.js",
       "_TextareaFormGroup-DTmbleEc.js",
-      "_BillingDocumentsRest-BuGA31yH.js",
+      "_BillingDocumentsRest-Cy1ePJLI.js",
       "_CommercialOrdersRest-BDOuBluE.js",
       "_BasicRest-B3gG22Ns.js",
       "_ReferralGuidesRest-BE8ybdDx.js",

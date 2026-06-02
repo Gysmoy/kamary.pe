@@ -47,6 +47,7 @@ const formatDateTime = (value) => {
   return text.length > 10 ? text.slice(0, 19).replace('T', ' ') : text
 }
 const currencyLabel = (value) => `${value ?? ''}`.toUpperCase() === 'USD' ? 'Dolares' : 'Soles'
+const monthNames = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SETIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE']
 const emptyBulkFilters = () => ({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false, detractionPercent: 12 })
 const billingControlStatusOptions = [
   { value: 'pending', label: 'En espera' },
@@ -107,6 +108,67 @@ const rowDescription = (row) => row?.items?.[0]?.description
   ?? row?.observations
   ?? row?.document_type
   ?? '-'
+
+const cleanText = (value, fallback = '') => {
+  const text = `${value ?? ''}`.trim()
+  return text && text !== '-' ? text : fallback
+}
+
+const rowDocumentNumber = (row) => {
+  const series = cleanText(row?.series)
+  const sequence = cleanText(row?.sequence)
+  if (series && sequence) return `${series}-${sequence}`
+  return series || sequence || cleanText(row?.code, 'comprobante')
+}
+
+const rowBillingCycleLabel = (row) => {
+  const raw = cleanText(rowDescription(row))
+  if (/mes\s+.+a(?:n|ñ)o/i.test(raw)) return ''
+
+  const dateText = rowServiceOrderDate(row) || row?.issue_date || row?.created_at
+  if (!dateText) return ''
+  const date = new Date(`${dateText}`.slice(0, 10))
+  if (Number.isNaN(date.getTime())) return ''
+  return `Mes ${monthNames[date.getUTCMonth()]} - Año ${date.getUTCFullYear()}`
+}
+
+const rowEmailConcept = (row) => {
+  const description = cleanText(rowDescription(row), 'Servicios generales')
+  const cycle = rowBillingCycleLabel(row)
+  return [description, cycle].filter(Boolean).join(' - ')
+}
+
+const rowEmailSubject = (row) => {
+  const source = cleanText(rowSourceCode(row), cleanText(row?.code, 'Documento'))
+  return `${source} | ${rowClientName(row)} | Documento ${rowDocumentNumber(row)}`
+}
+
+const defaultEmailDraft = (row) => ({
+  to: rowCustomerEmail(row),
+  cc: '',
+  subject: rowEmailSubject(row),
+  body: [
+    `Estimado ${rowClientName(row)}`,
+    '',
+    `El motivo del presente correo es para realizar el envío de la factura por ${rowEmailConcept(row)}`,
+    '',
+    'Para cualquier consulta, puede escribir al siguiente número: 972 830 676',
+    '',
+    'Estamos a la espera de su abono correspondiente.',
+    '',
+    `KAMARY MEDICAL SAC ${currencyLabel(row?.currency).toUpperCase()}`,
+    'BBVA CUENTA CORRIENTE 0011-0341-0100042988',
+    'BBVA CCI 011-341-000100042988-54',
+    '',
+    'Guisela Carrión Navarro',
+    'Departamento de Facturación y Cobranzas',
+    'KAMARY MEDICAL S.A.C.',
+    '972 830 676',
+    'administracion01@kamaryfarma.com',
+    '',
+    'Saludos cordiales',
+  ].join('\n')
+})
 
 const normalizedStatus = (value) => `${value ?? ''}`.trim().toLowerCase()
 
@@ -204,6 +266,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const reportModalRef = useRef()
   const bulkModalRef = useRef()
   const pdfPreviewModalRef = useRef()
+  const emailModalRef = useRef()
   const idRef = useRef()
   const issueDateRef = useRef()
   const dueDateRef = useRef()
@@ -244,6 +307,8 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const [bulkSelected, setBulkSelected] = useState([])
   const [bulkLoading, setBulkLoading] = useState(false)
   const [pdfPreview, setPdfPreview] = useState({ title: '', url: '', downloadUrl: '' })
+  const [emailDraft, setEmailDraft] = useState({ to: '', cc: '', subject: '', body: '' })
+  const [emailSending, setEmailSending] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -526,23 +591,28 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     window.open(pdfPreview.downloadUrl, '_blank', 'noopener')
   }
 
-  const onEmailDocument = async (row) => {
-    const email = rowCustomerEmail(row)
-    if (!email) {
-      await showBlockedAction('Correo no disponible', 'El cliente no tiene un correo de facturacion registrado.')
-      return
-    }
+  const onEmailDocument = (row) => {
+    setSelectedRow(row)
+    setEmailDraft(defaultEmailDraft(row))
+    $(emailModalRef.current).modal('show')
+  }
 
-    const subject = `Comprobante ${row?.series ?? ''}-${row?.sequence ?? ''}`.trim()
-    const recipients = email.split(/[;,]+/).map(item => item.trim()).filter(Boolean)
-    const pdfUrl = `${window.location.origin}${billingDocumentsRest.downloadUrl(row.id, 'pdf')}`
-    const body = [
-      `Estimado cliente,`,
-      '',
-      `Adjuntamos el enlace de su comprobante ${row?.series ?? ''}-${row?.sequence ?? ''}.`,
-      pdfUrl,
-    ].join('\n')
-    window.location.href = `mailto:${recipients.map(item => encodeURIComponent(item)).join(',')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+  const onEmailDraftChange = (field, value) => {
+    setEmailDraft(previous => ({ ...previous, [field]: value }))
+  }
+
+  const onSendBillingEmail = async (e) => {
+    e.preventDefault()
+    if (!selectedRow || emailSending) return
+    setEmailSending(true)
+    try {
+      const result = await billingDocumentsRest.email(selectedRow.id, emailDraft)
+      if (!result) return
+      $(emailModalRef.current).modal('hide')
+      $(gridRef.current).dxDataGrid('instance').refresh()
+    } finally {
+      setEmailSending(false)
+    }
   }
 
   const onPrintPreparedVoucher = async (row) => {
@@ -1065,6 +1135,47 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   </div>
 
   return <>
+    <style>{`
+      .billing-email-header {
+        background: #23264f;
+        color: #fff;
+        padding-top: .85rem;
+        padding-bottom: .85rem;
+      }
+      .billing-email-header .modal-title {
+        color: #fff;
+        font-size: 1rem;
+        font-weight: 700;
+      }
+      .billing-email-form .form-label {
+        font-weight: 600;
+      }
+      .billing-email-editor {
+        border: 1px solid #2c63c7;
+        background: #fff;
+      }
+      .billing-email-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 36px;
+        padding: 7px 12px;
+        border-bottom: 1px solid #e5e7eb;
+        color: #4b5563;
+      }
+      .billing-email-body {
+        min-height: 300px;
+        border: 0;
+        border-radius: 0;
+        resize: vertical;
+        line-height: 1.7;
+        padding: 24px;
+        white-space: pre-wrap;
+      }
+      .billing-email-body:focus {
+        box-shadow: none;
+      }
+    `}</style>
     {isStorageBilling && <style>{`
       .storage-billing-actions {
         display: inline-flex;
@@ -1184,6 +1295,61 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
         {pdfPreview.url
           ? <iframe title='Vista previa PDF' src={`${pdfPreview.url}#toolbar=1&navpanes=0`} className='border-0 w-100 flex-grow-1' />
           : <div className='d-flex align-items-center justify-content-center flex-grow-1 text-muted'>PDF no disponible</div>}
+      </div>
+    </Modal>
+
+    <Modal
+      modalRef={emailModalRef}
+      title={<span><i className='mdi mdi-plus-circle-outline me-2'></i>ENVIAR COMPROBANTE POR CORREO ELECTRÓNICO</span>}
+      size='xl'
+      headerClass='billing-email-header'
+      closeButtonClass='btn-close-white'
+      btnSubmitText={emailSending ? 'Enviando...' : 'Enviar Correo'}
+      onSubmit={onSendBillingEmail}
+    >
+      <div className='billing-email-form'>
+        <div className='mb-3'>
+          <label className='form-label'>Para:</label>
+          <input
+            className='form-control'
+            value={emailDraft.to}
+            onChange={(event) => onEmailDraftChange('to', event.target.value)}
+            placeholder='Para:'
+          />
+        </div>
+        <div className='mb-3'>
+          <label className='form-label'>Copia:</label>
+          <input
+            className='form-control'
+            value={emailDraft.cc}
+            onChange={(event) => onEmailDraftChange('cc', event.target.value)}
+            placeholder='Copia:'
+          />
+        </div>
+        <div className='mb-3'>
+          <label className='form-label'>Asunto</label>
+          <input
+            className='form-control'
+            value={emailDraft.subject}
+            onChange={(event) => onEmailDraftChange('subject', event.target.value)}
+          />
+        </div>
+        <div className='billing-email-editor'>
+          <div className='billing-email-toolbar'>
+            <span className='fw-semibold'>Source</span>
+            <i className='mdi mdi-format-bold'></i>
+            <i className='mdi mdi-format-italic'></i>
+            <i className='mdi mdi-format-underline'></i>
+            <i className='mdi mdi-format-list-bulleted'></i>
+            <i className='mdi mdi-link-variant'></i>
+            <i className='mdi mdi-image-outline'></i>
+          </div>
+          <textarea
+            className='form-control billing-email-body'
+            value={emailDraft.body}
+            onChange={(event) => onEmailDraftChange('body', event.target.value)}
+          />
+        </div>
       </div>
     </Modal>
 
