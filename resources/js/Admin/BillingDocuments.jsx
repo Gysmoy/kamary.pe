@@ -1136,22 +1136,15 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
 
   return <>
     <style>{`
-      .billing-email-header {
-        background: #23264f;
-        color: #fff;
-        padding-top: .85rem;
-        padding-bottom: .85rem;
-      }
-      .billing-email-header .modal-title {
-        color: #fff;
-        font-size: 1rem;
-        font-weight: 700;
+      .billing-email-form {
+        color: #4b5563;
       }
       .billing-email-form .form-label {
         font-weight: 600;
       }
       .billing-email-editor {
-        border: 1px solid #2c63c7;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
         background: #fff;
       }
       .billing-email-toolbar {
@@ -1302,8 +1295,6 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       modalRef={emailModalRef}
       title={<span><i className='mdi mdi-plus-circle-outline me-2'></i>ENVIAR COMPROBANTE POR CORREO ELECTRÓNICO</span>}
       size='xl'
-      headerClass='billing-email-header'
-      closeButtonClass='btn-close-white'
       btnSubmitText={emailSending ? 'Enviando...' : 'Enviar Correo'}
       onSubmit={onSendBillingEmail}
     >
