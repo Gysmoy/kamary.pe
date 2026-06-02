@@ -436,6 +436,20 @@ class BusinessController extends BasicController
         }
     }
 
+    public function fiscalLogo(Request $request, string $id)
+    {
+        $business = BusinessScope::findFixedBusiness($id);
+
+        abort_unless($business->fiscal_logo_path, 404);
+        abort_unless(Storage::disk('public')->exists($business->fiscal_logo_path), 404);
+
+        return Storage::disk('public')->response(
+            $business->fiscal_logo_path,
+            basename($business->fiscal_logo_path),
+            ['Cache-Control' => 'private, max-age=60']
+        );
+    }
+
     public function deleteFiscalAsset(Request $request, string $id, string $type): HttpResponse|ResponseFactory
     {
         $response = new Response();

@@ -55,6 +55,7 @@ const BillingSettings = ({ can }) => {
   const integratedQueryClientIdRef = useRef()
   const integratedQueryClientSecretRef = useRef()
   const logoFileRef = useRef()
+  const logoObjectUrlRef = useRef(null)
   const certificateFileRef = useRef()
   const certificatePasswordRef = useRef()
   const branchIdRef = useRef()
@@ -73,12 +74,36 @@ const BillingSettings = ({ can }) => {
   const [branches, setBranches] = useState([])
   const [isBranchEditing, setIsBranchEditing] = useState(false)
   const [selectedFiscalBusiness, setSelectedFiscalBusiness] = useState(null)
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState('')
+  const [logoPreviewLabel, setLogoPreviewLabel] = useState('')
+  const [logoPreviewError, setLogoPreviewError] = useState('')
   const [branchUbigeoSelection, setBranchUbigeoSelection] = useState(EMPTY_UBIGEO_SELECTION)
   const [facturadorMode, setFacturadorMode] = useState(null)
   const [selectedFacturadorMode, setSelectedFacturadorMode] = useState('demo')
 
+  const clearLogoObjectUrl = () => {
+    if (!logoObjectUrlRef.current) return
+    URL.revokeObjectURL(logoObjectUrlRef.current)
+    logoObjectUrlRef.current = null
+  }
+
+  const currentLogoUrl = (business) => {
+    if (!business?.id || !business?.fiscal_logo_path) return ''
+    const version = encodeURIComponent(`${business.fiscal_logo_path}-${business.updated_at ?? ''}`)
+    return `/api/admin/businesses/${business.id}/fiscal-assets/logo?v=${version}`
+  }
+
+  const setCurrentLogoPreview = (business) => {
+    clearLogoObjectUrl()
+    const url = currentLogoUrl(business)
+    setLogoPreviewUrl(url)
+    setLogoPreviewLabel(url ? 'Logo actual' : '')
+    setLogoPreviewError('')
+  }
+
   useEffect(() => {
     loadFacturadorMode()
+    return () => clearLogoObjectUrl()
   }, [])
 
   const loadFacturadorMode = async () => {
@@ -147,6 +172,23 @@ const BillingSettings = ({ can }) => {
     if (logoFileRef.current) logoFileRef.current.value = ''
     if (certificateFileRef.current) certificateFileRef.current.value = ''
     if (certificatePasswordRef.current) certificatePasswordRef.current.value = ''
+    setCurrentLogoPreview(business)
+  }
+
+  const onLogoFileChange = (event) => {
+    const file = event.target.files?.[0]
+
+    if (!file) {
+      setCurrentLogoPreview(selectedFiscalBusiness)
+      return
+    }
+
+    clearLogoObjectUrl()
+    const objectUrl = URL.createObjectURL(file)
+    logoObjectUrlRef.current = objectUrl
+    setLogoPreviewUrl(objectUrl)
+    setLogoPreviewLabel(`Nuevo: ${file.name}`)
+    setLogoPreviewError('')
   }
 
   const onFiscalOpen = (business) => {
@@ -575,9 +617,26 @@ const BillingSettings = ({ can }) => {
         <div className='col-md-4 mb-3'></div>
         <div className='col-md-6 mb-3'>
           <label className='form-label'>Logo fiscal</label>
-          <input ref={logoFileRef} type='file' className='form-control' accept='.png,.jpg,.jpeg,.gif,.svg' />
+          <input ref={logoFileRef} type='file' className='form-control' accept='.png,.jpg,.jpeg,.gif,.svg' onChange={onLogoFileChange} />
           <small className='text-muted d-block mt-1'>Actual: {selectedFiscalBusiness?.fiscal_logo_path ?? 'sin archivo'}</small>
-          {selectedFiscalBusiness?.fiscal_logo_path && <button type='button' className='btn btn-xs btn-soft-danger mt-2' onClick={() => onDeleteFiscalAsset('logo')}>Eliminar logo</button>}
+          <div className='border rounded mt-2 p-2 bg-light d-flex align-items-center justify-content-center' style={{ minHeight: 130 }}>
+            {logoPreviewUrl
+              ? <img
+                src={logoPreviewUrl}
+                alt='Logo fiscal'
+                className='img-fluid'
+                style={{ maxHeight: 110, objectFit: 'contain' }}
+                onLoad={() => setLogoPreviewError('')}
+                onError={() => setLogoPreviewError('No se pudo cargar la imagen del logo.')}
+              />
+              : <span className='text-muted'>Sin logo cargado</span>}
+          </div>
+          <div className='d-flex flex-wrap align-items-center gap-2 mt-2'>
+            {logoPreviewLabel && <span className='badge bg-soft-primary text-primary border border-primary'>{logoPreviewLabel}</span>}
+            {logoPreviewUrl && <a href={logoPreviewUrl} target='_blank' rel='noreferrer' className='btn btn-xs btn-soft-primary'>Abrir imagen</a>}
+            {selectedFiscalBusiness?.fiscal_logo_path && <button type='button' className='btn btn-xs btn-soft-danger' onClick={() => onDeleteFiscalAsset('logo')}>Eliminar logo</button>}
+          </div>
+          {logoPreviewError && <small className='text-danger d-block mt-1'>{logoPreviewError}</small>}
         </div>
         <div className='col-md-6 mb-3'>
           <label className='form-label'>Certificado fiscal</label>

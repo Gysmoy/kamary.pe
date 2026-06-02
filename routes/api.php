@@ -159,6 +159,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/businesses/{id}/branches', [AdminBusinessController::class, 'saveBranch']);
         Route::patch('/businesses/{id}/branches/{branchId}/{field}', [AdminBusinessController::class, 'branchBoolean']);
         Route::delete('/businesses/{id}/branches/{branchId}', [AdminBusinessController::class, 'deleteBranch']);
+        Route::get('/businesses/{id}/fiscal-assets/logo', [AdminBusinessController::class, 'fiscalLogo']);
         Route::post('/businesses/{id}/fiscal-assets', [AdminBusinessController::class, 'uploadFiscalAssets']);
         Route::delete('/businesses/{id}/fiscal-assets/{type}', [AdminBusinessController::class, 'deleteFiscalAsset'])->where('type', 'logo|certificate');
         Route::post('/businesses/{id}/facturador-sync', [AdminBusinessController::class, 'syncFacturador']);
