@@ -1319,14 +1319,14 @@ class FacturadorPro5Service
         $this->pdfRect($commands, $rightBoxX, 616, 153.07, 92);
 
         if ($logoImage) {
-            [$logoWidth, $logoHeight] = $this->fitPdfImage($logoImage['width'], $logoImage['height'], 70, 56);
-            $this->pdfImage($commands, $logoImage['name'], 54, 754 + ((56 - $logoHeight) / 2), $logoWidth, $logoHeight);
+            [$logoWidth, $logoHeight] = $this->fitPdfImage($logoImage['width'], $logoImage['height'], 62, 54);
+            $this->pdfImage($commands, $logoImage['name'], 54, 755 + ((54 - $logoHeight) / 2), $logoWidth, $logoHeight);
         } else {
             $this->pdfText($commands, 'KM', 54, 787, 18, 'F2');
         }
 
-        $this->pdfText($commands, mb_strtoupper($businessName), 111, 797, 14.5, 'F2');
-        $this->pdfWrappedText($commands, $businessAddress, 111, 779, 285, 9.2, 10, 3);
+        $this->pdfText($commands, mb_strtoupper($businessName), 134, 797, 14.5, 'F2');
+        $this->pdfWrappedText($commands, $businessAddress, 134, 779, 260, 9.2, 10, 3);
 
         $this->pdfText($commands, 'RUC ' . $businessRuc, $rightBoxX, 797, 10, 'F2', 153.07, 'C');
         $this->pdfText($commands, $documentTitle, $rightBoxX, 781, 10, 'F2', 153.07, 'C');
