@@ -71,31 +71,6 @@ class BillingDocumentVerificationService
         return url('/' . ltrim($url, '/'));
     }
 
-    public function summary(BillingDocument $document): array
-    {
-        $document->loadMissing('business', 'branch', 'client', 'eventualClient', 'serviceOrder', 'commercialOrder', 'items');
-
-        return [
-            'number' => trim(($document->series ?: '-') . ' - ' . ($document->sequence ?: '-')),
-            'code' => $document->code ?: '-',
-            'document_type' => $document->document_type ?: '-',
-            'business_name' => $document->business?->name ?: '-',
-            'business_ruc' => $document->business?->tax_number ?: '-',
-            'customer_document' => $document->client?->document_number ?: $document->eventualClient?->document_number ?: '-',
-            'customer_name' => $document->client?->full_name ?: $document->eventualClient?->business_name ?: '-',
-            'issue_date' => optional($document->issue_date)->format('Y-m-d') ?: '-',
-            'due_date' => optional($document->due_date)->format('Y-m-d') ?: '-',
-            'currency' => $document->currency ?: 'PEN',
-            'subtotal' => (float) $document->subtotal,
-            'tax_amount' => (float) $document->tax_amount,
-            'total' => (float) $document->total,
-            'local_status' => $document->local_status ?: '-',
-            'external_status' => $document->external_status ?: '-',
-            'xml_url' => $this->providerXmlUrl($document),
-            'verification_url' => $this->verificationUrl($document),
-        ];
-    }
-
     private function signaturePayload(BillingDocument $document): string
     {
         return implode('|', [
