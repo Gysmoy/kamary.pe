@@ -992,7 +992,7 @@ class SeedStorageServiceDemoCommand extends Command
             $total = (float) $order->total;
 
             $document = $this->insertRowAndFetch('billing_documents', [
-                'code' => 'FAC-STG-' . str_pad((string) $index, 6, '0', STR_PAD_LEFT),
+                'code' => 'PF' . str_pad((string) (7750 + $index), 5, '0', STR_PAD_LEFT),
                 'source_type' => 'service_order',
                 'source_id' => $order->id,
                 'service_order_id' => $order->id,

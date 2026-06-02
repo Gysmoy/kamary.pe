@@ -11,6 +11,7 @@ use App\Models\ServiceOrder;
 use App\Models\ServiceOrderItem;
 use App\Services\BillingDocumentService;
 use App\Support\BusinessScope;
+use App\Support\StoragePrefactureCode;
 use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -292,6 +293,11 @@ class ServiceOrderController extends BasicController
                 if ($createdPrefactures > 0 && in_array($jpa->order_status, ['draft', 'approved', 'scheduled'], true)) {
                     $jpa->update(['order_status' => 'prefactured']);
                 }
+            } elseif ($this->orderType() === 'storage_general') {
+                $createdPrefactures = $this->syncStorageGeneralPrefacture($jpa->fresh(['business', 'branch', 'client', 'items.service']));
+                if ($createdPrefactures > 0 && in_array($jpa->order_status, ['draft', 'approved', 'scheduled'], true)) {
+                    $jpa->update(['order_status' => 'prefactured']);
+                }
             }
 
             app(\App\Services\AccountsReceivableService::class)->syncFromServiceOrder($jpa->fresh([
@@ -546,7 +552,7 @@ class ServiceOrderController extends BasicController
             if ($subtotal <= 0) continue;
 
             $document = BillingDocument::create([
-                'code' => $this->nextBillingCode(),
+                'code' => StoragePrefactureCode::next(),
                 'source_type' => 'service_order',
                 'source_id' => $order->id,
                 'commercial_order_id' => null,
@@ -619,6 +625,96 @@ class ServiceOrderController extends BasicController
         return $created;
     }
 
+    private function syncStorageGeneralPrefacture(ServiceOrder $order): int
+    {
+        if ($this->hasProtectedStoragePrefacture($order->id)) {
+            return 0;
+        }
+
+        $this->deletePendingStoragePrefactures($order->id);
+
+        $order->loadMissing('items.service', 'client');
+        $activeItems = $order->items->where('status', true)->values();
+        if ($activeItems->isEmpty() || (float) $order->total <= 0) {
+            return 0;
+        }
+
+        $userId = Auth::id();
+        $billingDate = optional($order->first_due_date)->format('Y-m-d')
+            ?: optional($order->issue_date)->format('Y-m-d')
+            ?: now()->toDateString();
+
+        $document = BillingDocument::create([
+            'code' => StoragePrefactureCode::next(),
+            'source_type' => 'service_order',
+            'source_id' => $order->id,
+            'commercial_order_id' => null,
+            'service_order_id' => $order->id,
+            'reference_billing_document_id' => null,
+            'business_id' => $order->business_id,
+            'business_branch_id' => $order->business_branch_id,
+            'warehouse_id' => null,
+            'client_id' => $order->client_id,
+            'eventual_client_id' => null,
+            'provider' => 'facturadorpro5',
+            'document_type' => $order->expected_document_type ?: 'Factura',
+            'series' => null,
+            'sequence' => null,
+            'issue_date' => $billingDate,
+            'due_date' => $billingDate,
+            'currency' => $order->currency ?: 'PEN',
+            'payment_condition' => $order->payment_condition ?: 'Contado',
+            'payment_method' => null,
+            'customer_email' => $order->client?->billing_email ?: $order->client?->email,
+            'provider_endpoint' => rtrim((string) config('facturadorpro5.base_url'), '/') . (string) config('facturadorpro5.issue_endpoint'),
+            'provider_mode' => config('facturadorpro5.mode', 'demo'),
+            'subtotal' => (float) $order->subtotal,
+            'tax_amount' => (float) $order->tax_amount,
+            'total' => (float) $order->total,
+            'local_status' => 'pending',
+            'external_status' => 'draft',
+            'metadata' => [
+                'source_code' => $order->code,
+                'document_origin' => 'storage_general_service_order',
+                'storage_auto_prefacture' => true,
+                'billing_date' => $billingDate,
+            ],
+            'observations' => "Prefactura de servicio general {$billingDate}",
+            'status' => true,
+            'created_by' => $userId,
+            'updated_by' => $userId,
+        ]);
+
+        foreach ($activeItems as $item) {
+            BillingDocumentItem::create([
+                'billing_document_id' => $document->id,
+                'commercial_order_item_id' => null,
+                'service_order_item_id' => $item->id,
+                'item_type' => 'service',
+                'item_code' => $item->service?->code,
+                'description' => $item->description ?: ($item->service?->name ?: 'Servicio'),
+                'quantity' => $item->quantity,
+                'unit_price' => $item->unit_price,
+                'total' => $item->total,
+                'metadata' => [
+                    'service_id' => $item->service_id,
+                    'detraction_percent' => $item->detraction_percent,
+                    'commission_percent' => $item->commission_percent,
+                    'storage_billing_date' => $billingDate,
+                ],
+                'status' => true,
+            ]);
+        }
+
+        $billingService = app(BillingDocumentService::class);
+        $freshDocument = $billingService->refreshConnectorPayload($document->fresh(['items', 'client', 'eventualClient', 'business', 'branch', 'serviceOrder']));
+        $billingService->registerEvent($freshDocument, 'prepared', [
+            'message' => 'Prefactura generada desde servicio general de almacenamiento',
+        ]);
+
+        return 1;
+    }
+
     private function deletePendingStoragePrefactures(int $orderId): void
     {
         $documents = BillingDocument::query()
@@ -654,11 +750,25 @@ class ServiceOrderController extends BasicController
             ->all();
     }
 
+    private function hasProtectedStoragePrefacture(int $orderId): bool
+    {
+        return BillingDocument::query()
+            ->where('source_type', 'service_order')
+            ->where('source_id', $orderId)
+            ->where('service_order_id', $orderId)
+            ->where('status', true)
+            ->get()
+            ->contains(function ($document) {
+                return $this->isStorageAutoPrefacture($document)
+                    && !in_array($document->local_status, ['pending', 'cancelled'], true);
+            });
+    }
+
     private function isStorageAutoPrefacture(BillingDocument $document): bool
     {
         $metadata = is_array($document->metadata) ? $document->metadata : [];
         return (bool) ($metadata['storage_auto_prefacture'] ?? false)
-            || ($metadata['document_origin'] ?? null) === 'storage_service_order';
+            || in_array(($metadata['document_origin'] ?? null), ['storage_service_order', 'storage_general_service_order'], true);
     }
 
     private function toNullableInt($value): ?int
@@ -749,11 +859,4 @@ class ServiceOrderController extends BasicController
         return $this->codePrefix() . '-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
     }
 
-    private function nextBillingCode(): string
-    {
-        $next = 1;
-        $latest = BillingDocument::query()->lockForUpdate()->latest('id')->value('code');
-        if ($latest && preg_match('/(\d+)$/', $latest, $matches)) $next = ((int) $matches[1]) + 1;
-        return 'FAC-' . str_pad((string) $next, 6, '0', STR_PAD_LEFT);
-    }
 }

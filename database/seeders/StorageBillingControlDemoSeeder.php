@@ -12,6 +12,7 @@ use App\Models\ServiceOrder;
 use App\Models\ServiceOrderItem;
 use App\Models\User;
 use App\Support\BusinessScope;
+use App\Support\StoragePrefactureCode;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -38,7 +39,7 @@ class StorageBillingControlDemoSeeder extends Seeder
             $item = $this->ensureServiceOrderItem($order, $service);
 
             if (!$this->hasPrefactures()) {
-                $this->ensureDocument('STG-BILL-DEMO-PREF-001', $business, $branch, $client, $order, $item, [
+                $this->ensureDocument(StoragePrefactureCode::next(), $business, $branch, $client, $order, $item, [
                     'document_type' => 'Factura',
                     'series' => null,
                     'sequence' => null,
@@ -49,7 +50,7 @@ class StorageBillingControlDemoSeeder extends Seeder
             }
 
             if (!$this->hasIssuedInvoices()) {
-                $this->ensureDocument('STG-BILL-DEMO-ISS-001', $business, $branch, $client, $order, $item, [
+                $this->ensureDocument(StoragePrefactureCode::next(), $business, $branch, $client, $order, $item, [
                     'document_type' => 'Factura',
                     'series' => 'FM01',
                     'sequence' => '00001001',
@@ -64,7 +65,7 @@ class StorageBillingControlDemoSeeder extends Seeder
             }
 
             if (!$this->hasCancelledInvoices()) {
-                $this->ensureDocument('STG-BILL-DEMO-CAN-001', $business, $branch, $client, $order, $item, [
+                $this->ensureDocument(StoragePrefactureCode::next(), $business, $branch, $client, $order, $item, [
                     'document_type' => 'Factura',
                     'series' => 'FM01',
                     'sequence' => '00001002',
@@ -243,7 +244,7 @@ class StorageBillingControlDemoSeeder extends Seeder
 
     private function acceptedReference(Business $business, BusinessBranch $branch, Client $client, ServiceOrder $order, ServiceOrderItem $item): BillingDocument
     {
-        return $this->ensureDocument('STG-BILL-DEMO-NC-REF-001', $business, $branch, $client, $order, $item, [
+        return $this->ensureDocument(StoragePrefactureCode::next(), $business, $branch, $client, $order, $item, [
             'document_type' => 'Factura',
             'series' => 'FM01',
             'sequence' => '00001003',
@@ -366,7 +367,7 @@ class StorageBillingControlDemoSeeder extends Seeder
             ->where('source_type', 'service_order')
             ->where('status', true)
             ->whereHas('serviceOrder', function ($query) {
-                $query->where('order_type', 'storage_service')
+                $query->whereIn('order_type', ['storage_service', 'storage_general'])
                     ->whereHas('client', function ($client) {
                         $client->where('client_kind', 'regular')
                             ->where('module_scope', 'storage')

@@ -4,13 +4,14 @@ namespace App\Http\Controllers\Admin\Storage;
 
 use App\Http\Controllers\Admin\BillingDocumentController as BaseBillingDocumentController;
 use App\Models\ServiceOrder;
+use App\Support\StoragePrefactureCode;
 use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 
 class BillingControlController extends BaseBillingDocumentController
 {
-    private array $storageOrderTypes = ['storage_service'];
+    private array $storageOrderTypes = ['storage_service', 'storage_general'];
 
     public function setReactViewProperties(Request $request)
     {
@@ -51,6 +52,7 @@ class BillingControlController extends BaseBillingDocumentController
 
     public function beforeSave(Request $request)
     {
+        $isNew = !$request->filled('id');
         if ($request->filled('commercial_order_id')) {
             throw new \Exception('Control de facturacion de almacenamiento solo acepta ordenes de servicio.');
         }
@@ -65,6 +67,10 @@ class BillingControlController extends BaseBillingDocumentController
             throw new \Exception('La orden seleccionada no pertenece a almacenamiento.');
         }
         StorageScope::assertClient((int)$order->client_id);
+
+        if ($isNew) {
+            $body['code'] = StoragePrefactureCode::next();
+        }
 
         return $body;
     }
