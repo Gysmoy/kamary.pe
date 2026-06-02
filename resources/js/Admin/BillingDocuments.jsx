@@ -812,7 +812,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     const button = $('<button>')
       .attr('type', 'button')
       .attr('title', title)
-      .addClass(`btn btn-xs ${className} me-1 px-1 py-0 align-middle`)
+      .addClass(`btn btn-xs ${className} px-1 py-0 align-middle storage-billing-action-btn`)
       .on('click', onClick)
 
     button.append($('<i>').addClass(`${icon}${text ? ' me-1' : ''}`))
@@ -822,8 +822,8 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
 
   const storageActionColumn = {
     caption: 'Acciones',
-    width: 245,
-    minWidth: 245,
+    width: 320,
+    minWidth: 320,
     allowFiltering: false,
     allowExporting: false,
     allowSorting: false,
@@ -833,11 +833,11 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       const canSync = canSyncDocument(data)
       const canCancel = canCancelDocument(data)
       const canDownload = canDownloadDocument(data)
-      container.addClass('text-nowrap')
-      container.css({ textOverflow: 'unset', overflow: 'visible' })
+      const actions = $('<div>').addClass('storage-billing-actions')
+      container.empty().append(actions)
 
       if (activeStorageTab === 'prefactures') {
-        container.append(DxButton({
+        actions.append(DxButton({
           className: `btn btn-xs ${isPrepared ? 'btn-outline-danger' : 'btn-outline-primary'}`,
           title: isPrepared ? 'Previsualizar PDF' : 'Facturar',
           icon: isPrepared ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-send-outline',
@@ -847,44 +847,44 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       }
 
       if (activeStorageTab === 'issued') {
-        appendStorageButton(container, {
+        appendStorageButton(actions, {
           className: 'btn-outline-warning',
           title: 'Ver validacion fiscal',
           icon: 'mdi mdi-card-account-details-outline',
           onClick: () => openReadinessModal(data, `Validacion fiscal - ${data.code}`)
         })
-        appendStorageButton(container, {
+        appendStorageButton(actions, {
           className: 'btn-outline-warning',
           title: 'Sincronizar estado',
           icon: 'mdi mdi-refresh',
           onClick: () => canSync ? onSyncStatus(data) : showBlockedAction('Sync no disponible', 'El comprobante aun no tiene datos remotos para sincronizar.')
         })
-        appendStorageButton(container, {
+        appendStorageButton(actions, {
           className: canPreviewPdf ? 'btn-outline-primary' : 'btn-outline-secondary',
           title: canPreviewPdf ? 'Previsualizar PDF' : 'PDF no disponible',
           icon: canPreviewPdf ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-cancel-outline',
           onClick: () => canPreviewPdf ? onPreviewPdf(data) : showBlockedAction('PDF no disponible', 'El comprobante todavia no tiene PDF disponible.')
         })
-        appendStorageButton(container, {
+        appendStorageButton(actions, {
           className: canCancel ? 'btn-outline-danger' : 'btn-outline-secondary',
           title: canCancel ? 'Anular comprobante' : 'Anulacion no disponible',
           icon: canCancel ? 'mdi mdi-minus-circle' : 'mdi mdi-lock-outline',
           onClick: () => canCancel ? onOpenCancel(data) : showBlockedAction('Anulacion no disponible', 'Solo puedes anular comprobantes aceptados que no sean notas de credito.')
         })
-        appendStorageButton(container, {
+        appendStorageButton(actions, {
           className: rowCustomerEmail(data) ? 'btn-outline-success' : 'btn-outline-secondary',
           title: rowCustomerEmail(data) ? 'Enviar por correo' : 'Correo no disponible',
           icon: 'mdi mdi-email-outline',
           onClick: () => onEmailDocument(data)
         })
-        appendStorageButton(container, {
+        appendStorageButton(actions, {
           className: canDownload ? 'btn-outline-success' : 'btn-outline-secondary',
           title: canDownload ? 'Descargar XML' : 'XML no disponible',
           icon: canDownload ? 'mdi mdi-file-code-outline' : 'mdi mdi-file-cancel-outline',
           text: 'XML',
           onClick: () => canDownload ? onDownload(data, 'xml') : showBlockedAction('XML no disponible', 'El comprobante todavia no tiene XML disponible.')
         })
-        appendStorageButton(container, {
+        appendStorageButton(actions, {
           className: canDownload ? 'btn-outline-warning' : 'btn-outline-secondary',
           title: canDownload ? 'Descargar CDR' : 'CDR no disponible',
           icon: canDownload ? 'mdi mdi-file-document-outline' : 'mdi mdi-file-cancel-outline',
@@ -894,7 +894,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
         return
       }
 
-      container.append(DxButton({
+      actions.append(DxButton({
         className: `btn btn-xs ${canPreviewPdf ? 'btn-outline-danger' : 'btn-outline-info'}`,
         title: canPreviewPdf ? 'Previsualizar PDF' : 'Ver validacion fiscal',
         icon: canPreviewPdf ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-document-outline',
@@ -1065,6 +1065,31 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   </div>
 
   return <>
+    {isStorageBilling && <style>{`
+      .storage-billing-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+      .storage-billing-actions .btn {
+        flex: 0 0 auto;
+        min-width: 27px;
+        height: 24px;
+        margin-right: 0 !important;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+      }
+      .storage-billing-action-btn {
+        gap: 2px;
+      }
+    `}</style>}
     {isStorageBilling && <div className='row g-3 mb-3'>
       <div className='col-12 col-md-6 col-xl-3'>
         <button type='button' className='btn w-100 d-flex align-items-center justify-content-between py-3 text-white' style={{ background: '#23264f' }} onClick={openBulkModal}>
