@@ -1365,6 +1365,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     </div>}
 
     <Table
+      key={isStorageBilling ? `storage-billing-${activeStorageTab}` : 'billing-documents'}
       gridRef={gridRef}
       title={isStorageBilling ? storageTitle : moduleTitle}
       rest={billingDocumentsRest}
