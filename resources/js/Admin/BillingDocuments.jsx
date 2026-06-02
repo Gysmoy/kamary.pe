@@ -17,7 +17,10 @@ import { scopedPermission } from '../Utils/permissionScope';
 
 const billingDocumentsRest = new BillingDocumentsRest()
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => {
+  const date = new Date()
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+}
 
 const storageTabs = [
   { id: 'prefactures', label: 'Prefacturas' },
@@ -29,8 +32,8 @@ const storageTabs = [
 const emptyFilters = () => ({
   businessId: '',
   clientId: '',
-  startDate: '',
-  endDate: '',
+  startDate: today(),
+  endDate: today(),
 })
 
 const reportFilters = () => ({
