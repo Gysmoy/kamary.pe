@@ -1100,8 +1100,8 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     cellTemplate: (container, { data }) => {
       const canPreviewPdf = canPreviewPdfDocument(data)
       const isPrepared = hasPreparedVoucher(data)
-      const canSync = canSyncDocument(data)
       const canCancel = canCancelDocument(data)
+      const canCreditNote = canCreditNoteDocument(data)
       const canDownload = canDownloadDocument(data)
       const canPay = canPayDocument(data)
       const actions = $('<div>').addClass('storage-billing-actions')
@@ -1145,10 +1145,10 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
         }
         appendStorageButton(actions, {
           className: 'btn-outline-warning',
-          title: canSync ? 'Sincronizar estado' : 'Sync no disponible',
+          title: canCreditNote ? 'Generar nota de credito' : 'Nota de credito no disponible',
           icon: 'mdi mdi-refresh',
-          disabled: !canSync,
-          onClick: () => onSyncStatus(data)
+          disabled: !canCreditNote,
+          onClick: () => onOpenCreditNote(data)
         })
         appendStorageButton(actions, {
           className: 'btn-outline-primary',
