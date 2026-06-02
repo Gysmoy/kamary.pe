@@ -1297,7 +1297,8 @@ class FacturadorPro5Service
         $rightBoxX = 399.69;
         $businessName = $document->business?->name ?: 'KAMARY MEDICAL S.A.C.';
         $businessRuc = $document->business?->tax_number ?: '20604718237';
-        $branchAddress = $document->branch?->address ?: 'CAL.YEN ESCOBEDO GARRO NRO. 800';
+        $businessAddress = $document->business?->fiscal_address
+            ?: ($document->branch?->address ?: 'CAL.YEN ESCOBEDO GARRO NRO. 800');
         $documentTitle = $this->pdfDocumentTitle($document->document_type);
         $number = trim(($document->series ?: '-') . ' - ' . ($document->sequence ?: '-'));
         $currencyName = $this->pdfCurrencyName($document->currency);
@@ -1320,8 +1321,7 @@ class FacturadorPro5Service
         }
 
         $this->pdfText($commands, $businessName, 123, 797, 12, 'F2');
-        $this->pdfText($commands, $branchAddress, 123, 779, 8.5);
-        $this->pdfWrappedText($commands, $document->branch?->address ?: 'LIMA - LIMA - SAN LUIS', 123, 767, 245, 8, 9.5, 2);
+        $this->pdfWrappedText($commands, $businessAddress, 123, 779, 245, 8.5, 9.5, 2);
 
         $this->pdfText($commands, 'RUC ' . $businessRuc, $rightBoxX, 797, 10, 'F2', 153.07, 'C');
         $this->pdfText($commands, $documentTitle, $rightBoxX, 781, 10, 'F2', 153.07, 'C');

@@ -67,6 +67,7 @@ class BusinessController extends BasicController
         $body['description'] = array_key_exists('description', $body) ? trim((string)$body['description']) : $existing?->description;
         $body['tax_number'] = array_key_exists('tax_number', $body) ? $this->normalizeTaxNumber($body['tax_number']) : $existing?->tax_number;
         $body['trade_name'] = array_key_exists('trade_name', $body) ? $this->nullableTrim($body['trade_name']) : $existing?->trade_name;
+        $body['fiscal_address'] = array_key_exists('fiscal_address', $body) ? $this->nullableTrim($body['fiscal_address']) : $existing?->fiscal_address;
         $body['soap_send_id'] = array_key_exists('soap_send_id', $body) ? $this->normalizeSoapSendId($body['soap_send_id']) : $existing?->soap_send_id;
         $body['soap_type_id'] = array_key_exists('soap_type_id', $body) ? $this->normalizeSoapTypeId($body['soap_type_id']) : $existing?->soap_type_id;
         $body['soap_username'] = array_key_exists('soap_username', $body) ? $this->nullableTrim($body['soap_username']) : $existing?->soap_username;
@@ -616,6 +617,7 @@ class BusinessController extends BasicController
         return $existing->name !== ($payload['name'] ?? $existing->name)
             || $existing->tax_number !== ($payload['tax_number'] ?? $existing->tax_number)
             || $existing->trade_name !== ($payload['trade_name'] ?? $existing->trade_name)
+            || $existing->fiscal_address !== ($payload['fiscal_address'] ?? $existing->fiscal_address)
             || $existing->soap_send_id !== ($payload['soap_send_id'] ?? $existing->soap_send_id)
             || $existing->soap_type_id !== ($payload['soap_type_id'] ?? $existing->soap_type_id)
             || $existing->soap_username !== ($payload['soap_username'] ?? $existing->soap_username)

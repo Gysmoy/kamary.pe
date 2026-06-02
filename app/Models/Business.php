@@ -14,6 +14,7 @@ class Business extends Model
         'name',
         'tax_number',
         'trade_name',
+        'fiscal_address',
         'soap_send_id',
         'soap_type_id',
         'soap_username',

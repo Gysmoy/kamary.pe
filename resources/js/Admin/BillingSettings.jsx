@@ -37,6 +37,7 @@ const BillingSettings = ({ can }) => {
   const fiscalBusinessIdRef = useRef()
   const taxNumberRef = useRef()
   const tradeNameRef = useRef()
+  const fiscalAddressRef = useRef()
   const soapSendIdRef = useRef()
   const soapTypeIdRef = useRef()
   const soapUsernameRef = useRef()
@@ -151,6 +152,7 @@ const BillingSettings = ({ can }) => {
     fiscalBusinessIdRef.current.value = business?.id ?? ''
     taxNumberRef.current.value = business?.tax_number ?? ''
     tradeNameRef.current.value = business?.trade_name ?? ''
+    fiscalAddressRef.current.value = business?.fiscal_address ?? ''
     soapSendIdRef.current.value = business?.soap_send_id ?? '01'
     soapTypeIdRef.current.value = business?.soap_type_id ?? '01'
     soapUsernameRef.current.value = business?.soap_username ?? ''
@@ -203,6 +205,7 @@ const BillingSettings = ({ can }) => {
       id: fiscalBusinessIdRef.current.value,
       tax_number: taxNumberRef.current.value.trim(),
       trade_name: tradeNameRef.current.value.trim(),
+      fiscal_address: fiscalAddressRef.current.value.trim(),
       soap_send_id: soapSendIdRef.current.value,
       soap_type_id: soapTypeIdRef.current.value,
       soap_username: soapUsernameRef.current.value.trim(),
@@ -584,6 +587,7 @@ const BillingSettings = ({ can }) => {
         <div className='col-md-5 mb-3'><label className='form-label'>Nombre comercial</label><input ref={tradeNameRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>SOAP send</label><select ref={soapSendIdRef} className='form-control'><option value='01'>Sunat</option><option value='02'>OSE</option></select></div>
         <div className='col-md-2 mb-3'><label className='form-label'>SOAP type</label><select ref={soapTypeIdRef} className='form-control'><option value='01'>Beta</option><option value='02'>Producción</option></select></div>
+        <div className='col-12 mb-3'><label className='form-label'>Dirección fiscal</label><input ref={fiscalAddressRef} className='form-control' placeholder='Dirección fiscal que se mostrará en los PDF' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>SOAP usuario</label><input ref={soapUsernameRef} className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>SOAP clave</label><input ref={soapPasswordRef} className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>SOAP URL</label><input ref={soapUrlRef} className='form-control' /></div>

@@ -77,6 +77,7 @@ class BusinessFacturadorSyncService
             'number' => $business->tax_number,
             'name' => $business->name,
             'trade_name' => $business->trade_name ?: $business->name,
+            'address' => $business->fiscal_address,
             'soap_send_id' => $business->soap_send_id ?: '01',
             'soap_type_id' => $business->soap_type_id ?: '01',
             'soap_username' => $business->soap_username,

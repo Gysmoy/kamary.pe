@@ -253,8 +253,10 @@ class BillingDocumentService
                 $warnings[] = 'La sede no tiene ubigeo configurado.';
             }
 
-            if (trim((string) ($branch->address ?? '')) === '') {
-                $warnings[] = 'La sede no tiene direccion fiscal configurada.';
+            if (trim((string) ($branch->address ?? '')) === ''
+                && trim((string) ($business?->fiscal_address ?? '')) === ''
+            ) {
+                $warnings[] = 'La empresa o sede no tiene direccion fiscal configurada.';
             }
         }
 
