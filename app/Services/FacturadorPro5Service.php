@@ -1343,11 +1343,11 @@ class FacturadorPro5Service
 
         $columns = [
             ['CODIGO', 68, 'L'],
-            ['DESCRIPCION', 190, 'L'],
+            ['DESCRIPCION', 178, 'L'],
             ['SERV / M3', 54, 'R'],
-            ['P. SIN IGV', 66, 'R'],
-            ['P. CON IGV', 66, 'R'],
-            ['IMPORTE', 66.24, 'R'],
+            ['P. SIN IGV', 70, 'R'],
+            ['P. CON IGV', 70, 'R'],
+            ['IMPORTE', 70.24, 'R'],
         ];
         $tableTop = 585;
         $headerBottom = $tableTop - 28;
@@ -1374,7 +1374,7 @@ class FacturadorPro5Service
                 $cursor = $margin;
                 $this->pdfCellText($commands, $item->item_code ?: 'COD001', $cursor, $y, $columns[0][1], 6.6, 'L', 1);
                 $cursor += $columns[0][1];
-                $this->pdfCellText($commands, $description, $cursor, $y, $columns[1][1], 6.8, 'L', 3);
+                $this->pdfCellText($commands, $description, $cursor, $y, $columns[1][1], 6.8, 'L', 2);
                 $cursor += $columns[1][1];
                 $this->pdfCellText($commands, number_format($quantity, 2, '.', ''), $cursor, $y, $columns[2][1], 6.8, 'R');
                 $cursor += $columns[2][1];
@@ -1734,7 +1734,7 @@ class FacturadorPro5Service
 
     private function pdfApproxTextWidth(string $text, float $size): float
     {
-        return strlen($this->pdfTextValue($text)) * $size * 0.56;
+        return strlen($this->pdfTextValue($text)) * $size * 0.62;
     }
 
     private function pdfNumber(float $value): string
