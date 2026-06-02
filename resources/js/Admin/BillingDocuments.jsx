@@ -32,6 +32,12 @@ const storageTabs = [
 const emptyFilters = () => ({
   businessId: '',
   clientId: '',
+  startDate: '',
+  endDate: '',
+})
+
+const defaultStorageFilters = () => ({
+  ...emptyFilters(),
   startDate: today(),
   endDate: today(),
 })
@@ -383,7 +389,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const [selectedRow, setSelectedRow] = useState(null)
   const [payloadText, setPayloadText] = useState('')
   const [activeStorageTab, setActiveStorageTab] = useState('prefactures')
-  const [storageFilters, setStorageFilters] = useState(emptyFilters())
+  const [storageFilters, setStorageFilters] = useState(defaultStorageFilters())
   const [appliedStorageFilters, setAppliedStorageFilters] = useState(emptyFilters())
   const [modalReportFilters, setModalReportFilters] = useState(reportFilters())
   const [bulkFilters, setBulkFilters] = useState(emptyBulkFilters())
@@ -1189,7 +1195,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
             className={`nav-link ${activeStorageTab === tab.id ? 'active' : ''}`}
             onClick={() => {
               setActiveStorageTab(tab.id)
-              setStorageFilters(emptyFilters())
+              setStorageFilters(defaultStorageFilters())
               setAppliedStorageFilters(emptyFilters())
             }}
           >
