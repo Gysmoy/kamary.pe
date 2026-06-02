@@ -44,13 +44,13 @@ class BillingDocumentController extends BasicController
             ->selectRaw("(SELECT ar.balance_amount FROM accounts_receivable ar WHERE ar.status = 1 AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_balance_amount")
             ->selectRaw("(SELECT ar.payment_status FROM accounts_receivable ar WHERE ar.status = 1 AND ar.source_type = billing_documents.source_type AND ar.source_id = billing_documents.source_id ORDER BY ar.id DESC LIMIT 1) as receivable_payment_status")
             ->with([
-                'business:id,name,tax_number,soap_send_id,soap_type_id,soap_username,soap_password,detraction_account,payment_accounts,facturador_company_id,facturador_sync_status,status',
+                'business:id,name,trade_name,tax_number,soap_send_id,soap_type_id,soap_username,soap_password,detraction_account,payment_accounts,fiscal_logo_path,facturador_company_id,facturador_sync_status,status,updated_at',
                 'branch:id,business_id,name,establishment_code,ubigeo,address,email,telephone,facturador_establishment_id,facturador_sync_status,facturador_sync_message,facturador_last_sync_at,series_factura,series_boleta,series_nota_credito,status',
                 'warehouse:id,name',
                 'client:id,full_name,document_type,document_number,email,billing_email,phone,ubigeo,full_address',
                 'eventualClient:id,business_name,document_type,document_number,email,phone,address',
                 'commercialOrder:id,code,billing_status,dispatch_status,total,ubigeo,delivery_address,dispatch_contact_phone',
-                'serviceOrder:id,code,order_status,billing_status,total,issue_date,scheduled_at,created_at',
+                'serviceOrder:id,code,order_type,order_status,billing_status,total,issue_date,scheduled_at,created_at',
                 'referenceDocument:id,code,document_type,series,sequence,local_status,total',
                 'items:id,billing_document_id,commercial_order_item_id,service_order_item_id,item_type,item_code,description,quantity,unit_price,total,metadata,status',
                 'events:id,billing_document_id,event_type,local_status,external_status,message,created_at',

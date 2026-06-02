@@ -790,7 +790,63 @@ class FacturadorPro5Service
             Arr::get($document->metadata, 'delivery_address') ? 'Entrega: ' . Arr::get($document->metadata, 'delivery_address') : null,
         ]);
 
+        if ($this->isStorageBillingDocument($document)) {
+            $paymentAccounts = $this->paymentAccountTextLines($document->business?->payment_accounts);
+            if (!empty($paymentAccounts)) {
+                $lines[] = 'Cuentas bancarias: ' . implode(' / ', array_slice($paymentAccounts, 0, 5));
+            }
+        }
+
         return implode(' | ', $lines);
+    }
+
+    private function isStorageBillingDocument(BillingDocument $document): bool
+    {
+        $origin = (string) Arr::get($document->metadata ?? [], 'document_origin', '');
+        if (in_array($origin, [
+            'storage_service_order',
+            'storage_general_service_order',
+            'storage_billing_control_demo',
+            'storage_demo_seed',
+        ], true)) {
+            return true;
+        }
+
+        if (!$document->relationLoaded('serviceOrder') && $document->service_order_id) {
+            $document->loadMissing('serviceOrder');
+        }
+
+        return $document->source_type === 'service_order'
+            && in_array((string) $document->serviceOrder?->order_type, ['storage_service', 'storage_general'], true);
+    }
+
+    private function paymentAccountTextLines($value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : ['lines' => preg_split('/\r\n|\r|\n/', $value)];
+        }
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $lines = [];
+        foreach (['title', 'subtitle'] as $key) {
+            $text = trim((string) ($value[$key] ?? ''));
+            if ($text !== '') {
+                $lines[] = $text;
+            }
+        }
+
+        foreach (($value['lines'] ?? []) as $line) {
+            $line = trim((string) $line);
+            if ($line !== '') {
+                $lines[] = $line;
+            }
+        }
+
+        return array_values($lines);
     }
 
     private function buildStatusRequestBody(BillingDocument $document): array
@@ -1249,13 +1305,20 @@ class FacturadorPro5Service
         $customerDocument = $customer?->document_number ?: '-';
         $customerName = $this->resolveCustomerName($document);
         $customerAddress = $this->resolveCustomerAddress($document);
+        $logoImage = $this->storagePdfLogoImage($document);
 
         $this->pdfRect($commands, $margin, 745, 331.65, 68);
         $this->pdfRect($commands, $rightBoxX, 745, 153.07, 68);
         $this->pdfRect($commands, $margin, 616, $width, 108);
         $this->pdfRect($commands, $margin, 513, $width, 84);
 
-        $this->pdfText($commands, 'KM', 54, 787, 18, 'F2');
+        if ($logoImage) {
+            [$logoWidth, $logoHeight] = $this->fitPdfImage($logoImage['width'], $logoImage['height'], 68, 44);
+            $this->pdfImage($commands, $logoImage['name'], 54, 756 + ((44 - $logoHeight) / 2), $logoWidth, $logoHeight);
+        } else {
+            $this->pdfText($commands, 'KM', 54, 787, 18, 'F2');
+        }
+
         $this->pdfText($commands, $businessName, 123, 797, 12, 'F2');
         $this->pdfText($commands, $branchAddress, 123, 779, 8.5);
         $this->pdfWrappedText($commands, $document->branch?->address ?: 'LIMA - LIMA - SAN LUIS', 123, 767, 245, 8, 9.5, 2);
@@ -1330,17 +1393,26 @@ class FacturadorPro5Service
         $this->pdfWrappedText($commands, $this->amountInWords((float) $document->total, $document->currency), 150, $lettersY, 385, 8, 10, 2);
 
         $bankY = $lettersY - 42;
-        $this->pdfText($commands, 'KAMARY MEDICAL SAC ' . strtoupper($currencyName), 46.52, $bankY, 8, 'F2');
-        $this->pdfText($commands, 'BBVA CUENTA CORRIENTE 0011-0341-0100042988', 46.52, $bankY - 11, 8);
-        $this->pdfText($commands, 'BBVA CCI 011-341-000100042988-54', 46.52, $bankY - 22, 8);
+        $bankLineCount = 0;
+        if ($this->isStorageBillingDocument($document)) {
+            foreach (array_slice($this->paymentAccountTextLines($document->business?->payment_accounts), 0, 6) as $index => $line) {
+                $this->pdfCellText($commands, $line, 46.52, $bankY - ($index * 11), 360, 8, 'L', 1, 9, $index === 0 ? 'F2' : 'F1');
+                $bankLineCount++;
+            }
+        } else {
+            $this->pdfText($commands, 'KAMARY MEDICAL SAC ' . strtoupper($currencyName), 46.52, $bankY, 8, 'F2');
+            $this->pdfText($commands, 'BBVA CUENTA CORRIENTE 0011-0341-0100042988', 46.52, $bankY - 11, 8);
+            $this->pdfText($commands, 'BBVA CCI 011-341-000100042988-54', 46.52, $bankY - 22, 8);
+            $bankLineCount = 3;
+        }
 
-        $legendY = max($bankY - 64, 122);
+        $legendY = max($bankY - (($bankLineCount + 3) * 11), 122);
         $this->pdfWrappedText($commands, 'Representacion impresa de la ' . $documentTitle . ' ELECTRONICA, visita ' . url('/'), 46.52, $legendY, 500, 7.5, 9.5, 3);
         $this->pdfText($commands, 'Autorizado mediante Resolucion de Intendencia No.034-005-0005315', 46.52, $legendY - 30, 7.5);
         $this->pdfWrappedText($commands, 'Archivo XML: documento demo sin enlace XML del proveedor', 46.52, $legendY - 70, 500, 7.5, 9.5, 2);
         $this->pdfText($commands, 'PDF generado localmente para datos demo sin enlace del proveedor', 46.52, 42, 7);
 
-        return $this->pdfDocument(implode("\n", $commands) . "\n");
+        return $this->pdfDocument(implode("\n", $commands) . "\n", $logoImage ? [$logoImage] : []);
     }
 
     private function pdfDocumentTitle(?string $documentType): string
@@ -1428,6 +1500,91 @@ class FacturadorPro5Service
         return (string) $number;
     }
 
+    private function storagePdfLogoImage(BillingDocument $document): ?array
+    {
+        if (!$this->isStorageBillingDocument($document)) {
+            return null;
+        }
+
+        $path = trim((string) $document->business?->fiscal_logo_path);
+        if ($path === '' || !Storage::disk('public')->exists($path)) {
+            return null;
+        }
+
+        $data = @file_get_contents(Storage::disk('public')->path($path));
+        if ($data === false || $data === '') {
+            return null;
+        }
+
+        $info = @getimagesizefromstring($data);
+        if (!$info) {
+            return null;
+        }
+
+        $width = (int) ($info[0] ?? 0);
+        $height = (int) ($info[1] ?? 0);
+        $mime = strtolower((string) ($info['mime'] ?? ''));
+        if ($width <= 0 || $height <= 0) {
+            return null;
+        }
+
+        if ($mime !== 'image/jpeg') {
+            $converted = $this->convertImageDataToJpeg($data);
+            if ($converted === null) {
+                return null;
+            }
+            $data = $converted;
+        }
+
+        return [
+            'name' => 'FiscalLogo',
+            'width' => $width,
+            'height' => $height,
+            'data' => $data,
+            'filter' => 'DCTDecode',
+            'color_space' => 'DeviceRGB',
+            'bits' => 8,
+        ];
+    }
+
+    private function convertImageDataToJpeg(string $data): ?string
+    {
+        if (!function_exists('imagecreatefromstring') || !function_exists('imagecreatetruecolor') || !function_exists('imagejpeg')) {
+            return null;
+        }
+
+        $source = @imagecreatefromstring($data);
+        if (!$source) {
+            return null;
+        }
+
+        $width = imagesx($source);
+        $height = imagesy($source);
+        $canvas = imagecreatetruecolor($width, $height);
+        $white = imagecolorallocate($canvas, 255, 255, 255);
+        imagefilledrectangle($canvas, 0, 0, $width, $height, $white);
+        imagecopy($canvas, $source, 0, 0, 0, 0, $width, $height);
+
+        ob_start();
+        imagejpeg($canvas, null, 90);
+        $jpeg = ob_get_clean();
+
+        imagedestroy($source);
+        imagedestroy($canvas);
+
+        return is_string($jpeg) && $jpeg !== '' ? $jpeg : null;
+    }
+
+    private function fitPdfImage(int $sourceWidth, int $sourceHeight, float $maxWidth, float $maxHeight): array
+    {
+        if ($sourceWidth <= 0 || $sourceHeight <= 0) {
+            return [$maxWidth, $maxHeight];
+        }
+
+        $scale = min($maxWidth / $sourceWidth, $maxHeight / $sourceHeight);
+        return [max(1, $sourceWidth * $scale), max(1, $sourceHeight * $scale)];
+    }
+
     private function pdfRect(array &$commands, float $x, float $y, float $w, float $h): void
     {
         $commands[] = $this->pdfNumber($x) . ' ' . $this->pdfNumber($y) . ' ' . $this->pdfNumber($w) . ' ' . $this->pdfNumber($h) . ' re S';
@@ -1436,6 +1593,12 @@ class FacturadorPro5Service
     private function pdfLine(array &$commands, float $x1, float $y1, float $x2, float $y2): void
     {
         $commands[] = $this->pdfNumber($x1) . ' ' . $this->pdfNumber($y1) . ' m ' . $this->pdfNumber($x2) . ' ' . $this->pdfNumber($y2) . ' l S';
+    }
+
+    private function pdfImage(array &$commands, string $name, float $x, float $y, float $width, float $height): void
+    {
+        $name = preg_replace('/[^A-Za-z0-9]/', '', $name) ?: 'Image';
+        $commands[] = 'q ' . $this->pdfNumber($width) . ' 0 0 ' . $this->pdfNumber($height) . ' ' . $this->pdfNumber($x) . ' ' . $this->pdfNumber($y) . ' cm /' . $name . ' Do Q';
     }
 
     private function pdfText(array &$commands, string $text, float $x, float $y, float $size = 8, string $font = 'F1', ?float $boxWidth = null, string $align = 'L'): void
@@ -1514,16 +1677,42 @@ class FacturadorPro5Service
         return rtrim(rtrim(number_format($value, 3, '.', ''), '0'), '.');
     }
 
-    private function pdfDocument(string $content): string
+    private function pdfDocument(string $content, array $images = []): string
     {
+        $xObjects = [];
+        $imageObjects = [];
+        $nextObjectId = 7;
+        foreach ($images as $image) {
+            $name = preg_replace('/[^A-Za-z0-9]/', '', (string) ($image['name'] ?? 'Image' . $nextObjectId)) ?: 'Image' . $nextObjectId;
+            $data = (string) ($image['data'] ?? '');
+            if ($data === '') {
+                continue;
+            }
+
+            $xObjects[] = '/' . $name . ' ' . $nextObjectId . ' 0 R';
+            $imageObjects[] = $nextObjectId . ' 0 obj << /Type /XObject /Subtype /Image /Width ' . (int) ($image['width'] ?? 1)
+                . ' /Height ' . (int) ($image['height'] ?? 1)
+                . ' /ColorSpace /' . preg_replace('/[^A-Za-z0-9]/', '', (string) ($image['color_space'] ?? 'DeviceRGB'))
+                . ' /BitsPerComponent ' . (int) ($image['bits'] ?? 8)
+                . ' /Filter /' . preg_replace('/[^A-Za-z0-9]/', '', (string) ($image['filter'] ?? 'DCTDecode'))
+                . ' /Length ' . strlen($data) . " >> stream\n" . $data . "\nendstream endobj";
+            $nextObjectId++;
+        }
+
+        $resources = '/Font << /F1 5 0 R /F2 6 0 R >>';
+        if (!empty($xObjects)) {
+            $resources .= ' /XObject << ' . implode(' ', $xObjects) . ' >>';
+        }
+
         $objects = [
             '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
             '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
-            '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >> endobj',
+            '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << ' . $resources . ' >> /Contents 4 0 R >> endobj',
             '4 0 obj << /Length ' . strlen($content) . " >> stream\n" . $content . 'endstream endobj',
             '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
             '6 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj',
         ];
+        $objects = array_merge($objects, $imageObjects);
 
         $pdf = "%PDF-1.4\n";
         $offsets = [0];
