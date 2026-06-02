@@ -214,7 +214,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales/exit-note', [AdminMagistralesOutputController::class, 'reactView'])->middleware($magistralesOutputs);
         Route::get('/magistrales/purchase-orders', [AdminMagistralesPurchaseOrderController::class, 'reactView'])->middleware($magistralesProcurement);
         Route::get('/magistrales/accounts-payable', [AdminMagistralesAccountsPayableController::class, 'reactView'])->middleware('module.permission:magistrales-procurement');
-        Route::get('/magistrales/billing-settings', [AdminBillingSettingsController::class, 'reactView'])->middleware($magistralesBilling);
+        Route::get('/magistrales/billing-settings', fn() => redirect('/admin/billing-settings'))->middleware($magistralesBilling);
         Route::get('/magistrales/billing-documents', fn() => redirect('/admin/magistrales-sales'))->middleware($magistralesBilling);
         Route::get('/magistrales-category', [AdminMagistralesCategoryController::class, 'reactView'])->middleware($magistralesCategory);
         Route::get('/magistrales/formats', [AdminMagistralesFormatController::class, 'reactView'])->middleware($magistralesFormats);

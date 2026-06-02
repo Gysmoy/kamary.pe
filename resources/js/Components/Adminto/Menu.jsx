@@ -238,7 +238,6 @@ const Menu = ({ can, hasRole, panel = null }) => {
               {canAccessAny('magistrales-outputs', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales-outputs' icon='ti ti-file-export'>Salidas</MenuItem>}
               {canAccessAny('magistrales-unit', 'magistrales-products') && <MenuItem href='/admin/magistrales-unit' icon='ti ti-ruler-measure'>Unidad</MenuItem>}
               {canAccessAny('magistrales-sales', 'magistrales-billing') && <MenuItem href='/admin/magistrales-sales' icon='ti ti-cash'>Ventas</MenuItem>}
-              {canAccess('magistrales-billing') && <MenuItem href='/admin/magistrales/billing-settings' icon='ti ti-file-settings'>Config. facturación</MenuItem>}
             </MenuItemContainer>
           )}
         </ul>
