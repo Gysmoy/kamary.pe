@@ -52,7 +52,6 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada', fixedWarehouse
   const guideSequenceRef = useRef()
   const guideRucRef = useRef()
   const guideFilePathRef = useRef()
-  const businessRef = useRef()
   const warehouseRef = useRef()
   const supplierRef = useRef()
   const paymentMethodRef = useRef()
@@ -61,21 +60,20 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada', fixedWarehouse
   const affectsIgvRef = useRef()
   const issueDateRef = useRef()
   const observationsRef = useRef()
-  const [businesses, setBusinesses] = useState([])
   const [suppliers, setSuppliers] = useState([])
   const [articles, setArticles] = useState([])
   const [items, setItems] = useState([emptyItem()])
   const [isEditing, setIsEditing] = useState(false)
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
-  const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
+  const fixedWarehouseLabel = fixedWarehouse?.name || 'Almacen Magistrales'
+  const fixedBusinessId = fixedWarehouse?.business_id ? `${fixedWarehouse.business_id}` : ''
+  const fixedBusinessLabel = fixedWarehouse?.business_name || 'Kamary Peru'
 
   useEffect(() => {
     Promise.all([
-      incomesRest.getBusinesses(),
       incomesRest.getSuppliers(),
       incomesRest.getArticles(),
-    ]).then(([businessRows, supplierRows, articleRows]) => {
-      setBusinesses((businessRows ?? []).filter(row => row.status !== null))
+    ]).then(([supplierRows, articleRows]) => {
       setSuppliers((supplierRows ?? []).filter(row => row.status !== null))
       setArticles((articleRows ?? []).filter(row => row.status !== null))
     })
@@ -102,7 +100,6 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada', fixedWarehouse
     guideSequenceRef.current.value = data?.guide_sequence ?? ''
     guideRucRef.current.value = data?.guide_ruc ?? ''
     guideFilePathRef.current.value = data?.guide_file_path ?? ''
-    businessRef.current.value = data?.business_id ?? ''
     warehouseRef.current.value = data?.warehouse_id ?? fixedWarehouseId
     supplierRef.current.value = data?.supplier_id ?? ''
     paymentMethodRef.current.value = data?.payment_method ?? ''
@@ -142,7 +139,7 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada', fixedWarehouse
       guide_sequence: guideSequenceRef.current.value.trim(),
       guide_ruc: guideRucRef.current.value.trim(),
       guide_file_path: guideFilePathRef.current.value.trim(),
-      business_id: businessRef.current.value || null,
+      business_id: fixedBusinessId || null,
       warehouse_id: warehouseRef.current.value || fixedWarehouseId || null,
       supplier_id: supplierRef.current.value || null,
       payment_method: paymentMethodRef.current.value.trim(),
@@ -273,7 +270,6 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada', fixedWarehouse
           cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar nota de entrada magistral')
         },
         { dataField: 'document_guide', caption: 'Nro comp. / Guia R.', minWidth: 170, calculateCellValue: formatDocumentGuide },
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 180 },
         { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 160 },
         { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 190 },
         { dataField: 'creator_label', caption: 'Usuario registro', minWidth: 160, calculateCellValue: (data) => formatUser(data.creator) },
@@ -317,8 +313,8 @@ const Incomes = ({ moduleTitle = 'Magistrales - Nota de entrada', fixedWarehouse
         <input ref={warehouseRef} hidden />
         <div className='col-md-3 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' disabled={!isEditing} /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Orden de compra</label><input ref={purchaseOrderCodeRef} className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Almacen fijo</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Empresa</label><select ref={businessRef} className='form-control'><option value=''>Seleccione</option>{businesses.map(row => <option key={`mag-income-business-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Almacen</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Empresa</label><input className='form-control' value={fixedBusinessLabel} disabled /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Proveedor</label><select ref={supplierRef} className='form-control'><option value=''>Seleccione</option>{suppliers.map(row => <option key={`mag-income-supplier-${row.id}`} value={row.id}>{row.ruc} - {row.business_name}</option>)}</select></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Forma de pago</label><input ref={paymentMethodRef} className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Archivo</label><input ref={filePathRef} className='form-control' /></div>

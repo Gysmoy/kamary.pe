@@ -64,7 +64,7 @@ const itemKey = (row) => [
 ].join('|')
 
 const normalizeReason = (value) => `${value ?? ''}`.trim().toUpperCase()
-const warehouseLabel = (warehouse) => [warehouse?.branch?.name, warehouse?.name].filter(Boolean).join(' - ') || warehouse?.name || ''
+const warehouseLabel = (warehouse) => warehouse?.name || ''
 
 const Outputs = ({
   moduleTitle = 'Magistrales - Salidas',
@@ -121,13 +121,10 @@ const Outputs = ({
     return (grid?.getVisibleRows?.() ?? []).map(row => row.data).filter(Boolean)
   }
   const exportColumns = [
-    ['Empresa', row => row?.originWarehouse?.branch?.business?.name ?? fixedWarehouse?.business_name ?? ''],
     ['Codigo', row => row?.code ?? ''],
     ['Almacen origen', row => row?.originWarehouse?.name ?? ''],
     ['Destino', row => {
-      const branchName = row?.destinationWarehouse?.branch?.name
-      const warehouseName = row?.destinationWarehouse?.name
-      return [branchName, warehouseName].filter(Boolean).join(' - ') || row?.destination || '-'
+      return row?.destinationWarehouse?.name || row?.destination || '-'
     }],
     ['Motivo', row => row?.reason ?? ''],
     ['Observacion', row => row?.observations ?? ''],
@@ -572,9 +569,7 @@ const Outputs = ({
           caption: 'Destino',
           minWidth: 180,
           calculateCellValue: row => {
-            const branchName = row?.destinationWarehouse?.branch?.name
-            const warehouseName = row?.destinationWarehouse?.name
-            return [branchName, warehouseName].filter(Boolean).join(' - ') || row?.destination || '-'
+            return row?.destinationWarehouse?.name || row?.destination || '-'
           }
         },
         { dataField: 'reason', caption: 'Motivo', minWidth: 180 },

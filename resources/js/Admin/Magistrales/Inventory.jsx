@@ -37,7 +37,7 @@ const Inventory = ({ moduleTitle = 'Magistrales - Inventario', fixedWarehouse = 
   const [items, setItems] = useState([emptyItem()])
   const [isEditing, setIsEditing] = useState(false)
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
-  const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
+  const fixedWarehouseLabel = fixedWarehouse?.name || 'Almacen Magistrales'
 
   useEffect(() => {
     Promise.all([rest.getArticles()]).then(([articleRows]) => {
@@ -163,7 +163,6 @@ const Inventory = ({ moduleTitle = 'Magistrales - Inventario', fixedWarehouse = 
           width: 150,
           cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => openModal(data), 'Editar inventario')
         },
-        { dataField: 'branch.name', caption: 'Sede', minWidth: 150 },
         { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 170 },
         { dataField: 'creator_label', caption: 'Usuario registro', minWidth: 160, calculateCellValue: row => formatUser(row.creator) },
         { dataField: 'created_at', caption: 'Fecha registro', dataType: 'date', width: 135 },
@@ -198,7 +197,7 @@ const Inventory = ({ moduleTitle = 'Magistrales - Inventario', fixedWarehouse = 
         <input ref={idRef} hidden />
         <input ref={warehouseRef} hidden />
         <div className='col-md-3 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' disabled={!isEditing} /></div>
-        <div className='col-md-5 mb-3'><label className='form-label'>Almacen fijo</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
+        <div className='col-md-5 mb-3'><label className='form-label'>Almacen</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Fecha inventario</label><input ref={countDateRef} type='date' className='form-control' /></div>
         <div className='col-12 mb-2'><label className='form-label'>Observaciones</label><textarea ref={observationsRef} className='form-control' rows='2' /></div>
 

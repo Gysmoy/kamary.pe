@@ -54,7 +54,7 @@ const emptyItem = (warehouseId = '') => ({
 const formatUser = (user) => user?.fullname || [user?.name, user?.lastname].filter(Boolean).join(' ') || user?.username || ''
 const formatDocument = (row) => [row?.document_type, row?.document_number].filter(Boolean).join(' ')
 const itemSubtotal = (item) => Math.max(0, (Number(item.quantity || 0) * Number(item.unit_price || 0)) - Number(item.discount || 0))
-const emptyFilters = () => ({ businessId: '', patient: '', startDate: '', endDate: '' })
+const emptyFilters = () => ({ patient: '', startDate: '', endDate: '' })
 const combineFilters = (filters) => filters.filter(Boolean).reduce((carry, filter) => {
   if (!carry) return filter
   return [carry, 'and', filter]
@@ -64,8 +64,6 @@ const stockLabel = (value) => Number(value ?? 0).toLocaleString('es-PE', { minim
 const billingDocumentNumber = (row) => [row?.series, row?.sequence].filter(Boolean).join(' - ') || row?.code || ''
 const billingClientLabel = (row) => row?.client?.full_name ?? row?.eventualClient?.business_name ?? row?.eventual_client?.business_name ?? '-'
 const billingStatusLabel = (row) => getBillingDocumentStatusLabel(row?.local_status ?? row?.external_status)
-const normalizeLabel = (value) => (value ?? '').toString().trim().toLowerCase()
-const isFixedBusiness = (row) => normalizeLabel(row?.name).includes('kamary peru')
 const identityDocumentTypes = ['DNI', 'CE', 'RUC']
 const patientSexOptions = ['FEMENINO', 'MASCULINO']
 const emptyPatientForm = () => ({
@@ -147,7 +145,6 @@ const setSelect2Value = (select, value, text = value) => {
 
 const salesFilter = (tab, filters) => combineFilters([
   ['is_quote', '=', tab === 'quotes'],
-  filters.businessId ? ['business_id', '=', Number(filters.businessId)] : null,
   filters.patient ? ['patient', 'contains', filters.patient] : null,
   filters.startDate ? ['sale_date', '>=', filters.startDate] : null,
   filters.endDate ? ['sale_date', '<=', filters.endDate] : null,
@@ -169,7 +166,6 @@ const billingFilter = (tab, filters) => {
   return combineFilters([
     ['source_type', '=', 'magistral_sale'],
     statusFilter,
-    filters.businessId ? ['business_id', '=', Number(filters.businessId)] : null,
     filters.startDate ? ['issue_date', '>=', filters.startDate] : null,
     filters.endDate ? ['issue_date', '<=', filters.endDate] : null,
   ])
@@ -183,7 +179,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const doctorFormModalRef = useRef()
   const idRef = useRef()
   const codeRef = useRef()
-  const businessRef = useRef()
   const paymentStatusRef = useRef()
   const documentTypeRef = useRef()
   const patientSelectRef = useRef()
@@ -195,8 +190,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const dateRef = useRef()
   const observationsRef = useRef()
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
-  const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
-  const [businesses, setBusinesses] = useState([])
+  const fixedWarehouseLabel = fixedWarehouse?.name || 'Almacen Magistrales'
   const [articles, setArticles] = useState([])
   const [doctors, setDoctors] = useState([])
   const [items, setItems] = useState([emptyItem(fixedWarehouseId)])
@@ -222,9 +216,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     () => isBillingTab ? billingFilter(activeTab, appliedFilters) : salesFilter(activeTab, appliedFilters),
     [activeTab, appliedFilters, isBillingTab]
   )
-  const fixedBusiness = useMemo(() => businesses.find(isFixedBusiness) ?? businesses[0] ?? null, [businesses])
-  const fixedBusinessId = fixedBusiness?.id ? `${fixedBusiness.id}` : ''
-  const fixedBusinessLabel = fixedBusiness?.name ?? 'Kamary Peru'
+  const fixedBusinessId = fixedWarehouse?.business_id ? `${fixedWarehouse.business_id}` : ''
+  const fixedBusinessLabel = fixedWarehouse?.business_name || 'Kamary Peru'
   const doctorOptions = useMemo(() => doctors.map(doctor => ({ id: doctor.id, label: doctorLabel(doctor) })).filter(row => row.label), [doctors])
   const showLegacyDoctorOption = !!doctorValue && !doctorOptions.some(row => row.label === doctorValue)
   const isFacturaDocumentType = selectedDocumentType === 'Factura'
@@ -242,8 +235,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   }
 
   useEffect(() => {
-    Promise.all([rest.getBusinesses(), rest.getArticles(), rest.getDoctors()]).then(([businessRows, articleRows, doctorRows]) => {
-      setBusinesses((businessRows ?? []).filter(row => row.status !== null))
+    Promise.all([rest.getArticles(), rest.getDoctors()]).then(([articleRows, doctorRows]) => {
       setArticles((articleRows ?? []).filter(row => row.status !== null))
       setDoctors((doctorRows ?? []).filter(row => row.status !== null))
     })
@@ -348,12 +340,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     syncBillingDataFromPatient(selectedPatientData)
   }, [selectedDocumentType, selectedPatientData])
 
-  useEffect(() => {
-    if (businessRef.current && fixedBusinessId) {
-      businessRef.current.value = fixedBusinessId
-    }
-  }, [fixedBusinessId])
-
   const totals = items.reduce((carry, item) => {
     carry.discount += Number(item.discount || 0)
     carry.total += itemSubtotal(item)
@@ -367,7 +353,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     setModalDefaultQuote(data?.id ? !!data?.is_quote : !!asQuote)
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
-    businessRef.current.value = fixedBusinessId || data?.business_id || ''
     paymentStatusRef.current.value = data?.payment_status ?? 'pending'
     const nextDocumentType = saleDocumentTypes.includes(data?.document_type) ? data.document_type : 'Boleta'
     documentTypeRef.current.value = nextDocumentType
@@ -586,7 +571,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const save = async (e, asQuote = modalDefaultQuote) => {
     e.preventDefault()
     if (!fixedBusinessId) {
-      Swal.fire('Empresa no disponible', 'No se encontro Kamary Peru para registrar la venta.', 'warning')
+      Swal.fire('Empresa no disponible', 'No se encontro la configuracion fija de Kamary Peru para registrar la venta.', 'warning')
       return
     }
     const documentType = documentTypeRef.current.value.trim()
@@ -673,13 +658,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     { dataField: 'is_quote', visible: false, showInColumnChooser: false },
     { dataField: 'business_id', visible: false, showInColumnChooser: false },
     { dataField: 'sale_date', visible: false, showInColumnChooser: false },
-    {
-      dataField: 'business.name',
-      caption: 'Empresa',
-      minWidth: 170,
-      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business?.name, () => openModal(data), 'Editar venta magistral')
-    },
-    { dataField: 'code', caption: activeTab === 'quotes' ? 'Cod. Cotizacion' : 'Codigo', width: 145 },
+    { dataField: 'code', caption: activeTab === 'quotes' ? 'Cod. Cotizacion' : 'Codigo', width: 145, cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => openModal(data), 'Editar venta magistral') },
     activeTab === 'quotes'
       ? { dataField: 'sale_type', caption: 'Tipo Venta', width: 130 }
       : { dataField: 'payment_status', caption: 'Estado Pago', width: 120, calculateCellValue: row => paymentLabels[row.payment_status] ?? row.payment_status },
@@ -703,7 +682,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     },
     { dataField: 'source_type', visible: false, showInColumnChooser: false },
     { dataField: 'business_id', visible: false, showInColumnChooser: false },
-    { dataField: 'business.name', caption: 'Empresa', minWidth: 170 },
     { dataField: 'local_status', caption: activeTab === 'cancelled' ? 'Est. Anulacion' : 'Est. Comprobante', width: 145, calculateCellValue: billingStatusLabel },
     { dataField: 'document_number', caption: 'Comprobante', width: 160, calculateCellValue: billingDocumentNumber },
     { caption: 'Cliente', minWidth: 220, calculateCellValue: billingClientLabel },
@@ -788,22 +766,15 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
           ))}
         </ul>
         <form className='row align-items-end mt-3' onSubmit={applyFilters}>
-          <div className='col-12 col-lg-3 mb-2'>
-            <label className='form-label'>Empresa</label>
-            <select className='form-select' value={filters.businessId} onChange={(event) => setFilters(prev => ({ ...prev, businessId: event.target.value }))}>
-              <option value=''>Todos</option>
-              {businesses.map(row => <option key={`mag-sale-filter-business-${row.id}`} value={row.id}>{row.name}</option>)}
-            </select>
-          </div>
-          {!isBillingTab && <div className='col-12 col-lg-3 mb-2'>
+          {!isBillingTab && <div className='col-12 col-lg-4 mb-2'>
             <label className='form-label'>Paciente</label>
             <input className='form-control' value={filters.patient} placeholder='DNI o nombre del paciente' onChange={(event) => setFilters(prev => ({ ...prev, patient: event.target.value }))} />
           </div>}
-          <div className='col-12 col-md-4 col-lg-2 mb-2'>
+          <div className='col-12 col-md-4 col-lg-3 mb-2'>
             <label className='form-label'>Fecha Inicio</label>
             <input type='date' className='form-control' value={filters.startDate} onChange={(event) => setFilters(prev => ({ ...prev, startDate: event.target.value }))} />
           </div>
-          <div className='col-12 col-md-4 col-lg-2 mb-2'>
+          <div className='col-12 col-md-4 col-lg-3 mb-2'>
             <label className='form-label'>Fecha Fin</label>
             <input type='date' className='form-control' value={filters.endDate} onChange={(event) => setFilters(prev => ({ ...prev, endDate: event.target.value }))} />
           </div>
@@ -855,7 +826,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         <div className='col-md-3 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' disabled={!isEditing} /></div>
         <div className='col-md-3 mb-3'>
           <label className='form-label'>Empresa</label>
-          <input ref={businessRef} type='hidden' value={fixedBusinessId} readOnly />
           <input className='form-control' value={fixedBusinessLabel} readOnly disabled />
         </div>
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha</label><input ref={dateRef} type='date' className='form-control' /></div>

@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin\Magistrales;
 use App\Http\Controllers\BasicController;
 use App\Http\Controllers\Admin\Magistrales\Concerns\RunsMagistralSaveInTransaction;
 use App\Models\Article;
-use App\Models\Business;
 use App\Models\MagistralSale;
 use App\Models\MagistralSaleItem;
 use App\Support\MagistralesWarehouse;
@@ -63,8 +62,10 @@ class SaleController extends BasicController
             ->exists();
         if ($exists) throw new \Exception('Ya existe una venta magistral con este codigo');
 
-        $businessId = $this->toNullableInt($body['business_id'] ?? null);
-        if ($businessId) Business::findOrFail($businessId);
+        $businessId = MagistralesWarehouse::summary()['business_id'] ?? null;
+        if (!$businessId) {
+            throw new \Exception('No se encontro la configuracion fija de Kamary Peru para Magistrales');
+        }
 
         $isQuote = $this->toBoolean($body['is_quote'] ?? false);
         $this->parsedItems = $this->parseItems(is_array($request->items) ? $request->items : [], $id ? (int)$id : null, $isQuote);

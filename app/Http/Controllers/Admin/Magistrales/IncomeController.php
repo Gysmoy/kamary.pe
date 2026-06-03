@@ -80,7 +80,10 @@ class IncomeController extends BasicController
         $body['guide_sequence'] = trim((string)($body['guide_sequence'] ?? '')) ?: null;
         $body['guide_ruc'] = trim((string)($body['guide_ruc'] ?? '')) ?: null;
         $body['guide_file_path'] = trim((string)($body['guide_file_path'] ?? '')) ?: null;
-        $body['business_id'] = $this->toNullableInt($body['business_id'] ?? null);
+        $body['business_id'] = MagistralesWarehouse::summary()['business_id'] ?? null;
+        if (!$body['business_id']) {
+            throw new \Exception('No se encontro la configuracion fija de Kamary Peru para Magistrales');
+        }
         $body['warehouse_id'] = MagistralesWarehouse::id();
         $body['supplier_id'] = $this->toNullableInt($body['supplier_id'] ?? null);
         $body['payment_method'] = trim((string)($body['payment_method'] ?? '')) ?: null;
