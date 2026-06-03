@@ -65,6 +65,7 @@ const itemKey = (row) => [
 
 const normalizeReason = (value) => `${value ?? ''}`.trim().toUpperCase()
 const warehouseLabel = (warehouse) => warehouse?.name || ''
+const warehouseBranchId = (warehouse) => `${warehouse?.business_branch_id ?? warehouse?.branch?.id ?? ''}`
 
 const Outputs = ({
   moduleTitle = 'Magistrales - Salidas',
@@ -100,10 +101,13 @@ const Outputs = ({
   const [appliedFilter, setAppliedFilter] = useState(null)
 
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
+  const fixedBranchId = fixedWarehouse?.business_branch_id ? `${fixedWarehouse.business_branch_id}` : ''
 
   useEffect(() => {
     rest.getWarehouses().then((warehouseRows) => {
-      const activeWarehouses = (warehouseRows ?? []).filter(row => row.status !== null)
+      const activeWarehouses = (warehouseRows ?? [])
+        .filter(row => row.status !== null)
+        .filter(row => !fixedBranchId || warehouseBranchId(row) === fixedBranchId)
       setWarehouses(activeWarehouses)
       setSelectedOriginWarehouseId((current) => {
         if (current) return current
@@ -111,7 +115,7 @@ const Outputs = ({
         return defaultWarehouse?.id ? `${defaultWarehouse.id}` : ''
       })
     })
-  }, [fixedWarehouseId])
+  }, [fixedBranchId, fixedWarehouseId])
 
   const originWarehouses = warehouses
   const destinationWarehouses = warehouses.filter(row => `${row.id}` !== `${selectedOriginWarehouseId}`)
