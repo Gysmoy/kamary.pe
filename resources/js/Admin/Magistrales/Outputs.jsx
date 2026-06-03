@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { toast } from 'sonner'
 import Swal from 'sweetalert2'
@@ -65,11 +65,11 @@ const itemKey = (row) => [
 
 const normalizeReason = (value) => `${value ?? ''}`.trim().toUpperCase()
 const warehouseLabel = (warehouse) => warehouse?.name || ''
-const warehouseBranchId = (warehouse) => `${warehouse?.business_branch_id ?? warehouse?.branch?.id ?? ''}`
 
 const Outputs = ({
   moduleTitle = 'Magistrales - Salidas',
   fixedWarehouse = null,
+  availableWarehouses = [],
   reasonOptions: providedReasonOptions = [],
 }) => {
   const gridRef = useRef()
@@ -82,7 +82,6 @@ const Outputs = ({
   const stockSearchTextRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
-  const [warehouses, setWarehouses] = useState([])
   const [items, setItems] = useState([])
   const [reasonOptions, setReasonOptions] = useState(
     [...new Set([...(providedReasonOptions?.length ? providedReasonOptions : DEFAULT_REASON_OPTIONS)].map(normalizeReason).filter(Boolean))]
@@ -101,24 +100,13 @@ const Outputs = ({
   const [appliedFilter, setAppliedFilter] = useState(null)
 
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
-  const fixedBranchId = fixedWarehouse?.business_branch_id ? `${fixedWarehouse.business_branch_id}` : ''
-
-  useEffect(() => {
-    rest.getWarehouses().then((warehouseRows) => {
-      const activeWarehouses = (warehouseRows ?? [])
-        .filter(row => row.status !== null)
-        .filter(row => !fixedBranchId || warehouseBranchId(row) === fixedBranchId)
-      setWarehouses(activeWarehouses)
-      setSelectedOriginWarehouseId((current) => {
-        if (current) return current
-        const defaultWarehouse = activeWarehouses.find(row => `${row.id}` === fixedWarehouseId) ?? activeWarehouses[0]
-        return defaultWarehouse?.id ? `${defaultWarehouse.id}` : ''
-      })
-    })
-  }, [fixedBranchId, fixedWarehouseId])
-
-  const originWarehouses = warehouses
-  const destinationWarehouses = warehouses.filter(row => `${row.id}` !== `${selectedOriginWarehouseId}`)
+  const originWarehouses = useMemo(
+    () => (availableWarehouses ?? []).filter(row => row?.status !== null),
+    [availableWarehouses]
+  )
+  const currentOriginWarehouseId = selectedOriginWarehouseId
+    || `${originWarehouses.find(row => `${row.id}` === fixedWarehouseId)?.id ?? originWarehouses[0]?.id ?? fixedWarehouseId ?? ''}`
+  const destinationWarehouses = originWarehouses.filter(row => `${row.id}` !== `${currentOriginWarehouseId}`)
   const isTransferReason = selectedReason === 'TRANSFERENCIA'
   const exportRows = () => {
     const grid = $(gridRef.current).dxDataGrid('instance')
@@ -321,7 +309,7 @@ const Outputs = ({
   const save = async (e) => {
     e.preventDefault()
 
-    if (!selectedOriginWarehouseId) {
+    if (!currentOriginWarehouseId) {
       toast.error('Error', {
         description: 'Debes seleccionar un almacen origen',
         duration: 3000,
@@ -360,7 +348,7 @@ const Outputs = ({
     const result = await rest.save({
       id: idRef.current.value || undefined,
       code: isEditing ? codeRef.current.value.trim() : '',
-      origin_warehouse_id: selectedOriginWarehouseId || null,
+      origin_warehouse_id: currentOriginWarehouseId || null,
       destination_warehouse_id: isTransferReason ? selectedDestinationWarehouseId || null : null,
       reason: selectedReason,
       observations: observationsRef.current.value.trim(),
@@ -421,7 +409,7 @@ const Outputs = ({
   }
 
   const searchAvailableStockRows = async () => {
-    if (!selectedOriginWarehouseId) {
+    if (!currentOriginWarehouseId) {
       toast.error('Error', {
         description: 'Debes seleccionar un almacen antes de buscar articulos',
         duration: 3000,
@@ -435,7 +423,7 @@ const Outputs = ({
       const rows = await rest.availableStock({
         q: stockSearchTerm,
         output_id: idRef.current.value || '',
-        warehouse_id: selectedOriginWarehouseId || '',
+        warehouse_id: currentOriginWarehouseId || '',
       })
       setStockSearchRows(rows)
       setStockSearchSelectedIds([])
@@ -626,7 +614,7 @@ const Outputs = ({
                 <label className='form-label'>Almacen</label>
                 <select
                   className='form-select'
-                  value={selectedOriginWarehouseId}
+                  value={currentOriginWarehouseId}
                   onChange={(e) => {
                     const nextOriginWarehouseId = e.target.value
                     setSelectedOriginWarehouseId(nextOriginWarehouseId)
@@ -803,7 +791,7 @@ const Outputs = ({
           <label className='form-label'>Seleccionar almacen</label>
           <select
             className='form-select'
-            value={selectedOriginWarehouseId}
+            value={currentOriginWarehouseId}
             onChange={(e) => {
               setSelectedOriginWarehouseId(e.target.value)
               setStockSearchRows([])

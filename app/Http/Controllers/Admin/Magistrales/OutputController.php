@@ -40,10 +40,18 @@ class OutputController extends BasicController
 
     public function setReactViewProperties(Request $request)
     {
+        $fixedWarehouse = MagistralesWarehouse::warehouse();
+
         return [
             'moduleTitle' => 'Magistrales - Salidas',
             'requiredPermission' => ['magistrales-outputs', 'magistrales-warehouse'],
             'fixedWarehouse' => MagistralesWarehouse::summary(),
+            'availableWarehouses' => Warehouse::query()
+                ->with('branch:id,name,business_id')
+                ->where('business_branch_id', $fixedWarehouse->business_branch_id)
+                ->whereNotNull('status')
+                ->orderBy('name')
+                ->get(['id', 'name', 'business_branch_id', 'status']),
             'reasonOptions' => self::REASON_OPTIONS,
         ];
     }
