@@ -26,6 +26,7 @@ const doctorsRest = new DoctorsRest()
 const paymentLabels = { pending: 'Pendiente', paid: 'Pagado', partial: 'Parcial', cancelled: 'Cancelado' }
 const saleDocumentTypes = ['Factura', 'Boleta', 'Nota de pedido']
 const saleTypeOptions = ['PRESENCIAL', 'RECOJO EN TIENDA', 'DELIVERY']
+const discountPolicyOptions = ['', 'DESCUENTO EMPLEADOS', 'DESCUENTO MAYORISTA']
 const tabs = [
   { id: 'quotes', label: 'Cotizacion' },
   { id: 'sales', label: 'Ventas' },
@@ -77,6 +78,16 @@ const emptyPatientForm = () => ({
 const patientName = (row) => row?.full_name || row?.display_name || row?.business_name || ''
 const patientDocument = (row) => [row?.document_type?.toString?.().toUpperCase?.(), row?.document_number].filter(Boolean).join(' ')
 const patientSelectLabel = (row) => [patientDocument(row), patientName(row)].filter(Boolean).join(' | ')
+const patientBillingRuc = (row) => {
+  const companyRuc = (row?.company_ruc ?? '').toString().replace(/\D+/g, '')
+  if (companyRuc.length === 11 && (companyRuc.startsWith('20') || companyRuc.startsWith('10'))) return companyRuc
+
+  const documentNumber = (row?.document_number ?? '').toString().replace(/\D+/g, '')
+  const documentType = (row?.document_type ?? '').toString().trim().toUpperCase()
+  if (documentNumber.length === 11 && (documentType === 'RUC' || documentNumber.startsWith('20') || documentNumber.startsWith('10'))) return documentNumber
+
+  return ''
+}
 const patientFilter = (term) => {
   const sourceFilter = ['data_source', '=', 'client']
   const text = (term ?? '').trim()
@@ -176,6 +187,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const [patientLoading, setPatientLoading] = useState(false)
   const [patientForm, setPatientForm] = useState(emptyPatientForm())
   const [patientValue, setPatientValue] = useState('')
+  const [selectedPatientData, setSelectedPatientData] = useState(null)
   const [doctorForm, setDoctorForm] = useState(emptyDoctorForm())
   const [doctorValue, setDoctorValue] = useState('')
   const [selectedDocumentType, setSelectedDocumentType] = useState('Boleta')
@@ -193,6 +205,18 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const doctorOptions = useMemo(() => doctors.map(doctor => ({ id: doctor.id, label: doctorLabel(doctor) })).filter(row => row.label), [doctors])
   const showLegacyDoctorOption = !!doctorValue && !doctorOptions.some(row => row.label === doctorValue)
   const isFacturaDocumentType = selectedDocumentType === 'Factura'
+
+  const syncBillingDataFromPatient = (row) => {
+    if (!row || selectedDocumentType !== 'Factura') return
+    const ruc = patientBillingRuc(row)
+    if (!ruc) {
+      setBillingRuc('')
+      setBillingBusinessName('')
+      return
+    }
+    setBillingRuc(ruc)
+    setBillingBusinessName(patientName(row))
+  }
 
   useEffect(() => {
     Promise.all([rest.getBusinesses(), rest.getArticles(), rest.getDoctors()]).then(([businessRows, articleRows, doctorRows]) => {
@@ -249,9 +273,14 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         const row = event.params?.data?.data
         const value = row ? patientName(row) : (event.params?.data?.id ?? '')
         setPatientValue(value)
+        setSelectedPatientData(row ?? null)
+        if (row) syncBillingDataFromPatient(row)
       })
       .on('change.magSalePatient', (event) => {
-        if (!$(event.currentTarget).val()) setPatientValue('')
+        if (!$(event.currentTarget).val()) {
+          setPatientValue('')
+          setSelectedPatientData(null)
+        }
       })
 
     return () => {
@@ -292,6 +321,11 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   }, [doctorValue])
 
   useEffect(() => {
+    if (selectedDocumentType !== 'Factura' || !selectedPatientData) return
+    syncBillingDataFromPatient(selectedPatientData)
+  }, [selectedDocumentType, selectedPatientData])
+
+  useEffect(() => {
     if (businessRef.current && fixedBusinessId) {
       businessRef.current.value = fixedBusinessId
     }
@@ -318,9 +352,10 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     setBillingRuc(data?.billing_ruc ?? '')
     setBillingBusinessName(data?.billing_business_name ?? '')
     setPatientValue(data?.patient ?? '')
+    setSelectedPatientData(null)
     setSelect2Value(patientSelectRef.current, data?.patient ?? '', data?.patient ?? '')
     setDoctorValue(data?.doctor ?? '')
-    discountPolicyRef.current.value = data?.discount_policy ?? ''
+    discountPolicyRef.current.value = discountPolicyOptions.includes(data?.discount_policy ?? '') ? data.discount_policy : ''
     saleTypeRef.current.value = saleTypeOptions.includes(data?.sale_type) ? data.sale_type : 'PRESENCIAL'
     setSwitchChecked(allergyRef.current, !!data?.allergy)
     setSwitchChecked(intoleranceRef.current, !!data?.intolerance)
@@ -430,14 +465,21 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const selectPatient = (row) => {
     const value = patientName(row)
     setPatientValue(value)
+    setSelectedPatientData(row)
     setSelect2Value(patientSelectRef.current, value, patientSelectLabel(row) || value)
+    syncBillingDataFromPatient(row)
     $(patientSearchModalRef.current).modal('hide')
     $(patientFormModalRef.current).modal('hide')
   }
 
   const clearPatient = () => {
     setPatientValue('')
+    setSelectedPatientData(null)
     setSelect2Value(patientSelectRef.current, '', '')
+    if (selectedDocumentType === 'Factura') {
+      setBillingRuc('')
+      setBillingBusinessName('')
+    }
   }
 
   const openPatientSearch = () => {
@@ -819,7 +861,10 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         </>}
         <div className={isFacturaDocumentType ? 'col-md-3 mb-3' : 'col-md-4 mb-3'}>
           <label className='form-label'>Politica descuento</label>
-          <input ref={discountPolicyRef} className='form-control' />
+          <select ref={discountPolicyRef} className='form-control'>
+            <option value=''>Seleccione</option>
+            {discountPolicyOptions.filter(Boolean).map(policy => <option key={`discount-policy-${policy}`} value={policy}>{policy}</option>)}
+          </select>
         </div>
         <div className='col-md-3 mb-3'>
           <label className='form-label'>Tipo de venta</label>
