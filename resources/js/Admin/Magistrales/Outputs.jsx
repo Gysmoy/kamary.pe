@@ -80,7 +80,6 @@ const Outputs = ({
   const stockSearchTextRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
-  const [businesses, setBusinesses] = useState([])
   const [warehouses, setWarehouses] = useState([])
   const [items, setItems] = useState([])
   const [reasonOptions, setReasonOptions] = useState(
@@ -95,16 +94,15 @@ const Outputs = ({
   const [stockSearchPage, setStockSearchPage] = useState(1)
   const [stockSearchPageSize, setStockSearchPageSize] = useState(10)
   const [stockSearchLoading, setStockSearchLoading] = useState(false)
-  const [filters, setFilters] = useState({ businessId: '', startDate: '', endDate: '', code: '' })
+  const [filters, setFilters] = useState({ startDate: '', endDate: '', code: '' })
   const [appliedFilter, setAppliedFilter] = useState(null)
 
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
   const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
 
   useEffect(() => {
-    Promise.all([rest.getWarehouses(), rest.getBusinesses()]).then(([warehouseRows, businessRows]) => {
+    rest.getWarehouses().then((warehouseRows) => {
       setWarehouses((warehouseRows ?? []).filter(row => row.status !== null))
-      setBusinesses((businessRows ?? []).filter(row => row.status !== null))
     })
   }, [])
 
@@ -219,7 +217,6 @@ const Outputs = ({
 
   const applyFilters = () => {
     setAppliedFilter(combineFilters([
-      filters.businessId ? ['origin_branch.business_id', '=', Number(filters.businessId)] : null,
       filters.startDate ? ['output_date', '>=', filters.startDate] : null,
       filters.endDate ? ['output_date', '<=', filters.endDate] : null,
       filters.code ? ['code', 'contains', filters.code.trim()] : null,
@@ -487,22 +484,15 @@ const Outputs = ({
       <div className='card-header'>Notas de salida registradas</div>
       <div className='card-body'>
         <div className='row align-items-end g-3'>
-          <div className='col-md-3'>
-            <label className='form-label'>Empresa</label>
-            <select className='form-select' value={filters.businessId} onChange={(e) => setFilters(prev => ({ ...prev, businessId: e.target.value }))}>
-              <option value=''>Todos</option>
-              {businesses.map(row => <option key={`mag-output-filter-business-${row.id}`} value={row.id}>{row.name}</option>)}
-            </select>
-          </div>
-          <div className='col-md-3'>
+          <div className='col-md-4'>
             <label className='form-label'>Fecha inicio</label>
             <input type='date' className='form-control' value={filters.startDate} onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))} />
           </div>
-          <div className='col-md-3'>
+          <div className='col-md-4'>
             <label className='form-label'>Fecha fin</label>
             <input type='date' className='form-control' value={filters.endDate} onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))} />
           </div>
-          <div className='col-md-3'>
+          <div className='col-md-4'>
             <label className='form-label'>Codigo</label>
             <input className='form-control' value={filters.code} onChange={(e) => setFilters(prev => ({ ...prev, code: e.target.value }))} />
           </div>
