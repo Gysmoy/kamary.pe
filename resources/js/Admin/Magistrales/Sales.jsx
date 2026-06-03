@@ -26,7 +26,12 @@ const doctorsRest = new DoctorsRest()
 const paymentLabels = { pending: 'Pendiente', paid: 'Pagado', partial: 'Parcial', cancelled: 'Cancelado' }
 const saleDocumentTypes = ['Factura', 'Boleta', 'Nota de pedido']
 const saleTypeOptions = ['PRESENCIAL', 'RECOJO EN TIENDA', 'DELIVERY']
-const discountPolicyOptions = ['', 'DESCUENTO EMPLEADOS', 'DESCUENTO MAYORISTA']
+const noDiscountPolicyValue = '__NONE__'
+const discountPolicyOptions = [
+  { value: noDiscountPolicyValue, label: 'Seleccione' },
+  { value: 'DESCUENTO EMPLEADOS', label: 'DESCUENTO EMPLEADOS' },
+  { value: 'DESCUENTO MAYORISTA', label: 'DESCUENTO MAYORISTA' },
+]
 const tabs = [
   { id: 'quotes', label: 'Cotizacion' },
   { id: 'sales', label: 'Ventas' },
@@ -356,7 +361,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     setSelect2Value(patientSelectRef.current, data?.patient ?? '', data?.patient ?? '')
     setDoctorValue(data?.doctor ?? '')
     const nextDiscountPolicy = data?.discount_policy ?? ''
-    discountPolicyRef.current.value = discountPolicyOptions.includes(nextDiscountPolicy) ? nextDiscountPolicy : ''
+    discountPolicyRef.current.value = discountPolicyOptions.some(option => option.value === nextDiscountPolicy) ? nextDiscountPolicy : noDiscountPolicyValue
     saleTypeRef.current.value = saleTypeOptions.includes(data?.sale_type) ? data.sale_type : 'PRESENCIAL'
     setSwitchChecked(allergyRef.current, !!data?.allergy)
     setSwitchChecked(intoleranceRef.current, !!data?.intolerance)
@@ -565,7 +570,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       billing_business_name: documentType === 'Factura' ? normalizedBillingBusinessName : '',
       patient: patientValue.trim(),
       doctor: doctorValue.trim(),
-      discount_policy: discountPolicyRef.current.value.trim(),
+      discount_policy: discountPolicyRef.current.value === noDiscountPolicyValue ? '' : discountPolicyRef.current.value.trim(),
       sale_type: saleTypeRef.current.value.trim(),
       allergy: allergyRef.current.checked,
       intolerance: intoleranceRef.current.checked,
@@ -863,8 +868,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         <div className={isFacturaDocumentType ? 'col-md-3 mb-3' : 'col-md-4 mb-3'}>
           <label className='form-label'>Politica descuento</label>
           <select ref={discountPolicyRef} className='form-control'>
-            <option value=''>Seleccione</option>
-            {discountPolicyOptions.filter(Boolean).map(policy => <option key={`discount-policy-${policy}`} value={policy}>{policy}</option>)}
+            {discountPolicyOptions.map(option => <option key={`discount-policy-${option.value}`} value={option.value}>{option.label}</option>)}
           </select>
         </div>
         <div className='col-md-3 mb-3'>
