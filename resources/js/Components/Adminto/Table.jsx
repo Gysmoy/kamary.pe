@@ -2,7 +2,7 @@ import React from 'react'
 import DataGrid from './DataGrid'
 import { renderToString } from 'react-dom/server'
 
-const Table = ({ title, gridRef, rest, columns, toolBar, masterDetail, filterValue = null, allowQueryBuilder, isLoading, onRefresh, exportable, pageSize, hidden }) => {
+const Table = ({ title, gridRef, rest, columns, toolBar, masterDetail, filterValue = null, baseFilterValue = null, allowQueryBuilder, isLoading, onRefresh, exportable, pageSize, hidden }) => {
 
   const html = renderToString(<div>{title}</div>)
   const text = $(html).text().trim().clean('-')
@@ -40,7 +40,7 @@ const Table = ({ title, gridRef, rest, columns, toolBar, masterDetail, filterVal
               </h4>
               : ''
           }
-          <DataGrid gridRef={gridRef} rest={rest} allowQueryBuilder={allowQueryBuilder} columns={columns.filter(Boolean)} toolBar={toolBar} exportable={exportable} exportableName={text.toLowerCase()} masterDetail={masterDetail} filterValue={filterValue} pageSize={pageSize} onRefresh={onRefresh} />
+          <DataGrid gridRef={gridRef} rest={rest} allowQueryBuilder={allowQueryBuilder} columns={columns.filter(Boolean)} toolBar={toolBar} exportable={exportable} exportableName={text.toLowerCase()} masterDetail={masterDetail} filterValue={filterValue} baseFilterValue={baseFilterValue} pageSize={pageSize} onRefresh={onRefresh} />
         </div>
       </div>
     </div>

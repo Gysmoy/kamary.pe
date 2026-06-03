@@ -363,7 +363,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       </div>}
       rest={activeRest}
       pageSize={25}
-      filterValue={activeFilterValue}
+      baseFilterValue={activeFilterValue}
       toolBar={(items) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
         if (!isBillingTab) {

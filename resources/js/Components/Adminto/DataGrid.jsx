@@ -2,7 +2,12 @@ import React, { useEffect } from 'react'
 import { Local } from 'sode-extend-react'
 import { handleDataGridExport } from '../../Utils/dataGridExport'
 
-const DataGrid = ({ gridRef: dataGridRef, allowQueryBuilder = true, rest, columns, toolBar, masterDetail, filterValue = null, pageSize = 10, exportable, exportableName, customizeCell = () => { }, onRefresh = () => { } }) => {
+const combineFilterValues = (baseFilter, userFilter) => {
+  if (baseFilter && userFilter) return [baseFilter, 'and', userFilter]
+  return baseFilter || userFilter
+}
+
+const DataGrid = ({ gridRef: dataGridRef, allowQueryBuilder = true, rest, columns, toolBar, masterDetail, filterValue = null, baseFilterValue = null, pageSize = 10, exportable, exportableName, customizeCell = () => { }, onRefresh = () => { } }) => {
   useEffect(() => {
     DevExpress.localization.locale(navigator.language);
 
@@ -20,7 +25,8 @@ const DataGrid = ({ gridRef: dataGridRef, allowQueryBuilder = true, rest, column
               return emptyData
             }
             const response = await rest.paginate({
-              ...params
+              ...params,
+              filter: combineFilterValues(baseFilterValue, params.filter)
             })
             const rows = Array.isArray(response?.data)
               ? response.data
@@ -151,7 +157,7 @@ const DataGrid = ({ gridRef: dataGridRef, allowQueryBuilder = true, rest, column
         $(dataGridRef.current).dxDataGrid('instance')?.dispose()
       } catch (error) { }
     }
-  }, [filterValue])
+  }, [filterValue, baseFilterValue])
 
   return (
     <div ref={dataGridRef} ></div>
