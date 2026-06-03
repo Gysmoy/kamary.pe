@@ -33,7 +33,7 @@ class DoctorController extends BasicController
 
         if ($names === '') throw new \Exception('Los nombres son obligatorios');
         if ($paternalLastname === '') throw new \Exception('El apellido paterno es obligatorio');
-        if ($cmp === '') throw new \Exception('El CMP es obligatorio');
+        if ($cmp === '') throw new \Exception('El CMP numerico es obligatorio');
 
         $exists = MagistralDoctor::where('cmp', $cmp)
             ->when($id, fn($query) => $query->where('id', '!=', $id))

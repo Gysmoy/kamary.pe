@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-const Modal = ({ id, modalRef, title = 'Modal', isStatic = false, size = 'md', children, bodyClass = '', dialogClass = '', contentClass = '', headerClass = '', closeButtonClass = '', btnCancelText, btnSubmitText, hideFooter = false, bodyStyle, zIndex, hideButtonSubmit, asForm = true, onSubmit = (e) => { e.preventDefault(); $(modalRef.current).modal('hide') }, onClose = () => { } }) => {
+const Modal = ({ id, modalRef, title = 'Modal', isStatic = false, size = 'md', children, bodyClass = '', dialogClass = '', contentClass = '', headerClass = '', closeButtonClass = '', btnCancelText, btnSubmitText, hideFooter = false, footerActions = null, footerClass = '', bodyStyle, zIndex, hideButtonSubmit, asForm = true, onSubmit = (e) => { e.preventDefault(); $(modalRef.current).modal('hide') }, onClose = () => { } }) => {
   const staticProp = isStatic ? { 'data-bs-backdrop': 'static' } : {}
   const contentStyle = {
     boxShadow: '0 0 10px rgba(0,0,0,0.25)',
@@ -45,7 +45,8 @@ const Modal = ({ id, modalRef, title = 'Modal', isStatic = false, size = 'md', c
         </div>
         {
           !hideFooter && <>
-            <div className="modal-footer">
+            <div className={`modal-footer ${footerClass ?? ''}`}>
+              {footerActions}
               <button type="button" className="btn BTN-SM btn-light" data-bs-dismiss="modal">{btnCancelText ?? 'Cerrar'}</button>
               {!hideButtonSubmit && <button type="submit" className="btn BTN-SM btn-primary">{btnSubmitText ?? 'Aceptar'}</button>}
             </div>

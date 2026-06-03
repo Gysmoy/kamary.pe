@@ -370,8 +370,9 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
 
   const saveDoctor = async (event) => {
     event?.preventDefault?.()
-    if (!doctorForm.names.trim() || !doctorForm.paternal_lastname.trim() || !doctorForm.cmp.trim()) {
-      Swal.fire('Datos incompletos', 'Nombres, apellido paterno y CMP son obligatorios.', 'warning')
+    const cmp = doctorForm.cmp.replace(/\D+/g, '')
+    if (!doctorForm.names.trim() || !doctorForm.paternal_lastname.trim() || !cmp) {
+      Swal.fire('Datos incompletos', 'Nombres, apellido paterno y numero CMP son obligatorios.', 'warning')
       return
     }
 
@@ -379,7 +380,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       names: doctorForm.names,
       paternal_lastname: doctorForm.paternal_lastname,
       maternal_lastname: doctorForm.maternal_lastname,
-      cmp: doctorForm.cmp,
+      cmp,
       specialty: doctorForm.specialty,
       medical_center: doctorForm.medical_center,
       status: true,
@@ -391,7 +392,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
 
     const saved = result?.data ?? {
       ...doctorForm,
-      cmp: doctorForm.cmp.replace(/\D+/g, ''),
+      cmp,
       status: true,
     }
     setDoctorValue(doctorLabel(saved))
@@ -732,6 +733,14 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       dialogClass='magistrales-sale-dialog'
       contentClass='magistrales-sale-content'
       hideButtonSubmit
+      footerActions={<>
+        {!isEditing && <button type='button' className='btn btn-outline-primary' onClick={(e) => save(e, !modalDefaultQuote)}>
+          <i className='mdi mdi-file-document-outline me-1'></i> Registrar {modalDefaultQuote ? 'venta' : 'cotizacion'}
+        </button>}
+        <button type='button' className='btn btn-primary' onClick={(e) => save(e, modalDefaultQuote)}>
+          <i className='mdi mdi-check me-1'></i> {isEditing ? 'Guardar cambios' : `Registrar ${modalDefaultQuote ? 'cotizacion' : 'venta'}`}
+        </button>
+      </>}
     >
       <div className='row'>
         <input ref={idRef} hidden />
@@ -828,15 +837,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
           <h6 className='border-bottom pb-2 mb-3'><i className='mdi mdi-note-text-outline me-1'></i> Observaciones</h6>
           <textarea ref={observationsRef} className='form-control' rows='3' placeholder='Comentarios internos de la venta magistral' />
         </div>
-
-        <div className='col-12 d-flex gap-2 justify-content-center mt-4'>
-          {!isEditing && <button type='button' className='btn btn-outline-primary' onClick={(e) => save(e, !modalDefaultQuote)}>
-            <i className='mdi mdi-file-document-outline me-1'></i> Registrar {modalDefaultQuote ? 'venta' : 'cotizacion'}
-          </button>}
-          <button type='button' className='btn btn-primary' onClick={(e) => save(e, modalDefaultQuote)}>
-            <i className='mdi mdi-check me-1'></i> {isEditing ? 'Guardar cambios' : `Registrar ${modalDefaultQuote ? 'cotizacion' : 'venta'}`}
-          </button>
-        </div>
       </div>
     </Modal>
     <Modal
@@ -868,7 +868,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         </div>
         <div className='col-md-6 mb-3'>
           <label className='form-label'>CMP</label>
-          <input className='form-control' value={doctorForm.cmp} onChange={(event) => updateDoctorForm('cmp', event.target.value)} />
+          <input className='form-control' inputMode='numeric' placeholder='Numero de colegiatura CMP' value={doctorForm.cmp} onChange={(event) => updateDoctorForm('cmp', event.target.value.replace(/\D+/g, ''))} />
         </div>
         <div className='col-md-6 mb-3'>
           <label className='form-label'>Especialidad</label>
