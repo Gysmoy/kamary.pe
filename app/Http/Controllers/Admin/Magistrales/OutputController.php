@@ -82,8 +82,8 @@ class OutputController extends BasicController
             ->exists();
         if ($exists) throw new \Exception('Ya existe una salida magistral con este codigo');
 
-        $warehouse = MagistralesWarehouse::warehouse();
-        $warehouseId = (int) $warehouse->id;
+        $originWarehouse = $this->resolveOriginWarehouse($this->toNullableInt($body['origin_warehouse_id'] ?? null));
+        $warehouseId = (int) $originWarehouse->id;
         $reason = $this->normalizeReason($body['reason'] ?? null);
         if ($reason === null) throw new \Exception('Debes seleccionar un motivo para la salida');
 
@@ -148,7 +148,7 @@ class OutputController extends BasicController
     {
         $response = new Response();
         try {
-            $warehouse = MagistralesWarehouse::warehouse();
+            $warehouse = $this->resolveOriginWarehouse($this->toNullableInt($request->input('warehouse_id')));
             $search = trim((string)$request->input('q', ''));
             $outputId = $this->toNullableInt($request->input('output_id')) ?? 0;
 
@@ -392,7 +392,7 @@ class OutputController extends BasicController
 
         $destinationWarehouseId = $this->toNullableInt($body['destination_warehouse_id'] ?? null);
         if (!$destinationWarehouseId) throw new \Exception('Debes seleccionar el almacen destino para la transferencia');
-        if ($destinationWarehouseId === $originWarehouseId) throw new \Exception('El almacen destino no puede ser el mismo almacen magistral');
+        if ($destinationWarehouseId === $originWarehouseId) throw new \Exception('El almacen destino no puede ser el mismo almacen origen');
 
         $destinationWarehouse = Warehouse::query()
             ->with('branch:id,name,business_id')
@@ -408,6 +408,25 @@ class OutputController extends BasicController
         ])->filter()->implode(' - ');
 
         return [$destinationWarehouseId, $destinationLabel ?: $destinationWarehouse->name];
+    }
+
+    private function resolveOriginWarehouse(?int $warehouseId): Warehouse
+    {
+        if ($warehouseId) {
+            $warehouse = Warehouse::query()
+                ->with('branch:id,name,business_id')
+                ->whereKey($warehouseId)
+                ->whereNotNull('status')
+                ->first();
+
+            if (!$warehouse) {
+                throw new \Exception('El almacen origen seleccionado no existe o esta inactivo');
+            }
+
+            return $warehouse;
+        }
+
+        return MagistralesWarehouse::warehouse();
     }
 
     private function normalizeReason($value): ?string

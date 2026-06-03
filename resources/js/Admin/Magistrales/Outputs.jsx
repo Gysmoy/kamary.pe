@@ -64,6 +64,7 @@ const itemKey = (row) => [
 ].join('|')
 
 const normalizeReason = (value) => `${value ?? ''}`.trim().toUpperCase()
+const warehouseLabel = (warehouse) => [warehouse?.branch?.name, warehouse?.name].filter(Boolean).join(' - ') || warehouse?.name || ''
 
 const Outputs = ({
   moduleTitle = 'Magistrales - Salidas',
@@ -86,6 +87,7 @@ const Outputs = ({
     [...new Set([...(providedReasonOptions?.length ? providedReasonOptions : DEFAULT_REASON_OPTIONS)].map(normalizeReason).filter(Boolean))]
   )
   const [selectedReason, setSelectedReason] = useState('')
+  const [selectedOriginWarehouseId, setSelectedOriginWarehouseId] = useState('')
   const [selectedDestinationWarehouseId, setSelectedDestinationWarehouseId] = useState('')
   const [stockSearchTerm, setStockSearchTerm] = useState('')
   const [stockSearchRows, setStockSearchRows] = useState([])
@@ -98,15 +100,21 @@ const Outputs = ({
   const [appliedFilter, setAppliedFilter] = useState(null)
 
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
-  const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
 
   useEffect(() => {
     rest.getWarehouses().then((warehouseRows) => {
-      setWarehouses((warehouseRows ?? []).filter(row => row.status !== null))
+      const activeWarehouses = (warehouseRows ?? []).filter(row => row.status !== null)
+      setWarehouses(activeWarehouses)
+      setSelectedOriginWarehouseId((current) => {
+        if (current) return current
+        const defaultWarehouse = activeWarehouses.find(row => `${row.id}` === fixedWarehouseId) ?? activeWarehouses[0]
+        return defaultWarehouse?.id ? `${defaultWarehouse.id}` : ''
+      })
     })
-  }, [])
+  }, [fixedWarehouseId])
 
-  const destinationWarehouses = warehouses.filter(row => `${row.id}` !== fixedWarehouseId)
+  const originWarehouses = warehouses
+  const destinationWarehouses = warehouses.filter(row => `${row.id}` !== `${selectedOriginWarehouseId}`)
   const isTransferReason = selectedReason === 'TRANSFERENCIA'
   const exportRows = () => {
     const grid = $(gridRef.current).dxDataGrid('instance')
@@ -262,6 +270,8 @@ const Outputs = ({
   }
 
   const openModal = (data = null) => {
+    const defaultOriginWarehouseId = `${data?.origin_warehouse_id ?? fixedWarehouseId ?? ''}` || `${originWarehouses[0]?.id ?? ''}`
+
     setIsEditing(!!data?.id)
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
@@ -271,6 +281,7 @@ const Outputs = ({
     const reason = normalizeReason(data?.reason)
     ensureReasonOption(reason)
     setSelectedReason(reason)
+    setSelectedOriginWarehouseId(defaultOriginWarehouseId)
     setSelectedDestinationWarehouseId(data?.destination_warehouse_id ? `${data.destination_warehouse_id}` : '')
 
     const nextItems = (data?.items ?? []).map(item => ({
@@ -309,6 +320,15 @@ const Outputs = ({
   const save = async (e) => {
     e.preventDefault()
 
+    if (!selectedOriginWarehouseId) {
+      toast.error('Error', {
+        description: 'Debes seleccionar un almacen origen',
+        duration: 3000,
+        richColors: true,
+      })
+      return
+    }
+
     if (!selectedReason) {
       toast.error('Error', {
         description: 'Debes seleccionar un motivo para la nota de salida',
@@ -339,7 +359,7 @@ const Outputs = ({
     const result = await rest.save({
       id: idRef.current.value || undefined,
       code: isEditing ? codeRef.current.value.trim() : '',
-      origin_warehouse_id: fixedWarehouseId || null,
+      origin_warehouse_id: selectedOriginWarehouseId || null,
       destination_warehouse_id: isTransferReason ? selectedDestinationWarehouseId || null : null,
       reason: selectedReason,
       observations: observationsRef.current.value.trim(),
@@ -400,11 +420,21 @@ const Outputs = ({
   }
 
   const searchAvailableStockRows = async () => {
+    if (!selectedOriginWarehouseId) {
+      toast.error('Error', {
+        description: 'Debes seleccionar un almacen antes de buscar articulos',
+        duration: 3000,
+        richColors: true,
+      })
+      return
+    }
+
     setStockSearchLoading(true)
     try {
       const rows = await rest.availableStock({
         q: stockSearchTerm,
         output_id: idRef.current.value || '',
+        warehouse_id: selectedOriginWarehouseId || '',
       })
       setStockSearchRows(rows)
       setStockSearchSelectedIds([])
@@ -586,49 +616,57 @@ const Outputs = ({
       bodyClass='pt-3'
     >
       <input ref={idRef} hidden />
+      <input ref={codeRef} hidden />
+      <input ref={dateRef} hidden />
 
       <div className='row g-3'>
-        <div className='col-md-4'>
-          <label className='form-label'>Codigo</label>
-          <input ref={codeRef} className='form-control' disabled />
-        </div>
-        <div className='col-md-4'>
-          <label className='form-label'>Fecha de salida</label>
-          <input ref={dateRef} type='date' className='form-control' required />
-        </div>
-        <div className='col-md-4'>
-          <label className='form-label'>Resumen</label>
-          <div className='border rounded px-3 py-2 bg-light h-100 d-flex align-items-center justify-content-between'>
-            <span className='text-muted'>Lineas: {items.length}</span>
-            <span className='fw-semibold'>Total: {asNumber(quantityTotal)}</span>
-          </div>
-        </div>
-
         <div className='col-12'>
-          <div className='card border shadow-sm mb-0'>
-            <div className='card-header bg-light'>
-              <div className='d-flex align-items-center gap-2'>
-                <i className='mdi mdi-warehouse text-primary'></i>
-                <strong>Origen</strong>
+          <div className='border rounded p-3'>
+            <div className='row g-3'>
+              <div className='col-md-8'>
+                <label className='form-label'>Almacen</label>
+                <select
+                  className='form-select'
+                  value={selectedOriginWarehouseId}
+                  onChange={(e) => {
+                    const nextOriginWarehouseId = e.target.value
+                    setSelectedOriginWarehouseId(nextOriginWarehouseId)
+                    setItems([])
+                    if (`${selectedDestinationWarehouseId}` === `${nextOriginWarehouseId}`) {
+                      setSelectedDestinationWarehouseId('')
+                    }
+                  }}
+                  required
+                >
+                  <option value=''>Seleccione almacen</option>
+                  {originWarehouses.map(warehouse => (
+                    <option key={`mag-output-origin-${warehouse.id}`} value={warehouse.id}>
+                      {warehouseLabel(warehouse)}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
-            <div className='card-body'>
-              <div className='row g-3'>
-                <div className='col-md-6'>
-                  <label className='form-label'>Almacen fijo</label>
-                  <input className='form-control' value={fixedWarehouseLabel} disabled />
-                </div>
-                <div className='col-md-6'>
-                  <label className='form-label'>Motivo</label>
-                  <div className='input-group'>
-                    <select className='form-select' value={selectedReason} onChange={(e) => setSelectedReason(normalizeReason(e.target.value))} required>
-                      <option value=''>Seleccione</option>
-                      {reasonOptions.map(reason => <option key={`mag-output-reason-${reason}`} value={reason}>{reason}</option>)}
-                    </select>
-                    <button type='button' className='btn btn-light border' title='Agregar motivo' onClick={addCustomReason}>
-                      <i className='mdi mdi-plus'></i>
-                    </button>
-                  </div>
+              <div className='col-md-4'>
+                <label className='form-label'>Motivos</label>
+                <div className='input-group'>
+                  <select
+                    className='form-select'
+                    value={selectedReason}
+                    onChange={(e) => {
+                      const nextReason = normalizeReason(e.target.value)
+                      setSelectedReason(nextReason)
+                      if (nextReason !== 'TRANSFERENCIA') {
+                        setSelectedDestinationWarehouseId('')
+                      }
+                    }}
+                    required
+                  >
+                    <option value=''>Seleccione motivos</option>
+                    {reasonOptions.map(reason => <option key={`mag-output-reason-${reason}`} value={reason}>{reason}</option>)}
+                  </select>
+                  <button type='button' className='btn btn-light border' title='Agregar motivo' onClick={addCustomReason}>
+                    <i className='mdi mdi-plus'></i>
+                  </button>
                 </div>
               </div>
             </div>
@@ -636,35 +674,27 @@ const Outputs = ({
         </div>
 
         {isTransferReason && <div className='col-12'>
-          <div className='card border shadow-sm mb-0'>
-            <div className='card-header bg-light'>
-              <div className='d-flex align-items-center gap-2'>
-                <i className='mdi mdi-swap-horizontal text-primary'></i>
-                <strong>Destino</strong>
+          <div className='border rounded p-3'>
+            <div className='row g-3'>
+              <div className='col-md-8'>
+                <label className='form-label'>Almacen destino</label>
+                <select
+                  className='form-select'
+                  value={selectedDestinationWarehouseId}
+                  onChange={(e) => setSelectedDestinationWarehouseId(e.target.value)}
+                  required={isTransferReason}
+                >
+                  <option value=''>Seleccione almacen destino</option>
+                  {destinationWarehouses.map(warehouse => (
+                    <option key={`mag-output-destination-${warehouse.id}`} value={warehouse.id}>
+                      {warehouseLabel(warehouse)}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </div>
-            <div className='card-body'>
-              <div className='row g-3'>
-                <div className='col-md-8'>
-                  <label className='form-label'>Almacen destino</label>
-                  <select
-                    className='form-select'
-                    value={selectedDestinationWarehouseId}
-                    onChange={(e) => setSelectedDestinationWarehouseId(e.target.value)}
-                    required={isTransferReason}
-                  >
-                    <option value=''>Seleccione</option>
-                    {destinationWarehouses.map(warehouse => (
-                      <option key={`mag-output-destination-${warehouse.id}`} value={warehouse.id}>
-                        {[warehouse.branch?.name, warehouse.name].filter(Boolean).join(' - ') || warehouse.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className='col-md-4'>
-                  <label className='form-label'>Tipo de salida</label>
-                  <input className='form-control' value='Transferencia entre almacenes' disabled />
-                </div>
+              <div className='col-md-4'>
+                <label className='form-label'>Tipo de salida</label>
+                <input className='form-control' value='Transferencia entre almacenes' disabled />
               </div>
             </div>
           </div>
@@ -679,7 +709,7 @@ const Outputs = ({
           <div className='d-flex justify-content-between align-items-center mb-2'>
             <div>
               <h5 className='mb-0'>Detalle de salida</h5>
-              <small className='text-muted'>Selecciona los lotes desde el stock disponible del almacen fijo.</small>
+              <small className='text-muted'>Selecciona articulos y lotes del almacen origen elegido.</small>
             </div>
             <button type='button' className='btn btn-primary btn-sm' onClick={openStockSearchModal}>
               <i className='mdi mdi-plus me-1'></i> Insertar articulo
@@ -749,19 +779,19 @@ const Outputs = ({
 
     <Modal
       modalRef={stockModalRef}
-      title='Buscar stock disponible'
+      title='Buscar articulo'
       size='xl'
       hideFooter
       bodyClass='pt-3'
     >
       <div className='row g-3'>
         <div className='col-md-8'>
-          <label className='form-label'>Buscar por codigo, articulo o lote</label>
+          <label className='form-label'>Descripcion palabra clave</label>
           <input
             ref={stockSearchTextRef}
             className='form-control'
             value={stockSearchTerm}
-            placeholder='Ej. UREA, INS-21, LOTE-001'
+            placeholder='Ingrese codigo o nombre del articulo'
             onChange={(e) => setStockSearchTerm(e.target.value)}
             onKeyDown={(e) => {
               if (e.key !== 'Enter') return
@@ -771,8 +801,23 @@ const Outputs = ({
           />
         </div>
         <div className='col-md-4'>
-          <label className='form-label'>Almacen origen</label>
-          <input className='form-control' value={fixedWarehouseLabel} disabled />
+          <label className='form-label'>Seleccionar almacen</label>
+          <select
+            className='form-select'
+            value={selectedOriginWarehouseId}
+            onChange={(e) => {
+              setSelectedOriginWarehouseId(e.target.value)
+              setStockSearchRows([])
+              setStockSearchSelectedIds([])
+            }}
+          >
+            <option value=''>Seleccione almacen</option>
+            {originWarehouses.map(warehouse => (
+              <option key={`mag-output-stock-origin-${warehouse.id}`} value={warehouse.id}>
+                {warehouseLabel(warehouse)}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className='col-12 d-flex flex-wrap gap-2 justify-content-between align-items-center'>
@@ -782,7 +827,7 @@ const Outputs = ({
               Buscar
             </button>
             <button type='button' className='btn btn-light' onClick={() => $(stockModalRef.current).modal('hide')}>
-              Cerrar
+              Regresar
             </button>
           </div>
           <button type='button' className='btn btn-success' onClick={addSelectedStockRows} disabled={stockSearchSelectedIds.length === 0}>
