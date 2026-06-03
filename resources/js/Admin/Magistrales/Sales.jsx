@@ -107,7 +107,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const patientFormModalRef = useRef()
   const idRef = useRef()
   const codeRef = useRef()
-  const pharmacyRef = useRef()
   const businessRef = useRef()
   const paymentStatusRef = useRef()
   const documentTypeRef = useRef()
@@ -170,7 +169,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     setModalDefaultQuote(data?.id ? !!data?.is_quote : !!asQuote)
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
-    pharmacyRef.current.value = data?.pharmacy ?? ''
     businessRef.current.value = fixedBusinessId || data?.business_id || ''
     paymentStatusRef.current.value = data?.payment_status ?? 'pending'
     documentTypeRef.current.value = data?.document_type ?? 'Boleta'
@@ -331,7 +329,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     const result = await rest.save({
       id: idRef.current.value || undefined,
       code: isEditing ? codeRef.current.value.trim() : '',
-      pharmacy: pharmacyRef.current.value.trim(),
+      pharmacy: '',
       business_id: fixedBusinessId,
       payment_status: paymentStatusRef.current.value,
       document_type: documentTypeRef.current.value.trim(),
@@ -536,7 +534,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
           <input ref={businessRef} type='hidden' value={fixedBusinessId} readOnly />
           <input className='form-control' value={fixedBusinessLabel} readOnly disabled />
         </div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Farmacia</label><input ref={pharmacyRef} className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha</label><input ref={dateRef} type='date' className='form-control' /></div>
         <div className='col-md-4 mb-3'>
           <label className='form-label'>Paciente</label>
