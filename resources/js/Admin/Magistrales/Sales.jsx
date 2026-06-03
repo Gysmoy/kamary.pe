@@ -15,6 +15,9 @@ import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 import setSwitchChecked from '../../Utils/setSwitchChecked';
 import { getBillingDocumentStatusLabel } from '../../Utils/statusLabels';
+import select2SpanishLanguage from '../../Utils/select2SpanishLanguage';
+import { select2DropdownParentFor } from '../../Utils/select2DropdownParent';
+import xsrfToken from '../../Utils/xsrfToken';
 
 const rest = new SalesRest()
 const billingDocumentsRest = new BillingDocumentsRest()
@@ -71,6 +74,19 @@ const emptyPatientForm = () => ({
 })
 const patientName = (row) => row?.full_name || row?.display_name || row?.business_name || ''
 const patientDocument = (row) => [row?.document_type?.toString?.().toUpperCase?.(), row?.document_number].filter(Boolean).join(' ')
+const patientSelectLabel = (row) => [patientDocument(row), patientName(row)].filter(Boolean).join(' | ')
+const patientFilter = (term) => {
+  const sourceFilter = ['data_source', '=', 'client']
+  const text = (term ?? '').trim()
+  if (!text) return sourceFilter
+  return [sourceFilter, 'and', [
+    ['document_number', 'contains', text],
+    'or',
+    ['full_name', 'contains', text],
+    'or',
+    ['display_name', 'contains', text],
+  ]]
+}
 const emptyDoctorForm = () => ({
   names: '',
   paternal_lastname: '',
@@ -80,6 +96,18 @@ const emptyDoctorForm = () => ({
   medical_center: '',
 })
 const doctorLabel = (doctor) => doctor?.select_label || [doctor?.cmp, [doctor?.paternal_lastname, doctor?.maternal_lastname].filter(Boolean).join(' '), doctor?.names].filter(Boolean).join(' | ')
+const setSelect2Value = (select, value, text = value) => {
+  if (!select) return
+  const $select = $(select)
+  $select.find('option').remove()
+  if (value) {
+    $select.append(new Option(text, value, true, true))
+    $select.val(value)
+  } else {
+    $select.val(null)
+  }
+  $select.trigger($select.data('select2') ? 'change.select2' : 'change')
+}
 
 const salesFilter = (tab, filters) => combineFilters([
   ['is_quote', '=', tab === 'quotes'],
@@ -123,7 +151,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const paymentStatusRef = useRef()
   const documentTypeRef = useRef()
   const documentNumberRef = useRef()
-  const patientRef = useRef()
+  const patientSelectRef = useRef()
+  const doctorSelectRef = useRef()
   const discountPolicyRef = useRef()
   const saleTypeRef = useRef()
   const allergyRef = useRef()
@@ -145,6 +174,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const [patientRows, setPatientRows] = useState([])
   const [patientLoading, setPatientLoading] = useState(false)
   const [patientForm, setPatientForm] = useState(emptyPatientForm())
+  const [patientValue, setPatientValue] = useState('')
   const [doctorForm, setDoctorForm] = useState(emptyDoctorForm())
   const [doctorValue, setDoctorValue] = useState('')
   const isBillingTab = activeTab === 'issued' || activeTab === 'cancelled'
@@ -166,6 +196,97 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       setDoctors((doctorRows ?? []).filter(row => row.status !== null))
     })
   }, [fixedWarehouseId])
+
+  useEffect(() => {
+    const select = patientSelectRef.current
+    const $select = $(select)
+    if ($select.data('select2')) $select.select2('destroy')
+
+    $select.select2({
+      ajax: {
+        url: '/api/admin/clients/paginate',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          'X-Xsrf-Token': xsrfToken(),
+        },
+        type: 'POST',
+        delay: 150,
+        data: ({ term, page }) => JSON.stringify({
+          sort: [{ selector: 'display_name', desc: false }],
+          skip: ((page ?? 1) - 1) * 10,
+          take: 10,
+          requireTotalCount: true,
+          filter: patientFilter(term),
+        }),
+        processResults: (response, { page }) => ({
+          results: (response?.data ?? []).map(row => ({
+            id: patientName(row) || patientDocument(row),
+            text: patientSelectLabel(row),
+            data: row,
+          })),
+          pagination: {
+            more: ((page ?? 1) * 10) < (response?.totalCount ?? 0),
+          },
+        }),
+      },
+      dropdownParent: select2DropdownParentFor(select, modalRef.current),
+      language: select2SpanishLanguage,
+      minimumInputLength: 0,
+      minimumResultsForSearch: 0,
+      placeholder: 'Seleccione paciente',
+      width: '100%',
+    })
+
+    $select
+      .off('select2:select.magSalePatient change.magSalePatient')
+      .on('select2:select.magSalePatient', (event) => {
+        const row = event.params?.data?.data
+        const value = row ? patientName(row) : (event.params?.data?.id ?? '')
+        setPatientValue(value)
+        if (row?.document_type) documentTypeRef.current.value = row.document_type
+        if (row?.document_number) documentNumberRef.current.value = row.document_number
+      })
+      .on('change.magSalePatient', (event) => {
+        if (!$(event.currentTarget).val()) setPatientValue('')
+      })
+
+    return () => {
+      $select.off('select2:select.magSalePatient change.magSalePatient')
+      if ($select.data('select2')) $select.select2('destroy')
+    }
+  }, [])
+
+  useEffect(() => {
+    const select = doctorSelectRef.current
+    const $select = $(select)
+    if ($select.data('select2')) $select.select2('destroy')
+
+    $select.select2({
+      dropdownParent: select2DropdownParentFor(select, modalRef.current),
+      language: select2SpanishLanguage,
+      minimumInputLength: 0,
+      minimumResultsForSearch: 0,
+      placeholder: 'Seleccione',
+      width: '100%',
+    })
+
+    $select
+      .off('change.magSaleDoctor')
+      .on('change.magSaleDoctor', (event) => setDoctorValue(event.target.value ?? ''))
+
+    $select.val(doctorValue || '').trigger('change.select2')
+
+    return () => {
+      $select.off('change.magSaleDoctor')
+      if ($select.data('select2')) $select.select2('destroy')
+    }
+  }, [doctorOptions])
+
+  useEffect(() => {
+    const $select = $(doctorSelectRef.current)
+    if ($select.data('select2')) $select.val(doctorValue || '').trigger('change.select2')
+  }, [doctorValue])
 
   useEffect(() => {
     if (businessRef.current && fixedBusinessId) {
@@ -190,7 +311,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     paymentStatusRef.current.value = data?.payment_status ?? 'pending'
     documentTypeRef.current.value = data?.document_type ?? 'Boleta'
     documentNumberRef.current.value = data?.document_number ?? ''
-    patientRef.current.value = data?.patient ?? ''
+    setPatientValue(data?.patient ?? '')
+    setSelect2Value(patientSelectRef.current, data?.patient ?? '', data?.patient ?? '')
     setDoctorValue(data?.doctor ?? '')
     discountPolicyRef.current.value = data?.discount_policy ?? ''
     saleTypeRef.current.value = data?.sale_type ?? 'venta'
@@ -276,19 +398,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     $(doctorFormModalRef.current).modal('hide')
   }
 
-  const patientFilter = (term) => {
-    const sourceFilter = ['data_source', '=', 'client']
-    const text = term.trim()
-    if (!text) return sourceFilter
-    return [sourceFilter, 'and', [
-      ['document_number', 'contains', text],
-      'or',
-      ['full_name', 'contains', text],
-      'or',
-      ['display_name', 'contains', text],
-    ]]
-  }
-
   const searchPatients = async (event, forcedTerm = null) => {
     event?.preventDefault?.()
     const term = forcedTerm ?? patientSearch
@@ -312,17 +421,22 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   }
 
   const selectPatient = (row) => {
-    patientRef.current.value = patientName(row)
+    const value = patientName(row)
+    setPatientValue(value)
+    setSelect2Value(patientSelectRef.current, value, patientSelectLabel(row) || value)
+    if (row?.document_type) documentTypeRef.current.value = row.document_type
+    if (row?.document_number) documentNumberRef.current.value = row.document_number
     $(patientSearchModalRef.current).modal('hide')
     $(patientFormModalRef.current).modal('hide')
   }
 
   const clearPatient = () => {
-    patientRef.current.value = ''
+    setPatientValue('')
+    setSelect2Value(patientSelectRef.current, '', '')
   }
 
   const openPatientSearch = () => {
-    const term = patientRef.current?.value ?? ''
+    const term = patientValue
     setPatientSearch(term)
     setPatientRows([])
     $(patientSearchModalRef.current).modal('show')
@@ -390,7 +504,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       payment_status: paymentStatusRef.current.value,
       document_type: documentTypeRef.current.value.trim(),
       document_number: documentNumberRef.current.value.trim(),
-      patient: patientRef.current.value.trim(),
+      patient: patientValue.trim(),
       doctor: doctorValue.trim(),
       discount_policy: discountPolicyRef.current.value.trim(),
       sale_type: saleTypeRef.current.value.trim(),
@@ -497,6 +611,45 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   ].filter(Boolean)
 
   return <>
+    <style>{`
+      .magistrales-sale-dialog {
+        width: calc(100vw - 32px);
+        max-width: 1640px;
+      }
+      .magistrales-sale-content {
+        min-height: calc(100vh - 64px);
+      }
+      .mag-sale-select2-action {
+        display: flex;
+        align-items: stretch;
+        width: 100%;
+      }
+      .mag-sale-select2-action .select2-container {
+        flex: 1 1 auto;
+        width: auto !important;
+        min-width: 0;
+      }
+      .mag-sale-select2-action .select2-container .select2-selection--single {
+        height: 38px;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+      .mag-sale-select2-action .select2-selection__rendered {
+        line-height: 36px;
+      }
+      .mag-sale-select2-action .select2-selection__arrow {
+        height: 36px;
+      }
+      .mag-sale-select2-action .btn {
+        flex: 0 0 42px;
+        border-radius: 0;
+        margin-left: -1px;
+      }
+      .mag-sale-select2-action .btn:last-child {
+        border-top-right-radius: .25rem;
+        border-bottom-right-radius: .25rem;
+      }
+    `}</style>
     <div className='row mb-3'>
       <div className='col-12'>
         <div className='d-flex gap-2 flex-wrap'>
@@ -576,6 +729,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       title={isEditing ? (modalDefaultQuote ? 'Editar cotizacion' : 'Editar venta') : (modalDefaultQuote ? 'Registrar cotizacion' : 'Registrar venta')}
       onSubmit={(e) => save(e, modalDefaultQuote)}
       size='xl'
+      dialogClass='magistrales-sale-dialog'
+      contentClass='magistrales-sale-content'
       hideButtonSubmit
     >
       <div className='row'>
@@ -593,14 +748,11 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha</label><input ref={dateRef} type='date' className='form-control' /></div>
         <div className='col-md-4 mb-3'>
           <label className='form-label'>Paciente</label>
-          <div className='input-group'>
-            <button type='button' className='btn btn-outline-primary' onClick={openPatientSearch}>
-              <i className='mdi mdi-magnify me-1'></i> Buscar
-            </button>
+          <div className='mag-sale-select2-action'>
+            <select ref={patientSelectRef} data-select2-managed='component' className='form-control' style={{ width: '100%' }}></select>
             <button type='button' className='btn btn-outline-success' onClick={openPatientForm} title='Agregar paciente'>
               <i className='mdi mdi-account-plus'></i>
             </button>
-            <input ref={patientRef} className='form-control' placeholder='Seleccione paciente' />
             <button type='button' className='btn btn-outline-danger' onClick={clearPatient} title='Limpiar paciente'>
               <i className='mdi mdi-close'></i>
             </button>
@@ -608,8 +760,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         </div>
         <div className='col-md-4 mb-3'>
           <label className='form-label'>Doctor</label>
-          <div className='input-group'>
-            <select className='form-control' value={doctorValue} onChange={(event) => setDoctorValue(event.target.value)}>
+          <div className='mag-sale-select2-action'>
+            <select ref={doctorSelectRef} data-select2-managed='component' className='form-control' value={doctorValue} onChange={(event) => setDoctorValue(event.target.value)}>
               <option value=''>Seleccione</option>
               {showLegacyDoctorOption && <option value={doctorValue}>{doctorValue}</option>}
               {doctorOptions.map(doctor => <option key={`mag-sale-doctor-${doctor.id}`} value={doctor.label}>{doctor.label}</option>)}
