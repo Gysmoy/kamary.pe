@@ -229,7 +229,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
 
   const onTabChange = (tab) => {
     setActiveTab(tab)
-    requestAnimationFrame(() => $(gridRef.current).dxDataGrid('instance')?.refresh())
   }
 
   const openBillingPdf = (row) => {
@@ -238,14 +237,17 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
 
   const saleActionColumn = {
     caption: 'Acciones',
-    width: 115,
+    width: 145,
+    minWidth: 145,
     allowFiltering: false,
     allowExporting: false,
     cellTemplate: (container, { data }) => {
-      container.css('text-overflow', 'unset')
-      container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.sale(data)) }))
-      container.append(DxButton({ className: 'btn btn-xs btn-soft-primary ms-1', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openModal(data) }))
-      container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => remove(data.id) }))
+      container.css({ overflow: 'visible', textOverflow: 'unset', whiteSpace: 'nowrap' })
+      const actions = $('<div>').addClass('d-flex align-items-center flex-nowrap')
+      actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.sale(data)) }))
+      actions.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openModal(data) }))
+      actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => remove(data.id) }))
+      container.append(actions)
     }
   }
 
@@ -313,6 +315,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     </div>
 
     <Table
+      key={`magistrales-sales-table-${activeTab}`}
       gridRef={gridRef}
       title={<div>
         <div className='d-flex align-items-center justify-content-between flex-wrap gap-2'>

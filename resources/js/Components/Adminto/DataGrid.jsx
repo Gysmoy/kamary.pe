@@ -6,32 +6,39 @@ const DataGrid = ({ gridRef: dataGridRef, allowQueryBuilder = true, rest, column
   useEffect(() => {
     DevExpress.localization.locale(navigator.language);
 
+    const emptyData = {
+      totalCount: 0,
+      data: []
+    }
+
     $(dataGridRef.current).dxDataGrid({
       language: "es",
       dataSource: {
         load: async (params) => {
-          if (filterValue && typeof params.filter === 'undefined') {
-            return {
-              totalCount: 0,
-              data: []
+          try {
+            if (filterValue && typeof params.filter === 'undefined') {
+              return emptyData
             }
+            const response = await rest.paginate({
+              ...params
+            })
+            const rows = Array.isArray(response?.data)
+              ? response.data
+              : Array.isArray(response)
+                ? response
+                : []
+            const totalCount = Number.isFinite(Number(response?.totalCount))
+              ? Number(response.totalCount)
+              : rows.length
+            const data = response && typeof response === 'object' && !Array.isArray(response)
+              ? { ...response, data: rows, totalCount }
+              : { data: rows, totalCount }
+            onRefresh(data)
+            return data
+          } catch (error) {
+            if (error?.name === 'AbortError') return emptyData
+            throw error
           }
-          const response = await rest.paginate({
-            ...params
-          })
-          const rows = Array.isArray(response?.data)
-            ? response.data
-            : Array.isArray(response)
-              ? response
-              : []
-          const totalCount = Number.isFinite(Number(response?.totalCount))
-            ? Number(response.totalCount)
-            : rows.length
-          const data = response && typeof response === 'object' && !Array.isArray(response)
-            ? { ...response, data: rows, totalCount }
-            : { data: rows, totalCount }
-          onRefresh(data)
-          return data
         },
       },
       onToolbarPreparing: (e) => {
@@ -137,6 +144,13 @@ const DataGrid = ({ gridRef: dataGridRef, allowQueryBuilder = true, rest, column
     // if (dxSettings[location.pathname]) {
     //   $(dataGridRef.current).dxDataGrid('instance').state(dxSettings[location.pathname])
     // }
+
+    return () => {
+      if (!dataGridRef.current) return
+      try {
+        $(dataGridRef.current).dxDataGrid('instance')?.dispose()
+      } catch (error) { }
+    }
   }, [filterValue])
 
   return (
