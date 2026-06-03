@@ -49,6 +49,8 @@ const money = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFra
 const billingDocumentNumber = (row) => [row?.series, row?.sequence].filter(Boolean).join(' - ') || row?.code || ''
 const billingClientLabel = (row) => row?.client?.full_name ?? row?.eventualClient?.business_name ?? row?.eventual_client?.business_name ?? '-'
 const billingStatusLabel = (row) => getBillingDocumentStatusLabel(row?.local_status ?? row?.external_status)
+const normalizeLabel = (value) => (value ?? '').toString().trim().toLowerCase()
+const isFixedBusiness = (row) => normalizeLabel(row?.name).includes('kamary peru')
 const identityDocumentTypes = ['DNI', 'CE', 'RUC']
 const patientSexOptions = ['FEMENINO', 'MASCULINO']
 const emptyPatientForm = () => ({
@@ -138,6 +140,9 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     () => isBillingTab ? billingFilter(activeTab, appliedFilters) : salesFilter(activeTab, appliedFilters),
     [activeTab, appliedFilters, isBillingTab]
   )
+  const fixedBusiness = useMemo(() => businesses.find(isFixedBusiness) ?? businesses[0] ?? null, [businesses])
+  const fixedBusinessId = fixedBusiness?.id ? `${fixedBusiness.id}` : ''
+  const fixedBusinessLabel = fixedBusiness?.name ?? 'Kamary Peru'
 
   useEffect(() => {
     Promise.all([rest.getBusinesses(), rest.getArticles()]).then(([businessRows, articleRows]) => {
@@ -145,6 +150,12 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       setArticles((articleRows ?? []).filter(row => row.status !== null))
     })
   }, [fixedWarehouseId])
+
+  useEffect(() => {
+    if (businessRef.current && fixedBusinessId) {
+      businessRef.current.value = fixedBusinessId
+    }
+  }, [fixedBusinessId])
 
   const totals = items.reduce((carry, item) => {
     carry.discount += Number(item.discount || 0)
@@ -160,7 +171,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
     pharmacyRef.current.value = data?.pharmacy ?? ''
-    businessRef.current.value = data?.business_id ?? ''
+    businessRef.current.value = fixedBusinessId || data?.business_id || ''
     paymentStatusRef.current.value = data?.payment_status ?? 'pending'
     documentTypeRef.current.value = data?.document_type ?? 'Boleta'
     documentNumberRef.current.value = data?.document_number ?? ''
@@ -313,11 +324,15 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
 
   const save = async (e, asQuote = modalDefaultQuote) => {
     e.preventDefault()
+    if (!fixedBusinessId) {
+      Swal.fire('Empresa no disponible', 'No se encontro Kamary Peru para registrar la venta.', 'warning')
+      return
+    }
     const result = await rest.save({
       id: idRef.current.value || undefined,
       code: isEditing ? codeRef.current.value.trim() : '',
       pharmacy: pharmacyRef.current.value.trim(),
-      business_id: businessRef.current.value || null,
+      business_id: fixedBusinessId,
       payment_status: paymentStatusRef.current.value,
       document_type: documentTypeRef.current.value.trim(),
       document_number: documentNumberRef.current.value.trim(),
@@ -516,7 +531,11 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
           <h6 className='border-bottom pb-2 mb-3'><i className='mdi mdi-account-circle-outline me-1'></i> Datos del paciente</h6>
         </div>
         <div className='col-md-3 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' disabled={!isEditing} /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Empresa</label><select ref={businessRef} className='form-control'><option value=''>Seleccione</option>{businesses.map(row => <option key={`mag-sale-business-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
+        <div className='col-md-3 mb-3'>
+          <label className='form-label'>Empresa</label>
+          <input ref={businessRef} type='hidden' value={fixedBusinessId} readOnly />
+          <input className='form-control' value={fixedBusinessLabel} readOnly disabled />
+        </div>
         <div className='col-md-3 mb-3'><label className='form-label'>Farmacia</label><input ref={pharmacyRef} className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha</label><input ref={dateRef} type='date' className='form-control' /></div>
         <div className='col-md-4 mb-3'>
