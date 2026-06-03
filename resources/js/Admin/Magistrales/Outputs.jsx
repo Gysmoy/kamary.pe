@@ -40,6 +40,7 @@ const emptyItem = () => ({
 })
 
 const formatUser = (user) => user?.fullname || [user?.name, user?.lastname].filter(Boolean).join(' ') || user?.username || ''
+const combineFilters = (filters) => filters.filter(Boolean).reduce((carry, filter) => carry ? [carry, 'and', filter] : filter, null)
 
 const toDateInput = (value) => {
   if (!value) return ''
@@ -79,6 +80,7 @@ const Outputs = ({
   const stockSearchTextRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
+  const [businesses, setBusinesses] = useState([])
   const [warehouses, setWarehouses] = useState([])
   const [items, setItems] = useState([])
   const [reasonOptions, setReasonOptions] = useState(
@@ -93,19 +95,136 @@ const Outputs = ({
   const [stockSearchPage, setStockSearchPage] = useState(1)
   const [stockSearchPageSize, setStockSearchPageSize] = useState(10)
   const [stockSearchLoading, setStockSearchLoading] = useState(false)
+  const [filters, setFilters] = useState({ businessId: '', startDate: '', endDate: '', code: '' })
+  const [appliedFilter, setAppliedFilter] = useState(null)
 
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
   const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
 
   useEffect(() => {
-    rest.getWarehouses().then((rows) => {
-      const active = (rows ?? []).filter(row => row.status !== null)
-      setWarehouses(active)
+    Promise.all([rest.getWarehouses(), rest.getBusinesses()]).then(([warehouseRows, businessRows]) => {
+      setWarehouses((warehouseRows ?? []).filter(row => row.status !== null))
+      setBusinesses((businessRows ?? []).filter(row => row.status !== null))
     })
   }, [])
 
   const destinationWarehouses = warehouses.filter(row => `${row.id}` !== fixedWarehouseId)
   const isTransferReason = selectedReason === 'TRANSFERENCIA'
+  const exportRows = () => {
+    const grid = $(gridRef.current).dxDataGrid('instance')
+    return (grid?.getVisibleRows?.() ?? []).map(row => row.data).filter(Boolean)
+  }
+  const exportColumns = [
+    ['Empresa', row => row?.originWarehouse?.branch?.business?.name ?? fixedWarehouse?.business_name ?? ''],
+    ['Codigo', row => row?.code ?? ''],
+    ['Almacen origen', row => row?.originWarehouse?.name ?? ''],
+    ['Destino', row => {
+      const branchName = row?.destinationWarehouse?.branch?.name
+      const warehouseName = row?.destinationWarehouse?.name
+      return [branchName, warehouseName].filter(Boolean).join(' - ') || row?.destination || '-'
+    }],
+    ['Motivo', row => row?.reason ?? ''],
+    ['Observacion', row => row?.observations ?? ''],
+    ['Usuario registro', row => formatUser(row?.creator)],
+    ['Fecha registro', row => `${row?.created_at ?? ''}`.replace('T', ' ').slice(0, 19)],
+    ['Estado', row => row?.status ? 'Activo' : 'Inactivo'],
+  ]
+
+  const downloadBlob = (blob, filename) => {
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const copyGrid = async () => {
+    const rows = exportRows()
+    if (!rows.length) {
+      toast.info('Sin datos', { description: 'No hay filas para copiar', duration: 2500, richColors: true })
+      return
+    }
+    const text = [
+      exportColumns.map(([title]) => title).join('\t'),
+      ...rows.map(row => exportColumns.map(([, getter]) => getter(row)).join('\t')),
+    ].join('\n')
+    await navigator.clipboard.writeText(text)
+    toast.success('Copiado', { description: 'Se copiaron las filas visibles', duration: 2000, richColors: true })
+  }
+
+  const exportExcel = () => {
+    const rows = exportRows()
+    if (!rows.length) {
+      toast.info('Sin datos', { description: 'No hay filas para exportar', duration: 2500, richColors: true })
+      return
+    }
+    const matrix = [
+      exportColumns.map(([title]) => title),
+      ...rows.map(row => exportColumns.map(([, getter]) => getter(row))),
+    ]
+    const worksheet = XLSX.utils.aoa_to_sheet(matrix)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Salidas magistrales')
+    const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    downloadBlob(blob, 'salidas-magistrales.xlsx')
+  }
+
+  const printGrid = () => {
+    const rows = exportRows()
+    if (!rows.length) {
+      toast.info('Sin datos', { description: 'No hay filas para imprimir', duration: 2500, richColors: true })
+      return
+    }
+    const escapeHtml = (value) => String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;')
+    const head = exportColumns.map(([title]) => `<th>${escapeHtml(title)}</th>`).join('')
+    const body = rows.map(row => `<tr>${exportColumns.map(([, getter]) => `<td>${escapeHtml(getter(row))}</td>`).join('')}</tr>`).join('')
+    const win = window.open('', '_blank')
+    if (!win) return
+    win.document.write(`
+      <html>
+        <head>
+          <title>Salidas magistrales</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 24px; color: #1f2937; }
+            h1 { font-size: 18px; margin-bottom: 16px; }
+            table { width: 100%; border-collapse: collapse; font-size: 12px; }
+            th, td { border: 1px solid #d1d5db; padding: 6px 8px; text-align: left; vertical-align: top; }
+            th { background: #f3f4f6; }
+          </style>
+        </head>
+        <body>
+          <h1>Salidas magistrales</h1>
+          <table>
+            <thead><tr>${head}</tr></thead>
+            <tbody>${body}</tbody>
+          </table>
+        </body>
+      </html>
+    `)
+    win.document.close()
+    win.focus()
+    win.print()
+  }
+
+  const applyFilters = () => {
+    setAppliedFilter(combineFilters([
+      filters.businessId ? ['origin_branch.business_id', '=', Number(filters.businessId)] : null,
+      filters.startDate ? ['output_date', '>=', filters.startDate] : null,
+      filters.endDate ? ['output_date', '<=', filters.endDate] : null,
+      filters.code ? ['code', 'contains', filters.code.trim()] : null,
+    ]))
+  }
 
   const stockSearchFilteredRows = stockSearchRows.filter((row) => {
     const search = `${stockSearchFilter ?? ''}`.trim().toLowerCase()
@@ -364,12 +483,60 @@ const Outputs = ({
   }
 
   return <>
+    <div className='card mb-3'>
+      <div className='card-header'>Notas de salida registradas</div>
+      <div className='card-body'>
+        <div className='row align-items-end g-3'>
+          <div className='col-md-3'>
+            <label className='form-label'>Empresa</label>
+            <select className='form-select' value={filters.businessId} onChange={(e) => setFilters(prev => ({ ...prev, businessId: e.target.value }))}>
+              <option value=''>Todos</option>
+              {businesses.map(row => <option key={`mag-output-filter-business-${row.id}`} value={row.id}>{row.name}</option>)}
+            </select>
+          </div>
+          <div className='col-md-3'>
+            <label className='form-label'>Fecha inicio</label>
+            <input type='date' className='form-control' value={filters.startDate} onChange={(e) => setFilters(prev => ({ ...prev, startDate: e.target.value }))} />
+          </div>
+          <div className='col-md-3'>
+            <label className='form-label'>Fecha fin</label>
+            <input type='date' className='form-control' value={filters.endDate} onChange={(e) => setFilters(prev => ({ ...prev, endDate: e.target.value }))} />
+          </div>
+          <div className='col-md-3'>
+            <label className='form-label'>Codigo</label>
+            <input className='form-control' value={filters.code} onChange={(e) => setFilters(prev => ({ ...prev, code: e.target.value }))} />
+          </div>
+          <div className='col-12 text-center'>
+            <button type='button' className='btn btn-outline-primary' onClick={applyFilters}>
+              <i className='mdi mdi-magnify me-1'></i> Buscar notas de salida
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <Table
       gridRef={gridRef}
       title={moduleTitle}
       rest={rest}
       pageSize={25}
+      baseFilterValue={appliedFilter}
       toolBar={(items) => {
+        ;[
+          { text: 'Imprimir', onClick: printGrid },
+          { text: 'Excel', onClick: exportExcel },
+          { text: 'Copiar', onClick: copyGrid },
+        ].forEach(item => {
+          items.unshift({
+            widget: 'dxButton',
+            location: 'before',
+            options: {
+              text: item.text,
+              stylingMode: 'outlined',
+              onClick: item.onClick,
+            }
+          })
+        })
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openModal() } })
       }}

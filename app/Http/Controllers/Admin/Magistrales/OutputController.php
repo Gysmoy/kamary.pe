@@ -53,6 +53,8 @@ class OutputController extends BasicController
         return $model::select('magistral_outputs.*')
             ->with([
                 'originWarehouse:id,name',
+                'originWarehouse.branch:id,name,business_id',
+                'originWarehouse.branch.business:id,name',
                 'destinationWarehouse:id,name,business_branch_id',
                 'destinationWarehouse.branch:id,name,business_id',
                 'items:id,magistral_output_id,article_id,code,name,lot,expiration_date,stock,unit_label,quantity,total,status',
@@ -62,6 +64,8 @@ class OutputController extends BasicController
                 'updater:id,name,lastname,username,fullname',
             ])
             ->leftJoin('warehouses as origin_warehouse', 'origin_warehouse.id', '=', 'magistral_outputs.origin_warehouse_id')
+            ->leftJoin('business_branches as origin_branch', 'origin_branch.id', '=', 'origin_warehouse.business_branch_id')
+            ->leftJoin('businesses as origin_business', 'origin_business.id', '=', 'origin_branch.business_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'magistral_outputs.created_by')
             ->leftJoin('users as updater', 'updater.id', '=', 'magistral_outputs.updated_by');
     }
