@@ -41,17 +41,13 @@ class OutputController extends BasicController
     public function setReactViewProperties(Request $request)
     {
         $fixedWarehouse = MagistralesWarehouse::warehouse();
+        $availableWarehouses = $this->resolveAvailableOriginWarehouses((int) $fixedWarehouse->business_branch_id, (int) $fixedWarehouse->id);
 
         return [
             'moduleTitle' => 'Magistrales - Salidas',
             'requiredPermission' => ['magistrales-outputs', 'magistrales-warehouse'],
             'fixedWarehouse' => MagistralesWarehouse::summary(),
-            'availableWarehouses' => Warehouse::query()
-                ->with('branch:id,name,business_id')
-                ->where('business_branch_id', $fixedWarehouse->business_branch_id)
-                ->whereNotNull('status')
-                ->orderBy('name')
-                ->get(['id', 'name', 'business_branch_id', 'status']),
+            'availableWarehouses' => $availableWarehouses,
             'reasonOptions' => self::REASON_OPTIONS,
         ];
     }
@@ -435,6 +431,77 @@ class OutputController extends BasicController
         }
 
         return MagistralesWarehouse::warehouse();
+    }
+
+    private function resolveAvailableOriginWarehouses(int $branchId, int $fixedWarehouseId): array
+    {
+        $warehouses = Warehouse::query()
+            ->where('business_branch_id', $branchId)
+            ->whereNotNull('status')
+            ->orderBy('name')
+            ->get(['id', 'name', 'description', 'business_branch_id', 'status']);
+
+        $grouped = [];
+
+        foreach ($warehouses as $warehouse) {
+            $label = $this->normalizeOriginWarehouseLabel($warehouse);
+            if ($label === null || isset($grouped[$label])) {
+                continue;
+            }
+
+            $grouped[$label] = [
+                'id' => (int) $warehouse->id,
+                'name' => $label,
+                'business_branch_id' => (int) $warehouse->business_branch_id,
+                'status' => $warehouse->status,
+            ];
+        }
+
+        if (!isset($grouped['INSUMOS Y ENVASES'])) {
+            $fixedWarehouse = $warehouses->firstWhere('id', $fixedWarehouseId);
+            if ($fixedWarehouse) {
+                $grouped = ['INSUMOS Y ENVASES' => [
+                    'id' => (int) $fixedWarehouse->id,
+                    'name' => 'INSUMOS Y ENVASES',
+                    'business_branch_id' => (int) $fixedWarehouse->business_branch_id,
+                    'status' => $fixedWarehouse->status,
+                ]] + $grouped;
+            }
+        }
+
+        return array_values($grouped);
+    }
+
+    private function normalizeOriginWarehouseLabel(Warehouse $warehouse): ?string
+    {
+        $normalized = mb_strtolower(trim(implode(' ', [
+            $warehouse->name,
+            $warehouse->description,
+        ])));
+
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (
+            str_contains($normalized, 'terminado')
+            || str_contains($normalized, 'preparacion')
+            || str_contains($normalized, 'producto')
+            || str_contains($normalized, 'reserva')
+        ) {
+            return 'PREPARACIONES FARMACEUTICAS (TERMINADO)';
+        }
+
+        if (
+            str_contains($normalized, 'insumo')
+            || str_contains($normalized, 'envase')
+            || str_contains($normalized, 'principal')
+            || str_contains($normalized, 'magistrales')
+        ) {
+            return 'INSUMOS Y ENVASES';
+        }
+
+        return null;
     }
 
     private function normalizeReason($value): ?string
