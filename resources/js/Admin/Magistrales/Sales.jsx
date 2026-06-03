@@ -44,6 +44,7 @@ const emptyItem = (warehouseId = '') => ({
   article_id: '',
   warehouse_id: warehouseId,
   description: '',
+  warehouse_stock_rows: [],
   stock: 0,
   quantity: 1,
   unit_price: 0,
@@ -59,6 +60,7 @@ const combineFilters = (filters) => filters.filter(Boolean).reduce((carry, filte
   return [carry, 'and', filter]
 }, null)
 const money = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const stockLabel = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 3 })
 const billingDocumentNumber = (row) => [row?.series, row?.sequence].filter(Boolean).join(' - ') || row?.code || ''
 const billingClientLabel = (row) => row?.client?.full_name ?? row?.eventualClient?.business_name ?? row?.eventual_client?.business_name ?? '-'
 const billingStatusLabel = (row) => getBillingDocumentStatusLabel(row?.local_status ?? row?.external_status)
@@ -114,6 +116,22 @@ const emptyDoctorForm = () => ({
   medical_center: '',
 })
 const doctorLabel = (doctor) => doctor?.select_label || [doctor?.cmp, [doctor?.paternal_lastname, doctor?.maternal_lastname].filter(Boolean).join(' '), doctor?.names].filter(Boolean).join(' | ')
+const articleOptionLabel = (article) => [article?.name, `stock: ${stockLabel(article?.current_stock)}`, `S/. ${money(article?.sale_price)}`].filter(Boolean).join(' | ')
+const warehouseStockLines = (article, fallbackLabel) => {
+  const rows = Array.isArray(article?.warehouse_stock_rows) ? article.warehouse_stock_rows : []
+  if (rows.length) return rows.map(row => `${row.label} - STOCK: ${stockLabel(row.stock)}`)
+  return [fallbackLabel]
+}
+const buildItemFromArticle = (article, warehouseId, fallbackWarehouseLabel) => ({
+  article_id: article?.id ? `${article.id}` : '',
+  warehouse_id: warehouseId,
+  description: article?.name ?? '',
+  warehouse_stock_rows: warehouseStockLines(article, fallbackWarehouseLabel),
+  stock: Number(article?.current_stock ?? 0),
+  quantity: 1,
+  unit_price: Number(article?.sale_price ?? 0),
+  discount: 0,
+})
 const setSelect2Value = (select, value, text = value) => {
   if (!select) return
   const $select = $(select)
@@ -372,6 +390,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       article_id: item.article_id ?? '',
       warehouse_id: item.warehouse_id ?? fixedWarehouseId,
       description: item.description ?? item.article?.name ?? '',
+      warehouse_stock_rows: warehouseStockLines(articles.find(row => `${row.id}` === `${item.article_id}`), fixedWarehouseLabel),
       stock: item.stock ?? 0,
       quantity: item.quantity ?? 1,
       unit_price: item.unit_price ?? 0,
@@ -384,15 +403,36 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const updateItem = (uid, field, value) => {
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
-      const next = { ...item, [field]: value }
-      if (field === 'article_id') {
-        const article = articles.find(row => `${row.id}` === `${value}`)
-        next.description = article?.name ?? ''
-        next.unit_price = article?.sale_price ?? next.unit_price
-        next.warehouse_id = fixedWarehouseId
-      }
-      return next
+      return { ...item, [field]: value }
     }))
+  }
+
+  const selectArticle = async (uid, articleId) => {
+    if (!articleId) {
+      setItems(prev => prev.map(item => item.uid === uid ? { ...emptyItem(fixedWarehouseId), uid } : item))
+      return
+    }
+
+    const article = articles.find(row => `${row.id}` === `${articleId}`)
+    if (!article) return
+
+    if (Number(article.current_stock ?? 0) <= 0) {
+      const confirmation = await Swal.fire({
+        title: 'Producto sin stock',
+        text: 'Este producto no tiene stock. Desea agregarlo tambien?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Si, agregar',
+        cancelButtonText: 'No',
+      })
+      if (!confirmation.isConfirmed) return
+    }
+
+    setItems(prev => prev.map(item => (
+      item.uid === uid
+        ? { ...item, ...buildItemFromArticle(article, fixedWarehouseId, fixedWarehouseLabel) }
+        : item
+    )))
   }
 
   const removeItem = (uid) => {
@@ -890,7 +930,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
               <thead>
                 <tr>
                   <th style={{ minWidth: 230 }}>Articulo</th>
-                  <th style={{ minWidth: 150 }}>Almacen fijo</th>
+                  <th style={{ minWidth: 220 }}>Almacen - stock</th>
                   <th style={{ width: 100 }}>Stock</th>
                   <th style={{ width: 110 }}>Cantidad</th>
                   <th style={{ width: 110 }}>Precio</th>
@@ -902,13 +942,24 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
               <tbody>
                 {items.map(item => (
                   <tr key={item.uid}>
-                    <td><select className='form-control form-control-sm' value={item.article_id} onChange={(e) => updateItem(item.uid, 'article_id', e.target.value)}><option value=''>Articulo</option>{articles.map(article => <option key={`sale-article-${article.id}`} value={article.id}>{article.code} - {article.name}</option>)}</select></td>
-                    <td className='align-middle text-muted small'>{fixedWarehouseLabel}</td>
-                    <td><input className='form-control form-control-sm' type='number' step='0.001' value={item.stock} onChange={(e) => updateItem(item.uid, 'stock', e.target.value)} /></td>
+                    <td>
+                      <select className='form-control form-control-sm' value={item.article_id} onChange={(e) => selectArticle(item.uid, e.target.value)}>
+                        <option value=''>Articulo</option>
+                        {articles.map(article => <option key={`sale-article-${article.id}`} value={article.id}>{articleOptionLabel(article)}</option>)}
+                      </select>
+                    </td>
+                    <td className='align-middle text-muted small'>
+                      <div className='d-flex flex-column'>
+                        {(item.warehouse_stock_rows?.length ? item.warehouse_stock_rows : [fixedWarehouseLabel]).map((label, index) => (
+                          <span key={`${item.uid}-warehouse-${index}`}>{label}</span>
+                        ))}
+                      </div>
+                    </td>
+                    <td><input className='form-control form-control-sm bg-light' type='number' step='0.001' value={item.stock} readOnly /></td>
                     <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => updateItem(item.uid, 'quantity', e.target.value)} /></td>
-                    <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.unit_price} onChange={(e) => updateItem(item.uid, 'unit_price', e.target.value)} /></td>
-                    <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.discount} onChange={(e) => updateItem(item.uid, 'discount', e.target.value)} /></td>
-                    <td>S/ {itemSubtotal(item).toFixed(2)}</td>
+                    <td><input className='form-control form-control-sm bg-light' type='number' min='0' step='0.01' value={item.unit_price} readOnly /></td>
+                    <td><input className='form-control form-control-sm bg-light' type='number' min='0' step='0.01' value={item.discount} readOnly /></td>
+                    <td className='align-middle'>S/ {itemSubtotal(item).toFixed(2)}</td>
                     <td><button type='button' className='btn btn-xs btn-soft-danger' onClick={() => removeItem(item.uid)}><i className='mdi mdi-delete'></i></button></td>
                   </tr>
                 ))}

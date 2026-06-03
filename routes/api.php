@@ -281,6 +281,7 @@ Route::middleware('auth')->group(function () {
 
             Route::middleware($magistralesAny)->group(function () {
                 Route::post('/articles/paginate', [AdminMagistralesArticleController::class, 'paginate']);
+                Route::get('/articles/catalog', [AdminMagistralesArticleController::class, 'catalog']);
                 Route::get('/articles/laboratories/{id}/principles', [AdminMagistralesArticleController::class, 'principles']);
                 Route::get('/articles/{id}/stock-by-warehouse', [AdminMagistralesArticleController::class, 'stockByWarehouse']);
                 Route::post('/categories/paginate', [AdminMagistralesCategoryController::class, 'paginate']);
