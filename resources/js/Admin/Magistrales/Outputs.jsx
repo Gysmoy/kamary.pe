@@ -648,9 +648,9 @@ const Outputs = ({
               </div>
               <div className='col-md-4'>
                 <label className='form-label'>Motivos</label>
-                <div className='input-group'>
+                <div className='d-flex align-items-stretch gap-2'>
                   <select
-                    className='form-select'
+                    className='form-select flex-grow-1'
                     value={selectedReason}
                     onChange={(e) => {
                       const nextReason = normalizeReason(e.target.value)
@@ -664,7 +664,7 @@ const Outputs = ({
                     <option value=''>Seleccione motivos</option>
                     {reasonOptions.map(reason => <option key={`mag-output-reason-${reason}`} value={reason}>{reason}</option>)}
                   </select>
-                  <button type='button' className='btn btn-light border' title='Agregar motivo' onClick={addCustomReason}>
+                  <button type='button' className='btn btn-outline-success px-3' title='Agregar motivo' onClick={addCustomReason}>
                     <i className='mdi mdi-plus'></i>
                   </button>
                 </div>
