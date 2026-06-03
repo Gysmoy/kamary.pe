@@ -178,6 +178,9 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const [patientValue, setPatientValue] = useState('')
   const [doctorForm, setDoctorForm] = useState(emptyDoctorForm())
   const [doctorValue, setDoctorValue] = useState('')
+  const [selectedDocumentType, setSelectedDocumentType] = useState('Boleta')
+  const [billingRuc, setBillingRuc] = useState('')
+  const [billingBusinessName, setBillingBusinessName] = useState('')
   const isBillingTab = activeTab === 'issued' || activeTab === 'cancelled'
   const activeRest = isBillingTab ? billingDocumentsRest : rest
   const activeFilterValue = useMemo(
@@ -189,6 +192,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const fixedBusinessLabel = fixedBusiness?.name ?? 'Kamary Peru'
   const doctorOptions = useMemo(() => doctors.map(doctor => ({ id: doctor.id, label: doctorLabel(doctor) })).filter(row => row.label), [doctors])
   const showLegacyDoctorOption = !!doctorValue && !doctorOptions.some(row => row.label === doctorValue)
+  const isFacturaDocumentType = selectedDocumentType === 'Factura'
 
   useEffect(() => {
     Promise.all([rest.getBusinesses(), rest.getArticles(), rest.getDoctors()]).then(([businessRows, articleRows, doctorRows]) => {
@@ -308,7 +312,11 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
     businessRef.current.value = fixedBusinessId || data?.business_id || ''
     paymentStatusRef.current.value = data?.payment_status ?? 'pending'
-    documentTypeRef.current.value = saleDocumentTypes.includes(data?.document_type) ? data.document_type : 'Boleta'
+    const nextDocumentType = saleDocumentTypes.includes(data?.document_type) ? data.document_type : 'Boleta'
+    documentTypeRef.current.value = nextDocumentType
+    setSelectedDocumentType(nextDocumentType)
+    setBillingRuc(data?.billing_ruc ?? '')
+    setBillingBusinessName(data?.billing_business_name ?? '')
     setPatientValue(data?.patient ?? '')
     setSelect2Value(patientSelectRef.current, data?.patient ?? '', data?.patient ?? '')
     setDoctorValue(data?.doctor ?? '')
@@ -493,14 +501,25 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       Swal.fire('Empresa no disponible', 'No se encontro Kamary Peru para registrar la venta.', 'warning')
       return
     }
+    const documentType = documentTypeRef.current.value.trim()
+    const normalizedBillingRuc = billingRuc.replace(/\D+/g, '')
+    const normalizedBillingBusinessName = billingBusinessName.trim()
+    if (documentType === 'Factura') {
+      if (normalizedBillingRuc.length !== 11 || !normalizedBillingBusinessName) {
+        Swal.fire('Datos incompletos', 'Para factura debes registrar un RUC de facturacion valido y la razon social.', 'warning')
+        return
+      }
+    }
     const result = await rest.save({
       id: idRef.current.value || undefined,
       code: isEditing ? codeRef.current.value.trim() : '',
       pharmacy: '',
       business_id: fixedBusinessId,
-      payment_status: paymentStatusRef.current.value,
-      document_type: documentTypeRef.current.value.trim(),
+      payment_status: paymentStatusRef.current.value || 'pending',
+      document_type: documentType,
       document_number: '',
+      billing_ruc: documentType === 'Factura' ? normalizedBillingRuc : '',
+      billing_business_name: documentType === 'Factura' ? normalizedBillingBusinessName : '',
       patient: patientValue.trim(),
       doctor: doctorValue.trim(),
       discount_policy: discountPolicyRef.current.value.trim(),
@@ -778,20 +797,38 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         </div>
         <div className='col-md-4 mb-3'>
           <label className='form-label'>Tipo documento</label>
-          <select ref={documentTypeRef} className='form-control'>
+          <select
+            ref={documentTypeRef}
+            className='form-control'
+            value={selectedDocumentType}
+            onChange={(event) => setSelectedDocumentType(event.target.value)}
+          >
             {saleDocumentTypes.map(type => <option key={`sale-document-type-${type}`} value={type}>{type}</option>)}
           </select>
         </div>
-        <div className='col-md-2 mb-3'><label className='form-label'>Estado pago</label><select ref={paymentStatusRef} className='form-control'>{Object.entries(paymentLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Politica descuento</label><input ref={discountPolicyRef} className='form-control' /></div>
+        <input ref={paymentStatusRef} type='hidden' />
+        {isFacturaDocumentType && <>
+          <div className='col-md-3 mb-3'>
+            <label className='form-label'>RUC de facturacion</label>
+            <input className='form-control' maxLength='11' value={billingRuc} onChange={(event) => setBillingRuc(event.target.value)} />
+          </div>
+          <div className='col-md-5 mb-3'>
+            <label className='form-label'>Razon social</label>
+            <input className='form-control' value={billingBusinessName} onChange={(event) => setBillingBusinessName(event.target.value)} />
+          </div>
+        </>}
+        <div className={isFacturaDocumentType ? 'col-md-3 mb-3' : 'col-md-4 mb-3'}>
+          <label className='form-label'>Politica descuento</label>
+          <input ref={discountPolicyRef} className='form-control' />
+        </div>
         <div className='col-md-3 mb-3'>
           <label className='form-label'>Tipo de venta</label>
           <select ref={saleTypeRef} className='form-control'>
             {saleTypeOptions.map(type => <option key={`sale-type-${type}`} value={type}>{type}</option>)}
           </select>
         </div>
-        <SwitchFormGroup eRef={allergyRef} label='Alergia' col='col-md-2 mt-4' />
-        <SwitchFormGroup eRef={intoleranceRef} label='Intolerancia' col='col-md-2 mt-4' />
+        <SwitchFormGroup eRef={allergyRef} label='Alergia' col='col-md-3 mt-4' />
+        <SwitchFormGroup eRef={intoleranceRef} label='Intolerancia' col='col-md-3 mt-4' />
 
         <div className='col-12 mt-2'>
           <div className='d-flex justify-content-between align-items-center border-bottom pb-2 mb-3'>

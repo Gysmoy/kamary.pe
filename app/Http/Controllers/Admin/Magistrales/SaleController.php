@@ -89,6 +89,8 @@ class SaleController extends BasicController
         $body['payment_status'] = $this->normalizePaymentStatus($body['payment_status'] ?? 'pending');
         $body['document_type'] = trim((string)($body['document_type'] ?? '')) ?: null;
         $body['document_number'] = trim((string)($body['document_number'] ?? '')) ?: null;
+        $body['billing_ruc'] = preg_replace('/\D+/', '', (string)($body['billing_ruc'] ?? '')) ?: null;
+        $body['billing_business_name'] = trim((string)($body['billing_business_name'] ?? '')) ?: null;
         $body['patient'] = trim((string)($body['patient'] ?? '')) ?: null;
         $body['doctor'] = trim((string)($body['doctor'] ?? '')) ?: null;
         $body['discount_policy'] = trim((string)($body['discount_policy'] ?? '')) ?: null;
@@ -105,9 +107,23 @@ class SaleController extends BasicController
         $body['sale_date'] = $this->normalizeDate($body['sale_date'] ?? now()->toDateString());
         $body['observations'] = trim((string)($body['observations'] ?? '')) ?: null;
 
+        if ($body['document_type'] !== 'Factura') {
+            $body['billing_ruc'] = null;
+            $body['billing_business_name'] = null;
+        } else {
+            if (strlen((string) $body['billing_ruc']) !== 11) {
+                throw new \Exception('El RUC de facturacion debe tener 11 digitos.');
+            }
+            if (!$body['billing_business_name']) {
+                throw new \Exception('La razon social es obligatoria para factura.');
+            }
+        }
+
         unset($body['items']);
 
         foreach ([
+            'billing_ruc',
+            'billing_business_name',
             'doctor',
             'discount_policy',
             'sale_type',

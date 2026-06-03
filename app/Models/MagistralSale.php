@@ -18,6 +18,8 @@ class MagistralSale extends Model
         'payment_status',
         'document_type',
         'document_number',
+        'billing_ruc',
+        'billing_business_name',
         'patient',
         'doctor',
         'discount_policy',
