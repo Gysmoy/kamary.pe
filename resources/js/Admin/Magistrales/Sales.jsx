@@ -251,6 +251,9 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
 
   const saleColumns = [
     saleActionColumn,
+    { dataField: 'is_quote', visible: false, showInColumnChooser: false },
+    { dataField: 'business_id', visible: false, showInColumnChooser: false },
+    { dataField: 'sale_date', visible: false, showInColumnChooser: false },
     {
       dataField: 'business.name',
       caption: 'Empresa',
@@ -279,6 +282,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Ver PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openBillingPdf(data) }))
       }
     },
+    { dataField: 'source_type', visible: false, showInColumnChooser: false },
+    { dataField: 'business_id', visible: false, showInColumnChooser: false },
     { dataField: 'business.name', caption: 'Empresa', minWidth: 170 },
     { dataField: 'local_status', caption: activeTab === 'cancelled' ? 'Est. Anulacion' : 'Est. Comprobante', width: 145, calculateCellValue: billingStatusLabel },
     { dataField: 'document_number', caption: 'Comprobante', width: 160, calculateCellValue: billingDocumentNumber },
