@@ -24,6 +24,7 @@ const billingDocumentsRest = new BillingDocumentsRest()
 const clientsRest = new ClientsRest()
 const doctorsRest = new DoctorsRest()
 const paymentLabels = { pending: 'Pendiente', paid: 'Pagado', partial: 'Parcial', cancelled: 'Cancelado' }
+const saleDocumentTypes = ['Factura', 'Boleta', 'Nota de pedido']
 const tabs = [
   { id: 'quotes', label: 'Cotizacion' },
   { id: 'sales', label: 'Ventas' },
@@ -244,8 +245,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         const row = event.params?.data?.data
         const value = row ? patientName(row) : (event.params?.data?.id ?? '')
         setPatientValue(value)
-        if (row?.document_type) documentTypeRef.current.value = row.document_type
-        if (row?.document_number) documentNumberRef.current.value = row.document_number
       })
       .on('change.magSalePatient', (event) => {
         if (!$(event.currentTarget).val()) setPatientValue('')
@@ -309,7 +308,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
     businessRef.current.value = fixedBusinessId || data?.business_id || ''
     paymentStatusRef.current.value = data?.payment_status ?? 'pending'
-    documentTypeRef.current.value = data?.document_type ?? 'Boleta'
+    documentTypeRef.current.value = saleDocumentTypes.includes(data?.document_type) ? data.document_type : 'Boleta'
     documentNumberRef.current.value = data?.document_number ?? ''
     setPatientValue(data?.patient ?? '')
     setSelect2Value(patientSelectRef.current, data?.patient ?? '', data?.patient ?? '')
@@ -425,8 +424,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     const value = patientName(row)
     setPatientValue(value)
     setSelect2Value(patientSelectRef.current, value, patientSelectLabel(row) || value)
-    if (row?.document_type) documentTypeRef.current.value = row.document_type
-    if (row?.document_number) documentNumberRef.current.value = row.document_number
     $(patientSearchModalRef.current).modal('hide')
     $(patientFormModalRef.current).modal('hide')
   }
@@ -780,7 +777,12 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
             </button>
           </div>
         </div>
-        <div className='col-md-2 mb-3'><label className='form-label'>Tipo doc.</label><input ref={documentTypeRef} className='form-control' /></div>
+        <div className='col-md-2 mb-3'>
+          <label className='form-label'>Tipo documento</label>
+          <select ref={documentTypeRef} className='form-control'>
+            {saleDocumentTypes.map(type => <option key={`sale-document-type-${type}`} value={type}>{type}</option>)}
+          </select>
+        </div>
         <div className='col-md-2 mb-3'><label className='form-label'>Documento</label><input ref={documentNumberRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Estado pago</label><select ref={paymentStatusRef} className='form-control'>{Object.entries(paymentLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Politica descuento</label><input ref={discountPolicyRef} className='form-control' /></div>
