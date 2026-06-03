@@ -25,6 +25,7 @@ const clientsRest = new ClientsRest()
 const doctorsRest = new DoctorsRest()
 const paymentLabels = { pending: 'Pendiente', paid: 'Pagado', partial: 'Parcial', cancelled: 'Cancelado' }
 const saleDocumentTypes = ['Factura', 'Boleta', 'Nota de pedido']
+const saleTypeOptions = ['PRESENCIAL', 'RECOJO EN TIENDA', 'DELIVERY']
 const tabs = [
   { id: 'quotes', label: 'Cotizacion' },
   { id: 'sales', label: 'Ventas' },
@@ -151,7 +152,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const businessRef = useRef()
   const paymentStatusRef = useRef()
   const documentTypeRef = useRef()
-  const documentNumberRef = useRef()
   const patientSelectRef = useRef()
   const doctorSelectRef = useRef()
   const discountPolicyRef = useRef()
@@ -309,12 +309,11 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     businessRef.current.value = fixedBusinessId || data?.business_id || ''
     paymentStatusRef.current.value = data?.payment_status ?? 'pending'
     documentTypeRef.current.value = saleDocumentTypes.includes(data?.document_type) ? data.document_type : 'Boleta'
-    documentNumberRef.current.value = data?.document_number ?? ''
     setPatientValue(data?.patient ?? '')
     setSelect2Value(patientSelectRef.current, data?.patient ?? '', data?.patient ?? '')
     setDoctorValue(data?.doctor ?? '')
     discountPolicyRef.current.value = data?.discount_policy ?? ''
-    saleTypeRef.current.value = data?.sale_type ?? 'venta'
+    saleTypeRef.current.value = saleTypeOptions.includes(data?.sale_type) ? data.sale_type : 'PRESENCIAL'
     setSwitchChecked(allergyRef.current, !!data?.allergy)
     setSwitchChecked(intoleranceRef.current, !!data?.intolerance)
     dateRef.current.value = data?.sale_date?.toString?.().slice?.(0, 10) ?? new Date().toISOString().slice(0, 10)
@@ -501,7 +500,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       business_id: fixedBusinessId,
       payment_status: paymentStatusRef.current.value,
       document_type: documentTypeRef.current.value.trim(),
-      document_number: documentNumberRef.current.value.trim(),
+      document_number: '',
       patient: patientValue.trim(),
       doctor: doctorValue.trim(),
       discount_policy: discountPolicyRef.current.value.trim(),
@@ -777,18 +776,22 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
             </button>
           </div>
         </div>
-        <div className='col-md-2 mb-3'>
+        <div className='col-md-4 mb-3'>
           <label className='form-label'>Tipo documento</label>
           <select ref={documentTypeRef} className='form-control'>
             {saleDocumentTypes.map(type => <option key={`sale-document-type-${type}`} value={type}>{type}</option>)}
           </select>
         </div>
-        <div className='col-md-2 mb-3'><label className='form-label'>Documento</label><input ref={documentNumberRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Estado pago</label><select ref={paymentStatusRef} className='form-control'>{Object.entries(paymentLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Politica descuento</label><input ref={discountPolicyRef} className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Tipo venta</label><input ref={saleTypeRef} className='form-control' /></div>
-        <SwitchFormGroup eRef={allergyRef} label='Alergia' col='col-md-3 mt-4' />
-        <SwitchFormGroup eRef={intoleranceRef} label='Intolerancia' col='col-md-3 mt-4' />
+        <div className='col-md-3 mb-3'>
+          <label className='form-label'>Tipo de venta</label>
+          <select ref={saleTypeRef} className='form-control'>
+            {saleTypeOptions.map(type => <option key={`sale-type-${type}`} value={type}>{type}</option>)}
+          </select>
+        </div>
+        <SwitchFormGroup eRef={allergyRef} label='Alergia' col='col-md-2 mt-4' />
+        <SwitchFormGroup eRef={intoleranceRef} label='Intolerancia' col='col-md-2 mt-4' />
 
         <div className='col-12 mt-2'>
           <div className='d-flex justify-content-between align-items-center border-bottom pb-2 mb-3'>
