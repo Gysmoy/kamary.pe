@@ -833,6 +833,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       title={isEditing ? (modalDefaultQuote ? 'Editar cotizacion' : 'Editar venta') : (modalDefaultQuote ? 'Registrar cotizacion' : 'Registrar venta')}
       onSubmit={(e) => save(e, modalDefaultQuote)}
       size='xl'
+      centered={false}
       dialogClass='magistrales-sale-dialog'
       contentClass='magistrales-sale-content'
       hideButtonSubmit
