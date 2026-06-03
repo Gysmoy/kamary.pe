@@ -355,7 +355,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     setSelectedPatientData(null)
     setSelect2Value(patientSelectRef.current, data?.patient ?? '', data?.patient ?? '')
     setDoctorValue(data?.doctor ?? '')
-    discountPolicyRef.current.value = discountPolicyOptions.includes(data?.discount_policy ?? '') ? data.discount_policy : ''
+    const nextDiscountPolicy = data?.discount_policy ?? ''
+    discountPolicyRef.current.value = discountPolicyOptions.includes(nextDiscountPolicy) ? nextDiscountPolicy : ''
     saleTypeRef.current.value = saleTypeOptions.includes(data?.sale_type) ? data.sale_type : 'PRESENCIAL'
     setSwitchChecked(allergyRef.current, !!data?.allergy)
     setSwitchChecked(intoleranceRef.current, !!data?.intolerance)
