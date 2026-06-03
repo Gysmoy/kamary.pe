@@ -10,6 +10,7 @@ import Swal from 'sweetalert2';
 import SalesRest from '../../Actions/Admin/Magistrales/SalesRest';
 import BillingDocumentsRest from '../../Actions/Admin/BillingDocumentsRest';
 import ClientsRest from '../../Actions/Admin/ClientsRest';
+import DoctorsRest from '../../Actions/Admin/Magistrales/DoctorsRest';
 import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 import setSwitchChecked from '../../Utils/setSwitchChecked';
@@ -18,6 +19,7 @@ import { getBillingDocumentStatusLabel } from '../../Utils/statusLabels';
 const rest = new SalesRest()
 const billingDocumentsRest = new BillingDocumentsRest()
 const clientsRest = new ClientsRest()
+const doctorsRest = new DoctorsRest()
 const paymentLabels = { pending: 'Pendiente', paid: 'Pagado', partial: 'Parcial', cancelled: 'Cancelado' }
 const tabs = [
   { id: 'quotes', label: 'Cotizacion' },
@@ -69,6 +71,15 @@ const emptyPatientForm = () => ({
 })
 const patientName = (row) => row?.full_name || row?.display_name || row?.business_name || ''
 const patientDocument = (row) => [row?.document_type?.toString?.().toUpperCase?.(), row?.document_number].filter(Boolean).join(' ')
+const emptyDoctorForm = () => ({
+  names: '',
+  paternal_lastname: '',
+  maternal_lastname: '',
+  cmp: '',
+  specialty: '',
+  medical_center: '',
+})
+const doctorLabel = (doctor) => doctor?.select_label || [doctor?.cmp, [doctor?.paternal_lastname, doctor?.maternal_lastname].filter(Boolean).join(' '), doctor?.names].filter(Boolean).join(' | ')
 
 const salesFilter = (tab, filters) => combineFilters([
   ['is_quote', '=', tab === 'quotes'],
@@ -105,6 +116,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const modalRef = useRef()
   const patientSearchModalRef = useRef()
   const patientFormModalRef = useRef()
+  const doctorFormModalRef = useRef()
   const idRef = useRef()
   const codeRef = useRef()
   const businessRef = useRef()
@@ -112,7 +124,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const documentTypeRef = useRef()
   const documentNumberRef = useRef()
   const patientRef = useRef()
-  const doctorRef = useRef()
   const discountPolicyRef = useRef()
   const saleTypeRef = useRef()
   const allergyRef = useRef()
@@ -123,6 +134,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
   const [businesses, setBusinesses] = useState([])
   const [articles, setArticles] = useState([])
+  const [doctors, setDoctors] = useState([])
   const [items, setItems] = useState([emptyItem(fixedWarehouseId)])
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState('quotes')
@@ -133,6 +145,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const [patientRows, setPatientRows] = useState([])
   const [patientLoading, setPatientLoading] = useState(false)
   const [patientForm, setPatientForm] = useState(emptyPatientForm())
+  const [doctorForm, setDoctorForm] = useState(emptyDoctorForm())
+  const [doctorValue, setDoctorValue] = useState('')
   const isBillingTab = activeTab === 'issued' || activeTab === 'cancelled'
   const activeRest = isBillingTab ? billingDocumentsRest : rest
   const activeFilterValue = useMemo(
@@ -142,11 +156,14 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const fixedBusiness = useMemo(() => businesses.find(isFixedBusiness) ?? businesses[0] ?? null, [businesses])
   const fixedBusinessId = fixedBusiness?.id ? `${fixedBusiness.id}` : ''
   const fixedBusinessLabel = fixedBusiness?.name ?? 'Kamary Peru'
+  const doctorOptions = useMemo(() => doctors.map(doctor => ({ id: doctor.id, label: doctorLabel(doctor) })).filter(row => row.label), [doctors])
+  const showLegacyDoctorOption = !!doctorValue && !doctorOptions.some(row => row.label === doctorValue)
 
   useEffect(() => {
-    Promise.all([rest.getBusinesses(), rest.getArticles()]).then(([businessRows, articleRows]) => {
+    Promise.all([rest.getBusinesses(), rest.getArticles(), rest.getDoctors()]).then(([businessRows, articleRows, doctorRows]) => {
       setBusinesses((businessRows ?? []).filter(row => row.status !== null))
       setArticles((articleRows ?? []).filter(row => row.status !== null))
+      setDoctors((doctorRows ?? []).filter(row => row.status !== null))
     })
   }, [fixedWarehouseId])
 
@@ -174,7 +191,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     documentTypeRef.current.value = data?.document_type ?? 'Boleta'
     documentNumberRef.current.value = data?.document_number ?? ''
     patientRef.current.value = data?.patient ?? ''
-    doctorRef.current.value = data?.doctor ?? ''
+    setDoctorValue(data?.doctor ?? '')
     discountPolicyRef.current.value = data?.discount_policy ?? ''
     saleTypeRef.current.value = data?.sale_type ?? 'venta'
     setSwitchChecked(allergyRef.current, !!data?.allergy)
@@ -218,6 +235,45 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
 
   const updatePatientForm = (field, value) => {
     setPatientForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const updateDoctorForm = (field, value) => {
+    setDoctorForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const openDoctorForm = () => {
+    setDoctorForm(emptyDoctorForm())
+    $(doctorFormModalRef.current).modal('show')
+  }
+
+  const saveDoctor = async (event) => {
+    event?.preventDefault?.()
+    if (!doctorForm.names.trim() || !doctorForm.paternal_lastname.trim() || !doctorForm.cmp.trim()) {
+      Swal.fire('Datos incompletos', 'Nombres, apellido paterno y CMP son obligatorios.', 'warning')
+      return
+    }
+
+    const result = await doctorsRest.save({
+      names: doctorForm.names,
+      paternal_lastname: doctorForm.paternal_lastname,
+      maternal_lastname: doctorForm.maternal_lastname,
+      cmp: doctorForm.cmp,
+      specialty: doctorForm.specialty,
+      medical_center: doctorForm.medical_center,
+      status: true,
+    })
+    if (!result) return
+
+    const rows = await rest.getDoctors()
+    setDoctors((rows ?? []).filter(row => row.status !== null))
+
+    const saved = result?.data ?? {
+      ...doctorForm,
+      cmp: doctorForm.cmp.replace(/\D+/g, ''),
+      status: true,
+    }
+    setDoctorValue(doctorLabel(saved))
+    $(doctorFormModalRef.current).modal('hide')
   }
 
   const patientFilter = (term) => {
@@ -335,7 +391,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       document_type: documentTypeRef.current.value.trim(),
       document_number: documentNumberRef.current.value.trim(),
       patient: patientRef.current.value.trim(),
-      doctor: doctorRef.current.value.trim(),
+      doctor: doctorValue.trim(),
       discount_policy: discountPolicyRef.current.value.trim(),
       sale_type: saleTypeRef.current.value.trim(),
       allergy: allergyRef.current.checked,
@@ -550,7 +606,19 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
             </button>
           </div>
         </div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Doctor</label><input ref={doctorRef} className='form-control' /></div>
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Doctor</label>
+          <div className='input-group'>
+            <select className='form-control' value={doctorValue} onChange={(event) => setDoctorValue(event.target.value)}>
+              <option value=''>Seleccione</option>
+              {showLegacyDoctorOption && <option value={doctorValue}>{doctorValue}</option>}
+              {doctorOptions.map(doctor => <option key={`mag-sale-doctor-${doctor.id}`} value={doctor.label}>{doctor.label}</option>)}
+            </select>
+            <button type='button' className='btn btn-outline-success' onClick={openDoctorForm} title='Agregar doctor'>
+              <i className='mdi mdi-plus'></i>
+            </button>
+          </div>
+        </div>
         <div className='col-md-2 mb-3'><label className='form-label'>Tipo doc.</label><input ref={documentTypeRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Documento</label><input ref={documentNumberRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Estado pago</label><select ref={paymentStatusRef} className='form-control'>{Object.entries(paymentLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
@@ -616,6 +684,47 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
           <button type='button' className='btn btn-primary' onClick={(e) => save(e, modalDefaultQuote)}>
             <i className='mdi mdi-check me-1'></i> {isEditing ? 'Guardar cambios' : `Registrar ${modalDefaultQuote ? 'cotizacion' : 'venta'}`}
           </button>
+        </div>
+      </div>
+    </Modal>
+    <Modal
+      modalRef={doctorFormModalRef}
+      title='Formulario doctor'
+      onSubmit={saveDoctor}
+      size='lg'
+      btnSubmitText='Registrar'
+      zIndex={1060}
+      onClose={() => {
+        if ($(modalRef.current).hasClass('show')) $('body').addClass('modal-open')
+      }}
+    >
+      <div className='row'>
+        <div className='col-12'>
+          <h6 className='border-bottom pb-2 mb-3'><i className='mdi mdi-doctor me-1'></i> General</h6>
+        </div>
+        <div className='col-12 mb-3'>
+          <label className='form-label'>Nombres</label>
+          <input className='form-control' value={doctorForm.names} onChange={(event) => updateDoctorForm('names', event.target.value)} />
+        </div>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>Apellido paterno</label>
+          <input className='form-control' value={doctorForm.paternal_lastname} onChange={(event) => updateDoctorForm('paternal_lastname', event.target.value)} />
+        </div>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>Apellido materno</label>
+          <input className='form-control' value={doctorForm.maternal_lastname} onChange={(event) => updateDoctorForm('maternal_lastname', event.target.value)} />
+        </div>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>CMP</label>
+          <input className='form-control' value={doctorForm.cmp} onChange={(event) => updateDoctorForm('cmp', event.target.value)} />
+        </div>
+        <div className='col-md-6 mb-3'>
+          <label className='form-label'>Especialidad</label>
+          <input className='form-control' value={doctorForm.specialty} onChange={(event) => updateDoctorForm('specialty', event.target.value)} />
+        </div>
+        <div className='col-12 mb-3'>
+          <label className='form-label'>Centro Medico</label>
+          <input className='form-control' value={doctorForm.medical_center} onChange={(event) => updateDoctorForm('medical_center', event.target.value)} />
         </div>
       </div>
     </Modal>

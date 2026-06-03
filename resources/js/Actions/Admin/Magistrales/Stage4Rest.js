@@ -29,6 +29,7 @@ class MagistralesStage4Rest extends BasicRest {
   getBusinesses = () => this.getList('admin/businesses', 'name')
   getWarehouses = () => this.getList('admin/warehouses', 'name')
   getResponsibles = () => this.getList('admin/magistrales/responsibles', 'name')
+  getDoctors = () => this.getList('admin/magistrales/doctors', 'paternal_lastname')
   getFormats = () => this.getList('admin/magistrales/formats', 'description')
   getFormulas = () => this.getList('admin/magistrales/formulas', 'id')
 }

@@ -40,6 +40,7 @@ use App\Http\Controllers\Admin\ReferralGuideController as AdminReferralGuideCont
 use App\Http\Controllers\Admin\Magistrales\AccountsPayableController as AdminMagistralesAccountsPayableController;
 use App\Http\Controllers\Admin\Magistrales\ArticleController as AdminMagistralesArticleController;
 use App\Http\Controllers\Admin\Magistrales\CategoryController as AdminMagistralesCategoryController;
+use App\Http\Controllers\Admin\Magistrales\DoctorController as AdminMagistralesDoctorController;
 use App\Http\Controllers\Admin\Magistrales\FormatController as AdminMagistralesFormatController;
 use App\Http\Controllers\Admin\Magistrales\FormulaController as AdminMagistralesFormulaController;
 use App\Http\Controllers\Admin\Magistrales\IncomeController as AdminMagistralesIncomeController;
@@ -376,6 +377,8 @@ Route::middleware('auth')->group(function () {
             });
 
             Route::middleware($magistralesSales)->group(function () {
+                Route::post('/doctors', [AdminMagistralesDoctorController::class, 'save']);
+                Route::post('/doctors/paginate', [AdminMagistralesDoctorController::class, 'paginate']);
                 Route::post('/sales', [AdminMagistralesSaleController::class, 'save']);
                 Route::post('/sales/paginate', [AdminMagistralesSaleController::class, 'paginate']);
                 Route::patch('/sales/status', [AdminMagistralesSaleController::class, 'status']);
