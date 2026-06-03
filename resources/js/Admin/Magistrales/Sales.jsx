@@ -9,6 +9,7 @@ import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import SalesRest from '../../Actions/Admin/Magistrales/SalesRest';
 import BillingDocumentsRest from '../../Actions/Admin/BillingDocumentsRest';
+import ClientsRest from '../../Actions/Admin/ClientsRest';
 import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 import setSwitchChecked from '../../Utils/setSwitchChecked';
@@ -16,6 +17,7 @@ import { getBillingDocumentStatusLabel } from '../../Utils/statusLabels';
 
 const rest = new SalesRest()
 const billingDocumentsRest = new BillingDocumentsRest()
+const clientsRest = new ClientsRest()
 const paymentLabels = { pending: 'Pendiente', paid: 'Pagado', partial: 'Parcial', cancelled: 'Cancelado' }
 const tabs = [
   { id: 'quotes', label: 'Cotizacion' },
@@ -47,6 +49,24 @@ const money = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFra
 const billingDocumentNumber = (row) => [row?.series, row?.sequence].filter(Boolean).join(' - ') || row?.code || ''
 const billingClientLabel = (row) => row?.client?.full_name ?? row?.eventualClient?.business_name ?? row?.eventual_client?.business_name ?? '-'
 const billingStatusLabel = (row) => getBillingDocumentStatusLabel(row?.local_status ?? row?.external_status)
+const identityDocumentTypes = ['DNI', 'CE', 'RUC']
+const patientSexOptions = ['FEMENINO', 'MASCULINO']
+const emptyPatientForm = () => ({
+  document_type: 'DNI',
+  document_number: '',
+  names: '',
+  lastnames: '',
+  full_address: '',
+  phone: '',
+  birth_date: '',
+  email: '',
+  company_ruc: '',
+  position: '',
+  sex: 'FEMENINO',
+  secondary_phone: '',
+})
+const patientName = (row) => row?.full_name || row?.display_name || row?.business_name || ''
+const patientDocument = (row) => [row?.document_type?.toString?.().toUpperCase?.(), row?.document_number].filter(Boolean).join(' ')
 
 const salesFilter = (tab, filters) => combineFilters([
   ['is_quote', '=', tab === 'quotes'],
@@ -81,6 +101,8 @@ const billingFilter = (tab, filters) => {
 const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) => {
   const gridRef = useRef()
   const modalRef = useRef()
+  const patientSearchModalRef = useRef()
+  const patientFormModalRef = useRef()
   const idRef = useRef()
   const codeRef = useRef()
   const pharmacyRef = useRef()
@@ -106,6 +128,10 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const [filters, setFilters] = useState(emptyFilters())
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters())
   const [modalDefaultQuote, setModalDefaultQuote] = useState(false)
+  const [patientSearch, setPatientSearch] = useState('')
+  const [patientRows, setPatientRows] = useState([])
+  const [patientLoading, setPatientLoading] = useState(false)
+  const [patientForm, setPatientForm] = useState(emptyPatientForm())
   const isBillingTab = activeTab === 'issued' || activeTab === 'cancelled'
   const activeRest = isBillingTab ? billingDocumentsRest : rest
   const activeFilterValue = useMemo(
@@ -179,6 +205,110 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       const next = prev.filter(item => item.uid !== uid)
       return next.length ? next : [emptyItem(fixedWarehouseId)]
     })
+  }
+
+  const updatePatientForm = (field, value) => {
+    setPatientForm(prev => ({ ...prev, [field]: value }))
+  }
+
+  const patientFilter = (term) => {
+    const sourceFilter = ['data_source', '=', 'client']
+    const text = term.trim()
+    if (!text) return sourceFilter
+    return [sourceFilter, 'and', [
+      ['document_number', 'contains', text],
+      'or',
+      ['full_name', 'contains', text],
+      'or',
+      ['display_name', 'contains', text],
+    ]]
+  }
+
+  const searchPatients = async (event, forcedTerm = null) => {
+    event?.preventDefault?.()
+    const term = forcedTerm ?? patientSearch
+    setPatientLoading(true)
+    try {
+      const response = await clientsRest.paginate({
+        skip: 0,
+        take: 10,
+        requireTotalCount: true,
+        filter: patientFilter(term),
+        sort: [{ selector: 'display_name', desc: false }],
+      })
+      if (response?.status && response.status !== 200) throw new Error(response.message || 'No se pudo buscar pacientes')
+      setPatientRows(response?.data ?? [])
+    } catch (error) {
+      setPatientRows([])
+      if (error?.name !== 'AbortError') Swal.fire('No se pudo buscar', error.message || 'Ocurrio un error inesperado', 'error')
+    } finally {
+      setPatientLoading(false)
+    }
+  }
+
+  const selectPatient = (row) => {
+    patientRef.current.value = patientName(row)
+    $(patientSearchModalRef.current).modal('hide')
+    $(patientFormModalRef.current).modal('hide')
+  }
+
+  const clearPatient = () => {
+    patientRef.current.value = ''
+  }
+
+  const openPatientSearch = () => {
+    const term = patientRef.current?.value ?? ''
+    setPatientSearch(term)
+    setPatientRows([])
+    $(patientSearchModalRef.current).modal('show')
+    window.setTimeout(() => searchPatients(null, term), 0)
+  }
+
+  const openPatientForm = () => {
+    setPatientForm(emptyPatientForm())
+    if ($(patientSearchModalRef.current).hasClass('show')) {
+      $(patientSearchModalRef.current).modal('hide')
+    }
+    window.setTimeout(() => $(patientFormModalRef.current).modal('show'), 150)
+  }
+
+  const savePatient = async (event) => {
+    event?.preventDefault?.()
+    const fullName = [patientForm.names, patientForm.lastnames].map(value => value.trim()).filter(Boolean).join(' ')
+    if (!patientForm.document_number.trim() || !fullName) {
+      Swal.fire('Datos incompletos', 'Documento, nombres y apellidos son obligatorios.', 'warning')
+      return
+    }
+
+    const result = await clientsRest.save({
+      client_kind: 'regular',
+      module_scope: 'commercial',
+      document_type: patientForm.document_type,
+      document_number: patientForm.document_number,
+      full_name: fullName,
+      full_address: patientForm.full_address,
+      phone: patientForm.phone,
+      secondary_phone: patientForm.secondary_phone,
+      birth_date: patientForm.birth_date,
+      email: patientForm.email,
+      company_ruc: patientForm.company_ruc,
+      position: patientForm.position,
+      sex: patientForm.sex,
+      status: true,
+    })
+    if (!result) return
+
+    const saved = result?.data
+      ?? await clientsRest.lookupByDocument(patientForm.document_type, patientForm.document_number)
+      ?? {
+        document_type: patientForm.document_type,
+        document_number: patientForm.document_number,
+        full_name: fullName,
+        display_name: fullName,
+        status: true,
+      }
+
+    selectPatient(saved)
   }
 
   const save = async (e, asQuote = modalDefaultQuote) => {
@@ -389,7 +519,21 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         <div className='col-md-3 mb-3'><label className='form-label'>Empresa</label><select ref={businessRef} className='form-control'><option value=''>Seleccione</option>{businesses.map(row => <option key={`mag-sale-business-${row.id}`} value={row.id}>{row.name}</option>)}</select></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Farmacia</label><input ref={pharmacyRef} className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha</label><input ref={dateRef} type='date' className='form-control' /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Paciente</label><input ref={patientRef} className='form-control' /></div>
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Paciente</label>
+          <div className='input-group'>
+            <button type='button' className='btn btn-outline-primary' onClick={openPatientSearch}>
+              <i className='mdi mdi-magnify me-1'></i> Buscar
+            </button>
+            <button type='button' className='btn btn-outline-success' onClick={openPatientForm} title='Agregar paciente'>
+              <i className='mdi mdi-account-plus'></i>
+            </button>
+            <input ref={patientRef} className='form-control' placeholder='Seleccione paciente' />
+            <button type='button' className='btn btn-outline-danger' onClick={clearPatient} title='Limpiar paciente'>
+              <i className='mdi mdi-close'></i>
+            </button>
+          </div>
+        </div>
         <div className='col-md-3 mb-3'><label className='form-label'>Doctor</label><input ref={doctorRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Tipo doc.</label><input ref={documentTypeRef} className='form-control' /></div>
         <div className='col-md-2 mb-3'><label className='form-label'>Documento</label><input ref={documentNumberRef} className='form-control' /></div>
@@ -456,6 +600,137 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
           <button type='button' className='btn btn-primary' onClick={(e) => save(e, modalDefaultQuote)}>
             <i className='mdi mdi-check me-1'></i> {isEditing ? 'Guardar cambios' : `Registrar ${modalDefaultQuote ? 'cotizacion' : 'venta'}`}
           </button>
+        </div>
+      </div>
+    </Modal>
+    <Modal
+      modalRef={patientSearchModalRef}
+      title='Buscar paciente'
+      onSubmit={searchPatients}
+      size='lg'
+      hideFooter
+      zIndex={1060}
+      onClose={() => {
+        if ($(modalRef.current).hasClass('show')) $('body').addClass('modal-open')
+      }}
+    >
+      <div>
+        <label className='form-label'>Documento de Identidad o nombre del paciente</label>
+        <div className='input-group'>
+          <input
+            className='form-control'
+            value={patientSearch}
+            placeholder='Ingrese palabra clave'
+            onChange={(event) => setPatientSearch(event.target.value)}
+          />
+          <button type='button' className='btn btn-outline-primary' onClick={searchPatients} disabled={patientLoading}>
+            <i className='mdi mdi-magnify me-1'></i> Buscar
+          </button>
+          <button type='button' className='btn btn-outline-success' onClick={openPatientForm}>
+            <i className='mdi mdi-account-plus me-1'></i> Agregar paciente
+          </button>
+        </div>
+        <div className='table-responsive mt-3 border rounded'>
+          <table className='table table-sm table-hover mb-0'>
+            <thead className='table-light'>
+              <tr>
+                <th style={{ width: 90 }}>Acciones</th>
+                <th style={{ minWidth: 130 }}>Documento</th>
+                <th>Nombres y apellidos</th>
+                <th style={{ width: 110 }}>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {patientLoading && <tr><td colSpan='4' className='text-center text-muted py-3'>Buscando...</td></tr>}
+              {!patientLoading && patientRows.length === 0 && <tr><td colSpan='4' className='text-center text-muted py-3'>No existen elementos</td></tr>}
+              {!patientLoading && patientRows.map(row => (
+                <tr key={`patient-result-${row.id}`}>
+                  <td>
+                    <button type='button' className='btn btn-xs btn-soft-primary' onClick={() => selectPatient(row)} title='Seleccionar paciente'>
+                      <i className='mdi mdi-check'></i>
+                    </button>
+                  </td>
+                  <td>{patientDocument(row) || '-'}</td>
+                  <td>{patientName(row) || '-'}</td>
+                  <td>
+                    <span className={`badge ${row.status ? 'bg-success' : 'bg-secondary'}`}>{row.status ? 'Activo' : 'Inactivo'}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className='d-flex justify-content-end mt-3'>
+          <button type='button' className='btn btn-light' data-bs-dismiss='modal'>Cerrar</button>
+        </div>
+      </div>
+    </Modal>
+    <Modal
+      modalRef={patientFormModalRef}
+      title='Formulario paciente'
+      onSubmit={savePatient}
+      size='xl'
+      btnSubmitText='Registrar'
+      zIndex={1070}
+      onClose={() => {
+        if ($(modalRef.current).hasClass('show')) $('body').addClass('modal-open')
+      }}
+    >
+      <div className='row'>
+        <div className='col-12'>
+          <h6 className='border-bottom pb-2 mb-3'><i className='mdi mdi-account-plus-outline me-1'></i> General</h6>
+        </div>
+        <div className='col-md-2 mb-3'>
+          <label className='form-label'>Tipo de Documento</label>
+          <select className='form-control' value={patientForm.document_type} onChange={(event) => updatePatientForm('document_type', event.target.value)}>
+            {identityDocumentTypes.map(type => <option key={`patient-document-type-${type}`} value={type}>{type}</option>)}
+          </select>
+        </div>
+        <div className='col-md-3 mb-3'>
+          <label className='form-label'>Documento</label>
+          <input className='form-control' value={patientForm.document_number} onChange={(event) => updatePatientForm('document_number', event.target.value)} />
+        </div>
+        <div className='col-md-3 mb-3'>
+          <label className='form-label'>Nombres</label>
+          <input className='form-control' value={patientForm.names} onChange={(event) => updatePatientForm('names', event.target.value)} />
+        </div>
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Apellidos</label>
+          <input className='form-control' value={patientForm.lastnames} onChange={(event) => updatePatientForm('lastnames', event.target.value)} />
+        </div>
+        <div className='col-md-5 mb-3'>
+          <label className='form-label'>Direccion</label>
+          <input className='form-control' value={patientForm.full_address} onChange={(event) => updatePatientForm('full_address', event.target.value)} />
+        </div>
+        <div className='col-md-3 mb-3'>
+          <label className='form-label'>Telefono</label>
+          <input className='form-control' value={patientForm.phone} onChange={(event) => updatePatientForm('phone', event.target.value)} />
+        </div>
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Fecha de nacimiento</label>
+          <input type='date' className='form-control' value={patientForm.birth_date} onChange={(event) => updatePatientForm('birth_date', event.target.value)} />
+        </div>
+        <div className='col-md-5 mb-3'>
+          <label className='form-label'>Correo</label>
+          <input type='email' className='form-control' value={patientForm.email} onChange={(event) => updatePatientForm('email', event.target.value)} />
+        </div>
+        <div className='col-md-3 mb-3'>
+          <label className='form-label'>RUC Empresa</label>
+          <input className='form-control' value={patientForm.company_ruc} onChange={(event) => updatePatientForm('company_ruc', event.target.value)} />
+        </div>
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Cargo</label>
+          <input className='form-control' value={patientForm.position} onChange={(event) => updatePatientForm('position', event.target.value)} />
+        </div>
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Sexo</label>
+          <select className='form-control' value={patientForm.sex} onChange={(event) => updatePatientForm('sex', event.target.value)}>
+            {patientSexOptions.map(option => <option key={`patient-sex-${option}`} value={option}>{option}</option>)}
+          </select>
+        </div>
+        <div className='col-md-4 mb-3'>
+          <label className='form-label'>Telefono 2</label>
+          <input className='form-control' value={patientForm.secondary_phone} onChange={(event) => updatePatientForm('secondary_phone', event.target.value)} />
         </div>
       </div>
     </Modal>

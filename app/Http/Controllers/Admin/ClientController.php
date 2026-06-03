@@ -133,6 +133,11 @@ class ClientController extends BasicController
         $districtSelect = $this->clientColumnSelect('district');
         $taxpayerStatusSelect = $this->clientColumnSelect('taxpayer_status');
         $taxLastUpdatedAtSelect = $this->clientColumnSelect('tax_last_updated_at');
+        $birthDateSelect = $this->clientColumnSelect('birth_date');
+        $secondaryPhoneSelect = $this->clientColumnSelect('secondary_phone');
+        $companyRucSelect = $this->clientColumnSelect('company_ruc');
+        $positionSelect = $this->clientColumnSelect('position');
+        $sexSelect = $this->clientColumnSelect('sex');
 
         $regularOrders = DB::table('commercial_orders')
             ->selectRaw('client_id AS customer_id, COUNT(*) AS purchase_count, MAX(issue_date) AS last_purchase_at, COALESCE(SUM(total), 0) AS purchase_total')
@@ -178,6 +183,11 @@ class ClientController extends BasicController
                 clients.primary_contact_phone,
                 clients.phone,
                 clients.phone_prefix,
+                {$birthDateSelect} AS birth_date,
+                {$secondaryPhoneSelect} AS secondary_phone,
+                {$companyRucSelect} AS company_ruc,
+                {$positionSelect} AS position,
+                {$sexSelect} AS sex,
                 clients.short_code,
                 clients.ubigeo,
                 clients.full_address,
@@ -241,6 +251,11 @@ class ClientController extends BasicController
                 NULL AS primary_contact_phone,
                 eventual_clients.phone,
                 eventual_clients.phone_prefix,
+                NULL AS birth_date,
+                NULL AS secondary_phone,
+                NULL AS company_ruc,
+                NULL AS position,
+                NULL AS sex,
                 NULL AS short_code,
                 NULL AS ubigeo,
                 eventual_clients.address AS full_address,
@@ -365,6 +380,23 @@ class ClientController extends BasicController
         $body['primary_contact_phone'] = trim((string)($body['primary_contact_phone'] ?? '')) ?: null;
         $body['phone'] = trim((string)($body['phone'] ?? '')) ?: null;
         $body['phone_prefix'] = trim((string)($body['phone_prefix'] ?? '')) ?: null;
+        $patientFields = [
+            'birth_date' => trim((string)($body['birth_date'] ?? '')) ?: null,
+            'secondary_phone' => trim((string)($body['secondary_phone'] ?? '')) ?: null,
+            'company_ruc' => preg_replace('/\D+/', '', (string)($body['company_ruc'] ?? '')) ?: null,
+            'position' => trim((string)($body['position'] ?? '')) ?: null,
+            'sex' => trim((string)($body['sex'] ?? '')) ?: null,
+        ];
+        if ($patientFields['birth_date'] !== null && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $patientFields['birth_date'])) {
+            throw new \Exception('La fecha de nacimiento no es valida');
+        }
+        foreach ($patientFields as $field => $value) {
+            if (Schema::hasColumn('clients', $field)) {
+                $body[$field] = $value;
+            } else {
+                unset($body[$field]);
+            }
+        }
         $body['short_code'] = trim((string)($body['short_code'] ?? '')) ?: null;
         $body['ubigeo'] = trim((string)($body['ubigeo'] ?? '')) ?: null;
         $body['full_address'] = trim((string)($body['full_address'] ?? ($body['fiscal_address'] ?? ''))) ?: null;

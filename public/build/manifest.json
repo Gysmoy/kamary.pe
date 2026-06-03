@@ -61,6 +61,15 @@
       "_Base-BRvgSGyI.js"
     ]
   },
+  "_ClientsRest-BV01W6VD.js": {
+    "file": "assets/ClientsRest-BV01W6VD.js",
+    "name": "ClientsRest",
+    "imports": [
+      "_BasicRest-DFEA_Zn9.js",
+      "_CreateReactScript-D9pmrPNT.js",
+      "_permissionScope-Be8AULz2.js"
+    ]
+  },
   "_CommercialOrdersRest-C6qYNIty.js": {
     "file": "assets/CommercialOrdersRest-C6qYNIty.js",
     "name": "CommercialOrdersRest",
@@ -567,7 +576,7 @@
     ]
   },
   "resources/js/Admin/Clients.jsx": {
-    "file": "assets/Clients-Chk0Laze.js",
+    "file": "assets/Clients-Bf7bF64f.js",
     "name": "Clients",
     "src": "resources/js/Admin/Clients.jsx",
     "isEntry": true,
@@ -583,12 +592,13 @@
       "_SelectFormGroup-BD_x98rO.js",
       "_TextareaFormGroup-XpRE9Dgn.js",
       "_UbigeoCascade-Dqder5kj.js",
-      "_BasicRest-DFEA_Zn9.js",
-      "_permissionScope-Be8AULz2.js",
+      "_ClientsRest-BV01W6VD.js",
       "_UsersRest-BZMaAeLY.js",
+      "_BasicRest-DFEA_Zn9.js",
       "_ubigeoInei-D0FnAslC.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_tippy-react.esm-C5v8zKfk.js"
+      "_tippy-react.esm-C5v8zKfk.js",
+      "_permissionScope-Be8AULz2.js"
     ]
   },
   "resources/js/Admin/Colors.jsx": {
@@ -1257,7 +1267,7 @@
     ]
   },
   "resources/js/Admin/Magistrales/Sales.jsx": {
-    "file": "assets/Sales-DhGp7sKa.js",
+    "file": "assets/Sales-TVf28xKB.js",
     "name": "Sales",
     "src": "resources/js/Admin/Magistrales/Sales.jsx",
     "isEntry": true,
@@ -1270,6 +1280,7 @@
       "_SwitchFormGroup-DB90iCKp.js",
       "_Stage4Rest-G0rxqFM8.js",
       "_BillingDocumentsRest-9ICP_cPk.js",
+      "_ClientsRest-BV01W6VD.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_magistralesRecordPdf-3WOZ63NV.js",
       "_setSwitchChecked-BcAIL3nj.js",

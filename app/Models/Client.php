@@ -27,6 +27,11 @@ class Client extends Model
         'primary_contact_phone',
         'phone',
         'phone_prefix',
+        'birth_date',
+        'secondary_phone',
+        'company_ruc',
+        'position',
+        'sex',
         'short_code',
         'ubigeo',
         'full_address',
@@ -59,6 +64,7 @@ class Client extends Model
         'has_storage_service' => 'boolean',
         'storage_tariff_enabled' => 'boolean',
         'contract_due_days' => 'integer',
+        'birth_date' => 'date',
     ];
 
     public function creator()
