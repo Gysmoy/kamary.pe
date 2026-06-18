@@ -28,11 +28,6 @@ class EntryNoteController extends BasicController
 
     private array $itemsPayload = [];
 
-    private function neutralBusinessScopePaths(): array
-    {
-        return ['/admin/entry-note'];
-    }
-
     private function listRelations(bool $isStorage): array
     {
         if ($isStorage) {
@@ -116,7 +111,8 @@ class EntryNoteController extends BasicController
             ->leftJoin('users as creator', 'creator.id', '=', 'entry_notes.created_by')
             ->leftJoin('users as updater', 'updater.id', '=', 'entry_notes.updated_by');
 
-        $scopeKey = BusinessScope::scopedKeyForRequest(request(), $this->neutralBusinessScopePaths());
+        $scopeKey = BusinessScope::scopedKeyForRequest(request())
+            ?: ($isStorage ? BusinessScope::KAMARY_MEDICALS : BusinessScope::KAMARY_PERU);
         $query->whereHas('business', function ($business) use ($scopeKey) {
             $business->whereIn('business_key', BusinessScope::fixedKeys());
             if ($scopeKey) $business->where('business_key', $scopeKey);
@@ -142,7 +138,7 @@ class EntryNoteController extends BasicController
         $documentType = trim((string)($body['document_type'] ?? 'Boleta'));
         $currency = trim((string)($body['currency'] ?? 'PEN'));
 
-        if (!$businessId) throw new \Exception('La empresa es obligatoria');
+        if (!$businessId && $isStorage) throw new \Exception('La empresa es obligatoria');
         if (!$warehouseId) throw new \Exception('El almacen es obligatorio');
         if ($documentType === '') throw new \Exception('El tipo de documento es obligatorio');
         if ($currency === '') throw new \Exception('La moneda es obligatoria');
@@ -165,7 +161,10 @@ class EntryNoteController extends BasicController
             }
         }
 
-        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request, $this->neutralBusinessScopePaths());
+        $business = $businessId
+            ? BusinessScope::findFixedBusinessForRequest($businessId, $request)
+            : $this->defaultBusiness($request);
+        $body['business_id'] = $business->id;
         $warehouse = Warehouse::findOrFail($warehouseId);
         $body['business_branch_id'] = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
         $body['supplier_id'] = ($supplierId === '' || is_null($supplierId)) ? null : (int)$supplierId;
@@ -310,7 +309,7 @@ class EntryNoteController extends BasicController
     {
         $response = new Response();
         try {
-            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request, $this->neutralBusinessScopePaths());
+            $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = $business->branches()->whereNotNull('status')->orderBy('name')->get(['id', 'business_id', 'name', 'status']);
@@ -519,6 +518,13 @@ class EntryNoteController extends BasicController
         $path = '/' . trim($request->path(), '/');
         $referer = (string)$request->headers->get('referer', '');
         return str_contains($path, '/storage/entry-notes') || str_contains($referer, '/storage-entry-note');
+    }
+
+    private function defaultBusiness(Request $request)
+    {
+        $business = BusinessScope::businessForKey(BusinessScope::keyFromRequestPath($request) ?: BusinessScope::KAMARY_PERU);
+        if (!$business) throw new \Exception('No se encontro la empresa del modulo actual');
+        return $business;
     }
 
     private function assertStorageLocationsAvailable(object $entryNote, iterable $items): void

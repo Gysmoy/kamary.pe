@@ -40,6 +40,7 @@ const toDateInput = (value) => {
 
 const clientLabel = (client) => [client?.document_number, client?.full_name].filter(Boolean).join(' | ')
 const warehouseBusinessId = (warehouse) => warehouse?.branch?.business_id || warehouse?.branch?.business?.id || ''
+const warehouseBranchId = (warehouse) => warehouse?.business_branch_id || warehouse?.branch?.id || ''
 const locationCodeFromValue = (value) => `${value ?? ''}`.split(',')[0].split('|')[0].trim()
 const storageLocationOptionLabel = (location) => [location?.temperature_range, location?.code].filter(Boolean).join(' - ')
 
@@ -90,7 +91,6 @@ const EntryNotes = () => {
   const lotSearchTextRef = useRef()
 
   const idRef = useRef()
-  const businessRef = useRef()
   const branchRef = useRef()
   const warehouseRef = useRef()
   const supplierRef = useRef()
@@ -326,12 +326,6 @@ const EntryNotes = () => {
     setSelectedSupplierId(supplierId)
     setCurrentStorageClientId(clientId)
 
-    if (!storageContext && businessId && data?.business?.name) {
-      SetSelectValue(businessRef.current, businessId, data.business.name)
-    } else if (!storageContext && businessRef.current) {
-      $(businessRef.current).empty().trigger('change')
-    }
-
     if (!storageContext && warehouseId && data?.warehouse?.name) {
       SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
     } else if (!storageContext && warehouseRef.current) {
@@ -399,7 +393,9 @@ const EntryNotes = () => {
 
     const formData = new FormData()
     if (idRef.current.value) formData.append('id', idRef.current.value)
-    formData.append('business_id', selectedBusinessId || storageOptions.businesses[0]?.id || '')
+    if (storageContext || selectedBusinessId) {
+      formData.append('business_id', selectedBusinessId || storageOptions.businesses[0]?.id || '')
+    }
     formData.append('business_branch_id', selectedBranchId || '')
     formData.append('warehouse_id', selectedWarehouseId || '')
     formData.append('supplier_id', storageContext ? '' : (selectedSupplierId || ''))
@@ -484,23 +480,24 @@ const EntryNotes = () => {
     $(gridRef.current).dxDataGrid('instance').refresh()
   }
 
-  const onBusinessChanged = async (e) => {
-    const businessId = e.target.value || ''
-    setSelectedBusinessId(businessId)
-    setSelectedWarehouseId('')
-    if (warehouseRef.current) $(warehouseRef.current).empty().trigger('change')
-    setItems(prev => prev.map(item => ({ ...item, warehouse_id: '', stock: 0, location: storageContext ? item.location : '' })))
-    await Promise.all([
-      loadBranches(businessId, null),
-      loadWarehouses(businessId),
-    ])
-  }
-
   const onWarehouseChanged = async (e) => {
     const warehouseId = e.target.value || ''
     const selected = $(e.target).select2('data')?.[0]
+    const warehouse = selected?.data ?? null
     const warehouseLabel = warehouseLocationLabel(warehouseId, selected?.text)
+    const businessId = warehouseBusinessId(warehouse)
+    const branchId = warehouseBranchId(warehouse)
+
     setSelectedWarehouseId(warehouseId)
+    if (!storageContext && (warehouse || !warehouseId)) {
+      setSelectedBusinessId(businessId ? `${businessId}` : '')
+      if (businessId) {
+        await loadBranches(businessId, branchId || null)
+      } else {
+        setBranches([])
+        setSelectedBranchId('')
+      }
+    }
     const updatedItems = items.map(item => ({
       ...item,
       warehouse_id: warehouseId,
@@ -696,8 +693,8 @@ const EntryNotes = () => {
   }
 
   const onCreateBatchForItem = async (uid) => {
-    if (!selectedBusinessId) {
-      await Swal.fire({ icon: 'warning', title: 'Empresa requerida', text: 'Selecciona la empresa antes de crear un lote' })
+    if (storageContext && !selectedBusinessId) {
+      await Swal.fire({ icon: 'warning', title: 'Empresa requerida', text: 'No se pudo determinar la empresa del modulo de almacenamiento' })
       return
     }
     if (storageContext && !currentStorageClientId()) {
@@ -720,18 +717,20 @@ const EntryNotes = () => {
 
   const onCreateBatchModalSubmit = async (e) => {
     e.preventDefault()
-    if (!selectedBusinessId) return
+    if (storageContext && !selectedBusinessId) return
 
     const lot = (createBatchLotRef.current?.value ?? '').trim()
     const expiration = createBatchExpirationRef.current?.value ?? ''
     if (!createBatchArticleId || !lot || !expiration) return
 
-    const createdBatch = await entryNotesRest.createBatch({
-      business_id: selectedBusinessId,
+    const request = {
       article_id: createBatchArticleId,
       lot,
       expiration_date: expiration,
-    })
+    }
+    if (selectedBusinessId) request.business_id = selectedBusinessId
+
+    const createdBatch = await entryNotesRest.createBatch(request)
     if (!createdBatch?.id) return
 
     const selectedArticle = $(createBatchArticleRef.current).select2('data')?.[0] ?? null
@@ -1164,12 +1163,11 @@ const EntryNotes = () => {
   const standardColumns = [
     { dataField: 'id', caption: 'ID', visible: false },
     {
-      dataField: 'business.name',
-      caption: 'Empresa',
-      minWidth: 150,
-      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business?.name, () => onModalOpen(data), 'Editar nota de entrada')
+      dataField: 'branch.name',
+      caption: 'Sede',
+      minWidth: 140,
+      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.branch?.name, () => onModalOpen(data), 'Editar nota de entrada')
     },
-    { dataField: 'branch.name', caption: 'Sede', minWidth: 140 },
     { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 140 },
     { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 200 },
     { dataField: 'document_type', caption: 'Tipo doc', width: 110 },
@@ -1595,20 +1593,10 @@ const EntryNotes = () => {
       <fieldset className='row' id='entry-note-form-container' disabled={isViewing}>
         <input ref={idRef} type='hidden' />
 
-        <SelectAPIFormGroup
-          eRef={businessRef}
-          label='Empresa'
-          col='col-md-3'
-          required
-          searchAPI='/api/admin/businesses/paginate'
-          searchBy='name'
-          dropdownParent='#entry-note-form-container'
-          onChange={onBusinessChanged}
-        />
         <SelectFormGroup
           eRef={branchRef}
           label='Sede'
-          col='col-md-3'
+          col='col-md-4'
           dropdownParent='#entry-note-form-container'
           value={selectedBranchId}
           onChange={(e) => setSelectedBranchId(e.target.value)}
@@ -1620,18 +1608,17 @@ const EntryNotes = () => {
         <SelectAPIFormGroup
           eRef={warehouseRef}
           label='Almacen'
-          col='col-md-3'
+          col='col-md-4'
           required
           searchAPI='/api/admin/warehouses/paginate'
           searchBy='name'
-          filter={selectedBusinessId ? ['branch.business_id', '=', Number(selectedBusinessId)] : undefined}
           dropdownParent='#entry-note-form-container'
           onChange={onWarehouseChanged}
         />
         <SelectAPIFormGroup
           eRef={supplierRef}
           label='Proveedor'
-          col='col-md-3'
+          col='col-md-4'
           searchAPI='/api/admin/suppliers/paginate'
           searchBy='business_name'
           dropdownParent='#entry-note-form-container'

@@ -47,12 +47,14 @@ class ExitNoteController extends BasicController
             ->join('users as creator', 'creator.id', '=', 'exit_notes.created_by')
             ->join('users as updater', 'updater.id', '=', 'exit_notes.updated_by');
 
-        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $isStorage = $this->isStorageRequest(request());
+        $scopeKey = BusinessScope::scopedKeyForRequest(request())
+            ?: ($isStorage ? BusinessScope::KAMARY_MEDICALS : BusinessScope::KAMARY_PERU);
         $query->whereHas('business', function ($business) use ($scopeKey) {
             $business->whereIn('business_key', BusinessScope::fixedKeys());
             if ($scopeKey) $business->where('business_key', $scopeKey);
         });
-        if ($this->isStorageRequest(request())) {
+        if ($isStorage) {
             $query->whereHas('client', fn($client) => StorageScope::applyClientScope($client, 'clients'));
         }
 
@@ -82,7 +84,7 @@ class ExitNoteController extends BasicController
             $clientId = $client?->id;
         }
 
-        if (!$businessId) throw new \Exception('La empresa es obligatoria');
+        if (!$businessId && $isStorage) throw new \Exception('La empresa es obligatoria');
         if (!$warehouseId) throw new \Exception('El almacen es obligatorio');
         if ($isStorage) {
             if (!$clientId) throw new \Exception('El cliente es obligatorio');
@@ -102,9 +104,12 @@ class ExitNoteController extends BasicController
             }
         }
 
-        $business = BusinessScope::findFixedBusinessForRequest($businessId, $request);
+        $business = $businessId
+            ? BusinessScope::findFixedBusinessForRequest($businessId, $request)
+            : $this->defaultBusiness($request);
         $warehouse = Warehouse::findOrFail($warehouseId);
 
+        $body['business_id'] = $business->id;
         $body['business_branch_id'] = BusinessScope::branchIdFromWarehouse($business, $warehouse, $branchId);
         $body['client_id'] = $clientId;
         unset($body['client_document_number']);
@@ -470,6 +475,13 @@ class ExitNoteController extends BasicController
         $path = '/' . trim($request->path(), '/');
         $referer = (string)$request->headers->get('referer', '');
         return str_contains($path, '/storage/exit-notes') || str_contains($referer, '/storage-exit-note');
+    }
+
+    private function defaultBusiness(Request $request)
+    {
+        $business = BusinessScope::businessForKey(BusinessScope::keyFromRequestPath($request) ?: BusinessScope::KAMARY_PERU);
+        if (!$business) throw new \Exception('No se encontro la empresa del modulo actual');
+        return $business;
     }
 
     private function stockReservationKey(int $articleId, int $warehouseId, string $lot, ?string $expirationDate, string $location): string

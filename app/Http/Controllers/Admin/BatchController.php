@@ -37,11 +37,9 @@ class BatchController extends BasicController
             ->join('users as creator', 'creator.id', '=', 'batches.created_by')
             ->join('users as updater', 'updater.id', '=', 'batches.updated_by');
 
-        $scopeKey = BusinessScope::scopedKeyForRequest(request());
+        $scopeKey = BusinessScope::scopedKeyForRequest(request()) ?: BusinessScope::KAMARY_PERU;
         $query->whereIn('business.business_key', BusinessScope::fixedKeys());
-        if ($scopeKey) {
-            $query->where('business.business_key', $scopeKey);
-        }
+        $query->where('business.business_key', $scopeKey);
 
         return $query;
     }
@@ -215,12 +213,14 @@ class BatchController extends BasicController
         $lot = trim((string)($body['lot'] ?? ''));
         $expirationDate = $this->normalizeDate($body['expiration_date'] ?? null);
 
-        if (!$businessId) throw new \Exception('La empresa es obligatoria');
         if (!$articleId) throw new \Exception('El articulo es obligatorio');
         if ($lot === '') throw new \Exception('El lote es obligatorio');
         if (!$expirationDate) throw new \Exception('La fecha de vencimiento es obligatoria');
 
-        BusinessScope::findFixedBusinessForRequest($businessId, $request);
+        $business = $businessId
+            ? BusinessScope::findFixedBusinessForRequest($businessId, $request)
+            : $this->defaultBusiness($request);
+        $businessId = $business->id;
         Article::findOrFail($articleId);
 
         $exists = Batch::where('business_id', $businessId)
@@ -237,6 +237,7 @@ class BatchController extends BasicController
             $body['status'] = true;
         }
         $body['updated_by'] = $userId;
+        $body['business_id'] = $businessId;
         $body['lot'] = $lot;
         $body['expiration_date'] = $expirationDate;
 
@@ -246,6 +247,13 @@ class BatchController extends BasicController
     public function afterSave(Request $request, object $jpa, bool $isNew)
     {
         return $jpa;
+    }
+
+    private function defaultBusiness(Request $request)
+    {
+        $business = BusinessScope::businessForKey(BusinessScope::keyFromRequestPath($request) ?: BusinessScope::KAMARY_PERU);
+        if (!$business) throw new \Exception('No se encontro la empresa del modulo actual');
+        return $business;
     }
 
     public function boolean(Request $request)

@@ -77,20 +77,17 @@ const Batches = () => {
   const importFileRef = useRef()
 
   const idRef = useRef()
-  const businessRef = useRef()
   const articleRef = useRef()
   const lotRef = useRef()
   const expirationDateRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
-  const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedArticleId, setSelectedArticleId] = useState('')
   const [isImporting, setIsImporting] = useState(false)
   const [importRows, setImportRows] = useState([])
   const [importHeaders, setImportHeaders] = useState([])
   const [importFileName, setImportFileName] = useState('')
   const [mapping, setMapping] = useState({
-    business: '',
     article: '',
     lot: '',
     expiration_date: '',
@@ -104,16 +101,8 @@ const Batches = () => {
     lotRef.current.value = data?.lot ?? ''
     expirationDateRef.current.value = (data?.expiration_date ?? '').toString().slice(0, 10)
 
-    const businessId = data?.business_id ? `${data.business_id}` : ''
     const articleId = data?.article_id ? `${data.article_id}` : ''
-    setSelectedBusinessId(businessId)
     setSelectedArticleId(articleId)
-
-    if (businessId && data?.business?.name) {
-      SetSelectValue(businessRef.current, businessId, data.business.name)
-    } else {
-      $(businessRef.current).empty().trigger('change')
-    }
 
     if (articleId && data?.article?.name) {
       const articleLabel = `${data.article.code ?? ''} ${data.article.name ?? ''}`.trim()
@@ -130,7 +119,6 @@ const Batches = () => {
 
     const request = {
       id: idRef.current.value || undefined,
-      business_id: selectedBusinessId || null,
       article_id: selectedArticleId || null,
       lot: lotRef.current.value.trim(),
       expiration_date: expirationDateRef.current.value || null,
@@ -169,7 +157,6 @@ const Batches = () => {
     setImportHeaders([])
     setImportFileName('')
     setMapping({
-      business: '',
       article: '',
       lot: '',
       expiration_date: '',
@@ -187,7 +174,6 @@ const Batches = () => {
     const findByNames = (candidates) => withNorm.find(({ norm }) => candidates.includes(norm))?.header ?? ''
 
     return {
-      business: findByNames(['empresa', 'business', 'compania', 'company']),
       article: findByNames(['articulo', 'article', 'codigo', 'code', 'descripcion', 'description']),
       lot: findByNames(['lote', 'lot', 'batch']),
       expiration_date: findByNames(['fechavencimiento', 'vencimiento', 'expirationdate', 'expirydate', 'fechaexpiracion']),
@@ -218,7 +204,6 @@ const Batches = () => {
       setImportHeaders([])
       setImportFileName('')
       setMapping({
-        business: '',
         article: '',
         lot: '',
         expiration_date: '',
@@ -269,7 +254,6 @@ const Batches = () => {
 
   const previewRows = importRows.slice(0, 5).map((row, idx) => ({
     row: idx + 1,
-    business: mapping.business ? (row[mapping.business] ?? '') : '',
     article: mapping.article ? (row[mapping.article] ?? '') : '',
     lot: mapping.lot ? (row[mapping.lot] ?? '') : '',
     expirationDate: mapping.expiration_date ? (row[mapping.expiration_date] ?? '') : '',
@@ -313,12 +297,11 @@ const Batches = () => {
       columns={[
         { dataField: 'id', caption: 'ID', visible: false },
         {
-          dataField: 'business.name',
-          caption: 'Empresa',
-          minWidth: 180,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business?.name, () => onModalOpen(data), 'Editar lote')
+          dataField: 'article.code',
+          caption: 'Cod. articulo',
+          width: '130px',
+          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.article?.code, () => onModalOpen(data), 'Editar lote')
         },
-        { dataField: 'article.code', caption: 'Cod. articulo', width: '130px' },
         { dataField: 'article.name', caption: 'Articulo', minWidth: 220 },
         { dataField: 'lot', caption: 'Lote', width: '140px' },
         { dataField: 'expiration_date', caption: 'F. vencimiento', dataType: 'date', width: '140px' },
@@ -378,20 +361,9 @@ const Batches = () => {
         <input ref={idRef} type='hidden' />
 
         <SelectAPIFormGroup
-          eRef={businessRef}
-          label='Empresa'
-          col='col-md-6'
-          required
-          searchAPI='/api/admin/businesses/paginate'
-          searchBy='name'
-          dropdownParent='#batch-form-container'
-          onChange={(e) => setSelectedBusinessId(e.target.value || '')}
-        />
-
-        <SelectAPIFormGroup
           eRef={articleRef}
           label='Articulo'
-          col='col-md-6'
+          col='col-md-12'
           required
           searchAPI='/api/admin/articles/paginate'
           searchBy='name'
@@ -424,21 +396,14 @@ const Batches = () => {
           {importFileName && <div className='mt-1'><small className='text-muted'>Archivo: {importFileName} ({importRows.length} filas)</small></div>}
         </div>
 
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Empresa</label>
-          <select className='form-control' value={mapping.business} onChange={(e) => setMapping(prev => ({ ...prev, business: e.target.value }))}>
-            <option value=''>Seleccionar...</option>
-            {importHeaders.map(header => <option key={`business-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-4 mb-2'>
+        <div className='col-md-6 mb-2'>
           <label className='form-label'>Articulo *</label>
           <select className='form-control' value={mapping.article} onChange={(e) => setMapping(prev => ({ ...prev, article: e.target.value }))}>
             <option value=''>Seleccionar...</option>
             {importHeaders.map(header => <option key={`article-${header}`} value={header}>{header}</option>)}
           </select>
         </div>
-        <div className='col-md-4 mb-2'>
+        <div className='col-md-6 mb-2'>
           <label className='form-label'>Lote *</label>
           <select className='form-control' value={mapping.lot} onChange={(e) => setMapping(prev => ({ ...prev, lot: e.target.value }))}>
             <option value=''>Seleccionar...</option>
@@ -467,7 +432,6 @@ const Batches = () => {
               <thead>
                 <tr>
                   <th>#</th>
-                  <th>Empresa</th>
                   <th>Articulo</th>
                   <th>Lote</th>
                   <th>F. vencimiento</th>
@@ -477,13 +441,12 @@ const Batches = () => {
               <tbody>
                 {previewRows.length === 0 && (
                   <tr>
-                    <td colSpan={6} className='text-center text-muted'>Sin datos para previsualizar</td>
+                    <td colSpan={5} className='text-center text-muted'>Sin datos para previsualizar</td>
                   </tr>
                 )}
                 {previewRows.map(item => (
                   <tr key={`preview-${item.row}`}>
                     <td>{item.row}</td>
-                    <td>{item.business?.toString?.() ?? ''}</td>
                     <td>{item.article?.toString?.() ?? ''}</td>
                     <td>{item.lot?.toString?.() ?? ''}</td>
                     <td>{item.expirationDate?.toString?.() ?? ''}</td>

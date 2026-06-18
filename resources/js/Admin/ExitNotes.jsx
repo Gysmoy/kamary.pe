@@ -133,7 +133,6 @@ const ExitNotes = () => {
   const stockSearchTextRef = useRef()
 
   const idRef = useRef()
-  const businessRef = useRef()
   const branchRef = useRef()
   const warehouseRef = useRef()
   const clientNameRef = useRef()
@@ -255,6 +254,25 @@ const ExitNotes = () => {
     await syncWarehouseContext(warehouseId)
   }
 
+  const onWarehouseChanged = async (e) => {
+    const warehouseId = e.target.value || ''
+    const selected = $(e.target).select2('data')?.[0]
+    const warehouse = selected?.data ?? null
+    const businessId = warehouseBusinessId(warehouse)
+    const branchId = warehouseBranchId(warehouse)
+
+    setSelectedWarehouseId(warehouseId)
+    if (warehouse || !warehouseId) {
+      setSelectedBusinessId(businessId ? `${businessId}` : '')
+      if (businessId) {
+        await loadBranches(businessId, branchId || null)
+      } else {
+        setBranches([])
+        setSelectedBranchId('')
+      }
+    }
+  }
+
   const onModalOpen = async (data = null) => {
     setIsEditing(!!data?.id)
 
@@ -279,11 +297,6 @@ const ExitNotes = () => {
     if (storageContext) {
       await syncWarehouseContext(warehouseId, currentWarehouses)
     } else {
-      if (businessId && data?.business?.name) {
-        SetSelectValue(businessRef.current, businessId, data.business.name)
-      } else {
-        $(businessRef.current).empty().trigger('change')
-      }
       if (warehouseId && data?.warehouse?.name) {
         SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
       } else {
@@ -340,7 +353,7 @@ const ExitNotes = () => {
       : ''
     const request = {
       id: idRef.current.value || undefined,
-      business_id: selectedBusinessId || null,
+      business_id: (storageContext || selectedBusinessId) ? (selectedBusinessId || null) : undefined,
       business_branch_id: selectedBranchId || null,
       warehouse_id: selectedWarehouseId || null,
       client_id: storageContext ? currentClientId || null : undefined,
@@ -427,12 +440,6 @@ const ExitNotes = () => {
     const result = await exitNotesRest.delete(id)
     if (!result) return
     $(gridRef.current).dxDataGrid('instance').refresh()
-  }
-
-  const onBusinessChanged = async (e) => {
-    const businessId = e.target.value || ''
-    setSelectedBusinessId(businessId)
-    await loadBranches(businessId, null)
   }
 
   const addMotive = () => {
@@ -546,8 +553,8 @@ const ExitNotes = () => {
 
   const onCreateBatchForItem = async (uid) => {
     const currentItem = items.find(item => item.uid === uid)
-    if (!selectedBusinessId) {
-      await Swal.fire({ icon: 'warning', title: 'Empresa requerida', text: 'Selecciona la empresa antes de crear un lote' })
+    if (storageContext && !selectedBusinessId) {
+      await Swal.fire({ icon: 'warning', title: 'Empresa requerida', text: 'No se pudo determinar la empresa del modulo de almacenamiento' })
       return
     }
     if (!currentItem?.article_id) {
@@ -581,13 +588,16 @@ const ExitNotes = () => {
     })
 
     if (!formValues) return
+    if (storageContext && !selectedBusinessId) return
 
-    const createdBatch = await exitNotesRest.createBatch({
-      business_id: selectedBusinessId,
+    const request = {
       article_id: currentItem.article_id,
       lot: formValues.lot,
       expiration_date: formValues.expiration,
-    })
+    }
+    if (selectedBusinessId) request.business_id = selectedBusinessId
+
+    const createdBatch = await exitNotesRest.createBatch(request)
     if (!createdBatch?.id) return
 
     setItems(prev => prev.map(item => item.uid === uid ? {
@@ -798,12 +808,11 @@ const ExitNotes = () => {
   const standardColumns = [
     { dataField: 'id', caption: 'ID', visible: false },
     {
-      dataField: 'business.name',
-      caption: 'Empresa',
-      minWidth: 150,
-      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.business?.name, () => onModalOpen(data), 'Editar nota de salida')
+      dataField: 'branch.name',
+      caption: 'Sede',
+      minWidth: 140,
+      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.branch?.name, () => onModalOpen(data), 'Editar nota de salida')
     },
-    { dataField: 'branch.name', caption: 'Sede', minWidth: 140 },
     { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 140 },
     { dataField: 'client_name', caption: 'Cliente', minWidth: 180 },
     { dataField: 'motives', caption: 'Motivos', minWidth: 220, cellTemplate: (container, { data }) => container.text((data?.motives ?? []).join(', ')) },
@@ -1047,13 +1056,12 @@ const ExitNotes = () => {
             </div>
           </div>
         </> : <div className='row'>
-          <SelectAPIFormGroup eRef={businessRef} label='Empresa' col='col-md-3' required searchAPI='/api/admin/businesses/paginate' searchBy='name' dropdownParent='#exit-note-form-container' onChange={onBusinessChanged} />
-          <SelectFormGroup eRef={branchRef} label='Sede' col='col-md-3' dropdownParent='#exit-note-form-container' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)} effectWith={[selectedBranchId, branches.length]}>
+          <SelectFormGroup eRef={branchRef} label='Sede' col='col-md-4' dropdownParent='#exit-note-form-container' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)} effectWith={[selectedBranchId, branches.length]}>
             <option value=''>-- Seleccionar sede --</option>
             {branches.map(branch => <option key={`exit-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
           </SelectFormGroup>
-          <SelectAPIFormGroup eRef={warehouseRef} label='Almacen' col='col-md-3' required searchAPI='/api/admin/warehouses/paginate' searchBy='name' dropdownParent='#exit-note-form-container' onChange={(e) => setSelectedWarehouseId(e.target.value || '')} />
-          <InputFormGroup eRef={clientNameRef} label='Cliente' col='col-md-3' />
+          <SelectAPIFormGroup eRef={warehouseRef} label='Almacen' col='col-md-4' required searchAPI='/api/admin/warehouses/paginate' searchBy='name' dropdownParent='#exit-note-form-container' onChange={onWarehouseChanged} />
+          <InputFormGroup eRef={clientNameRef} label='Cliente' col='col-md-4' />
 
           <div className='form-group col-md-8 mb-2'>
             <label className='form-label'>Motivos</label>
