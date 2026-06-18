@@ -4,6 +4,15 @@ import MenuItem from './Menu/MenuItem'
 import MenuItemContainer from './Menu/MenuItemContainer'
 import LaravelSession from '../../Utils/LaravelSession'
 
+const BusinessHeading = ({ children, spaced = false }) => (
+  <li className={`side-nav-item menu-business-section ${spaced ? 'menu-business-section-spaced' : ''}`.trim()}>
+    <div className='menu-business-heading'>
+      <span className='menu-business-heading-line'></span>
+      <span className='menu-business-heading-text'>{children}</span>
+    </div>
+  </li>
+)
+
 const Menu = ({ can, hasRole, panel = null }) => {
   const mainRole = LaravelSession.roles?.[0] ?? { name: 'User' }
 
@@ -173,7 +182,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
             </MenuItemContainer>
           )}
 
-          {canAccessAny(...kamaryPeruPermissions) && <li className='menu-business-heading'>KAMARY PERU SAC</li>}
+          {canAccessAny(...kamaryPeruPermissions) && <BusinessHeading>KAMARY PERU SAC</BusinessHeading>}
 
           {canAccessAny('businesses', 'articles', 'inventory', 'kardex', 'laboratories', 'batches', 'entry-note', 'exit-note', 'suppliers', 'units-of-measure') && (
             <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
@@ -267,7 +276,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
             </MenuItemContainer>
           )}
 
-          {canAccessAny(...kamaryMedicalPermissions) && <li className='menu-business-heading menu-business-heading-spaced'>KAMARY MEDICAL SAC</li>}
+          {canAccessAny(...kamaryMedicalPermissions) && <BusinessHeading spaced>KAMARY MEDICAL SAC</BusinessHeading>}
 
           {canAccessAny(...kamaryMedicalPermissions) && (
             <MenuItemContainer title='Serv. Almacenamiento' icon='ti ti-building-warehouse'>
