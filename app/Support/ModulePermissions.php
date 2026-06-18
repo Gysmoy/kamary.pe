@@ -56,6 +56,7 @@ class ModulePermissions
             'storage-general-service' => 'Serv. Almacenamiento - Servicio General',
             'storage-billing-control' => 'Serv. Almacenamiento - Control de Facturacion',
             'storage-general-service-orders' => 'Serv. Almacenamiento - O. Servicio General',
+            'storage-api-tokens' => 'Serv. Almacenamiento - Tokens acceso API',
 
             'activity' => 'Despacho - Actividad',
             'driver' => 'Despacho - Conductor',
@@ -136,6 +137,7 @@ class ModulePermissions
             ['permission' => 'storage-general-service', 'web' => '/admin/storage-general-service', 'label' => 'Servicio General'],
             ['permission' => 'storage-billing-control', 'web' => '/admin/storage-billing-control', 'label' => 'Control de Facturacion'],
             ['permission' => 'storage-general-service-orders', 'web' => '/admin/storage-general-service-orders', 'label' => 'O. Servicio General'],
+            ['permission' => 'storage-api-tokens', 'web' => '/admin/storage-api-tokens', 'label' => 'Tokens acceso API'],
 
             ['permission' => 'activity', 'web' => '/admin/activity', 'label' => 'Actividad'],
             ['permission' => 'driver', 'web' => '/admin/driver', 'label' => 'Conductor'],

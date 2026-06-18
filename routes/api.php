@@ -68,6 +68,7 @@ use App\Http\Controllers\Admin\Storage\KardexController as AdminStorageKardexCon
 use App\Http\Controllers\Admin\Storage\ProductController as AdminStorageProductController;
 use App\Http\Controllers\Admin\Storage\ServiceOrderController as AdminStorageServiceOrderController;
 use App\Http\Controllers\Admin\Storage\UnitController as AdminStorageUnitController;
+use App\Http\Controllers\Admin\Storage\ApiTokenController as AdminStorageApiTokenController;
 use App\Http\Controllers\Admin\ServiceCatalogController as AdminServiceCatalogController;
 use App\Http\Controllers\Admin\ServiceClientController as AdminServiceClientController;
 use App\Http\Controllers\Admin\ServiceOrderController as AdminServiceOrderController;
@@ -82,6 +83,7 @@ use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\UnitController as AdminUnitController;
 use App\Http\Controllers\Admin\WarehouseController as AdminWarehouseController;
+use App\Http\Controllers\External\StorageApiController;
 use App\Http\Controllers\Integrations\EcomsurController;
 use App\Http\Controllers\Integrations\MultivendeWebhookController;
 
@@ -106,6 +108,15 @@ Route::prefix('integrations')->group(function () {
     Route::post('/ecomsur/logistic-orders', [EcomsurController::class, 'logisticOrders']);
     Route::post('/ecomsur/stock', [EcomsurController::class, 'stock']);
     Route::post('/multivende/webhook', MultivendeWebhookController::class);
+});
+
+Route::prefix('external/storage')->group(function () {
+    Route::get('/me', [StorageApiController::class, 'me'])->middleware('storage.api.token');
+    Route::get('/stock', [StorageApiController::class, 'stock'])->middleware('storage.api.token:stock:read');
+    Route::post('/orders', [StorageApiController::class, 'createOrder'])->middleware('storage.api.token:orders:write');
+    Route::get('/orders/{reference}', [StorageApiController::class, 'order'])
+        ->middleware('storage.api.token:orders:read')
+        ->where('reference', '.*');
 });
 
 Route::middleware('auth')->group(function () {
@@ -426,7 +437,7 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::prefix('storage')->group(function () {
-            $storageAny = 'module.permission:storage-inventory,storage-clients,storage-service-orders,storage-units,storage-products,storage-entry-note,storage-exit-note,storage-kardex,storage-general-service,storage-billing-control,storage-general-service-orders';
+            $storageAny = 'module.permission:storage-inventory,storage-clients,storage-service-orders,storage-units,storage-products,storage-entry-note,storage-exit-note,storage-kardex,storage-general-service,storage-billing-control,storage-general-service-orders,storage-api-tokens';
 
             Route::middleware('module.permission:storage-inventory')->group(function () {
                 Route::get('/inventory/options', [AdminStorageInventoryController::class, 'options']);
@@ -565,6 +576,15 @@ Route::middleware('auth')->group(function () {
                 Route::patch('/general-service-orders/{field}', [AdminStorageGeneralServiceOrderController::class, 'boolean']);
                 Route::delete('/general-service-orders/{id}', [AdminStorageGeneralServiceOrderController::class, 'delete']);
                 Route::get('/general-service-orders/businesses/{id}/branches', [AdminStorageGeneralServiceOrderController::class, 'branches']);
+            });
+
+            Route::middleware('module.permission:storage-api-tokens')->group(function () {
+                Route::post('/api-tokens', [AdminStorageApiTokenController::class, 'save']);
+                Route::post('/api-tokens/paginate', [AdminStorageApiTokenController::class, 'paginate']);
+                Route::patch('/api-tokens/{field}', [AdminStorageApiTokenController::class, 'boolean']);
+                Route::delete('/api-tokens/{id}', [AdminStorageApiTokenController::class, 'delete']);
+                Route::get('/api-tokens/{id}/reveal', [AdminStorageApiTokenController::class, 'reveal']);
+                Route::post('/api-tokens/{id}/renew', [AdminStorageApiTokenController::class, 'renew']);
             });
         });
 

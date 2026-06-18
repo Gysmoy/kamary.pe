@@ -15,6 +15,10 @@ return [
         'default_unit_id' => env('ECOMSUR_DEFAULT_UNIT_ID'),
     ],
 
+    'storage_client_api' => [
+        'system_user_id' => env('STORAGE_CLIENT_API_SYSTEM_USER_ID', 1),
+    ],
+
     'multivende' => [
         'base_url' => env('MULTIVENDE_BASE_URL', 'https://app.multivende.com'),
         'client_id' => env('MULTIVENDE_CLIENT_ID'),

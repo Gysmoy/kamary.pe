@@ -25,6 +25,10 @@ class ExitNote extends Model
         'observations',
         'status',
         'exit_status',
+        'external_source',
+        'external_reference',
+        'external_payload',
+        'storage_api_token_id',
         'created_by',
         'updated_by',
     ];
@@ -34,6 +38,7 @@ class ExitNote extends Model
         'status' => 'boolean',
         'exit_date' => 'date',
         'document_date' => 'date',
+        'external_payload' => 'array',
     ];
 
     public function business()
@@ -54,6 +59,11 @@ class ExitNote extends Model
     public function client()
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function storageApiToken()
+    {
+        return $this->belongsTo(StorageApiToken::class);
     }
 
     public function items()

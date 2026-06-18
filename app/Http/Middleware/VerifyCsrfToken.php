@@ -12,6 +12,8 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        '/api/culqi/webhook'
+        '/api/culqi/webhook',
+        '/api/external/storage/*',
+        'api/external/storage/*',
     ];
 }

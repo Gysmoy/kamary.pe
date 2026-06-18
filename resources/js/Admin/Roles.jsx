@@ -47,7 +47,8 @@ const STORAGE_MENU_PERMISSIONS = [
   'storage-kardex',
   'storage-general-service',
   'storage-billing-control',
-  'storage-general-service-orders'
+  'storage-general-service-orders',
+  'storage-api-tokens'
 ]
 
 const HIDDEN_PERMISSION_NAMES = ['client-distribution']
@@ -114,7 +115,7 @@ const PERMISSION_GROUPS = [
   {
     key: 'almacenamiento',
     title: 'Serv. Almacenamiento',
-    permissions: ['storage-inventory', 'storage-clients', 'storage-service-orders', 'storage-units', 'storage-products', 'storage-entry-note', 'storage-exit-note', 'storage-kardex', 'storage-general-service', 'storage-billing-control', 'storage-general-service-orders']
+    permissions: ['storage-inventory', 'storage-clients', 'storage-service-orders', 'storage-units', 'storage-products', 'storage-entry-note', 'storage-exit-note', 'storage-kardex', 'storage-general-service', 'storage-billing-control', 'storage-general-service-orders', 'storage-api-tokens']
   },
   {
     key: 'despacho',

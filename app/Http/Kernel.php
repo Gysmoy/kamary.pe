@@ -79,6 +79,7 @@ class Kernel extends HttpKernel
         'admin.permission' => \App\Http\Middleware\EnsureAdminPermissionForPath::class,
         'internal.token' => \App\Http\Middleware\EnsureInternalRouteToken::class,
         'module.permission' => \App\Http\Middleware\EnsureModulePermission::class,
+        'storage.api.token' => \App\Http\Middleware\AuthenticateStorageApiToken::class,
         'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
         'precognitive' => \Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests::class,
         'signed' => \App\Http\Middleware\ValidateSignature::class,

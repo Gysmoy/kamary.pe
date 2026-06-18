@@ -36,6 +36,7 @@ use App\Http\Controllers\Admin\Storage\KardexController as AdminStorageKardexCon
 use App\Http\Controllers\Admin\Storage\ProductController as AdminStorageProductController;
 use App\Http\Controllers\Admin\Storage\ServiceOrderController as AdminStorageServiceOrderController;
 use App\Http\Controllers\Admin\Storage\UnitController as AdminStorageUnitController;
+use App\Http\Controllers\Admin\Storage\ApiTokenController as AdminStorageApiTokenController;
 use App\Http\Controllers\Admin\AccountController as AdminAccountController;
 use App\Http\Controllers\Admin\ActivityController as AdminActivityController;
 use App\Http\Controllers\Admin\ArticleController as AdminArticleController;
@@ -108,6 +109,7 @@ Route::get('/confirmation/{token}', [AuthController::class, 'loginView'])->name(
 
 Route::get('/unsubscribe', [MailingController::class, 'reactView'])->name('Unsubscribe.jsx');
 Route::get('/v/{document}/{token}', [BillingDocumentVerificationController::class, 'show'])->name('billing-documents.verify');
+Route::view('/api-docs/storage', 'api-docs.storage')->name('api-docs.storage');
 
 Route::middleware('auth')->group(function () {
     Route::get('/comercial/tomapedido', [AdminTakeOrderController::class, 'reactView'])->middleware('module.permission:take-orders');
@@ -184,6 +186,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/storage-general-service', [AdminStorageGeneralServiceController::class, 'reactView'])->middleware('module.permission:storage-general-service');
         Route::get('/storage-billing-control', [AdminStorageBillingControlController::class, 'reactView'])->middleware('module.permission:storage-billing-control');
         Route::get('/storage-general-service-orders', [AdminStorageGeneralServiceOrderController::class, 'reactView'])->middleware('module.permission:storage-general-service-orders');
+        Route::get('/storage-api-tokens', [AdminStorageApiTokenController::class, 'reactView'])->middleware('module.permission:storage-api-tokens');
 
         // Despacho
         Route::get('/activity', [AdminActivityController::class, 'reactView']);

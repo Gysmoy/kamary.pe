@@ -81,6 +81,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
     'storage-general-service',
     'storage-billing-control',
     'storage-general-service-orders',
+    'storage-api-tokens',
   ]
 
   return (
@@ -291,6 +292,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
               {canAccess('storage-general-service') && <MenuItem href='/admin/storage-general-service' icon='ti ti-settings'>Servicio General</MenuItem>}
               {canAccess('storage-billing-control') && <MenuItem href='/admin/storage-billing-control' icon='ti ti-receipt-2'>Control de Facturación</MenuItem>}
               {canAccess('storage-general-service-orders') && <MenuItem href='/admin/storage-general-service-orders' icon='ti ti-list-details'>O. Servicio General</MenuItem>}
+              {canAccess('storage-api-tokens') && <MenuItem href='/admin/storage-api-tokens' icon='ti ti-key'>Tokens acceso</MenuItem>}
             </MenuItemContainer>
           )}
         </ul>
