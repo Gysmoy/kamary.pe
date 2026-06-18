@@ -35,27 +35,42 @@
 }
 
 .sidenav-menu .side-nav .menu-business-section {
-  margin: 14px 0 4px 0;
+  margin: 22px 18px 10px 18px;
 }
 
 .sidenav-menu .side-nav .menu-business-section-spaced {
-  margin-top: 26px;
+  margin-top: 34px;
 }
 
 .sidenav-menu .side-nav .menu-business-heading {
   align-items: center;
-  background: transparent !important;
-  color: #7b8797 !important;
+  background: #f3f7fb !important;
+  border: 1px solid #e4edf6;
+  border-radius: 7px;
+  color: #4f5f72 !important;
   cursor: default;
   display: flex;
   min-height: 24px;
-  padding-bottom: 2px;
-  padding-top: 2px;
+  padding: 7px 10px;
   pointer-events: none;
+  position: relative;
+}
+
+.sidenav-menu .side-nav .menu-business-heading::before {
+  background: #1e8df5;
+  border-radius: 999px;
+  content: "";
+  height: 14px;
+  left: 10px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
 }
 
 .sidenav-menu .side-nav .menu-business-heading .menu-icon {
-  opacity: 0;
+  flex: 0 0 auto;
+  width: 22px;
 }
 
 .sidenav-menu .side-nav .menu-business-heading-text {
@@ -63,6 +78,7 @@
   display: block;
   font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.04em;
   line-height: 1;
   overflow: hidden;
   text-overflow: ellipsis;
