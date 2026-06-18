@@ -15,6 +15,65 @@ const Menu = ({ can, hasRole, panel = null }) => {
     return permissions.some(permission => canAccess(permission))
   }
 
+  const kamaryPeruPermissions = [
+    'businesses',
+    'articles',
+    'inventory',
+    'kardex',
+    'laboratories',
+    'batches',
+    'entry-note',
+    'exit-note',
+    'suppliers',
+    'units-of-measure',
+    'purchase-orders',
+    'purchase-receipts',
+    'accounts-payable',
+    'expenses',
+    'daily-summary',
+    'clients',
+    'eventual-clients',
+    'accounts-receivable',
+    'take-orders',
+    'orders',
+    'pricing',
+    'sample-orders',
+    'magistrales-dashboard',
+    'magistrales-products',
+    'magistrales-procurement',
+    'magistrales-warehouse',
+    'magistrales-billing',
+    'magistrales-articles',
+    'magistrales-category',
+    'magistrales-formats',
+    'magistrales-formulas',
+    'magistrales-incomes',
+    'magistrales-inventory',
+    'magistrales-kardex',
+    'magistrales-laboratory',
+    'magistrales-purchase-order',
+    'magistrales-production-order',
+    'magistrales-supplier',
+    'magistrales-responsible',
+    'magistrales-outputs',
+    'magistrales-unit',
+    'magistrales-sales',
+  ]
+
+  const kamaryMedicalPermissions = [
+    'storage-inventory',
+    'storage-clients',
+    'storage-service-orders',
+    'storage-units',
+    'storage-products',
+    'storage-entry-note',
+    'storage-exit-note',
+    'storage-kardex',
+    'storage-general-service',
+    'storage-billing-control',
+    'storage-general-service-orders',
+  ]
+
   return (
     <div className='sidenav-menu'>
       <a href='/' className='logo'>
@@ -114,6 +173,8 @@ const Menu = ({ can, hasRole, panel = null }) => {
             </MenuItemContainer>
           )}
 
+          {canAccessAny(...kamaryPeruPermissions) && <li className='menu-business-heading'>KAMARY PERU SAC</li>}
+
           {canAccessAny('businesses', 'articles', 'inventory', 'kardex', 'laboratories', 'batches', 'entry-note', 'exit-note', 'suppliers', 'units-of-measure') && (
             <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
               {canAccess('articles') && <MenuItem href='/admin/articles' icon='ti ti-box'>Artículos</MenuItem>}
@@ -148,41 +209,6 @@ const Menu = ({ can, hasRole, panel = null }) => {
               {canAccess('orders') && <MenuItem href='/admin/commercial-orders' icon='ti ti-basket' exact>Pedido</MenuItem>}
               {canAccess('orders') && <MenuItem href='/admin/commercial-orders/multivende' icon='ti ti-plug-connected'>Pedidos Multivende</MenuItem>}
               {canAccess('pricing') && <MenuItem href='/admin/pricing' icon='ti ti-tags'>Tarifario</MenuItem>}
-            </MenuItemContainer>
-          )}
-
-          {canAccessAny('storage-inventory', 'storage-clients', 'storage-service-orders', 'storage-units', 'storage-products', 'storage-entry-note', 'storage-exit-note', 'storage-kardex', 'storage-general-service', 'storage-billing-control', 'storage-general-service-orders') && (
-            <MenuItemContainer title='Serv. Almacenamiento' icon='ti ti-building-warehouse'>
-              {canAccess('storage-inventory') && <MenuItem href='/admin/storage-inventory' icon='ti ti-stack-2'>Inventario</MenuItem>}
-              {canAccess('storage-clients') && <MenuItem href='/admin/storage-clients' icon='ti ti-users'>Clientes</MenuItem>}
-              {canAccess('storage-service-orders') && <MenuItem href='/admin/storage-service-orders' icon='ti ti-list-details'>O. Servicio</MenuItem>}
-              {canAccess('storage-units') && <MenuItem href='/admin/storage-units' icon='ti ti-ruler-measure'>Und. de medida</MenuItem>}
-              {canAccess('storage-products') && <MenuItem href='/admin/storage-products' icon='ti ti-box'>Creación del producto</MenuItem>}
-              {canAccess('storage-entry-note') && <MenuItem href='/admin/storage-entry-note' icon='ti ti-file-import'>Nota de entrada</MenuItem>}
-              {canAccess('storage-exit-note') && <MenuItem href='/admin/storage-exit-note' icon='ti ti-file-export'>Nota de salida</MenuItem>}
-              {canAccess('storage-kardex') && <MenuItem href='/admin/storage-kardex' icon='ti ti-notebook'>Kardex</MenuItem>}
-              {canAccess('storage-general-service') && <MenuItem href='/admin/storage-general-service' icon='ti ti-settings'>Servicio General</MenuItem>}
-              {canAccess('storage-billing-control') && <MenuItem href='/admin/storage-billing-control' icon='ti ti-receipt-2'>Control de Facturación</MenuItem>}
-              {canAccess('storage-general-service-orders') && <MenuItem href='/admin/storage-general-service-orders' icon='ti ti-list-details'>O. Servicio General</MenuItem>}
-            </MenuItemContainer>
-          )}
-
-          {canAccessAny('activity', 'driver', 'dispatch', 'vehicle-zone') && (
-            <MenuItemContainer title='Despacho' icon='ti ti-truck-delivery'>
-              {canAccess('activity') && <MenuItem href='/admin/activity' icon='ti ti-activity'>Actividad</MenuItem>}
-              {canAccess('driver') && <MenuItem href='/admin/driver' icon='ti ti-user-circle'>Conductor</MenuItem>}
-              {canAccess('dispatch') && <MenuItem href='/admin/picking' icon='ti ti-list-check'>Preparacion</MenuItem>}
-              {canAccess('dispatch') && <MenuItem href='/admin/dispatch' icon='ti ti-truck-delivery'>Despacho</MenuItem>}
-              {canAccess('vehicle-zone') && <MenuItem href='/admin/vehicle-zone' icon='ti ti-map-2'>Vehículo / Zona</MenuItem>}
-            </MenuItemContainer>
-          )}
-
-          {canAccessAny('services-client', 'services-billing', 'services-service-order', 'services-services') && (
-            <MenuItemContainer title='Servicios' icon='ti ti-settings'>
-              {canAccess('services-client') && <MenuItem href='/admin/services-client' icon='ti ti-users'>Cliente</MenuItem>}
-              {canAccess('services-billing') && <MenuItem href='/admin/services-billing' icon='ti ti-file-invoice'>Facturacion</MenuItem>}
-              {canAccess('services-service-order') && <MenuItem href='/admin/services-service-order' icon='ti ti-file-dollar'>Orden de servicio</MenuItem>}
-              {canAccess('services-services') && <MenuItem href='/admin/services-services' icon='ti ti-settings'>Servicios</MenuItem>}
             </MenuItemContainer>
           )}
 
@@ -238,6 +264,24 @@ const Menu = ({ can, hasRole, panel = null }) => {
               {canAccessAny('magistrales-outputs', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales-outputs' icon='ti ti-file-export'>Salidas</MenuItem>}
               {canAccessAny('magistrales-unit', 'magistrales-products') && <MenuItem href='/admin/magistrales-unit' icon='ti ti-ruler-measure'>Unidad</MenuItem>}
               {canAccessAny('magistrales-sales', 'magistrales-billing') && <MenuItem href='/admin/magistrales-sales' icon='ti ti-cash'>Ventas</MenuItem>}
+            </MenuItemContainer>
+          )}
+
+          {canAccessAny(...kamaryMedicalPermissions) && <li className='menu-business-heading menu-business-heading-spaced'>KAMARY MEDICAL SAC</li>}
+
+          {canAccessAny(...kamaryMedicalPermissions) && (
+            <MenuItemContainer title='Serv. Almacenamiento' icon='ti ti-building-warehouse'>
+              {canAccess('storage-inventory') && <MenuItem href='/admin/storage-inventory' icon='ti ti-stack-2'>Inventario</MenuItem>}
+              {canAccess('storage-clients') && <MenuItem href='/admin/storage-clients' icon='ti ti-users'>Clientes</MenuItem>}
+              {canAccess('storage-service-orders') && <MenuItem href='/admin/storage-service-orders' icon='ti ti-list-details'>O. Servicio</MenuItem>}
+              {canAccess('storage-units') && <MenuItem href='/admin/storage-units' icon='ti ti-ruler-measure'>Und. de medida</MenuItem>}
+              {canAccess('storage-products') && <MenuItem href='/admin/storage-products' icon='ti ti-box'>Creación del producto</MenuItem>}
+              {canAccess('storage-entry-note') && <MenuItem href='/admin/storage-entry-note' icon='ti ti-file-import'>Nota de entrada</MenuItem>}
+              {canAccess('storage-exit-note') && <MenuItem href='/admin/storage-exit-note' icon='ti ti-file-export'>Nota de salida</MenuItem>}
+              {canAccess('storage-kardex') && <MenuItem href='/admin/storage-kardex' icon='ti ti-notebook'>Kardex</MenuItem>}
+              {canAccess('storage-general-service') && <MenuItem href='/admin/storage-general-service' icon='ti ti-settings'>Servicio General</MenuItem>}
+              {canAccess('storage-billing-control') && <MenuItem href='/admin/storage-billing-control' icon='ti ti-receipt-2'>Control de Facturación</MenuItem>}
+              {canAccess('storage-general-service-orders') && <MenuItem href='/admin/storage-general-service-orders' icon='ti ti-list-details'>O. Servicio General</MenuItem>}
             </MenuItemContainer>
           )}
         </ul>

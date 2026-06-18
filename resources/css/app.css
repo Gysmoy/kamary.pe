@@ -33,3 +33,21 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+
+.sidenav-menu .side-nav .menu-business-heading {
+  color: #111827;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  padding: 18px 24px 8px 76px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sidenav-menu .side-nav .menu-business-heading-spaced {
+  padding-top: 34px;
+}
+
+body[data-sidebar-size="condensed"] .sidenav-menu .side-nav .menu-business-heading {
+  display: none;
+}
