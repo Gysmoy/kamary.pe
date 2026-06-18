@@ -6,8 +6,8 @@ import LaravelSession from '../../Utils/LaravelSession'
 
 const BusinessHeading = ({ children, spaced = false }) => (
   <li className={`side-nav-item menu-business-section ${spaced ? 'menu-business-section-spaced' : ''}`.trim()}>
-    <div className='menu-business-heading'>
-      <span className='menu-business-heading-line'></span>
+    <div className='side-nav-link menu-business-heading'>
+      <span className='menu-icon'></span>
       <span className='menu-business-heading-text'>{children}</span>
     </div>
   </li>
