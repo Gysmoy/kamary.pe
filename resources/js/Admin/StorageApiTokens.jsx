@@ -199,7 +199,13 @@ const StorageApiTokens = ({ moduleTitle = 'Tokens acceso API', clients = [], abi
           widget: 'dxButton', location: 'after',
           options: {
             icon: 'doc',
+            text: 'Ver manual API',
+            stylingMode: 'contained',
+            type: 'default',
             hint: 'Ver documentacion API',
+            elementAttr: {
+              class: 'storage-api-manual-btn'
+            },
             onClick: () => window.open(apiDocsUrl, '_blank')
           }
         })
