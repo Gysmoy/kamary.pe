@@ -294,9 +294,11 @@ ELECTRÓNICA`},nr=e=>kr(e).replace(`
         font-weight: 700;
       }
       .commercial-order-filter-actions {
+        grid-column: 1 / -1;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
+        justify-content: flex-end;
         gap: 8px;
       }
       .commercial-order-filter-actions .btn {
@@ -316,7 +318,7 @@ ELECTRÓNICA`},nr=e=>kr(e).replace(`
             auto;
         }
         .commercial-order-filter-actions {
-          justify-content: flex-start;
+          justify-content: flex-end;
         }
       }
       .commercial-order-page-size {

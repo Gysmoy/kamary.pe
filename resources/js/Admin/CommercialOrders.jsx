@@ -2671,9 +2671,11 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         font-weight: 700;
       }
       .commercial-order-filter-actions {
+        grid-column: 1 / -1;
         display: flex;
         flex-wrap: wrap;
         align-items: center;
+        justify-content: flex-end;
         gap: 8px;
       }
       .commercial-order-filter-actions .btn {
@@ -2693,7 +2695,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             auto;
         }
         .commercial-order-filter-actions {
-          justify-content: flex-start;
+          justify-content: flex-end;
         }
       }
       .commercial-order-page-size {
