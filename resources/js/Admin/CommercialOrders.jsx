@@ -2236,6 +2236,36 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       )}
     </div>
   )
+  const onCreditNoteOpen = async (document) => {
+    const label = billingDocumentNumber(document) || document.code
+    const { value: reason, isConfirmed } = await Swal.fire({
+      title: 'Generar nota de credito',
+      html: `Se anulara el comprobante <b>${label}</b> generando una nota de credito que lo deja sin efecto.`,
+      icon: 'warning',
+      input: 'textarea',
+      inputLabel: 'Motivo de la anulacion',
+      inputValue: 'Anulacion de la operacion',
+      inputPlaceholder: 'Describe el motivo de la anulacion',
+      showCancelButton: true,
+      confirmButtonText: 'Generar nota de credito',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => (!value || !value.trim()) ? 'El motivo es obligatorio' : undefined,
+    })
+    if (!isConfirmed) return
+
+    const result = await billingDocumentsRest.creditNote(document.id, { reason: reason.trim() })
+    if (!result) return
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Nota de credito generada',
+      text: 'Revisala en la pestaña Notas de Credito.',
+      timer: 2500,
+      showConfirmButton: false,
+    })
+    refreshActiveListingGrid()
+  }
+
   const billingActionColumn = {
     caption: 'Acciones',
     width: 100,
@@ -2254,6 +2284,14 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
           `Comprobante ${billingDocumentNumber(data) || data.code}`,
         )
       })
+      if (`${data.document_type ?? ''}`.trim().toLowerCase() !== 'nota de credito') {
+        appendGridActionButton(container, {
+          variant: 'warning',
+          title: 'Anular: generar nota de credito de este comprobante',
+          icon: 'mdi mdi-file-cancel-outline',
+          onClick: () => onCreditNoteOpen(data)
+        })
+      }
     }
   }
   const orderFilterColumns = [

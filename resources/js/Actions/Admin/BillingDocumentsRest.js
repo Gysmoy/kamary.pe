@@ -142,6 +142,21 @@ class BillingDocumentsRest extends BasicRest {
     }
   }
 
+  creditNote = async (id, request = {}) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${id}/credit-note`, {
+        method: 'POST',
+        body: JSON.stringify(request)
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo generar la nota de credito')
+      toast.success('Correcto', { description: result.message, duration: 3000, richColors: true })
+      return result
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
+      return null
+    }
+  }
+
   cancel = async (id, request) => {
     try {
       const { status, result } = await Fetch(`/api/${this.path}/${id}/cancel`, {
