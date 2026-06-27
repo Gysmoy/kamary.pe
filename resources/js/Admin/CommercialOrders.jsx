@@ -953,6 +953,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const trackingModalRef = useRef()
   const evidenceModalRef = useRef()
   const evidenceFileRef = useRef()
+  const creditNoteModalRef = useRef()
+  const creditNoteDocRef = useRef()
+  const creditNoteReasonRef = useRef()
 
   const idRef = useRef()
   const codeRef = useRef()
@@ -2178,6 +2181,40 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       })
     }
   }, [activeListingTab, hasDateRangeFilter])
+
+  const renderBillingDocOption = (item) => {
+    const x = item?.data
+    if (!x) return item?.text ?? ''
+    const num = [x.series, x.sequence].filter(Boolean).join('-') || x.code || `#${x.id}`
+    const client = billingDocumentClientLabel(x)
+    return $(`<span><b>${num}</b>${client && client !== '-' ? ' · ' + client : ''}</span>`)
+  }
+
+  const onOpenCreateCreditNote = () => {
+    if (creditNoteDocRef.current) $(creditNoteDocRef.current).val(null).trigger('change')
+    if (creditNoteReasonRef.current) creditNoteReasonRef.current.value = 'Anulacion de la operacion'
+    $(creditNoteModalRef.current).modal('show')
+  }
+
+  const onCreateCreditNoteSubmit = async (e) => {
+    e.preventDefault()
+    const documentId = creditNoteDocRef.current?.value
+    const reason = (creditNoteReasonRef.current?.value ?? '').trim()
+    if (!documentId) {
+      Swal.fire({ icon: 'warning', title: 'Selecciona un comprobante', text: 'Elige la factura o boleta a anular.' })
+      return
+    }
+    if (!reason) {
+      Swal.fire({ icon: 'warning', title: 'Motivo requerido', text: 'Indica el motivo de la anulacion.' })
+      return
+    }
+    const result = await billingDocumentsRest.creditNote(documentId, { reason })
+    if (!result) return
+    $(creditNoteModalRef.current).modal('hide')
+    Swal.fire({ icon: 'success', title: 'Nota de credito generada', timer: 2200, showConfirmButton: false })
+    refreshActiveListingGrid()
+  }
+
   const listingHeader = (
     <div className='commercial-order-listing-header'>
       <div className='d-flex align-items-center justify-content-between gap-2 mb-2'>
@@ -2203,6 +2240,11 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         <form className='commercial-order-filter-form mb-2' onSubmit={applyListingFilters}>
           {activeFilterFields.map(field => renderListingFilterField(activeListingTab, field))}
           <div className='commercial-order-filter-actions'>
+            {activeListingTab === 'credit-notes' && (
+              <button type='button' className='btn btn-primary' onClick={onOpenCreateCreditNote}>
+                <i className='mdi mdi-plus me-1'></i>Crear Nota de Crédito
+              </button>
+            )}
             <button type='submit' className='btn btn-outline-primary'>
               <i className='mdi mdi-magnify me-1'></i>Filtrar
             </button>
@@ -3726,6 +3768,23 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             )}
           </div>
         </div>
+      </div>
+    </Modal>
+
+    <Modal modalRef={creditNoteModalRef} title='Crear nota de credito' size='md' btnSubmitText='Generar nota de credito' onSubmit={onCreateCreditNoteSubmit}>
+      <div className='row'>
+        <SelectAPIFormGroup
+          eRef={creditNoteDocRef}
+          label='Comprobante a anular (Factura / Boleta)'
+          col='col-12'
+          required
+          searchAPI={'/api/admin/billing-documents/paginate'}
+          searchBy={'sequence'}
+          filter={[['document_type', '<>', 'Nota de credito'], 'and', ['source_type', '=', 'commercial_order']]}
+          templateResult={renderBillingDocOption}
+          templateSelection={renderBillingDocOption}
+        />
+        <TextareaFormGroup eRef={creditNoteReasonRef} label='Motivo de la anulacion' col='col-12' rows={3} required />
       </div>
     </Modal>
   </>)
