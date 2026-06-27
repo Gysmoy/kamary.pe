@@ -63,9 +63,10 @@ const staticListingTabs = {
 
 const appendGridActionButton = (container, { variant, title, icon, onClick }) => {
   const button = $('<button type="button"></button>')
-    .addClass(`btn btn-xs btn-soft-${variant} commercial-order-action-btn`)
+    .addClass(`btn btn-xs btn-soft-${variant} commercial-order-action-btn tippy-here`)
     .attr('title', title)
     .attr('aria-label', title)
+    .attr('data-tippy-content', title)
     .append($('<i></i>').addClass(icon))
     .on('click', (event) => {
       event.preventDefault()
