@@ -2087,7 +2087,6 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   )
   const listingFilterFields = {
     orders: [
-      { key: 'businessId', label: 'Empresa', type: 'business' },
       { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
       {
         key: 'laboratoryId',
@@ -2107,11 +2106,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       },
     ],
     issued: [
-      { key: 'businessId', label: 'Empresa', type: 'business' },
       { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
     ],
     'credit-notes': [
-      { key: 'businessId', label: 'Empresa', type: 'business' },
       { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
     ],
     multivende: [
