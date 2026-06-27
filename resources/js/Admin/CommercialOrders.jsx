@@ -47,7 +47,6 @@ const listingTabs = [
   { id: 'credit-notes', label: 'Notas de Credito', kind: 'billing' },
   { id: 'visitors', label: 'Pedidos - Visitadores', kind: 'static' },
   { id: 'visitors-legacy', label: 'Pedidos - Visitadores Legacy', kind: 'static' },
-  { id: 'platforms', label: 'Plataformas', kind: 'static' },
   { id: 'multivende', label: 'Pedidos - Multivende', kind: 'multivende' },
 ]
 
@@ -69,15 +68,6 @@ const staticListingTabs = {
       { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
     ],
     headers: ['ACCIONES', 'ESTADO', 'COMPROBANTE', 'TIPO DOCUMENTO', 'CLIENTE', 'TOTAL', 'TIPO DE PAGO', 'F.E COMPROBANTE', 'F.E GUIA', 'USUARIO', 'FECHA REGISTRO', 'USUARIO REGISTRO', 'CODIGO', 'EMPRESA'],
-  },
-  platforms: {
-    pageSize: 20,
-    exports: ['Copiar', 'Excel'],
-    filters: [
-      { key: 'businessId', label: 'Empresa', type: 'business' },
-      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
-    ],
-    headers: ['ACCIONES', 'ESTADO', 'COMPROBANTE', 'TIPO DOCUMENTO', 'CLIENTE', 'TOTAL', 'TIPO DE PAGO', 'USUARIO', 'FECHA REGISTRO', 'USUARIO REGISTRO', 'CODIGO', 'EMPRESA'],
   },
 }
 
@@ -342,10 +332,6 @@ const emptyListingFilters = () => ({
   },
   'visitors-legacy': {
     visitor: '',
-    dateRange: defaultDateRange(),
-  },
-  platforms: {
-    businessId: '',
     dateRange: defaultDateRange(),
   },
   multivende: {
