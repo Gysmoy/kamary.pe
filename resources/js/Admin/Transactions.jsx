@@ -23,10 +23,12 @@ const Transactions = ({ }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const previewModalRef = useRef();
+  const categoryCreateModalRef = useRef()
 
   // Form elements ref
   const idRef = useRef()
   const categoryRef = useRef()
+  const newCategoryNameRef = useRef()
   const descriptionRef = useRef()
   const amountRef = useRef()
   const dateRef = useRef()
@@ -95,6 +97,24 @@ const Transactions = ({ }) => {
     $(previewModalRef.current).modal('show');
     setPreviewData(data);
   };
+
+  const onOpenCreateCategoryModal = () => {
+    newCategoryNameRef.current.value = ''
+    $(categoryCreateModalRef.current).modal('show')
+  }
+
+  const onCreateCategorySubmit = async (e) => {
+    e.preventDefault()
+    const name = (newCategoryNameRef.current.value ?? '').trim()
+    if (!name) return
+
+    const result = await faqsRest.createCategory({ name, status: true })
+    if (!result) return
+
+    const created = result?.data ?? result
+    if (created?.id) SetSelectValue(categoryRef.current, created.id, created.name ?? name)
+    $(categoryCreateModalRef.current).modal('hide')
+  }
 
   return (<>
     <Table gridRef={gridRef} title='Gastos' rest={faqsRest}
@@ -193,7 +213,9 @@ const Transactions = ({ }) => {
       <div className='row' id='testimony-container'>
         <input ref={idRef} type='hidden' />
         <div className='col-md-6'>
-          <SelectAPIFormGroup eRef={categoryRef} label='Categoría' searchAPI={'/api/admin/transactions/categories/paginate'} searchBy={'name'} />
+          <SelectAPIFormGroup eRef={categoryRef}
+            label={<span>Categoría <button type='button' className='btn btn-xs btn-soft-primary ms-1 py-0 px-1' title='Nueva categoría' onClick={onOpenCreateCategoryModal}><i className='mdi mdi-plus'></i></button></span>}
+            searchAPI={'/api/admin/transactions/categories/paginate'} searchBy={'name'} />
           {/* <SelectFormGroup eRef={categoryRef} label='Categoría' required>
             <option value="Ventas" disabled>Ventas</option>
             <option value="Publicidad">Publicidad</option>
@@ -218,6 +240,11 @@ const Transactions = ({ }) => {
           </SelectFormGroup>
           <InputFormGroup eRef={issueRef} label='Documento' />
         </div>
+      </div>
+    </Modal>
+    <Modal modalRef={categoryCreateModalRef} title='Nueva categoría de gasto' onSubmit={onCreateCategorySubmit} size='sm'>
+      <div className='row'>
+        <InputFormGroup eRef={newCategoryNameRef} label='Nombre de la categoría' required />
       </div>
     </Modal>
     <Modal modalRef={previewModalRef} title='Detalles de transacción' onClose={() => setPreviewData(null)} bodyClass='p-0' hideFooter>
