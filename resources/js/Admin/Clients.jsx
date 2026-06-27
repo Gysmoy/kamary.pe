@@ -1365,11 +1365,15 @@ const Clients = ({
         {
           dataField: 'is_habitual',
           caption: 'Habitual',
-          width: 95,
+          width: 110,
           dataType: 'boolean',
+          alignment: 'center',
           cellTemplate: (container, { data }) => {
             $(container).empty()
-            ReactAppend(container, <SwitchFormGroup checked={!!data.is_habitual} disabled noMargin />)
+            // Indicador de solo lectura (se calcula solo: cliente con 3+ compras)
+            ReactAppend(container, data?.is_habitual
+              ? <span className='badge bg-soft-success'>Habitual</span>
+              : <span className='badge bg-soft-secondary'>—</span>)
           }
         },
         {
