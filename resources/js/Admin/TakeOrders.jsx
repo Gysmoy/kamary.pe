@@ -860,7 +860,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
         {
           dataField: 'code',
           caption: 'Código',
-          width: 120,
+          width: 150,
           cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data, data?.order_profile ?? 'micro'), 'Editar pedido')
         },
         {
