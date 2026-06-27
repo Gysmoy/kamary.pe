@@ -2981,7 +2981,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       gridRef={gridRef}
       title={listingHeader}
       rest={commercialOrdersRest}
-      filterValue={ordersFilterValue}
+      baseFilterValue={ordersFilterValue}
       toolBar={(container) => {
         container.unshift({
           widget: 'dxButton', location: 'after',
@@ -3131,7 +3131,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       gridRef={billingGridRef}
       title={listingHeader}
       rest={billingDocumentsRest}
-      filterValue={billingFilterValue}
+      baseFilterValue={billingFilterValue}
       pageSize={20}
       exportable
       columns={billingColumnsByTab[activeListingTab] ?? billingColumnsByTab.issued}
@@ -3152,7 +3152,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       gridRef={multivendeGridRef}
       title={listingHeader}
       rest={multivendeOrdersRest}
-      filterValue={multivendeFilterValue}
+      baseFilterValue={multivendeFilterValue}
       pageSize={10}
       exportable
       columns={multivendeColumns}

@@ -249,7 +249,10 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
     if (!isServiceOrderContext) return
     serviceOrdersRest.deleted = activeServiceTab === 'deleted'
     setServiceSummary({ penTotal: 0, penBilled: 0, usdTotal: 0, usdBilled: 0 })
-    const instance = gridRef.current ? $(gridRef.current).dxDataGrid('instance') : null
+    // El grid puede no estar inicializado todavia en el primer layout effect:
+    // llamar dxDataGrid('instance') sobre un elemento sin inicializar lanza E0009.
+    let instance = null
+    try { instance = gridRef.current ? $(gridRef.current).dxDataGrid('instance') : null } catch (e) { instance = null }
     if (instance) {
       instance.pageIndex(0)
       instance.getDataSource().reload()

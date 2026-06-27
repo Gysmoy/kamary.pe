@@ -143,7 +143,9 @@ const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
 
   const [laboratoryId, setLaboratoryId] = useState('')
   const [articleId, setArticleId] = useState('')
-  const [warehouseId, setWarehouseId] = useState('')
+  // En Magistrales el almacen es fijo: inicializarlo desde el inicio evita una
+  // primera carga del grid con warehouse_id vacio que luego se aborta (ERR_ABORTED).
+  const [warehouseId, setWarehouseId] = useState(isMagistralesPath() && fixedWarehouse?.id ? `${fixedWarehouse.id}` : '')
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [movementRows, setMovementRows] = useState([])
