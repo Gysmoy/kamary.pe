@@ -162,7 +162,8 @@ Route::middleware('auth')->group(function () {
 
         // Comercial
         Route::get('/clients', [AdminClientController::class, 'reactView']);
-        Route::get('/eventual-clients', [AdminEventualClientController::class, 'reactView']);
+        // Unificado: la ruta de eventuales abre la pantalla unica de Clientes (filtrada a eventuales)
+        Route::get('/eventual-clients', [AdminClientController::class, 'reactView']);
         Route::get('/client-distribution', [AdminClientDistributionNetworkController::class, 'reactView']);
         Route::get('/accounts-receivable', [AdminAccountsReceivableController::class, 'reactView']);
         Route::get('/commercial-orders', [AdminCommercialOrderController::class, 'reactView']);
