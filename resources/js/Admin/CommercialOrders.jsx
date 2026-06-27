@@ -46,7 +46,6 @@ const listingTabs = [
   { id: 'cancelled', label: 'Facturas Anuladas', kind: 'billing' },
   { id: 'credit-notes', label: 'Notas de Credito', kind: 'billing' },
   { id: 'visitors', label: 'Pedidos - Visitadores', kind: 'static' },
-  { id: 'visitors-legacy', label: 'Pedidos - Visitadores Legacy', kind: 'static' },
   { id: 'multivende', label: 'Pedidos - Multivende', kind: 'multivende' },
 ]
 
@@ -56,15 +55,6 @@ const staticListingTabs = {
     exports: ['Copiar', 'Excel'],
     filters: [
       { key: 'visitor', label: 'Visitador', type: 'select', options: ['ALICIA ASTO ASTO'] },
-      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
-    ],
-    headers: ['ACCIONES', 'ESTADO', 'COMPROBANTE', 'TIPO DOCUMENTO', 'CLIENTE', 'TOTAL', 'TIPO DE PAGO', 'F.E COMPROBANTE', 'F.E GUIA', 'USUARIO', 'FECHA REGISTRO', 'USUARIO REGISTRO', 'CODIGO', 'EMPRESA'],
-  },
-  'visitors-legacy': {
-    pageSize: 20,
-    exports: ['Copiar', 'Excel'],
-    filters: [
-      { key: 'visitor', label: 'Visitador', type: 'select', options: ['Todos', 'ALICIA ASTO ASTO'] },
       { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
     ],
     headers: ['ACCIONES', 'ESTADO', 'COMPROBANTE', 'TIPO DOCUMENTO', 'CLIENTE', 'TOTAL', 'TIPO DE PAGO', 'F.E COMPROBANTE', 'F.E GUIA', 'USUARIO', 'FECHA REGISTRO', 'USUARIO REGISTRO', 'CODIGO', 'EMPRESA'],
@@ -328,10 +318,6 @@ const emptyListingFilters = () => ({
   },
   visitors: {
     visitor: 'ALICIA ASTO ASTO',
-    dateRange: defaultDateRange(),
-  },
-  'visitors-legacy': {
-    visitor: '',
     dateRange: defaultDateRange(),
   },
   multivende: {
