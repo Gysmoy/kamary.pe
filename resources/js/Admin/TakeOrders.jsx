@@ -797,26 +797,6 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     : ''
 
   return (<>
-    <div className='row mb-3'>
-      {Object.values(orderProfiles).map((item) => (
-        <div className='col-md-4 mb-3' key={`take-order-card-${item.key}`}>
-          <button
-            type='button'
-            className='btn btn-primary w-100 text-start py-3'
-            onClick={() => onModalOpen(null, item.key)}
-          >
-            <div className='d-flex justify-content-between align-items-start'>
-              <div>
-                <div className='fw-semibold'>Crear pedido</div>
-                <div className='fs-4 lh-sm'>{item.title}</div>
-              </div>
-              <i className='mdi mdi-file-document-outline fs-2'></i>
-            </div>
-          </button>
-        </div>
-      ))}
-    </div>
-
     <Table
       gridRef={gridRef}
       title='Lista de Toma pedido'
@@ -829,6 +809,20 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
             hint: 'Refrescar tabla',
             onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
           }
+        });
+        // Botones de Crear pedido por perfil, en la barra del grid (uno por perfil)
+        Object.values(orderProfiles).slice().reverse().forEach((item) => {
+          container.unshift({
+            widget: 'dxButton', location: 'after',
+            options: {
+              icon: 'add',
+              text: item.title,
+              type: 'default',
+              stylingMode: 'contained',
+              hint: `Crear pedido ${item.title}`,
+              onClick: () => onModalOpen(null, item.key)
+            }
+          });
         });
       }}
       pageSize={25}
