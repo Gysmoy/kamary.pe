@@ -209,13 +209,17 @@ const Transactions = ({ }) => {
           allowExporting: false
         }
       ]} />
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar gasto' : 'Agregar gasto'} onSubmit={onModalSubmit} size='md'>
+    <Modal modalRef={modalRef} title={isEditing ? 'Editar gasto' : 'Agregar gasto'} onSubmit={onModalSubmit} size='lg'>
       <div className='row' id='testimony-container'>
         <input ref={idRef} type='hidden' />
         <div className='col-md-6'>
-          <SelectAPIFormGroup eRef={categoryRef}
-            label={<span>Categoría <button type='button' className='btn btn-xs btn-soft-primary ms-1 py-0 px-1' title='Nueva categoría' onClick={onOpenCreateCategoryModal}><i className='mdi mdi-plus'></i></button></span>}
-            searchAPI={'/api/admin/transactions/categories/paginate'} searchBy={'name'} />
+          <div className='d-flex align-items-end gap-1'>
+            <SelectAPIFormGroup col='flex-grow-1' eRef={categoryRef} label='Categoría'
+              searchAPI={'/api/admin/transactions/categories/paginate'} searchBy={'name'} />
+            <button type='button' className='btn btn-soft-primary mb-2' title='Nueva categoría' onClick={onOpenCreateCategoryModal}>
+              <i className='mdi mdi-plus'></i>
+            </button>
+          </div>
           {/* <SelectFormGroup eRef={categoryRef} label='Categoría' required>
             <option value="Ventas" disabled>Ventas</option>
             <option value="Publicidad">Publicidad</option>
