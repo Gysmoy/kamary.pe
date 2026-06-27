@@ -1347,7 +1347,14 @@ const Clients = ({
           dataField: 'client_kind',
           caption: 'Tipo',
           width: 105,
-          calculateCellValue: (data) => data.client_kind === 'eventual' ? 'Eventual' : 'Regular'
+          alignment: 'center',
+          calculateCellValue: (data) => data.client_kind === 'eventual' ? 'Eventual' : 'Regular',
+          cellTemplate: (container, { data }) => {
+            $(container).empty()
+            ReactAppend(container, data.client_kind === 'eventual'
+              ? <span className='badge bg-warning text-dark'>Eventual</span>
+              : <span className='badge bg-primary'>Regular</span>)
+          }
         },
         { dataField: 'document_type', caption: 'Tipo Doc.', width: 95 },
         { dataField: 'document_number', caption: 'Numero', width: 125 },
@@ -1372,7 +1379,7 @@ const Clients = ({
             $(container).empty()
             // Indicador de solo lectura (se calcula solo: cliente con 3+ compras)
             ReactAppend(container, data?.is_habitual
-              ? <span className='badge bg-soft-success'>Habitual</span>
+              ? <span className='badge bg-success'><i className='mdi mdi-star me-1'></i>Habitual</span>
               : <span className='badge bg-soft-secondary'>—</span>)
           }
         },
