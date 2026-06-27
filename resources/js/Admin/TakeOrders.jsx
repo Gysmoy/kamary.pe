@@ -829,7 +829,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
       columns={[
         {
           caption: 'Acciones',
-          width: 120,
+          width: 150,
           fixed: true,
           fixedPosition: 'left',
           allowFiltering: false,
