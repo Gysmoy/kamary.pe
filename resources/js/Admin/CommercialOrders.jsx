@@ -43,7 +43,6 @@ const defaultExternalSource = 'ecomsur_oms'
 const listingTabs = [
   { id: 'orders', label: 'Pedidos', kind: 'orders' },
   { id: 'issued', label: 'Facturas Emitidas', kind: 'billing' },
-  { id: 'cancelled', label: 'Facturas Anuladas', kind: 'billing' },
   { id: 'credit-notes', label: 'Notas de Credito', kind: 'billing' },
   { id: 'visitors', label: 'Pedidos - Visitadores', kind: 'static' },
   { id: 'multivende', label: 'Pedidos - Multivende', kind: 'multivende' },
@@ -309,10 +308,6 @@ const emptyListingFilters = () => ({
     businessId: '',
     dateRange: defaultDateRange(),
   },
-  cancelled: {
-    businessId: '',
-    dateRange: defaultDateRange(),
-  },
   'credit-notes': {
     businessId: '',
     dateRange: defaultDateRange(),
@@ -364,7 +359,6 @@ const billingDocumentTabFilter = (tab) => {
   if (tab === 'issued') {
     return [[['local_status', '=', 'sent'], 'or', ['local_status', '=', 'accepted'], 'or', ['local_status', '=', 'observed'], 'or', ['local_status', '=', 'rejected']], 'and', notCreditNote]
   }
-  if (tab === 'cancelled') return [['local_status', '=', 'cancelled'], 'and', notCreditNote]
   if (tab === 'credit-notes') return ['document_type', '=', 'Nota de credito']
   return null
 }
@@ -2113,10 +2107,6 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       { key: 'businessId', label: 'Empresa', type: 'business' },
       { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
     ],
-    cancelled: [
-      { key: 'businessId', label: 'Empresa', type: 'business' },
-      { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
-    ],
     'credit-notes': [
       { key: 'businessId', label: 'Empresa', type: 'business' },
       { key: 'dateRange', label: 'Fecha Registro (Inicio - Fin):', type: 'dateRange' },
@@ -2297,21 +2287,6 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       { dataField: 'total', caption: 'Importe Factura', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
       { dataField: 'payment_method', caption: 'Tipo de Pago', width: 150 },
       { dataField: 'issue_date', caption: 'Fecha Facturacion', dataType: 'date', width: 150 },
-    ],
-    cancelled: [
-      ...billingFilterColumns,
-      billingActionColumn,
-      { dataField: 'series', caption: 'Serie', width: 90 },
-      { dataField: 'sequence', caption: 'Secuencia', width: 110 },
-      { caption: 'Cliente', minWidth: 260, calculateCellValue: billingDocumentClientLabel },
-      { caption: 'Motivo', minWidth: 180, calculateCellValue: billingDocumentReasonLabel },
-      { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (row) => currencyLabel(row.currency) },
-      { dataField: 'subtotal', caption: 'Total Gravada', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'tax_amount', caption: 'IGV', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'total', caption: 'Importe Factura', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'payment_method', caption: 'Tipo de Pago', width: 150 },
-      { dataField: 'issue_date', caption: 'F. Facturacion', dataType: 'date', width: 130 },
-      { dataField: 'cancelled_at', caption: 'F. Anulacion', dataType: 'datetime', width: 160 },
     ],
     'credit-notes': [
       ...billingFilterColumns,
