@@ -45,7 +45,6 @@ class ClientsRest extends BasicRest {
       document_type: request.document_type,
       document_number: request.document_number,
       full_name: request.full_name,
-      is_platform: request.is_platform,
       has_storage_service: isStoragePath() ? true : request.has_storage_service,
       storage_tariff_enabled: request.storage_tariff_enabled,
       contract_due_days: request.contract_due_days,

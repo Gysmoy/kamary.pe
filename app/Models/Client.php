@@ -15,7 +15,6 @@ class Client extends Model
         'client_kind',
         'module_scope',
         'full_name',
-        'is_platform',
         'has_storage_service',
         'storage_tariff_enabled',
         'contract_due_days',
@@ -60,7 +59,6 @@ class Client extends Model
 
     protected $casts = [
         'status' => 'boolean',
-        'is_platform' => 'boolean',
         'has_storage_service' => 'boolean',
         'storage_tariff_enabled' => 'boolean',
         'contract_due_days' => 'integer',

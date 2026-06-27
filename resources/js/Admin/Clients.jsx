@@ -294,7 +294,6 @@ const Clients = ({
   const documentTypeRef = useRef()
   const documentNumberRef = useRef()
   const fullNameRef = useRef()
-  const isPlatformRef = useRef()
   const hasStorageServiceRef = useRef()
   const storageTariffEnabledRef = useRef()
   const contractDueDaysRef = useRef()
@@ -400,7 +399,6 @@ const Clients = ({
     setRefValue(documentNumberRef, '')
     setRefValue(documentLookupRef, '')
     setRefValue(fullNameRef, '')
-    setRefChecked(isPlatformRef, false)
     setRefChecked(hasStorageServiceRef, storageContext)
     setRefChecked(storageTariffEnabledRef, false)
     setRefValue(contractDueDaysRef, '')
@@ -563,7 +561,6 @@ const Clients = ({
     setRefValue(documentNumberRef, data.document_number ?? '')
     setRefValue(documentLookupRef, data.document_number ?? '')
     setRefValue(fullNameRef, data.full_name ?? data.business_name ?? data.display_name ?? '')
-    setRefChecked(isPlatformRef, !!data.is_platform)
     setRefChecked(hasStorageServiceRef, storageContext || !!data.has_storage_service)
     setRefChecked(storageTariffEnabledRef, !!data.storage_tariff_enabled)
     setRefValue(contractDueDaysRef, data.contract_due_days ?? '')
@@ -667,7 +664,6 @@ const Clients = ({
       document_type: getRefValue(documentTypeRef),
       document_number: normalizeDigits(getRefValue(documentNumberRef)),
       full_name: getRefValue(fullNameRef).trim(),
-      is_platform: storageContext ? false : getRefChecked(isPlatformRef),
       has_storage_service: storageContext ? true : getRefChecked(hasStorageServiceRef),
       storage_tariff_enabled: storageContext ? getRefChecked(storageTariffEnabledRef) : undefined,
       contract_due_days: storageContext ? '' : getRefValue(contractDueDaysRef).trim(),
@@ -1395,16 +1391,6 @@ const Clients = ({
         { dataField: 'primary_contact', caption: 'Contacto', minWidth: 160, calculateCellValue: (data) => data.primary_contact ?? data.contact_name ?? '' },
         { dataField: 'full_address', caption: 'Direccion', minWidth: 220, calculateCellValue: (data) => data.full_address ?? data.address ?? '' },
         {
-          dataField: 'is_platform',
-          caption: 'Plataforma',
-          width: 100,
-          dataType: 'boolean',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            ReactAppend(container, <SwitchFormGroup checked={!!data.is_platform} disabled noMargin />)
-          }
-        },
-        {
           dataField: 'has_storage_service',
           caption: 'Almacenamiento',
           width: 130,
@@ -1580,13 +1566,6 @@ const Clients = ({
 
         {!storageContext && !serviceContext && !isEventual && (
           <>
-            <div className='form-group col-md-4 mb-2'>
-              <label className='form-label d-block'>Es plataforma</label>
-              <div className='form-check form-switch'>
-                <input ref={isPlatformRef} type='checkbox' className='form-check-input' />
-              </div>
-            </div>
-
             <div className='form-group col-md-4 mb-2'>
               <label className='form-label d-block'>Cuenta con servicio de almacenamiento</label>
               <div className='form-check form-switch'>

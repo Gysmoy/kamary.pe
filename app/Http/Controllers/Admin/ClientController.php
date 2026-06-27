@@ -171,7 +171,6 @@ class ClientController extends BasicController
                 clients.full_name,
                 NULL AS business_name,
                 COALESCE(clients.full_name, '') AS display_name,
-                clients.is_platform,
                 clients.has_storage_service,
                 {$storageTariffSelect} AS storage_tariff_enabled,
                 clients.contract_due_days,
@@ -239,7 +238,6 @@ class ClientController extends BasicController
                 NULL AS full_name,
                 eventual_clients.business_name,
                 COALESCE(eventual_clients.business_name, '') AS display_name,
-                0 AS is_platform,
                 0 AS has_storage_service,
                 0 AS storage_tariff_enabled,
                 NULL AS contract_due_days,
@@ -364,7 +362,6 @@ class ClientController extends BasicController
             unset($body['module_scope']);
         }
         $body['full_name'] = $fullName !== '' ? $fullName : null;
-        $body['is_platform'] = $this->toBoolean($body['is_platform'] ?? false);
         $body['has_storage_service'] = $this->toBoolean($body['has_storage_service'] ?? false);
         if (Schema::hasColumn('clients', 'storage_tariff_enabled')) {
             $body['storage_tariff_enabled'] = $this->toBoolean($body['storage_tariff_enabled'] ?? false);

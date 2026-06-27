@@ -216,7 +216,6 @@ class ClientController extends BaseClientController
                 clients.full_name,
                 NULL AS business_name,
                 COALESCE(clients.full_name, '') AS display_name,
-                clients.is_platform,
                 1 AS has_storage_service,
                 {$storageTariffSelect} AS storage_tariff_enabled,
                 clients.contract_due_days,
