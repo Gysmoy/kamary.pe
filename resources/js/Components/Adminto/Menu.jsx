@@ -212,8 +212,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
 
           {canAccessAny('clients', 'eventual-clients', 'accounts-receivable', 'take-orders', 'orders', 'pricing') && (
             <MenuItemContainer title='Comercial' icon='ti ti-shopping-bag'>
-              {canAccess('clients') && <MenuItem href='/admin/clients' icon='ti ti-user-square'>Cliente</MenuItem>}
-              {canAccess('eventual-clients') && <MenuItem href='/admin/eventual-clients' icon='ti ti-users'>Clientes Eventual</MenuItem>}
+              {canAccessAny('clients', 'eventual-clients') && <MenuItem href={canAccess('clients') ? '/admin/clients' : '/admin/eventual-clients'} icon='ti ti-user-square'>Cliente</MenuItem>}
               {canAccess('accounts-receivable') && <MenuItem href='/admin/accounts-receivable' icon='ti ti-cash-banknote'>Cuenta por Cobrar</MenuItem>}
               {canAccess('take-orders') && <MenuItem href='/admin/comercial/tomapedido' icon='ti ti-clipboard-list'>Toma pedido</MenuItem>}
               {canAccess('orders') && <MenuItem href='/admin/commercial-orders' icon='ti ti-basket' exact>Pedido</MenuItem>}
