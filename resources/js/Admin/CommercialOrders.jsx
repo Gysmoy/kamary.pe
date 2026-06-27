@@ -2207,13 +2207,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               <i className='mdi mdi-magnify me-1'></i>Filtrar
             </button>
             {activeTab.kind !== 'static' && (
-              <button type='button' className='btn btn-outline-danger' onClick={() => exportActiveListingGrid(true)}>
-                <i className='mdi mdi-file-excel-box me-1'></i>Filtrar a Excel
-              </button>
-            )}
-            {activeTab.kind !== 'static' && (
               <button type='button' className='btn btn-outline-success' onClick={() => exportActiveListingGrid(false)}>
-                <i className='mdi mdi-file-excel-box me-1'></i>Reporte
+                <i className='mdi mdi-file-excel-box me-1'></i>Exportar a Excel
               </button>
             )}
             {activeListingTab === 'multivende' && (
