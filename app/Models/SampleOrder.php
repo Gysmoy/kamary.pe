@@ -28,6 +28,8 @@ class SampleOrder extends Model
         'sales_subchannel',
         'business_line',
         'business_subline',
+        'giro_id',
+        'sub_giro_id',
         'ubigeo',
         'delivery_address',
         'delivery_reference',

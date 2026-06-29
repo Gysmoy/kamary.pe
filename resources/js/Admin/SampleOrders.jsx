@@ -32,8 +32,6 @@ const emailStatusOptions = [
 const requestReasonOptions = ['CAPACITACIONES', 'NUEVO CLIENTE', 'PRUEBA PILOTO', 'CODIFICACION NUEVO SKU', 'EVENTOS', 'REPOSICION', 'PROMOCION', 'MUESTRA MEDICA']
 const salesChannelOptions = ['B2B', 'DIRECTOS', 'E COMERCE', 'RETAIL', 'TRADICIONAL', 'TRADE', 'MKT', 'COMMERCIAL EXCELLENCE']
 const salesSubchannelOptions = ['LIMA 1', 'LIMA 2', 'PROVINCIAS']
-const businessLineOptions = ['EDUCACION', 'GASTRONOMIA', 'HOTELERIA', 'INDUSTRIAS', 'OFICINAS', 'BELLEZA', 'BTL', 'PROVEEDOR JABONES', 'MUESTRAS', 'REPOSICION', 'INSTITUCION', 'FARMACIA', 'RETAIL', 'CLINICA']
-const businessSublineOptions = ['BARES RESTAURANTES', 'BOTICAS', 'CADENAS', 'INDEPENDIENTE']
 const serviceTypeOptions = ['NEXT DAY', 'SAME DAY', 'PROGRAMADO']
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -73,6 +71,8 @@ const emptyForm = () => ({
   sales_subchannel: '',
   business_line: '',
   business_subline: '',
+  giro_id: '',
+  sub_giro_id: '',
   ubigeo: '',
   delivery_address: '',
   delivery_reference: '',
@@ -248,7 +248,7 @@ const isOrderComplete = (data) => {
   return list.length > 0 && list.every(item => Number(item?.quantity || 0) > 0 && Number(item?.stock || 0) >= Number(item?.quantity || 0))
 }
 
-const SampleSelect = ({ label, value, options = [], onChange, placeholder = 'Seleccione', addButton = false, disabled = false }) => (
+const SampleSelect = ({ label, value, options = [], onChange, placeholder = 'Seleccione', addButton = false, onAdd, disabled = false }) => (
   <div className='sample-field'>
     <label className='form-label'>{label}</label>
     <div className='sample-input-group'>
@@ -256,7 +256,7 @@ const SampleSelect = ({ label, value, options = [], onChange, placeholder = 'Sel
         <option value=''>{placeholder}</option>
         {options.map(option => <option key={`${label}-${option.value ?? option}`} value={option.value ?? option}>{option.label ?? option}</option>)}
       </select>
-      {addButton && <button type='button' className='btn btn-outline-success sample-plus' onClick={() => Swal.fire('Dato adicional', 'Puedes escribir o seleccionar el valor requerido para este pedido.', 'info')}>+</button>}
+      {addButton && <button type='button' className='btn btn-outline-success sample-plus' onClick={onAdd ?? (() => Swal.fire('Dato adicional', 'Puedes escribir o seleccionar el valor requerido para este pedido.', 'info'))}>+</button>}
     </div>
   </div>
 )
@@ -279,11 +279,18 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const evidenceModalRef = useRef()
   const evidenceFileRef = useRef()
 
+  const giroModalRef = useRef()
+  const subGiroModalRef = useRef()
+
   const [form, setForm] = useState(emptyForm())
   const [items, setItems] = useState([emptyItem()])
   const [clients, setClients] = useState([])
   const [users, setUsers] = useState([])
   const [articles, setArticles] = useState([])
+  const [giros, setGiros] = useState([])
+  const [subGiros, setSubGiros] = useState([])
+  const [giroForm, setGiroForm] = useState({ name: '', status: '1' })
+  const [subGiroForm, setSubGiroForm] = useState({ giro_id: '', name: '', status: '1' })
   const [ubigeoOptions, setUbigeoOptions] = useState([])
   const [articleQuery, setArticleQuery] = useState('')
   const [articlePageSize, setArticlePageSize] = useState(20)
@@ -297,10 +304,14 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       sampleOrdersRest.getClients(),
       sampleOrdersRest.getUsers(),
       sampleOrdersRest.getArticles(),
-    ]).then(([clientRows, userRows, articleRows]) => {
+      sampleOrdersRest.getGiros(),
+      sampleOrdersRest.getSubGiros(),
+    ]).then(([clientRows, userRows, articleRows, giroRows, subGiroRows]) => {
       setClients((clientRows ?? []).filter(row => row.status !== null))
       setUsers((userRows ?? []).filter(row => row.status !== null))
       setArticles((articleRows ?? []).filter(row => row.status !== null))
+      setGiros((giroRows ?? []).filter(row => row.status !== null))
+      setSubGiros((subGiroRows ?? []).filter(row => row.status !== null))
     })
 
     getUbigeoCatalog()
@@ -316,6 +327,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
   const clientOptions = useMemo(() => makeSelectOptions(clients, formatClient, row => row.entity_id ?? row.id), [clients])
   const userOptions = useMemo(() => makeSelectOptions(users, formatUser), [users])
+  const giroOptions = useMemo(() => giros.map(row => ({ value: `${row.id}`, label: row.name })), [giros])
+  const subGiroOptions = useMemo(() => subGiros
+    .filter(row => !form.giro_id || `${row.giro_id}` === `${form.giro_id}`)
+    .map(row => ({ value: `${row.id}`, label: row.name })), [subGiros, form.giro_id])
   const articleRows = useMemo(() => {
     const terms = normalizeSearchText(articleQuery).split(' ').filter(Boolean)
     const rows = terms.length
@@ -380,8 +395,79 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     }))
   }
 
+  const onGiroSelect = (giroId) => {
+    const selected = giros.find(row => `${row.id}` === `${giroId}`)
+    // Al cambiar de giro se limpia el sub giro porque depende del giro
+    setForm(prev => ({
+      ...prev,
+      giro_id: giroId,
+      business_line: selected?.name ?? '',
+      sub_giro_id: '',
+      business_subline: '',
+    }))
+  }
+
+  const onSubGiroSelect = (subGiroId) => {
+    const selected = subGiros.find(row => `${row.id}` === `${subGiroId}`)
+    setForm(prev => ({
+      ...prev,
+      sub_giro_id: subGiroId,
+      business_subline: selected?.name ?? '',
+    }))
+  }
+
+  const openGiroModal = () => {
+    setGiroForm({ name: '', status: '1' })
+    $(giroModalRef.current).modal('show')
+  }
+
+  const openSubGiroModal = () => {
+    setSubGiroForm({ giro_id: form.giro_id || '', name: '', status: '1' })
+    $(subGiroModalRef.current).modal('show')
+  }
+
+  const onCreateGiro = async (e) => {
+    e.preventDefault()
+    const name = (giroForm.name ?? '').trim()
+    if (!name) return
+    const result = await sampleOrdersRest.createGiro({ name, status: giroForm.status === '1' })
+    if (!result) return
+    const created = result?.data ?? result
+    if (created?.id) {
+      setGiros(prev => [created, ...prev])
+      setForm(prev => ({ ...prev, giro_id: `${created.id}`, business_line: created.name ?? name, sub_giro_id: '', business_subline: '' }))
+    }
+    $(giroModalRef.current).modal('hide')
+  }
+
+  const onCreateSubGiro = async (e) => {
+    e.preventDefault()
+    const name = (subGiroForm.name ?? '').trim()
+    const giroId = subGiroForm.giro_id
+    if (!name || !giroId) return
+    const result = await sampleOrdersRest.createSubGiro({ giro_id: giroId, name, status: subGiroForm.status === '1' })
+    if (!result) return
+    const created = result?.data ?? result
+    if (created?.id) {
+      setSubGiros(prev => [created, ...prev])
+      const giroName = giros.find(row => `${row.id}` === `${giroId}`)?.name
+      setForm(prev => ({
+        ...prev,
+        giro_id: `${giroId}`,
+        business_line: giroName ?? prev.business_line,
+        sub_giro_id: `${created.id}`,
+        business_subline: created.name ?? name,
+      }))
+    }
+    $(subGiroModalRef.current).modal('hide')
+  }
+
   const openModal = (data = null) => {
     if (data?.id) {
+      // Los pedidos antiguos solo guardaron el texto (business_line); intentamos
+      // emparejarlo con un giro/sub giro existente para preseleccionarlo por id.
+      const giroId = data.giro_id ?? giros.find(row => row.name === data.business_line)?.id ?? ''
+      const subGiroId = data.sub_giro_id ?? subGiros.find(row => row.name === data.business_subline && (!giroId || `${row.giro_id}` === `${giroId}`))?.id ?? ''
       setForm({
         ...emptyForm(),
         ...data,
@@ -394,6 +480,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         client_id: data.client_id ? `${data.client_id}` : '',
         supervisor_id: data.supervisor_id ? `${data.supervisor_id}` : '',
         sales_channel: data.sales_channel ?? data.channel ?? '',
+        giro_id: giroId ? `${giroId}` : '',
+        sub_giro_id: subGiroId ? `${subGiroId}` : '',
       })
       const nextItems = Array.isArray(data.items) && data.items.length ? data.items.map(item => ({ ...emptyItem(), ...item, uid: crypto.randomUUID() })) : [emptyItem()]
       setItems(nextItems)
@@ -700,8 +788,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
         <SampleSelect label='Canal de venta' value={form.sales_channel} onChange={value => setField('sales_channel', value)} options={salesChannelOptions} addButton />
         <SampleSelect label='Sub canal de venta' value={form.sales_subchannel} onChange={value => setField('sales_subchannel', value)} options={salesSubchannelOptions} addButton />
-        <SampleSelect label='Giro' value={form.business_line} onChange={value => setField('business_line', value)} options={businessLineOptions} addButton />
-        <SampleSelect label='Sub Giro' value={form.business_subline} onChange={value => setField('business_subline', value)} options={businessSublineOptions} addButton />
+        <SampleSelect label='Giro' value={form.giro_id} onChange={onGiroSelect} options={giroOptions} addButton onAdd={openGiroModal} />
+        <SampleSelect label='Sub Giro' value={form.sub_giro_id} onChange={onSubGiroSelect} options={subGiroOptions} addButton onAdd={openSubGiroModal} />
 
         <SampleSelect label='Ubigeo' value={form.ubigeo} onChange={value => setField('ubigeo', value)} options={selectedUbigeoOptions} placeholder='Seleccione Ubigeo' />
         <SampleInput label='Direccion de entrega' value={form.delivery_address} onChange={value => setField('delivery_address', value)} placeholder='Introduce una ubicacion' />
@@ -923,6 +1011,41 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         ) : (
           <div className='text-muted py-4 text-center'>Sin evidencia registrada</div>
         )}
+      </div>
+    </Modal>
+
+    <Modal modalRef={giroModalRef} title='Registrar Giro' size='sm' btnSubmitText='Registrar' onSubmit={onCreateGiro}>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b></label>
+        <input className='form-control' value={giroForm.name} onChange={e => setGiroForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del giro' required />
+      </div>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Estado</label>
+        <select className='form-select' value={giroForm.status} onChange={e => setGiroForm(prev => ({ ...prev, status: e.target.value }))}>
+          <option value='1'>Activo</option>
+          <option value='0'>Inactivo</option>
+        </select>
+      </div>
+    </Modal>
+
+    <Modal modalRef={subGiroModalRef} title='Registrar Sub Giro' size='sm' btnSubmitText='Registrar' onSubmit={onCreateSubGiro}>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Giro <b className='text-danger'>*</b></label>
+        <select className='form-select' value={subGiroForm.giro_id} onChange={e => setSubGiroForm(prev => ({ ...prev, giro_id: e.target.value }))} required>
+          <option value=''>Seleccione</option>
+          {giroOptions.map(option => <option key={`subgiro-giro-${option.value}`} value={option.value}>{option.label}</option>)}
+        </select>
+      </div>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b></label>
+        <input className='form-control' value={subGiroForm.name} onChange={e => setSubGiroForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del sub giro' required />
+      </div>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Estado</label>
+        <select className='form-select' value={subGiroForm.status} onChange={e => setSubGiroForm(prev => ({ ...prev, status: e.target.value }))}>
+          <option value='1'>Activo</option>
+          <option value='0'>Inactivo</option>
+        </select>
       </div>
     </Modal>
   </>

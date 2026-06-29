@@ -77,6 +77,8 @@ use App\Http\Controllers\Admin\SampleOrderController as AdminSampleOrderControll
 use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Admin\TransactionCategoryController as AdminTransactionCategoryController;
+use App\Http\Controllers\Admin\GiroController as AdminGiroController;
+use App\Http\Controllers\Admin\SubGiroController as AdminSubGiroController;
 use App\Http\Controllers\Admin\VehicleController as AdminVehicleController;
 use App\Http\Controllers\Admin\ZoneController as AdminZoneController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
@@ -660,6 +662,18 @@ Route::middleware('auth')->group(function () {
         Route::patch('/transactions/categories/status', [AdminTransactionCategoryController::class, 'status']);
         Route::patch('/transactions/categories/{field}', [AdminTransactionCategoryController::class, 'boolean']);
         Route::delete('/transactions/categories/{id}', [AdminTransactionCategoryController::class, 'delete']);
+
+        Route::post('/giros', [AdminGiroController::class, 'save']);
+        Route::post('/giros/paginate', [AdminGiroController::class, 'paginate']);
+        Route::patch('/giros/status', [AdminGiroController::class, 'status']);
+        Route::patch('/giros/{field}', [AdminGiroController::class, 'boolean']);
+        Route::delete('/giros/{id}', [AdminGiroController::class, 'delete']);
+
+        Route::post('/sub-giros', [AdminSubGiroController::class, 'save']);
+        Route::post('/sub-giros/paginate', [AdminSubGiroController::class, 'paginate']);
+        Route::patch('/sub-giros/status', [AdminSubGiroController::class, 'status']);
+        Route::patch('/sub-giros/{field}', [AdminSubGiroController::class, 'boolean']);
+        Route::delete('/sub-giros/{id}', [AdminSubGiroController::class, 'delete']);
 
         Route::post('/services-client', [AdminServiceClientController::class, 'save']);
         Route::post('/services-client/paginate', [AdminServiceClientController::class, 'paginate']);
