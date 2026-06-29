@@ -24,6 +24,7 @@ class SampleOrder extends Model
         'client_id',
         'supervisor_id',
         'request_reason',
+        'request_reason_id',
         'sales_channel',
         'sales_subchannel',
         'business_line',

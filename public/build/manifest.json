@@ -148,8 +148,8 @@
       "_CreateReactScript-BZK8oH6G.js"
     ]
   },
-  "_SampleOrdersRest-BUv7eA6V.js": {
-    "file": "assets/SampleOrdersRest-BUv7eA6V.js",
+  "_SampleOrdersRest-C_kuV8zC.js": {
+    "file": "assets/SampleOrdersRest-C_kuV8zC.js",
     "name": "SampleOrdersRest",
     "imports": [
       "_BasicRest-CfowDrFz.js",
@@ -1368,7 +1368,7 @@
     ]
   },
   "resources/js/Admin/Picking.jsx": {
-    "file": "assets/Picking-BsL2RBEo.js",
+    "file": "assets/Picking-BpZOi8HJ.js",
     "name": "Picking",
     "src": "resources/js/Admin/Picking.jsx",
     "isEntry": true,
@@ -1376,7 +1376,7 @@
       "_CreateReactScript-BZK8oH6G.js",
       "_Base-MwHRVYvh.js",
       "_CommercialOrdersRest-DS67VrL7.js",
-      "_SampleOrdersRest-BUv7eA6V.js",
+      "_SampleOrdersRest-C_kuV8zC.js",
       "_BasicRest-CfowDrFz.js"
     ]
   },
@@ -1603,7 +1603,7 @@
     ]
   },
   "resources/js/Admin/SampleOrders.jsx": {
-    "file": "assets/SampleOrders-CYbTVugu.js",
+    "file": "assets/SampleOrders-Cco_ZAEf.js",
     "name": "SampleOrders",
     "src": "resources/js/Admin/SampleOrders.jsx",
     "isEntry": true,
@@ -1613,7 +1613,7 @@
       "_Table-CFxtCd01.js",
       "_Modal-tZyrY8-T.js",
       "_DxButton-CsjWvhyj.js",
-      "_SampleOrdersRest-BUv7eA6V.js",
+      "_SampleOrdersRest-C_kuV8zC.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_magistralesRecordPdf-BqWEf1vD.js",
       "_ubigeoInei-D0FnAslC.js",

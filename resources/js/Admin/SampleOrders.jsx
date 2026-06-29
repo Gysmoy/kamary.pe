@@ -29,7 +29,6 @@ const emailStatusOptions = [
   { value: 'failed', label: 'Fallido', className: 'bg-danger-subtle text-danger border border-danger' },
 ]
 
-const requestReasonOptions = ['CAPACITACIONES', 'NUEVO CLIENTE', 'PRUEBA PILOTO', 'CODIFICACION NUEVO SKU', 'EVENTOS', 'REPOSICION', 'PROMOCION', 'MUESTRA MEDICA']
 const salesChannelOptions = ['B2B', 'DIRECTOS', 'E COMERCE', 'RETAIL', 'TRADICIONAL', 'TRADE', 'MKT', 'COMMERCIAL EXCELLENCE']
 const salesSubchannelOptions = ['LIMA 1', 'LIMA 2', 'PROVINCIAS']
 const serviceTypeOptions = ['NEXT DAY', 'SAME DAY', 'PROGRAMADO']
@@ -63,6 +62,7 @@ const emptyForm = () => ({
   total_gross_weight: '',
   requested_at: today(),
   request_reason: '',
+  request_reason_id: '',
   supervisor_id: '',
   supervisor_name: '',
   client_id: '',
@@ -281,6 +281,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
   const giroModalRef = useRef()
   const subGiroModalRef = useRef()
+  const reasonModalRef = useRef()
 
   const [form, setForm] = useState(emptyForm())
   const [items, setItems] = useState([emptyItem()])
@@ -289,8 +290,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const [articles, setArticles] = useState([])
   const [giros, setGiros] = useState([])
   const [subGiros, setSubGiros] = useState([])
+  const [requestReasons, setRequestReasons] = useState([])
   const [giroForm, setGiroForm] = useState({ name: '', status: '1' })
   const [subGiroForm, setSubGiroForm] = useState({ giro_id: '', name: '', status: '1' })
+  const [reasonForm, setReasonForm] = useState({ name: '', status: '1' })
   const [ubigeoOptions, setUbigeoOptions] = useState([])
   const [articleQuery, setArticleQuery] = useState('')
   const [articlePageSize, setArticlePageSize] = useState(20)
@@ -306,12 +309,14 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       sampleOrdersRest.getArticles(),
       sampleOrdersRest.getGiros(),
       sampleOrdersRest.getSubGiros(),
-    ]).then(([clientRows, userRows, articleRows, giroRows, subGiroRows]) => {
+      sampleOrdersRest.getRequestReasons(),
+    ]).then(([clientRows, userRows, articleRows, giroRows, subGiroRows, reasonRows]) => {
       setClients((clientRows ?? []).filter(row => row.status !== null))
       setUsers((userRows ?? []).filter(row => row.status !== null))
       setArticles((articleRows ?? []).filter(row => row.status !== null))
       setGiros((giroRows ?? []).filter(row => row.status !== null))
       setSubGiros((subGiroRows ?? []).filter(row => row.status !== null))
+      setRequestReasons((reasonRows ?? []).filter(row => row.status !== null))
     })
 
     getUbigeoCatalog()
@@ -327,6 +332,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
   const clientOptions = useMemo(() => makeSelectOptions(clients, formatClient, row => row.entity_id ?? row.id), [clients])
   const userOptions = useMemo(() => makeSelectOptions(users, formatUser), [users])
+  const reasonOptions = useMemo(() => requestReasons.map(row => ({ value: `${row.id}`, label: row.name })), [requestReasons])
   const giroOptions = useMemo(() => giros.map(row => ({ value: `${row.id}`, label: row.name })), [giros])
   const subGiroOptions = useMemo(() => subGiros
     .filter(row => !form.giro_id || `${row.giro_id}` === `${form.giro_id}`)
@@ -393,6 +399,34 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       supervisor_id: userId,
       supervisor_name: selected ? formatUser(selected) : '',
     }))
+  }
+
+  const onReasonSelect = (reasonId) => {
+    const selected = requestReasons.find(row => `${row.id}` === `${reasonId}`)
+    setForm(prev => ({
+      ...prev,
+      request_reason_id: reasonId,
+      request_reason: selected?.name ?? '',
+    }))
+  }
+
+  const openReasonModal = () => {
+    setReasonForm({ name: '', status: '1' })
+    $(reasonModalRef.current).modal('show')
+  }
+
+  const onCreateReason = async (e) => {
+    e.preventDefault()
+    const name = (reasonForm.name ?? '').trim()
+    if (!name) return
+    const result = await sampleOrdersRest.createRequestReason({ name, status: reasonForm.status === '1' })
+    if (!result) return
+    const created = result?.data ?? result
+    if (created?.id) {
+      setRequestReasons(prev => [created, ...prev])
+      setForm(prev => ({ ...prev, request_reason_id: `${created.id}`, request_reason: created.name ?? name }))
+    }
+    $(reasonModalRef.current).modal('hide')
   }
 
   const onGiroSelect = (giroId) => {
@@ -468,6 +502,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       // emparejarlo con un giro/sub giro existente para preseleccionarlo por id.
       const giroId = data.giro_id ?? giros.find(row => row.name === data.business_line)?.id ?? ''
       const subGiroId = data.sub_giro_id ?? subGiros.find(row => row.name === data.business_subline && (!giroId || `${row.giro_id}` === `${giroId}`))?.id ?? ''
+      const reasonId = data.request_reason_id ?? requestReasons.find(row => row.name === data.request_reason)?.id ?? ''
       setForm({
         ...emptyForm(),
         ...data,
@@ -480,6 +515,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         client_id: data.client_id ? `${data.client_id}` : '',
         supervisor_id: data.supervisor_id ? `${data.supervisor_id}` : '',
         sales_channel: data.sales_channel ?? data.channel ?? '',
+        request_reason_id: reasonId ? `${reasonId}` : '',
         giro_id: giroId ? `${giroId}` : '',
         sub_giro_id: subGiroId ? `${subGiroId}` : '',
       })
@@ -781,7 +817,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       <div className='sample-form-title'>Pedido N&deg;</div>
 
       <div className='sample-grid'>
-        <SampleSelect label='Motivo del pedido' value={form.request_reason} onChange={value => setField('request_reason', value)} options={requestReasonOptions} addButton />
+        <SampleSelect label='Motivo del pedido' value={form.request_reason_id} onChange={onReasonSelect} options={reasonOptions} addButton onAdd={openReasonModal} />
         <SampleSelect label='Supervisor' value={form.supervisor_id} onChange={onSupervisorSelect} options={userOptions} addButton />
         <SampleSelect label='Seleccione cliente' value={form.client_id} onChange={onClientSelect} options={clientOptions} />
         <SampleInput label='Cliente' value={form.client_name} onChange={value => setField('client_name', value)} addButton />
@@ -1011,6 +1047,20 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         ) : (
           <div className='text-muted py-4 text-center'>Sin evidencia registrada</div>
         )}
+      </div>
+    </Modal>
+
+    <Modal modalRef={reasonModalRef} title='Registrar Motivo Pedido' size='sm' btnSubmitText='Registrar' onSubmit={onCreateReason}>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b></label>
+        <input className='form-control' value={reasonForm.name} onChange={e => setReasonForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del motivo' required />
+      </div>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Estado</label>
+        <select className='form-select' value={reasonForm.status} onChange={e => setReasonForm(prev => ({ ...prev, status: e.target.value }))}>
+          <option value='1'>Activo</option>
+          <option value='0'>Inactivo</option>
+        </select>
       </div>
     </Modal>
 

@@ -91,6 +91,7 @@ class SampleOrderController extends BasicController
         $body['client_id'] = $this->toNullableInt($body['client_id'] ?? null);
         $body['supervisor_id'] = $this->toNullableInt($body['supervisor_id'] ?? null);
         $body['request_reason'] = trim((string)($body['request_reason'] ?? '')) ?: null;
+        $body['request_reason_id'] = trim((string)($body['request_reason_id'] ?? '')) ?: null;
         $body['giro_id'] = trim((string)($body['giro_id'] ?? '')) ?: null;
         $body['sub_giro_id'] = trim((string)($body['sub_giro_id'] ?? '')) ?: null;
         $body['order_complete'] = $this->toBoolean($body['order_complete'] ?? false);

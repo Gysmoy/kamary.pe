@@ -79,6 +79,7 @@ use App\Http\Controllers\Admin\TransactionController as AdminTransactionControll
 use App\Http\Controllers\Admin\TransactionCategoryController as AdminTransactionCategoryController;
 use App\Http\Controllers\Admin\GiroController as AdminGiroController;
 use App\Http\Controllers\Admin\SubGiroController as AdminSubGiroController;
+use App\Http\Controllers\Admin\RequestReasonController as AdminRequestReasonController;
 use App\Http\Controllers\Admin\VehicleController as AdminVehicleController;
 use App\Http\Controllers\Admin\ZoneController as AdminZoneController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
@@ -674,6 +675,12 @@ Route::middleware('auth')->group(function () {
         Route::patch('/sub-giros/status', [AdminSubGiroController::class, 'status']);
         Route::patch('/sub-giros/{field}', [AdminSubGiroController::class, 'boolean']);
         Route::delete('/sub-giros/{id}', [AdminSubGiroController::class, 'delete']);
+
+        Route::post('/request-reasons', [AdminRequestReasonController::class, 'save']);
+        Route::post('/request-reasons/paginate', [AdminRequestReasonController::class, 'paginate']);
+        Route::patch('/request-reasons/status', [AdminRequestReasonController::class, 'status']);
+        Route::patch('/request-reasons/{field}', [AdminRequestReasonController::class, 'boolean']);
+        Route::delete('/request-reasons/{id}', [AdminRequestReasonController::class, 'delete']);
 
         Route::post('/services-client', [AdminServiceClientController::class, 'save']);
         Route::post('/services-client/paginate', [AdminServiceClientController::class, 'paginate']);

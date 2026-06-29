@@ -25,9 +25,11 @@ class SampleOrdersRest extends BasicRest {
   getArticles = async () => await loadAll('/api/admin/sample-orders/articles')
   getGiros = async () => await loadAll('/api/admin/giros/paginate')
   getSubGiros = async () => await loadAll('/api/admin/sub-giros/paginate')
+  getRequestReasons = async () => await loadAll('/api/admin/request-reasons/paginate')
 
   createGiro = async (request) => await this.simplePost('/api/admin/giros', request)
   createSubGiro = async (request) => await this.simplePost('/api/admin/sub-giros', request)
+  createRequestReason = async (request) => await this.simplePost('/api/admin/request-reasons', request)
 
   booleanResult = async ({ id, field, value }) => {
     try {
