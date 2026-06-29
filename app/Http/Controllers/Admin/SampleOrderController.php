@@ -135,6 +135,21 @@ class SampleOrderController extends BasicController
         }
     }
 
+    // Pedido completo solo si hay items y el stock alcanza la cantidad pedida en cada uno
+    private function sampleOrderComplete(SampleOrder $order): bool
+    {
+        $items = is_array($order->items) ? $order->items : [];
+        if (count($items) === 0) return false;
+
+        foreach ($items as $item) {
+            $quantity = (float)($item['quantity'] ?? 0);
+            $stock = (float)($item['stock'] ?? 0);
+            if ($quantity <= 0 || $stock < $quantity) return false;
+        }
+
+        return true;
+    }
+
     public function boolean(Request $request)
     {
         $field = trim((string)$request->field);
@@ -154,6 +169,12 @@ class SampleOrderController extends BasicController
             );
 
             $order = SampleOrder::query()->whereKey($request->id)->whereNotNull('status')->firstOrFail();
+
+            // No se puede aprobar un pedido incompleto (stock insuficiente para liquidarlo)
+            if ($orderStatus === 'approved' && !$this->sampleOrderComplete($order)) {
+                throw new \Exception('No se puede aprobar el pedido: el stock es insuficiente (pedido incompleto).');
+            }
+
             $updates = [
                 'order_status' => $orderStatus,
                 'updated_by' => Auth::id(),

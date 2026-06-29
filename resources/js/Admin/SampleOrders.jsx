@@ -1088,28 +1088,36 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
             container.css({ overflow: 'hidden', whiteSpace: 'nowrap' })
             const currentStatus = normalizeOrderStatus(data.order_status)
             const complete = isOrderComplete(data)
+            const approvedOrBeyond = ['approved', 'preparing', 'in_route', 'delivered'].includes(currentStatus)
             const actions = $('<div/>', { class: 'sample-grid-actions' })
+
+            // Editar siempre disponible
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-warning tippy-here', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openModal(data) }))
-            // Sin stock suficiente no se puede avanzar el estado ni generar la guia de remision
-            if (complete && currentStatus !== 'cancelled') {
-              if (!['approved', 'preparing', 'in_route', 'delivered'].includes(currentStatus)) {
-                actions.append(DxButton({ className: 'btn btn-xs btn-outline-success tippy-here', title: 'Aprobar pedido', icon: 'mdi mdi-check', onClick: () => changeOrderStatus(data, 'approved', 'Aprobar pedido') }))
-              }
-              if (currentStatus === 'approved') {
-                actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'Enviar a picking', icon: 'mdi mdi-package-variant-closed', onClick: () => changeOrderStatus(data, 'preparing', 'Enviar pedido a picking') }))
-              }
-              if (currentStatus === 'preparing') {
-                actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'En ruta', icon: 'mdi mdi-truck-fast-outline', onClick: () => changeOrderStatus(data, 'in_route', 'Marcar pedido en ruta') }))
-              }
-              if (currentStatus === 'in_route') {
-                actions.append(DxButton({ className: 'btn btn-xs btn-outline-success tippy-here', title: 'Entregado', icon: 'mdi mdi-check-all', onClick: () => changeOrderStatus(data, 'delivered', 'Marcar pedido entregado') }))
-              }
+
+            // Registrado: solo se puede Aprobar si el stock alcanza (pedido completo)
+            if (currentStatus === 'registered' && complete) {
+              actions.append(DxButton({ className: 'btn btn-xs btn-outline-success tippy-here', title: 'Aprobar pedido', icon: 'mdi mdi-check', onClick: () => changeOrderStatus(data, 'approved', 'Aprobar pedido') }))
             }
-            actions.append(DxButton({ className: 'btn btn-xs btn-outline-info tippy-here', title: 'Ver evidencia', icon: 'mdi mdi-eye', onClick: () => openEvidence(data) }))
-            actions.append(DxButton({ className: 'btn btn-xs btn-outline-dark tippy-here', title: 'Tracking pedido', icon: 'mdi mdi-map-marker-path', onClick: () => openTracking(data) }))
-            if (complete) {
+
+            // Avance de estado (recien despues de aprobado)
+            if (currentStatus === 'approved') {
+              actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'Enviar a picking', icon: 'mdi mdi-package-variant-closed', onClick: () => changeOrderStatus(data, 'preparing', 'Enviar pedido a picking') }))
+            }
+            if (currentStatus === 'preparing') {
+              actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'En ruta', icon: 'mdi mdi-truck-fast-outline', onClick: () => changeOrderStatus(data, 'in_route', 'Marcar pedido en ruta') }))
+            }
+            if (currentStatus === 'in_route') {
+              actions.append(DxButton({ className: 'btn btn-xs btn-outline-success tippy-here', title: 'Entregado', icon: 'mdi mdi-check-all', onClick: () => changeOrderStatus(data, 'delivered', 'Marcar pedido entregado') }))
+            }
+
+            // Evidencia, tracking y guia de remision: solo desde que el pedido esta aprobado en adelante
+            if (approvedOrBeyond) {
+              actions.append(DxButton({ className: 'btn btn-xs btn-outline-info tippy-here', title: 'Ver evidencia', icon: 'mdi mdi-eye', onClick: () => openEvidence(data) }))
+              actions.append(DxButton({ className: 'btn btn-xs btn-outline-dark tippy-here', title: 'Tracking pedido', icon: 'mdi mdi-map-marker-path', onClick: () => openTracking(data) }))
               actions.append(DxButton({ className: 'btn btn-xs btn-outline-danger tippy-here', title: 'Imprimir guia de remision', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.sampleOrder(data)) }))
             }
+
+            // Eliminar siempre disponible
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-danger tippy-here', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data) }))
             container.empty().append(actions)
           }
