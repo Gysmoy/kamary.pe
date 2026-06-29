@@ -248,6 +248,43 @@ const isOrderComplete = (data) => {
   return list.length > 0 && list.every(item => Number(item?.quantity || 0) > 0 && Number(item?.stock || 0) >= Number(item?.quantity || 0))
 }
 
+const statusBadge = (active) => active
+  ? <span className='badge bg-success-subtle text-success border border-success'>Activo</span>
+  : <span className='badge bg-danger-subtle text-danger border border-danger'>Inactivo</span>
+
+// Lista reutilizable de un catalogo (motivo / giro / sub giro) con acciones editar y eliminar
+const CatalogList = ({ items, editingId, onEdit, onDelete, extraColumn }) => (
+  <div className='mt-3'>
+    <div className='fw-bold mb-1' style={{ fontSize: 13 }}>Registrados</div>
+    <div className='table-responsive' style={{ maxHeight: 240, overflowY: 'auto' }}>
+      <table className='table table-sm table-bordered align-middle mb-0' style={{ fontSize: 12 }}>
+        <thead>
+          <tr>
+            <th style={{ width: 86 }}>Acciones</th>
+            <th style={{ width: 84 }}>Estado</th>
+            {extraColumn && <th>{extraColumn.header}</th>}
+            <th>Descripcion</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.length === 0 && <tr><td colSpan={extraColumn ? 4 : 3} className='text-center text-muted py-2'>Sin registros</td></tr>}
+          {items.map(item => (
+            <tr key={item.id} className={`${editingId}` === `${item.id}` ? 'table-warning' : ''}>
+              <td>
+                <button type='button' className='btn btn-xs btn-outline-warning me-1' title='Editar' onClick={() => onEdit(item)}><i className='mdi mdi-pencil'></i></button>
+                <button type='button' className='btn btn-xs btn-outline-danger' title='Eliminar' onClick={() => onDelete(item)}><i className='mdi mdi-delete'></i></button>
+              </td>
+              <td>{statusBadge(item.status)}</td>
+              {extraColumn && <td>{extraColumn.value(item)}</td>}
+              <td>{item.name}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)
+
 const SampleSelect = ({ label, value, options = [], onChange, placeholder = 'Seleccione', addButton = false, onAdd, disabled = false }) => (
   <div className='sample-field'>
     <label className='form-label'>{label}</label>
@@ -291,9 +328,9 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const [giros, setGiros] = useState([])
   const [subGiros, setSubGiros] = useState([])
   const [requestReasons, setRequestReasons] = useState([])
-  const [giroForm, setGiroForm] = useState({ name: '', status: '1' })
-  const [subGiroForm, setSubGiroForm] = useState({ giro_id: '', name: '', status: '1' })
-  const [reasonForm, setReasonForm] = useState({ name: '', status: '1' })
+  const [giroForm, setGiroForm] = useState({ id: '', name: '', status: '1' })
+  const [subGiroForm, setSubGiroForm] = useState({ id: '', giro_id: '', name: '', status: '1' })
+  const [reasonForm, setReasonForm] = useState({ id: '', name: '', status: '1' })
   const [ubigeoOptions, setUbigeoOptions] = useState([])
   const [articleQuery, setArticleQuery] = useState('')
   const [articlePageSize, setArticlePageSize] = useState(20)
@@ -332,10 +369,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
   const clientOptions = useMemo(() => makeSelectOptions(clients, formatClient, row => row.entity_id ?? row.id), [clients])
   const userOptions = useMemo(() => makeSelectOptions(users, formatUser), [users])
-  const reasonOptions = useMemo(() => requestReasons.map(row => ({ value: `${row.id}`, label: row.name })), [requestReasons])
-  const giroOptions = useMemo(() => giros.map(row => ({ value: `${row.id}`, label: row.name })), [giros])
+  const reasonOptions = useMemo(() => requestReasons.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [requestReasons])
+  const giroOptions = useMemo(() => giros.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [giros])
   const subGiroOptions = useMemo(() => subGiros
-    .filter(row => !form.giro_id || `${row.giro_id}` === `${form.giro_id}`)
+    .filter(row => row.status && (!form.giro_id || `${row.giro_id}` === `${form.giro_id}`))
     .map(row => ({ value: `${row.id}`, label: row.name })), [subGiros, form.giro_id])
   const articleRows = useMemo(() => {
     const terms = normalizeSearchText(articleQuery).split(' ').filter(Boolean)
@@ -401,99 +438,133 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     }))
   }
 
+  // Inserta o reemplaza un registro en el listado de un catalogo
+  const upsertRow = (setter, saved) => setter(prev => {
+    const exists = prev.some(row => `${row.id}` === `${saved.id}`)
+    return exists ? prev.map(row => `${row.id}` === `${saved.id}` ? saved : row) : [saved, ...prev]
+  })
+
+  // ----- Motivo del pedido -----
   const onReasonSelect = (reasonId) => {
     const selected = requestReasons.find(row => `${row.id}` === `${reasonId}`)
-    setForm(prev => ({
-      ...prev,
-      request_reason_id: reasonId,
-      request_reason: selected?.name ?? '',
-    }))
+    setForm(prev => ({ ...prev, request_reason_id: reasonId, request_reason: selected?.name ?? '' }))
   }
 
   const openReasonModal = () => {
-    setReasonForm({ name: '', status: '1' })
+    setReasonForm({ id: '', name: '', status: '1' })
     $(reasonModalRef.current).modal('show')
   }
 
-  const onCreateReason = async (e) => {
+  const editReason = (item) => setReasonForm({ id: `${item.id}`, name: item.name ?? '', status: item.status ? '1' : '0' })
+
+  const onSaveReason = async (e) => {
     e.preventDefault()
     const name = (reasonForm.name ?? '').trim()
     if (!name) return
-    const result = await sampleOrdersRest.createRequestReason({ name, status: reasonForm.status === '1' })
+    const payload = { name, status: reasonForm.status === '1' }
+    if (reasonForm.id) payload.id = reasonForm.id
+    const result = await sampleOrdersRest.saveRequestReason(payload)
     if (!result) return
-    const created = result?.data ?? result
-    if (created?.id) {
-      setRequestReasons(prev => [created, ...prev])
-      setForm(prev => ({ ...prev, request_reason_id: `${created.id}`, request_reason: created.name ?? name }))
+    const saved = result?.data ?? result
+    if (saved?.id) {
+      upsertRow(setRequestReasons, saved)
+      if (!reasonForm.id && saved.status) setForm(prev => ({ ...prev, request_reason_id: `${saved.id}`, request_reason: saved.name ?? name }))
+      else setForm(prev => `${prev.request_reason_id}` === `${saved.id}` ? { ...prev, request_reason: saved.name ?? name } : prev)
     }
-    $(reasonModalRef.current).modal('hide')
+    setReasonForm({ id: '', name: '', status: '1' })
   }
 
+  const onDeleteReason = async (item) => {
+    const { isConfirmed } = await Swal.fire({ title: 'Eliminar motivo', text: `Se eliminara "${item.name}".`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
+    if (!isConfirmed) return
+    if (!await sampleOrdersRest.deleteRequestReason(item.id)) return
+    setRequestReasons(prev => prev.filter(row => `${row.id}` !== `${item.id}`))
+    setForm(prev => `${prev.request_reason_id}` === `${item.id}` ? { ...prev, request_reason_id: '', request_reason: '' } : prev)
+    if (`${reasonForm.id}` === `${item.id}`) setReasonForm({ id: '', name: '', status: '1' })
+  }
+
+  // ----- Giro -----
   const onGiroSelect = (giroId) => {
     const selected = giros.find(row => `${row.id}` === `${giroId}`)
     // Al cambiar de giro se limpia el sub giro porque depende del giro
-    setForm(prev => ({
-      ...prev,
-      giro_id: giroId,
-      business_line: selected?.name ?? '',
-      sub_giro_id: '',
-      business_subline: '',
-    }))
-  }
-
-  const onSubGiroSelect = (subGiroId) => {
-    const selected = subGiros.find(row => `${row.id}` === `${subGiroId}`)
-    setForm(prev => ({
-      ...prev,
-      sub_giro_id: subGiroId,
-      business_subline: selected?.name ?? '',
-    }))
+    setForm(prev => ({ ...prev, giro_id: giroId, business_line: selected?.name ?? '', sub_giro_id: '', business_subline: '' }))
   }
 
   const openGiroModal = () => {
-    setGiroForm({ name: '', status: '1' })
+    setGiroForm({ id: '', name: '', status: '1' })
     $(giroModalRef.current).modal('show')
   }
 
-  const openSubGiroModal = () => {
-    setSubGiroForm({ giro_id: form.giro_id || '', name: '', status: '1' })
-    $(subGiroModalRef.current).modal('show')
-  }
+  const editGiro = (item) => setGiroForm({ id: `${item.id}`, name: item.name ?? '', status: item.status ? '1' : '0' })
 
-  const onCreateGiro = async (e) => {
+  const onSaveGiro = async (e) => {
     e.preventDefault()
     const name = (giroForm.name ?? '').trim()
     if (!name) return
-    const result = await sampleOrdersRest.createGiro({ name, status: giroForm.status === '1' })
+    const payload = { name, status: giroForm.status === '1' }
+    if (giroForm.id) payload.id = giroForm.id
+    const result = await sampleOrdersRest.saveGiro(payload)
     if (!result) return
-    const created = result?.data ?? result
-    if (created?.id) {
-      setGiros(prev => [created, ...prev])
-      setForm(prev => ({ ...prev, giro_id: `${created.id}`, business_line: created.name ?? name, sub_giro_id: '', business_subline: '' }))
+    const saved = result?.data ?? result
+    if (saved?.id) {
+      upsertRow(setGiros, saved)
+      if (!giroForm.id && saved.status) setForm(prev => ({ ...prev, giro_id: `${saved.id}`, business_line: saved.name ?? name, sub_giro_id: '', business_subline: '' }))
+      else setForm(prev => `${prev.giro_id}` === `${saved.id}` ? { ...prev, business_line: saved.name ?? name } : prev)
     }
-    $(giroModalRef.current).modal('hide')
+    setGiroForm({ id: '', name: '', status: '1' })
   }
 
-  const onCreateSubGiro = async (e) => {
+  const onDeleteGiro = async (item) => {
+    const { isConfirmed } = await Swal.fire({ title: 'Eliminar giro', text: `Se eliminara "${item.name}" y sus sub giros quedaran sin giro.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
+    if (!isConfirmed) return
+    if (!await sampleOrdersRest.deleteGiro(item.id)) return
+    setGiros(prev => prev.filter(row => `${row.id}` !== `${item.id}`))
+    setForm(prev => `${prev.giro_id}` === `${item.id}` ? { ...prev, giro_id: '', business_line: '', sub_giro_id: '', business_subline: '' } : prev)
+    if (`${giroForm.id}` === `${item.id}`) setGiroForm({ id: '', name: '', status: '1' })
+  }
+
+  // ----- Sub Giro -----
+  const onSubGiroSelect = (subGiroId) => {
+    const selected = subGiros.find(row => `${row.id}` === `${subGiroId}`)
+    setForm(prev => ({ ...prev, sub_giro_id: subGiroId, business_subline: selected?.name ?? '' }))
+  }
+
+  const openSubGiroModal = () => {
+    setSubGiroForm({ id: '', giro_id: form.giro_id || '', name: '', status: '1' })
+    $(subGiroModalRef.current).modal('show')
+  }
+
+  const editSubGiro = (item) => setSubGiroForm({ id: `${item.id}`, giro_id: item.giro_id ? `${item.giro_id}` : '', name: item.name ?? '', status: item.status ? '1' : '0' })
+
+  const onSaveSubGiro = async (e) => {
     e.preventDefault()
     const name = (subGiroForm.name ?? '').trim()
     const giroId = subGiroForm.giro_id
     if (!name || !giroId) return
-    const result = await sampleOrdersRest.createSubGiro({ giro_id: giroId, name, status: subGiroForm.status === '1' })
+    const payload = { giro_id: giroId, name, status: subGiroForm.status === '1' }
+    if (subGiroForm.id) payload.id = subGiroForm.id
+    const result = await sampleOrdersRest.saveSubGiro(payload)
     if (!result) return
-    const created = result?.data ?? result
-    if (created?.id) {
-      setSubGiros(prev => [created, ...prev])
-      const giroName = giros.find(row => `${row.id}` === `${giroId}`)?.name
-      setForm(prev => ({
-        ...prev,
-        giro_id: `${giroId}`,
-        business_line: giroName ?? prev.business_line,
-        sub_giro_id: `${created.id}`,
-        business_subline: created.name ?? name,
-      }))
+    const saved = result?.data ?? result
+    if (saved?.id) {
+      upsertRow(setSubGiros, saved)
+      if (!subGiroForm.id && saved.status) {
+        const giroName = giros.find(row => `${row.id}` === `${giroId}`)?.name
+        setForm(prev => ({ ...prev, giro_id: `${giroId}`, business_line: giroName ?? prev.business_line, sub_giro_id: `${saved.id}`, business_subline: saved.name ?? name }))
+      } else {
+        setForm(prev => `${prev.sub_giro_id}` === `${saved.id}` ? { ...prev, business_subline: saved.name ?? name } : prev)
+      }
     }
-    $(subGiroModalRef.current).modal('hide')
+    setSubGiroForm({ id: '', giro_id: form.giro_id || '', name: '', status: '1' })
+  }
+
+  const onDeleteSubGiro = async (item) => {
+    const { isConfirmed } = await Swal.fire({ title: 'Eliminar sub giro', text: `Se eliminara "${item.name}".`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
+    if (!isConfirmed) return
+    if (!await sampleOrdersRest.deleteSubGiro(item.id)) return
+    setSubGiros(prev => prev.filter(row => `${row.id}` !== `${item.id}`))
+    setForm(prev => `${prev.sub_giro_id}` === `${item.id}` ? { ...prev, sub_giro_id: '', business_subline: '' } : prev)
+    if (`${subGiroForm.id}` === `${item.id}`) setSubGiroForm({ id: '', giro_id: form.giro_id || '', name: '', status: '1' })
   }
 
   const openModal = (data = null) => {
@@ -1050,9 +1121,11 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       </div>
     </Modal>
 
-    <Modal modalRef={reasonModalRef} title='Registrar Motivo Pedido' size='sm' btnSubmitText='Registrar' onSubmit={onCreateReason}>
+    <Modal modalRef={reasonModalRef} title='Registrar Motivo Pedido' size='md' btnSubmitText={reasonForm.id ? 'Actualizar' : 'Registrar'} onSubmit={onSaveReason}>
       <div className='form-group mb-2'>
-        <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b></label>
+        <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b>
+          {reasonForm.id && <a role='button' className='ms-2 small text-decoration-underline' onClick={() => setReasonForm({ id: '', name: '', status: '1' })}>Cancelar edicion</a>}
+        </label>
         <input className='form-control' value={reasonForm.name} onChange={e => setReasonForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del motivo' required />
       </div>
       <div className='form-group mb-2'>
@@ -1062,11 +1135,14 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           <option value='0'>Inactivo</option>
         </select>
       </div>
+      <CatalogList items={requestReasons} editingId={reasonForm.id} onEdit={editReason} onDelete={onDeleteReason} />
     </Modal>
 
-    <Modal modalRef={giroModalRef} title='Registrar Giro' size='sm' btnSubmitText='Registrar' onSubmit={onCreateGiro}>
+    <Modal modalRef={giroModalRef} title='Registrar Giro' size='md' btnSubmitText={giroForm.id ? 'Actualizar' : 'Registrar'} onSubmit={onSaveGiro}>
       <div className='form-group mb-2'>
-        <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b></label>
+        <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b>
+          {giroForm.id && <a role='button' className='ms-2 small text-decoration-underline' onClick={() => setGiroForm({ id: '', name: '', status: '1' })}>Cancelar edicion</a>}
+        </label>
         <input className='form-control' value={giroForm.name} onChange={e => setGiroForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del giro' required />
       </div>
       <div className='form-group mb-2'>
@@ -1076,9 +1152,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           <option value='0'>Inactivo</option>
         </select>
       </div>
+      <CatalogList items={giros} editingId={giroForm.id} onEdit={editGiro} onDelete={onDeleteGiro} />
     </Modal>
 
-    <Modal modalRef={subGiroModalRef} title='Registrar Sub Giro' size='sm' btnSubmitText='Registrar' onSubmit={onCreateSubGiro}>
+    <Modal modalRef={subGiroModalRef} title='Registrar Sub Giro' size='md' btnSubmitText={subGiroForm.id ? 'Actualizar' : 'Registrar'} onSubmit={onSaveSubGiro}>
       <div className='form-group mb-2'>
         <label className='form-label mb-1'>Giro <b className='text-danger'>*</b></label>
         <select className='form-select' value={subGiroForm.giro_id} onChange={e => setSubGiroForm(prev => ({ ...prev, giro_id: e.target.value }))} required>
@@ -1087,7 +1164,9 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         </select>
       </div>
       <div className='form-group mb-2'>
-        <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b></label>
+        <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b>
+          {subGiroForm.id && <a role='button' className='ms-2 small text-decoration-underline' onClick={() => setSubGiroForm({ id: '', giro_id: form.giro_id || '', name: '', status: '1' })}>Cancelar edicion</a>}
+        </label>
         <input className='form-control' value={subGiroForm.name} onChange={e => setSubGiroForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del sub giro' required />
       </div>
       <div className='form-group mb-2'>
@@ -1097,6 +1176,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           <option value='0'>Inactivo</option>
         </select>
       </div>
+      <CatalogList items={subGiros} editingId={subGiroForm.id} onEdit={editSubGiro} onDelete={onDeleteSubGiro}
+        extraColumn={{ header: 'Giro', value: item => giros.find(row => `${row.id}` === `${item.giro_id}`)?.name ?? '-' }} />
     </Modal>
   </>
 }

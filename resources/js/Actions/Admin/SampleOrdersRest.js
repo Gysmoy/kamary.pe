@@ -27,9 +27,25 @@ class SampleOrdersRest extends BasicRest {
   getSubGiros = async () => await loadAll('/api/admin/sub-giros/paginate')
   getRequestReasons = async () => await loadAll('/api/admin/request-reasons/paginate')
 
-  createGiro = async (request) => await this.simplePost('/api/admin/giros', request)
-  createSubGiro = async (request) => await this.simplePost('/api/admin/sub-giros', request)
-  createRequestReason = async (request) => await this.simplePost('/api/admin/request-reasons', request)
+  saveGiro = async (request) => await this.simplePost('/api/admin/giros', request)
+  saveSubGiro = async (request) => await this.simplePost('/api/admin/sub-giros', request)
+  saveRequestReason = async (request) => await this.simplePost('/api/admin/request-reasons', request)
+
+  simpleDelete = async (url) => {
+    try {
+      const { status, result } = await Fetch(url, { method: 'DELETE' })
+      if (!status) throw new Error(result?.message ?? 'Ocurrio un error inesperado')
+      toast.success('Correcto', { description: result.message, duration: 3000, richColors: true })
+      return true
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
+      return false
+    }
+  }
+
+  deleteGiro = async (id) => await this.simpleDelete(`/api/admin/giros/${id}`)
+  deleteSubGiro = async (id) => await this.simpleDelete(`/api/admin/sub-giros/${id}`)
+  deleteRequestReason = async (id) => await this.simpleDelete(`/api/admin/request-reasons/${id}`)
 
   booleanResult = async ({ id, field, value }) => {
     try {
