@@ -43,13 +43,63 @@ class BusinessController extends BasicController
     }
 
     /**
-     * Radiografia de la data de produccion: estructura completa (tablas, campos y conteos),
-     * data real de las tablas estructurales (empresas, sedes, almacenes, zonas) y totales clave.
-     * Sirve para mapear el estado actual y como data dump para desarrollo.
+     * Radiografia de la data: estructura completa (tablas, campos y conteos), data real de las
+     * tablas estructurales (empresas, sedes, almacenes, zonas) y totales clave.
+     * Si se pasa $id, toda la data se filtra a esa empresa (por business_id / business_key /
+     * sus sedes / sus almacenes) para ver como trabaja y que data tiene cada empresa.
      */
-    public function exportData(Request $request)
+    public function exportData(Request $request, $id = null)
     {
         $database = DB::getDatabaseName();
+
+        // Contexto de empresa (solo si se exporta una empresa puntual)
+        $business = null;
+        $businessId = null;
+        $businessKey = null;
+        $branchIds = [];
+        $warehouseIds = [];
+        if ($id !== null) {
+            $business = Business::find($id);
+            if (!$business) {
+                return response()->json(['message' => 'Empresa no encontrada'], 404);
+            }
+            $businessId = $business->id;
+            $businessKey = $business->business_key;
+            $branchIds = Schema::hasTable('business_branches')
+                ? DB::table('business_branches')->where('business_id', $businessId)->pluck('id')->map(fn($v) => (int)$v)->all()
+                : [];
+            $warehouseIds = (Schema::hasTable('warehouses') && count($branchIds))
+                ? DB::table('warehouses')->whereIn('business_branch_id', $branchIds)->pluck('id')->map(fn($v) => (int)$v)->all()
+                : [];
+        }
+
+        // Aplica el filtro de empresa a una consulta segun las columnas de la tabla. Devuelve el
+        // criterio usado, o null si la tabla no tiene relacion con empresa (es data compartida).
+        $applyScope = function ($query, string $table) use ($id, $businessId, $businessKey, $branchIds, $warehouseIds) {
+            if ($id === null) return 'all';
+            if ($table === 'businesses') {
+                $query->where('id', $businessId);
+                return 'id';
+            }
+            $cols = Schema::getColumnListing($table);
+            if (in_array('business_id', $cols, true)) {
+                $query->where('business_id', $businessId);
+                return 'business_id';
+            }
+            if (in_array('business_key', $cols, true)) {
+                $query->where('business_key', $businessKey);
+                return 'business_key';
+            }
+            if (in_array('business_branch_id', $cols, true)) {
+                $query->whereIn('business_branch_id', $branchIds ?: [-1]);
+                return 'business_branch_id';
+            }
+            if (in_array('warehouse_id', $cols, true)) {
+                $query->whereIn('warehouse_id', $warehouseIds ?: [-1]);
+                return 'warehouse_id';
+            }
+            return 'global'; // sin columna de empresa: data compartida
+        };
 
         // Columnas cuyo valor enmascaramos para no exponer secretos en el dump
         $secretPattern = '/(password|secret|token|certificate|sol_user|sol_pass|private|client_secret|api_key|remember_token)/i';
@@ -65,7 +115,7 @@ class BusinessController extends BasicController
             })->values()->all();
         };
 
-        // 1) Estructura: todas las tablas con sus columnas y cantidad de filas
+        // 1) Estructura: todas las tablas con sus columnas y cantidad de filas (filtradas si hay empresa)
         $tableNames = collect(DB::select(
             "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE' ORDER BY table_name",
             [$database]
@@ -73,13 +123,16 @@ class BusinessController extends BasicController
 
         $tables = [];
         foreach ($tableNames as $tableName) {
+            $scopedBy = 'all';
             try {
                 $columns = DB::select(
                     "SELECT column_name AS name, data_type AS type, is_nullable AS nullable, column_key AS col_key
                      FROM information_schema.columns WHERE table_schema = ? AND table_name = ? ORDER BY ordinal_position",
                     [$database, $tableName]
                 );
-                $rows = (int) DB::table($tableName)->count();
+                $query = DB::table($tableName);
+                $scopedBy = $applyScope($query, $tableName);
+                $rows = (int) $query->count();
             } catch (\Throwable $th) {
                 $columns = [];
                 $rows = -1;
@@ -88,6 +141,7 @@ class BusinessController extends BasicController
             $tables[] = [
                 'name' => $tableName,
                 'rows' => $rows,
+                'scoped_by' => $scopedBy,
                 'columns' => array_map(fn($column) => [
                     'name' => $column->name,
                     'type' => $column->type,
@@ -97,20 +151,24 @@ class BusinessController extends BasicController
             ];
         }
 
-        // 2) Data real de las tablas estructurales (cada registro)
+        // 2) Data real de las tablas estructurales (cada registro, filtrado por empresa)
         $detailTables = ['businesses', 'business_branches', 'warehouses', 'zones'];
         $data = [];
         foreach ($detailTables as $tableName) {
             if (Schema::hasTable($tableName)) {
-                $data[$tableName] = $redact(DB::table($tableName)->get());
+                $query = DB::table($tableName);
+                $applyScope($query, $tableName);
+                $data[$tableName] = $redact($query->get());
             }
         }
 
-        // 3) Totales clave
+        // 3) Totales clave (filtrados por empresa)
         $summary = ['total_tables' => count($tables)];
         foreach (['businesses', 'business_branches', 'warehouses', 'zones', 'articles', 'clients', 'eventual_clients', 'users', 'suppliers'] as $tableName) {
             if (Schema::hasTable($tableName)) {
-                $summary[$tableName] = (int) DB::table($tableName)->count();
+                $query = DB::table($tableName);
+                $applyScope($query, $tableName);
+                $summary[$tableName] = (int) $query->count();
             }
         }
 
@@ -120,6 +178,7 @@ class BusinessController extends BasicController
             try {
                 $productsPerWarehouse = DB::table('entry_note_items as item')
                     ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'item.warehouse_id')
+                    ->when($id !== null, fn($q) => $q->whereIn('item.warehouse_id', $warehouseIds ?: [-1]))
                     ->select('item.warehouse_id', 'warehouse.name as warehouse')
                     ->selectRaw('COUNT(DISTINCT item.article_id) as products')
                     ->groupBy('item.warehouse_id', 'warehouse.name')
@@ -139,12 +198,20 @@ class BusinessController extends BasicController
         $payload = [
             'generated_at' => now()->toDateTimeString(),
             'database' => $database,
+            'scope' => $business ? [
+                'business_id' => $businessId,
+                'name' => $business->name,
+                'business_key' => $businessKey,
+                'branch_ids' => $branchIds,
+                'warehouse_ids' => $warehouseIds,
+            ] : 'TODAS LAS EMPRESAS',
             'summary' => $summary,
             'detail' => $data,
             'tables' => $tables,
         ];
 
-        $filename = 'kamary_data_dump_' . now()->format('Ymd_His') . '.json';
+        $slug = $businessKey ? preg_replace('/[^a-z0-9]+/i', '_', $businessKey) : 'todas';
+        $filename = 'kamary_data_dump_' . $slug . '_' . now()->format('Ymd_His') . '.json';
 
         return response(
             json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),

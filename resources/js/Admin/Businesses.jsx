@@ -157,15 +157,22 @@ const Businesses = ({ can }) => {
         },
         {
           caption: 'Acciones',
-          width: '90px',
+          width: '120px',
           cellTemplate: (container, { data }) => {
             container.css('text-overflow', 'unset')
 
             container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
+              className: 'btn btn-xs btn-soft-primary me-1',
               title: 'Editar',
               icon: 'mdi mdi-pencil',
               onClick: () => onModalOpen(data)
+            }))
+
+            container.append(DxButton({
+              className: 'btn btn-xs btn-soft-info',
+              title: 'Exportar data de esta empresa',
+              icon: 'mdi mdi-database-export',
+              onClick: () => businessesRest.exportBusinessData(data.id)
             }))
           },
           allowFiltering: false,
