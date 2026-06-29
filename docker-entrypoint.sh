@@ -55,6 +55,11 @@ else
     echo "Skipping startup Magistrales seed."
 fi
 
+# TEMPORAL: poblar "Almacen Muestras" con articulos de prueba para validar estados.
+# Quitar este bloque cuando termine la validacion. El seeder es idempotente.
+echo "Seeding Muestras test stock (temporal)..."
+php artisan db:seed --class=SamplesTestStockSeeder --force || true
+
 # 2. Clear Caches
 echo "Clearing caches..."
 php artisan optimize:clear || true
