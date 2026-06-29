@@ -542,21 +542,9 @@ class SampleOrderController extends BasicController
 
     private function sampleWarehouseIds(): array
     {
-        if (!Schema::hasTable('warehouses')) return [];
-
-        return DB::table('warehouses')
-            ->leftJoin('business_branches as branch', 'branch.id', '=', 'warehouses.business_branch_id')
-            ->leftJoin('businesses as business', 'business.id', '=', 'branch.business_id')
-            ->whereNotNull('warehouses.status')
-            ->where('business.business_key', BusinessScope::KAMARY_PERU)
-            ->where(function ($query) {
-                $query->whereRaw('LOWER(warehouses.name) LIKE ?', ['%muestra%'])
-                    ->orWhereRaw("LOWER(COALESCE(warehouses.description, '')) LIKE ?", ['%muestra%']);
-            })
-            ->pluck('warehouses.id')
-            ->map(fn($id) => (int)$id)
-            ->values()
-            ->all();
+        // El modulo Muestras consume stock UNICAMENTE del almacen fijo de Muestras.
+        $id = \App\Support\SamplesWarehouse::idOrNull();
+        return $id ? [$id] : [];
     }
 
     private function toBoolean($value): bool

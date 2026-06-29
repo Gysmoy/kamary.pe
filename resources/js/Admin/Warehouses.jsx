@@ -29,7 +29,7 @@ const formatAuditUser = (user) => {
   return ''
 }
 
-const Warehouses = ({ fixedWarehouse = null, fixedBusiness = null, defaultBranch = null }) => {
+const Warehouses = ({ fixedWarehouse = null, sampleWarehouse = null, fixedBusiness = null, defaultBranch = null }) => {
   const gridRef = useRef()
   const modalRef = useRef()
   const locationModalRef = useRef()
@@ -52,10 +52,16 @@ const Warehouses = ({ fixedWarehouse = null, fixedBusiness = null, defaultBranch
   const [selectedWarehouse, setSelectedWarehouse] = useState(null)
   const [locations, setLocations] = useState([])
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
+  const sampleWarehouseId = sampleWarehouse?.id ? `${sampleWarehouse.id}` : ''
   const fixedBusinessId = fixedBusiness?.id ? `${fixedBusiness.id}` : ''
   const fixedBranchId = defaultBranch?.id ? `${defaultBranch.id}` : ''
 
-  const isLockedWarehouse = (warehouse) => `${warehouse?.id ?? ''}` === fixedWarehouseId
+  const isLockedWarehouse = (warehouse) => {
+    const id = `${warehouse?.id ?? ''}`
+    return id !== '' && (id === fixedWarehouseId || id === sampleWarehouseId)
+  }
+  // Etiqueta del almacen fijo segun a que modulo pertenece
+  const lockedLabel = (warehouse) => `${warehouse?.id ?? ''}` === sampleWarehouseId ? 'Muestras fijo' : 'Magistrales fijo'
 
   useEffect(() => {
     const load = async () => {
@@ -144,10 +150,10 @@ const Warehouses = ({ fixedWarehouse = null, fixedBusiness = null, defaultBranch
   }
 
   const onDeleteClicked = async (id) => {
-    if (`${id}` === fixedWarehouseId) {
+    if (`${id}` === fixedWarehouseId || `${id}` === sampleWarehouseId) {
       await Swal.fire({
         icon: 'info',
-        title: 'Almacén fijo de Magistrales',
+        title: 'Almacén fijo protegido',
         text: 'Este almacén está protegido y no se puede eliminar.',
         confirmButtonText: 'Entendido'
       })
@@ -280,7 +286,7 @@ const Warehouses = ({ fixedWarehouse = null, fixedBusiness = null, defaultBranch
 
             ReactAppend(container, <div>
               <span className='fw-semibold text-primary'>{data?.name}</span>
-              <div><small className='badge badge-soft-primary mt-1'>Magistrales fijo</small></div>
+              <div><small className='badge badge-soft-primary mt-1'>{lockedLabel(data)}</small></div>
             </div>)
           }
         },

@@ -8,6 +8,7 @@ use App\Models\Warehouse;
 use App\Models\WarehouseLocation;
 use App\Support\BusinessScope;
 use App\Support\MagistralesWarehouse;
+use App\Support\SamplesWarehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use SoDe\Extend\Response;
@@ -31,6 +32,7 @@ class WarehouseController extends BasicController
 
         return [
             'fixedWarehouse' => MagistralesWarehouse::summary(),
+            'sampleWarehouse' => SamplesWarehouse::summary(),
             'businessScopeKey' => BusinessScope::KAMARY_PERU,
             'fixedBusiness' => $business ? [
                 'id' => $business->id,
@@ -70,8 +72,8 @@ class WarehouseController extends BasicController
         $userId = Auth::id();
         $warehouseId = isset($body['id']) && $body['id'] !== '' ? (int) $body['id'] : null;
 
-        if ($warehouseId && MagistralesWarehouse::isFixedWarehouseId($warehouseId)) {
-            throw new \Exception('El almacen fijo de Magistrales no se puede editar');
+        if ($warehouseId && $this->isFixedWarehouse($warehouseId)) {
+            throw new \Exception('Este almacen fijo no se puede editar');
         }
 
         $name = trim((string)($body['name'] ?? ''));
@@ -106,12 +108,18 @@ class WarehouseController extends BasicController
         return $jpa;
     }
 
+    // Almacenes fijos protegidos (no se editan ni eliminan): Magistrales y Muestras.
+    private function isFixedWarehouse($id): bool
+    {
+        return MagistralesWarehouse::isFixedWarehouseId($id) || SamplesWarehouse::isFixedWarehouseId($id);
+    }
+
     public function boolean(Request $request)
     {
         $response = new Response();
         try {
-            if (MagistralesWarehouse::isFixedWarehouseId($request->id)) {
-                throw new \Exception('El almacen fijo de Magistrales no se puede editar');
+            if ($this->isFixedWarehouse($request->id)) {
+                throw new \Exception('Este almacen fijo no se puede editar');
             }
 
             $field = $this->allowedBooleanFieldFromRequest($request);
@@ -135,8 +143,8 @@ class WarehouseController extends BasicController
     {
         $response = new Response();
         try {
-            if (MagistralesWarehouse::isFixedWarehouseId($request->id)) {
-                throw new \Exception('El almacen fijo de Magistrales no se puede editar');
+            if ($this->isFixedWarehouse($request->id)) {
+                throw new \Exception('Este almacen fijo no se puede editar');
             }
 
             $this->model::where($this->identifier, $request->id)->update([
@@ -156,10 +164,10 @@ class WarehouseController extends BasicController
 
     public function delete(Request $request, string $id)
     {
-        if (MagistralesWarehouse::isFixedWarehouseId($id)) {
+        if ($this->isFixedWarehouse($id)) {
             $response = new Response();
             $response->status = 400;
-            $response->message = 'El almacen fijo de Magistrales no se puede eliminar';
+            $response->message = 'Este almacen fijo no se puede eliminar';
             return response($response->toArray(), $response->status);
         }
 
