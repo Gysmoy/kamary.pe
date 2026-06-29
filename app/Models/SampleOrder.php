@@ -27,6 +27,8 @@ class SampleOrder extends Model
         'request_reason_id',
         'sales_channel',
         'sales_subchannel',
+        'sales_channel_id',
+        'sales_subchannel_id',
         'business_line',
         'business_subline',
         'giro_id',

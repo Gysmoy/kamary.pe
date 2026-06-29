@@ -26,6 +26,8 @@ class SampleOrdersRest extends BasicRest {
   getGiros = async () => await loadAll('/api/admin/giros/paginate')
   getSubGiros = async () => await loadAll('/api/admin/sub-giros/paginate')
   getRequestReasons = async () => await loadAll('/api/admin/request-reasons/paginate')
+  getSalesChannels = async () => await loadAll('/api/admin/sales-channels/paginate')
+  getSalesSubchannels = async () => await loadAll('/api/admin/sales-subchannels/paginate')
 
   saveGiro = async (request) => await this.simplePost('/api/admin/giros', request)
   saveSubGiro = async (request) => await this.simplePost('/api/admin/sub-giros', request)
@@ -45,11 +47,15 @@ class SampleOrdersRest extends BasicRest {
 
   saveSupervisor = async (request) => await this.simplePost('/api/admin/supervisors', request)
   saveClient = async (request) => await this.simplePost('/api/admin/clients', request)
+  saveSalesChannel = async (request) => await this.simplePost('/api/admin/sales-channels', request)
+  saveSalesSubchannel = async (request) => await this.simplePost('/api/admin/sales-subchannels', request)
 
   deleteGiro = async (id) => await this.simpleDelete(`/api/admin/giros/${id}`)
   deleteSubGiro = async (id) => await this.simpleDelete(`/api/admin/sub-giros/${id}`)
   deleteRequestReason = async (id) => await this.simpleDelete(`/api/admin/request-reasons/${id}`)
   deleteSupervisor = async (id) => await this.simpleDelete(`/api/admin/supervisors/${id}`)
+  deleteSalesChannel = async (id) => await this.simpleDelete(`/api/admin/sales-channels/${id}`)
+  deleteSalesSubchannel = async (id) => await this.simpleDelete(`/api/admin/sales-subchannels/${id}`)
 
   booleanResult = async ({ id, field, value }) => {
     try {

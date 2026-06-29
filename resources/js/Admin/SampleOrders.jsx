@@ -29,8 +29,6 @@ const emailStatusOptions = [
   { value: 'failed', label: 'Fallido', className: 'bg-danger-subtle text-danger border border-danger' },
 ]
 
-const salesChannelOptions = ['B2B', 'DIRECTOS', 'E COMERCE', 'RETAIL', 'TRADICIONAL', 'TRADE', 'MKT', 'COMMERCIAL EXCELLENCE']
-const salesSubchannelOptions = ['LIMA 1', 'LIMA 2', 'PROVINCIAS']
 const serviceTypeOptions = ['NEXT DAY', 'SAME DAY', 'PROGRAMADO']
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -69,6 +67,8 @@ const emptyForm = () => ({
   client_name: '',
   sales_channel: '',
   sales_subchannel: '',
+  sales_channel_id: '',
+  sales_subchannel_id: '',
   business_line: '',
   business_subline: '',
   giro_id: '',
@@ -355,6 +355,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const reasonModalRef = useRef()
   const supervisorModalRef = useRef()
   const clientModalRef = useRef()
+  const channelModalRef = useRef()
+  const subchannelModalRef = useRef()
 
   const [form, setForm] = useState(emptyForm())
   const [items, setItems] = useState([emptyItem()])
@@ -364,9 +366,13 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const [giros, setGiros] = useState([])
   const [subGiros, setSubGiros] = useState([])
   const [requestReasons, setRequestReasons] = useState([])
+  const [salesChannels, setSalesChannels] = useState([])
+  const [salesSubchannels, setSalesSubchannels] = useState([])
   const [giroForm, setGiroForm] = useState({ id: '', name: '', status: '1' })
   const [subGiroForm, setSubGiroForm] = useState({ id: '', giro_id: '', name: '', status: '1' })
   const [reasonForm, setReasonForm] = useState({ id: '', name: '', status: '1' })
+  const [channelForm, setChannelForm] = useState({ id: '', name: '', status: '1' })
+  const [subchannelForm, setSubchannelForm] = useState({ id: '', sales_channel_id: '', name: '', status: '1' })
   const [supervisorForm, setSupervisorForm] = useState({ id: '', document_number: '', name: '', lastname_p: '', lastname_m: '', phone: '', status: '1' })
   const [clientForm, setClientForm] = useState({ document_type: '', document_number: '', full_name: '', email: '', phone: '', short_code: '', status: '1', full_address: '' })
   const [ubigeoOptions, setUbigeoOptions] = useState([])
@@ -385,7 +391,9 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       sampleOrdersRest.getGiros(),
       sampleOrdersRest.getSubGiros(),
       sampleOrdersRest.getRequestReasons(),
-    ]).then(([clientRows, userRows, articleRows, giroRows, subGiroRows, reasonRows]) => {
+      sampleOrdersRest.getSalesChannels(),
+      sampleOrdersRest.getSalesSubchannels(),
+    ]).then(([clientRows, userRows, articleRows, giroRows, subGiroRows, reasonRows, channelRows, subchannelRows]) => {
       setClients((clientRows ?? []).filter(row => row.status !== null))
       // El modelo User oculta 'id' y lo expone como 'entity_id'; lo normalizamos a id
       setUsers((userRows ?? []).filter(row => row.status !== null).map(row => ({ ...row, id: row.entity_id ?? row.id })))
@@ -393,6 +401,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       setGiros((giroRows ?? []).filter(row => row.status !== null))
       setSubGiros((subGiroRows ?? []).filter(row => row.status !== null))
       setRequestReasons((reasonRows ?? []).filter(row => row.status !== null))
+      setSalesChannels((channelRows ?? []).filter(row => row.status !== null))
+      setSalesSubchannels((subchannelRows ?? []).filter(row => row.status !== null))
     })
 
     getUbigeoCatalog()
@@ -411,6 +421,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   // Para gestionar supervisores excluimos a los administradores (Admin/Root) por seguridad
   const supervisorListItems = useMemo(() => users.filter(row => !(row.roles ?? []).some(role => ['Admin', 'Root'].includes(role.name))), [users])
   const reasonOptions = useMemo(() => requestReasons.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [requestReasons])
+  const channelOptions = useMemo(() => salesChannels.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [salesChannels])
+  const subchannelOptions = useMemo(() => salesSubchannels
+    .filter(row => row.status && (!form.sales_channel_id || `${row.sales_channel_id}` === `${form.sales_channel_id}`))
+    .map(row => ({ value: `${row.id}`, label: row.name })), [salesSubchannels, form.sales_channel_id])
   const giroOptions = useMemo(() => giros.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [giros])
   const subGiroOptions = useMemo(() => subGiros
     .filter(row => row.status && (!form.giro_id || `${row.giro_id}` === `${form.giro_id}`))
@@ -561,6 +575,90 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     if (`${reasonForm.id}` === `${item.id}`) setReasonForm({ id: '', name: '', status: '1' })
   }
 
+  // ----- Canal de venta -----
+  const onChannelSelect = (channelId) => {
+    const selected = salesChannels.find(row => `${row.id}` === `${channelId}`)
+    // Al cambiar de canal se limpia el sub canal porque depende del canal
+    setForm(prev => ({ ...prev, sales_channel_id: channelId, sales_channel: selected?.name ?? '', sales_subchannel_id: '', sales_subchannel: '' }))
+  }
+
+  const openChannelModal = () => {
+    setChannelForm({ id: '', name: '', status: '1' })
+    $(channelModalRef.current).modal('show')
+  }
+
+  const editChannel = (item) => setChannelForm({ id: `${item.id}`, name: item.name ?? '', status: item.status ? '1' : '0' })
+
+  const onSaveChannel = async (e) => {
+    e.preventDefault()
+    const name = (channelForm.name ?? '').trim()
+    if (!name) return
+    const payload = { name, status: channelForm.status === '1' }
+    if (channelForm.id) payload.id = channelForm.id
+    const result = await sampleOrdersRest.saveSalesChannel(payload)
+    if (!result) return
+    const saved = result?.data ?? result
+    if (saved?.id) {
+      upsertRow(setSalesChannels, saved)
+      if (!channelForm.id && saved.status) setForm(prev => ({ ...prev, sales_channel_id: `${saved.id}`, sales_channel: saved.name ?? name, sales_subchannel_id: '', sales_subchannel: '' }))
+      else setForm(prev => `${prev.sales_channel_id}` === `${saved.id}` ? { ...prev, sales_channel: saved.name ?? name } : prev)
+    }
+    setChannelForm({ id: '', name: '', status: '1' })
+  }
+
+  const onDeleteChannel = async (item) => {
+    const { isConfirmed } = await Swal.fire({ title: 'Eliminar canal de venta', text: `Se eliminara "${item.name}" y sus sub canales quedaran sin canal.`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
+    if (!isConfirmed) return
+    if (!await sampleOrdersRest.deleteSalesChannel(item.id)) return
+    setSalesChannels(prev => prev.filter(row => `${row.id}` !== `${item.id}`))
+    setForm(prev => `${prev.sales_channel_id}` === `${item.id}` ? { ...prev, sales_channel_id: '', sales_channel: '', sales_subchannel_id: '', sales_subchannel: '' } : prev)
+    if (`${channelForm.id}` === `${item.id}`) setChannelForm({ id: '', name: '', status: '1' })
+  }
+
+  // ----- Sub canal de venta -----
+  const onSubchannelSelect = (subchannelId) => {
+    const selected = salesSubchannels.find(row => `${row.id}` === `${subchannelId}`)
+    setForm(prev => ({ ...prev, sales_subchannel_id: subchannelId, sales_subchannel: selected?.name ?? '' }))
+  }
+
+  const openSubchannelModal = () => {
+    setSubchannelForm({ id: '', sales_channel_id: form.sales_channel_id || '', name: '', status: '1' })
+    $(subchannelModalRef.current).modal('show')
+  }
+
+  const editSubchannel = (item) => setSubchannelForm({ id: `${item.id}`, sales_channel_id: item.sales_channel_id ? `${item.sales_channel_id}` : '', name: item.name ?? '', status: item.status ? '1' : '0' })
+
+  const onSaveSubchannel = async (e) => {
+    e.preventDefault()
+    const name = (subchannelForm.name ?? '').trim()
+    const channelId = subchannelForm.sales_channel_id
+    if (!name || !channelId) return
+    const payload = { sales_channel_id: channelId, name, status: subchannelForm.status === '1' }
+    if (subchannelForm.id) payload.id = subchannelForm.id
+    const result = await sampleOrdersRest.saveSalesSubchannel(payload)
+    if (!result) return
+    const saved = result?.data ?? result
+    if (saved?.id) {
+      upsertRow(setSalesSubchannels, saved)
+      if (!subchannelForm.id && saved.status) {
+        const channelName = salesChannels.find(row => `${row.id}` === `${channelId}`)?.name
+        setForm(prev => ({ ...prev, sales_channel_id: `${channelId}`, sales_channel: channelName ?? prev.sales_channel, sales_subchannel_id: `${saved.id}`, sales_subchannel: saved.name ?? name }))
+      } else {
+        setForm(prev => `${prev.sales_subchannel_id}` === `${saved.id}` ? { ...prev, sales_subchannel: saved.name ?? name } : prev)
+      }
+    }
+    setSubchannelForm({ id: '', sales_channel_id: form.sales_channel_id || '', name: '', status: '1' })
+  }
+
+  const onDeleteSubchannel = async (item) => {
+    const { isConfirmed } = await Swal.fire({ title: 'Eliminar sub canal', text: `Se eliminara "${item.name}".`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
+    if (!isConfirmed) return
+    if (!await sampleOrdersRest.deleteSalesSubchannel(item.id)) return
+    setSalesSubchannels(prev => prev.filter(row => `${row.id}` !== `${item.id}`))
+    setForm(prev => `${prev.sales_subchannel_id}` === `${item.id}` ? { ...prev, sales_subchannel_id: '', sales_subchannel: '' } : prev)
+    if (`${subchannelForm.id}` === `${item.id}`) setSubchannelForm({ id: '', sales_channel_id: form.sales_channel_id || '', name: '', status: '1' })
+  }
+
   // ----- Giro -----
   const onGiroSelect = (giroId) => {
     const selected = giros.find(row => `${row.id}` === `${giroId}`)
@@ -704,6 +802,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       const giroId = data.giro_id ?? giros.find(row => row.name === data.business_line)?.id ?? ''
       const subGiroId = data.sub_giro_id ?? subGiros.find(row => row.name === data.business_subline && (!giroId || `${row.giro_id}` === `${giroId}`))?.id ?? ''
       const reasonId = data.request_reason_id ?? requestReasons.find(row => row.name === data.request_reason)?.id ?? ''
+      const channelId = data.sales_channel_id ?? salesChannels.find(row => row.name === (data.sales_channel ?? data.channel))?.id ?? ''
+      const subchannelId = data.sales_subchannel_id ?? salesSubchannels.find(row => row.name === data.sales_subchannel && (!channelId || `${row.sales_channel_id}` === `${channelId}`))?.id ?? ''
       setForm({
         ...emptyForm(),
         ...data,
@@ -716,6 +816,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         client_id: data.client_id ? `${data.client_id}` : '',
         supervisor_id: data.supervisor_id ? `${data.supervisor_id}` : '',
         sales_channel: data.sales_channel ?? data.channel ?? '',
+        sales_channel_id: channelId ? `${channelId}` : '',
+        sales_subchannel_id: subchannelId ? `${subchannelId}` : '',
         request_reason_id: reasonId ? `${reasonId}` : '',
         giro_id: giroId ? `${giroId}` : '',
         sub_giro_id: subGiroId ? `${subGiroId}` : '',
@@ -1023,8 +1125,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         <SampleSelect label='Seleccione cliente' value={form.client_id} onChange={onClientSelect} options={clientOptions} />
         <SampleInput label='Cliente' value={form.client_name} onChange={value => setField('client_name', value)} addButton onAdd={openClientModal} />
 
-        <SampleSelect label='Canal de venta' value={form.sales_channel} onChange={value => setField('sales_channel', value)} options={salesChannelOptions} addButton />
-        <SampleSelect label='Sub canal de venta' value={form.sales_subchannel} onChange={value => setField('sales_subchannel', value)} options={salesSubchannelOptions} addButton />
+        <SampleSelect label='Canal de venta' value={form.sales_channel_id} onChange={onChannelSelect} options={channelOptions} addButton onAdd={openChannelModal} />
+        <SampleSelect label='Sub canal de venta' value={form.sales_subchannel_id} onChange={onSubchannelSelect} options={subchannelOptions} addButton onAdd={openSubchannelModal} />
         <SampleSelect label='Giro' value={form.giro_id} onChange={onGiroSelect} options={giroOptions} addButton onAdd={openGiroModal} />
         <SampleSelect label='Sub Giro' value={form.sub_giro_id} onChange={onSubGiroSelect} options={subGiroOptions} addButton onAdd={openSubGiroModal} />
 
@@ -1348,6 +1450,48 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         </select>
       </div>
       <CatalogList items={requestReasons} editingId={reasonForm.id} onEdit={editReason} onDelete={onDeleteReason} />
+    </Modal>
+
+    <Modal modalRef={channelModalRef} title='Registrar Canal Venta' size='md' btnSubmitText={channelForm.id ? 'Actualizar' : 'Registrar'} onSubmit={onSaveChannel}>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b>
+          {channelForm.id && <a role='button' className='ms-2 small text-decoration-underline' onClick={() => setChannelForm({ id: '', name: '', status: '1' })}>Cancelar edicion</a>}
+        </label>
+        <input className='form-control' value={channelForm.name} onChange={e => setChannelForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del canal' required />
+      </div>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Estado</label>
+        <select className='form-select' value={channelForm.status} onChange={e => setChannelForm(prev => ({ ...prev, status: e.target.value }))}>
+          <option value='1'>Activo</option>
+          <option value='0'>Inactivo</option>
+        </select>
+      </div>
+      <CatalogList items={salesChannels} editingId={channelForm.id} onEdit={editChannel} onDelete={onDeleteChannel} />
+    </Modal>
+
+    <Modal modalRef={subchannelModalRef} title='Registrar Sub Canal Venta' size='md' btnSubmitText={subchannelForm.id ? 'Actualizar' : 'Registrar'} onSubmit={onSaveSubchannel}>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Canal venta <b className='text-danger'>*</b></label>
+        <select className='form-select' value={subchannelForm.sales_channel_id} onChange={e => setSubchannelForm(prev => ({ ...prev, sales_channel_id: e.target.value }))} required>
+          <option value=''>Seleccione</option>
+          {channelOptions.map(option => <option key={`subchannel-channel-${option.value}`} value={option.value}>{option.label}</option>)}
+        </select>
+      </div>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b>
+          {subchannelForm.id && <a role='button' className='ms-2 small text-decoration-underline' onClick={() => setSubchannelForm({ id: '', sales_channel_id: form.sales_channel_id || '', name: '', status: '1' })}>Cancelar edicion</a>}
+        </label>
+        <input className='form-control' value={subchannelForm.name} onChange={e => setSubchannelForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del sub canal' required />
+      </div>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Estado</label>
+        <select className='form-select' value={subchannelForm.status} onChange={e => setSubchannelForm(prev => ({ ...prev, status: e.target.value }))}>
+          <option value='1'>Activo</option>
+          <option value='0'>Inactivo</option>
+        </select>
+      </div>
+      <CatalogList items={salesSubchannels} editingId={subchannelForm.id} onEdit={editSubchannel} onDelete={onDeleteSubchannel}
+        extraColumn={{ header: 'Canal venta', value: item => salesChannels.find(row => `${row.id}` === `${item.sales_channel_id}`)?.name ?? '-' }} />
     </Modal>
 
     <Modal modalRef={giroModalRef} title='Registrar Giro' size='md' btnSubmitText={giroForm.id ? 'Actualizar' : 'Registrar'} onSubmit={onSaveGiro}>
