@@ -242,6 +242,11 @@ const sampleGrossWeight = (data) => {
   return sampleItems(data)
     .reduce((sum, item) => sum + (Number(item?.quantity || 0) * Number(item?.unit_weight || 0)), 0)
 }
+// Pedido completo solo si hay items y el stock alcanza la cantidad pedida en cada uno
+const isOrderComplete = (data) => {
+  const list = sampleItems(data)
+  return list.length > 0 && list.every(item => Number(item?.quantity || 0) > 0 && Number(item?.stock || 0) >= Number(item?.quantity || 0))
+}
 
 const SampleSelect = ({ label, value, options = [], onChange, placeholder = 'Seleccione', addButton = false, disabled = false }) => (
   <div className='sample-field'>
@@ -520,7 +525,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       total_gross_weight: Number(form.total_gross_weight || computedGrossWeight || 0),
       channel: form.sales_channel,
       document_type: form.document_type || 'RUC',
-      order_complete: cleanItems.length > 0 && cleanItems.every(item => Number(item.quantity || 0) > 0),
+      order_complete: cleanItems.length > 0 && cleanItems.every(item => Number(item.quantity || 0) > 0 && Number(item.stock || 0) >= Number(item.quantity || 0)),
       items: cleanItems,
     })
     if (!result) return
@@ -608,23 +613,29 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           cellTemplate: (container, { data }) => {
             container.css({ overflow: 'hidden', whiteSpace: 'nowrap' })
             const currentStatus = normalizeOrderStatus(data.order_status)
+            const complete = isOrderComplete(data)
             const actions = $('<div/>', { class: 'sample-grid-actions' })
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-warning tippy-here', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openModal(data) }))
-            if (!['approved', 'preparing', 'in_route', 'delivered', 'cancelled'].includes(currentStatus)) {
-              actions.append(DxButton({ className: 'btn btn-xs btn-outline-success tippy-here', title: 'Aprobar pedido', icon: 'mdi mdi-check', onClick: () => changeOrderStatus(data, 'approved', 'Aprobar pedido') }))
-            }
-            if (currentStatus === 'approved') {
-              actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'Enviar a picking', icon: 'mdi mdi-package-variant-closed', onClick: () => changeOrderStatus(data, 'preparing', 'Enviar pedido a picking') }))
-            }
-            if (currentStatus === 'preparing') {
-              actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'En ruta', icon: 'mdi mdi-truck-fast-outline', onClick: () => changeOrderStatus(data, 'in_route', 'Marcar pedido en ruta') }))
-            }
-            if (currentStatus === 'in_route') {
-              actions.append(DxButton({ className: 'btn btn-xs btn-outline-success tippy-here', title: 'Entregado', icon: 'mdi mdi-check-all', onClick: () => changeOrderStatus(data, 'delivered', 'Marcar pedido entregado') }))
+            // Sin stock suficiente no se puede avanzar el estado ni generar la guia de remision
+            if (complete && currentStatus !== 'cancelled') {
+              if (!['approved', 'preparing', 'in_route', 'delivered'].includes(currentStatus)) {
+                actions.append(DxButton({ className: 'btn btn-xs btn-outline-success tippy-here', title: 'Aprobar pedido', icon: 'mdi mdi-check', onClick: () => changeOrderStatus(data, 'approved', 'Aprobar pedido') }))
+              }
+              if (currentStatus === 'approved') {
+                actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'Enviar a picking', icon: 'mdi mdi-package-variant-closed', onClick: () => changeOrderStatus(data, 'preparing', 'Enviar pedido a picking') }))
+              }
+              if (currentStatus === 'preparing') {
+                actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'En ruta', icon: 'mdi mdi-truck-fast-outline', onClick: () => changeOrderStatus(data, 'in_route', 'Marcar pedido en ruta') }))
+              }
+              if (currentStatus === 'in_route') {
+                actions.append(DxButton({ className: 'btn btn-xs btn-outline-success tippy-here', title: 'Entregado', icon: 'mdi mdi-check-all', onClick: () => changeOrderStatus(data, 'delivered', 'Marcar pedido entregado') }))
+              }
             }
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-info tippy-here', title: 'Ver evidencia', icon: 'mdi mdi-eye', onClick: () => openEvidence(data) }))
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-dark tippy-here', title: 'Tracking pedido', icon: 'mdi mdi-map-marker-path', onClick: () => openTracking(data) }))
-            actions.append(DxButton({ className: 'btn btn-xs btn-outline-danger tippy-here', title: 'Imprimir guia de remision', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.sampleOrder(data)) }))
+            if (complete) {
+              actions.append(DxButton({ className: 'btn btn-xs btn-outline-danger tippy-here', title: 'Imprimir guia de remision', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.sampleOrder(data)) }))
+            }
             actions.append(DxButton({ className: 'btn btn-xs btn-outline-danger tippy-here', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data) }))
             container.empty().append(actions)
           }
@@ -660,8 +671,11 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           dataField: 'order_complete',
           caption: 'Pedido completo',
           minWidth: 140,
-          calculateCellValue: data => data.order_complete ? 'COMPLETO' : 'INCOMPLETO',
-          cellTemplate: (container, { data }) => renderBadge(container, data.order_complete ? 'COMPLETO' : 'INCOMPLETO', data.order_complete ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-warning border border-warning')
+          calculateCellValue: data => isOrderComplete(data) ? 'COMPLETO' : 'INCOMPLETO',
+          cellTemplate: (container, { data }) => {
+            const complete = isOrderComplete(data)
+            renderBadge(container, complete ? 'COMPLETO' : 'INCOMPLETO', complete ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-warning border border-warning')
+          }
         },
         { dataField: 'supervisor_name', caption: 'Supervisor', minWidth: 200 },
       ]}
