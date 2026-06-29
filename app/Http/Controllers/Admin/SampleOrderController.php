@@ -94,6 +94,7 @@ class SampleOrderController extends BasicController
         $body['request_reason_id'] = trim((string)($body['request_reason_id'] ?? '')) ?: null;
         $body['sales_channel_id'] = trim((string)($body['sales_channel_id'] ?? '')) ?: null;
         $body['sales_subchannel_id'] = trim((string)($body['sales_subchannel_id'] ?? '')) ?: null;
+        $body['service_type_id'] = trim((string)($body['service_type_id'] ?? '')) ?: null;
         $body['giro_id'] = trim((string)($body['giro_id'] ?? '')) ?: null;
         $body['sub_giro_id'] = trim((string)($body['sub_giro_id'] ?? '')) ?: null;
         $body['order_complete'] = $this->toBoolean($body['order_complete'] ?? false);

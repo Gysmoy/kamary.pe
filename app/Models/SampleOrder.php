@@ -37,6 +37,7 @@ class SampleOrder extends Model
         'delivery_address',
         'delivery_reference',
         'service_type',
+        'service_type_id',
         'contact_document',
         'contact_name',
         'contact_phone',

@@ -83,6 +83,7 @@ use App\Http\Controllers\Admin\RequestReasonController as AdminRequestReasonCont
 use App\Http\Controllers\Admin\SupervisorController as AdminSupervisorController;
 use App\Http\Controllers\Admin\SalesChannelController as AdminSalesChannelController;
 use App\Http\Controllers\Admin\SalesSubchannelController as AdminSalesSubchannelController;
+use App\Http\Controllers\Admin\ServiceTypeController as AdminServiceTypeController;
 use App\Http\Controllers\Admin\VehicleController as AdminVehicleController;
 use App\Http\Controllers\Admin\ZoneController as AdminZoneController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
@@ -699,6 +700,12 @@ Route::middleware('auth')->group(function () {
         Route::patch('/sales-subchannels/status', [AdminSalesSubchannelController::class, 'status']);
         Route::patch('/sales-subchannels/{field}', [AdminSalesSubchannelController::class, 'boolean']);
         Route::delete('/sales-subchannels/{id}', [AdminSalesSubchannelController::class, 'delete']);
+
+        Route::post('/service-types', [AdminServiceTypeController::class, 'save']);
+        Route::post('/service-types/paginate', [AdminServiceTypeController::class, 'paginate']);
+        Route::patch('/service-types/status', [AdminServiceTypeController::class, 'status']);
+        Route::patch('/service-types/{field}', [AdminServiceTypeController::class, 'boolean']);
+        Route::delete('/service-types/{id}', [AdminServiceTypeController::class, 'delete']);
 
         Route::post('/services-client', [AdminServiceClientController::class, 'save']);
         Route::post('/services-client/paginate', [AdminServiceClientController::class, 'paginate']);

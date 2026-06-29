@@ -29,7 +29,6 @@ const emailStatusOptions = [
   { value: 'failed', label: 'Fallido', className: 'bg-danger-subtle text-danger border border-danger' },
 ]
 
-const serviceTypeOptions = ['NEXT DAY', 'SAME DAY', 'PROGRAMADO']
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -77,6 +76,7 @@ const emptyForm = () => ({
   delivery_address: '',
   delivery_reference: '',
   service_type: '',
+  service_type_id: '',
   delivered_at: today(),
   document_type: 'RUC',
   document_number: '',
@@ -357,6 +357,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const clientModalRef = useRef()
   const channelModalRef = useRef()
   const subchannelModalRef = useRef()
+  const serviceTypeModalRef = useRef()
 
   const [form, setForm] = useState(emptyForm())
   const [items, setItems] = useState([emptyItem()])
@@ -368,11 +369,13 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const [requestReasons, setRequestReasons] = useState([])
   const [salesChannels, setSalesChannels] = useState([])
   const [salesSubchannels, setSalesSubchannels] = useState([])
+  const [serviceTypes, setServiceTypes] = useState([])
   const [giroForm, setGiroForm] = useState({ id: '', name: '', status: '1' })
   const [subGiroForm, setSubGiroForm] = useState({ id: '', giro_id: '', name: '', status: '1' })
   const [reasonForm, setReasonForm] = useState({ id: '', name: '', status: '1' })
   const [channelForm, setChannelForm] = useState({ id: '', name: '', status: '1' })
   const [subchannelForm, setSubchannelForm] = useState({ id: '', sales_channel_id: '', name: '', status: '1' })
+  const [serviceTypeForm, setServiceTypeForm] = useState({ id: '', name: '', status: '1' })
   const [supervisorForm, setSupervisorForm] = useState({ id: '', document_number: '', name: '', lastname_p: '', lastname_m: '', phone: '', status: '1' })
   const [clientForm, setClientForm] = useState({ document_type: '', document_number: '', full_name: '', email: '', phone: '', short_code: '', status: '1', full_address: '' })
   const [ubigeoOptions, setUbigeoOptions] = useState([])
@@ -393,7 +396,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       sampleOrdersRest.getRequestReasons(),
       sampleOrdersRest.getSalesChannels(),
       sampleOrdersRest.getSalesSubchannels(),
-    ]).then(([clientRows, userRows, articleRows, giroRows, subGiroRows, reasonRows, channelRows, subchannelRows]) => {
+      sampleOrdersRest.getServiceTypes(),
+    ]).then(([clientRows, userRows, articleRows, giroRows, subGiroRows, reasonRows, channelRows, subchannelRows, serviceTypeRows]) => {
       setClients((clientRows ?? []).filter(row => row.status !== null))
       // El modelo User oculta 'id' y lo expone como 'entity_id'; lo normalizamos a id
       setUsers((userRows ?? []).filter(row => row.status !== null).map(row => ({ ...row, id: row.entity_id ?? row.id })))
@@ -403,6 +407,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       setRequestReasons((reasonRows ?? []).filter(row => row.status !== null))
       setSalesChannels((channelRows ?? []).filter(row => row.status !== null))
       setSalesSubchannels((subchannelRows ?? []).filter(row => row.status !== null))
+      setServiceTypes((serviceTypeRows ?? []).filter(row => row.status !== null))
     })
 
     getUbigeoCatalog()
@@ -421,6 +426,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   // Para gestionar supervisores excluimos a los administradores (Admin/Root) por seguridad
   const supervisorListItems = useMemo(() => users.filter(row => !(row.roles ?? []).some(role => ['Admin', 'Root'].includes(role.name))), [users])
   const reasonOptions = useMemo(() => requestReasons.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [requestReasons])
+  const serviceTypeOptions = useMemo(() => serviceTypes.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [serviceTypes])
   const channelOptions = useMemo(() => salesChannels.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [salesChannels])
   const subchannelOptions = useMemo(() => salesSubchannels
     .filter(row => row.status && (!form.sales_channel_id || `${row.sales_channel_id}` === `${form.sales_channel_id}`))
@@ -573,6 +579,45 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     setRequestReasons(prev => prev.filter(row => `${row.id}` !== `${item.id}`))
     setForm(prev => `${prev.request_reason_id}` === `${item.id}` ? { ...prev, request_reason_id: '', request_reason: '' } : prev)
     if (`${reasonForm.id}` === `${item.id}`) setReasonForm({ id: '', name: '', status: '1' })
+  }
+
+  // ----- Tipo servicio -----
+  const onServiceTypeSelect = (serviceTypeId) => {
+    const selected = serviceTypes.find(row => `${row.id}` === `${serviceTypeId}`)
+    setForm(prev => ({ ...prev, service_type_id: serviceTypeId, service_type: selected?.name ?? '' }))
+  }
+
+  const openServiceTypeModal = () => {
+    setServiceTypeForm({ id: '', name: '', status: '1' })
+    $(serviceTypeModalRef.current).modal('show')
+  }
+
+  const editServiceType = (item) => setServiceTypeForm({ id: `${item.id}`, name: item.name ?? '', status: item.status ? '1' : '0' })
+
+  const onSaveServiceType = async (e) => {
+    e.preventDefault()
+    const name = (serviceTypeForm.name ?? '').trim()
+    if (!name) return
+    const payload = { name, status: serviceTypeForm.status === '1' }
+    if (serviceTypeForm.id) payload.id = serviceTypeForm.id
+    const result = await sampleOrdersRest.saveServiceType(payload)
+    if (!result) return
+    const saved = result?.data ?? result
+    if (saved?.id) {
+      upsertRow(setServiceTypes, saved)
+      if (!serviceTypeForm.id && saved.status) setForm(prev => ({ ...prev, service_type_id: `${saved.id}`, service_type: saved.name ?? name }))
+      else setForm(prev => `${prev.service_type_id}` === `${saved.id}` ? { ...prev, service_type: saved.name ?? name } : prev)
+    }
+    setServiceTypeForm({ id: '', name: '', status: '1' })
+  }
+
+  const onDeleteServiceType = async (item) => {
+    const { isConfirmed } = await Swal.fire({ title: 'Eliminar tipo de servicio', text: `Se eliminara "${item.name}".`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
+    if (!isConfirmed) return
+    if (!await sampleOrdersRest.deleteServiceType(item.id)) return
+    setServiceTypes(prev => prev.filter(row => `${row.id}` !== `${item.id}`))
+    setForm(prev => `${prev.service_type_id}` === `${item.id}` ? { ...prev, service_type_id: '', service_type: '' } : prev)
+    if (`${serviceTypeForm.id}` === `${item.id}`) setServiceTypeForm({ id: '', name: '', status: '1' })
   }
 
   // ----- Canal de venta -----
@@ -804,6 +849,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       const reasonId = data.request_reason_id ?? requestReasons.find(row => row.name === data.request_reason)?.id ?? ''
       const channelId = data.sales_channel_id ?? salesChannels.find(row => row.name === (data.sales_channel ?? data.channel))?.id ?? ''
       const subchannelId = data.sales_subchannel_id ?? salesSubchannels.find(row => row.name === data.sales_subchannel && (!channelId || `${row.sales_channel_id}` === `${channelId}`))?.id ?? ''
+      const serviceTypeId = data.service_type_id ?? serviceTypes.find(row => row.name === data.service_type)?.id ?? ''
       setForm({
         ...emptyForm(),
         ...data,
@@ -818,6 +864,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         sales_channel: data.sales_channel ?? data.channel ?? '',
         sales_channel_id: channelId ? `${channelId}` : '',
         sales_subchannel_id: subchannelId ? `${subchannelId}` : '',
+        service_type_id: serviceTypeId ? `${serviceTypeId}` : '',
         request_reason_id: reasonId ? `${reasonId}` : '',
         giro_id: giroId ? `${giroId}` : '',
         sub_giro_id: subGiroId ? `${subGiroId}` : '',
@@ -1133,7 +1180,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         <SampleSelect label='Ubigeo' value={form.ubigeo} onChange={value => setField('ubigeo', value)} options={selectedUbigeoOptions} placeholder='Seleccione Ubigeo' />
         <SampleInput label='Direccion de entrega' value={form.delivery_address} onChange={value => setField('delivery_address', value)} placeholder='Introduce una ubicacion' />
         <SampleInput label='Referencia' value={form.delivery_reference} onChange={value => setField('delivery_reference', value)} />
-        <SampleSelect label='Tipo servicio' value={form.service_type} onChange={value => setField('service_type', value)} options={serviceTypeOptions} addButton />
+        <SampleSelect label='Tipo servicio' value={form.service_type_id} onChange={onServiceTypeSelect} options={serviceTypeOptions} addButton onAdd={openServiceTypeModal} />
 
         <SampleInput label='Fecha solicitada' value={form.requested_at} onChange={value => setField('requested_at', value)} type='date' />
         <SampleInput label='Fecha Entrega' value={form.delivered_at} onChange={value => setField('delivered_at', value)} type='date' />
@@ -1433,6 +1480,23 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       <CatalogList items={supervisorListItems} editingId={supervisorForm.id} onEdit={editSupervisor} onDelete={onDeleteSupervisor}
         getLabel={formatUser} labelHeader='Supervisor'
         extraColumn={{ header: 'Documento', value: item => item.document_number ?? '-' }} />
+    </Modal>
+
+    <Modal modalRef={serviceTypeModalRef} title='Registrar Tipo Servicio' size='md' btnSubmitText={serviceTypeForm.id ? 'Actualizar' : 'Registrar'} onSubmit={onSaveServiceType}>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b>
+          {serviceTypeForm.id && <a role='button' className='ms-2 small text-decoration-underline' onClick={() => setServiceTypeForm({ id: '', name: '', status: '1' })}>Cancelar edicion</a>}
+        </label>
+        <input className='form-control' value={serviceTypeForm.name} onChange={e => setServiceTypeForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del tipo de servicio' required />
+      </div>
+      <div className='form-group mb-2'>
+        <label className='form-label mb-1'>Estado</label>
+        <select className='form-select' value={serviceTypeForm.status} onChange={e => setServiceTypeForm(prev => ({ ...prev, status: e.target.value }))}>
+          <option value='1'>Activo</option>
+          <option value='0'>Inactivo</option>
+        </select>
+      </div>
+      <CatalogList items={serviceTypes} editingId={serviceTypeForm.id} onEdit={editServiceType} onDelete={onDeleteServiceType} />
     </Modal>
 
     <Modal modalRef={reasonModalRef} title='Registrar Motivo Pedido' size='md' btnSubmitText={reasonForm.id ? 'Actualizar' : 'Registrar'} onSubmit={onSaveReason}>
