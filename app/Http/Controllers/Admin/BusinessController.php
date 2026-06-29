@@ -13,6 +13,7 @@ use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use SoDe\Extend\Response;
 
@@ -39,6 +40,120 @@ class BusinessController extends BasicController
         }
 
         return $query;
+    }
+
+    /**
+     * Radiografia de la data de produccion: estructura completa (tablas, campos y conteos),
+     * data real de las tablas estructurales (empresas, sedes, almacenes, zonas) y totales clave.
+     * Sirve para mapear el estado actual y como data dump para desarrollo.
+     */
+    public function exportData(Request $request)
+    {
+        $database = DB::getDatabaseName();
+
+        // Columnas cuyo valor enmascaramos para no exponer secretos en el dump
+        $secretPattern = '/(password|secret|token|certificate|sol_user|sol_pass|private|client_secret|api_key|remember_token)/i';
+        $redact = function ($rows) use ($secretPattern) {
+            return collect($rows)->map(function ($row) use ($secretPattern) {
+                $arr = (array) $row;
+                foreach ($arr as $key => $value) {
+                    if ($value !== null && $value !== '' && preg_match($secretPattern, $key)) {
+                        $arr[$key] = '***';
+                    }
+                }
+                return $arr;
+            })->values()->all();
+        };
+
+        // 1) Estructura: todas las tablas con sus columnas y cantidad de filas
+        $tableNames = collect(DB::select(
+            "SELECT table_name AS name FROM information_schema.tables WHERE table_schema = ? AND table_type = 'BASE TABLE' ORDER BY table_name",
+            [$database]
+        ))->pluck('name')->all();
+
+        $tables = [];
+        foreach ($tableNames as $tableName) {
+            try {
+                $columns = DB::select(
+                    "SELECT column_name AS name, data_type AS type, is_nullable AS nullable, column_key AS col_key
+                     FROM information_schema.columns WHERE table_schema = ? AND table_name = ? ORDER BY ordinal_position",
+                    [$database, $tableName]
+                );
+                $rows = (int) DB::table($tableName)->count();
+            } catch (\Throwable $th) {
+                $columns = [];
+                $rows = -1;
+            }
+
+            $tables[] = [
+                'name' => $tableName,
+                'rows' => $rows,
+                'columns' => array_map(fn($column) => [
+                    'name' => $column->name,
+                    'type' => $column->type,
+                    'nullable' => $column->nullable === 'YES',
+                    'key' => $column->col_key,
+                ], $columns),
+            ];
+        }
+
+        // 2) Data real de las tablas estructurales (cada registro)
+        $detailTables = ['businesses', 'business_branches', 'warehouses', 'zones'];
+        $data = [];
+        foreach ($detailTables as $tableName) {
+            if (Schema::hasTable($tableName)) {
+                $data[$tableName] = $redact(DB::table($tableName)->get());
+            }
+        }
+
+        // 3) Totales clave
+        $summary = ['total_tables' => count($tables)];
+        foreach (['businesses', 'business_branches', 'warehouses', 'zones', 'articles', 'clients', 'eventual_clients', 'users', 'suppliers'] as $tableName) {
+            if (Schema::hasTable($tableName)) {
+                $summary[$tableName] = (int) DB::table($tableName)->count();
+            }
+        }
+
+        // Productos por almacen (solo totales): articulos distintos con ingresos por almacen
+        $productsPerWarehouse = [];
+        if (Schema::hasTable('entry_note_items') && Schema::hasTable('warehouses')) {
+            try {
+                $productsPerWarehouse = DB::table('entry_note_items as item')
+                    ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'item.warehouse_id')
+                    ->select('item.warehouse_id', 'warehouse.name as warehouse')
+                    ->selectRaw('COUNT(DISTINCT item.article_id) as products')
+                    ->groupBy('item.warehouse_id', 'warehouse.name')
+                    ->orderBy('warehouse.name')
+                    ->get()
+                    ->map(fn($row) => [
+                        'warehouse_id' => $row->warehouse_id,
+                        'warehouse' => $row->warehouse,
+                        'products' => (int) $row->products,
+                    ])->all();
+            } catch (\Throwable $th) {
+                $productsPerWarehouse = [];
+            }
+        }
+        $summary['products_per_warehouse'] = $productsPerWarehouse;
+
+        $payload = [
+            'generated_at' => now()->toDateTimeString(),
+            'database' => $database,
+            'summary' => $summary,
+            'detail' => $data,
+            'tables' => $tables,
+        ];
+
+        $filename = 'kamary_data_dump_' . now()->format('Ymd_His') . '.json';
+
+        return response(
+            json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            200,
+            [
+                'Content-Type' => 'application/json; charset=utf-8',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            ]
+        );
     }
 
     public function beforeSave(Request $request)

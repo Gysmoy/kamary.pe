@@ -32,6 +32,14 @@ const Businesses = ({ can }) => {
   const descriptionRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
+  const [exporting, setExporting] = useState(false)
+
+  const onExportData = async () => {
+    if (exporting) return
+    setExporting(true)
+    await businessesRest.exportData()
+    setExporting(false)
+  }
 
   const onModalOpen = (data) => {
     setIsEditing(!!data?.id)
@@ -66,11 +74,16 @@ const Businesses = ({ can }) => {
           ? <> Los almacenes se gestionan en <b>Configuraciones &gt; Estructura operativa &gt; Almacenes</b>.</>
           : null}
       </div>
-      {(can('services-billing') || can('businesses')) && (
-        <a href='/admin/billing-settings' className='btn btn-sm btn-primary'>
-          Gestionar sedes
-        </a>
-      )}
+      <div className='d-flex gap-2'>
+        <button type='button' className='btn btn-sm btn-outline-primary' onClick={onExportData} disabled={exporting} title='Descarga un JSON con la estructura, conteos y data de produccion'>
+          <i className={`mdi ${exporting ? 'mdi-loading mdi-spin' : 'mdi-database-export'} me-1`}></i>{exporting ? 'Exportando...' : 'Exportar data'}
+        </button>
+        {(can('services-billing') || can('businesses')) && (
+          <a href='/admin/billing-settings' className='btn btn-sm btn-primary'>
+            Gestionar sedes
+          </a>
+        )}
+      </div>
     </div>
 
     <Table
