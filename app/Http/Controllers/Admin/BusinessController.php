@@ -195,6 +195,52 @@ class BusinessController extends BasicController
         }
         $summary['products_per_warehouse'] = $productsPerWarehouse;
 
+        // Desglose por sede: cuanta data tiene cada sucursal (para validar la estructura
+        // y ver cual tiene menos datos antes de decidir limpiar duplicadas).
+        $branches = [];
+        if ($id !== null && count($branchIds) && Schema::hasTable('business_branches')) {
+            $branchDataTables = ['entry_notes', 'exit_notes', 'purchase_orders', 'purchase_receipts', 'commercial_orders', 'take_orders', 'service_orders', 'dispatches', 'billing_documents', 'referral_guides', 'inventory_counts', 'magistral_incomes', 'magistral_sales', 'price_lists'];
+            foreach (DB::table('business_branches')->whereIn('id', $branchIds)->get() as $branch) {
+                $branchWarehouses = DB::table('warehouses')->where('business_branch_id', $branch->id)->get(['id', 'name', 'status']);
+                $branchWarehouseIds = $branchWarehouses->pluck('id')->map(fn($v) => (int)$v)->all();
+
+                $counts = [];
+                foreach ($branchDataTables as $tableName) {
+                    if (!Schema::hasTable($tableName)) continue;
+                    $cols = Schema::getColumnListing($tableName);
+                    $query = DB::table($tableName);
+                    if (in_array('business_branch_id', $cols, true)) {
+                        $query->where('business_branch_id', $branch->id);
+                    } elseif (in_array('warehouse_id', $cols, true)) {
+                        if (!$branchWarehouseIds) { continue; }
+                        $query->whereIn('warehouse_id', $branchWarehouseIds);
+                    } else {
+                        continue;
+                    }
+                    $counts[$tableName] = (int) $query->count();
+                }
+
+                $productsWithStock = 0;
+                if (Schema::hasTable('entry_note_items') && $branchWarehouseIds) {
+                    $productsWithStock = (int) DB::table('entry_note_items')->whereIn('warehouse_id', $branchWarehouseIds)->distinct()->count('article_id');
+                }
+
+                $branches[] = [
+                    'id' => (int) $branch->id,
+                    'name' => $branch->name,
+                    'establishment_code' => $branch->establishment_code,
+                    'status' => $branch->status,
+                    'warehouses_total' => $branchWarehouses->count(),
+                    'warehouses' => $branchWarehouses,
+                    'products_with_stock' => $productsWithStock,
+                    'data_counts' => $counts,
+                    'total_records' => array_sum($counts) + $productsWithStock,
+                ];
+            }
+            // Ordenamos de mas a menos data para ver de un vistazo cual tiene menos
+            usort($branches, fn($a, $b) => $b['total_records'] <=> $a['total_records']);
+        }
+
         $payload = [
             'generated_at' => now()->toDateTimeString(),
             'database' => $database,
@@ -206,6 +252,7 @@ class BusinessController extends BasicController
                 'warehouse_ids' => $warehouseIds,
             ] : 'TODAS LAS EMPRESAS',
             'summary' => $summary,
+            'branches' => $branches,
             'detail' => $data,
             'tables' => $tables,
         ];
