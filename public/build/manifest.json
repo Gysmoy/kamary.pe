@@ -44,8 +44,8 @@
       "_permissionScope-Be8AULz2.js"
     ]
   },
-  "_BusinessesRest-BWAsUtrk.js": {
-    "file": "assets/BusinessesRest-BWAsUtrk.js",
+  "_BusinessesRest-CEdlwaPn.js": {
+    "file": "assets/BusinessesRest-CEdlwaPn.js",
     "name": "BusinessesRest",
     "imports": [
       "_BasicRest-CfowDrFz.js",
@@ -459,7 +459,7 @@
     ]
   },
   "resources/js/Admin/BillingSettings.jsx": {
-    "file": "assets/BillingSettings-ZQ0UBZCz.js",
+    "file": "assets/BillingSettings-BFontYS7.js",
     "name": "BillingSettings",
     "src": "resources/js/Admin/BillingSettings.jsx",
     "isEntry": true,
@@ -473,7 +473,7 @@
       "_InputFormGroup-B975TFs1.js",
       "_UbigeoCascade-5GC_n-RY.js",
       "_ubigeoInei-D0FnAslC.js",
-      "_BusinessesRest-BWAsUtrk.js",
+      "_BusinessesRest-CEdlwaPn.js",
       "_permissionScope-Be8AULz2.js",
       "_BasicRest-CfowDrFz.js",
       "_tippy-react.esm-DNee90TV.js",
@@ -502,7 +502,7 @@
     ]
   },
   "resources/js/Admin/Businesses.jsx": {
-    "file": "assets/Businesses-BrTE7K6X.js",
+    "file": "assets/Businesses-CAAUFVQH.js",
     "name": "Businesses",
     "src": "resources/js/Admin/Businesses.jsx",
     "isEntry": true,
@@ -514,7 +514,7 @@
       "_DxButton-CsjWvhyj.js",
       "_InputFormGroup-B975TFs1.js",
       "_TextareaFormGroup-BzRWvtCz.js",
-      "_BusinessesRest-BWAsUtrk.js",
+      "_BusinessesRest-CEdlwaPn.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_BasicRest-CfowDrFz.js",
       "_tippy-react.esm-DNee90TV.js"

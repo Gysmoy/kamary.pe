@@ -169,13 +169,11 @@ Route::middleware('auth')->group(function () {
         Route::patch('/roles/{field}', [AdminRoleController::class, 'boolean']);
         Route::delete('/roles/{id}', [AdminRoleController::class, 'delete']);
 
-        Route::get('/businesses/export-data', [AdminBusinessController::class, 'exportData']);
         Route::post('/businesses', [AdminBusinessController::class, 'save']);
         Route::post('/businesses/paginate', [AdminBusinessController::class, 'paginate']);
         Route::patch('/businesses/status', [AdminBusinessController::class, 'status']);
         Route::patch('/businesses/{field}', [AdminBusinessController::class, 'boolean']);
         Route::delete('/businesses/{id}', [AdminBusinessController::class, 'delete']);
-        Route::get('/businesses/{id}/export-data', [AdminBusinessController::class, 'exportData']);
         Route::get('/businesses/{id}/branches', [AdminBusinessController::class, 'branches']);
         Route::post('/businesses/{id}/branches', [AdminBusinessController::class, 'saveBranch']);
         Route::patch('/businesses/{id}/branches/{branchId}/{field}', [AdminBusinessController::class, 'branchBoolean']);

@@ -10,33 +10,6 @@ class BusinessesRest extends BasicRest {
     return await this.simpleGet(`/api/${this.path}/${businessId}/branches`)
   }
 
-  downloadDump = async (url, prefix) => {
-    try {
-      const res = await fetch(url, { method: 'GET', headers: { 'X-Xsrf-Token': xsrfToken() } })
-      if (!res.ok) throw new Error('No se pudo exportar la data')
-
-      const blob = await res.blob()
-      const objectUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '')
-      a.href = objectUrl
-      a.download = `${prefix}_${stamp}.json`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(objectUrl)
-
-      toast.success('Correcto', { description: 'Data exportada', duration: 3000, richColors: true })
-      return true
-    } catch (error) {
-      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
-      return false
-    }
-  }
-
-  exportData = async () => await this.downloadDump(`/api/${this.path}/export-data`, 'kamary_data_dump')
-  exportBusinessData = async (businessId) => await this.downloadDump(`/api/${this.path}/${businessId}/export-data`, 'kamary_empresa_dump')
-
   getFacturadorMode = async () => {
     return await this.simpleGet('/api/admin/billing-settings/facturador-mode')
   }
