@@ -583,8 +583,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       exportable
       toolBar={(items) => {
         items.unshift(
-          { widget: 'dxButton', location: 'before', options: { icon: 'plus', text: 'Registrar Pedido', type: 'default', stylingMode: 'contained', onClick: () => openModal() } },
-          { widget: 'dxButton', location: 'before', options: { icon: 'plus', text: 'Registrar Pedido Masivo', type: 'default', stylingMode: 'contained', onClick: () => Swal.fire('Pedido masivo', 'El registro masivo queda preparado para conectar con importacion.', 'info') } },
+          { widget: 'dxButton', location: 'after', options: { icon: 'plus', text: 'Registrar Pedido', type: 'normal', stylingMode: 'contained', onClick: () => openModal() } },
+          { widget: 'dxButton', location: 'after', options: { icon: 'plus', text: 'Registrar Pedido Masivo', type: 'normal', stylingMode: 'contained', onClick: () => Swal.fire('Pedido masivo', 'El registro masivo queda preparado para conectar con importacion.', 'info') } },
           { widget: 'dxButton', location: 'after', options: { icon: 'refresh', hint: 'Actualizar', onClick: refreshGrid } },
         )
       }}
