@@ -80,6 +80,7 @@ use App\Http\Controllers\Admin\TransactionCategoryController as AdminTransaction
 use App\Http\Controllers\Admin\GiroController as AdminGiroController;
 use App\Http\Controllers\Admin\SubGiroController as AdminSubGiroController;
 use App\Http\Controllers\Admin\RequestReasonController as AdminRequestReasonController;
+use App\Http\Controllers\Admin\SupervisorController as AdminSupervisorController;
 use App\Http\Controllers\Admin\VehicleController as AdminVehicleController;
 use App\Http\Controllers\Admin\ZoneController as AdminZoneController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
@@ -681,6 +682,9 @@ Route::middleware('auth')->group(function () {
         Route::patch('/request-reasons/status', [AdminRequestReasonController::class, 'status']);
         Route::patch('/request-reasons/{field}', [AdminRequestReasonController::class, 'boolean']);
         Route::delete('/request-reasons/{id}', [AdminRequestReasonController::class, 'delete']);
+
+        Route::post('/supervisors', [AdminSupervisorController::class, 'save']);
+        Route::delete('/supervisors/{id}', [AdminSupervisorController::class, 'delete']);
 
         Route::post('/services-client', [AdminServiceClientController::class, 'save']);
         Route::post('/services-client/paginate', [AdminServiceClientController::class, 'paginate']);

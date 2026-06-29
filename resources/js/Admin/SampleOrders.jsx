@@ -252,8 +252,8 @@ const statusBadge = (active) => active
   ? <span className='badge bg-success-subtle text-success border border-success'>Activo</span>
   : <span className='badge bg-danger-subtle text-danger border border-danger'>Inactivo</span>
 
-// Lista reutilizable de un catalogo (motivo / giro / sub giro) con acciones editar y eliminar
-const CatalogList = ({ items, editingId, onEdit, onDelete, extraColumn }) => (
+// Lista reutilizable de un catalogo (motivo / giro / sub giro / supervisor) con acciones editar y eliminar
+const CatalogList = ({ items, editingId, onEdit, onDelete, extraColumn, getLabel, labelHeader = 'Descripcion' }) => (
   <div className='mt-3'>
     <div className='fw-bold mb-1' style={{ fontSize: 13 }}>Registrados</div>
     <div className='table-responsive' style={{ maxHeight: 240, overflowY: 'auto' }}>
@@ -263,7 +263,7 @@ const CatalogList = ({ items, editingId, onEdit, onDelete, extraColumn }) => (
             <th style={{ width: 86 }}>Acciones</th>
             <th style={{ width: 84 }}>Estado</th>
             {extraColumn && <th>{extraColumn.header}</th>}
-            <th>Descripcion</th>
+            <th>{labelHeader}</th>
           </tr>
         </thead>
         <tbody>
@@ -276,7 +276,7 @@ const CatalogList = ({ items, editingId, onEdit, onDelete, extraColumn }) => (
               </td>
               <td>{statusBadge(item.status)}</td>
               {extraColumn && <td>{extraColumn.value(item)}</td>}
-              <td>{item.name}</td>
+              <td>{getLabel ? getLabel(item) : item.name}</td>
             </tr>
           ))}
         </tbody>
@@ -319,6 +319,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const giroModalRef = useRef()
   const subGiroModalRef = useRef()
   const reasonModalRef = useRef()
+  const supervisorModalRef = useRef()
 
   const [form, setForm] = useState(emptyForm())
   const [items, setItems] = useState([emptyItem()])
@@ -331,6 +332,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const [giroForm, setGiroForm] = useState({ id: '', name: '', status: '1' })
   const [subGiroForm, setSubGiroForm] = useState({ id: '', giro_id: '', name: '', status: '1' })
   const [reasonForm, setReasonForm] = useState({ id: '', name: '', status: '1' })
+  const [supervisorForm, setSupervisorForm] = useState({ id: '', document_number: '', name: '', lastname_p: '', lastname_m: '', phone: '', status: '1' })
   const [ubigeoOptions, setUbigeoOptions] = useState([])
   const [articleQuery, setArticleQuery] = useState('')
   const [articlePageSize, setArticlePageSize] = useState(20)
@@ -349,7 +351,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       sampleOrdersRest.getRequestReasons(),
     ]).then(([clientRows, userRows, articleRows, giroRows, subGiroRows, reasonRows]) => {
       setClients((clientRows ?? []).filter(row => row.status !== null))
-      setUsers((userRows ?? []).filter(row => row.status !== null))
+      // El modelo User oculta 'id' y lo expone como 'entity_id'; lo normalizamos a id
+      setUsers((userRows ?? []).filter(row => row.status !== null).map(row => ({ ...row, id: row.entity_id ?? row.id })))
       setArticles((articleRows ?? []).filter(row => row.status !== null))
       setGiros((giroRows ?? []).filter(row => row.status !== null))
       setSubGiros((subGiroRows ?? []).filter(row => row.status !== null))
@@ -369,6 +372,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
   const clientOptions = useMemo(() => makeSelectOptions(clients, formatClient, row => row.entity_id ?? row.id), [clients])
   const userOptions = useMemo(() => makeSelectOptions(users, formatUser), [users])
+  // Para gestionar supervisores excluimos a los administradores (Admin/Root) por seguridad
+  const supervisorListItems = useMemo(() => users.filter(row => !(row.roles ?? []).some(role => ['Admin', 'Root'].includes(role.name))), [users])
   const reasonOptions = useMemo(() => requestReasons.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [requestReasons])
   const giroOptions = useMemo(() => giros.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [giros])
   const subGiroOptions = useMemo(() => subGiros
@@ -565,6 +570,58 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     setSubGiros(prev => prev.filter(row => `${row.id}` !== `${item.id}`))
     setForm(prev => `${prev.sub_giro_id}` === `${item.id}` ? { ...prev, sub_giro_id: '', business_subline: '' } : prev)
     if (`${subGiroForm.id}` === `${item.id}`) setSubGiroForm({ id: '', giro_id: form.giro_id || '', name: '', status: '1' })
+  }
+
+  // ----- Supervisor (usuario) -----
+  const emptySupervisorForm = () => ({ id: '', document_number: '', name: '', lastname_p: '', lastname_m: '', phone: '', status: '1' })
+
+  const openSupervisorModal = () => {
+    setSupervisorForm(emptySupervisorForm())
+    $(supervisorModalRef.current).modal('show')
+  }
+
+  const editSupervisor = (item) => setSupervisorForm({
+    id: `${item.id}`,
+    document_number: item.document_number ?? '',
+    name: item.name ?? '',
+    lastname_p: item.lastname ?? '',
+    lastname_m: '',
+    phone: item.phone ?? '',
+    status: item.status ? '1' : '0',
+  })
+
+  const onSaveSupervisor = async (e) => {
+    e.preventDefault()
+    const name = (supervisorForm.name ?? '').trim()
+    if (!name) return
+    const lastname = [supervisorForm.lastname_p, supervisorForm.lastname_m].map(value => (value ?? '').trim()).filter(Boolean).join(' ')
+    const payload = {
+      name,
+      lastname,
+      document_type: 'DNI',
+      document_number: (supervisorForm.document_number ?? '').trim() || null,
+      phone: (supervisorForm.phone ?? '').trim() || null,
+      status: supervisorForm.status === '1',
+    }
+    if (supervisorForm.id) payload.id = supervisorForm.id
+    const result = await sampleOrdersRest.saveSupervisor(payload)
+    if (!result) return
+    const saved = result?.data ?? result
+    if (saved?.id) {
+      upsertRow(setUsers, saved)
+      if (!supervisorForm.id && saved.status) setForm(prev => ({ ...prev, supervisor_id: `${saved.id}`, supervisor_name: formatUser(saved) }))
+      else setForm(prev => `${prev.supervisor_id}` === `${saved.id}` ? { ...prev, supervisor_name: formatUser(saved) } : prev)
+    }
+    setSupervisorForm(emptySupervisorForm())
+  }
+
+  const onDeleteSupervisor = async (item) => {
+    const { isConfirmed } = await Swal.fire({ title: 'Eliminar supervisor', text: `Se eliminara "${formatUser(item)}".`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
+    if (!isConfirmed) return
+    if (!await sampleOrdersRest.deleteSupervisor(item.id)) return
+    setUsers(prev => prev.filter(row => `${row.id}` !== `${item.id}`))
+    setForm(prev => `${prev.supervisor_id}` === `${item.id}` ? { ...prev, supervisor_id: '', supervisor_name: '' } : prev)
+    if (`${supervisorForm.id}` === `${item.id}`) setSupervisorForm(emptySupervisorForm())
   }
 
   const openModal = (data = null) => {
@@ -889,7 +946,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
       <div className='sample-grid'>
         <SampleSelect label='Motivo del pedido' value={form.request_reason_id} onChange={onReasonSelect} options={reasonOptions} addButton onAdd={openReasonModal} />
-        <SampleSelect label='Supervisor' value={form.supervisor_id} onChange={onSupervisorSelect} options={userOptions} addButton />
+        <SampleSelect label='Supervisor' value={form.supervisor_id} onChange={onSupervisorSelect} options={userOptions} addButton onAdd={openSupervisorModal} />
         <SampleSelect label='Seleccione cliente' value={form.client_id} onChange={onClientSelect} options={clientOptions} />
         <SampleInput label='Cliente' value={form.client_name} onChange={value => setField('client_name', value)} addButton />
 
@@ -1119,6 +1176,43 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           <div className='text-muted py-4 text-center'>Sin evidencia registrada</div>
         )}
       </div>
+    </Modal>
+
+    <Modal modalRef={supervisorModalRef} title='Registrar Supervisor' size='lg' btnSubmitText={supervisorForm.id ? 'Actualizar' : 'Registrar'} onSubmit={onSaveSupervisor}>
+      <div className='row'>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Nro Documento</label>
+          <input className='form-control' value={supervisorForm.document_number} onChange={e => setSupervisorForm(prev => ({ ...prev, document_number: e.target.value }))} placeholder='DNI' />
+        </div>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Telefono</label>
+          <input className='form-control' value={supervisorForm.phone} onChange={e => setSupervisorForm(prev => ({ ...prev, phone: e.target.value }))} />
+        </div>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Nombres <b className='text-danger'>*</b>
+            {supervisorForm.id && <a role='button' className='ms-2 small text-decoration-underline' onClick={() => setSupervisorForm(emptySupervisorForm())}>Cancelar edicion</a>}
+          </label>
+          <input className='form-control' value={supervisorForm.name} onChange={e => setSupervisorForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombres' required />
+        </div>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Estado</label>
+          <select className='form-select' value={supervisorForm.status} onChange={e => setSupervisorForm(prev => ({ ...prev, status: e.target.value }))}>
+            <option value='1'>Activo</option>
+            <option value='0'>Inactivo</option>
+          </select>
+        </div>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Apellido Paterno</label>
+          <input className='form-control' value={supervisorForm.lastname_p} onChange={e => setSupervisorForm(prev => ({ ...prev, lastname_p: e.target.value }))} />
+        </div>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Apellido Materno</label>
+          <input className='form-control' value={supervisorForm.lastname_m} onChange={e => setSupervisorForm(prev => ({ ...prev, lastname_m: e.target.value }))} />
+        </div>
+      </div>
+      <CatalogList items={supervisorListItems} editingId={supervisorForm.id} onEdit={editSupervisor} onDelete={onDeleteSupervisor}
+        getLabel={formatUser} labelHeader='Supervisor'
+        extraColumn={{ header: 'Documento', value: item => item.document_number ?? '-' }} />
     </Modal>
 
     <Modal modalRef={reasonModalRef} title='Registrar Motivo Pedido' size='md' btnSubmitText={reasonForm.id ? 'Actualizar' : 'Registrar'} onSubmit={onSaveReason}>
