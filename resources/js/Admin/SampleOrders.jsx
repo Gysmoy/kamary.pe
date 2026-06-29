@@ -429,11 +429,11 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const serviceTypeOptions = useMemo(() => serviceTypes.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [serviceTypes])
   const channelOptions = useMemo(() => salesChannels.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [salesChannels])
   const subchannelOptions = useMemo(() => salesSubchannels
-    .filter(row => row.status && (!form.sales_channel_id || `${row.sales_channel_id}` === `${form.sales_channel_id}`))
+    .filter(row => row.status && form.sales_channel_id && `${row.sales_channel_id}` === `${form.sales_channel_id}`)
     .map(row => ({ value: `${row.id}`, label: row.name })), [salesSubchannels, form.sales_channel_id])
   const giroOptions = useMemo(() => giros.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [giros])
   const subGiroOptions = useMemo(() => subGiros
-    .filter(row => row.status && (!form.giro_id || `${row.giro_id}` === `${form.giro_id}`))
+    .filter(row => row.status && form.giro_id && `${row.giro_id}` === `${form.giro_id}`)
     .map(row => ({ value: `${row.id}`, label: row.name })), [subGiros, form.giro_id])
   const articleRows = useMemo(() => {
     const terms = normalizeSearchText(articleQuery).split(' ').filter(Boolean)
@@ -1173,9 +1173,9 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         <SampleInput label='Cliente' value={form.client_name} onChange={value => setField('client_name', value)} addButton onAdd={openClientModal} />
 
         <SampleSelect label='Canal de venta' value={form.sales_channel_id} onChange={onChannelSelect} options={channelOptions} addButton onAdd={openChannelModal} />
-        <SampleSelect label='Sub canal de venta' value={form.sales_subchannel_id} onChange={onSubchannelSelect} options={subchannelOptions} addButton onAdd={openSubchannelModal} />
+        <SampleSelect label='Sub canal de venta' value={form.sales_subchannel_id} onChange={onSubchannelSelect} options={subchannelOptions} addButton onAdd={openSubchannelModal} disabled={!form.sales_channel_id} placeholder={form.sales_channel_id ? 'Seleccione' : 'Seleccione un canal primero'} />
         <SampleSelect label='Giro' value={form.giro_id} onChange={onGiroSelect} options={giroOptions} addButton onAdd={openGiroModal} />
-        <SampleSelect label='Sub Giro' value={form.sub_giro_id} onChange={onSubGiroSelect} options={subGiroOptions} addButton onAdd={openSubGiroModal} />
+        <SampleSelect label='Sub Giro' value={form.sub_giro_id} onChange={onSubGiroSelect} options={subGiroOptions} addButton onAdd={openSubGiroModal} disabled={!form.giro_id} placeholder={form.giro_id ? 'Seleccione' : 'Seleccione un giro primero'} />
 
         <SampleSelect label='Ubigeo' value={form.ubigeo} onChange={value => setField('ubigeo', value)} options={selectedUbigeoOptions} placeholder='Seleccione Ubigeo' />
         <SampleInput label='Direccion de entrega' value={form.delivery_address} onChange={value => setField('delivery_address', value)} placeholder='Introduce una ubicacion' />
