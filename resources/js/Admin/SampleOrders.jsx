@@ -548,10 +548,6 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
   return <>
     <style>{`
-      .sample-action-row { display: flex; gap: 22px; margin-top: 22px; flex-wrap: wrap; }
-      .sample-action-card { width: min(405px, 100%); min-height: 58px; border-radius: 6px; border: 0; color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-weight: 700; }
-      .sample-action-card.primary { background: #23244f; }
-      .sample-action-card.secondary { background: #23244f; }
       .sample-form-title { text-align: center; font-size: 22px; font-weight: 700; color: #565c68; margin-bottom: 26px; }
       .sample-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px 22px; }
       .sample-grid .span-2 { grid-column: span 2; }
@@ -586,7 +582,11 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       pageSize={25}
       exportable
       toolBar={(items) => {
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', hint: 'Actualizar', onClick: refreshGrid } })
+        items.unshift(
+          { widget: 'dxButton', location: 'before', options: { icon: 'plus', text: 'Registrar Pedido', type: 'default', stylingMode: 'contained', onClick: () => openModal() } },
+          { widget: 'dxButton', location: 'before', options: { icon: 'plus', text: 'Registrar Pedido Masivo', type: 'default', stylingMode: 'contained', onClick: () => Swal.fire('Pedido masivo', 'El registro masivo queda preparado para conectar con importacion.', 'info') } },
+          { widget: 'dxButton', location: 'after', options: { icon: 'refresh', hint: 'Actualizar', onClick: refreshGrid } },
+        )
       }}
       columns={[
         {
@@ -666,17 +666,6 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         { dataField: 'supervisor_name', caption: 'Supervisor', minWidth: 200 },
       ]}
     />
-
-    <div className='sample-action-row'>
-      <button className='sample-action-card primary' type='button' onClick={() => openModal()}>
-        <span><i className='mdi mdi-plus-circle-outline me-2'></i>Registrar Pedido</span>
-        <i className='mdi mdi-calendar fs-3'></i>
-      </button>
-      <button className='sample-action-card secondary' type='button' onClick={() => Swal.fire('Pedido masivo', 'El registro masivo queda preparado para conectar con importacion.', 'info')}>
-        <span><i className='mdi mdi-plus-circle-outline me-2'></i>Registrar Pedido Masivo</span>
-        <i className='mdi mdi-calendar fs-3'></i>
-      </button>
-    </div>
 
     <Modal
       modalRef={modalRef}
