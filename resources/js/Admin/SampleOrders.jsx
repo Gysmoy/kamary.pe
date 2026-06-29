@@ -548,7 +548,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
   return <>
     <style>{`
-      .sample-action-row { display: flex; gap: 22px; margin-bottom: 22px; flex-wrap: wrap; }
+      .sample-action-row { display: flex; gap: 22px; margin-top: 22px; flex-wrap: wrap; }
       .sample-action-card { width: min(405px, 100%); min-height: 58px; border-radius: 6px; border: 0; color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; font-weight: 700; }
       .sample-action-card.primary { background: #23244f; }
       .sample-action-card.secondary { background: #23244f; }
@@ -578,17 +578,6 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         .sample-grid .span-2, .sample-grid .span-4 { grid-column: span 1; }
       }
     `}</style>
-
-    <div className='sample-action-row'>
-      <button className='sample-action-card primary' type='button' onClick={() => openModal()}>
-        <span><i className='mdi mdi-plus-circle-outline me-2'></i>Registrar Pedido</span>
-        <i className='mdi mdi-calendar fs-3'></i>
-      </button>
-      <button className='sample-action-card secondary' type='button' onClick={() => Swal.fire('Pedido masivo', 'El registro masivo queda preparado para conectar con importacion.', 'info')}>
-        <span><i className='mdi mdi-plus-circle-outline me-2'></i>Registrar Pedido Masivo</span>
-        <i className='mdi mdi-calendar fs-3'></i>
-      </button>
-    </div>
 
     <Table
       gridRef={gridRef}
@@ -677,6 +666,17 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         { dataField: 'supervisor_name', caption: 'Supervisor', minWidth: 200 },
       ]}
     />
+
+    <div className='sample-action-row'>
+      <button className='sample-action-card primary' type='button' onClick={() => openModal()}>
+        <span><i className='mdi mdi-plus-circle-outline me-2'></i>Registrar Pedido</span>
+        <i className='mdi mdi-calendar fs-3'></i>
+      </button>
+      <button className='sample-action-card secondary' type='button' onClick={() => Swal.fire('Pedido masivo', 'El registro masivo queda preparado para conectar con importacion.', 'info')}>
+        <span><i className='mdi mdi-plus-circle-outline me-2'></i>Registrar Pedido Masivo</span>
+        <i className='mdi mdi-calendar fs-3'></i>
+      </button>
+    </div>
 
     <Modal
       modalRef={modalRef}
