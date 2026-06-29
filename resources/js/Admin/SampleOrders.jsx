@@ -360,7 +360,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const serviceTypeModalRef = useRef()
 
   const [form, setForm] = useState(emptyForm())
-  const [items, setItems] = useState([emptyItem()])
+  const [items, setItems] = useState([])
   const [clients, setClients] = useState([])
   const [users, setUsers] = useState([])
   const [articles, setArticles] = useState([])
@@ -869,11 +869,11 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         giro_id: giroId ? `${giroId}` : '',
         sub_giro_id: subGiroId ? `${subGiroId}` : '',
       })
-      const nextItems = Array.isArray(data.items) && data.items.length ? data.items.map(item => ({ ...emptyItem(), ...item, uid: crypto.randomUUID() })) : [emptyItem()]
+      const nextItems = Array.isArray(data.items) && data.items.length ? data.items.map(item => ({ ...emptyItem(), ...item, uid: crypto.randomUUID() })) : []
       setItems(nextItems)
     } else {
       setForm(emptyForm())
-      setItems([emptyItem()])
+      setItems([])
     }
     $(modalRef.current).modal('show')
   }
@@ -884,7 +884,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   }
 
   const addItem = (item = emptyItem()) => setItems(prev => [...prev, item])
-  const removeItem = (uid) => setItems(prev => prev.length > 1 ? prev.filter(item => item.uid !== uid) : [emptyItem()])
+  const removeItem = (uid) => setItems(prev => prev.filter(item => item.uid !== uid))
   const updateItem = (uid, field, value) => setItems(prev => prev.map(item => item.uid === uid ? { ...item, [field]: value } : item))
   const addArticleItem = (article) => {
     const nextItem = articleToItem(article)
