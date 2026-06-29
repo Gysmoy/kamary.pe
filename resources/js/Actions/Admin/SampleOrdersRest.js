@@ -44,6 +44,7 @@ class SampleOrdersRest extends BasicRest {
   }
 
   saveSupervisor = async (request) => await this.simplePost('/api/admin/supervisors', request)
+  saveClient = async (request) => await this.simplePost('/api/admin/clients', request)
 
   deleteGiro = async (id) => await this.simpleDelete(`/api/admin/giros/${id}`)
   deleteSubGiro = async (id) => await this.simpleDelete(`/api/admin/sub-giros/${id}`)

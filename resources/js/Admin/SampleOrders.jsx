@@ -332,12 +332,12 @@ const SampleSelect = ({ label, value, options = [], onChange, placeholder = 'Sel
   </div>
 )
 
-const SampleInput = ({ label, value, onChange, type = 'text', placeholder = '', disabled = false, addButton = false }) => (
+const SampleInput = ({ label, value, onChange, type = 'text', placeholder = '', disabled = false, addButton = false, onAdd }) => (
   <div className='sample-field'>
     <label className='form-label'>{label}</label>
     <div className='sample-input-group'>
       <input className='form-control' type={type} value={value ?? ''} placeholder={placeholder} disabled={disabled} onChange={e => onChange(e.target.value)} />
-      {addButton && <button type='button' className='btn btn-outline-success sample-plus' onClick={() => Swal.fire('Dato adicional', 'Puedes completar este campo manualmente.', 'info')}>+</button>}
+      {addButton && <button type='button' className='btn btn-outline-success sample-plus' onClick={onAdd ?? (() => Swal.fire('Dato adicional', 'Puedes completar este campo manualmente.', 'info'))}>+</button>}
     </div>
   </div>
 )
@@ -354,6 +354,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const subGiroModalRef = useRef()
   const reasonModalRef = useRef()
   const supervisorModalRef = useRef()
+  const clientModalRef = useRef()
 
   const [form, setForm] = useState(emptyForm())
   const [items, setItems] = useState([emptyItem()])
@@ -367,6 +368,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const [subGiroForm, setSubGiroForm] = useState({ id: '', giro_id: '', name: '', status: '1' })
   const [reasonForm, setReasonForm] = useState({ id: '', name: '', status: '1' })
   const [supervisorForm, setSupervisorForm] = useState({ id: '', document_number: '', name: '', lastname_p: '', lastname_m: '', phone: '', status: '1' })
+  const [clientForm, setClientForm] = useState({ document_type: '', document_number: '', full_name: '', email: '', phone: '', short_code: '', status: '1', full_address: '' })
   const [ubigeoOptions, setUbigeoOptions] = useState([])
   const [articleQuery, setArticleQuery] = useState('')
   const [articlePageSize, setArticlePageSize] = useState(20)
@@ -466,6 +468,43 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       ubigeo: selected?.ubigeo ?? prev.ubigeo,
       delivery_address: selected?.full_address ?? selected?.fiscal_address ?? prev.delivery_address,
     }))
+  }
+
+  const openClientModal = () => {
+    setClientForm({ document_type: '', document_number: '', full_name: '', email: '', phone: '', short_code: '', status: '1', full_address: '' })
+    $(clientModalRef.current).modal('show')
+  }
+
+  const onSaveClient = async (e) => {
+    e.preventDefault()
+    const payload = {
+      document_type: clientForm.document_type,
+      document_number: (clientForm.document_number ?? '').trim(),
+      full_name: (clientForm.full_name ?? '').trim(),
+      email: (clientForm.email ?? '').trim() || null,
+      phone: (clientForm.phone ?? '').trim() || null,
+      short_code: (clientForm.short_code ?? '').trim() || null,
+      full_address: (clientForm.full_address ?? '').trim() || null,
+      status: clientForm.status === '1',
+      client_kind: 'regular',
+    }
+    const result = await sampleOrdersRest.saveClient(payload)
+    if (!result) return
+    const saved = result?.data ?? result
+    if (saved?.id) {
+      const normalized = { ...saved, entity_id: saved.entity_id ?? saved.id }
+      setClients(prev => [normalized, ...prev])
+      setForm(prev => ({
+        ...prev,
+        client_id: `${normalized.entity_id}`,
+        client_name: normalizeText(saved.full_name),
+        document_number: saved.document_number ?? prev.document_number,
+        contact_document: saved.document_number ?? prev.contact_document,
+        contact_phone: saved.phone ?? prev.contact_phone,
+        delivery_address: saved.full_address ?? prev.delivery_address,
+      }))
+    }
+    $(clientModalRef.current).modal('hide')
   }
 
   const onSupervisorSelect = (userId) => {
@@ -982,7 +1021,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         <SampleSelect label='Motivo del pedido' value={form.request_reason_id} onChange={onReasonSelect} options={reasonOptions} addButton onAdd={openReasonModal} />
         <SampleSelect label='Supervisor' value={form.supervisor_id} onChange={onSupervisorSelect} options={userOptions} addButton onAdd={openSupervisorModal} />
         <SampleSelect label='Seleccione cliente' value={form.client_id} onChange={onClientSelect} options={clientOptions} />
-        <SampleInput label='Cliente' value={form.client_name} onChange={value => setField('client_name', value)} addButton />
+        <SampleInput label='Cliente' value={form.client_name} onChange={value => setField('client_name', value)} addButton onAdd={openClientModal} />
 
         <SampleSelect label='Canal de venta' value={form.sales_channel} onChange={value => setField('sales_channel', value)} options={salesChannelOptions} addButton />
         <SampleSelect label='Sub canal de venta' value={form.sales_subchannel} onChange={value => setField('sales_subchannel', value)} options={salesSubchannelOptions} addButton />
@@ -1209,6 +1248,51 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         ) : (
           <div className='text-muted py-4 text-center'>Sin evidencia registrada</div>
         )}
+      </div>
+    </Modal>
+
+    <Modal modalRef={clientModalRef} title='Registrar Cliente' size='lg' btnSubmitText='Registrar' onSubmit={onSaveClient}>
+      <div className='row'>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Tipo de Documento <b className='text-danger'>*</b></label>
+          <select className='form-select' value={clientForm.document_type} onChange={e => setClientForm(prev => ({ ...prev, document_type: e.target.value }))} required>
+            <option value=''>Seleccione</option>
+            <option value='dni'>DNI</option>
+            <option value='ruc'>RUC</option>
+            <option value='ce'>Carnet de extranjeria</option>
+          </select>
+        </div>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>N&deg; Documento <b className='text-danger'>*</b></label>
+          <input className='form-control' value={clientForm.document_number} onChange={e => setClientForm(prev => ({ ...prev, document_number: e.target.value }))} required />
+        </div>
+        <div className='form-group col-12 mb-2'>
+          <label className='form-label mb-1'>Razon Social <b className='text-danger'>*</b></label>
+          <input className='form-control' value={clientForm.full_name} onChange={e => setClientForm(prev => ({ ...prev, full_name: e.target.value }))} required />
+        </div>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Email</label>
+          <input className='form-control' type='email' value={clientForm.email} onChange={e => setClientForm(prev => ({ ...prev, email: e.target.value }))} />
+        </div>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Celular</label>
+          <input className='form-control' value={clientForm.phone} onChange={e => setClientForm(prev => ({ ...prev, phone: e.target.value }))} />
+        </div>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Codigo corto</label>
+          <input className='form-control' value={clientForm.short_code} onChange={e => setClientForm(prev => ({ ...prev, short_code: e.target.value }))} />
+        </div>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Estado</label>
+          <select className='form-select' value={clientForm.status} onChange={e => setClientForm(prev => ({ ...prev, status: e.target.value }))}>
+            <option value='1'>Activo</option>
+            <option value='0'>Inactivo</option>
+          </select>
+        </div>
+        <div className='form-group col-12 mb-2'>
+          <label className='form-label mb-1'>Direccion</label>
+          <input className='form-control' value={clientForm.full_address} onChange={e => setClientForm(prev => ({ ...prev, full_address: e.target.value }))} />
+        </div>
       </div>
     </Modal>
 
