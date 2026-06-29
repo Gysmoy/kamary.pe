@@ -1139,6 +1139,17 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
             renderBadge(container, option.label, option.className)
           }
         },
+        {
+          dataField: 'email_status',
+          caption: 'E. Email',
+          minWidth: 120,
+          lookup: { dataSource: emailStatusOptions, valueExpr: 'value', displayExpr: 'label' },
+          calculateCellValue: data => getOptionLabel(emailStatusOptions, data.email_status, normalizeEmailStatus),
+          cellTemplate: (container, { data }) => {
+            const option = getStatusOption(emailStatusOptions, data.email_status, normalizeEmailStatus)
+            renderBadge(container, option.label, option.className)
+          }
+        },
         { dataField: 'referral_guide', caption: 'Guia Remision', minWidth: 130 },
         { dataField: 'products', caption: 'Producto', minWidth: 300, calculateCellValue: sampleProducts, allowFiltering: false, allowSorting: false },
         { dataField: 'quantity_total', caption: 'Cantidad', dataType: 'number', minWidth: 105, calculateCellValue: sampleQuantity, format: { type: 'fixedPoint', precision: 0 }, allowFiltering: false, allowSorting: false },
