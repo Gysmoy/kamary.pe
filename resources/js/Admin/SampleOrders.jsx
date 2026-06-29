@@ -252,12 +252,39 @@ const statusBadge = (active) => active
   ? <span className='badge bg-success-subtle text-success border border-success'>Activo</span>
   : <span className='badge bg-danger-subtle text-danger border border-danger'>Inactivo</span>
 
-// Lista reutilizable de un catalogo (motivo / giro / sub giro / supervisor) con acciones editar y eliminar
-const CatalogList = ({ items, editingId, onEdit, onDelete, extraColumn, getLabel, labelHeader = 'Descripcion' }) => (
-  <div className='mt-3'>
-    <div className='fw-bold mb-1' style={{ fontSize: 13 }}>Registrados</div>
-    <div className='table-responsive' style={{ maxHeight: 240, overflowY: 'auto' }}>
-      <table className='table table-sm table-bordered align-middle mb-0' style={{ fontSize: 12 }}>
+// Lista reutilizable de un catalogo (motivo / giro / sub giro / supervisor) con filtro,
+// paginado y acciones editar / eliminar
+const CatalogList = ({ items, editingId, onEdit, onDelete, extraColumn, getLabel, labelHeader = 'Descripcion' }) => {
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(5)
+
+  const labelOf = (item) => (getLabel ? getLabel(item) : (item.name ?? ''))
+  const term = search.trim().toLowerCase()
+  const filtered = term
+    ? items.filter(item => [labelOf(item), extraColumn ? extraColumn.value(item) : '', item.status ? 'activo' : 'inactivo'].join(' ').toLowerCase().includes(term))
+    : items
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const currentPage = Math.min(page, totalPages)
+  const start = (currentPage - 1) * pageSize
+  const pageItems = filtered.slice(start, start + pageSize)
+  const colSpan = extraColumn ? 4 : 3
+
+  return (
+    <div className='mt-3'>
+      <div className='d-flex flex-wrap justify-content-between align-items-center mb-1 gap-2'>
+        <div className='fw-bold' style={{ fontSize: 13 }}>Registrados</div>
+        <div className='d-flex align-items-center gap-2'>
+          <select className='form-select form-select-sm' style={{ width: 'auto' }} value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}>
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+          </select>
+          <input className='form-control form-control-sm' style={{ width: 170 }} placeholder='Filtrar...' value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
+        </div>
+      </div>
+      <table className='table table-sm table-bordered align-middle mb-2' style={{ fontSize: 12 }}>
         <thead>
           <tr>
             <th style={{ width: 86 }}>Acciones</th>
@@ -267,8 +294,8 @@ const CatalogList = ({ items, editingId, onEdit, onDelete, extraColumn, getLabel
           </tr>
         </thead>
         <tbody>
-          {items.length === 0 && <tr><td colSpan={extraColumn ? 4 : 3} className='text-center text-muted py-2'>Sin registros</td></tr>}
-          {items.map(item => (
+          {pageItems.length === 0 && <tr><td colSpan={colSpan} className='text-center text-muted py-2'>Sin registros</td></tr>}
+          {pageItems.map(item => (
             <tr key={item.id} className={`${editingId}` === `${item.id}` ? 'table-warning' : ''}>
               <td>
                 <button type='button' className='btn btn-xs btn-outline-warning me-1' title='Editar' onClick={() => onEdit(item)}><i className='mdi mdi-pencil'></i></button>
@@ -276,14 +303,21 @@ const CatalogList = ({ items, editingId, onEdit, onDelete, extraColumn, getLabel
               </td>
               <td>{statusBadge(item.status)}</td>
               {extraColumn && <td>{extraColumn.value(item)}</td>}
-              <td>{getLabel ? getLabel(item) : item.name}</td>
+              <td>{labelOf(item)}</td>
             </tr>
           ))}
         </tbody>
       </table>
+      <div className='d-flex flex-wrap justify-content-between align-items-center'>
+        <small className='text-muted'>{filtered.length} registro(s) &middot; Pagina {currentPage} de {totalPages}</small>
+        <div className='btn-group btn-group-sm'>
+          <button type='button' className='btn btn-outline-secondary' disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)}>Anterior</button>
+          <button type='button' className='btn btn-outline-secondary' disabled={currentPage >= totalPages} onClick={() => setPage(currentPage + 1)}>Siguiente</button>
+        </div>
+      </div>
     </div>
-  </div>
-)
+  )
+}
 
 const SampleSelect = ({ label, value, options = [], onChange, placeholder = 'Seleccione', addButton = false, onAdd, disabled = false }) => (
   <div className='sample-field'>
