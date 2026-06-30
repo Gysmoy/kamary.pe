@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\EmailConfig;
 use App\Http\Controllers\BasicController;
+use App\Models\Client;
 use App\Models\SampleOrder;
 use App\Support\BusinessScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -66,11 +69,11 @@ class SampleOrderController extends BasicController
                 ?? ($id ? SampleOrder::query()->whereKey($id)->value('approved_at') : null)
                 ?? now();
         }
-        $body['email_status'] = $this->normalizeOption(
-            $this->normalizeStatusAlias($body['email_status'] ?? 'pending', ['sent' => 'delivered']),
-            ['pending', 'delivered', 'failed'],
-            'pending'
-        );
+        // El estado del correo lo gobierna el envio real al aprobar (no el formulario):
+        // nace 'pending' y al editar se conserva el estado ya registrado.
+        $body['email_status'] = $id
+            ? (SampleOrder::query()->whereKey($id)->value('email_status') ?: 'pending')
+            : 'pending';
         $body['referral_guide'] = trim((string)($body['referral_guide'] ?? '')) ?: null;
         $body['total_gross_weight'] = $this->toNullableDecimal($body['total_gross_weight'] ?? null);
         $body['channel'] = trim((string)($body['channel'] ?? '')) ?: null;
@@ -150,6 +153,88 @@ class SampleOrderController extends BasicController
         return true;
     }
 
+    // Notifica por correo al cliente vinculado que su pedido de muestra fue aprobado.
+    // No interrumpe el flujo: cualquier fallo deja email_status='failed' y se registra en log.
+    private function sendApprovalEmail(SampleOrder $order): void
+    {
+        try {
+            $client = $order->client_id ? Client::query()->find($order->client_id) : null;
+            $email = $client ? trim((string)($client->email ?? '')) : '';
+
+            if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $order->update(['email_status' => 'failed']);
+                Log::warning('Pedido muestra aprobado sin correo de cliente valido', [
+                    'sample_order_id' => $order->id,
+                    'client_id' => $order->client_id,
+                ]);
+                return;
+            }
+
+            $html = $this->buildApprovalEmailBody($order, $client);
+
+            $mail = EmailConfig::config();
+            $mail->Subject = 'Pedido de muestra ' . ($order->order_number ?: ('#' . $order->id)) . ' aprobado';
+            $mail->isHTML(true);
+            $mail->Body = $html;
+            $mail->AltBody = trim(strip_tags($html));
+            $mail->addAddress($email, trim((string)($client->full_name ?? $order->client_name ?? '')) ?: $email);
+            $mail->send();
+            $mail->smtpClose();
+
+            $order->update(['email_status' => 'delivered']);
+        } catch (\Throwable $th) {
+            $order->update(['email_status' => 'failed']);
+            Log::error('Error enviando correo de aprobacion de pedido muestra', [
+                'sample_order_id' => $order->id,
+                'message' => $th->getMessage(),
+            ]);
+        }
+    }
+
+    private function buildApprovalEmailBody(SampleOrder $order, ?Client $client): string
+    {
+        $items = is_array($order->items) ? $order->items : [];
+        $rows = '';
+        foreach ($items as $item) {
+            $code = e((string)($item['code'] ?? ''));
+            $name = e((string)($item['name'] ?? ''));
+            $unit = e((string)($item['unit'] ?? ''));
+            $quantity = (float)($item['quantity'] ?? 0);
+            $quantityLabel = e(rtrim(rtrim(number_format($quantity, 2, '.', ''), '0'), '.'));
+            $rows .= "<tr>"
+                . "<td style=\"padding:6px 10px;border:1px solid #e5e7eb;\">{$code}</td>"
+                . "<td style=\"padding:6px 10px;border:1px solid #e5e7eb;\">{$name}</td>"
+                . "<td style=\"padding:6px 10px;border:1px solid #e5e7eb;text-align:center;\">{$quantityLabel}</td>"
+                . "<td style=\"padding:6px 10px;border:1px solid #e5e7eb;\">{$unit}</td>"
+                . "</tr>";
+        }
+        if ($rows === '') {
+            $rows = "<tr><td colspan=\"4\" style=\"padding:6px 10px;border:1px solid #e5e7eb;text-align:center;\">Sin articulos</td></tr>";
+        }
+
+        $orderNumber = e((string)($order->order_number ?: ('#' . $order->id)));
+        $clientName = e((string)($client->full_name ?? $order->client_name ?? ''));
+        $requestedAt = $order->requested_at ? e($order->requested_at->format('d/m/Y')) : '';
+        $appName = e((string) config('app.name', 'Kamary'));
+
+        return "<div style=\"font-family:Arial,Helvetica,sans-serif;color:#111827;max-width:640px;margin:0 auto;\">"
+            . "<h2 style=\"color:#1d4ed8;\">Pedido de muestra aprobado</h2>"
+            . "<p>Estimado(a) <strong>{$clientName}</strong>,</p>"
+            . "<p>Le informamos que su pedido de muestra <strong>{$orderNumber}</strong> ha sido <strong>aprobado</strong>.</p>"
+            . ($requestedAt !== '' ? "<p><strong>Fecha de solicitud:</strong> {$requestedAt}</p>" : '')
+            . "<h3 style=\"margin-bottom:6px;\">Detalle de articulos</h3>"
+            . "<table style=\"border-collapse:collapse;width:100%;font-size:14px;\">"
+            . "<thead><tr style=\"background:#f3f4f6;\">"
+            . "<th style=\"padding:6px 10px;border:1px solid #e5e7eb;text-align:left;\">Codigo</th>"
+            . "<th style=\"padding:6px 10px;border:1px solid #e5e7eb;text-align:left;\">Articulo</th>"
+            . "<th style=\"padding:6px 10px;border:1px solid #e5e7eb;\">Cantidad</th>"
+            . "<th style=\"padding:6px 10px;border:1px solid #e5e7eb;text-align:left;\">Unidad</th>"
+            . "</tr></thead>"
+            . "<tbody>{$rows}</tbody></table>"
+            . "<p style=\"margin-top:20px;color:#6b7280;font-size:12px;\">Este es un correo automatico de {$appName}.</p>"
+            . "</div>";
+    }
+
     public function boolean(Request $request)
     {
         $field = trim((string)$request->field);
@@ -169,6 +254,7 @@ class SampleOrderController extends BasicController
             );
 
             $order = SampleOrder::query()->whereKey($request->id)->whereNotNull('status')->firstOrFail();
+            $wasApproved = in_array($order->order_status, ['approved', 'preparing', 'in_route', 'delivered'], true);
 
             // No se puede aprobar un pedido incompleto (stock insuficiente para liquidarlo)
             if ($orderStatus === 'approved' && !$this->sampleOrderComplete($order)) {
@@ -192,6 +278,11 @@ class SampleOrderController extends BasicController
             }
 
             $order->update($updates);
+
+            // Al aprobar (transicion a 'approved') se notifica por correo al cliente vinculado
+            if ($orderStatus === 'approved' && !$wasApproved) {
+                $this->sendApprovalEmail($order);
+            }
 
             $response->status = 200;
             $response->message = 'Operacion correcta';
