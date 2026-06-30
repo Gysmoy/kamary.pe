@@ -38,12 +38,25 @@ class SamplesTestStockSeeder extends Seeder
     /** code => [name, stock]. stock = 0 significa "sin entrada" (no aparece en el buscador). */
     private const ARTICLES = [
         ['code' => 'MUESTRA-001', 'name' => 'Muestra Paracetamol 500mg', 'stock' => 50],
-        ['code' => 'MUESTRA-002', 'name' => 'Muestra Ibuprofeno 400mg', 'stock' => 50],
+        ['code' => 'MUESTRA-002', 'name' => 'Muestra Ibuprofeno 400mg', 'stock' => 35],
         ['code' => 'MUESTRA-003', 'name' => 'Muestra Amoxicilina 250mg', 'stock' => 30],
         ['code' => 'MUESTRA-004', 'name' => 'Muestra Loratadina 10mg', 'stock' => 2],
         ['code' => 'MUESTRA-005', 'name' => 'Muestra Omeprazol 20mg', 'stock' => 1],
         ['code' => 'MUESTRA-006', 'name' => 'Muestra Vitamina C 1g', 'stock' => 0],
-        ['code' => 'MUESTRA-007', 'name' => 'Muestra Crema Hidratante', 'stock' => 0],
+        ['code' => 'MUESTRA-007', 'name' => 'Muestra Crema Hidratante 50g', 'stock' => 0],
+        ['code' => 'MUESTRA-008', 'name' => 'Muestra Naproxeno 550mg', 'stock' => 18],
+        ['code' => 'MUESTRA-009', 'name' => 'Muestra Cetirizina 10mg', 'stock' => 12],
+        ['code' => 'MUESTRA-010', 'name' => 'Muestra Azitromicina 500mg', 'stock' => 25],
+        ['code' => 'MUESTRA-011', 'name' => 'Muestra Metformina 850mg', 'stock' => 60],
+        ['code' => 'MUESTRA-012', 'name' => 'Muestra Losartan 50mg', 'stock' => 8],
+        ['code' => 'MUESTRA-013', 'name' => 'Muestra Atorvastatina 20mg', 'stock' => 22],
+        ['code' => 'MUESTRA-014', 'name' => 'Muestra Salbutamol inhalador', 'stock' => 5],
+        ['code' => 'MUESTRA-015', 'name' => 'Muestra Diclofenaco 50mg', 'stock' => 40],
+        ['code' => 'MUESTRA-016', 'name' => 'Muestra Ranitidina 300mg', 'stock' => 3],
+        ['code' => 'MUESTRA-017', 'name' => 'Muestra Amoxicilina + Ac. Clavulanico 1g', 'stock' => 15],
+        ['code' => 'MUESTRA-018', 'name' => 'Muestra Acido Folico 5mg', 'stock' => 0],
+        ['code' => 'MUESTRA-019', 'name' => 'Muestra Ibuprofeno jarabe 100mg/5ml', 'stock' => 28],
+        ['code' => 'MUESTRA-020', 'name' => 'Muestra Complejo B', 'stock' => 10],
     ];
 
     public function run(): void
@@ -166,9 +179,10 @@ class SamplesTestStockSeeder extends Seeder
     {
         $this->command?->info("Almacen Muestras poblado: {$warehouseName}");
         foreach (self::ARTICLES as $spec) {
-            $tag = $spec['stock'] > 0
-                ? ($spec['stock'] >= 10 ? 'stock alto' : 'stock bajo')
-                : 'sin stock';
+            $stock = (float) $spec['stock'];
+            $tag = $stock <= 0 ? 'sin stock'
+                : ($stock < 5 ? 'stock bajo'
+                : ($stock < 20 ? 'stock medio' : 'stock alto'));
             $this->command?->line(str_pad($spec['code'] . ' ' . $spec['name'], 44, '.')
                 . ' ' . str_pad((string) $spec['stock'], 4, ' ', STR_PAD_LEFT)
                 . "  ({$tag})");
