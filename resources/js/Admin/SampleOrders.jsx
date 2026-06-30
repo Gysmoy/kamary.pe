@@ -103,6 +103,14 @@ const normalizeSearchText = (value) => normalizeText(value)
   .toLowerCase()
   .replace(/[^a-z0-9]+/g, ' ')
   .trim()
+
+// Palabras que Google agrega a los nombres administrativos pero el catalogo INEI no.
+// Se quitan de ambos lados para emparejar departamento/provincia/distrito.
+const UBIGEO_STOPWORDS = new Set(['region', 'provincia', 'departamento', 'distrito', 'province', 'district', 'department', 'de', 'del'])
+const normalizeUbigeoName = (value) => normalizeSearchText(value)
+  .split(' ')
+  .filter(word => word && !UBIGEO_STOPWORDS.has(word))
+  .join(' ')
 const normalizeOrderStatus = (value) => ({ processing: 'preparing', completed: 'delivered' }[value] ?? value)
 const normalizeEmailStatus = (value) => ({ sent: 'delivered' }[value] ?? value)
 const getOptionLabel = (options, value, normalizer = value => value) => options.find(option => option.value === normalizer(value))?.label ?? value ?? ''
@@ -477,6 +485,24 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     if (!form.ubigeo || ubigeoOptions.some(option => option.value === form.ubigeo)) return ubigeoOptions
     return [{ value: form.ubigeo, label: form.ubigeo }, ...ubigeoOptions]
   }, [form.ubigeo, ubigeoOptions])
+  // Indices para resolver el codigo de ubigeo desde los nombres de Google.
+  // exact: departamento|provincia|distrito ; byDeptDistrict: departamento|distrito (respaldo)
+  const ubigeoIndex = useMemo(() => {
+    const exact = new Map()
+    const byDeptDistrict = new Map()
+    for (const option of ubigeoOptions) {
+      const parts = `${option.label ?? ''}`.split(' | ')
+      if (parts.length < 3) continue
+      const nd = normalizeUbigeoName(parts[0])
+      const np = normalizeUbigeoName(parts[1])
+      const nx = normalizeUbigeoName(parts[2])
+      if (!nd || !nx) continue
+      exact.set(`${nd}|${np}|${nx}`, option.value)
+      const ddKey = `${nd}|${nx}`
+      if (!byDeptDistrict.has(ddKey)) byDeptDistrict.set(ddKey, option.value)
+    }
+    return { exact, byDeptDistrict }
+  }, [ubigeoOptions])
   const googleMapsApiKey = `${Global.GMAPS_API_KEY ?? ''}`.trim()
 
   const setField = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
@@ -499,8 +525,27 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       if (status === 'OK' && results?.[0]) {
         const formatted = `${results[0].formatted_address ?? ''}`.trim()
         if (formatted) setField('delivery_address', formatted)
+        resolveUbigeoFromComponents(results[0].address_components)
       }
     })
+  }
+
+  // Mapea los componentes de direccion de Google al codigo de ubigeo INEI.
+  const resolveUbigeoFromComponents = (components) => {
+    if (!Array.isArray(components) || !components.length) return
+    const pick = (type) => components.find(item => (item.types ?? []).includes(type))?.long_name ?? ''
+    const department = pick('administrative_area_level_1')
+    const province = pick('administrative_area_level_2')
+    const district = pick('administrative_area_level_3') || pick('locality') || pick('sublocality_level_1') || pick('sublocality')
+    if (!department || !district) return
+
+    const nd = normalizeUbigeoName(department)
+    const np = normalizeUbigeoName(province)
+    const nx = normalizeUbigeoName(district)
+    const code = ubigeoIndex.exact.get(`${nd}|${np}|${nx}`)
+      ?? ubigeoIndex.exact.get(`${nd}|${nd}|${nx}`) // Lima y Callao: provincia = departamento
+      ?? ubigeoIndex.byDeptDistrict.get(`${nd}|${nx}`)
+    if (code) setField('ubigeo', code)
   }
 
   // Cuando el usuario elige un lugar del autocompletado de Google Places.
@@ -509,6 +554,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     if (!place) return
     const formatted = `${place.formatted_address ?? place.name ?? ''}`.trim()
     if (formatted) setField('delivery_address', formatted)
+    resolveUbigeoFromComponents(place.address_components)
     const location = place.geometry?.location
     if (location) setMapLocation(location.lat(), location.lng())
   }
