@@ -11,8 +11,14 @@ import renderGridEditLink from '../Utils/renderGridEditLink';
 import Global from '../Utils/Global';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import { getUbigeoCatalog } from '../Utils/ubigeoInei';
+import { Autocomplete, GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 
 const sampleOrdersRest = new SampleOrdersRest()
+
+// Referencia estable para evitar recargas del script de Google Maps
+const SAMPLE_MAP_LIBRARIES = ['places']
+// Centro por defecto (Lima) cuando el pedido aun no tiene coordenadas
+const DEFAULT_MAP_CENTER = { lat: -12.046374, lng: -77.042793 }
 
 const orderStatusOptions = [
   { value: 'registered', label: 'Registrado', className: 'bg-warning-subtle text-warning border border-warning' },
@@ -386,6 +392,11 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const [evidenceOrder, setEvidenceOrder] = useState(null)
   const [evidenceFile, setEvidenceFile] = useState(null)
   const [evidencePreview, setEvidencePreview] = useState('')
+  const [isMapLoaded, setIsMapLoaded] = useState(false)
+  const [mapPoint, setMapPoint] = useState(DEFAULT_MAP_CENTER)
+  const [hasMarker, setHasMarker] = useState(false)
+  const addressAutocompleteRef = useRef(null)
+  const geocoderRef = useRef(null)
 
   useEffect(() => {
     Promise.all([
@@ -467,11 +478,59 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     return [{ value: form.ubigeo, label: form.ubigeo }, ...ubigeoOptions]
   }, [form.ubigeo, ubigeoOptions])
   const googleMapsApiKey = `${Global.GMAPS_API_KEY ?? ''}`.trim()
-  const sampleMapSrc = googleMapsApiKey
-    ? `https://www.google.com/maps/embed/v1/place?key=${googleMapsApiKey}&q=${encodeURIComponent(form.delivery_address || 'Lima Peru')}&zoom=11`
-    : ''
 
   const setField = (field, value) => setForm(prev => ({ ...prev, [field]: value }))
+
+  // Fija el punto en el mapa y guarda las coordenadas en el formulario.
+  const setMapLocation = (lat, lng, { reverse = false } = {}) => {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+    const point = { lat, lng }
+    setMapPoint(point)
+    setHasMarker(true)
+    setForm(prev => ({ ...prev, map_lat: lat, map_lng: lng }))
+    if (reverse) reverseGeocode(point)
+  }
+
+  // Convierte coordenadas en direccion legible y la coloca en "Direccion de entrega".
+  const reverseGeocode = (point) => {
+    if (!window.google?.maps) return
+    if (!geocoderRef.current) geocoderRef.current = new window.google.maps.Geocoder()
+    geocoderRef.current.geocode({ location: point }, (results, status) => {
+      if (status === 'OK' && results?.[0]) {
+        const formatted = `${results[0].formatted_address ?? ''}`.trim()
+        if (formatted) setField('delivery_address', formatted)
+      }
+    })
+  }
+
+  // Cuando el usuario elige un lugar del autocompletado de Google Places.
+  const onAddressPlaceChanged = () => {
+    const place = addressAutocompleteRef.current?.getPlace?.()
+    if (!place) return
+    const formatted = `${place.formatted_address ?? place.name ?? ''}`.trim()
+    if (formatted) setField('delivery_address', formatted)
+    const location = place.geometry?.location
+    if (location) setMapLocation(location.lat(), location.lng())
+  }
+
+  const onMapClick = (event) => setMapLocation(event?.latLng?.lat?.(), event?.latLng?.lng?.(), { reverse: true })
+  const onMarkerDragEnd = (event) => setMapLocation(event?.latLng?.lat?.(), event?.latLng?.lng?.(), { reverse: true })
+
+  const clearMapLocation = () => {
+    setHasMarker(false)
+    setForm(prev => ({ ...prev, map_lat: '', map_lng: '' }))
+  }
+
+  const useMyLocation = () => {
+    if (!navigator.geolocation) {
+      Swal.fire('Ubicacion', 'Tu navegador no permite geolocalizacion.', 'info')
+      return
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => setMapLocation(pos.coords.latitude, pos.coords.longitude, { reverse: true }),
+      () => Swal.fire('Ubicacion', 'No se pudo obtener tu ubicacion. Revisa los permisos del navegador.', 'warning')
+    )
+  }
   const closeMainModal = () => $(modalRef.current).modal('hide')
   const refreshGrid = () => $(gridRef.current).dxDataGrid('instance').refresh()
 
@@ -875,9 +934,20 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       })
       const nextItems = Array.isArray(data.items) && data.items.length ? data.items.map(item => ({ ...emptyItem(), ...item, uid: crypto.randomUUID() })) : []
       setItems(nextItems)
+      const lat = Number(data.map_lat)
+      const lng = Number(data.map_lng)
+      if (data.map_lat != null && data.map_lat !== '' && data.map_lng != null && data.map_lng !== '' && Number.isFinite(lat) && Number.isFinite(lng)) {
+        setMapPoint({ lat, lng })
+        setHasMarker(true)
+      } else {
+        setMapPoint(DEFAULT_MAP_CENTER)
+        setHasMarker(false)
+      }
     } else {
       setForm(emptyForm())
       setItems([])
+      setMapPoint(DEFAULT_MAP_CENTER)
+      setHasMarker(false)
     }
     $(modalRef.current).modal('show')
   }
@@ -1202,7 +1272,22 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         <SampleSelect label='Sub Giro' value={form.sub_giro_id} onChange={onSubGiroSelect} options={subGiroOptions} addButton onAdd={openSubGiroModal} disabled={!form.giro_id} placeholder={form.giro_id ? 'Seleccione' : 'Seleccione un giro primero'} />
 
         <SampleSelect label='Ubigeo' value={form.ubigeo} onChange={value => setField('ubigeo', value)} options={selectedUbigeoOptions} placeholder='Seleccione Ubigeo' />
-        <SampleInput label='Direccion de entrega' value={form.delivery_address} onChange={value => setField('delivery_address', value)} placeholder='Introduce una ubicacion' />
+        <div className='sample-field'>
+          <label className='form-label'>Direccion de entrega</label>
+          {googleMapsApiKey ? (
+            <LoadScript googleMapsApiKey={googleMapsApiKey} libraries={SAMPLE_MAP_LIBRARIES} onLoad={() => setIsMapLoaded(true)}>
+              <Autocomplete
+                onLoad={instance => { addressAutocompleteRef.current = instance }}
+                onPlaceChanged={onAddressPlaceChanged}
+                options={{ componentRestrictions: { country: 'pe' } }}
+              >
+                <input className='form-control' value={form.delivery_address ?? ''} placeholder='Escribe y elige una direccion...' onChange={e => setField('delivery_address', e.target.value)} />
+              </Autocomplete>
+            </LoadScript>
+          ) : (
+            <input className='form-control' value={form.delivery_address ?? ''} placeholder='Introduce una ubicacion' onChange={e => setField('delivery_address', e.target.value)} />
+          )}
+        </div>
         <SampleInput label='Referencia' value={form.delivery_reference} onChange={value => setField('delivery_reference', value)} />
         <SampleSelect label='Tipo servicio' value={form.service_type_id} onChange={onServiceTypeSelect} options={serviceTypeOptions} addButton onAdd={openServiceTypeModal} />
 
@@ -1219,16 +1304,36 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         </div>
 
         <div className='span-4'>
-          {sampleMapSrc ? (
-            <iframe
-              title='Mapa de entrega'
-              className='sample-map'
-              loading='lazy'
-              referrerPolicy='no-referrer-when-downgrade'
-              src={sampleMapSrc}
-            />
+          <div className='d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1'>
+            <label className='form-label mb-0'>Ubicacion de entrega <small className='text-muted'>(haz clic en el mapa o arrastra el pin)</small></label>
+            {googleMapsApiKey && (
+              <div className='d-flex gap-2'>
+                <button type='button' className='btn btn-sm btn-outline-primary' onClick={useMyLocation}><i className='mdi mdi-crosshairs-gps me-1'></i>Mi ubicacion</button>
+                {hasMarker && <button type='button' className='btn btn-sm btn-outline-danger' onClick={clearMapLocation}><i className='mdi mdi-map-marker-off me-1'></i>Quitar pin</button>}
+              </div>
+            )}
+          </div>
+          {googleMapsApiKey ? (
+            isMapLoaded ? (
+              <GoogleMap
+                mapContainerClassName='sample-map'
+                center={mapPoint}
+                zoom={hasMarker ? 16 : 12}
+                onClick={onMapClick}
+                options={{ streetViewControl: false, mapTypeControl: false, fullscreenControl: true }}
+              >
+                {hasMarker && <Marker position={mapPoint} draggable onDragEnd={onMarkerDragEnd} />}
+              </GoogleMap>
+            ) : (
+              <div className='sample-map-empty'>Cargando mapa...</div>
+            )
           ) : (
-            <div className='sample-map-empty'>Configura Google Maps API Key en Sistemas &gt; Datos generales &gt; Integraciones para ver el mapa.</div>
+            <div className='sample-map-empty'>Configura Google Maps API Key en Sistemas &gt; Datos generales &gt; Integraciones para usar el mapa.</div>
+          )}
+          {hasMarker && (
+            <div className='text-muted mt-1' style={{ fontSize: 12 }}>
+              <i className='mdi mdi-map-marker me-1'></i>Coordenadas: {Number(form.map_lat).toFixed(6)}, {Number(form.map_lng).toFixed(6)}
+            </div>
           )}
         </div>
       </div>

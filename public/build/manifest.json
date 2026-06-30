@@ -1603,7 +1603,7 @@
     ]
   },
   "resources/js/Admin/SampleOrders.jsx": {
-    "file": "assets/SampleOrders-BxDqQMiV.js",
+    "file": "assets/SampleOrders-D9K87MWc.js",
     "name": "SampleOrders",
     "src": "resources/js/Admin/SampleOrders.jsx",
     "isEntry": true,
@@ -1617,6 +1617,7 @@
       "_renderGridEditLink-D8NGEeKJ.js",
       "_magistralesRecordPdf-BqWEf1vD.js",
       "_ubigeoInei-D0FnAslC.js",
+      "_esm-DwCEfCCI.js",
       "_BasicRest-CfowDrFz.js"
     ]
   },
