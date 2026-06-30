@@ -380,7 +380,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const [clientForm, setClientForm] = useState({ document_type: '', document_number: '', full_name: '', email: '', phone: '', short_code: '', status: '1', full_address: '' })
   const [ubigeoOptions, setUbigeoOptions] = useState([])
   const [articleQuery, setArticleQuery] = useState('')
-  const [articlePageSize, setArticlePageSize] = useState(20)
+  const [articlePageSize, setArticlePageSize] = useState(10)
+  const [articlePage, setArticlePage] = useState(1)
   const [trackingOrder, setTrackingOrder] = useState(null)
   const [evidenceOrder, setEvidenceOrder] = useState(null)
   const [evidenceFile, setEvidenceFile] = useState(null)
@@ -435,18 +436,21 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const subGiroOptions = useMemo(() => subGiros
     .filter(row => row.status && form.giro_id && `${row.giro_id}` === `${form.giro_id}`)
     .map(row => ({ value: `${row.id}`, label: row.name })), [subGiros, form.giro_id])
-  const articleRows = useMemo(() => {
+  const articleMatches = useMemo(() => {
     const terms = normalizeSearchText(articleQuery).split(' ').filter(Boolean)
-    const rows = terms.length
+    return terms.length
       ? articles
         .map(article => ({ article, score: articleSearchScore(article, terms) }))
         .filter(row => row.score < 99)
         .sort((left, right) => left.score - right.score || normalizeText(left.article.name).localeCompare(normalizeText(right.article.name), 'es'))
         .map(row => row.article)
       : articles
+  }, [articles, articleQuery])
 
-    return rows.slice(0, articlePageSize)
-  }, [articles, articleQuery, articlePageSize])
+  const articleTotalPages = Math.max(1, Math.ceil(articleMatches.length / articlePageSize))
+  const articleCurrentPage = Math.min(articlePage, articleTotalPages)
+  const articleStart = (articleCurrentPage - 1) * articlePageSize
+  const articleRows = articleMatches.slice(articleStart, articleStart + articlePageSize)
 
   const itemTotal = useMemo(() => items.reduce((sum, item) => sum + Number(item.quantity || 0), 0), [items])
   const computedGrossWeight = useMemo(
@@ -880,6 +884,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
   const openArticleModal = () => {
     setArticleQuery('')
+    setArticlePage(1)
     $(articleModalRef.current).modal('show')
   }
 
@@ -1287,18 +1292,18 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       <div className='sample-grid'>
         <div className='sample-field span-4'>
           <label className='form-label'>Descripcion del Articulo</label>
-          <input className='form-control' value={articleQuery} onChange={e => setArticleQuery(e.target.value)} placeholder='Ingrese codigo, nombre o categoria del articulo' />
+          <input className='form-control' value={articleQuery} onChange={e => { setArticleQuery(e.target.value); setArticlePage(1) }} placeholder='Ingrese codigo, nombre o categoria del articulo' />
         </div>
       </div>
       <div className='text-center my-3'>
-        <button type='button' className='btn btn-sm btn-outline-primary fw-semibold' onClick={() => setArticlePageSize(20)}><i className='mdi mdi-magnify me-1'></i>Buscar</button>
+        <button type='button' className='btn btn-sm btn-outline-primary fw-semibold' onClick={() => setArticlePage(1)}><i className='mdi mdi-magnify me-1'></i>Buscar</button>
       </div>
       <hr />
       <div className='d-flex align-items-center justify-content-between mb-2'>
         <div className='fw-semibold'><i className='mdi mdi-menu me-2'></i>SELECCIONAR ARTICULOS</div>
         <div className='d-flex align-items-center gap-2'>
           <span>Elementos:</span>
-          <select className='form-control form-control-sm' style={{ width: 78 }} value={articlePageSize} onChange={e => setArticlePageSize(Number(e.target.value))}>
+          <select className='form-control form-control-sm' style={{ width: 78 }} value={articlePageSize} onChange={e => { setArticlePageSize(Number(e.target.value)); setArticlePage(1) }}>
             {[10, 20, 50, 100].map(size => <option key={`article-page-${size}`} value={size}>{size}</option>)}
           </select>
         </div>
@@ -1352,7 +1357,13 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           </tbody>
         </table>
       </div>
-      <div className='mt-3 text-muted'>{articleRows.length} elementos</div>
+      <div className='mt-3 d-flex align-items-center justify-content-between flex-wrap gap-2'>
+        <small className='text-muted'>{articleMatches.length} elemento(s) &middot; Pagina {articleCurrentPage} de {articleTotalPages}</small>
+        <div className='btn-group btn-group-sm'>
+          <button type='button' className='btn btn-outline-secondary' disabled={articleCurrentPage <= 1} onClick={() => setArticlePage(articleCurrentPage - 1)}>Anterior</button>
+          <button type='button' className='btn btn-outline-secondary' disabled={articleCurrentPage >= articleTotalPages} onClick={() => setArticlePage(articleCurrentPage + 1)}>Siguiente</button>
+        </div>
+      </div>
     </Modal>
 
     <Modal
