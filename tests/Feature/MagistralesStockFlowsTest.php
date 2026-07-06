@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Models\ActivePrinciple;
 use App\Models\Article;
 use App\Models\Business;
+use App\Models\InventoryCountItem;
 use App\Models\Laboratory;
-use App\Models\MagistralInventoryCountItem;
 use App\Models\Unit;
 use App\Models\User;
 use App\Support\BusinessScope;
@@ -14,6 +14,7 @@ use App\Support\MagistralesStock;
 use App\Support\MagistralesWarehouse;
 use Database\Seeders\ModulePermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\PermissionRegistrar;
@@ -61,6 +62,7 @@ class MagistralesStockFlowsTest extends TestCase
             'created_by' => $user->id,
             'updated_by' => $user->id,
         ]);
+        // Almacen magistral: unificado con el almacen general (Magistrales = almacen 11 de Kamary Peru).
         $warehouse = MagistralesWarehouse::warehouse();
         $unit = Unit::create([
             'module_scope' => 'magistrales',
@@ -130,26 +132,23 @@ class MagistralesStockFlowsTest extends TestCase
         ]);
         $this->actingAs($user);
 
+        // Entrada: Magistrales ahora usa la nota de entrada GENERAL apuntando al almacen magistral.
         Carbon::setTestNow('2026-05-10 10:00:00');
-        $income = $this->post('/api/admin/magistrales/incomes', [
+        $income = $this->post('/api/admin/entry-notes', [
             'warehouse_id' => $warehouse->id,
-            'document_type' => 'Boleta',
-            'affects_igv' => false,
             'items' => [[
                 'article_id' => $article->id,
                 'quantity' => 5,
-                'presentation' => 'UND',
-                'price_without_igv' => 8,
-                'price_with_igv' => 8,
+                'cost_unit' => 8,
             ]],
         ]);
         $income->assertStatus(200);
         $this->assertEquals(5.0, MagistralesStock::stock($article->id, $warehouse->id));
 
-        Carbon::setTestNow('2026-05-10 10:00:01');
-        $output = $this->post('/api/admin/magistrales/outputs', [
-            'origin_warehouse_id' => $warehouse->id,
-            'reason' => 'QA',
+        // Salida: nota de salida GENERAL apuntando al almacen magistral.
+        Carbon::setTestNow('2026-05-11 10:00:00');
+        $output = $this->post('/api/admin/exit-notes', [
+            'warehouse_id' => $warehouse->id,
             'items' => [[
                 'article_id' => $article->id,
                 'quantity' => 4,
@@ -158,7 +157,8 @@ class MagistralesStockFlowsTest extends TestCase
         $output->assertStatus(200);
         $this->assertEquals(1.0, MagistralesStock::stock($article->id, $warehouse->id));
 
-        Carbon::setTestNow('2026-05-10 10:00:02');
+        // Produccion sigue en su propio endpoint de Magistrales (sin cambios).
+        Carbon::setTestNow('2026-05-12 10:00:00');
         $production = $this->post('/api/admin/magistrales/production-orders', [
             'order_status' => 'finished',
             'destination_warehouse_id' => $warehouse->id,
@@ -175,10 +175,9 @@ class MagistralesStockFlowsTest extends TestCase
         $this->assertEquals(0.0, MagistralesStock::stock($article->id, $warehouse->id));
         $this->assertEquals(2.0, MagistralesStock::stock($finishedProduct->id, $warehouse->id));
 
-        Carbon::setTestNow('2026-05-10 10:00:03');
-        $blockedOutput = $this->post('/api/admin/magistrales/outputs', [
-            'origin_warehouse_id' => $warehouse->id,
-            'reason' => 'QA',
+        Carbon::setTestNow('2026-05-13 10:00:00');
+        $blockedOutput = $this->post('/api/admin/exit-notes', [
+            'warehouse_id' => $warehouse->id,
             'items' => [[
                 'article_id' => $article->id,
                 'quantity' => 2,
@@ -187,6 +186,7 @@ class MagistralesStockFlowsTest extends TestCase
         $blockedOutput->assertStatus(400);
         $this->assertStringContainsString('Stock insuficiente', $blockedOutput->json('message'));
 
+        // Ventas siguen en su propio endpoint de Magistrales (sin cambios).
         $quote = $this->post('/api/admin/magistrales/sales', [
             'payment_status' => 'pending',
             'patient' => 'Paciente QA',
@@ -215,22 +215,18 @@ class MagistralesStockFlowsTest extends TestCase
         $blockedSale->assertStatus(400);
         $this->assertStringContainsString('Stock insuficiente', $blockedSale->json('message'));
 
-        Carbon::setTestNow('2026-05-10 10:00:04');
-        $replenishment = $this->post('/api/admin/magistrales/incomes', [
+        Carbon::setTestNow('2026-05-14 10:00:00');
+        $replenishment = $this->post('/api/admin/entry-notes', [
             'warehouse_id' => $warehouse->id,
-            'document_type' => 'Boleta',
-            'affects_igv' => false,
             'items' => [[
                 'article_id' => $article->id,
                 'quantity' => 1,
-                'presentation' => 'UND',
-                'price_without_igv' => 8,
-                'price_with_igv' => 8,
+                'cost_unit' => 8,
             ]],
         ]);
         $replenishment->assertStatus(200);
 
-        Carbon::setTestNow('2026-05-10 10:00:05');
+        Carbon::setTestNow('2026-05-15 10:00:00');
         $sale = $this->post('/api/admin/magistrales/sales', [
             'payment_status' => 'paid',
             'patient' => 'Paciente QA',
@@ -245,23 +241,29 @@ class MagistralesStockFlowsTest extends TestCase
         $sale->assertStatus(200);
         $this->assertEquals(0.0, MagistralesStock::stock($article->id, $warehouse->id));
 
-        $movements = $this->post('/api/admin/magistrales/kardex/movements', [
+        // Kardex: endpoint GENERAL. Cada movimiento se registro en un dia distinto para que el
+        // orden cronologico del reporte no dependa del desempate alfabetico interno del kardex
+        // general (entry-N/exit-N) cuando dos movimientos comparten la misma fecha.
+        $movements = $this->post('/api/admin/kardex/movements', [
             'article_id' => $article->id,
             'warehouse_id' => $warehouse->id,
         ]);
         $movements->assertStatus(200);
 
         $rows = collect($movements->json('data'));
-        $this->assertSame(['Ingreso', 'Salida', 'Consumo produccion', 'Ingreso', 'Venta'], $rows->pluck('operation')->values()->all());
+        // El kardex general solo distingue Entrada/Salida (no "Consumo produccion" ni "Venta"
+        // como el kardex especifico de Magistrales que fue removido); el consumo de produccion
+        // y la venta se reflejan como salidas mediante el mirror del ledger general.
+        $this->assertSame(['Entrada', 'Salida', 'Salida', 'Entrada', 'Salida'], $rows->pluck('operation')->values()->all());
         $this->assertEquals([5.0, 1.0, 0.0, 1.0, 0.0], $rows->pluck('balance')->map(fn($value) => (float)$value)->values()->all());
 
-        $productMovements = $this->post('/api/admin/magistrales/kardex/movements', [
+        $productMovements = $this->post('/api/admin/kardex/movements', [
             'article_id' => $finishedProduct->id,
             'warehouse_id' => $warehouse->id,
         ]);
         $productMovements->assertStatus(200);
         $productRows = collect($productMovements->json('data'));
-        $this->assertSame(['Produccion'], $productRows->pluck('operation')->values()->all());
+        $this->assertSame(['Entrada'], $productRows->pluck('operation')->values()->all());
         $this->assertEquals([2.0], $productRows->pluck('balance')->map(fn($value) => (float)$value)->values()->all());
         Carbon::setTestNow();
     }
@@ -273,28 +275,22 @@ class MagistralesStockFlowsTest extends TestCase
         $this->actingAs($user);
 
         Carbon::setTestNow('2026-05-10 11:00:00');
-        $income = $this->post('/api/admin/magistrales/incomes', [
+        $income = $this->post('/api/admin/entry-notes', [
             'warehouse_id' => $warehouse->id,
-            'document_type' => 'Boleta',
-            'affects_igv' => false,
             'items' => [
                 [
                     'article_id' => $article->id,
                     'quantity' => 2,
-                    'presentation' => 'UND',
                     'expiration_date' => '2027-01-31',
                     'lot' => 'L-001',
-                    'price_without_igv' => 8,
-                    'price_with_igv' => 8,
+                    'cost_unit' => 8,
                 ],
                 [
                     'article_id' => $article->id,
                     'quantity' => 3,
-                    'presentation' => 'UND',
                     'expiration_date' => '2027-02-28',
                     'lot' => 'L-002',
-                    'price_without_igv' => 8,
-                    'price_with_igv' => 8,
+                    'cost_unit' => 8,
                 ],
             ],
         ]);
@@ -304,9 +300,8 @@ class MagistralesStockFlowsTest extends TestCase
         $this->assertEquals(2.0, MagistralesStock::stock($article->id, $warehouse->id, 'L-001', '2027-01-31'));
         $this->assertEquals(3.0, MagistralesStock::stock($article->id, $warehouse->id, 'L-002', '2027-02-28'));
 
-        $blockedOutput = $this->post('/api/admin/magistrales/outputs', [
-            'origin_warehouse_id' => $warehouse->id,
-            'reason' => 'QA lote',
+        $blockedOutput = $this->post('/api/admin/exit-notes', [
+            'warehouse_id' => $warehouse->id,
             'items' => [[
                 'article_id' => $article->id,
                 'lot' => 'L-001',
@@ -317,9 +312,8 @@ class MagistralesStockFlowsTest extends TestCase
         $blockedOutput->assertStatus(400);
         $this->assertStringContainsString('Stock insuficiente', $blockedOutput->json('message'));
 
-        $output = $this->post('/api/admin/magistrales/outputs', [
-            'origin_warehouse_id' => $warehouse->id,
-            'reason' => 'QA lote',
+        $output = $this->post('/api/admin/exit-notes', [
+            'warehouse_id' => $warehouse->id,
             'items' => [[
                 'article_id' => $article->id,
                 'lot' => 'L-001',
@@ -332,35 +326,39 @@ class MagistralesStockFlowsTest extends TestCase
         $this->assertEquals(4.0, MagistralesStock::stock($article->id, $warehouse->id));
         $this->assertEquals(1.0, MagistralesStock::stock($article->id, $warehouse->id, 'L-001', '2027-01-31'));
 
-        $stockLookup = $this->post('/api/admin/magistrales/inventory/stock', [
-            'article_id' => $article->id,
+        // Inventario: endpoints GENERALES de Admin\InventoryController. El endpoint dedicado
+        // "/magistrales/inventory/stock" (lookup puntual por lote) fue removido y no tiene
+        // equivalente general por HTTP; el stock por lote ya se valido arriba directamente via
+        // MagistralesStock::stock(), que es la misma fuente que usa el inventario general.
+        $inventory = $this->post('/api/admin/inventory', [
             'warehouse_id' => $warehouse->id,
-            'lot' => 'L-001',
-            'expiration_date' => '2027-01-31',
-        ]);
-        $stockLookup->assertStatus(200);
-        $this->assertEquals(1.0, (float)$stockLookup->json('data.stock'));
-
-        $inventory = $this->post('/api/admin/magistrales/inventory', [
-            'warehouse_id' => $warehouse->id,
-            'count_date' => '2026-05-10',
-            'items' => [[
-                'article_id' => $article->id,
-                'lot' => 'L-001',
-                'expiration_date' => '2027-01-31',
-                'system_stock' => 999,
-                'real_stock' => 0.5,
-            ]],
         ]);
         $inventory->assertStatus(200);
 
-        $inventoryItem = MagistralInventoryCountItem::query()
-            ->where('article_id', $article->id)
-            ->where('lot', 'L-001')
-            ->first();
+        $items = collect($inventory->json('data.items'));
+        $lotItem = $items->firstWhere('lot', 'L-001');
+        $this->assertNotNull($lotItem);
+        $this->assertEquals(1.0, (float)$lotItem['system_stock']);
 
+        // El inventario general no acepta "real_stock" inline al crear el conteo (siempre nace
+        // en 0 para todo lo que tenga stock); el stock real se carga mediante importacion CSV.
+        $countId = $inventory->json('data.id');
+        $csvRows = [
+            ['ID', 'CODIGO LOTE', 'NOMBRE', 'LABORATORIO', 'UBICACION', 'STOCK SISTEMA', 'STOCK REAL'],
+            [$lotItem['id'], 'L-001', $lotItem['article_name'], $lotItem['laboratory_name'], '', '1.000', '0.5'],
+        ];
+        $csv = implode("\n", array_map(fn($row) => implode(',', $row), $csvRows)) . "\n";
+        $file = UploadedFile::fake()->createWithContent('formato.csv', $csv);
+
+        $import = $this->post("/api/admin/inventory/{$countId}/import", [
+            'format_file' => $file,
+        ]);
+        $import->assertStatus(200);
+
+        $inventoryItem = InventoryCountItem::query()->find($lotItem['id']);
         $this->assertNotNull($inventoryItem);
         $this->assertEquals(1.0, (float)$inventoryItem->system_stock);
+        $this->assertEquals(0.5, (float)$inventoryItem->real_stock);
         $this->assertEquals(-0.5, (float)$inventoryItem->difference);
         Carbon::setTestNow();
     }

@@ -21,6 +21,13 @@ return new class extends Migration
 
     public function up(): void
     {
+        // Es una migracion de datos de una sola vez para PROD/dev (espeja los movimientos existentes).
+        // En el entorno de test (migrate:fresh sin datos reales) no debe correr: dejaria entry_notes/
+        // exit_notes con filas demo que rompen tests que asumen tablas limpias.
+        if (app()->environment('testing')) {
+            return;
+        }
+
         foreach (['magistral_incomes', 'magistral_outputs', 'magistral_sales', 'magistral_production_orders'] as $t) {
             if (!Schema::hasTable($t)) return;
         }

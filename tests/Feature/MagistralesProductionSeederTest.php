@@ -19,9 +19,9 @@ class MagistralesProductionSeederTest extends TestCase
     {
         $this->seed(MagistralesProductionSeeder::class);
 
-        $business = Business::where('business_key', BusinessScope::KAMARY_MEDICALS)->first();
+        $business = Business::where('business_key', BusinessScope::KAMARY_PERU)->first();
         $this->assertNotNull($business);
-        $this->assertSame('Kamary Medicals', $business->name);
+        $this->assertSame('Kamary Peru', $business->name);
 
         $branch = $business->branches()->where('name', 'Principal Magistrales')->first();
         $this->assertNotNull($branch);
@@ -75,10 +75,10 @@ class MagistralesProductionSeederTest extends TestCase
 
     private function scopeCounts(): array
     {
-        $business = Business::where('business_key', BusinessScope::KAMARY_MEDICALS)->firstOrFail();
+        $business = Business::where('business_key', BusinessScope::KAMARY_PERU)->firstOrFail();
 
         return [
-            'businesses' => Business::where('business_key', BusinessScope::KAMARY_MEDICALS)->count(),
+            'businesses' => Business::where('business_key', BusinessScope::KAMARY_PERU)->count(),
             'branches' => $business->branches()->where('name', 'Principal Magistrales')->count(),
             'warehouses' => Warehouse::whereIn('business_branch_id', $business->branches()->pluck('id'))
                 ->where('name', 'Almacen Magistrales Principal')
