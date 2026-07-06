@@ -645,114 +645,96 @@ const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
 
       <Modal
         modalRef={movementModalRef}
-        title={<h4 className='modal-title'><i className='mdi mdi-menu me-1'></i> KARDEX MENSUAL POR SELECCION DE CODIGOS</h4>}
-        size='full-width'
-        hideFooter
-        headerClass='standard-kardex-modal-header'
-        closeButtonClass='btn-close-white'
-        contentClass='standard-kardex-modal'
-        bodyClass='standard-kardex-modal-body'
+        title='Kardex mensual por selección de códigos'
+        size='xl'
+        hideButtonSubmit
+        btnCancelText='Cerrar'
         onSubmit={(e) => { e.preventDefault(); loadMovementRows() }}
       >
         <style>{`
-          .standard-kardex-modal { border-radius: 0; }
-          .standard-kardex-modal-header { background: #272954; color: #fff; padding: 0.45rem 1rem; }
-          .standard-kardex-modal-header .modal-title { color: #fff; font-size: 0.8rem; font-weight: 700; }
-          .standard-kardex-modal-body { padding: 0; }
-          .standard-kardex-month-filter label { color: #666; font-size: 0.8rem; font-weight: 600; margin-bottom: 0.35rem; }
-          .standard-kardex-month-filter .form-control { border-radius: 0; min-height: 34px; }
           .standard-kardex-month-table { min-width: 1100px; }
           .standard-kardex-month-table th,
-          .standard-kardex-month-table td { vertical-align: middle; border-color: #e7eaef; }
-          .standard-kardex-month-band { background: #079aa3; color: #fff; font-weight: 700; }
-          .standard-kardex-month-head th { background: #079aa3; color: #fff; font-size: 0.76rem; text-transform: uppercase; text-align: center; }
-          .standard-kardex-product-row td { color: #666; font-size: 1rem; font-weight: 700; text-align: center; }
+          .standard-kardex-month-table td { vertical-align: middle; }
+          .standard-kardex-month-head th { font-size: 0.76rem; text-transform: uppercase; text-align: center; }
+          .standard-kardex-product-row td { font-weight: 700; text-align: center; }
           .standard-kardex-document-link { color: #c52018; border: 0; background: transparent; padding: 0; font: inherit; }
         `}</style>
 
-        <div className='px-3 pt-4 pb-3'>
-          <div className='row justify-content-center align-items-end g-3 standard-kardex-month-filter'>
-            <div className='col-md-3'>
-              <label className='form-label d-block text-center'>Seleccionar fecha inicial</label>
-              <input className='form-control' type='month' value={movementStartMonth} onChange={(e) => setMovementStartMonth(e.target.value)} />
-            </div>
-            <div className='col-md-3'>
-              <label className='form-label d-block text-center'>Seleccionar fecha final</label>
-              <input className='form-control' type='month' value={movementEndMonth} onChange={(e) => setMovementEndMonth(e.target.value)} />
-            </div>
-            <div className='col-md-2 text-center'>
-              <button type='submit' className='btn btn-outline-primary' disabled={movementLoading}>
-                <i className={`mdi ${movementLoading ? 'mdi-loading mdi-spin' : 'mdi-magnify'} me-1`}></i> Buscar
-              </button>
-            </div>
+        <div className='row justify-content-center align-items-end g-3 mb-4'>
+          <div className='col-md-4'>
+            <label className='form-label d-block text-center'>Seleccionar fecha inicial</label>
+            <input className='form-control' type='month' value={movementStartMonth} onChange={(e) => setMovementStartMonth(e.target.value)} />
           </div>
-
-          <div className='row align-items-start mt-4 mb-4'>
-            <div className='col-md-6'>
-              <h4 className='mb-0'>
-                <span className='text-muted'>Kardex mensual:</span> <span className='fw-bold text-primary'>{movementTitle}</span>
-              </h4>
-            </div>
-            <div className='col-md-6'>
-              <h4 className='mb-1'><span className='text-muted'>Sede:</span> {movementContext?.branch_name || movementRows[0]?.branch_name || '-'}</h4>
-              <h4 className='mb-0'><span className='text-muted'>Almacen:</span> {movementContext?.warehouse_name || movementRows[0]?.warehouse_name || '-'}</h4>
-            </div>
+          <div className='col-md-4'>
+            <label className='form-label d-block text-center'>Seleccionar fecha final</label>
+            <input className='form-control' type='month' value={movementEndMonth} onChange={(e) => setMovementEndMonth(e.target.value)} />
           </div>
-
-          <div className='table-responsive'>
-            <table className='table table-bordered table-sm standard-kardex-month-table mb-0'>
-              <thead>
-                <tr>
-                  <th colSpan='10' className='text-center standard-kardex-month-band py-3'>TRANSACCION</th>
-                  <th rowSpan='2' className='standard-kardex-month-band text-center' style={{ width: 80 }}>SALDO</th>
-                </tr>
-                <tr className='standard-kardex-month-head'>
-                  <th style={{ width: 150 }}>Fecha</th>
-                  <th style={{ width: 120 }}>Operacion</th>
-                  <th style={{ width: 150 }}>Documento</th>
-                  <th style={{ minWidth: 240 }}>Proveedor/Cliente</th>
-                  <th style={{ width: 120 }}>Lote</th>
-                  <th style={{ width: 130 }}>F. Vencimiento</th>
-                  <th style={{ width: 140 }}>Ubicacion</th>
-                  <th style={{ width: 110 }}>Entrada</th>
-                  <th style={{ width: 110 }}>Salida</th>
-                  <th style={{ width: 90 }}>Unidad</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className='standard-kardex-product-row'>
-                  <td colSpan='11'>{movementContext?.article_name || movementTitle}</td>
-                </tr>
-                {movementLoading && <tr><td colSpan='11' className='text-center text-muted py-4'>Cargando movimientos...</td></tr>}
-                {!movementLoading && movementRows.length === 0 && <tr><td colSpan='11' className='text-center text-muted py-4'>No existen movimientos</td></tr>}
-                {!movementLoading && movementRows.map(row => (
-                  <tr key={row.id}>
-                    <td className='text-center'>{row.movement_date?.toString?.().slice(0, 16)}</td>
-                    <td className='text-center'>{row.operation}</td>
-                    <td className='text-center'>
-                      {row.source_type && row.source_id
-                        ? <button type='button' className='standard-kardex-document-link' onClick={() => openDocument(row)}>{row.document || '-'}</button>
-                        : row.document}
-                    </td>
-                    <td>{row.partner ?? row.transaction ?? ''}</td>
-                    <td className='text-center'>{row.lot || '-'}</td>
-                    <td className='text-center'>{row.expiration_date?.toString?.().slice(0, 10) || '-'}</td>
-                    <td className='text-center'>{row.location}</td>
-                    <td className='text-end text-info fw-semibold'>{Number(row.quantity_in ?? 0) ? Number(row.quantity_in ?? 0).toFixed(3) : ''}</td>
-                    <td className='text-end text-danger'>{Number(row.quantity_out ?? 0) ? Number(row.quantity_out ?? 0).toFixed(3) : ''}</td>
-                    <td className='text-center'>{row.unit_label}</td>
-                    <td className='text-end text-info fw-bold'>{Number(row.balance ?? 0).toFixed(3)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className='text-center py-4'>
-            <button type='button' className='btn btn-light' data-bs-dismiss='modal'>
-              <i className='mdi mdi-close me-1'></i> Cerrar
+          <div className='col-md-2'>
+            <button type='submit' className='btn btn-outline-primary w-100' disabled={movementLoading}>
+              <i className={`mdi ${movementLoading ? 'mdi-loading mdi-spin' : 'mdi-magnify'} me-1`}></i> Buscar
             </button>
           </div>
+        </div>
+
+        <div className='row align-items-start mb-4'>
+          <div className='col-md-6'>
+            <h4 className='mb-0'>
+              <span className='text-muted'>Kardex mensual:</span> <span className='fw-bold text-primary'>{movementTitle}</span>
+            </h4>
+          </div>
+          <div className='col-md-6'>
+            <h4 className='mb-1'><span className='text-muted'>Sede:</span> {movementContext?.branch_name || movementRows[0]?.branch_name || '-'}</h4>
+            <h4 className='mb-0'><span className='text-muted'>Almacen:</span> {movementContext?.warehouse_name || movementRows[0]?.warehouse_name || '-'}</h4>
+          </div>
+        </div>
+
+        <div className='table-responsive'>
+          <table className='table table-bordered table-sm standard-kardex-month-table mb-0'>
+            <thead className='table-light'>
+              <tr>
+                <th colSpan='10' className='text-center py-2'>TRANSACCION</th>
+                <th rowSpan='2' className='text-center' style={{ width: 80 }}>SALDO</th>
+              </tr>
+              <tr className='standard-kardex-month-head'>
+                <th style={{ width: 150 }}>Fecha</th>
+                <th style={{ width: 120 }}>Operacion</th>
+                <th style={{ width: 150 }}>Documento</th>
+                <th style={{ minWidth: 240 }}>Proveedor/Cliente</th>
+                <th style={{ width: 120 }}>Lote</th>
+                <th style={{ width: 130 }}>F. Vencimiento</th>
+                <th style={{ width: 140 }}>Ubicacion</th>
+                <th style={{ width: 110 }}>Entrada</th>
+                <th style={{ width: 110 }}>Salida</th>
+                <th style={{ width: 90 }}>Unidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className='standard-kardex-product-row'>
+                <td colSpan='11'>{movementContext?.article_name || movementTitle}</td>
+              </tr>
+              {movementLoading && <tr><td colSpan='11' className='text-center text-muted py-4'>Cargando movimientos...</td></tr>}
+              {!movementLoading && movementRows.length === 0 && <tr><td colSpan='11' className='text-center text-muted py-4'>No existen movimientos</td></tr>}
+              {!movementLoading && movementRows.map(row => (
+                <tr key={row.id}>
+                  <td className='text-center'>{row.movement_date?.toString?.().slice(0, 16)}</td>
+                  <td className='text-center'>{row.operation}</td>
+                  <td className='text-center'>
+                    {row.source_type && row.source_id
+                      ? <button type='button' className='standard-kardex-document-link' onClick={() => openDocument(row)}>{row.document || '-'}</button>
+                      : row.document}
+                  </td>
+                  <td>{row.partner ?? row.transaction ?? ''}</td>
+                  <td className='text-center'>{row.lot || '-'}</td>
+                  <td className='text-center'>{row.expiration_date?.toString?.().slice(0, 10) || '-'}</td>
+                  <td className='text-center'>{row.location}</td>
+                  <td className='text-end text-info fw-semibold'>{Number(row.quantity_in ?? 0) ? Number(row.quantity_in ?? 0).toFixed(3) : ''}</td>
+                  <td className='text-end text-danger'>{Number(row.quantity_out ?? 0) ? Number(row.quantity_out ?? 0).toFixed(3) : ''}</td>
+                  <td className='text-center'>{row.unit_label}</td>
+                  <td className='text-end text-info fw-bold'>{Number(row.balance ?? 0).toFixed(3)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </Modal>
     </div>
@@ -1550,21 +1532,16 @@ const StorageKardex = () => {
 
     <Modal
       modalRef={monthlyKardexModalRef}
-      title={<h5 className='modal-title text-white mb-0'><i className='mdi mdi-menu me-1'></i> KARDEX MENSUAL</h5>}
+      title='Kardex mensual'
       size='xl'
-      hideFooter
-      headerClass='py-2'
-      closeButtonClass='btn-close-white'
-      contentClass='border-0 storage-monthly-kardex'
+      hideButtonSubmit
+      btnCancelText='Cerrar'
       onSubmit={(e) => { e.preventDefault(); loadMonthlyKardexRows() }}
-      bodyStyle={{ maxHeight: 'calc(100vh - 90px)', overflowY: 'auto', overflowX: 'hidden' }}
     >
       <style>{`
-        .storage-monthly-kardex .modal-header { background: #23264f; }
         .storage-monthly-kardex-table th,
         .storage-monthly-kardex-table td { vertical-align: middle; }
-        .storage-monthly-kardex-band { background: #079aa3; color: #fff; font-weight: 700; font-size: 18px; }
-        .storage-monthly-kardex-head { background: #079aa3; color: #fff; font-weight: 700; }
+        .storage-monthly-kardex-head th { text-transform: uppercase; }
       `}</style>
       <div>
         <div className='row justify-content-center g-3 mb-3'>
@@ -1590,9 +1567,9 @@ const StorageKardex = () => {
 
         <div className='table-responsive'>
           <table className='table table-bordered table-sm storage-monthly-kardex-table mb-0'>
-            <thead>
+            <thead className='table-light'>
               <tr>
-                <th colSpan='7' className='text-center storage-monthly-kardex-band py-3'>TRANSACCION -</th>
+                <th colSpan='7' className='text-center py-2'>TRANSACCION -</th>
               </tr>
               <tr className='storage-monthly-kardex-head text-center'>
                 <th style={{ minWidth: 150 }}>FECHA</th>
