@@ -366,6 +366,15 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const importTypeOptions = !isStorageProduct && !isMagistrales
     ? standardArticleImportTypeOptions
     : articleImportTypeOptions
+
+  const onArticleScopeChanged = (value) => {
+    if (value === 'magistrales' && !isMagistrales) {
+      window.location.href = '/admin/magistrales/articles'
+    } else if (value === 'standard' && isMagistrales) {
+      window.location.href = '/admin/articles'
+    }
+  }
+
   const gridRef = useRef()
   const modalRef = useRef()
   const stockModalRef = useRef()
@@ -2116,6 +2125,23 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           }
         }
       `}</style>
+    )}
+    {!isStorageProduct && (
+      <div className='card mb-3'>
+        <div className='card-body d-flex flex-wrap align-items-center gap-2'>
+          <label className='form-label mb-0 fw-semibold' htmlFor='article-scope-selector'>Ver artículos de:</label>
+          <select
+            id='article-scope-selector'
+            className='form-control'
+            style={{ maxWidth: 260 }}
+            value={isMagistrales ? 'magistrales' : 'standard'}
+            onChange={(e) => onArticleScopeChanged(e.target.value)}
+          >
+            <option value='standard'>Almacén general</option>
+            <option value='magistrales'>Magistrales (almacén 11)</option>
+          </select>
+        </div>
+      </div>
     )}
     {!isStorageProduct && (
       <div className='card mb-3'>

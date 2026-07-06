@@ -10,7 +10,6 @@ use App\Http\Controllers\Admin\PurchaseOrderController as AdminPurchaseOrderCont
 use App\Http\Controllers\Admin\PurchaseReceiptController as AdminPurchaseReceiptController;
 use App\Http\Controllers\Admin\Magistrales\AccountsPayableController as AdminMagistralesAccountsPayableController;
 use App\Http\Controllers\Admin\Magistrales\ArticleController as AdminMagistralesArticleController;
-use App\Http\Controllers\Admin\Magistrales\CategoryController as AdminMagistralesCategoryController;
 use App\Http\Controllers\Admin\Magistrales\DashboardController as AdminMagistralesDashboardController;
 use App\Http\Controllers\Admin\Magistrales\FormatController as AdminMagistralesFormatController;
 use App\Http\Controllers\Admin\Magistrales\FormulaController as AdminMagistralesFormulaController;
@@ -135,7 +134,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales/units', fn() => redirect('/admin/units'));
         Route::get('/magistrales/units-of-measure', fn() => redirect('/admin/units'));
         Route::get('/magistrales/laboratories', fn() => redirect('/admin/laboratories'));
-        Route::get('/magistrales/categories', [AdminMagistralesCategoryController::class, 'reactView'])->middleware($magistralesCategory);
+        Route::get('/magistrales/categories', fn() => redirect('/admin/magistrales/articles'))->middleware($magistralesCategory);
 
         // Administración
         Route::get('/purchase-orders', [AdminPurchaseOrderController::class, 'reactView']);
@@ -204,7 +203,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales/accounts-payable', [AdminMagistralesAccountsPayableController::class, 'reactView'])->middleware('module.permission:magistrales-procurement');
         Route::get('/magistrales/billing-settings', fn() => redirect('/admin/billing-settings'))->middleware($magistralesBilling);
         Route::get('/magistrales/billing-documents', fn() => redirect('/admin/magistrales-sales'))->middleware($magistralesBilling);
-        Route::get('/magistrales-category', [AdminMagistralesCategoryController::class, 'reactView'])->middleware($magistralesCategory);
+        Route::get('/magistrales-category', fn() => redirect('/admin/magistrales/articles'))->middleware($magistralesCategory);
         Route::get('/magistrales/formats', [AdminMagistralesFormatController::class, 'reactView'])->middleware($magistralesFormats);
         Route::get('/magistrales-formats', [AdminMagistralesFormatController::class, 'reactView'])->middleware($magistralesFormats);
         Route::get('/magistrales/formulas', [AdminMagistralesFormulaController::class, 'reactView'])->middleware($magistralesFormulas);
