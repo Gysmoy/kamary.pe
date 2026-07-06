@@ -10,7 +10,6 @@ use App\Models\ExitNoteItem;
 use App\Models\Warehouse;
 use App\Services\StockService;
 use App\Support\BusinessScope;
-use App\Support\MagistralesWarehouse;
 use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -47,14 +46,6 @@ class ExitNoteController extends BasicController
             ])
             ->join('users as creator', 'creator.id', '=', 'exit_notes.created_by')
             ->join('users as updater', 'updater.id', '=', 'exit_notes.updated_by');
-
-        // El almacen fijo de Magistrales guarda sus propias notas de salida (ver
-        // Admin\Magistrales\OutputController) directamente en esta misma tabla; se excluyen
-        // del listado general para que no aparezcan mezcladas con las de los demas almacenes.
-        $magistralesWarehouseId = MagistralesWarehouse::idOrNull();
-        if ($magistralesWarehouseId) {
-            $query->where('exit_notes.warehouse_id', '!=', $magistralesWarehouseId);
-        }
 
         $isStorage = $this->isStorageRequest(request());
         $scopeKey = BusinessScope::scopedKeyForRequest(request())

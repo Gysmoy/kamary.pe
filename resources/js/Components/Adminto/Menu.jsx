@@ -266,7 +266,6 @@ const Menu = ({ can, hasRole, panel = null }) => {
               {canAccessAny('magistrales-purchase-order', 'magistrales-procurement') && <MenuItem href='/admin/magistrales/purchase-orders' icon='ti ti-shopping-cart'>O. Compra</MenuItem>}
               {canAccessAny('magistrales-production-order', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales-production-order' icon='ti ti-clipboard-list'>O. Producción</MenuItem>}
               {canAccessAny('magistrales-responsible', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales-responsible' icon='ti ti-user-check'>Responsable</MenuItem>}
-              {canAccessAny('magistrales-outputs', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales-outputs' icon='ti ti-file-export'>Salidas</MenuItem>}
               {canAccessAny('magistrales-sales', 'magistrales-billing') && <MenuItem href='/admin/magistrales-sales' icon='ti ti-cash'>Ventas</MenuItem>}
             </MenuItemContainer>
           )}

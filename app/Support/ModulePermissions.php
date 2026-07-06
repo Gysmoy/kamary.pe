@@ -271,7 +271,6 @@ class ModulePermissions
             ['permission' => 'magistrales-purchase-order', 'web' => '/admin/magistrales/purchase-orders', 'api' => '/api/admin/magistrales/purchase-orders/paginate', 'label' => 'O. Compra'],
             ['permission' => 'magistrales-production-order', 'web' => '/admin/magistrales-production-order', 'api' => '/api/admin/magistrales/production-orders/paginate', 'label' => 'O. Produccion'],
             ['permission' => 'magistrales-responsible', 'web' => '/admin/magistrales-responsible', 'api' => '/api/admin/magistrales/responsibles/paginate', 'label' => 'Responsable'],
-            ['permission' => 'magistrales-outputs', 'web' => '/admin/magistrales-outputs', 'api' => '/api/admin/magistrales/outputs/paginate', 'label' => 'Salidas'],
             ['permission' => 'magistrales-sales', 'web' => '/admin/magistrales-sales', 'api' => '/api/admin/magistrales/sales/paginate', 'label' => 'Ventas'],
         ];
     }

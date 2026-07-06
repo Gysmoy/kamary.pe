@@ -5,7 +5,7 @@ import select2SpanishLanguage from "../../../Utils/select2SpanishLanguage"
 import { select2DropdownParentFor } from "../../../Utils/select2DropdownParent"
 import xsrfToken from "../../../Utils/xsrfToken"
 
-const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = false, disabled = false, dropdownParent, searchAPI, searchBy, selectBy = 'id', multiple = false, filter = null, onChange = () => { },
+const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = false, disabled = false, dropdownParent, searchAPI, searchBy, selectBy = 'id', multiple = false, filter = null, extraParams = null, onChange = () => { },
   templateResult,
   templateSelection,
   tags
@@ -59,7 +59,8 @@ const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = fa
               searchBy,
               "contains",
               term || ''
-            ]
+            ],
+            ...(extraParams || {})
           })
         },
         processResults: function (data, { page }) {
@@ -90,7 +91,7 @@ const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = fa
       $select.off('change.selectAPIFormGroup')
       if ($select.data('select2')) $select.select2('destroy')
     }
-  }, [dropdownParent, filter, searchAPI, searchBy, selectBy, multiple, tags, disabled])
+  }, [dropdownParent, filter, extraParams, searchAPI, searchBy, selectBy, multiple, tags, disabled])
 
   return <div id={containerId} className={`form-group ${col} mb-2`}>
     <label htmlFor={selectId} className="form-label">

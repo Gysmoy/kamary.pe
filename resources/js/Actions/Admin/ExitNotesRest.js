@@ -12,14 +12,18 @@ class ExitNotesRest extends BasicRest {
     return result ?? []
   }
 
-  getArticles = async () => {
+  getArticles = async (warehouseId = '') => {
     try {
       const { status, result } = await Fetch(`/api/${isStoragePath() ? 'admin/storage/articles' : 'admin/articles'}/paginate`, {
         method: 'POST',
         body: JSON.stringify({
           isLoadingAll: true,
           take: 1000,
-          sort: [{ selector: 'name', desc: false }]
+          sort: [{ selector: 'name', desc: false }],
+          // picker_warehouse_id solo activa el catalogo de Magistrales cuando coincide con el
+          // almacen fijo (ver ArticleController::pickerEffectiveModuleScope); para cualquier otro
+          // almacen o si no se manda, el backend devuelve exactamente el catalogo estandar de hoy.
+          ...(warehouseId ? { picker_warehouse_id: warehouseId } : {})
         })
       })
       if (!status) throw new Error(result?.message || 'No se pudieron cargar articulos')

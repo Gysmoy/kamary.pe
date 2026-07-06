@@ -44,7 +44,6 @@ use App\Http\Controllers\Admin\Magistrales\DoctorController as AdminMagistralesD
 use App\Http\Controllers\Admin\Magistrales\FormatController as AdminMagistralesFormatController;
 use App\Http\Controllers\Admin\Magistrales\FormulaController as AdminMagistralesFormulaController;
 use App\Http\Controllers\Admin\Magistrales\IncomeController as AdminMagistralesIncomeController;
-use App\Http\Controllers\Admin\Magistrales\OutputController as AdminMagistralesOutputController;
 use App\Http\Controllers\Admin\Magistrales\ProductionOrderController as AdminMagistralesProductionOrderController;
 use App\Http\Controllers\Admin\Magistrales\PurchaseOrderController as AdminMagistralesPurchaseOrderController;
 use App\Http\Controllers\Admin\Magistrales\ResponsibleController as AdminMagistralesResponsibleController;
@@ -274,7 +273,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/suppliers/ruc/{ruc}', [AdminSupplierController::class, 'lookupByRuc']);
 
         Route::prefix('magistrales')->group(function () {
-            $magistralesAny = 'module.permission:magistrales-dashboard,magistrales-products,magistrales-procurement,magistrales-warehouse,magistrales-billing,magistrales-articles,magistrales-category,magistrales-formats,magistrales-formulas,magistrales-incomes,magistrales-inventory,magistrales-kardex,magistrales-laboratory,magistrales-purchase-order,magistrales-production-order,magistrales-supplier,magistrales-responsible,magistrales-outputs,magistrales-unit,magistrales-sales';
+            $magistralesAny = 'module.permission:magistrales-dashboard,magistrales-products,magistrales-procurement,magistrales-warehouse,magistrales-billing,magistrales-articles,magistrales-category,magistrales-formats,magistrales-formulas,magistrales-incomes,magistrales-inventory,magistrales-kardex,magistrales-laboratory,magistrales-purchase-order,magistrales-production-order,magistrales-supplier,magistrales-responsible,magistrales-unit,magistrales-sales';
             $magistralesArticles = 'module.permission:magistrales-articles,magistrales-products';
             $magistralesCategory = 'module.permission:magistrales-category,magistrales-products';
             $magistralesFormats = 'module.permission:magistrales-formats,magistrales-products';
@@ -282,7 +281,6 @@ Route::middleware('auth')->group(function () {
             $magistralesIncomes = 'module.permission:magistrales-incomes,magistrales-procurement';
             $magistralesResponsible = 'module.permission:magistrales-responsible,magistrales-warehouse';
             $magistralesProduction = 'module.permission:magistrales-production-order,magistrales-warehouse';
-            $magistralesOutputs = 'module.permission:magistrales-outputs,magistrales-warehouse';
             $magistralesSales = 'module.permission:magistrales-sales,magistrales-billing';
             $magistralesPurchaseOrders = 'module.permission:magistrales-purchase-order,magistrales-procurement';
             $magistralesProcurement = 'module.permission:magistrales-procurement';
@@ -356,15 +354,6 @@ Route::middleware('auth')->group(function () {
                 Route::patch('/production-orders/status', [AdminMagistralesProductionOrderController::class, 'status']);
                 Route::patch('/production-orders/{field}', [AdminMagistralesProductionOrderController::class, 'boolean']);
                 Route::delete('/production-orders/{id}', [AdminMagistralesProductionOrderController::class, 'delete']);
-            });
-
-            Route::middleware($magistralesOutputs)->group(function () {
-                Route::post('/outputs', [AdminMagistralesOutputController::class, 'save']);
-                Route::post('/outputs/paginate', [AdminMagistralesOutputController::class, 'paginate']);
-                Route::get('/outputs/available-stock', [AdminMagistralesOutputController::class, 'availableStock']);
-                Route::patch('/outputs/status', [AdminMagistralesOutputController::class, 'status']);
-                Route::patch('/outputs/{field}', [AdminMagistralesOutputController::class, 'boolean']);
-                Route::delete('/outputs/{id}', [AdminMagistralesOutputController::class, 'delete']);
             });
 
             Route::middleware($magistralesSales)->group(function () {

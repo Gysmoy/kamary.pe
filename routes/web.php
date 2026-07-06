@@ -15,7 +15,6 @@ use App\Http\Controllers\Admin\Magistrales\DashboardController as AdminMagistral
 use App\Http\Controllers\Admin\Magistrales\FormatController as AdminMagistralesFormatController;
 use App\Http\Controllers\Admin\Magistrales\FormulaController as AdminMagistralesFormulaController;
 use App\Http\Controllers\Admin\Magistrales\IncomeController as AdminMagistralesIncomeController;
-use App\Http\Controllers\Admin\Magistrales\OutputController as AdminMagistralesOutputController;
 use App\Http\Controllers\Admin\Magistrales\ProductionOrderController as AdminMagistralesProductionOrderController;
 use App\Http\Controllers\Admin\Magistrales\PurchaseOrderController as AdminMagistralesPurchaseOrderController;
 use App\Http\Controllers\Admin\Magistrales\ResponsibleController as AdminMagistralesResponsibleController;
@@ -122,7 +121,6 @@ Route::middleware('auth')->group(function () {
         $magistralesProcurement = 'module.permission:magistrales-procurement,magistrales-purchase-order';
         $magistralesProduction = 'module.permission:magistrales-production-order,magistrales-warehouse';
         $magistralesResponsible = 'module.permission:magistrales-responsible,magistrales-warehouse';
-        $magistralesOutputs = 'module.permission:magistrales-outputs,magistrales-warehouse';
         $magistralesBilling = 'module.permission:magistrales-billing,magistrales-sales';
 
         // Almacén
@@ -205,7 +203,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales-articles', [AdminMagistralesArticleController::class, 'reactView'])->middleware($magistralesProducts);
         Route::get('/magistrales/batches', fn() => redirect('/admin/magistrales/articles'))->middleware($magistralesProducts);
         Route::get('/magistrales/entry-note', [AdminMagistralesIncomeController::class, 'reactView'])->middleware($magistralesIncomes);
-        Route::get('/magistrales/exit-note', [AdminMagistralesOutputController::class, 'reactView'])->middleware($magistralesOutputs);
+        Route::get('/magistrales/exit-note', fn() => redirect('/admin/exit-note'));
         Route::get('/magistrales/purchase-orders', [AdminMagistralesPurchaseOrderController::class, 'reactView'])->middleware($magistralesProcurement);
         Route::get('/magistrales/accounts-payable', [AdminMagistralesAccountsPayableController::class, 'reactView'])->middleware('module.permission:magistrales-procurement');
         Route::get('/magistrales/billing-settings', fn() => redirect('/admin/billing-settings'))->middleware($magistralesBilling);
@@ -230,8 +228,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales-supplier', fn() => redirect('/admin/suppliers'));
         Route::get('/magistrales/responsibles', [AdminMagistralesResponsibleController::class, 'reactView'])->middleware($magistralesResponsible);
         Route::get('/magistrales-responsible', [AdminMagistralesResponsibleController::class, 'reactView'])->middleware($magistralesResponsible);
-        Route::get('/magistrales/outputs', [AdminMagistralesOutputController::class, 'reactView'])->middleware($magistralesOutputs);
-        Route::get('/magistrales-outputs', [AdminMagistralesOutputController::class, 'reactView'])->middleware($magistralesOutputs);
+        Route::get('/magistrales/outputs', fn() => redirect('/admin/exit-note'));
+        Route::get('/magistrales-outputs', fn() => redirect('/admin/exit-note'));
         Route::get('/magistrales-unit', fn() => redirect('/admin/units'));
         Route::get('/magistrales/sales', [AdminMagistralesSaleController::class, 'reactView'])->middleware($magistralesBilling);
         Route::get('/magistrales-sales', [AdminMagistralesSaleController::class, 'reactView'])->middleware($magistralesBilling);

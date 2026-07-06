@@ -15,6 +15,7 @@ use App\Models\Unit;
 use App\Models\Warehouse;
 use App\Services\StockService;
 use App\Support\BusinessScope;
+use App\Support\MagistralesWarehouse;
 use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -38,8 +39,35 @@ class ArticleController extends BasicController
     private const IMPORT_TYPE_PACK_COMPONENTS = 'pack_components';
     private const IMPORT_TYPE_CORPORATE_CATALOG = 'corporate_catalog';
 
+    /**
+     * El selector de articulos del modulo GENERAL de Nota de Salida necesita mostrar el catalogo
+     * de Magistrales cuando el usuario elige el almacen fijo de Magistrales (id devuelto por
+     * MagistralesWarehouse::idOrNull()). El frontend manda esto en un parametro EXPLICITO y
+     * distinto (`picker_warehouse_id`) para no interferir con el `warehouse_id` que ya usa el
+     * filtro/grid estandar de Articulos ni con ningun otro consumidor de este mismo endpoint.
+     *
+     * Fuera de esta condicion exacta (moduleScope==='standard' + parametro presente + coincide
+     * con el almacen fijo de Magistrales) esto devuelve $this->moduleScope sin cambios, o sea el
+     * comportamiento actual queda intacto para el grid estandar y para los demas almacenes.
+     */
+    private function pickerEffectiveModuleScope(): string
+    {
+        if ($this->moduleScope !== 'standard') return $this->moduleScope;
+
+        $pickerWarehouseId = $this->toNullableInt(request()->input('picker_warehouse_id'));
+        if (!$pickerWarehouseId) return $this->moduleScope;
+
+        $magistralesWarehouseId = MagistralesWarehouse::idOrNull();
+        if (!$magistralesWarehouseId || $pickerWarehouseId !== $magistralesWarehouseId) {
+            return $this->moduleScope;
+        }
+
+        return 'magistrales';
+    }
+
     public function setPaginationInstance(string $model)
     {
+        $effectiveScope = $this->pickerEffectiveModuleScope();
         $hasBusinessColumn = Schema::hasColumn('articles', 'business_id');
         $hasWarehouseColumn = Schema::hasColumn('articles', 'warehouse_id');
         $with = [
@@ -81,7 +109,7 @@ class ArticleController extends BasicController
             $query->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'articles.warehouse_id');
         }
 
-        if ($this->moduleScope === 'magistrales') {
+        if ($effectiveScope === 'magistrales') {
             $query
                 ->leftJoin('active_principles as active_principle', 'active_principle.id', '=', 'articles.active_principle_id')
                 ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'articles.laboratory_id');
@@ -92,14 +120,14 @@ class ArticleController extends BasicController
         }
 
         if (Schema::hasColumn('articles', 'module_scope')) {
-            $query->where(function ($scope) {
-                $scope->where('articles.module_scope', $this->moduleScope);
-                if ($this->moduleScope === 'standard') {
+            $query->where(function ($scope) use ($effectiveScope) {
+                $scope->where('articles.module_scope', $effectiveScope);
+                if ($effectiveScope === 'standard') {
                     $scope->orWhereNull('articles.module_scope');
                 }
             });
         }
-        if ($this->moduleScope === 'storage') {
+        if ($effectiveScope === 'storage') {
             $query->whereHas('client', fn($client) => StorageScope::applyClientScope($client, 'clients'));
         }
 

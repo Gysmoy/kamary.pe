@@ -1118,6 +1118,12 @@ const ExitNotes = () => {
                     } else if (item.article_id) {
                       batchFilter = ['article_id', '=', Number(item.article_id)]
                     }
+                    // El almacen de la linea (o el del encabezado si aun no se sobreescribe) decide
+                    // si el selector de articulos muestra el catalogo estandar o el de Magistrales
+                    // (ver ArticleController::pickerEffectiveModuleScope, backend). Para cualquier
+                    // otro almacen esto no cambia nada del comportamiento actual.
+                    const articlePickerWarehouseId = item.warehouse_id || selectedWarehouseId || ''
+                    const articleExtraParams = articlePickerWarehouseId ? { picker_warehouse_id: Number(articlePickerWarehouseId) } : undefined
                     return (
                       <tr key={item.uid}>
                         <td style={{ width: '20%' }}>
@@ -1144,6 +1150,7 @@ const ExitNotes = () => {
                             col='col-12'
                             searchAPI='/api/admin/articles/paginate'
                             searchBy='name'
+                            extraParams={articleExtraParams}
                             dropdownParent='#exit-note-form-container'
                             onChange={(e) => onItemArticleChanged(item.uid, e)}
                           />
