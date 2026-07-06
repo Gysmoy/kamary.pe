@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\Admin\Magistrales\IncomeController as MagistralesIncomeController;
 use App\Models\Article;
 use App\Models\Business;
 use App\Models\Laboratory;
@@ -149,14 +148,30 @@ class MagistralesModuleReadinessTest extends TestCase
         }
     }
 
-    public function test_magistrales_entry_note_routes_use_magistrales_income_controller(): void
+    public function test_magistrales_entry_note_and_purchase_order_routes_redirect_to_general_module(): void
     {
         $router = app('router')->getRoutes();
-        $webRoute = $router->match(Request::create('/admin/magistrales/entry-note', 'GET'));
-        $apiRoute = $router->match(Request::create('/api/admin/magistrales/entry-notes/paginate', 'POST'));
 
-        $this->assertSame(MagistralesIncomeController::class . '@reactView', $webRoute->getActionName());
-        $this->assertSame(MagistralesIncomeController::class . '@paginate', $apiRoute->getActionName());
+        foreach ([
+            '/admin/magistrales/entry-note',
+            '/admin/magistrales/incomes',
+            '/admin/magistrales-incomes',
+        ] as $path) {
+            $route = $router->match(Request::create($path, 'GET'));
+            $this->assertTrue($route->getAction('uses') instanceof \Closure, "La ruta {$path} deberia ser un redirect, no un controlador");
+        }
+
+        foreach ([
+            '/admin/magistrales/purchase-orders',
+            '/admin/magistrales-purchase-order',
+        ] as $path) {
+            $route = $router->match(Request::create($path, 'GET'));
+            $this->assertTrue($route->getAction('uses') instanceof \Closure, "La ruta {$path} deberia ser un redirect, no un controlador");
+        }
+
+        $this->actingAs($this->adminUser());
+        $this->get('/admin/magistrales/entry-note')->assertRedirect('/admin/entry-note');
+        $this->get('/admin/magistrales/purchase-orders')->assertRedirect('/admin/purchase-orders');
     }
 
     public function test_all_magistrales_permissions_exist_in_database(): void

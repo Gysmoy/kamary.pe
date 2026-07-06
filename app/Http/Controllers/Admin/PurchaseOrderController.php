@@ -11,6 +11,7 @@ use App\Models\Supplier;
 use App\Services\AccountsPayableService;
 use App\Models\Warehouse;
 use App\Support\BusinessScope;
+use App\Support\MagistralesWarehouse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -163,12 +164,18 @@ class PurchaseOrderController extends BasicController
 
             $inserted = 0;
             $grossSubtotal = 0;
+            // El modulo GENERAL de O. Compra unifico las ordenes del almacen fijo de Magistrales
+            // (purchase_orders.module_scope='magistrales' -> 'standard', ver migracion
+            // rescope_magistral_purchase_orders). Los articulos de catalogo magistral solo pueden
+            // agregarse a una orden cuyo almacen de destino sea ese almacen fijo; para cualquier
+            // otro almacen el filtro de articulos por module_scope se mantiene exactamente igual a hoy.
+            $effectiveArticleScope = $this->articleScopeForWarehouse((int)($jpa->warehouse_id ?? 0));
             foreach ($this->itemsPayload as $item) {
                 if (!is_array($item)) continue;
 
                 $articleId = $item['article_id'] ?? null;
                 if (!$articleId) throw new \Exception('Cada linea debe tener articulo');
-                $article = $this->scopedArticleQuery()->findOrFail($articleId);
+                $article = $this->scopedArticleQuery($effectiveArticleScope)->findOrFail($articleId);
                 if ($this->moduleScope === 'magistrales') {
                     $this->assertMagistralArticleMatchesPurchaseType($article, (string)$jpa->article_type);
                 }
@@ -477,14 +484,36 @@ class PurchaseOrderController extends BasicController
             });
     }
 
-    private function scopedArticleQuery()
+    /**
+     * El selector de articulos del PO general necesita mostrar el catalogo de Magistrales cuando
+     * la orden apunta al almacen fijo de Magistrales (id devuelto por MagistralesWarehouse::idOrNull()).
+     * Fuera de esta condicion exacta (moduleScope==='standard' + almacen coincide con el fijo) esto
+     * devuelve $this->moduleScope sin cambios, o sea el comportamiento actual queda intacto para
+     * cualquier otro almacen.
+     */
+    private function articleScopeForWarehouse(?int $warehouseId): string
     {
+        if ($this->moduleScope !== 'standard') return $this->moduleScope;
+        if (!$warehouseId) return $this->moduleScope;
+
+        $magistralesWarehouseId = MagistralesWarehouse::idOrNull();
+        if (!$magistralesWarehouseId || $warehouseId !== $magistralesWarehouseId) {
+            return $this->moduleScope;
+        }
+
+        return 'magistrales';
+    }
+
+    private function scopedArticleQuery(?string $scope = null)
+    {
+        $scope = $scope ?? $this->moduleScope;
+
         return Article::query()
-            ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
-                $query->where(function ($scope) {
-                    $scope->where('module_scope', $this->moduleScope);
-                    if ($this->moduleScope === 'standard') {
-                        $scope->orWhereNull('module_scope');
+            ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) use ($scope) {
+                $query->where(function ($q) use ($scope) {
+                    $q->where('module_scope', $scope);
+                    if ($scope === 'standard') {
+                        $q->orWhereNull('module_scope');
                     }
                 });
             });

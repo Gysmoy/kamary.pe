@@ -905,7 +905,15 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
                 </tr>
               </thead>
               <tbody>
-                {items.map(item => (
+                {items.map(item => {
+                  // El almacen seleccionado en el encabezado decide si el selector de articulos
+                  // muestra el catalogo estandar o el de Magistrales (ver
+                  // ArticleController::pickerEffectiveModuleScope, backend). Para cualquier otro
+                  // almacen esto no cambia nada del comportamiento actual. No aplica al flujo
+                  // magistral fijo (fixedWarehouseId ya es el almacen 11 y usa su propio filtro).
+                  const articlePickerWarehouseId = !isMagistrales ? (selectedWarehouseId || '') : ''
+                  const articleExtraParams = articlePickerWarehouseId ? { picker_warehouse_id: Number(articlePickerWarehouseId) } : undefined
+                  return (
                   <tr key={item.uid}>
                     <td style={{ width: isMagistrales ? '34%' : '24%' }}>
                       <SelectAPIFormGroup
@@ -915,6 +923,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
                         searchBy='name'
                         dropdownParent='#purchase-order-form-container'
                         filter={articleFilter}
+                        extraParams={articleExtraParams}
                         disabled={isMagistrales && !selectedArticleType}
                         onChange={(e) => onItemArticleChanged(item.uid, e)}
                       />
@@ -974,7 +983,8 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
                       </button>
                     </td>
                   </tr>
-                ))}
+                )
+              })}
               </tbody>
             </table>
           </div>

@@ -1261,6 +1261,15 @@ const EntryNotes = () => {
   const storageArticleClientFilter = storageContext
     ? ['client_id', '=', Number(currentStorageClientId() || 0)]
     : null
+  // El almacen del item destino de "Crear lote" (o el del encabezado si aun no se sobreescribe)
+  // decide si el selector de articulos muestra el catalogo estandar o el de Magistrales (ver
+  // ArticleController::pickerEffectiveModuleScope, backend). Para cualquier otro almacen esto no
+  // cambia nada del comportamiento actual. No aplica al contexto de almacenamiento (catalogo propio).
+  const createBatchTargetItem = items.find(item => item.uid === createBatchTargetUid)
+  const createBatchArticlePickerWarehouseId = createBatchTargetItem?.warehouse_id || selectedWarehouseId || ''
+  const createBatchArticleExtraParams = (!storageContext && createBatchArticlePickerWarehouseId)
+    ? { picker_warehouse_id: Number(createBatchArticlePickerWarehouseId) }
+    : undefined
 
   const toggleLotSearchPage = (checked) => {
     const pageIds = lotSearchPageRows.map(row => row.id)
@@ -1881,6 +1890,7 @@ const EntryNotes = () => {
           searchAPI={storageContext ? '/api/admin/storage/articles/paginate' : '/api/admin/articles/paginate'}
           searchBy='name'
           filter={storageArticleClientFilter ?? undefined}
+          extraParams={createBatchArticleExtraParams}
           dropdownParent='#entry-note-create-batch-container'
           onChange={(e) => setCreateBatchArticleId(e.target.value || '')}
         />
