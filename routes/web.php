@@ -17,14 +17,11 @@ use App\Http\Controllers\Admin\Magistrales\FormulaController as AdminMagistrales
 use App\Http\Controllers\Admin\Magistrales\IncomeController as AdminMagistralesIncomeController;
 use App\Http\Controllers\Admin\Magistrales\InventoryController as AdminMagistralesInventoryController;
 use App\Http\Controllers\Admin\Magistrales\KardexController as AdminMagistralesKardexController;
-use App\Http\Controllers\Admin\Magistrales\LaboratoryController as AdminMagistralesLaboratoryController;
 use App\Http\Controllers\Admin\Magistrales\OutputController as AdminMagistralesOutputController;
 use App\Http\Controllers\Admin\Magistrales\ProductionOrderController as AdminMagistralesProductionOrderController;
 use App\Http\Controllers\Admin\Magistrales\PurchaseOrderController as AdminMagistralesPurchaseOrderController;
 use App\Http\Controllers\Admin\Magistrales\ResponsibleController as AdminMagistralesResponsibleController;
 use App\Http\Controllers\Admin\Magistrales\SaleController as AdminMagistralesSaleController;
-use App\Http\Controllers\Admin\Magistrales\SupplierController as AdminMagistralesSupplierController;
-use App\Http\Controllers\Admin\Magistrales\UnitController as AdminMagistralesUnitController;
 use App\Http\Controllers\Admin\Storage\BillingControlController as AdminStorageBillingControlController;
 use App\Http\Controllers\Admin\Storage\ClientController as AdminStorageClientController;
 use App\Http\Controllers\Admin\Storage\EntryNoteController as AdminStorageEntryNoteController;
@@ -128,11 +125,8 @@ Route::middleware('auth')->group(function () {
         $magistralesWarehouse = 'module.permission:magistrales-warehouse,magistrales-inventory';
         $magistralesKardex = 'module.permission:magistrales-kardex,magistrales-warehouse';
         $magistralesProduction = 'module.permission:magistrales-production-order,magistrales-warehouse';
-        $magistralesSupplier = 'module.permission:magistrales-supplier,magistrales-procurement';
         $magistralesResponsible = 'module.permission:magistrales-responsible,magistrales-warehouse';
         $magistralesOutputs = 'module.permission:magistrales-outputs,magistrales-warehouse';
-        $magistralesUnit = 'module.permission:magistrales-unit,magistrales-products';
-        $magistralesLaboratory = 'module.permission:magistrales-laboratory,magistrales-products';
         $magistralesBilling = 'module.permission:magistrales-billing,magistrales-sales';
 
         // Almacén
@@ -148,9 +142,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/categories', fn() => redirect('/admin/laboratories'));
         Route::get('/units', [AdminUnitController::class, 'reactView']);
         Route::get('/units-of-measure', fn() => redirect('/admin/units'));
-        Route::get('/magistrales/units', [AdminMagistralesUnitController::class, 'reactView'])->middleware($magistralesUnit);
-        Route::get('/magistrales/units-of-measure', fn() => redirect('/admin/magistrales/units'))->middleware($magistralesUnit);
-        Route::get('/magistrales/laboratories', [AdminMagistralesLaboratoryController::class, 'reactView'])->middleware($magistralesLaboratory);
+        Route::get('/magistrales/units', fn() => redirect('/admin/units'));
+        Route::get('/magistrales/units-of-measure', fn() => redirect('/admin/units'));
+        Route::get('/magistrales/laboratories', fn() => redirect('/admin/laboratories'));
         Route::get('/magistrales/categories', [AdminMagistralesCategoryController::class, 'reactView'])->middleware($magistralesCategory);
 
         // Administración
@@ -231,18 +225,18 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales-inventory', [AdminMagistralesInventoryController::class, 'reactView'])->middleware($magistralesWarehouse);
         Route::get('/magistrales/kardex', [AdminMagistralesKardexController::class, 'reactView'])->middleware($magistralesKardex);
         Route::get('/magistrales-kardex', [AdminMagistralesKardexController::class, 'reactView'])->middleware($magistralesKardex);
-        Route::get('/magistrales-laboratory', [AdminMagistralesLaboratoryController::class, 'reactView'])->middleware($magistralesLaboratory);
+        Route::get('/magistrales-laboratory', fn() => redirect('/admin/laboratories'));
         Route::get('/magistrales-purchase-order', fn() => redirect('/admin/magistrales/purchase-orders'))->middleware($magistralesProcurement);
         Route::get('/magistrales/production-orders', [AdminMagistralesProductionOrderController::class, 'reactView'])->middleware($magistralesProduction);
         Route::get('/magistrales-production-order', [AdminMagistralesProductionOrderController::class, 'reactView'])->middleware($magistralesProduction);
-        Route::get('/magistrales/suppliers', [AdminMagistralesSupplierController::class, 'reactView'])->middleware($magistralesSupplier);
+        Route::get('/magistrales/suppliers', fn() => redirect('/admin/suppliers'));
         Route::get('/magistrales/warehouses', fn() => redirect('/admin/magistrales/inventory'))->middleware($magistralesWarehouse);
-        Route::get('/magistrales-supplier', [AdminMagistralesSupplierController::class, 'reactView'])->middleware($magistralesSupplier);
+        Route::get('/magistrales-supplier', fn() => redirect('/admin/suppliers'));
         Route::get('/magistrales/responsibles', [AdminMagistralesResponsibleController::class, 'reactView'])->middleware($magistralesResponsible);
         Route::get('/magistrales-responsible', [AdminMagistralesResponsibleController::class, 'reactView'])->middleware($magistralesResponsible);
         Route::get('/magistrales/outputs', [AdminMagistralesOutputController::class, 'reactView'])->middleware($magistralesOutputs);
         Route::get('/magistrales-outputs', [AdminMagistralesOutputController::class, 'reactView'])->middleware($magistralesOutputs);
-        Route::get('/magistrales-unit', [AdminMagistralesUnitController::class, 'reactView'])->middleware($magistralesUnit);
+        Route::get('/magistrales-unit', fn() => redirect('/admin/units'));
         Route::get('/magistrales/sales', [AdminMagistralesSaleController::class, 'reactView'])->middleware($magistralesBilling);
         Route::get('/magistrales-sales', [AdminMagistralesSaleController::class, 'reactView'])->middleware($magistralesBilling);
 

@@ -37,9 +37,8 @@ class PurchaseOrderController extends BasicController
                 'warehouse:id,name',
                 'supplier:id,ruc,business_name',
                 'items:id,purchase_order_id,article_id,presentation_id,presentation_label,presentation_units,last_price,requested_quantity,received_quantity,price_unit,total,status',
-                'items.article:id,code,name,article_type,magistral_presentation,laboratory_id,magistral_laboratory_id,active_principle_id,unit_id',
+                'items.article:id,code,name,article_type,magistral_presentation,laboratory_id,active_principle_id,unit_id',
                 'items.article.laboratory:id,name',
-                'items.article.magistralLaboratory:id,description',
                 'items.article.activePrinciple:id,name',
                 'items.article.unit:id,name,symbol',
                 'items.article.presentations:id,article_id,name,units,price,purchase_price_national,purchase_price_foreign,sort_order,status',
@@ -257,7 +256,6 @@ class PurchaseOrderController extends BasicController
                 'warehouse',
                 'supplier',
                 'items.article.laboratory',
-                'items.article.magistralLaboratory',
                 'items.article.activePrinciple',
                 'items.article.unit',
                 'items.article.presentations',
@@ -465,11 +463,14 @@ class PurchaseOrderController extends BasicController
 
     private function scopedSupplierQuery()
     {
+        // Los proveedores de Magistrales se unificaron al catalogo general (scope standard).
+        $scopeKey = $this->moduleScope === 'magistrales' ? 'standard' : $this->moduleScope;
+
         return Supplier::query()
-            ->when(Schema::hasColumn('suppliers', 'module_scope'), function ($query) {
-                $query->where(function ($scope) {
-                    $scope->where('module_scope', $this->moduleScope);
-                    if ($this->moduleScope === 'standard') {
+            ->when(Schema::hasColumn('suppliers', 'module_scope'), function ($query) use ($scopeKey) {
+                $query->where(function ($scope) use ($scopeKey) {
+                    $scope->where('module_scope', $scopeKey);
+                    if ($scopeKey === 'standard') {
                         $scope->orWhereNull('module_scope');
                     }
                 });

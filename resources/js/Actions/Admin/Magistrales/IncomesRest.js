@@ -21,7 +21,7 @@ class IncomesRest extends BasicRest {
 
   getBusinesses = async () => await loadAll('/api/admin/businesses/paginate')
   getWarehouses = async () => await loadAll('/api/admin/warehouses/paginate')
-  getSuppliers = async () => await loadAll('/api/admin/magistrales/suppliers/paginate')
+  getSuppliers = async () => await loadAll('/api/admin/suppliers/paginate')
   getArticles = async () => await loadAll('/api/admin/magistrales/articles/paginate')
 }
 

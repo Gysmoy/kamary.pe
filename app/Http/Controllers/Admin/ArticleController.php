@@ -9,7 +9,6 @@ use App\Models\ArticlePackComponent;
 use App\Models\ArticlePresentation;
 use App\Models\Laboratory;
 use App\Models\MagistralCategory;
-use App\Models\MagistralLaboratory;
 use App\Models\MagistralSubcategory;
 use App\Models\StorageProductLot;
 use App\Models\Unit;
@@ -45,7 +44,6 @@ class ArticleController extends BasicController
         $hasWarehouseColumn = Schema::hasColumn('articles', 'warehouse_id');
         $with = [
             'laboratory:id,name,code',
-            'magistralLaboratory:id,description,code',
             'activePrinciple:id,laboratory_id,name',
             'client:id,full_name,document_number',
             'unit:id,name,symbol',
@@ -86,7 +84,7 @@ class ArticleController extends BasicController
         if ($this->moduleScope === 'magistrales') {
             $query
                 ->leftJoin('active_principles as active_principle', 'active_principle.id', '=', 'articles.active_principle_id')
-                ->leftJoin('magistral_laboratories as magistral_laboratory', 'magistral_laboratory.id', '=', 'articles.magistral_laboratory_id');
+                ->leftJoin('laboratories as laboratory', 'laboratory.id', '=', 'articles.laboratory_id');
         } else {
             $query
                 ->join('active_principles as active_principle', 'active_principle.id', '=', 'articles.active_principle_id')
@@ -172,13 +170,9 @@ class ArticleController extends BasicController
                 if ($normalizedCode !== '') $articleByCode[$normalizedCode] = $item->id;
             }
 
-            $existingLabs = $this->moduleScope === 'magistrales'
-                ? MagistralLaboratory::query()
-                    ->whereNotNull('description')
-                    ->get(['id', 'description as name', 'code'])
-                : Laboratory::query()
-                    ->whereNotNull('name')
-                    ->get(['id', 'name', 'code']);
+            $existingLabs = Laboratory::query()
+                ->whereNotNull('name')
+                ->get(['id', 'name', 'code']);
             $labByName = [];
             $labCodeTaken = [];
             foreach ($existingLabs as $lab) {
@@ -279,21 +273,13 @@ class ArticleController extends BasicController
                 $laboratoryId = $labByName[$normalizedLabName] ?? null;
                 if (!$laboratoryId) {
                     $newLabCode = $this->generateLaboratoryCode($laboratoryName, $labCodeTaken);
-                    $newLab = $this->moduleScope === 'magistrales'
-                        ? MagistralLaboratory::create([
-                            'description' => $laboratoryName,
-                            'code' => $newLabCode,
-                            'status' => true,
-                            'created_by' => $userId,
-                            'updated_by' => $userId,
-                        ])
-                        : Laboratory::create([
-                            'name' => $laboratoryName,
-                            'code' => $newLabCode,
-                            'status' => true,
-                            'created_by' => $userId,
-                            'updated_by' => $userId,
-                        ]);
+                    $newLab = Laboratory::create([
+                        'name' => $laboratoryName,
+                        'code' => $newLabCode,
+                        'status' => true,
+                        'created_by' => $userId,
+                        'updated_by' => $userId,
+                    ]);
                     $laboratoryId = $newLab->id;
                     $labByName[$normalizedLabName] = $laboratoryId;
                     $labCodeTaken[$this->normalizeText($newLabCode)] = true;
@@ -348,14 +334,8 @@ class ArticleController extends BasicController
                         'status' => $status,
                         'updated_by' => $userId,
                     ];
-                    if ($this->moduleScope === 'magistrales') {
-                        $updateData['magistral_laboratory_id'] = $laboratoryId;
-                        $updateData['laboratory_id'] = null;
-                        $updateData['active_principle_id'] = null;
-                    } else {
-                        $updateData['laboratory_id'] = $laboratoryId;
-                        $updateData['active_principle_id'] = $activePrincipleId;
-                    }
+                    $updateData['laboratory_id'] = $laboratoryId;
+                    $updateData['active_principle_id'] = $this->moduleScope === 'magistrales' ? null : $activePrincipleId;
                     if ($hasArticleModuleScope) $updateData['module_scope'] = $this->moduleScope;
                     if ($hasArticleBusiness) $updateData['business_id'] = $defaultBusinessId;
                     if ($hasArticleWarehouse) $updateData['warehouse_id'] = $warehouseId;
@@ -390,14 +370,8 @@ class ArticleController extends BasicController
                     if ($hasMagistralStatus && $this->moduleScope === 'magistrales') {
                         $createData['magistral_status'] = $magistralStatus;
                     }
-                    if ($this->moduleScope === 'magistrales') {
-                        $createData['magistral_laboratory_id'] = $laboratoryId;
-                        $createData['laboratory_id'] = null;
-                        $createData['active_principle_id'] = null;
-                    } else {
-                        $createData['laboratory_id'] = $laboratoryId;
-                        $createData['active_principle_id'] = $activePrincipleId;
-                    }
+                    $createData['laboratory_id'] = $laboratoryId;
+                    $createData['active_principle_id'] = $this->moduleScope === 'magistrales' ? null : $activePrincipleId;
 
                     $newArticle = Article::create($createData);
                     $articleByCode[$normalizedCode] = $newArticle->id;
@@ -812,10 +786,7 @@ class ArticleController extends BasicController
 
         $code = trim((string)($body['code'] ?? ''));
         $name = trim((string)($body['name'] ?? ''));
-        $laboratoryId = $body['laboratory_id'] ?? null;
-        $magistralLaboratoryId = $this->moduleScope === 'magistrales'
-            ? $this->toNullableInt($body['magistral_laboratory_id'] ?? $body['laboratory_id'] ?? null)
-            : null;
+        $laboratoryId = $this->toNullableInt($body['laboratory_id'] ?? null);
         $activePrincipleId = $body['active_principle_id'] ?? null;
         $unitId = $this->toNullableInt($body['unit_id'] ?? null);
         $businessId = $this->toNullableInt($body['business_id'] ?? null);
@@ -878,7 +849,6 @@ class ArticleController extends BasicController
             $body['magistral_status'] = $this->normalizeMagistralStatus($body['magistral_status'] ?? $body['status'] ?? null);
             $body['status'] = $body['magistral_status'] !== 'de_baja';
             $unitId = $unitId ?: $this->resolveMagistralUnitFromPresentations();
-            $laboratoryId = null;
             $activePrincipleId = null;
             if (!empty($body['magistral_presentation']) && !$magistralPresentation) {
                 throw new \Exception('La presentacion seleccionada no es valida');
@@ -901,11 +871,9 @@ class ArticleController extends BasicController
 
         if ($code === '') throw new \Exception('El codigo de articulo es obligatorio');
         if ($name === '') throw new \Exception('El nombre del articulo es obligatorio');
-        if ($this->moduleScope === 'magistrales') {
-            if (!$magistralLaboratoryId) throw new \Exception('El laboratorio magistral es obligatorio');
-        } else {
-            if (!$laboratoryId) throw new \Exception('El laboratorio es obligatorio');
-            if (!$activePrincipleId) throw new \Exception('El principio activo es obligatorio');
+        if (!$laboratoryId) throw new \Exception('El laboratorio es obligatorio');
+        if ($this->moduleScope !== 'magistrales' && !$activePrincipleId) {
+            throw new \Exception('El principio activo es obligatorio');
         }
         if (!$unitId) throw new \Exception('La unidad de medida es obligatoria');
 
@@ -922,11 +890,7 @@ class ArticleController extends BasicController
             ->exists();
         if ($existsCode) throw new \Exception('El codigo de articulo ya existe');
 
-        if ($this->moduleScope === 'magistrales') {
-            MagistralLaboratory::findOrFail($magistralLaboratoryId);
-        } else {
-            Laboratory::findOrFail($laboratoryId);
-        }
+        Laboratory::findOrFail($laboratoryId);
         $unit = Unit::findOrFail($unitId);
         if (
             $this->moduleScope === 'storage'
@@ -1043,14 +1007,8 @@ class ArticleController extends BasicController
             }
         }
 
-        if ($this->moduleScope === 'magistrales') {
-            $body['magistral_laboratory_id'] = $magistralLaboratoryId;
-            $body['laboratory_id'] = null;
-            $body['active_principle_id'] = null;
-        } else {
-            $body['laboratory_id'] = $laboratoryId;
-            $body['active_principle_id'] = $activePrincipleId;
-        }
+        $body['laboratory_id'] = $laboratoryId;
+        $body['active_principle_id'] = $this->moduleScope === 'magistrales' ? null : $activePrincipleId;
         unset($body['presentations'], $body['storage_lots']);
 
         foreach ([
@@ -1066,7 +1024,6 @@ class ArticleController extends BasicController
             'sub_category',
             'magistral_presentation',
             'magistral_format_id',
-            'magistral_laboratory_id',
             'health_registration',
             'default_lot',
             'default_expiration_date',
@@ -1541,53 +1498,30 @@ class ArticleController extends BasicController
                 ->orWhereRaw('LOWER(TRIM(name)) = ?', [$normalized]);
         };
 
-        if (Schema::hasColumn('units', 'module_scope')) {
-            $unit = Unit::where('module_scope', 'magistrales')
-                ->where($matcher)
-                ->first();
-            if ($unit) return (int)$unit->id;
-
-            $unit = Unit::where(function ($scope) {
-                    $scope->where('module_scope', 'standard')
-                        ->orWhereNull('module_scope');
-                })
-                ->where($matcher)
-                ->first();
-            if ($unit) return (int)$unit->id;
-        } else {
-            $unit = Unit::where($matcher)->first();
-            if ($unit) return (int)$unit->id;
-        }
+        // Unidades unificadas al catalogo general (scope standard).
+        $unit = Unit::where($matcher)->first();
+        if ($unit) return (int)$unit->id;
 
         $userId = Auth::id();
-        $data = [
+
+        return (int)Unit::create([
             'name' => $label,
             'symbol' => mb_strtoupper($label),
             'status' => true,
             'created_by' => $userId,
             'updated_by' => $userId,
-        ];
-        if (Schema::hasColumn('units', 'module_scope')) {
-            $data['module_scope'] = 'magistrales';
-        }
-
-        return (int)Unit::create($data)->id;
+        ])->id;
     }
 
     private function ensureDefaultMagistralUnit(): int
     {
         $userId = Auth::id();
-        $data = [
+        $unit = Unit::firstOrCreate(['symbol' => 'MAG-GEN'], [
             'name' => 'Unidad Magistral',
             'status' => true,
             'created_by' => $userId,
             'updated_by' => $userId,
-        ];
-        if (Schema::hasColumn('units', 'module_scope')) {
-            $data['module_scope'] = 'magistrales';
-        }
-
-        $unit = Unit::firstOrCreate(['symbol' => 'MAG-GEN'], $data);
+        ]);
 
         return (int)$unit->id;
     }

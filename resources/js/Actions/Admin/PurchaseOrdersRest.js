@@ -8,7 +8,7 @@ class PurchaseOrdersRest extends BasicRest {
 
   articlesPath = () => isMagistralesPath() ? 'admin/magistrales/articles' : 'admin/articles'
 
-  suppliersPath = () => isMagistralesPath() ? 'admin/magistrales/suppliers' : 'admin/suppliers'
+  suppliersPath = () => 'admin/suppliers'
 
   articlesPaginateApi = () => `/api/${this.articlesPath()}/paginate`
 

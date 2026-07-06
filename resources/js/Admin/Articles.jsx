@@ -228,19 +228,9 @@ const getMagistralPresentationValue = (value) => {
     .find(([, needles]) => needles.some(needle => normalized.includes(needle)))?.[0] ?? ''
 }
 
-const getMagistralLaboratory = (data) => data?.magistralLaboratory ?? data?.magistral_laboratory ?? null
+const getArticleLaboratoryId = (data) => (data?.laboratory_id ? `${data.laboratory_id}` : '')
 
-const getArticleLaboratoryId = (data, isMagistrales) => {
-  if (!data) return ''
-  if (isMagistrales) return data?.magistral_laboratory_id ? `${data.magistral_laboratory_id}` : ''
-  return data?.laboratory_id ? `${data.laboratory_id}` : ''
-}
-
-const getArticleLaboratoryLabel = (data, isMagistrales) => {
-  if (!data) return ''
-  if (isMagistrales) return getMagistralLaboratory(data)?.description ?? ''
-  return data?.laboratory?.name ?? ''
-}
+const getArticleLaboratoryLabel = (data) => data?.laboratory?.name ?? ''
 
 const getMagistralEquivalenceDefaults = (articleType) => {
   const normalizedType = normalizeMagistralArticleType(articleType)
@@ -724,8 +714,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     } else {
       setSelectedStorageClientId('')
       setStorageLots([emptyStorageLot()])
-      const laboratoryId = getArticleLaboratoryId(data, isMagistrales)
-      const laboratoryLabel = getArticleLaboratoryLabel(data, isMagistrales)
+      const laboratoryId = getArticleLaboratoryId(data)
+      const laboratoryLabel = getArticleLaboratoryLabel(data)
       setSelectedLaboratoryId(laboratoryId)
       if (laboratoryId && laboratoryLabel) {
         SetSelectValue(laboratoryRef.current, laboratoryId, laboratoryLabel)
@@ -773,8 +763,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       health_registration: healthRegistrationRef.current?.value?.trim() ?? '',
       business_id: (!isStorageProduct && !isMagistrales) ? (selectedBusinessId || null) : null,
       warehouse_id: (!isStorageProduct && !isMagistrales) ? (selectedWarehouseId || null) : null,
-      laboratory_id: isMagistrales ? null : (selectedLaboratoryId || null),
-      magistral_laboratory_id: isMagistrales ? (selectedLaboratoryId || null) : null,
+      laboratory_id: selectedLaboratoryId || null,
       active_principle_id: isMagistrales ? null : (selectedPrincipleId || null),
       unit_id: selectedUnitId || null,
       volume: volumeRef.current?.value ?? '',
@@ -990,7 +979,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const articleExportRow = (row) => {
     const common = [
       row?.code ?? '',
-      getArticleLaboratoryLabel(row, isMagistrales) || row?.laboratory_name || '',
+      getArticleLaboratoryLabel(row) || row?.laboratory_name || '',
       row?.name ?? '',
       row?.unit?.symbol || row?.unit?.name || '',
       row?.status === false || row?.status === 0 ? 'Inactivo' : 'Activo',
@@ -1544,10 +1533,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     { dataField: 'administration_route', caption: 'Via adm.', width: '120px' },
     { dataField: 'name', caption: 'Articulo', minWidth: 200 },
     {
-      dataField: 'magistral_laboratory.description',
+      dataField: 'laboratory.name',
       caption: 'Laboratorio',
       width: '150px',
-      cellTemplate: (container, { data }) => container.text(getArticleLaboratoryLabel(data, true))
+      cellTemplate: (container, { data }) => container.text(getArticleLaboratoryLabel(data))
     },
     magistralIgvColumn,
     { dataField: 'default_expiration_date', caption: 'F. venc.', width: '110px', dataType: 'date' },

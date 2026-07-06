@@ -8,9 +8,9 @@ class ArticlesRest extends BasicRest {
     ? 'admin/magistrales/articles'
     : (isStoragePath() ? 'admin/storage/articles' : 'admin/articles')
 
-  laboratoriesPath = () => isMagistralesPath() ? 'admin/magistrales/laboratories' : 'admin/laboratories'
+  laboratoriesPath = () => 'admin/laboratories'
 
-  laboratoriesSearchBy = () => isMagistralesPath() ? 'description' : 'name'
+  laboratoriesSearchBy = () => 'name'
 
   laboratoriesPaginateApi = () => `/api/${this.laboratoriesPath()}/paginate`
 
@@ -36,9 +36,7 @@ class ArticlesRest extends BasicRest {
     }
   }
 
-  unitsPath = () => isMagistralesPath()
-    ? 'admin/magistrales/units'
-    : (isStoragePath() ? 'admin/storage/units' : 'admin/units')
+  unitsPath = () => isStoragePath() ? 'admin/storage/units' : 'admin/units'
 
   importRows = async (request) => {
     try {

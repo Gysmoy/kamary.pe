@@ -9,9 +9,9 @@ use App\Models\MagistralCategory;
 use App\Models\MagistralFormula;
 use App\Models\MagistralFormulaItem;
 use App\Models\MagistralFormat;
+use App\Models\Laboratory;
 use App\Models\MagistralInventoryCount;
 use App\Models\MagistralInventoryCountItem;
-use App\Models\MagistralLaboratory;
 use App\Models\MagistralResponsible;
 use App\Models\MagistralSubcategory;
 use App\Models\PurchaseOrder;
@@ -131,7 +131,7 @@ class MagistralesProductionSeeder extends Seeder
             'UND' => Unit::query()->updateOrCreate(
                 ['symbol' => 'MAG-UND'],
                 [
-                    'module_scope' => 'magistrales',
+                    'module_scope' => 'standard',
                     'name' => 'Unidad Magistral',
                     'status' => true,
                     'created_by' => $this->userId,
@@ -141,7 +141,7 @@ class MagistralesProductionSeeder extends Seeder
             'G' => Unit::query()->updateOrCreate(
                 ['symbol' => 'MAG-G'],
                 [
-                    'module_scope' => 'magistrales',
+                    'module_scope' => 'standard',
                     'name' => 'Gramo Magistral',
                     'status' => true,
                     'created_by' => $this->userId,
@@ -151,7 +151,7 @@ class MagistralesProductionSeeder extends Seeder
             'ML' => Unit::query()->updateOrCreate(
                 ['symbol' => 'MAG-ML'],
                 [
-                    'module_scope' => 'magistrales',
+                    'module_scope' => 'standard',
                     'name' => 'Mililitro Magistral',
                     'status' => true,
                     'created_by' => $this->userId,
@@ -253,12 +253,13 @@ class MagistralesProductionSeeder extends Seeder
         return $formats;
     }
 
-    private function ensureLaboratory(): MagistralLaboratory
+    private function ensureLaboratory(): Laboratory
     {
-        return MagistralLaboratory::query()->updateOrCreate(
+        return Laboratory::query()->updateOrCreate(
             ['code' => 'MAGLAB-001'],
             [
-                'description' => 'Laboratorio Magistral Kamary',
+                'name' => 'Laboratorio Magistral Kamary',
+                'country' => 'Perú',
                 'status' => true,
                 'created_by' => $this->userId,
                 'updated_by' => $this->userId,
@@ -284,7 +285,7 @@ class MagistralesProductionSeeder extends Seeder
         return Supplier::query()->updateOrCreate(
             ['ruc' => '20600000001'],
             [
-                'module_scope' => 'magistrales',
+                'module_scope' => 'standard',
                 'business_name' => 'Proveedor Magistral Base',
                 'trade_name' => 'Proveedor Magistral Base',
                 'business_line' => 'Insumos magistrales',
@@ -305,7 +306,7 @@ class MagistralesProductionSeeder extends Seeder
         array $categories,
         array $subcategories,
         array $formats,
-        MagistralLaboratory $laboratory
+        Laboratory $laboratory
     ): array {
         $articles = [];
 
@@ -317,7 +318,7 @@ class MagistralesProductionSeeder extends Seeder
             'currency' => 'PEN',
             'stock_has_expiration' => true,
             'stock_has_lot' => true,
-            'magistral_laboratory_id' => $laboratory->id,
+            'laboratory_id' => $laboratory->id,
             'created_by' => $this->userId,
             'updated_by' => $this->userId,
         ];
@@ -497,7 +498,7 @@ class MagistralesProductionSeeder extends Seeder
         }
 
         $supplier = Supplier::query()
-            ->where('module_scope', 'magistrales')
+            ->where('ruc', '20600000001')
             ->whereNotNull('status')
             ->orderBy('id')
             ->first();

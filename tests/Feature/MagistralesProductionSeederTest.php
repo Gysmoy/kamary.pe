@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Business;
-use App\Models\MagistralLaboratory;
+use App\Models\Laboratory;
 use App\Models\Unit;
 use App\Models\Warehouse;
 use App\Support\BusinessScope;
@@ -39,14 +39,15 @@ class MagistralesProductionSeederTest extends TestCase
     public function test_magistrales_production_seeder_preserves_catalog_data_and_is_idempotent(): void
     {
         Unit::create([
-            'module_scope' => 'magistrales',
+            'module_scope' => 'standard',
             'name' => 'Temporal',
             'symbol' => 'TMP',
             'status' => true,
         ]);
-        MagistralLaboratory::create([
+        Laboratory::create([
             'code' => 'TEMP-LAB',
-            'description' => 'Temporal',
+            'name' => 'Temporal',
+            'country' => 'Perú',
             'status' => true,
         ]);
 
@@ -54,15 +55,15 @@ class MagistralesProductionSeederTest extends TestCase
         $firstCounts = $this->scopeCounts();
 
         $this->assertDatabaseHas('units', [
-            'module_scope' => 'magistrales',
+            'module_scope' => 'standard',
             'symbol' => 'TMP',
         ]);
-        $this->assertDatabaseHas('magistral_laboratories', [
+        $this->assertDatabaseHas('laboratories', [
             'code' => 'TEMP-LAB',
         ]);
         foreach (['MAG-UND', 'MAG-G', 'MAG-ML'] as $symbol) {
             $this->assertDatabaseHas('units', [
-                'module_scope' => 'magistrales',
+                'module_scope' => 'standard',
                 'symbol' => $symbol,
             ]);
         }
@@ -82,8 +83,8 @@ class MagistralesProductionSeederTest extends TestCase
             'warehouses' => Warehouse::whereIn('business_branch_id', $business->branches()->pluck('id'))
                 ->where('name', 'Almacen Magistrales Principal')
                 ->count(),
-            'units' => Unit::where('module_scope', 'magistrales')->count(),
-            'laboratories' => MagistralLaboratory::count(),
+            'units' => Unit::where('module_scope', 'standard')->count(),
+            'laboratories' => Laboratory::count(),
         ];
     }
 }

@@ -1,9 +1,6 @@
 const MAGISTRALES_SCOPE_MAP = {
   articles: ['magistrales-articles', 'magistrales-products'],
   batches: ['magistrales-articles', 'magistrales-products'],
-  laboratories: ['magistrales-laboratory', 'magistrales-products'],
-  'units-of-measure': ['magistrales-unit', 'magistrales-products'],
-  suppliers: ['magistrales-supplier', 'magistrales-procurement'],
   'purchase-orders': ['magistrales-purchase-order', 'magistrales-procurement'],
   'purchase-receipts': ['magistrales-purchase-order', 'magistrales-procurement'],
   'accounts-payable': ['magistrales-procurement'],

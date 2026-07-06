@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Http\Controllers\Admin\Magistrales\IncomeController as MagistralesIncomeController;
 use App\Models\Article;
 use App\Models\Business;
+use App\Models\Laboratory;
 use App\Models\MagistralCategory;
-use App\Models\MagistralLaboratory;
 use App\Models\MagistralSubcategory;
 use App\Models\Unit;
 use App\Models\User;
@@ -176,9 +176,10 @@ class MagistralesModuleReadinessTest extends TestCase
         $user = $this->adminUser();
         $this->actingAs($user);
 
-        $laboratory = MagistralLaboratory::create([
-            'description' => 'MAGISTRAL',
+        $laboratory = Laboratory::create([
+            'name' => 'MAGISTRAL',
             'code' => 'MAG-QA',
+            'country' => 'Perú',
             'status' => true,
             'created_by' => $user->id,
             'updated_by' => $user->id,
@@ -205,7 +206,7 @@ class MagistralesModuleReadinessTest extends TestCase
             'magistral_category_id' => $category->id,
             'sub_category' => 'POLVO',
             'magistral_presentation' => 'POLVO',
-            'magistral_laboratory_id' => $laboratory->id,
+            'laboratory_id' => $laboratory->id,
             'igv_rule' => true,
             'stock_min' => 100,
             'stock_max' => 1000,
@@ -234,11 +235,12 @@ class MagistralesModuleReadinessTest extends TestCase
 
         $response->assertOk()->assertJsonPath('status', 200);
 
-        $unit = Unit::where('module_scope', 'magistrales')->where('symbol', 'KG')->first();
+        $unit = Unit::where('symbol', 'KG')->first();
         $this->assertNotNull($unit);
 
         $article = Article::where('module_scope', 'magistrales')->where('name', 'ACIDO ASCORBICO')->firstOrFail();
         $this->assertSame($unit->id, $article->unit_id);
+        $this->assertSame($laboratory->id, $article->laboratory_id);
         $this->assertSame('INS-1', $article->code);
         $this->assertCount(2, $article->presentations);
     }

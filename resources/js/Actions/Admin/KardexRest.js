@@ -70,8 +70,8 @@ class KardexRest extends BasicRest {
 
   getLaboratories = async () => {
     try {
-      const laboratoriesPath = isMagistralesPath() ? 'admin/magistrales/laboratories' : 'admin/laboratories'
-      const labelField = isMagistralesPath() ? 'description' : 'name'
+      const laboratoriesPath = 'admin/laboratories'
+      const labelField = 'name'
       const { status, result } = await Fetch(`/api/${laboratoriesPath}/paginate`, {
         method: 'POST',
         body: JSON.stringify({
