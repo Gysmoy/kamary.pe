@@ -5,9 +5,7 @@ import { isMagistralesPath, isStoragePath } from "../../Utils/permissionScope";
 import xsrfToken from "../../Utils/xsrfToken";
 
 class KardexRest extends BasicRest {
-  path = isMagistralesPath()
-    ? 'admin/magistrales/kardex'
-    : (isStoragePath() ? 'admin/storage/kardex' : 'admin/kardex')
+  path = isStoragePath() ? 'admin/storage/kardex' : 'admin/kardex'
   filters = {
     business_id: '',
     business_branch_id: '',

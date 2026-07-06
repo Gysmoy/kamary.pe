@@ -4,8 +4,6 @@ const MAGISTRALES_SCOPE_MAP = {
   'purchase-orders': ['magistrales-purchase-order', 'magistrales-procurement'],
   'purchase-receipts': ['magistrales-purchase-order', 'magistrales-procurement'],
   'accounts-payable': ['magistrales-procurement'],
-  inventory: ['magistrales-inventory', 'magistrales-warehouse'],
-  kardex: ['magistrales-kardex', 'magistrales-warehouse'],
   'entry-note': ['magistrales-incomes', 'magistrales-procurement'],
   'exit-note': ['magistrales-outputs', 'magistrales-warehouse'],
   'services-billing': ['magistrales-sales', 'magistrales-billing'],

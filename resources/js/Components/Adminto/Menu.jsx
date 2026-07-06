@@ -263,8 +263,6 @@ const Menu = ({ can, hasRole, panel = null }) => {
               {canAccessAny('magistrales-formats', 'magistrales-products') && <MenuItem href='/admin/magistrales-formats' icon='ti ti-forms'>Formatos</MenuItem>}
               {canAccessAny('magistrales-formulas', 'magistrales-products') && <MenuItem href='/admin/magistrales-formulas' icon='ti ti-test-pipe'>Fórmulas</MenuItem>}
               {canAccessAny('magistrales-incomes', 'magistrales-procurement') && <MenuItem href='/admin/magistrales/entry-note' icon='ti ti-file-import'>Nota de entrada</MenuItem>}
-              {canAccessAny('magistrales-inventory', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales/inventory' icon='ti ti-stack-2'>Inventario</MenuItem>}
-              {canAccessAny('magistrales-kardex', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales/kardex' icon='ti ti-notebook'>Kardex</MenuItem>}
               {canAccessAny('magistrales-purchase-order', 'magistrales-procurement') && <MenuItem href='/admin/magistrales/purchase-orders' icon='ti ti-shopping-cart'>O. Compra</MenuItem>}
               {canAccessAny('magistrales-production-order', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales-production-order' icon='ti ti-clipboard-list'>O. Producción</MenuItem>}
               {canAccessAny('magistrales-responsible', 'magistrales-warehouse') && <MenuItem href='/admin/magistrales-responsible' icon='ti ti-user-check'>Responsable</MenuItem>}

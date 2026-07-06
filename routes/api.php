@@ -44,8 +44,6 @@ use App\Http\Controllers\Admin\Magistrales\DoctorController as AdminMagistralesD
 use App\Http\Controllers\Admin\Magistrales\FormatController as AdminMagistralesFormatController;
 use App\Http\Controllers\Admin\Magistrales\FormulaController as AdminMagistralesFormulaController;
 use App\Http\Controllers\Admin\Magistrales\IncomeController as AdminMagistralesIncomeController;
-use App\Http\Controllers\Admin\Magistrales\InventoryController as AdminMagistralesInventoryController;
-use App\Http\Controllers\Admin\Magistrales\KardexController as AdminMagistralesKardexController;
 use App\Http\Controllers\Admin\Magistrales\OutputController as AdminMagistralesOutputController;
 use App\Http\Controllers\Admin\Magistrales\ProductionOrderController as AdminMagistralesProductionOrderController;
 use App\Http\Controllers\Admin\Magistrales\PurchaseOrderController as AdminMagistralesPurchaseOrderController;
@@ -286,8 +284,6 @@ Route::middleware('auth')->group(function () {
             $magistralesProduction = 'module.permission:magistrales-production-order,magistrales-warehouse';
             $magistralesOutputs = 'module.permission:magistrales-outputs,magistrales-warehouse';
             $magistralesSales = 'module.permission:magistrales-sales,magistrales-billing';
-            $magistralesInventory = 'module.permission:magistrales-inventory,magistrales-warehouse';
-            $magistralesKardex = 'module.permission:magistrales-kardex,magistrales-warehouse';
             $magistralesPurchaseOrders = 'module.permission:magistrales-purchase-order,magistrales-procurement';
             $magistralesProcurement = 'module.permission:magistrales-procurement';
 
@@ -379,19 +375,6 @@ Route::middleware('auth')->group(function () {
                 Route::patch('/sales/status', [AdminMagistralesSaleController::class, 'status']);
                 Route::patch('/sales/{field}', [AdminMagistralesSaleController::class, 'boolean']);
                 Route::delete('/sales/{id}', [AdminMagistralesSaleController::class, 'delete']);
-            });
-
-            Route::middleware($magistralesInventory)->group(function () {
-                Route::post('/inventory', [AdminMagistralesInventoryController::class, 'save']);
-                Route::post('/inventory/stock', [AdminMagistralesInventoryController::class, 'stock']);
-                Route::post('/inventory/paginate', [AdminMagistralesInventoryController::class, 'paginate']);
-                Route::patch('/inventory/status', [AdminMagistralesInventoryController::class, 'status']);
-                Route::delete('/inventory/{id}', [AdminMagistralesInventoryController::class, 'delete']);
-            });
-
-            Route::middleware($magistralesKardex)->group(function () {
-                Route::post('/kardex/paginate', [AdminMagistralesKardexController::class, 'paginate']);
-                Route::post('/kardex/movements', [AdminMagistralesKardexController::class, 'movements']);
             });
 
             Route::middleware($magistralesPurchaseOrders)->group(function () {
