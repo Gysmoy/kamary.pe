@@ -153,16 +153,21 @@ class StorageServiceKmFlowTest extends TestCase
         ])->assertStatus(400);
     }
 
-    public function test_storage_billing_control_excludes_general_service_orders(): void
+    public function test_storage_billing_control_excludes_non_storage_service_orders(): void
     {
         $user = $this->user();
         $context = $this->storageContext($user);
 
+        // Ambos tipos son ordenes de almacenamiento (ver ServiceOrderController::syncStorageGeneralPrefacture
+        // y BillingControlController::$storageOrderTypes) y deben aparecer en el control de facturacion.
         $storageOrder = $this->serviceOrder($context, $user, 'storage_service', 'OSA-001');
-        $generalOrder = $this->serviceOrder($context, $user, 'storage_general', 'OSG-001');
+        $generalStorageOrder = $this->serviceOrder($context, $user, 'storage_general', 'OSG-001');
+        // Una orden que no pertenece a almacenamiento debe quedar excluida.
+        $nonStorageOrder = $this->serviceOrder($context, $user, 'service', 'OS-001');
 
         $this->billingDocument($context, $user, $storageOrder, 'PRE-001');
-        $this->billingDocument($context, $user, $generalOrder, 'PRE-002');
+        $this->billingDocument($context, $user, $generalStorageOrder, 'PRE-002');
+        $this->billingDocument($context, $user, $nonStorageOrder, 'PRE-003');
 
         $codes = (new BillingControlController())
             ->setPaginationInstance(BillingDocument::class)
@@ -170,7 +175,8 @@ class StorageServiceKmFlowTest extends TestCase
             ->all();
 
         $this->assertContains('PRE-001', $codes);
-        $this->assertNotContains('PRE-002', $codes);
+        $this->assertContains('PRE-002', $codes);
+        $this->assertNotContains('PRE-003', $codes);
     }
 
     public function test_storage_inventory_imports_km_adjustment_format(): void

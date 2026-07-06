@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Supplier;
 use App\Models\User;
+use Database\Seeders\ModulePermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class SupplierImportTest extends TestCase
@@ -14,7 +16,10 @@ class SupplierImportTest extends TestCase
 
     private function makeUser(): User
     {
-        return User::create([
+        $this->seed(ModulePermissionsSeeder::class);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $user = User::create([
             'name' => 'Supplier',
             'lastname' => 'Importer',
             'fullname' => 'Supplier Importer',
@@ -23,11 +28,20 @@ class SupplierImportTest extends TestCase
             'password' => Hash::make('secret'),
             'status' => true,
         ]);
+        $user->assignRole('Admin');
+
+        return $user;
     }
 
     public function test_can_import_suppliers_and_update_existing_by_ruc(): void
     {
         $user = $this->makeUser();
+
+        // Las migraciones siembran proveedores demo de Magistrales (unificados a module_scope
+        // "standard"), asi que el conteo esperado se calcula contra la base ya existente en vez
+        // de asumir una tabla vacia.
+        $baselineCount = Supplier::count();
+
         $existing = Supplier::create([
             'ruc' => '20517411613',
             'business_name' => 'RAZON ANTIGUA',
@@ -73,7 +87,7 @@ class SupplierImportTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertDatabaseCount('suppliers', 2);
+        $this->assertDatabaseCount('suppliers', $baselineCount + 2);
         $this->assertDatabaseHas('suppliers', [
             'id' => $existing->id,
             'ruc' => '20517411613',

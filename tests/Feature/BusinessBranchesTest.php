@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\Business;
 use App\Models\BusinessBranch;
 use App\Models\User;
+use Database\Seeders\ModulePermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class BusinessBranchesTest extends TestCase
@@ -15,7 +17,10 @@ class BusinessBranchesTest extends TestCase
 
     private function makeUser(): User
     {
-        return User::create([
+        $this->seed(ModulePermissionsSeeder::class);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $user = User::create([
             'name' => 'Test',
             'lastname' => 'User',
             'fullname' => 'Test User',
@@ -24,12 +29,17 @@ class BusinessBranchesTest extends TestCase
             'password' => Hash::make('secret'),
             'status' => true,
         ]);
+        $user->assignRole('Admin');
+
+        return $user;
     }
 
     public function test_can_create_multiple_branches_for_same_business(): void
     {
         $user = $this->makeUser();
         $business = Business::where('business_key', 'kamary_peru')->firstOrFail();
+
+        $branchesBefore = BusinessBranch::where('business_id', $business->id)->count();
 
         $this->actingAs($user);
 
@@ -45,7 +55,10 @@ class BusinessBranchesTest extends TestCase
         ]);
         $second->assertStatus(200);
 
-        $this->assertDatabaseCount('business_branches', 2);
+        $this->assertSame(
+            $branchesBefore + 2,
+            BusinessBranch::where('business_id', $business->id)->count()
+        );
         $this->assertDatabaseHas('business_branches', [
             'business_id' => $business->id,
             'name' => 'Sede Centro',
@@ -76,6 +89,8 @@ class BusinessBranchesTest extends TestCase
             'updated_by' => $user->id,
         ]);
 
+        $branchesBefore = BusinessBranch::where('business_id', $business->id)->count();
+
         $this->actingAs($user);
 
         $update = $this->postJson("/api/admin/businesses/{$business->id}/branches", [
@@ -93,6 +108,9 @@ class BusinessBranchesTest extends TestCase
             'id' => $branchB->id,
             'name' => 'Sede B',
         ]);
-        $this->assertDatabaseCount('business_branches', 2);
+        $this->assertSame(
+            $branchesBefore,
+            BusinessBranch::where('business_id', $business->id)->count()
+        );
     }
 }

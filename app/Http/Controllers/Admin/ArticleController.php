@@ -136,13 +136,13 @@ class ArticleController extends BasicController
 
     public function import(Request $request): HttpResponse|ResponseFactory
     {
+        $importType = $this->normalizeArticleImportType($request->input('import_type', 'upsert'));
+        if ($importType === 'pack_components') {
+            return $this->importPackComponents($request);
+        }
+
         $response = new Response();
         try {
-            $importType = $this->normalizeArticleImportType($request->input('import_type', 'upsert'));
-            if ($importType === 'pack_components') {
-                return $this->importPackComponents($request);
-            }
-
             $rows = $request->rows;
             $mapping = $request->mapping ?? [];
             $userId = Auth::id();

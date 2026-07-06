@@ -14,8 +14,10 @@ use App\Models\Laboratory;
 use App\Models\Unit;
 use App\Models\User;
 use App\Models\Warehouse;
+use Database\Seeders\ModulePermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class CommercialOrdersTest extends TestCase
@@ -24,7 +26,10 @@ class CommercialOrdersTest extends TestCase
 
     private function makeUser(): User
     {
-        return User::create([
+        $this->seed(ModulePermissionsSeeder::class);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $user = User::create([
             'name' => 'Commercial',
             'lastname' => 'Tester',
             'fullname' => 'Commercial Tester',
@@ -33,6 +38,9 @@ class CommercialOrdersTest extends TestCase
             'password' => Hash::make('secret'),
             'status' => true,
         ]);
+        $user->assignRole('Admin');
+
+        return $user;
     }
 
     public function test_can_create_regular_client_commercial_order(): void
