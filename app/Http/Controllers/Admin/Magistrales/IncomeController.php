@@ -5,24 +5,39 @@ namespace App\Http\Controllers\Admin\Magistrales;
 use App\Http\Controllers\BasicController;
 use App\Http\Controllers\Admin\Magistrales\Concerns\RunsMagistralSaveInTransaction;
 use App\Models\Article;
-use App\Models\MagistralIncome;
-use App\Models\MagistralIncomeItem;
+use App\Models\EntryNote;
+use App\Models\EntryNoteItem;
 use App\Support\MagistralesWarehouse;
-use App\Support\MagistralLedgerSync;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use SoDe\Extend\Response;
 
+/**
+ * Magistrales - Nota de Entrada.
+ *
+ * Guarda/lee directamente sobre el ledger general (entry_notes / entry_note_items), en el
+ * almacen fijo de Magistrales, en vez de las tablas viejas magistral_incomes/magistral_income_items
+ * (ya retiradas). Los registros se identifican por el prefijo de codigo 'ING-MAG-' para no
+ * mezclarse con otras notas de entrada generales ni con las de produccion (OPP-MAG-) que
+ * tambien caen en el mismo almacen.
+ *
+ * El shape que expone `setPaginationInstance` se mantiene igual al que consumia el front
+ * (resources/js/Admin/Magistrales/Incomes.jsx), incluyendo campos derivados (no persistidos
+ * en entry_notes/entry_note_items) como item.description, item.price_with_igv, item.subtotal
+ * y note.subtotal/igv/total.
+ */
 class IncomeController extends BasicController
 {
     use RunsMagistralSaveInTransaction;
 
-    public $model = MagistralIncome::class;
-    public $reactView = 'Admin/Magistrales/Incomes';
-    public $prefix4filter = 'magistral_incomes';
+    private const CODE_PREFIX = 'ING-MAG-';
 
-    private array $itemsPayload = [];
+    public $model = EntryNote::class;
+    public $reactView = 'Admin/Magistrales/Incomes';
+    public $prefix4filter = 'entry_notes';
+
     private array $parsedItems = [];
 
     public function setReactViewProperties(Request $request)
@@ -36,21 +51,33 @@ class IncomeController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('magistral_incomes.*')
+        return $model::select('entry_notes.*')
+            ->selectRaw("(select coalesce(round(sum(sub.quantity * sub.cost_unit), 2), 0) from entry_note_items sub where sub.entry_note_id = entry_notes.id and sub.status = 1) as subtotal")
+            ->selectRaw('0 as igv')
+            ->selectRaw("(select coalesce(round(sum(sub.quantity * sub.cost_unit), 2), 0) from entry_note_items sub where sub.entry_note_id = entry_notes.id and sub.status = 1) as total")
+            ->where('entry_notes.warehouse_id', MagistralesWarehouse::id())
+            ->where('entry_notes.code', 'like', self::CODE_PREFIX . '%')
             ->with([
                 'business:id,name',
                 'warehouse:id,name',
                 'supplier:id,ruc,business_name',
-                'items:id,magistral_income_id,article_id,description,quantity,presentation,expiration_date,lot,price_without_igv,price_with_igv,subtotal,status',
+                'items' => function ($query) {
+                    $query->select('entry_note_items.*')
+                        ->selectRaw('(select a.name from articles a where a.id = entry_note_items.article_id) as description')
+                        ->selectRaw('entry_note_items.cost_unit as price_without_igv')
+                        ->selectRaw('entry_note_items.cost_unit as price_with_igv')
+                        ->selectRaw('round(entry_note_items.quantity * entry_note_items.cost_unit, 2) as subtotal')
+                        ->orderBy('entry_note_items.id');
+                },
                 'items.article:id,code,name',
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ])
-            ->leftJoin('businesses as business', 'business.id', '=', 'magistral_incomes.business_id')
-            ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'magistral_incomes.warehouse_id')
-            ->leftJoin('suppliers as supplier', 'supplier.id', '=', 'magistral_incomes.supplier_id')
-            ->leftJoin('users as creator', 'creator.id', '=', 'magistral_incomes.created_by')
-            ->leftJoin('users as updater', 'updater.id', '=', 'magistral_incomes.updated_by');
+            ->leftJoin('businesses as business', 'business.id', '=', 'entry_notes.business_id')
+            ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'entry_notes.warehouse_id')
+            ->leftJoin('suppliers as supplier', 'supplier.id', '=', 'entry_notes.supplier_id')
+            ->leftJoin('users as creator', 'creator.id', '=', 'entry_notes.created_by')
+            ->leftJoin('users as updater', 'updater.id', '=', 'entry_notes.updated_by');
     }
 
     public function beforeSave(Request $request)
@@ -60,99 +87,83 @@ class IncomeController extends BasicController
         $code = trim((string)($body['code'] ?? ''));
         if ($code === '') $code = $this->nextCode();
 
-        $exists = MagistralIncome::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
+        $exists = EntryNote::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
             ->when($id, fn($query) => $query->where('id', '!=', $id))
             ->exists();
         if ($exists) throw new \Exception('Ya existe un ingreso magistral con este codigo');
 
-        if (!$id) {
-            $body['created_by'] = Auth::id();
-            $body['status'] = true;
-        }
-
-        $body['updated_by'] = Auth::id();
-        $body['code'] = $code;
-        $body['purchase_order_code'] = trim((string)($body['purchase_order_code'] ?? '')) ?: null;
-        $body['document_type'] = trim((string)($body['document_type'] ?? '')) ?: null;
-        $body['document_series'] = trim((string)($body['document_series'] ?? '')) ?: null;
-        $body['document_sequence'] = trim((string)($body['document_sequence'] ?? '')) ?: null;
-        $body['guide_number'] = trim((string)($body['guide_number'] ?? '')) ?: null;
-        $body['guide_series'] = trim((string)($body['guide_series'] ?? '')) ?: null;
-        $body['guide_sequence'] = trim((string)($body['guide_sequence'] ?? '')) ?: null;
-        $body['guide_ruc'] = trim((string)($body['guide_ruc'] ?? '')) ?: null;
-        $body['guide_file_path'] = trim((string)($body['guide_file_path'] ?? '')) ?: null;
-        $body['business_id'] = MagistralesWarehouse::summary()['business_id'] ?? null;
-        if (!$body['business_id']) {
+        $businessId = MagistralesWarehouse::summary()['business_id'] ?? null;
+        if (!$businessId) {
             throw new \Exception('No se encontro la configuracion fija de Kamary Peru para Magistrales');
         }
-        $body['warehouse_id'] = MagistralesWarehouse::id();
-        $body['supplier_id'] = $this->toNullableInt($body['supplier_id'] ?? null);
-        $body['payment_method'] = trim((string)($body['payment_method'] ?? '')) ?: null;
-        $body['file_path'] = trim((string)($body['file_path'] ?? '')) ?: null;
-        $body['origin'] = trim((string)($body['origin'] ?? '')) ?: null;
-        $body['currency'] = trim((string)($body['currency'] ?? '')) ?: null;
-        $body['affects_igv'] = $this->toBoolean($body['affects_igv'] ?? false);
-        $body['issue_date'] = $this->normalizeDate($body['issue_date'] ?? null);
-        $body['observations'] = trim((string)($body['observations'] ?? '')) ?: null;
+        $warehouse = MagistralesWarehouse::warehouse();
 
-        $this->itemsPayload = is_array($request->items) ? $request->items : [];
-        $this->parsedItems = $this->parseItems($this->itemsPayload);
+        $this->parsedItems = $this->parseItems(is_array($request->items) ? $request->items : []);
         if (count($this->parsedItems) === 0) {
             throw new \Exception('Debes agregar al menos un articulo al ingreso');
         }
 
-        $body['subtotal'] = round(array_sum(array_column($this->parsedItems, 'price_without_total')), 2);
-        $body['total'] = round(array_sum(array_column($this->parsedItems, 'price_with_total')), 2);
-        $body['igv'] = $body['affects_igv'] ? round(max(0, $body['total'] - $body['subtotal']), 2) : 0;
+        $mapped = [
+            'code' => $code,
+            'business_id' => $businessId,
+            'business_branch_id' => $warehouse->business_branch_id,
+            'warehouse_id' => (int) $warehouse->id,
+            'supplier_id' => $this->toNullableInt($body['supplier_id'] ?? null),
+            'document_type' => trim((string)($body['document_type'] ?? '')) ?: null,
+            'document_series' => trim((string)($body['document_series'] ?? '')) ?: null,
+            'document_sequence' => trim((string)($body['document_sequence'] ?? '')) ?: null,
+            'document_file' => trim((string)($body['file_path'] ?? '')) ?: null,
+            'currency' => trim((string)($body['currency'] ?? '')) ?: 'PEN',
+            'observations' => trim((string)($body['observations'] ?? '')) ?: null,
+            'guide_series' => trim((string)($body['guide_series'] ?? '')) ?: null,
+            'guide_sequence' => trim((string)($body['guide_sequence'] ?? '')) ?: null,
+            'guide_ruc' => trim((string)($body['guide_ruc'] ?? '')) ?: null,
+            'guide_file' => trim((string)($body['guide_file_path'] ?? '')) ?: null,
+            'entry_date' => $this->normalizeDate($body['issue_date'] ?? null),
+            'entry_status' => 'approved',
+            'updated_by' => Auth::id(),
+        ];
 
-        unset($body['items']);
-
-        foreach ([
-            'purchase_order_code',
-            'guide_series',
-            'guide_sequence',
-            'guide_ruc',
-            'guide_file_path',
-            'payment_method',
-            'file_path',
-            'origin',
-            'currency',
-            'affects_igv',
-            'subtotal',
-            'igv',
-            'total',
-        ] as $column) {
-            if (!Schema::hasColumn('magistral_incomes', $column)) unset($body[$column]);
+        if ($id) $mapped['id'] = $id;
+        if (!$id) {
+            $mapped['created_by'] = Auth::id();
+            $mapped['status'] = true;
         }
 
-        return $body;
+        return $mapped;
     }
 
     public function afterSave(Request $request, object $jpa, bool $isNew)
     {
         DB::beginTransaction();
         try {
-            MagistralIncomeItem::where('magistral_income_id', $jpa->id)->delete();
+            if (!$jpa->code) {
+                $jpa->code = $this->nextCode();
+                $jpa->save();
+            }
 
+            EntryNoteItem::where('entry_note_id', $jpa->id)->delete();
+
+            $warehouseId = (int) $jpa->warehouse_id;
             foreach ($this->parsedItems as $item) {
-                MagistralIncomeItem::create([
-                    'magistral_income_id' => $jpa->id,
+                EntryNoteItem::create([
+                    'entry_note_id' => $jpa->id,
                     'article_id' => $item['article_id'],
-                    'description' => $item['description'],
-                    'quantity' => $item['quantity'],
-                    'presentation' => $item['presentation'],
-                    'expiration_date' => $item['expiration_date'],
+                    'warehouse_id' => $warehouseId,
                     'lot' => $item['lot'],
-                    'price_without_igv' => $item['price_without_igv'],
-                    'price_with_igv' => $item['price_with_igv'],
-                    'subtotal' => $item['subtotal'],
+                    'batch_code' => $item['lot'],
+                    'expiration_date' => $item['expiration_date'],
+                    'quantity' => $item['quantity'],
+                    'requested_quantity' => $item['quantity'],
+                    'received_quantity' => $item['quantity'],
+                    'cost_unit' => $item['cost_unit'],
+                    'total' => round($item['quantity'] * $item['cost_unit'], 2),
+                    'stock' => 0,
                     'status' => true,
                 ]);
             }
 
             DB::commit();
-
-            MagistralLedgerSync::syncIncome((int) $jpa->id);
 
             return $jpa->fresh(['business', 'warehouse', 'supplier', 'items.article', 'creator', 'updater']);
         } catch (\Throwable $th) {
@@ -163,35 +174,38 @@ class IncomeController extends BasicController
 
     public function delete(Request $request, string $id)
     {
-        DB::beginTransaction();
+        $response = new Response();
         try {
-            $response = parent::delete($request, $id);
-            $statusCode = method_exists($response, 'getStatusCode') ? $response->getStatusCode() : 500;
+            $updated = EntryNote::where('id', $id)
+                ->where('code', 'like', self::CODE_PREFIX . '%')
+                ->update([
+                    'status' => null,
+                    'entry_status' => 'cancelled',
+                    'updated_by' => Auth::id(),
+                ]);
+            if (!$updated) throw new \Exception('No se ha eliminado ningun registro');
 
-            if ($statusCode >= 400) {
-                DB::rollBack();
-                return $response;
-            }
-
-            MagistralLedgerSync::removeIncome((int) $id);
-            DB::commit();
-
-            return $response;
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
         } catch (\Throwable $th) {
-            DB::rollBack();
-            throw $th;
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
         }
     }
 
     private function nextCode(): string
     {
-        $next = 1;
-        $latest = MagistralIncome::query()->latest('id')->value('code');
-        if ($latest && preg_match('/(\d+)$/', $latest, $matches)) {
-            $next = ((int)$matches[1]) + 1;
-        }
+        // entry_notes mezcla varias familias de codigo (ING-MAG-, OPP-MAG-, notas generales)
+        // en la misma tabla, asi que el id mas alto no necesariamente tiene el numero de
+        // codigo mas alto: se calcula el maximo real sobre el sufijo numerico de todos los
+        // codigos con este prefijo en vez de asumir el orden de insercion.
+        $max = (int) EntryNote::where('code', 'like', self::CODE_PREFIX . '%')
+            ->selectRaw('MAX(CAST(SUBSTRING(code, ?) AS UNSIGNED)) as max_num', [strlen(self::CODE_PREFIX) + 1])
+            ->value('max_num');
 
-        return 'ING-MAG-' . str_pad((string)$next, 6, '0', STR_PAD_LEFT);
+        return self::CODE_PREFIX . str_pad((string)($max + 1), 6, '0', STR_PAD_LEFT);
     }
 
     private function normalizeDate($value): ?string
@@ -222,15 +236,6 @@ class IncomeController extends BasicController
         return (float)$text;
     }
 
-    private function toBoolean($value): bool
-    {
-        if (is_bool($value)) return $value;
-        if (is_numeric($value)) return (int)$value !== 0;
-
-        $normalized = mb_strtolower(trim((string)$value));
-        return in_array($normalized, ['1', 'true', 'si', 'yes', 'y', 'activo', 'activa', 'on'], true);
-    }
-
     private function parseItems(array $items): array
     {
         $parsed = [];
@@ -239,37 +244,28 @@ class IncomeController extends BasicController
             if (!is_array($item)) continue;
 
             $articleId = $this->toNullableInt($item['article_id'] ?? null);
-            $description = trim((string)($item['description'] ?? ''));
-            if ($articleId) {
-                $article = Article::query()
-                    ->when(Schema::hasColumn('articles', 'module_scope'), fn($query) => $query->where('module_scope', 'magistrales'))
-                    ->findOrFail($articleId);
-                if ($description === '') $description = $article->name;
+            if (!$articleId) {
+                throw new \Exception('Debes seleccionar un articulo para el item ' . ($index + 1));
             }
+
+            Article::query()
+                ->when(Schema::hasColumn('articles', 'module_scope'), fn($query) => $query->where('module_scope', 'magistrales'))
+                ->findOrFail($articleId);
 
             $quantity = $this->toNullableDecimal($item['quantity'] ?? null) ?? 0;
             $priceWithoutIgv = $this->toNullableDecimal($item['price_without_igv'] ?? null) ?? 0;
-            $priceWithIgv = $this->toNullableDecimal($item['price_with_igv'] ?? null) ?? 0;
-            $presentation = trim((string)($item['presentation'] ?? '')) ?: null;
             $expirationDate = $this->normalizeDate($item['expiration_date'] ?? null);
             $lot = trim((string)($item['lot'] ?? '')) ?: null;
 
-            if (!$articleId && $description === '') continue;
             if ($quantity <= 0) throw new \Exception('La cantidad del item ' . ($index + 1) . ' debe ser mayor a 0');
-            if ($priceWithoutIgv < 0 || $priceWithIgv < 0) throw new \Exception('Los precios del item ' . ($index + 1) . ' no pueden ser negativos');
+            if ($priceWithoutIgv < 0) throw new \Exception('El precio del item ' . ($index + 1) . ' no puede ser negativo');
 
             $parsed[] = [
                 'article_id' => $articleId,
-                'description' => $description,
                 'quantity' => $quantity,
-                'presentation' => $presentation,
-                'expiration_date' => $expirationDate,
+                'cost_unit' => $priceWithoutIgv,
                 'lot' => $lot,
-                'price_without_igv' => $priceWithoutIgv,
-                'price_with_igv' => $priceWithIgv,
-                'price_without_total' => round($quantity * $priceWithoutIgv, 2),
-                'price_with_total' => round($quantity * $priceWithIgv, 2),
-                'subtotal' => round($quantity * $priceWithIgv, 2),
+                'expiration_date' => $expirationDate,
             ];
         }
 

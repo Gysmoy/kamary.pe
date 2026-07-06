@@ -387,14 +387,16 @@ class DashboardController extends BasicController
                 ]));
         }
 
-        if ($this->hasTable('magistral_incomes')) {
-            $activities = $activities->merge(DB::table('magistral_incomes')
-                ->whereNotNull('status')
-                ->whereDate('issue_date', '>=', $startDate)
-                ->whereDate('issue_date', '<=', $endDate)
-                ->orderByDesc('issue_date')
+        if ($this->hasTable('entry_notes')) {
+            $activities = $activities->merge(DB::table('entry_notes as note')
+                ->leftJoin(DB::raw('(select entry_note_id, coalesce(sum(quantity * cost_unit), 0) as total from entry_note_items group by entry_note_id) as agg'), 'agg.entry_note_id', '=', 'note.id')
+                ->whereNotNull('note.status')
+                ->where('note.code', 'like', 'ING-MAG-%')
+                ->whereDate('note.entry_date', '>=', $startDate)
+                ->whereDate('note.entry_date', '<=', $endDate)
+                ->orderByDesc('note.entry_date')
                 ->limit(8)
-                ->get(['code', 'issue_date as date', 'origin as subject', 'total'])
+                ->get(['note.code as code', 'note.entry_date as date', 'note.observations as subject', DB::raw('COALESCE(agg.total, 0) as total')])
                 ->map(fn($row) => [
                     'type' => 'Ingreso',
                     'code' => $row->code,
@@ -404,19 +406,20 @@ class DashboardController extends BasicController
                 ]));
         }
 
-        if ($this->hasTable('magistral_outputs')) {
-            $activities = $activities->merge(DB::table('magistral_outputs')
+        if ($this->hasTable('exit_notes')) {
+            $activities = $activities->merge(DB::table('exit_notes')
                 ->whereNotNull('status')
-                ->whereDate('output_date', '>=', $startDate)
-                ->whereDate('output_date', '<=', $endDate)
-                ->orderByDesc('output_date')
+                ->where('code', 'like', 'SAL-MAG-%')
+                ->whereDate('exit_date', '>=', $startDate)
+                ->whereDate('exit_date', '<=', $endDate)
+                ->orderByDesc('exit_date')
                 ->limit(8)
-                ->get(['code', 'output_date as date', 'reason as subject'])
+                ->get(['code', 'exit_date as date', 'motives'])
                 ->map(fn($row) => [
                     'type' => 'Salida',
                     'code' => $row->code,
                     'date' => $row->date,
-                    'subject' => $row->subject ?: 'Sin motivo',
+                    'subject' => $this->firstMotive($row->motives) ?: 'Sin motivo',
                     'amount' => null,
                 ]));
         }
@@ -439,37 +442,51 @@ class DashboardController extends BasicController
 
     private function incomeTotals(string $startDate, string $endDate): array
     {
-        if (!$this->hasTable('magistral_incomes')) return ['count' => 0, 'value' => 0];
+        if (!$this->hasTable('entry_notes')) return ['count' => 0, 'value' => 0];
 
-        $query = DB::table('magistral_incomes')
+        $count = (int) DB::table('entry_notes')
             ->whereNotNull('status')
-            ->whereDate('issue_date', '>=', $startDate)
-            ->whereDate('issue_date', '<=', $endDate);
+            ->where('code', 'like', 'ING-MAG-%')
+            ->whereDate('entry_date', '>=', $startDate)
+            ->whereDate('entry_date', '<=', $endDate)
+            ->count();
 
-        return [
-            'count' => (int) (clone $query)->count(),
-            'value' => (float) (clone $query)->sum('total'),
-        ];
+        $value = 0;
+        if ($this->hasTable('entry_note_items')) {
+            $value = (float) DB::table('entry_note_items as item')
+                ->join('entry_notes as note', 'note.id', '=', 'item.entry_note_id')
+                ->whereNotNull('note.status')
+                ->whereNotNull('item.status')
+                ->where('note.code', 'like', 'ING-MAG-%')
+                ->whereDate('note.entry_date', '>=', $startDate)
+                ->whereDate('note.entry_date', '<=', $endDate)
+                ->selectRaw('COALESCE(SUM(item.quantity * item.cost_unit), 0) as value')
+                ->value('value');
+        }
+
+        return ['count' => $count, 'value' => $value];
     }
 
     private function outputTotals(string $startDate, string $endDate): array
     {
-        if (!$this->hasTable('magistral_outputs')) return ['count' => 0, 'units' => 0];
+        if (!$this->hasTable('exit_notes')) return ['count' => 0, 'units' => 0];
 
-        $count = (int) DB::table('magistral_outputs')
+        $count = (int) DB::table('exit_notes')
             ->whereNotNull('status')
-            ->whereDate('output_date', '>=', $startDate)
-            ->whereDate('output_date', '<=', $endDate)
+            ->where('code', 'like', 'SAL-MAG-%')
+            ->whereDate('exit_date', '>=', $startDate)
+            ->whereDate('exit_date', '<=', $endDate)
             ->count();
 
         $units = 0;
-        if ($this->hasTable('magistral_output_items')) {
-            $units = (float) DB::table('magistral_output_items as item')
-                ->join('magistral_outputs as output', 'output.id', '=', 'item.magistral_output_id')
-                ->whereNotNull('output.status')
+        if ($this->hasTable('exit_note_items')) {
+            $units = (float) DB::table('exit_note_items as item')
+                ->join('exit_notes as note', 'note.id', '=', 'item.exit_note_id')
+                ->whereNotNull('note.status')
                 ->whereNotNull('item.status')
-                ->whereDate('output.output_date', '>=', $startDate)
-                ->whereDate('output.output_date', '<=', $endDate)
+                ->where('note.code', 'like', 'SAL-MAG-%')
+                ->whereDate('note.exit_date', '>=', $startDate)
+                ->whereDate('note.exit_date', '<=', $endDate)
                 ->sum('item.quantity');
         }
 
@@ -609,6 +626,12 @@ class DashboardController extends BasicController
             'totalValue' => 0,
             'statusRows' => [],
         ];
+    }
+
+    private function firstMotive(?string $json): ?string
+    {
+        $decoded = json_decode((string) $json, true);
+        return is_array($decoded) ? ($decoded[0] ?? null) : null;
     }
 
     private function hasTable(string $table): bool

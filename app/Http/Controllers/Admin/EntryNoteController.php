@@ -10,6 +10,7 @@ use App\Models\Laboratory;
 use App\Models\Warehouse;
 use App\Services\StockService;
 use App\Support\BusinessScope;
+use App\Support\MagistralesWarehouse;
 use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -110,6 +111,14 @@ class EntryNoteController extends BasicController
             ->leftJoin('clients as client', 'client.id', '=', 'entry_notes.client_id')
             ->leftJoin('users as creator', 'creator.id', '=', 'entry_notes.created_by')
             ->leftJoin('users as updater', 'updater.id', '=', 'entry_notes.updated_by');
+
+        // El almacen fijo de Magistrales guarda sus propias notas de entrada (ver
+        // Admin\Magistrales\IncomeController) directamente en esta misma tabla; se excluyen
+        // del listado general para que no aparezcan mezcladas con las de los demas almacenes.
+        $magistralesWarehouseId = MagistralesWarehouse::idOrNull();
+        if ($magistralesWarehouseId) {
+            $query->where('entry_notes.warehouse_id', '!=', $magistralesWarehouseId);
+        }
 
         $scopeKey = BusinessScope::scopedKeyForRequest(request())
             ?: ($isStorage ? BusinessScope::KAMARY_MEDICALS : BusinessScope::KAMARY_PERU);

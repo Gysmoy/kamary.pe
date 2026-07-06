@@ -5,12 +5,11 @@ namespace App\Http\Controllers\Admin\Magistrales;
 use App\Http\Controllers\BasicController;
 use App\Http\Controllers\Admin\Magistrales\Concerns\RunsMagistralSaveInTransaction;
 use App\Models\Article;
-use App\Models\MagistralOutput;
-use App\Models\MagistralOutputItem;
+use App\Models\ExitNote;
+use App\Models\ExitNoteItem;
 use App\Models\Warehouse;
 use App\Support\MagistralesWarehouse;
 use App\Support\MagistralesStock;
-use App\Support\MagistralLedgerSync;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -19,9 +18,26 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\Response;
 
+/**
+ * Magistrales - Salidas.
+ *
+ * Guarda/lee directamente sobre el ledger general (exit_notes / exit_note_items) en vez de las
+ * tablas viejas magistral_outputs/magistral_output_items (ya retiradas). Los registros se
+ * identifican por el prefijo de codigo 'SAL-MAG-' para no mezclarse con otras notas de salida
+ * generales ni con las de venta (VTA-MAG-) / consumo de produccion (OPC-MAG-) que tambien caen
+ * en el mismo almacen.
+ *
+ * exit_notes no tiene columnas propias para "motivo" (usa `motives` json), "destino" de
+ * transferencia (usa `client_name` como etiqueta libre) ni `destination_warehouse_id`; este
+ * ultimo se guarda dentro de `external_payload` (columna generica ya existente en exit_notes)
+ * solo para poder re-seleccionar el almacen destino al editar una transferencia, sin necesidad
+ * de una migracion nueva.
+ */
 class OutputController extends BasicController
 {
     use RunsMagistralSaveInTransaction;
+
+    private const CODE_PREFIX = 'SAL-MAG-';
 
     private const REASON_TRANSFER = 'TRANSFERENCIA';
     private const REASON_OPTIONS = [
@@ -33,9 +49,9 @@ class OutputController extends BasicController
         'PREPARACION DE BASE CREMA NO IONICA',
     ];
 
-    public $model = MagistralOutput::class;
+    public $model = ExitNote::class;
     public $reactView = 'Admin/Magistrales/Outputs';
-    public $prefix4filter = 'magistral_outputs';
+    public $prefix4filter = 'exit_notes';
 
     private array $parsedItems = [];
 
@@ -55,24 +71,33 @@ class OutputController extends BasicController
 
     public function setPaginationInstance(string $model)
     {
-        return $model::select('magistral_outputs.*')
+        return $model::select('exit_notes.*')
+            ->selectRaw('exit_notes.client_name as destination')
+            ->selectRaw('JSON_UNQUOTE(JSON_EXTRACT(exit_notes.motives, \'$[0]\')) as reason')
+            ->selectRaw('JSON_UNQUOTE(JSON_EXTRACT(exit_notes.external_payload, \'$.destination_warehouse_id\')) as destination_warehouse_id')
+            ->where('exit_notes.code', 'like', self::CODE_PREFIX . '%')
             ->with([
                 'originWarehouse:id,name',
                 'originWarehouse.branch:id,name,business_id',
                 'originWarehouse.branch.business:id,name',
-                'destinationWarehouse:id,name,business_branch_id',
-                'destinationWarehouse.branch:id,name,business_id',
-                'items:id,magistral_output_id,article_id,code,name,lot,expiration_date,stock,unit_label,quantity,total,status',
+                'items' => function ($query) {
+                    $query->select('exit_note_items.*')
+                        ->selectRaw('exit_note_items.batch_code as lot')
+                        ->selectRaw('(select a.code from articles a where a.id = exit_note_items.article_id) as code')
+                        ->selectRaw('(select a.name from articles a where a.id = exit_note_items.article_id) as name')
+                        ->selectRaw('(select coalesce(u.symbol, u.name) from articles a left join units u on u.id = a.unit_id where a.id = exit_note_items.article_id) as unit_label')
+                        ->orderBy('exit_note_items.id');
+                },
                 'items.article:id,code,name,unit_id,article_type',
                 'items.article.unit:id,name,symbol',
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ])
-            ->leftJoin('warehouses as origin_warehouse', 'origin_warehouse.id', '=', 'magistral_outputs.origin_warehouse_id')
+            ->leftJoin('warehouses as origin_warehouse', 'origin_warehouse.id', '=', 'exit_notes.warehouse_id')
             ->leftJoin('business_branches as origin_branch', 'origin_branch.id', '=', 'origin_warehouse.business_branch_id')
             ->leftJoin('businesses as origin_business', 'origin_business.id', '=', 'origin_branch.business_id')
-            ->leftJoin('users as creator', 'creator.id', '=', 'magistral_outputs.created_by')
-            ->leftJoin('users as updater', 'updater.id', '=', 'magistral_outputs.updated_by');
+            ->leftJoin('users as creator', 'creator.id', '=', 'exit_notes.created_by')
+            ->leftJoin('users as updater', 'updater.id', '=', 'exit_notes.updated_by');
     }
 
     public function beforeSave(Request $request)
@@ -82,7 +107,7 @@ class OutputController extends BasicController
         $code = trim((string)($body['code'] ?? ''));
         if ($code === '') $code = $this->nextCode();
 
-        $exists = MagistralOutput::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
+        $exists = ExitNote::whereRaw('LOWER(code) = ?', [mb_strtolower($code)])
             ->when($id, fn($query) => $query->where('id', '!=', $id))
             ->exists();
         if ($exists) throw new \Exception('Ya existe una salida magistral con este codigo');
@@ -97,44 +122,59 @@ class OutputController extends BasicController
             throw new \Exception('Debes agregar al menos un articulo a la salida');
         }
 
-        if (!$id) {
-            $body['created_by'] = Auth::id();
-            $body['status'] = true;
-        }
-
-        $body['updated_by'] = Auth::id();
-        $body['code'] = $code;
-        $body['origin_warehouse_id'] = $warehouseId;
-        $body['reason'] = $reason;
-        $body['observations'] = trim((string)($body['observations'] ?? '')) ?: null;
-        $body['output_date'] = $this->normalizeDate($body['output_date'] ?? now()->toDateString());
-        if ($body['output_date'] === null) throw new \Exception('La fecha de salida es obligatoria');
+        $outputDate = $this->normalizeDate($body['output_date'] ?? now()->toDateString());
+        if ($outputDate === null) throw new \Exception('La fecha de salida es obligatoria');
 
         [$destinationWarehouseId, $destinationLabel] = $this->resolveDestination($body, $warehouseId, $reason);
-        $body['destination_warehouse_id'] = $destinationWarehouseId;
-        $body['destination'] = $destinationLabel;
 
-        unset($body['items']);
+        $businessId = MagistralesWarehouse::summary()['business_id'] ?? null;
+        if (!$businessId) {
+            throw new \Exception('No se encontro la configuracion fija de Kamary Peru para Magistrales');
+        }
 
-        return $body;
+        $mapped = [
+            'code' => $code,
+            'business_id' => $businessId,
+            'business_branch_id' => $originWarehouse->business_branch_id,
+            'warehouse_id' => $warehouseId,
+            'client_name' => $destinationLabel ?: null,
+            'motives' => [$reason],
+            'exit_date' => $outputDate,
+            'observations' => trim((string)($body['observations'] ?? '')) ?: null,
+            'exit_status' => 'approved',
+            'external_payload' => $destinationWarehouseId ? ['destination_warehouse_id' => $destinationWarehouseId] : null,
+            'updated_by' => Auth::id(),
+        ];
+
+        if ($id) $mapped['id'] = $id;
+        if (!$id) {
+            $mapped['created_by'] = Auth::id();
+            $mapped['status'] = true;
+        }
+
+        return $mapped;
     }
 
     public function afterSave(Request $request, object $jpa, bool $isNew)
     {
         DB::beginTransaction();
         try {
-            MagistralOutputItem::where('magistral_output_id', $jpa->id)->delete();
+            if (!$jpa->code) {
+                $jpa->code = $this->nextCode();
+                $jpa->save();
+            }
 
+            ExitNoteItem::where('exit_note_id', $jpa->id)->delete();
+
+            $warehouseId = (int) $jpa->warehouse_id;
             foreach ($this->parsedItems as $item) {
-                MagistralOutputItem::create([
-                    'magistral_output_id' => $jpa->id,
+                ExitNoteItem::create([
+                    'exit_note_id' => $jpa->id,
                     'article_id' => $item['article_id'],
-                    'code' => $item['code'],
-                    'name' => $item['name'],
-                    'lot' => $item['lot'],
+                    'warehouse_id' => $warehouseId,
+                    'batch_code' => $item['lot'],
                     'expiration_date' => $item['expiration_date'],
                     'stock' => $item['stock'],
-                    'unit_label' => $item['unit_label'],
                     'quantity' => $item['quantity'],
                     'total' => $item['total'],
                     'status' => true,
@@ -143,9 +183,7 @@ class OutputController extends BasicController
 
             DB::commit();
 
-            MagistralLedgerSync::syncOutput((int) $jpa->id);
-
-            return $jpa->fresh(['originWarehouse', 'destinationWarehouse.branch', 'items.article.unit', 'creator', 'updater']);
+            return $jpa->fresh(['originWarehouse', 'items.article.unit', 'creator', 'updater']);
         } catch (\Throwable $th) {
             DB::rollBack();
             throw $th;
@@ -154,23 +192,24 @@ class OutputController extends BasicController
 
     public function delete(Request $request, string $id)
     {
-        DB::beginTransaction();
+        $response = new Response();
         try {
-            $response = parent::delete($request, $id);
-            $statusCode = method_exists($response, 'getStatusCode') ? $response->getStatusCode() : 500;
+            $updated = ExitNote::where('id', $id)
+                ->where('code', 'like', self::CODE_PREFIX . '%')
+                ->update([
+                    'status' => null,
+                    'exit_status' => 'cancelled',
+                    'updated_by' => Auth::id(),
+                ]);
+            if (!$updated) throw new \Exception('No se ha eliminado ningun registro');
 
-            if ($statusCode >= 400) {
-                DB::rollBack();
-                return $response;
-            }
-
-            MagistralLedgerSync::removeOutput((int) $id);
-            DB::commit();
-
-            return $response;
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
         } catch (\Throwable $th) {
-            DB::rollBack();
-            throw $th;
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
         }
     }
 
@@ -249,15 +288,16 @@ class OutputController extends BasicController
 
         $lotRows = collect();
 
-        if (Schema::hasTable('magistral_income_items') && Schema::hasTable('magistral_incomes')) {
+        if (Schema::hasTable('entry_note_items') && Schema::hasTable('entry_notes')) {
             $lotRows = $lotRows->merge(
-                DB::table('magistral_income_items as item')
-                    ->join('magistral_incomes as income', 'income.id', '=', 'item.magistral_income_id')
-                    ->where('income.warehouse_id', $warehouseId)
-                    ->whereNotNull('income.status')
+                DB::table('entry_note_items as item')
+                    ->join('entry_notes as note', 'note.id', '=', 'item.entry_note_id')
+                    ->where('item.warehouse_id', $warehouseId)
+                    ->where('note.entry_status', 'approved')
+                    ->whereNotNull('note.status')
                     ->whereNotNull('item.status')
                     ->whereNotNull('item.article_id')
-                    ->select('item.article_id', 'item.lot', 'item.expiration_date')
+                    ->selectRaw('item.article_id, COALESCE(item.lot, item.batch_code) as lot, item.expiration_date')
                     ->distinct()
                     ->get()
             );
@@ -394,24 +434,29 @@ class OutputController extends BasicController
     {
         if (!$outputId) return 0;
 
-        return (float) DB::table('magistral_output_items as item')
-            ->join('magistral_outputs as output', 'output.id', '=', 'item.magistral_output_id')
-            ->where('output.id', $outputId)
+        return (float) DB::table('exit_note_items as item')
+            ->join('exit_notes as note', 'note.id', '=', 'item.exit_note_id')
+            ->where('note.id', $outputId)
             ->where('item.article_id', $articleId)
-            ->whereNotNull('output.status')
+            ->whereNotNull('note.status')
             ->whereNotNull('item.status')
-            ->when($warehouseId, fn($query) => $query->where('output.origin_warehouse_id', $warehouseId))
-            ->when($lot !== null, fn($query) => $query->where('item.lot', $lot))
+            ->when($warehouseId, fn($query) => $query->where('item.warehouse_id', $warehouseId))
+            ->when($lot !== null, fn($query) => $query->where('item.batch_code', $lot))
             ->when($expirationDate !== null, fn($query) => $query->whereDate('item.expiration_date', $expirationDate))
             ->sum('item.quantity');
     }
 
     private function nextCode(): string
     {
-        $next = 1;
-        $latest = MagistralOutput::query()->latest('id')->value('code');
-        if ($latest && preg_match('/(\d+)$/', $latest, $matches)) $next = ((int)$matches[1]) + 1;
-        return 'SAL-MAG-' . str_pad((string)$next, 6, '0', STR_PAD_LEFT);
+        // exit_notes mezcla varias familias de codigo (SAL-MAG-, VTA-MAG-, OPC-MAG-, notas
+        // generales) en la misma tabla, asi que el id mas alto no necesariamente tiene el
+        // numero de codigo mas alto: se calcula el maximo real sobre el sufijo numerico de
+        // todos los codigos con este prefijo en vez de asumir el orden de insercion.
+        $max = (int) ExitNote::where('code', 'like', self::CODE_PREFIX . '%')
+            ->selectRaw('MAX(CAST(SUBSTRING(code, ?) AS UNSIGNED)) as max_num', [strlen(self::CODE_PREFIX) + 1])
+            ->value('max_num');
+
+        return self::CODE_PREFIX . str_pad((string)($max + 1), 6, '0', STR_PAD_LEFT);
     }
 
     private function resolveDestination(array $body, int $originWarehouseId, string $reason): array

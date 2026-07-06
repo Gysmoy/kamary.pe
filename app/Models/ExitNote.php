@@ -56,6 +56,15 @@ class ExitNote extends Model
         return $this->belongsTo(Warehouse::class);
     }
 
+    /**
+     * Alias de `warehouse()` usado por Magistrales\OutputController para exponer el mismo
+     * nombre de relacion ("originWarehouse") que consumia el viejo modelo MagistralOutput.
+     */
+    public function originWarehouse()
+    {
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
+    }
+
     public function client()
     {
         return $this->belongsTo(Client::class);
