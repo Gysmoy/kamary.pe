@@ -10,6 +10,7 @@ use App\Models\MagistralOutputItem;
 use App\Models\Warehouse;
 use App\Support\MagistralesWarehouse;
 use App\Support\MagistralesStock;
+use App\Support\MagistralLedgerSync;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -141,7 +142,32 @@ class OutputController extends BasicController
             }
 
             DB::commit();
+
+            MagistralLedgerSync::syncOutput((int) $jpa->id);
+
             return $jpa->fresh(['originWarehouse', 'destinationWarehouse.branch', 'items.article.unit', 'creator', 'updater']);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            throw $th;
+        }
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        DB::beginTransaction();
+        try {
+            $response = parent::delete($request, $id);
+            $statusCode = method_exists($response, 'getStatusCode') ? $response->getStatusCode() : 500;
+
+            if ($statusCode >= 400) {
+                DB::rollBack();
+                return $response;
+            }
+
+            MagistralLedgerSync::removeOutput((int) $id);
+            DB::commit();
+
+            return $response;
         } catch (\Throwable $th) {
             DB::rollBack();
             throw $th;

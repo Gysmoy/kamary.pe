@@ -168,12 +168,6 @@ class KardexController extends BasicController
                 ->when($warehouseId, fn($query) => $query->where('stock.warehouse_id', $warehouseId))
                 ->when($laboratoryId, fn($query) => $query->where('article.laboratory_id', $laboratoryId))
                 ->when($articleId, fn($query) => $query->where('article.id', $articleId))
-                ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
-                    $query->where(function ($scope) {
-                        $scope->where('article.module_scope', $this->moduleScope)
-                            ->orWhereNull('article.module_scope');
-                    });
-                })
                 ->selectRaw("
                     CONCAT(stock.article_id, '-', stock.warehouse_id) as id,
                     stock.article_id,

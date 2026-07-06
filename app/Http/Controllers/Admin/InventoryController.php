@@ -463,12 +463,6 @@ class InventoryController extends BasicController
             })
             ->where('stock.warehouse_id', $warehouseId)
             ->when($laboratoryId, fn($query) => $query->where('article.laboratory_id', $laboratoryId))
-            ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
-                $query->where(function ($scope) {
-                    $scope->where('article.module_scope', 'standard')
-                        ->orWhereNull('article.module_scope');
-                });
-            })
             ->selectRaw("
                 MIN(stock.source_key) as source_key,
                 stock.article_id,
@@ -515,12 +509,6 @@ class InventoryController extends BasicController
             ->whereNotNull('status')
             ->when($laboratoryId, fn($query) => $query->where('laboratory_id', $laboratoryId))
             ->when(count($articleIdsWithStock) > 0, fn($query) => $query->whereNotIn('id', $articleIdsWithStock))
-            ->when(Schema::hasColumn('articles', 'module_scope'), function ($query) {
-                $query->where(function ($scope) {
-                    $scope->where('module_scope', 'standard')
-                        ->orWhereNull('module_scope');
-                });
-            })
             ->orderBy('name')
             ->get(['id', 'warehouse_id', 'code', 'name', 'laboratory_id', 'unit_id'])
             ->map(function (Article $article, $index) use ($warehouseId, $rows) {

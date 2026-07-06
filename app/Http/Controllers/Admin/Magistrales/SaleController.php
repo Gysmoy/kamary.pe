@@ -9,6 +9,7 @@ use App\Models\MagistralSale;
 use App\Models\MagistralSaleItem;
 use App\Support\MagistralesWarehouse;
 use App\Support\MagistralesStock;
+use App\Support\MagistralLedgerSync;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -166,7 +167,32 @@ class SaleController extends BasicController
             }
 
             DB::commit();
+
+            MagistralLedgerSync::syncSale((int) $jpa->id);
+
             return $jpa->fresh(['business', 'items.article.unit', 'items.warehouse', 'creator', 'updater']);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            throw $th;
+        }
+    }
+
+    public function delete(Request $request, string $id)
+    {
+        DB::beginTransaction();
+        try {
+            $response = parent::delete($request, $id);
+            $statusCode = method_exists($response, 'getStatusCode') ? $response->getStatusCode() : 500;
+
+            if ($statusCode >= 400) {
+                DB::rollBack();
+                return $response;
+            }
+
+            MagistralLedgerSync::removeSale((int) $id);
+            DB::commit();
+
+            return $response;
         } catch (\Throwable $th) {
             DB::rollBack();
             throw $th;
