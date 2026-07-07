@@ -447,17 +447,32 @@ class StorageServiceImportSeeder extends Seeder
             $map[$key] = (int) $warehouse->id;
         }
 
-        // Deja SOLO los 6 almacenes del dump: desactiva (status=null, reversible)
-        // los demas almacenes activos de kamary_medicals que no son del dump.
+        // Deja SOLO los 6 almacenes del dump: ELIMINA (hard delete) los demas
+        // almacenes de kamary_medicals que no son del dump. Como el wipe previo ya
+        // borro las notas/despachos/OS de storage, no deberian tener referencias.
+        // Fallback: si alguno sigue referenciado (FK), se desactiva (status=null)
+        // para no romper integridad.
         $keepIds = array_values($map);
         if (!empty($keepIds)) {
-            Warehouse::query()
+            $toRemove = Warehouse::query()
                 ->whereHas('branch.business', function ($q) {
                     $q->where('business_key', BusinessScope::KAMARY_MEDICALS);
                 })
-                ->whereNotNull('status')
                 ->whereNotIn('id', $keepIds)
-                ->update(['status' => null, 'updated_by' => $this->userId]);
+                ->pluck('id')
+                ->all();
+
+            foreach ($toRemove as $warehouseId) {
+                $this->deleteByColumnIn('warehouse_locations', 'warehouse_id', [$warehouseId]);
+                try {
+                    Warehouse::query()->whereKey($warehouseId)->delete();
+                } catch (\Throwable $e) {
+                    Warehouse::query()->whereKey($warehouseId)->update([
+                        'status' => null,
+                        'updated_by' => $this->userId,
+                    ]);
+                }
+            }
         }
 
         return $map;
