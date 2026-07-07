@@ -21,20 +21,20 @@ use Illuminate\Support\Facades\Schema;
  *   - database/data/kamary_peru_productos.json  (catalogo comercial + magistrales)
  *   - database/data/kamary_peru_series.json     (series de documentos por empresa)
  *
- * Efecto sobre el catalogo (REVERSIBLE):
- *   - Deja ACTIVOS solo los productos del dump. El dump trae 108 filas = 92 codigos
- *     distintos (66 standard + 26 magistrales; 10 codigos se repiten por lote). El
- *     catalogo queda con esos ~92 productos activos.
- *   - "Elimina" (soft-delete: status=null, como el boton Eliminar de la app) los
- *     demas articulos standard (y NULL) y magistrales de Kamary Peru -> desaparecen
- *     del catalogo pero NO se borran filas ni se rompen pedidos/compras/inventarios.
- *   - NO toca el modulo Muestras.
+ * PURGA FISICA IRREVERSIBLE (borrado de raiz). Deja SOLO la data del dump:
+ *   - Conserva los ~92 productos del dump (66 standard + 26 magistrales; el dump trae
+ *     108 filas = 92 codigos, 10 se repiten por lote) y los 3 almacenes de marca.
+ *   - BORRA fisicamente (FOREIGN_KEY_CHECKS=0, acotado a kamary_peru): los articulos
+ *     standard/magistrales/NULL que no son del dump (+ presentaciones/lotes), todo el
+ *     transaccional demo (pedidos, compras, recepciones, listas de precio, despachos,
+ *     guias, conteos, notas de entrada/salida, facturacion, CxP/CxC, actividades,
+ *     take/sample orders) y los almacenes demo.
+ *   - VACIA los almacenes fijos de Muestras y Magistrales (los deja para recargar
+ *     data real). Los 26 productos magistrales del dump se conservan.
+ *   - NO toca kamary_medicals (almacenamiento).
  *
- * Ademas (NO reversible):
- *   - Crea los almacenes de marca (GLOBAL GREEN / PHARMA SOLUTIONS / PHARMARIS).
- *   - Setea las series de documentos en las sedes comerciales.
- *   - Crea usuarios nuevos (clave 4ccessme + rol Admin). A las cuentas ya
- *     existentes NO les toca password/scope: solo les concede Admin.
+ * Ademas: crea usuarios nuevos (clave 4ccessme + rol Admin; a los existentes solo
+ * les concede Admin, sin pisar password) y setea las series por sede comercial.
  *
  * Ejecutar:  php artisan db:seed --class=KamaryPeruImportSeeder
  * Idempotente y re-ejecutable.
@@ -94,10 +94,14 @@ class KamaryPeruImportSeeder extends Seeder
             $principleIds = $this->syncActivePrinciples($labIds);
             $unitIds = $this->syncUnits($plan['units']);
             $warehouseIds = $this->syncBrandWarehouses($plan['warehouses'], $branch->id);
-            $this->softDeleteDemoWarehouses($warehouseIds);
 
+            // 1) Asegura los productos del dump (activos).
             $kept = $this->syncProducts($plan['articles'], $peru->id, $labIds, $principleIds, $unitIds, $warehouseIds);
-            $removed = $this->softDeleteOthers($plan['stdCodes'], $plan['magCodes']);
+
+            // 2) PURGA FISICA IRREVERSIBLE: borra de raiz todo lo demas de Kamary Peru
+            //    (articulos no-dump, transaccional demo, almacenes demo). Vacia Muestras/Magistrales.
+            $keepCodes = array_values(array_unique(array_merge($plan['stdCodes'], $plan['magCodes'])));
+            $removed = $this->hardPurge($peru->id, $keepCodes, $warehouseIds);
 
             return [$kept, $removed];
         });
@@ -303,26 +307,159 @@ class KamaryPeruImportSeeder extends Seeder
     }
 
     /**
-     * Oculta (soft-delete status=null, reversible) los almacenes demo/operativos
-     * de Kamary Peru que NO son del dump: deja solo los 3 de marca. NO toca los
-     * almacenes fijos de Muestras ni Magistrales (la app los protege). No borra
-     * filas: pedidos/compras/despachos que los referencian siguen intactos.
+     * PURGA FISICA IRREVERSIBLE de todo el demo de Kamary Peru. Con FOREIGN_KEY_CHECKS=0,
+     * acotado a la empresa kamary_peru:
+     *   - borra el transaccional (pedidos, ordenes de compra, recepciones, listas de
+     *     precio, despachos, guias, conteos, notas de entrada/salida, facturacion, CxP/CxC,
+     *     actividades, lotes, take/sample orders);
+     *   - borra los articulos standard/magistrales/NULL que NO son del dump (+ hijos);
+     *   - borra fisicamente los almacenes demo (deja solo los 3 de marca);
+     *   - vacia los almacenes fijos de Muestras y Magistrales (borra sus ubicaciones).
+     * Conserva: los productos del dump, los almacenes de marca, Muestras y Magistrales
+     * (vacios), empresa/sedes/usuarios/series/labs/units.
      *
-     * @param array<string,int> $keepIds ids de los almacenes de marca a conservar
+     * @param array<string> $keepCodes codigos de articulo a conservar (los del dump)
+     * @param array<string,int> $keepWarehouseIds ids de almacenes de marca a conservar
+     * @return array<string,int> conteos eliminados
      */
-    private function softDeleteDemoWarehouses(array $keepIds): void
+    private function hardPurge(int $peruId, array $keepCodes, array $keepWarehouseIds): array
     {
-        $keep = array_values(array_unique(array_map('intval', $keepIds)));
+        $counts = [
+            'articulos_no_dump' => Article::query()
+                ->where(function ($q) {
+                    $q->whereIn('module_scope', ['standard', 'magistrales'])->orWhereNull('module_scope');
+                })
+                ->whereNotIn('code', $keepCodes)
+                ->count(),
+            'pedidos_com' => $this->countByColumn('commercial_orders', 'business_id', $peruId),
+            'ordenes_compra' => $this->countByColumn('purchase_orders', 'business_id', $peruId),
+        ];
 
-        Warehouse::query()
-            ->whereHas('branch.business', function ($q) {
-                $q->where('business_key', BusinessScope::KAMARY_PERU);
-            })
-            ->whereNotNull('status')
-            ->when(!empty($keep), fn($q) => $q->whereNotIn('id', $keep))
-            ->whereRaw('LOWER(name) NOT LIKE ?', ['%muestra%'])
-            ->whereRaw('LOWER(name) NOT LIKE ?', ['%magistral%'])
-            ->update(['status' => null, 'updated_by' => $this->userId]);
+        // Hijos (item/detalle) cuyo header tiene business_id = kamary_peru.
+        $childByParent = [
+            ['order_items', 'order_id', 'orders'],
+            ['commercial_order_items', 'commercial_order_id', 'commercial_orders'],
+            ['commercial_order_stock_movements', 'commercial_order_id', 'commercial_orders'],
+            ['purchase_order_items', 'purchase_order_id', 'purchase_orders'],
+            ['purchase_receipt_items', 'purchase_receipt_id', 'purchase_receipts'],
+            ['price_list_items', 'price_list_id', 'price_lists'],
+            ['dispatch_assignments', 'dispatch_id', 'dispatches'],
+            ['delivery_evidences', 'dispatch_id', 'dispatches'],
+            ['referral_guide_items', 'referral_guide_id', 'referral_guides'],
+            ['inventory_count_items', 'inventory_count_id', 'inventory_counts'],
+            ['entry_note_items', 'entry_note_id', 'entry_notes'],
+            ['exit_note_items', 'exit_note_id', 'exit_notes'],
+            ['take_order_items', 'take_order_id', 'take_orders'],
+            ['billing_document_items', 'billing_document_id', 'billing_documents'],
+            ['billing_events', 'billing_document_id', 'billing_documents'],
+            ['accounts_payable_installments', 'accounts_payable_id', 'accounts_payable'],
+            ['accounts_payable_payments', 'accounts_payable_id', 'accounts_payable'],
+            ['accounts_receivable_installments', 'accounts_receivable_id', 'accounts_receivable'],
+            ['receivable_payments', 'accounts_receivable_id', 'accounts_receivable'],
+            ['activity_items', 'activity_id', 'activities'],
+        ];
+        $headers = [
+            'orders', 'commercial_orders', 'purchase_orders', 'purchase_receipts', 'price_lists',
+            'dispatches', 'referral_guides', 'inventory_counts', 'entry_notes', 'exit_notes',
+            'take_orders', 'billing_documents', 'accounts_payable',
+            'accounts_receivable', 'activities', 'batches',
+        ];
+        // Tablas de kamary_peru sin business_id (modulo Muestras / tracking): borrado total.
+        $deleteAll = ['sample_orders', 'commercial_order_tracking_events'];
+
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        try {
+            foreach ($childByParent as [$child, $fk, $parent]) {
+                $this->deleteChildrenByParent($child, $fk, $parent, 'business_id', $peruId);
+            }
+            foreach ($headers as $table) {
+                $this->deleteByColumn($table, 'business_id', $peruId);
+            }
+            foreach ($deleteAll as $table) {
+                if (Schema::hasTable($table)) DB::table($table)->delete();
+            }
+
+            // Articulos NO-dump + hijos que los referencian por article_id.
+            $delIds = Article::query()
+                ->where(function ($q) {
+                    $q->whereIn('module_scope', ['standard', 'magistrales'])->orWhereNull('module_scope');
+                })
+                ->whereNotIn('code', $keepCodes)
+                ->pluck('id')->all();
+
+            if (!empty($delIds)) {
+                foreach ([
+                    'article_presentations', 'order_items', 'commercial_order_items', 'purchase_order_items',
+                    'purchase_receipt_items', 'price_list_items', 'entry_note_items', 'exit_note_items',
+                    'take_order_items', 'inventory_count_items', 'activity_items', 'referral_guide_items',
+                ] as $t) {
+                    $this->deleteByColumnIn($t, 'article_id', $delIds);
+                }
+                $this->deleteByColumnIn('article_pack_components', 'pack_article_id', $delIds);
+                $this->deleteByColumnIn('article_pack_components', 'component_article_id', $delIds);
+                foreach (array_chunk($delIds, 1000) as $chunk) {
+                    Article::query()->whereIn('id', $chunk)->delete();
+                }
+            }
+
+            // Almacenes demo (kamary_peru, no marca, no muestras/magistrales) -> HARD delete + ubicaciones.
+            $keepWh = array_values(array_unique(array_map('intval', $keepWarehouseIds)));
+            $demoWh = Warehouse::query()
+                ->whereHas('branch.business', fn($q) => $q->where('business_key', BusinessScope::KAMARY_PERU))
+                ->when(!empty($keepWh), fn($q) => $q->whereNotIn('id', $keepWh))
+                ->whereRaw('LOWER(name) NOT LIKE ?', ['%muestra%'])
+                ->whereRaw('LOWER(name) NOT LIKE ?', ['%magistral%'])
+                ->pluck('id')->all();
+            $counts['almacenes_demo'] = count($demoWh);
+            if (!empty($demoWh)) {
+                $this->deleteByColumnIn('warehouse_locations', 'warehouse_id', $demoWh);
+                foreach (array_chunk($demoWh, 500) as $chunk) {
+                    Warehouse::query()->whereIn('id', $chunk)->delete();
+                }
+            }
+
+            // Vaciar Muestras/Magistrales (borrar sus ubicaciones; su stock ya se elimino arriba).
+            $fixedWh = Warehouse::query()
+                ->whereHas('branch.business', fn($q) => $q->where('business_key', BusinessScope::KAMARY_PERU))
+                ->where(function ($q) {
+                    $q->whereRaw('LOWER(name) LIKE ?', ['%muestra%'])->orWhereRaw('LOWER(name) LIKE ?', ['%magistral%']);
+                })
+                ->pluck('id')->all();
+            $this->deleteByColumnIn('warehouse_locations', 'warehouse_id', $fixedWh);
+        } finally {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        }
+
+        return $counts;
+    }
+
+    private function countByColumn(string $table, string $column, $value): int
+    {
+        if (!Schema::hasTable($table) || !Schema::hasColumn($table, $column)) return 0;
+        return (int) DB::table($table)->where($column, $value)->count();
+    }
+
+    private function deleteByColumn(string $table, string $column, $value): void
+    {
+        if (!Schema::hasTable($table) || !Schema::hasColumn($table, $column)) return;
+        DB::table($table)->where($column, $value)->delete();
+    }
+
+    private function deleteByColumnIn(string $table, string $column, array $ids): void
+    {
+        if (empty($ids) || !Schema::hasTable($table) || !Schema::hasColumn($table, $column)) return;
+        foreach (array_chunk($ids, 1000) as $chunk) {
+            DB::table($table)->whereIn($column, $chunk)->delete();
+        }
+    }
+
+    private function deleteChildrenByParent(string $childTable, string $fk, string $parentTable, string $parentColumn, $parentValue): void
+    {
+        if (!Schema::hasTable($childTable) || !Schema::hasColumn($childTable, $fk) || !Schema::hasTable($parentTable) || !Schema::hasColumn($parentTable, $parentColumn)) {
+            return;
+        }
+        $parentIds = DB::table($parentTable)->where($parentColumn, $parentValue)->pluck('id')->all();
+        $this->deleteByColumnIn($childTable, $fk, $parentIds);
     }
 
     /**
@@ -408,40 +545,6 @@ class KamaryPeruImportSeeder extends Seeder
             'sort_order' => 0,
             'status' => true,
         ]);
-    }
-
-    /**
-     * Soft-delete (status=null, reversible) de todos los articulos standard y
-     * magistrales que NO son del dump -> el catalogo queda con solo los 108.
-     * No borra filas: no rompe pedidos/compras/inventarios que los referencien.
-     *
-     * @return array{standard:int,magistrales:int}
-     */
-    private function softDeleteOthers(array $stdCodes, array $magCodes): array
-    {
-        $std = 0;
-        $mag = 0;
-
-        if (!empty($stdCodes)) {
-            // Espeja el grid standard (module_scope='standard' OR IS NULL) para que no
-            // queden articulos NULL visibles fuera del dump.
-            $std = Article::query()
-                ->where(function ($q) {
-                    $q->where('module_scope', 'standard')->orWhereNull('module_scope');
-                })
-                ->whereNotNull('status')
-                ->whereNotIn('code', $stdCodes)
-                ->update(['status' => null, 'updated_by' => $this->userId]);
-        }
-        if (!empty($magCodes)) {
-            $mag = Article::query()
-                ->where('module_scope', 'magistrales')
-                ->whereNotNull('status')
-                ->whereNotIn('code', $magCodes)
-                ->update(['status' => null, 'updated_by' => $this->userId]);
-        }
-
-        return ['standard' => (int) $std, 'magistrales' => (int) $mag];
     }
 
     /** Setea series por sede en business_branches. @return int series aplicadas */
@@ -601,8 +704,11 @@ class KamaryPeruImportSeeder extends Seeder
     {
         $this->command?->info('Import Kamary Peru completado:');
         $this->command?->line('  productos dump asegurados (activos) . ' . $kept . ' (' . count($plan['stdCodes']) . ' standard + ' . count($plan['magCodes']) . ' magistrales)');
-        $this->command?->line('  standard soft-deleted (status=null) . ' . ($removed['standard'] ?? 0));
-        $this->command?->line('  magistrales soft-deleted ............ ' . ($removed['magistrales'] ?? 0));
+        $this->command?->warn('  PURGA FISICA (borrado de raiz):');
+        $this->command?->line('    articulos no-dump eliminados ..... ' . ($removed['articulos_no_dump'] ?? 0));
+        $this->command?->line('    pedidos comerciales eliminados ... ' . ($removed['pedidos_com'] ?? 0));
+        $this->command?->line('    ordenes de compra eliminadas ..... ' . ($removed['ordenes_compra'] ?? 0));
+        $this->command?->line('    almacenes demo eliminados ........ ' . ($removed['almacenes_demo'] ?? 0));
         $this->command?->line('  laboratorios ....................... ' . count($plan['labs']));
         $this->command?->line('  almacenes de marca ................. ' . count($plan['warehouses']));
         $this->command?->line('  series aplicadas ................... ' . $seriesSet);
