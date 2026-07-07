@@ -1,0 +1,57 @@
+[
+  {
+    "empresa": "KAMARY PERU SAC",
+    "tipo_documento": "FACTURAS",
+    "serie": "F001"
+  },
+  {
+    "empresa": "KAMARY PERU SAC",
+    "tipo_documento": "FACTURAS",
+    "serie": "F002"
+  },
+  {
+    "empresa": "KAMARY PERU SAC",
+    "tipo_documento": "BOLETAS",
+    "serie": "B001"
+  },
+  {
+    "empresa": "KAMARY PERU SAC",
+    "tipo_documento": "BOLETAS",
+    "serie": "B002"
+  },
+  {
+    "empresa": "KAMARY PERU SAC",
+    "tipo_documento": "NOTA DE PEDIDO",
+    "serie": "NP01"
+  },
+  {
+    "empresa": "KAMARY PERU SAC",
+    "tipo_documento": "GUIA DE REMISION",
+    "serie": "T001"
+  },
+  {
+    "empresa": "KAMARY PERU SAC",
+    "tipo_documento": "GUIA DE REMISION",
+    "serie": "T002"
+  },
+  {
+    "empresa": "KAMARY MEDICAL",
+    "tipo_documento": "FACTURAS",
+    "serie": "F001"
+  },
+  {
+    "empresa": "KAMARY MEDICAL",
+    "tipo_documento": "BOLETAS",
+    "serie": "B001"
+  },
+  {
+    "empresa": "KAMARY MEDICAL",
+    "tipo_documento": "NOTA DE PEDIDO",
+    "serie": "NP01"
+  },
+  {
+    "empresa": "KAMARY MEDICAL",
+    "tipo_documento": "GUIA DE REMISION",
+    "serie": "T001"
+  }
+]
