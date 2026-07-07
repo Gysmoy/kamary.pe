@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\ActivePrinciple;
 use App\Models\Article;
 use App\Models\Business;
 use App\Models\BusinessBranch;
@@ -86,11 +87,12 @@ class StorageServiceImportSeeder extends Seeder
 
             $branch = $this->resolveBranch($business);
             $labId = $this->ensureLaboratory();
+            $activePrincipleId = $this->ensureActivePrinciple($labId);
 
             $warehouseIds = $this->syncWarehouses($plan['warehouses'], $business, $branch->id);
             $unitIds = $this->syncUnits($plan['units']);
             $clientIds = $this->syncClients($plan['clients']);
-            $articleIds = $this->syncArticles($plan['articles'], $business->id, $clientIds, $unitIds, $labId);
+            $articleIds = $this->syncArticles($plan['articles'], $business->id, $clientIds, $unitIds, $labId, $activePrincipleId);
 
             $this->syncLocations($plan['locations'], $warehouseIds, $clientIds);
             $this->syncProductLots($plan['lots'], $articleIds);
@@ -415,6 +417,23 @@ class StorageServiceImportSeeder extends Seeder
         )->id;
     }
 
+    /**
+     * El grid de productos de almacenamiento hace INNER JOIN a active_principles
+     * (ArticleController::setPaginationInstance), asi que cada articulo necesita
+     * un principio activo. El export no trae uno, usamos un placeholder.
+     */
+    private function ensureActivePrinciple(int $labId): int
+    {
+        return (int) ActivePrinciple::query()->updateOrCreate(
+            ['laboratory_id' => $labId, 'name' => 'Sin principio activo'],
+            [
+                'status' => true,
+                'created_by' => $this->userId,
+                'updated_by' => $this->userId,
+            ]
+        )->id;
+    }
+
     /** @return array<string,int> warehouseKey(norm) => id */
     private function syncWarehouses(array $warehouses, Business $business, int $branchId): array
     {
@@ -538,7 +557,7 @@ class StorageServiceImportSeeder extends Seeder
      * @param array<string,int> $unitIds
      * @return array<string,int> articleCode => id
      */
-    private function syncArticles(array $articles, int $businessId, array $clientIds, array $unitIds, int $labId): array
+    private function syncArticles(array $articles, int $businessId, array $clientIds, array $unitIds, int $labId, int $activePrincipleId): array
     {
         $map = [];
         foreach ($articles as $code => $a) {
@@ -552,6 +571,7 @@ class StorageServiceImportSeeder extends Seeder
                     'client_id' => $clientIds[$a['clientKey']] ?? null,
                     'name' => $a['name'],
                     'laboratory_id' => $labId,
+                    'active_principle_id' => $activePrincipleId,
                     'unit_id' => $unitIds[$a['unit']] ?? null,
                     'units_per_article' => 1,
                     'margin_rule' => false,
