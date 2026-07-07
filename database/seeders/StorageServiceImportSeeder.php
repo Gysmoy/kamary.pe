@@ -450,14 +450,21 @@ class StorageServiceImportSeeder extends Seeder
         return $map;
     }
 
-    /** @return array<string,int> unitLabel => id */
+    /**
+     * @return array<string,int> unitLabel => id
+     *
+     * OJO: units.symbol tiene unique GLOBAL (no por module_scope). Reutilizamos
+     * la unidad existente por simbolo (a lo sumo una por simbolo) y solo creamos
+     * una nueva con scope storage si el simbolo no existe en ningun modulo.
+     */
     private function syncUnits(array $units): array
     {
         $map = [];
         foreach ($units as $label) {
-            $unit = Unit::query()->updateOrCreate(
-                ['module_scope' => 'storage', 'symbol' => $label],
+            $unit = Unit::query()->firstOrCreate(
+                ['symbol' => $label],
                 [
+                    'module_scope' => 'storage',
                     'name' => ucfirst(mb_strtolower($label, 'UTF-8')),
                     'status' => true,
                     'created_by' => $this->userId,
@@ -507,9 +514,12 @@ class StorageServiceImportSeeder extends Seeder
     {
         $map = [];
         foreach ($articles as $code => $a) {
+            // articles.code es unique GLOBAL: keyear solo por code (los codigos
+            // L105-* son exclusivos de este import y no chocan con otros modulos).
             $article = Article::query()->updateOrCreate(
-                ['module_scope' => 'storage', 'code' => $code],
+                ['code' => $code],
                 [
+                    'module_scope' => 'storage',
                     'business_id' => $businessId,
                     'client_id' => $clientIds[$a['clientKey']] ?? null,
                     'name' => $a['name'],
