@@ -2545,26 +2545,28 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
         <SelectAPIFormGroup
           eRef={laboratoryRef}
-          label={<span>Laboratorio <button type='button' className='btn btn-link p-0 ms-2' onClick={() => $(labManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button></span>}
+          label='Laboratorio'
           col='col-md-4'
           required
           searchAPI={articlesRest.laboratoriesPaginateApi()}
           searchBy={articlesRest.laboratoriesSearchBy()}
           dropdownParent='#article-form-container'
           onChange={onLaboratoryChanged}
+          append={<button type='button' className='btn btn-success' title='Gestionar laboratorios' onClick={() => $(labManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button>}
         />
 
         {isMagistrales && <InputFormGroup eRef={healthRegistrationRef} label='R. sanitario' col='col-md-4' />}
 
         {!isMagistrales && <SelectFormGroup
           eRef={principleRef}
-          label={<span>Principio activo <button type='button' className='btn btn-link p-0 ms-2' onClick={() => $(principleManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button></span>}
+          label='Principio activo'
           col='col-md-4'
           dropdownParent='#article-form-container'
           required
           value={selectedPrincipleId}
           onChange={(e) => setSelectedPrincipleId(e.target.value)}
           effectWith={[selectedPrincipleId, principles.length]}
+          append={<button type='button' className='btn btn-success' title='Gestionar principios activos' onClick={() => $(principleManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button>}
         >
           <option value=''>Seleccionar...</option>
           {principles.map(principle => (
@@ -2574,13 +2576,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
         <SelectFormGroup
           eRef={unitRef}
-          label={<span>Unidad de medida <button type='button' className='btn btn-link p-0 ms-2' onClick={() => $(unitManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button></span>}
+          label='Unidad de medida'
           col='col-md-4'
           dropdownParent='#article-form-container'
           required
           value={selectedUnitId}
           onChange={(e) => setSelectedUnitId(e.target.value)}
           effectWith={[selectedUnitId, units.length]}
+          append={<button type='button' className='btn btn-success' title='Gestionar unidades de medida' onClick={() => $(unitManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button>}
         >
           <option value=''>Seleccionar...</option>
           {units.map(unit => (

@@ -9,7 +9,8 @@ const SelectFormGroup = ({ id, col, className, label, specification, eRef, value
   minimumInputLength = 0,
   minimumResultsForSearch,
   effectWith = [],
-  tags
+  tags,
+  append = null
 }) => {
 
   if (!eRef) eRef = useRef()
@@ -69,10 +70,21 @@ const SelectFormGroup = ({ id, col, className, label, specification, eRef, value
         </>
       }
     </label>
-    <select ref={eRef} id={selectId} data-select2-managed="component" required={required} className={`form-control ${className}`} style={{ width: '100%' }} disabled={disabled} multiple={multiple} value={localValue ?? (multiple ? [] : '')}
-      onChange={(e) => setLocalValue(multiple ? Array.from(e.target.selectedOptions).map(option => option.value) : e.target.value)}>
-      {children}
-    </select>
+    {(() => {
+      const selectEl = (
+        <select ref={eRef} id={selectId} data-select2-managed="component" required={required} className={`form-control ${className}`} style={{ width: '100%' }} disabled={disabled} multiple={multiple} value={localValue ?? (multiple ? [] : '')}
+          onChange={(e) => setLocalValue(multiple ? Array.from(e.target.selectedOptions).map(option => option.value) : e.target.value)}>
+          {children}
+        </select>
+      )
+      if (!append) return selectEl
+      return (
+        <div className="d-flex align-items-center gap-1">
+          <div className="flex-grow-1" style={{ minWidth: 0 }}>{selectEl}</div>
+          {append}
+        </div>
+      )
+    })()}
   </div>
 }
 

@@ -8,7 +8,8 @@ import xsrfToken from "../../../Utils/xsrfToken"
 const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = false, disabled = false, dropdownParent, searchAPI, searchBy, selectBy = 'id', multiple = false, filter = null, extraParams = null, onChange = () => { },
   templateResult,
   templateSelection,
-  tags
+  tags,
+  append = null
 }) => {
   if (!eRef) eRef = useRef();
   const generatedIdRef = useRef(id || `select-${crypto.randomUUID()}`);
@@ -106,7 +107,16 @@ const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = fa
         </>
       }
     </label>
-    <select ref={eRef} id={selectId} data-select2-managed="component" required={required} disabled={disabled} className='form-control' style={{ width: '100%' }} multiple={multiple}></select>
+    {append ? (
+      <div className="d-flex align-items-center gap-1">
+        <div className="flex-grow-1" style={{ minWidth: 0 }}>
+          <select ref={eRef} id={selectId} data-select2-managed="component" required={required} disabled={disabled} className='form-control' style={{ width: '100%' }} multiple={multiple}></select>
+        </div>
+        {append}
+      </div>
+    ) : (
+      <select ref={eRef} id={selectId} data-select2-managed="component" required={required} disabled={disabled} className='form-control' style={{ width: '100%' }} multiple={multiple}></select>
+    )}
   </div>
 }
 
