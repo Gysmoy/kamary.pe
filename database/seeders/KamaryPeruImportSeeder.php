@@ -490,6 +490,11 @@ class KamaryPeruImportSeeder extends Seeder
                 $updates = ['updated_by' => $this->userId];
                 if ($article->status !== true) $updates['status'] = true;
                 if ($article->module_scope !== $a['scope']) $updates['module_scope'] = $a['scope'];
+                // Asigna el almacen de marca del dump (el anterior era un almacen demo ya borrado).
+                if ($a['scope'] === 'standard' && $a['warehouse']) {
+                    $whId = $warehouseIds[$this->norm($a['warehouse'])] ?? null;
+                    if ($whId) $updates['warehouse_id'] = $whId;
+                }
                 if (Schema::hasColumn('articles', 'default_lot') && !$article->default_lot && $a['default_lot']) {
                     $updates['default_lot'] = $a['default_lot'];
                 }

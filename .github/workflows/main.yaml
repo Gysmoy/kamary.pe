@@ -107,7 +107,7 @@ jobs:
             docker compose exec --interactive=false -T app php artisan db:seed --class=ModulePermissionsSeeder --force
             docker compose exec --interactive=false -T app php artisan db:seed --class=MagistralesProductionSeeder --force
             docker compose exec --interactive=false -T app sh -lc 'if [ -f storage/app/.storage-l105-import-v4 ]; then echo "Storage L105 import already applied"; elif php artisan db:seed --class=StorageServiceImportSeeder --force; then mkdir -p storage/app && date -Is > storage/app/.storage-l105-import-v4; else echo "=== STORAGE L105 IMPORT FALLO (ver salida arriba); el deploy continua ==="; fi'
-            docker compose exec --interactive=false -T app sh -lc 'if [ -f storage/app/.kamary-peru-import-v3 ]; then echo "Kamary Peru import already applied"; elif php artisan db:seed --class=KamaryPeruImportSeeder --force; then mkdir -p storage/app && date -Is > storage/app/.kamary-peru-import-v3; else echo "=== KAMARY PERU IMPORT FALLO (ver salida arriba); el deploy continua ==="; fi'
+            docker compose exec --interactive=false -T app sh -lc 'if [ -f storage/app/.kamary-peru-import-v4 ]; then echo "Kamary Peru import already applied"; elif php artisan db:seed --class=KamaryPeruImportSeeder --force; then mkdir -p storage/app && date -Is > storage/app/.kamary-peru-import-v4; else echo "=== KAMARY PERU IMPORT FALLO (ver salida arriba); el deploy continua ==="; fi'
             docker compose exec --interactive=false -T app php artisan optimize:clear
 
             notify_deploy "success"
