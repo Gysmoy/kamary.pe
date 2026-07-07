@@ -763,7 +763,7 @@ class StorageServiceImportSeeder extends Seeder
         if (!Schema::hasTable($childTable) || !Schema::hasColumn($childTable, $fk) || !Schema::hasTable($parentTable)) return;
 
         $parentIds = DB::table($parentTable)
-            ->when($parentColumn !== null, function ($query) use ($parentColumn, $parentValue) {
+            ->when($parentColumn !== null, function ($query) use ($parentTable, $parentColumn, $parentValue) {
                 if (Schema::hasColumn($parentTable, $parentColumn)) {
                     $query->where($parentColumn, $parentValue);
                 }
