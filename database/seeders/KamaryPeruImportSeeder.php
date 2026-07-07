@@ -94,6 +94,7 @@ class KamaryPeruImportSeeder extends Seeder
             $principleIds = $this->syncActivePrinciples($labIds);
             $unitIds = $this->syncUnits($plan['units']);
             $warehouseIds = $this->syncBrandWarehouses($plan['warehouses'], $branch->id);
+            $this->softDeleteDemoWarehouses($warehouseIds);
 
             $kept = $this->syncProducts($plan['articles'], $peru->id, $labIds, $principleIds, $unitIds, $warehouseIds);
             $removed = $this->softDeleteOthers($plan['stdCodes'], $plan['magCodes']);
@@ -299,6 +300,29 @@ class KamaryPeruImportSeeder extends Seeder
             $map[$this->norm($name)] = (int) $wh->id;
         }
         return $map;
+    }
+
+    /**
+     * Oculta (soft-delete status=null, reversible) los almacenes demo/operativos
+     * de Kamary Peru que NO son del dump: deja solo los 3 de marca. NO toca los
+     * almacenes fijos de Muestras ni Magistrales (la app los protege). No borra
+     * filas: pedidos/compras/despachos que los referencian siguen intactos.
+     *
+     * @param array<string,int> $keepIds ids de los almacenes de marca a conservar
+     */
+    private function softDeleteDemoWarehouses(array $keepIds): void
+    {
+        $keep = array_values(array_unique(array_map('intval', $keepIds)));
+
+        Warehouse::query()
+            ->whereHas('branch.business', function ($q) {
+                $q->where('business_key', BusinessScope::KAMARY_PERU);
+            })
+            ->whereNotNull('status')
+            ->when(!empty($keep), fn($q) => $q->whereNotIn('id', $keep))
+            ->whereRaw('LOWER(name) NOT LIKE ?', ['%muestra%'])
+            ->whereRaw('LOWER(name) NOT LIKE ?', ['%magistral%'])
+            ->update(['status' => null, 'updated_by' => $this->userId]);
     }
 
     /**
