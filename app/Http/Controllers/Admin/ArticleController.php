@@ -16,6 +16,7 @@ use App\Models\Warehouse;
 use App\Services\StockService;
 use App\Support\BusinessScope;
 use App\Support\MagistralesWarehouse;
+use App\Support\SamplesWarehouse;
 use App\Support\StorageScope;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
@@ -40,15 +41,16 @@ class ArticleController extends BasicController
     private const IMPORT_TYPE_CORPORATE_CATALOG = 'corporate_catalog';
 
     /**
-     * El selector de articulos del modulo GENERAL de Nota de Salida necesita mostrar el catalogo
-     * de Magistrales cuando el usuario elige el almacen fijo de Magistrales (id devuelto por
-     * MagistralesWarehouse::idOrNull()). El frontend manda esto en un parametro EXPLICITO y
-     * distinto (`picker_warehouse_id`) para no interferir con el `warehouse_id` que ya usa el
-     * filtro/grid estandar de Articulos ni con ningun otro consumidor de este mismo endpoint.
+     * El selector de articulos del modulo GENERAL de Nota de Salida/Entrada necesita mostrar el
+     * catalogo de Magistrales o de Muestras cuando el usuario elige el almacen fijo respectivo
+     * (ids devueltos por MagistralesWarehouse::idOrNull() / SamplesWarehouse::idOrNull()). El
+     * frontend manda esto en un parametro EXPLICITO y distinto (`picker_warehouse_id`) para no
+     * interferir con el `warehouse_id` que ya usa el filtro/grid estandar de Articulos ni con
+     * ningun otro consumidor de este mismo endpoint.
      *
      * Fuera de esta condicion exacta (moduleScope==='standard' + parametro presente + coincide
-     * con el almacen fijo de Magistrales) esto devuelve $this->moduleScope sin cambios, o sea el
-     * comportamiento actual queda intacto para el grid estandar y para los demas almacenes.
+     * con un almacen fijo) esto devuelve $this->moduleScope sin cambios, o sea el comportamiento
+     * actual queda intacto para el grid estandar y para los demas almacenes.
      */
     private function pickerEffectiveModuleScope(): string
     {
@@ -58,11 +60,16 @@ class ArticleController extends BasicController
         if (!$pickerWarehouseId) return $this->moduleScope;
 
         $magistralesWarehouseId = MagistralesWarehouse::idOrNull();
-        if (!$magistralesWarehouseId || $pickerWarehouseId !== $magistralesWarehouseId) {
-            return $this->moduleScope;
+        if ($magistralesWarehouseId && $pickerWarehouseId === $magistralesWarehouseId) {
+            return 'magistrales';
         }
 
-        return 'magistrales';
+        $samplesWarehouseId = SamplesWarehouse::idOrNull();
+        if ($samplesWarehouseId && $pickerWarehouseId === $samplesWarehouseId) {
+            return 'muestras';
+        }
+
+        return $this->moduleScope;
     }
 
     public function setPaginationInstance(string $model)

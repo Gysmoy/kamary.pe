@@ -1,0 +1,2155 @@
+{
+  "_meta": {
+    "sistema": "kamary.l105.com",
+    "modulo": "Almacen - Articulos",
+    "filtro": "SOFTYS MUESTRAS (categoria 179)",
+    "generado": "2026-07-07T22:41:16.143Z",
+    "total": 268
+  },
+  "articulos": [
+    {
+      "codigo": "MUESTRAS000272",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "4703127332 Tomatodos Fiestas Patrias Rendipel",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000271",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371775 JABÓN LÍQUIDO ELITE PRO - PLUS 6X1L",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000270",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "4703097368 Polos Rendipel Workup",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000269",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361446 HIGIENICO RENDIPEL PRO UH 280m x6",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000268",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371789 JABON LIQUIDO ANTIBAC ELITE PRO PLUS X 5 LT",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000267",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371788 JABON ESPUMA ANTIBACTERIAL ELITE PROFESIONAL EXCELENCE 1 LT",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000266",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371779 ALCOHOL GEL ELITE CLASSIC X 5 LT",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000265",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361822 Paño Maxwipe 60 Interfoliado",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000264",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "M - 6 - 371777 Alcohol Gel Elite Pro - Plus 6x1L",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000263",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "M - 5 - 371773 Jabón Espuma Elite Pro - Excellence 6x1L",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000262",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361449 PH Elite Institucional Classic DH 14 mts x2x24 AZUL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000261",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395188 DISP JABON MULTIFLEX 2026 NEGRO/NEGRO",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000260",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395187 DISP JABÓN MULTIFLEX 2026 BLANCO/NEGRO",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000259",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "4703075141 Catálogo Rendipel Pioner",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000258",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "Servilletero Rendipel Cuadrado Transparente",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000257",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "Servilletero Rendipel Triangular",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000256",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "Lanyards rendipel",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000255",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "M-4 Catálogos de Nueva Matriz Jabón Elite Professional",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000254",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371776 Jabón Líquido Elite Pro - Classic 2x5L",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000253",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371778 Alcohol spray Elite Pro - Plus 6x1L",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000252",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "M-1 Samplings de Nueva Matriz Jabón Elite Professional",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000251",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361444-PM-PH ELITE DH EXCELLENCE 12x4 23METROS",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000250",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361702-PM-PH ELITE UH AHORRO CLASSIC 500m X4",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000247",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371712PL PAÑAL COTIDIAN PREMIUM TANGA Mx20x4 N",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000246",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371711PL PAÑAL COTIDIAN PREMIUM TANGA Mx8x8 N",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000245",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371710PL PAÑAL COTIDIAN PREMIUM TANGA GX20X2 N",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000244",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371709PL PAÑAL COTIDIAN PREMIUM TANGA GX8X8 N",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000243",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371694PL PAÑAL COTIDIAN SABANILLA PREDOBLA 8x8",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000242",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371657TF Cotidian Lady Super 28x10",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000241",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371656TF Cotidian Lady Maxi 28x12",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000240",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371641PL PAÑAL COTIDIAN CLASICO TANGA Gx20x2",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000239",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371640PL PAÑAL COTIDIAN CLASICO TANGA Mx20x4",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000238",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371639PL PAÑAL COTIDIAN CLASICO TANGA Gx8x8",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000237",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371638PL PAÑAL COTIDIAN CLASICO TANGA Mx8x8",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000236",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371539PL COTIDIAN PANTS ULTRAPROTECT G 8x12",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000235",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371538PL COTIDIAN PANTS ULTRAPROTECT M 8x12",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000234",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371503PD COTIDIAN LADY PROTECTOR LARGO 26x12",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000233",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "KEYEUROLINE - Llave de dispensador Euroline",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000232",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361117 POELITE ALOE VERA PROMOCIONAL PACK8X36",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000231",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371769 JABON RENDIPEL CITRICO 400 ML",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000230",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361813 - SE RENDIPEL CORTADA X400 x9",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000229",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "052230 POLO MARCA RENDIPEL TALLA M",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000228",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "052231 POLO MARCA RENDIPEL TALLA L",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000226",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361793 PT ELITE PROFESSIONAL PLUS 200m x2 GH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000225",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361792 PT ELITE PROFESIONAL CLASSIC 200 MX 4GH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000224",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361791 PT ELITE PROFESIONAL CLASICC 200 MX 2 GH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000223",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "4703036423 DISPENSADORES JABON RENDIPEL 100ML",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000222",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1770029 BOLSA TO ELITE BÁSICA UH X200M X4 45MC",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000221",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1275340 BOLSA TERM PH RENDIPEL PRO UH 760X536MM",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000220",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371629 MUESTRA NP Jabon Espuma Multiflex Elite 6x1lt",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000219",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361794 PAÑO MAXWIPE 60 BOBINA X 1 UND",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000218",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361531 TO INTERF ELITE PLUS BCA DH 200",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000217",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "4703023441 - Catalogo A5 Rendipel",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000216",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "4703021161 DISPENSADORES 50ML RENDIPEL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000215",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "18230790 Libretas A6 - Elite Professional",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000214",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361790 TO ELITE PLUS UH 200m x1 GH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000213",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "137604 TAZA ELITE PROFESSIONAL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000212",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395183 NP JABON RENDIPEL PRO GAL X 3.80L",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000211",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "18320000 CATÁLOGOS MAXWIPE",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000210",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "18310000 FLYERS JABÓN RENDIPEL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000209",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "18300000 PORTACARGADOR RENDIPEL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000208",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "18290000 MUESTRA JABÓN RENDIPEL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000207",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "120000299 KIT DE FIESTAS PATRIAS",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000206",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "120000132 CATALOGO RENDIPEL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000205",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "120000124 MANDIL RENDIPEL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000204",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "12100000000 CANGUROS RENDIPEL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000203",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "12000000000 LAPICEROS RENDIPEL (50 unidades)",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000202",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "120000044 BOTELLAS RENDIPEL (5 unid)",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000201",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "120000050 POLO RENDIPEL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000200",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361784 PANO MAXWIPE80 ROJOX 6 UNID",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000199",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361783 PANO MAXWIPE80 AZUL X 6 UNID",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000198",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361782 PANO MAXWIPE AMARILLO X 6 UNID",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000197",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "MUESTRACLASSIC TO ELITE PROFESSIONAL UH 200mX2 CLASSIC",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000196",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200280624-2 BOLSA NEGRA DE BASURA BOLSITEXS (5 Unidades x PQT)",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000195",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001214 Chaleco TALLA \"M\"",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000194",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001217 ATOMIZADOR PORTATIL ELITE ANTIVIRAL 10ML (5 unid)",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000193",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001207 CUADERNO A5 ELITE PROFESIONAL",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000192",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000324 Polo Rendipel",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000191",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000450 Bolsa Elite Professional 500 mt (100 unidades)",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000190",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200003444 Canguros Tradicional und",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000189",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001133 Libretas (50 unidades)",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000188",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "KIT2025FV Kits Día del Vendedor - B2B",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000187",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395170 DISP SE ELITE PROFESS CUBO CJ X 1",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000186",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395168 DISP SE ELITE PROFESS TORRE CJ X 1",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000185",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "971204001241 DIPENSADOR ACRILICO BLANCO - TO INTERF ELITE PLUS",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000184",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001272 Preciador Cuadrado (x5 und)",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000183",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001273 Preciador Estrella (x10 und)",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000182",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001253 Colgante Redondo (x5 und)",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000181",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001326 Catálogo B2B",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000180",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001211 LAPICERO INSTITUCIONAL ECONÓMICO 825",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000179",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000674 Plumón indeleble negro-Mercaderismo FDH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000178",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000677 Tijera grande - MERCADERISMO FDH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000177",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000676 Cuchilla Cutter-Mercaderismo FDH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000176",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000672 CORRECTOR DE LAPICERO-MERCADERISMO FDH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000175",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361776 TO RENDIPEL POWER 1-- MX 1 GH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000174",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361779 SE INTERF PLUS 300X30",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000173",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361176 TO RENDIPEL POWER 100 M X 1GH",
+      "unidad": "UNIDAD",
+      "estado": "Inactivo"
+    },
+    {
+      "codigo": "MUESTRAS000172",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200070325-CINTAS FRONTERIZADORAS RENDIPE",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000171",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000576 BOLSA RENDIPEL 115 MTS PAQUETE 2400 UNDS",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000170",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000446 BOTELLA SPRAY PARA ALCOHOL 1L PAQUETE 50 UNDS",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000169",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001333 Folletos B2B (100 Und)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000168",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001377 - BOLSAS DE NOTEX CON FUELLE",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000167",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001376 LIBRETA ECOLOGICA RENDIPEL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000166",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "TOSCOTTSSE TOALLAS DE PAPEL DOBLADAS SCOTT SSENTIAL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000165",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "TOROLLOSCOTT TOALLA DE MANOS EN ROLLO SCOTT X 2",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000164",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "TOKLEENEXSUP TOALLA DE MANO DOBLADAS KLEENEX SUPREME",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000163",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "SEDOBBRANT SERVILLETAS DOBLADAS SCOTT BRANT",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000162",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "SEDOB100 SERVILLETA DOBLADAS X 100 SCOTT",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000161",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "SEDINNAPKINS DINNER SERVILLETAS NAPKINS KLEENEX",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000160",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "HSSCOTT HOJA SENCILLA SCOTT",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000159",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "GPIR300MTS PAPEL TOALLA ROLLO PIRAMIDAL 300 MTS PAPEL CAFÉ",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000158",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "GFLOR150MTS Papel Toalla Rollo FLOR 150 M PAPEL CAFÉ",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000157",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "7730219099818 TH OkPet",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000156",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200220525 Catálogos Rendipel",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000155",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "31254 CATÁLOGO ALCOHOLES Y JABONES 2023 - UNITARIO",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000154",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "CAJCAT23 CAJA SOBRANTES CATALOGO 2023",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000153",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "28071608V3 BLOCK A5 ELITE PROFESIONAL",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000152",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "28071608V2 BLOCK A5 ELITE PROFESIONAL",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000151",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "4702756638 PORTA FACIAL ELITE PROFESSIONAL-CAJA",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000150",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000577 BOLSA RENDIPEL 280 MTS PAQUETE 2400 UNDS",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000149",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000576 BOLSA RENDIPEL 115 MTS PAQUETE 2400 UNDS",
+      "unidad": "PQT",
+      "estado": "Inactivo"
+    },
+    {
+      "codigo": "MUESTRAS000148",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000551 SERVILLETEROS ELITE TRANSPARENTE",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000147",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000490 FOLDER ELITE PROFESSIONAL PAQUETE 200 UNDS",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000146",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000446 BOTELLA SPRAY PARA ALCOHOL 1L PAQUETE 50 UNDS",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000145",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000441 Folletos ELITE MAXWIPE (50 UND)",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000144",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "2800506 DISPENSADOR SERVILLETAS RENDIPEL-CAJA",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000143",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "32556 HOJA DE VENTA PH 20 MTS X50UNDS",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000142",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "32390 VOLANTES SERVILLETAS 361699 X 50 UND",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000141",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "32228 ADAPTER CUSTOM MODEL (50 und)",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000140",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000327 BLOCK A5 RENDIPEL ROLLO POWER",
+      "unidad": "PQT",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000139",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200290125 Calendarios Rendipel 2025 x 100",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000138",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395180 DISP JABON MULTIFLEX NEGRO/NEGOR REC",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000137",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395129 DISP INOX PAPEL HIGIENICO SL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000136",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000160 AYUDAVENTAS MAXWIPE X UNIDAD",
+      "unidad": "UNIDAD",
+      "estado": "Inactivo"
+    },
+    {
+      "codigo": "MUESTRAS000135",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395167 DISP JABON RELLENABLE BLANCO ECONOMICO",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000134",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395166 DISP AUTO CORT TOALLA B/N",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000133",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361571 PH ELITE UH AHORRO CLASSIC 500m X4",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000132",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200020125 Canastas Navideñas Canal Tradicional",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000131",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001340-KITS DE NAVIDAD B2B",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000130",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395159-I DISP SERVILLETERO ELITE PRO (50 UNIDADES)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000129",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "28071608V3 BLOCK A5 ELITE PROFESIONAL (1 UND)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000128",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "28071607V2 CUADERNO A5 ELITE PROFESIONAL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000127",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "28070519V2 LAPICERO INSTITUCIONAL ECONOMICO 825 (10 UND)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000126",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "2800506V2 DISPENSADOR SERVILLETAS RENDIPEL (24 UNIDADES)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000125",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200280624-1 Bolsa negra de basura Bolsitexs (Bultos-Fardos)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000124",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000498V2 BOLSA NOTEX NARANJA (6 UND)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000123",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000493V2 BOLSA NOTEX AZUL ELITE PROFESSIONAL (50 UNDS)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000122",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "12000001603 AYUDAVENTAS MAXWIPE X UNIDAD",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000121",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200280624 BOLSA NEGRA DE BASURA BOLSITEXS (PAQUETES X10U)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000120",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200160824 Afiche Rendipel GH (250u x pq)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000119",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200120630 COLGANTE RENDIPEL GH RECTANGULAR 45X15CM (100 UNDS)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000118",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200120629 COLGANTE RENDIPEL GH CIRCULAR 36X28CM (100 UNDS)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000117",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200120628 STICKER RENDIPEL GH 600 METRAZOS (100 UNDS)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000116",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200120627 STICKER RENDIPEL GH 100 METRAZOS (100 UNDS)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000115",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200120626 JALAVENTA RENDIPEL GH 600 METRAZOS (100 UNDS)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000114",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200120625 JALAVENTA RENDIPEL GH 100 METRAZOS (100 UNDS)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000113",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200120624 PRECIARIO TROQUELADO RENDIPEL GH (1000 UNDS)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000112",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200040932 Colgantes Circulares Rendipel (40u x pq)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000111",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200040931 Preciadores estrella Rendipel (200u x pq)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000110",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200040930 Preciadores cuadrados Rendipel (200u x pq)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000109",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001243 LAPICEROS ECOLÓGICO (10 UNDS)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000108",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001233 FRASCO GEL ANTIBACTERIAL ELITE PROFESSIONAL (50 UNDS)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000107",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001232 MORRAL ELITE PROFESSIONAL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000106",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001231 AGENDA ECOLÓGICA RENDIPEL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000105",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200001230 AGENDA ECOLÓGICA ELITE PROFESSIONAL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000104",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000498 BOLSA NOTEX NARANJA",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000103",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000493 BOLSA NOTEX ELITE PROF AZUL (10 UNDS)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000102",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "1200000326 LAPICERO RENDIPEL (50 UNDS)",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000101",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "32889 STICKER CATÁLOGO MUESTRARIO X UNIDAD",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000100",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361667 TO ELITE BASICA UH 200MX1 CLASSIC",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000099",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371572 NP JABON MULTIFLEX ELITE GLICERINA 6x1L",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000098",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361719 PH RENDIPEL PRO DH8X4 60METROS",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000097",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361759 TO ELITE BASICA UH 200MX2 CLASSIC GH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000096",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361761 SABANILLA ELITE PLUS UH 100m X 2 53cm",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000095",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361757 PH RENDIPEL PRO UH 245m x6 GH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000094",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361693 PH ELITE ECOLOGICO UH PLUS 500m X 4",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000093",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361704 SE ELITE DOB EN 4 100X24 ECO NATURAL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000092",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395147 DISP SE INTERFOLIADA BLANCO 40X1",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000091",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361756 PH RENDIPEL PRO DH 100M X6 GH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000090",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361710 TOALLA DE PAPEL INTERFOLIADO ECO NATURAL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000089",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361653 SE CORTADA UNA HOJA RENDIPEL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000088",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "370049 Alcohol Elite Spray Multiflex 1000ml x6x1",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000087",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361531-1 (EN DESARROLLO) TO INTERF ELITE PLUS BCA DH 200",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000086",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371439 NP JABON ESPUMA BOTELLA 6x800mL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000085",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361425 SE Elite Inst. Cortada Classic UH 14x13.5 cm x18x300",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000084",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361598 PO ELITE SUPERMERCADO ALOE VERA PACK x4",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000083",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361661 TO INTERF ELITE PLUS BCA DH 200X18",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000082",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "360976 SE ELITE DOB EN 4 PLUS 100X24 3",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000081",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361424 SE Elite Instit. Excellence UH 24x24 cm x24x100",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000080",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361699 SE ELITE DOB EN 4 PLUS 100X24 33X33",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000079",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361646 SE ELITE CORTADA CLASSIC 1000X12",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000078",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "360442 SE ELITE DOB EN 4 PLUS 100X24 30X30",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000077",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361711 PAÑO MAXWIPE X60 125 PAÑOS X1",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000076",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361536 PT Elite Interfoliado Classic UH XL 21.6x25 cm x8x150",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000075",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395159 SERVILLETERO ELITE PRO - UNIDAD",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000074",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371664 NP JABON LIQUIDO DOYPACK 900ML PE",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000073",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361421 PH Elite Excellence DH 65 mts x4x8",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000072",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361731 SERVILLETA GOURMET BLANCA UH X 50 X 12",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000071",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361377 PH Elite Jumbo Excellence DH 250 mts x1x6",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000070",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361712 PAÑO MAXWIPE X80 80PAÑOS X6",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000069",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361660 TO INTERF ELITE PLUS BCA DH XL 200X18",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000068",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361698 RC ELITE PLUS DH 1",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000067",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361179 PT Elite Interfoliado Excellence DH ST 21.6x21 cm x20x150",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000066",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361702 PH ELITE UH AHORRO CLASSIC 500 X4",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000065",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361530 PT Elite Interfoliado Plus Blanco DH XL 21.6x25 cm x18x200",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000064",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361720 PAÑO MULTIUSOS ELITE MAXWIPE 70 88PAÑOS",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000063",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361593 PT Elite Plus DH 15 mts x3x8",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000062",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361641 PH ELITE DH CLASSIC 2X10 15ME",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000061",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371632 NP Jabon Spray Multiflex Elite 6x1L PE",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000060",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371626 Alcohol Gel Multiflex Elite 6X1L PE",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000059",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371625 NP Jabon Antibact Eespuma Multiflex 6X1L PE",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000058",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "360854 SE Elite Instit. Excellence UH 33x33 cm x24x100",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000057",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395148 DISP SE INTERFOLIADA NEGRO 40X1",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000056",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371631 NP ALCOHOL SPRAY MULTIFLEX 1 L",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000055",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371575 Jabón Elite Spray Multiflex 1000ml x6x1",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000054",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361686 PH ELITE UNA HOJA PLUS 550m x4",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000053",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361515 FA Elite Individual 60x30",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000052",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361450 SE Elite Interfoliado Classic UH 21.6x10.5 cm x8x300",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000051",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361117 PO ELITE ALOE VERA PROMOCIONAL pack 8x36",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000050",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371630 NP Jabon Espuma Botella 6x800mL PE",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000049",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361706 HIGIENICO RENDIPEL PRO UH 500m x2",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000048",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361486 SERVILLETA GOURMET BLANCA UH X 50 X 12",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000047",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395127 DISPENSADOR SABANILLA BLANCO SL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000045",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371574 Jabón Elite Espuma Multiflex 1000ml x6x1",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000044",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361746 TO ELITE BASICA UH 200 M X 2 CLASSIC",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000043",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361735 TOALLA DE PAPEL UNA HOJA 2 ROLLOS ECO NATURAL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000042",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361687 TO ELITE BLANCA UH 300MX2 PLUS",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000041",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361533 PT Elite Jumbo Plus Ecológica UH 300 mts x1x2",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000040",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "360374 PH Elite Jumbo Plus Ecológico UH 500 mts x1x4",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000039",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395142 DISP JABÓN LIQUIDO ECONOMICO x1 SL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000038",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395124 DISP TO PALANCA BLANC/NEGRO DISP91534 SL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000037",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371470 Jabón Elite Económico 5 litros x2x1",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000036",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395149 DISP JABÓN MULTIFLEX BLANCO/NEGRO RECI",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000035",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395145 DISP NP TO AUTOC ELEC BLANC/BLANC 8826SL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000034",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395121 Dispensador Jabón Liq Rell Blanco /Negro DISP91524",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000033",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371547 MASCARILLA ELITE PRO DISPLAY 50 x 40",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000032",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361656 PH ELITE EXCELLENCE INTERFOL DH 400 X18",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000031",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361540 PH Elite Jumbo Plus Blanco UH 550 mts x1x4",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000030",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361499 TO Rendipel Pro DH 120m x1",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000029",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395157 DISP. PT ROLLO PALANC. BLANCO ECON.",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000028",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395154 DISP JABON LIQ RELL NEG/NEG",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000027",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395144 DISP PAPEL HIGIENICO ECONOMICO",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000026",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395136 DISPEN PH INTERF 70080 SL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000025",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395134 DISP PAPEL HIGIÉNICO 4TTS-WC/ELITE SL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000024",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395119 Dispensador Jabón Espuma Metal 800ml",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000023",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371665 NP JABON ANTIBACTERIAL 5L PE",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000022",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "371628 NP Jabon Glicerina Multif Elite 6x1L PE",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000021",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361703 TO ELITE BASICA UH 200MX4 CLASSIC",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000020",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361668 TO ELITE BLANCA UH 200mX2 CLASS",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000019",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395156 DISP. PT INTERF. BLANCO ECON",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000018",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395151 DISP HIG JUMBO NEGRO/NEGRO",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000017",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395150 DISP JABÓN MULTIFLEX NEGRO/NEGRO RECI",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000016",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395135 DISP PAPEL HIG METÁLIC 7TTS-BAN/ELITE SL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000015",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395131 DISPENSADOR DE JABÓN AUTOMÁTICO x1",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000014",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395128 DISPENSADOR INOX PT INTERFOLIADO",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000013",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395125 DISPENSADOR TOALLA DOBLADA BLANCO/NEGRO",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000012",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361705 PH ELITE PROFESSIONAL PLUS DH X24 20M",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000011",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361666 PT Elite Jumbo Classic Básica UH 200 mts x1x2",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000010",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395158 DISP. JABÓN RELLENABLE BLANCO ECON.",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000009",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395155 DISP. PAPEL HIG BLANCO ECON",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000008",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395153 DIS TO AUTOCORTE NEGRO/NEGRO 8813 SL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000007",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395152 DISP TO DOBLAD NEGRO/NEGRO 8823 SL",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000006",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395126 NP DISP TO AUTOCORTE BLANCO/NEGRO 8812",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000005",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "395123 DISPENS HIG JUMBO BLANCO/NEGRO DISP91508",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000004",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361758 TO RENDIPEL PRO DH 100m x1 GH",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000003",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361616 HIGIENICO RENDIPEL PRO DH 115m x6",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000002",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361449 PH Elite Institucional Classic DH 14 mts x2x24 VERDE",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    },
+    {
+      "codigo": "MUESTRAS000001",
+      "laboratorio": "SOFTYS MUESTRAS",
+      "principio_activo": "PRODUCTO",
+      "descripcion": "361444 PH Elite Excellence DH 23 mts x4x12",
+      "unidad": "UNIDAD",
+      "estado": "Activo"
+    }
+  ]
+}
