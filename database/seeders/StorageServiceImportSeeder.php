@@ -447,6 +447,19 @@ class StorageServiceImportSeeder extends Seeder
             $map[$key] = (int) $warehouse->id;
         }
 
+        // Deja SOLO los 6 almacenes del dump: desactiva (status=null, reversible)
+        // los demas almacenes activos de kamary_medicals que no son del dump.
+        $keepIds = array_values($map);
+        if (!empty($keepIds)) {
+            Warehouse::query()
+                ->whereHas('branch.business', function ($q) {
+                    $q->where('business_key', BusinessScope::KAMARY_MEDICALS);
+                })
+                ->whereNotNull('status')
+                ->whereNotIn('id', $keepIds)
+                ->update(['status' => null, 'updated_by' => $this->userId]);
+        }
+
         return $map;
     }
 
