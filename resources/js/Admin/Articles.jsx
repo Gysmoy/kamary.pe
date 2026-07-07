@@ -17,9 +17,14 @@ import SetSelectValue from '../Utils/SetSelectValue';
 import { scopedPermission } from '../Utils/permissionScope';
 import renderGridEditLink from '../Utils/renderGridEditLink';
 import ArticlesRest from '../Actions/Admin/ArticlesRest';
+import UnitsRest from '../Actions/Admin/UnitsRest';
+import LaboratoriesRest from '../Actions/Admin/LaboratoriesRest';
+import CatalogManagerModal from '../Components/Adminto/CatalogManagerModal';
 import setSwitchChecked from '../Utils/setSwitchChecked';
 
 const articlesRest = new ArticlesRest()
+const unitsRest = new UnitsRest()
+const laboratoriesRest = new LaboratoriesRest()
 
 const formatAuditUser = (user) => {
   if (!user) return ''
@@ -381,8 +386,9 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const importModalRef = useRef()
   const importFileRef = useRef()
   const importLaboratoryRef = useRef()
-  const principleCreateModalRef = useRef()
-  const unitCreateModalRef = useRef()
+  const labManagerRef = useRef()
+  const principleManagerRef = useRef()
+  const unitManagerRef = useRef()
   const manufacturerCreateModalRef = useRef()
 
   const idRef = useRef()
@@ -420,9 +426,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const purchasePriceNationalRef = useRef()
   const purchasePriceForeignRef = useRef()
   const notesRef = useRef()
-  const newPrincipleNameRef = useRef()
-  const newUnitNameRef = useRef()
-  const newUnitSymbolRef = useRef()
   const newManufacturerNameRef = useRef()
   const newManufacturerCountryRef = useRef()
   const newManufacturerStatusRef = useRef()
@@ -1089,53 +1092,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     setSelectedLaboratoryId(laboratoryId)
     if (isMagistrales) return
     await loadPrinciples(laboratoryId, null)
-  }
-
-  const onOpenCreatePrincipleModal = () => {
-    if (isMagistrales) return
-    if (!selectedLaboratoryId) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Laboratorio requerido',
-        text: 'Primero selecciona un laboratorio para asociar el principio activo'
-      })
-      return
-    }
-    newPrincipleNameRef.current.value = ''
-    $(principleCreateModalRef.current).modal('show')
-  }
-
-  const onCreatePrincipleSubmit = async (e) => {
-    e.preventDefault()
-    const name = (newPrincipleNameRef.current.value ?? '').trim()
-    if (!name) return
-
-    const created = await articlesRest.createPrinciple(selectedLaboratoryId, { name })
-    if (!created) return
-
-    await loadPrinciples(selectedLaboratoryId, created.id)
-    $(principleCreateModalRef.current).modal('hide')
-  }
-
-  const onOpenCreateUnitModal = () => {
-    newUnitNameRef.current.value = ''
-    newUnitSymbolRef.current.value = ''
-    $(unitCreateModalRef.current).modal('show')
-  }
-
-  const onCreateUnitSubmit = async (e) => {
-    e.preventDefault()
-    const request = {
-      name: (newUnitNameRef.current.value ?? '').trim(),
-      symbol: (newUnitSymbolRef.current.value ?? '').trim(),
-    }
-    if (!request.name || !request.symbol) return
-
-    const created = await articlesRest.createUnit(request)
-    if (!created?.id) return
-
-    await loadUnits(created.id)
-    $(unitCreateModalRef.current).modal('hide')
   }
 
   const onPresentationUpdated = (uid, field, value) => {
@@ -2589,7 +2545,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
         <SelectAPIFormGroup
           eRef={laboratoryRef}
-          label='Laboratorio'
+          label={<span>Laboratorio <button type='button' className='btn btn-link p-0 ms-2' onClick={() => $(labManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button></span>}
           col='col-md-4'
           required
           searchAPI={articlesRest.laboratoriesPaginateApi()}
@@ -2602,7 +2558,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
         {!isMagistrales && <SelectFormGroup
           eRef={principleRef}
-          label={<span>Principio activo <button type='button' className='btn btn-link p-0 ms-2' onClick={onOpenCreatePrincipleModal}>Agregar</button></span>}
+          label={<span>Principio activo <button type='button' className='btn btn-link p-0 ms-2' onClick={() => $(principleManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button></span>}
           col='col-md-4'
           dropdownParent='#article-form-container'
           required
@@ -2618,7 +2574,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
         <SelectFormGroup
           eRef={unitRef}
-          label={<span>Unidad de medida <button type='button' className='btn btn-link p-0 ms-2' onClick={onOpenCreateUnitModal}>Agregar</button></span>}
+          label={<span>Unidad de medida <button type='button' className='btn btn-link p-0 ms-2' onClick={() => $(unitManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button></span>}
           col='col-md-4'
           dropdownParent='#article-form-container'
           required
@@ -3054,27 +3010,44 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       </div>
     </Modal>
 
-    <Modal
-      modalRef={principleCreateModalRef}
-      title='Agregar principio activo'
-      onSubmit={onCreatePrincipleSubmit}
-      size='md'
-    >
-      <InputFormGroup eRef={newPrincipleNameRef} label='Nombre del principio activo' col='col-12' required />
-      <small className='text-muted'>Se asociara al laboratorio actualmente seleccionado.</small>
-    </Modal>
+    <CatalogManagerModal
+      modalRef={unitManagerRef}
+      title='Gestionar unidades de medida'
+      fields={[
+        { key: 'name', label: 'Nombre', col: 'col-md-8', required: true },
+        { key: 'symbol', label: 'Simbolo', col: 'col-md-4', required: true },
+      ]}
+      fetchList={() => articlesRest.getUnits()}
+      save={(payload) => unitsRest.save(payload)}
+      remove={(id) => unitsRest.delete(id)}
+      onChanged={() => loadUnits(selectedUnitId)}
+    />
 
-    <Modal
-      modalRef={unitCreateModalRef}
-      title='Agregar unidad de medida'
-      onSubmit={onCreateUnitSubmit}
-      size='md'
-    >
-      <div className='row'>
-        <InputFormGroup eRef={newUnitNameRef} label='Nombre' col='col-md-8' required />
-        <InputFormGroup eRef={newUnitSymbolRef} label='Simbolo' col='col-md-4' required />
-      </div>
-    </Modal>
+    <CatalogManagerModal
+      modalRef={principleManagerRef}
+      title='Gestionar principios activos'
+      fields={[
+        { key: 'name', label: 'Nombre', col: 'col-12', required: true },
+      ]}
+      canManage={!!selectedLaboratoryId}
+      fetchList={() => articlesRest.getPrinciplesByLaboratory(selectedLaboratoryId)}
+      save={(payload) => laboratoriesRest.savePrinciple(selectedLaboratoryId, payload)}
+      remove={(id) => laboratoriesRest.deletePrinciple(selectedLaboratoryId, id)}
+      onChanged={() => loadPrinciples(selectedLaboratoryId, selectedPrincipleId)}
+    />
+
+    <CatalogManagerModal
+      modalRef={labManagerRef}
+      title='Gestionar laboratorios'
+      fields={[
+        { key: 'code', label: 'Codigo', col: 'col-md-4', required: true },
+        { key: 'name', label: 'Nombre', col: 'col-md-8', required: true },
+      ]}
+      fetchList={() => articlesRest.getLaboratories()}
+      save={(payload) => laboratoriesRest.save({ country: 'Perú', status: true, ...payload })}
+      remove={(id) => laboratoriesRest.delete(id)}
+      onChanged={() => { }}
+    />
   </>)
 }
 
