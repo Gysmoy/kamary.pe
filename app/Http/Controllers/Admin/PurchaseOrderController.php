@@ -12,6 +12,7 @@ use App\Services\AccountsPayableService;
 use App\Models\Warehouse;
 use App\Support\BusinessScope;
 use App\Support\MagistralesWarehouse;
+use App\Support\SamplesWarehouse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
@@ -485,11 +486,12 @@ class PurchaseOrderController extends BasicController
     }
 
     /**
-     * El selector de articulos del PO general necesita mostrar el catalogo de Magistrales cuando
-     * la orden apunta al almacen fijo de Magistrales (id devuelto por MagistralesWarehouse::idOrNull()).
-     * Fuera de esta condicion exacta (moduleScope==='standard' + almacen coincide con el fijo) esto
-     * devuelve $this->moduleScope sin cambios, o sea el comportamiento actual queda intacto para
-     * cualquier otro almacen.
+     * El selector de articulos del PO general muestra el catalogo de Magistrales o de Muestras
+     * cuando la orden apunta al almacen fijo respectivo (MagistralesWarehouse::idOrNull() /
+     * SamplesWarehouse::idOrNull()). DEBE mantenerse en sincronia con
+     * ArticleController::pickerEffectiveModuleScope(): lo que ese picker ofrece es lo que aqui
+     * se valida al guardar (scopedArticleQuery). Fuera de esos almacenes fijos devuelve
+     * $this->moduleScope sin cambios (comportamiento estandar intacto).
      */
     private function articleScopeForWarehouse(?int $warehouseId): string
     {
@@ -497,11 +499,16 @@ class PurchaseOrderController extends BasicController
         if (!$warehouseId) return $this->moduleScope;
 
         $magistralesWarehouseId = MagistralesWarehouse::idOrNull();
-        if (!$magistralesWarehouseId || $warehouseId !== $magistralesWarehouseId) {
-            return $this->moduleScope;
+        if ($magistralesWarehouseId && $warehouseId === $magistralesWarehouseId) {
+            return 'magistrales';
         }
 
-        return 'magistrales';
+        $samplesWarehouseId = SamplesWarehouse::idOrNull();
+        if ($samplesWarehouseId && $warehouseId === $samplesWarehouseId) {
+            return 'muestras';
+        }
+
+        return $this->moduleScope;
     }
 
     private function scopedArticleQuery(?string $scope = null)
