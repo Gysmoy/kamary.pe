@@ -170,8 +170,9 @@ class SetupController extends Controller
                 }
             }
 
+            // Request::boolean() no existe en Laravel 5.7
             $sendDocumentToPse = $request->has('send_document_to_pse')
-                ? $request->boolean('send_document_to_pse')
+                ? filter_var($request->input('send_document_to_pse'), FILTER_VALIDATE_BOOLEAN)
                 : (bool)($company ? $company->send_document_to_pse : false);
             if (!$sendDocumentToPse) {
                 return;
