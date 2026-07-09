@@ -38,23 +38,14 @@ const BillingSettings = ({ can }) => {
   const taxNumberRef = useRef()
   const tradeNameRef = useRef()
   const fiscalAddressRef = useRef()
-  const soapSendIdRef = useRef()
   const soapTypeIdRef = useRef()
   const soapUsernameRef = useRef()
   const soapPasswordRef = useRef()
-  const soapUrlRef = useRef()
   const detractionAccountRef = useRef()
   const paymentAccountsTitleRef = useRef()
   const paymentAccountsSubtitleRef = useRef()
   const paymentAccountsLinesRef = useRef()
   const certificateDueRef = useRef()
-  const operationAmazoniaRef = useRef()
-  const sendDocumentToPseRef = useRef()
-  const urlSignaturePseRef = useRef()
-  const urlSendCdrPseRef = useRef()
-  const clientIdPseRef = useRef()
-  const integratedQueryClientIdRef = useRef()
-  const integratedQueryClientSecretRef = useRef()
   const facturadorBaseUrlRef = useRef()
   const facturadorAuthModeRef = useRef()
   const facturadorTokenRef = useRef()
@@ -158,24 +149,15 @@ const BillingSettings = ({ can }) => {
     taxNumberRef.current.value = business?.tax_number ?? ''
     tradeNameRef.current.value = business?.trade_name ?? ''
     fiscalAddressRef.current.value = business?.fiscal_address ?? ''
-    soapSendIdRef.current.value = business?.soap_send_id ?? '01'
     soapTypeIdRef.current.value = business?.soap_type_id ?? '01'
     soapUsernameRef.current.value = business?.soap_username ?? ''
     soapPasswordRef.current.value = business?.soap_password ?? ''
-    soapUrlRef.current.value = business?.soap_url ?? ''
     detractionAccountRef.current.value = business?.detraction_account ?? ''
     const paymentAccounts = normalizePaymentAccounts(business?.payment_accounts)
     paymentAccountsTitleRef.current.value = paymentAccounts?.title ?? ''
     paymentAccountsSubtitleRef.current.value = paymentAccounts?.subtitle ?? ''
     paymentAccountsLinesRef.current.value = (paymentAccounts?.lines ?? []).join('\n')
     certificateDueRef.current.value = business?.certificate_due?.toString?.().slice?.(0, 10) ?? ''
-    operationAmazoniaRef.current.checked = business?.operation_amazonia ?? false
-    sendDocumentToPseRef.current.checked = business?.send_document_to_pse ?? false
-    urlSignaturePseRef.current.value = business?.url_signature_pse ?? ''
-    urlSendCdrPseRef.current.value = business?.url_send_cdr_pse ?? ''
-    clientIdPseRef.current.value = business?.client_id_pse ?? ''
-    integratedQueryClientIdRef.current.value = business?.integrated_query_client_id ?? ''
-    integratedQueryClientSecretRef.current.value = business?.integrated_query_client_secret ?? ''
     facturadorBaseUrlRef.current.value = business?.facturador_base_url ?? ''
     facturadorAuthModeRef.current.value = business?.facturador_auth_mode ?? ''
     facturadorTokenRef.current.value = business?.facturador_token ?? ''
@@ -216,11 +198,10 @@ const BillingSettings = ({ can }) => {
       tax_number: taxNumberRef.current.value.trim(),
       trade_name: tradeNameRef.current.value.trim(),
       fiscal_address: fiscalAddressRef.current.value.trim(),
-      soap_send_id: soapSendIdRef.current.value,
+      soap_send_id: '01',
       soap_type_id: soapTypeIdRef.current.value,
       soap_username: soapUsernameRef.current.value.trim(),
       soap_password: soapPasswordRef.current.value.trim(),
-      soap_url: soapUrlRef.current.value.trim(),
       detraction_account: detractionAccountRef.current.value.trim(),
       payment_accounts: {
         title: paymentAccountsTitleRef.current.value.trim(),
@@ -228,13 +209,6 @@ const BillingSettings = ({ can }) => {
         lines: paymentAccountsLinesRef.current.value.split(/\r?\n/).map(line => line.trim()).filter(Boolean),
       },
       certificate_due: certificateDueRef.current.value || null,
-      operation_amazonia: operationAmazoniaRef.current.checked,
-      send_document_to_pse: sendDocumentToPseRef.current.checked,
-      url_signature_pse: urlSignaturePseRef.current.value.trim(),
-      url_send_cdr_pse: urlSendCdrPseRef.current.value.trim(),
-      client_id_pse: clientIdPseRef.current.value.trim(),
-      integrated_query_client_id: integratedQueryClientIdRef.current.value.trim(),
-      integrated_query_client_secret: integratedQueryClientSecretRef.current.value.trim(),
       facturador_base_url: facturadorBaseUrlRef.current.value.trim(),
       facturador_auth_mode: facturadorAuthModeRef.current.value,
       facturador_token: facturadorTokenRef.current.value.trim(),
@@ -599,14 +573,12 @@ const BillingSettings = ({ can }) => {
           </div>
         )}
         <div className='col-md-3 mb-3'><label className='form-label'>RUC</label><input ref={taxNumberRef} className='form-control' maxLength={11} /></div>
-        <div className='col-md-5 mb-3'><label className='form-label'>Nombre comercial</label><input ref={tradeNameRef} className='form-control' /></div>
-        <div className='col-md-2 mb-3'><label className='form-label'>SOAP send</label><select ref={soapSendIdRef} className='form-control'><option value='01'>Sunat</option><option value='02'>OSE</option></select></div>
-        <div className='col-md-2 mb-3'><label className='form-label'>SOAP type</label><select ref={soapTypeIdRef} className='form-control'><option value='01'>Beta</option><option value='02'>Producción</option></select></div>
+        <div className='col-md-6 mb-3'><label className='form-label'>Nombre comercial</label><input ref={tradeNameRef} className='form-control' /></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Ambiente SUNAT</label><select ref={soapTypeIdRef} className='form-control'><option value='01'>Beta (pruebas)</option><option value='02'>Producción (real)</option></select></div>
         <div className='col-12 mb-3'><label className='form-label'>Dirección fiscal</label><input ref={fiscalAddressRef} className='form-control' placeholder='Dirección fiscal que se mostrará en los PDF' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>SOAP usuario</label><input ref={soapUsernameRef} className='form-control' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>SOAP clave</label><input ref={soapPasswordRef} className='form-control' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>SOAP URL</label><input ref={soapUrlRef} className='form-control' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Cuenta detracción</label><input ref={detractionAccountRef} className='form-control' /></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Usuario SOL</label><input ref={soapUsernameRef} className='form-control' placeholder='RUC + usuario, ej. 20123456789USUARIO1' /><small className='text-muted'>Va con el RUC adelante, tal como se usa en SUNAT.</small></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Clave SOL</label><input ref={soapPasswordRef} className='form-control' /></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Cuenta detracción</label><input ref={detractionAccountRef} className='form-control' /><small className='text-muted'>Solo si emites facturas con detracción.</small></div>
         <div className='col-12'>
           <hr className='my-2' />
           <h5 className='mb-1'>Conexión al facturador</h5>
@@ -637,14 +609,7 @@ const BillingSettings = ({ can }) => {
           <small className='text-muted'>Ingresa una linea por cada cuenta o CCI.</small>
         </div>
         <div className='col-md-4 mb-3'><label className='form-label'>Vence certificado</label><input ref={certificateDueRef} type='date' className='form-control' /></div>
-        <div className='col-md-4 mb-3 d-flex align-items-end'><div className='form-check mb-2'><input ref={operationAmazoniaRef} type='checkbox' className='form-check-input' id='operation-amazonia-settings' /><label className='form-check-label' htmlFor='operation-amazonia-settings'>Operación amazonia</label></div></div>
-        <div className='col-md-4 mb-3 d-flex align-items-end'><div className='form-check mb-2'><input ref={sendDocumentToPseRef} type='checkbox' className='form-check-input' id='send-document-to-pse-settings' /><label className='form-check-label' htmlFor='send-document-to-pse-settings'>Enviar a PSE</label></div></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>PSE firma URL</label><input ref={urlSignaturePseRef} className='form-control' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>PSE CDR URL</label><input ref={urlSendCdrPseRef} className='form-control' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>PSE client id</label><input ref={clientIdPseRef} className='form-control' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Integrated query id</label><input ref={integratedQueryClientIdRef} className='form-control' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Integrated query secret</label><input ref={integratedQueryClientSecretRef} className='form-control' /></div>
-        <div className='col-md-4 mb-3'></div>
+        <div className='col-md-8 mb-3'></div>
         <div className='col-md-6 mb-3'>
           <label className='form-label'>Logo fiscal</label>
           <input ref={logoFileRef} type='file' className='form-control' accept='.png,.jpg,.jpeg,.gif,.svg' onChange={onLogoFileChange} />

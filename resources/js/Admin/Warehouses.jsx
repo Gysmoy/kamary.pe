@@ -262,8 +262,7 @@ const Warehouses = ({ fixedWarehouse = null, sampleWarehouse = null, fixedBusine
       defaultSort={{ field: 'name', desc: false }}
       defaultPageSize={25}
       searchFields={['name', 'description', 'branch.name', 'branch.business.name']}
-      searchPlaceholder="Buscar almacén…"
-      searchMobileOnly
+      searchPlaceholder="Buscar por nombre, empresa o sede…"
       emptyText="No se encontraron almacenes."
       headerActions={<>
         <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refresh}>

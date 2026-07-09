@@ -163,7 +163,6 @@ const VdTable = forwardRef(({
   defaultSort = null,
   defaultPageSize = 10,
   pageSizes = [10, 25, 50, 100],
-  columnsMenu = true,
   searchFields = null,
   searchPlaceholder = 'Buscar…',
   searchMobileOnly = false,
@@ -186,8 +185,7 @@ const VdTable = forwardRef(({
   const [rawText, setRawText] = useState({})    // key -> valor en pantalla (text/number/date)
   const [search, setSearch] = useState('')
   const [searchRaw, setSearchRaw] = useState('')
-  const [colMenuOpen, setColMenuOpen] = useState(false)
-  const [hidden, setHidden] = useState(() => {
+  const [hidden] = useState(() => {
     const h = {}
     columns.forEach((c) => { if (c.visible === false) h[c.key] = true })
     return h
@@ -196,7 +194,6 @@ const VdTable = forwardRef(({
   const debounceRef = useRef({})
   const searchDebounceRef = useRef(null)
   const reqIdRef = useRef(0)
-  const colMenuBoxRef = useRef(null)
   const reloadRef = useRef(() => {})
 
   const visibleColumns = columns.filter((c) => !hidden[c.key])
@@ -290,14 +287,6 @@ const VdTable = forwardRef(({
     return () => { if (node) delete node._vdInstance }
   }, [])
 
-  /* -------- cerrar menu de columnas al click fuera -------- */
-  useEffect(() => {
-    if (!colMenuOpen) return
-    const onDoc = (e) => { if (!colMenuBoxRef.current?.contains(e.target)) setColMenuOpen(false) }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [colMenuOpen])
-
   /* -------- handlers de filtro -------- */
   const commitFilter = (key, value) => {
     setFilters((f) => { const n = { ...f }; if (value === '' || value == null) delete n[key]; else n[key] = value; return n })
@@ -370,32 +359,9 @@ const VdTable = forwardRef(({
       </div>
 
       {/* toolbar: extras + columnas + buscador */}
-      {(toolbar || columnsMenu || searchFields) && (
+      {(toolbar || searchFields) && (
         <div className="d-flex align-items-center flex-wrap mt-3" style={{ gap: 8 }}>
           {toolbar}
-          {columnsMenu && (
-            <div className="position-relative" ref={colMenuBoxRef}>
-              <button type="button" className="vdt-btn-soft" onClick={() => setColMenuOpen((v) => !v)}>
-                <i className="mdi mdi-view-column"></i> Columnas
-              </button>
-              {colMenuOpen && (
-                <div className="vdt-colmenu">
-                  <p className="vdt-colmenu-title">Mostrar columnas</p>
-                  {columns.map((c) => (
-                    <label className="vdt-colmenu-item" key={c.key}>
-                      <input
-                        type="checkbox"
-                        className="form-check-input mt-0"
-                        checked={!hidden[c.key]}
-                        onChange={() => setHidden((h) => ({ ...h, [c.key]: !h[c.key] }))}
-                      />
-                      {c.label}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
           {searchFields?.length > 0 && (
             <div className={`position-relative ${searchMobileOnly ? 'd-md-none' : ''}`} style={{ flex: '1 1 220px', minWidth: 180 }}>
               <i className="mdi mdi-magnify vdt-search-ico"></i>
