@@ -1,28 +1,69 @@
-import React, { createRef, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Fetch } from 'sode-extend-react';
+import { toast } from 'sonner';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
-import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
+import Modal from '@Adminto/Modal';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
-import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
-import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
-import SetSelectValue from '../Utils/SetSelectValue';
 import PurchaseReceiptsRest from '../Actions/Admin/PurchaseReceiptsRest';
 import { scopedPermission } from '../Utils/permissionScope';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
   purchaseReceiptStatusOptions,
-  toLookup,
+  getPurchaseReceiptStatusLabel,
 } from '../Utils/statusLabels';
 
 const purchaseReceiptsRest = new PurchaseReceiptsRest()
+
+const documentTypeOptions = [
+  { value: 'Factura', label: 'Factura' },
+  { value: 'Boleta', label: 'Boleta' },
+  { value: 'Ticket', label: 'Ticket' },
+  { value: 'Otro', label: 'Otro' },
+]
+
+const currencyOptions = [
+  { value: 'PEN', label: 'PEN' },
+  { value: 'USD', label: 'USD' },
+  { value: 'EUR', label: 'EUR' },
+]
+
+const paymentConditionOptions = [
+  { value: 'Contado', label: 'Contado' },
+  { value: 'Credito', label: 'Crédito' },
+]
+
+// Carga listas completas (acotadas) para alimentar los VdSelect que antes
+// hacian busqueda remota via select2/SelectAPIFormGroup. VdSelect no soporta
+// busqueda remota paginada, asi que se carga un lote generoso una sola vez.
+const loadFullList = async (path, { take = 500, sort = 'name', desc = false, extra = {} } = {}) => {
+  try {
+    const { status, result } = await Fetch(`/api/${path}/paginate`, {
+      method: 'POST',
+      body: JSON.stringify({
+        isLoadingAll: true,
+        take,
+        sort: [{ selector: sort, desc }],
+        ...extra,
+      })
+    })
+    if (!status) throw new Error(result?.message || 'No se pudo cargar la lista')
+    return result?.data ?? []
+  } catch (error) {
+    toast.error('Error', {
+      description: error.message,
+      duration: 3000,
+      richColors: true,
+    });
+    return []
+  }
+}
 
 const formatAuditUser = (user) => {
   if (!user) return ''
@@ -60,24 +101,15 @@ const emptyItem = () => ({
 })
 
 const PurchaseReceipts = () => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
 
   const idRef = useRef()
   const codeRef = useRef()
-  const purchaseOrderRef = useRef()
-  const businessRef = useRef()
-  const branchRef = useRef()
-  const warehouseRef = useRef()
-  const supplierRef = useRef()
   const issueDateRef = useRef()
-  const receiptStatusRef = useRef()
-  const documentTypeRef = useRef()
   const documentSeriesRef = useRef()
   const documentSequenceRef = useRef()
   const documentFileRef = useRef()
-  const currencyRef = useRef()
-  const paymentConditionRef = useRef()
   const firstDueDateRef = useRef()
   const installmentsRef = useRef()
   const taxAmountRef = useRef()
@@ -86,7 +118,6 @@ const PurchaseReceipts = () => {
   const guideSequenceRef = useRef()
   const guideRucRef = useRef()
   const guideFileRef = useRef()
-  const articleRefs = useRef({})
 
   const [isEditing, setIsEditing] = useState(false)
   const [selectedPurchaseOrderId, setSelectedPurchaseOrderId] = useState('')
@@ -94,24 +125,62 @@ const PurchaseReceipts = () => {
   const [selectedBranchId, setSelectedBranchId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
   const [selectedSupplierId, setSelectedSupplierId] = useState('')
+  const [selectedReceiptStatus, setSelectedReceiptStatus] = useState('draft')
+  const [selectedDocumentType, setSelectedDocumentType] = useState('Factura')
+  const [selectedCurrency, setSelectedCurrency] = useState('PEN')
+  const [selectedPaymentCondition, setSelectedPaymentCondition] = useState('Contado')
   const [branches, setBranches] = useState([])
   const [items, setItems] = useState([emptyItem()])
   const [taxAmount, setTaxAmount] = useState(0)
 
-  const getArticleRef = (uid) => {
-    if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
-    return articleRefs.current[uid]
+  const [businessesCatalog, setBusinessesCatalog] = useState([])
+  const [warehousesCatalog, setWarehousesCatalog] = useState([])
+  const [suppliersCatalog, setSuppliersCatalog] = useState([])
+  const [purchaseOrdersCatalog, setPurchaseOrdersCatalog] = useState([])
+  const [articlesCatalog, setArticlesCatalog] = useState([])
+
+  const refresh = () => tableRef.current?.refresh()
+
+  // Agrega un registro puntual (por ejemplo el de una recepcion en edicion)
+  // al catalogo si el lote cargado al inicio no lo incluyo.
+  const ensureCatalog = (setList, record) => {
+    if (!record?.id) return
+    setList(prev => prev.some(item => `${item.id}` === `${record.id}`) ? prev : [...prev, record])
   }
 
   useEffect(() => {
-    items.forEach(item => {
-      const ref = getArticleRef(item.uid)
-      if (!ref.current || !item.article_id || !item.article_label) return
-      const current = $(ref.current).val()
-      if (`${current}` === `${item.article_id}`) return
-      SetSelectValue(ref.current, item.article_id, item.article_label)
-    })
-  }, [items])
+    const loadCatalogs = async () => {
+      const [businessesData, warehousesData, suppliersData, purchaseOrdersData, articlesData] = await Promise.all([
+        loadFullList('admin/businesses', { take: 500, sort: 'name' }),
+        loadFullList('admin/warehouses', { take: 500, sort: 'name' }),
+        loadFullList('admin/suppliers', { take: 1000, sort: 'business_name' }),
+        loadFullList('admin/purchase-orders', { take: 1000, sort: 'id', desc: true }),
+        loadFullList('admin/articles', { take: 1000, sort: 'name' }),
+      ])
+      setBusinessesCatalog(businessesData)
+      setWarehousesCatalog(warehousesData)
+      setSuppliersCatalog(suppliersData)
+      setPurchaseOrdersCatalog(purchaseOrdersData)
+      setArticlesCatalog(articlesData)
+    }
+    loadCatalogs()
+  }, [])
+
+  const businessOptions = useMemo(() => businessesCatalog.map(item => ({ value: `${item.id}`, label: item.name })), [businessesCatalog])
+  const warehouseOptions = useMemo(() => warehousesCatalog.map(item => ({ value: `${item.id}`, label: item.name })), [warehousesCatalog])
+  const supplierOptions = useMemo(() => suppliersCatalog.map(item => ({ value: `${item.id}`, label: item.business_name })), [suppliersCatalog])
+  const purchaseOrderOptions = useMemo(() => purchaseOrdersCatalog.map(po => ({
+    value: `${po.id}`,
+    label: `${po.code ?? ''}${po?.supplier?.business_name ? ` - ${po.supplier.business_name}` : ''}`.trim(),
+  })), [purchaseOrdersCatalog])
+  const articleOptions = useMemo(() => articlesCatalog.map(a => ({ value: `${a.id}`, label: `${a.code ?? ''} - ${a.name ?? ''}`.trim() })), [articlesCatalog])
+
+  // Si el articulo de una linea (guardado previamente) no esta en el catalogo
+  // cargado, se agrega como opcion puntual para que el VdSelect lo muestre.
+  const articleOptionsForItem = (item) => {
+    if (!item.article_id || articlesCatalog.some(a => `${a.id}` === `${item.article_id}`)) return articleOptions
+    return [...articleOptions, { value: `${item.article_id}`, label: item.article_label || `#${item.article_id}` }]
+  }
 
   const loadBranches = async (businessId, preferredId = null) => {
     if (!businessId) {
@@ -203,23 +272,13 @@ const PurchaseReceipts = () => {
     setSelectedWarehouseId(warehouseId)
     setSelectedSupplierId(supplierId)
 
-    if (purchaseOrderId) {
-      const poLabel = `${purchaseOrder.code ?? ''}${purchaseOrder?.supplier?.business_name ? ` - ${purchaseOrder.supplier.business_name}` : ''}`.trim()
-      SetSelectValue(purchaseOrderRef.current, purchaseOrderId, poLabel)
-    }
-    if (businessId && purchaseOrder?.business?.name) {
-      SetSelectValue(businessRef.current, businessId, purchaseOrder.business.name)
-    }
-    if (warehouseId && purchaseOrder?.warehouse?.name) {
-      SetSelectValue(warehouseRef.current, warehouseId, purchaseOrder.warehouse.name)
-    }
-    if (supplierId && purchaseOrder?.supplier?.business_name) {
-      SetSelectValue(supplierRef.current, supplierId, purchaseOrder.supplier.business_name)
-    }
+    ensureCatalog(setBusinessesCatalog, purchaseOrder?.business)
+    ensureCatalog(setWarehousesCatalog, purchaseOrder?.warehouse)
+    ensureCatalog(setSuppliersCatalog, purchaseOrder?.supplier)
 
-    setRefValue(currencyRef, purchaseOrder?.currency ?? 'PEN')
-    setRefValue(paymentConditionRef, purchaseOrder?.payment_condition ?? 'Contado')
-    await loadBranches(purchaseOrder?.business_id ?? null, purchaseOrder?.business_branch_id ?? null)
+    setSelectedCurrency(purchaseOrder?.currency ?? 'PEN')
+    setSelectedPaymentCondition(purchaseOrder?.payment_condition ?? 'Contado')
+    await loadBranches(purchaseOrder?.business_id ?? null, purchaseOrder?.business_branch_id ?? branchId)
 
     const pendingItems = (purchaseOrder?.items ?? [])
       .map(buildItemFromPurchaseOrderItem)
@@ -234,13 +293,13 @@ const PurchaseReceipts = () => {
     setRefValue(idRef, data?.id ?? '')
     setRefValue(codeRef, data?.code ?? 'Se genera al guardar')
     setRefValue(issueDateRef, data?.issue_date ? data.issue_date.toString().slice(0, 10) : new Date().toISOString().slice(0, 10))
-    setRefValue(receiptStatusRef, data?.receipt_status ?? 'draft')
-    setRefValue(documentTypeRef, data?.document_type ?? 'Factura')
+    setSelectedReceiptStatus(data?.receipt_status ?? 'draft')
+    setSelectedDocumentType(data?.document_type ?? 'Factura')
     setRefValue(documentSeriesRef, data?.document_series ?? '')
     setRefValue(documentSequenceRef, data?.document_sequence ?? '')
     if (documentFileRef.current) documentFileRef.current.value = ''
-    setRefValue(currencyRef, data?.currency ?? 'PEN')
-    setRefValue(paymentConditionRef, data?.payment_condition ?? 'Contado')
+    setSelectedCurrency(data?.currency ?? 'PEN')
+    setSelectedPaymentCondition(data?.payment_condition ?? 'Contado')
     setRefValue(firstDueDateRef, data?.first_due_date ? data.first_due_date.toString().slice(0, 10) : '')
     setRefValue(installmentsRef, data?.installments ?? '')
     setTaxAmount(Number(data?.tax_amount ?? 0))
@@ -260,30 +319,19 @@ const PurchaseReceipts = () => {
     setSelectedWarehouseId(warehouseId)
     setSelectedSupplierId(supplierId)
 
-    if (purchaseOrderId && data?.purchaseOrder?.code) {
-      const poLabel = `${data.purchaseOrder.code ?? ''}${data?.supplier?.business_name ? ` - ${data.supplier.business_name}` : ''}`.trim()
-      SetSelectValue(purchaseOrderRef.current, purchaseOrderId, poLabel)
-    } else {
-      $(purchaseOrderRef.current).empty().trigger('change')
+    if (purchaseOrderId) {
+      ensureCatalog(setPurchaseOrdersCatalog, {
+        ...(data?.purchaseOrder ?? { id: data.purchase_order_id, code: data?.purchaseOrder?.code }),
+        supplier: data?.purchaseOrder?.supplier ?? data?.supplier ?? null,
+      })
     }
-    if (businessId && data?.business?.name) {
-      SetSelectValue(businessRef.current, businessId, data.business.name)
-    } else {
-      $(businessRef.current).empty().trigger('change')
-    }
-    if (warehouseId && data?.warehouse?.name) {
-      SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
-    } else {
-      $(warehouseRef.current).empty().trigger('change')
-    }
-    if (supplierId && data?.supplier?.business_name) {
-      SetSelectValue(supplierRef.current, supplierId, data.supplier.business_name)
-    } else {
-      $(supplierRef.current).empty().trigger('change')
-    }
+    ensureCatalog(setBusinessesCatalog, data?.business)
+    ensureCatalog(setWarehousesCatalog, data?.warehouse)
+    ensureCatalog(setSuppliersCatalog, data?.supplier)
 
     const detail = (data?.items ?? []).map(buildItemFromReceiptRow)
     setItems(detail.length ? detail : [emptyItem()])
+    ;(data?.items ?? []).forEach(row => { if (row?.article) ensureCatalog(setArticlesCatalog, row.article) })
 
     $(modalRef.current).modal('show')
     await loadBranches(data?.business_id ?? null, data?.business_branch_id ?? null)
@@ -291,6 +339,19 @@ const PurchaseReceipts = () => {
 
   const onModalSubmit = async (e) => {
     e.preventDefault()
+
+    if (!selectedBusinessId) {
+      Swal.fire({ icon: 'warning', title: 'Falta empresa', text: 'Selecciona una empresa.', confirmButtonText: 'Entendido' })
+      return
+    }
+    if (!selectedWarehouseId) {
+      Swal.fire({ icon: 'warning', title: 'Falta almacén', text: 'Selecciona un almacén.', confirmButtonText: 'Entendido' })
+      return
+    }
+    if (!selectedSupplierId) {
+      Swal.fire({ icon: 'warning', title: 'Falta proveedor', text: 'Selecciona un proveedor.', confirmButtonText: 'Entendido' })
+      return
+    }
 
     const formData = new FormData()
     if (getRefValue(idRef)) formData.append('id', getRefValue(idRef))
@@ -300,12 +361,12 @@ const PurchaseReceipts = () => {
     formData.append('warehouse_id', selectedWarehouseId || '')
     formData.append('supplier_id', selectedSupplierId || '')
     formData.append('issue_date', getRefValue(issueDateRef))
-    formData.append('receipt_status', getRefValue(receiptStatusRef) || 'draft')
-    formData.append('document_type', getRefValue(documentTypeRef) || 'Factura')
+    formData.append('receipt_status', selectedReceiptStatus || 'draft')
+    formData.append('document_type', selectedDocumentType || 'Factura')
     formData.append('document_series', getRefValue(documentSeriesRef))
     formData.append('document_sequence', getRefValue(documentSequenceRef))
-    formData.append('currency', getRefValue(currencyRef) || 'PEN')
-    formData.append('payment_condition', getRefValue(paymentConditionRef) || 'Contado')
+    formData.append('currency', selectedCurrency || 'PEN')
+    formData.append('payment_condition', selectedPaymentCondition || 'Contado')
     formData.append('first_due_date', getRefValue(firstDueDateRef))
     formData.append('installments', getRefValue(installmentsRef))
     formData.append('tax_amount', Number(getRefValue(taxAmountRef) || 0))
@@ -337,14 +398,14 @@ const PurchaseReceipts = () => {
     const result = await purchaseReceiptsRest.save(formData)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
     $(modalRef.current).modal('hide')
   }
 
   const onBooleanChange = async ({ id, field, value }) => {
     const result = await purchaseReceiptsRest.boolean({ id, field, value })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -359,22 +420,25 @@ const PurchaseReceipts = () => {
     if (!isConfirmed) return
     const result = await purchaseReceiptsRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
   }
 
-  const onBusinessChanged = async (e) => {
-    const businessId = e.target.value || ''
+  const onBusinessChanged = async (value) => {
+    const businessId = value || ''
     setSelectedBusinessId(businessId)
     await loadBranches(businessId, null)
   }
 
-  const onPurchaseOrderChanged = async (e) => {
-    const purchaseOrderId = e.target.value || ''
+  const onPurchaseOrderChanged = async (value) => {
+    const purchaseOrderId = value || ''
     setSelectedPurchaseOrderId(purchaseOrderId)
     if (!purchaseOrderId) return
 
-    const selected = $(e.target).select2('data')?.[0]
-    const purchaseOrder = selected?.data ?? await purchaseReceiptsRest.getPurchaseOrderById(purchaseOrderId)
+    // Se pide siempre el detalle completo (con items) por id: el catalogo
+    // masivo del picker solo garantiza id/code/supplier para la etiqueta.
+    const purchaseOrder = await purchaseReceiptsRest.getPurchaseOrderById(purchaseOrderId)
+    if (!purchaseOrder) return
+    ensureCatalog(setPurchaseOrdersCatalog, purchaseOrder)
     await applyPurchaseOrderData(purchaseOrder)
   }
 
@@ -386,20 +450,20 @@ const PurchaseReceipts = () => {
     }))
   }
 
-  const onItemArticleChanged = async (uid, e) => {
-    const selected = $(e.target).select2('data')?.[0]
-    const article = selected?.data ?? null
-    const articleId = e.target.value || ''
+  const onItemArticleChanged = async (uid, value) => {
+    const articleId = value || ''
 
     if (!articleId) {
       setItems(prev => prev.map(item => item.uid === uid ? { ...emptyItem(), uid: item.uid } : item))
       return
     }
 
-    const hydrated = article ?? await purchaseReceiptsRest.getArticleById(articleId)
+    const hydrated = articlesCatalog.find(a => `${a.id}` === `${articleId}`)
+      ?? await purchaseReceiptsRest.getArticleById(articleId)
+    if (hydrated) ensureCatalog(setArticlesCatalog, hydrated)
     const articleLabel = hydrated
       ? `${hydrated.code ?? ''} - ${hydrated.name ?? ''}`.trim()
-      : (selected?.text ?? articleId)
+      : `#${articleId}`
 
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
@@ -434,218 +498,194 @@ const PurchaseReceipts = () => {
   const subtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
   const grandTotal = useMemo(() => subtotal + Number(taxAmount || 0), [subtotal, taxAmount])
 
+  const rowActions = (row) => [
+    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+    { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir PDF', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.purchaseReceipt(r)) },
+    { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+  ]
+
   return (<>
-    <Table
-      gridRef={gridRef}
-      title='Recepciones de compra'
+    <VdTable
+      ref={tableRef}
       rest={purchaseReceiptsRest}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar recepción de compra',
-            onClick: () => onModalOpen(null)
-          }
-        });
-      }}
-      pageSize={25}
+      icon="mdi mdi-truck-check"
+      title="Recepciones de compra"
+      unit="recepciones"
+      defaultSort={{ field: 'id', desc: true }}
+      defaultPageSize={25}
+      searchFields={['code', 'purchaseOrder.code', 'warehouse.name', 'supplier.business_name', 'document_series', 'document_sequence']}
+      searchPlaceholder="Buscar por código, OC, almacén o proveedor…"
+      emptyText="No se encontraron recepciones de compra."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refresh}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen(null)}>
+          <i className="mdi mdi-plus"></i> Nueva recepción
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
-        { dataField: 'id', caption: 'ID', width: 80 },
+        { key: 'id', label: 'ID', field: 'id', width: '70px', filter: { type: 'number' } },
         {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: 130,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar recepcion de compra')
+          key: 'code', label: 'Código', field: 'code', width: '130px', filter: { type: 'text' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar recepción de compra">
+              {row.code || '-'}
+            </a>
+          ),
         },
-        { dataField: 'purchaseOrder.code', caption: 'OC', width: 130 },
-        { dataField: 'issue_date', caption: 'F. emisión', width: 110, dataType: 'date' },
-        { dataField: 'warehouse.name', caption: 'Almacén', minWidth: 130 },
-        { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 220 },
-        { dataField: 'document_type', caption: 'Tipo doc', width: 110 },
-        { dataField: 'document_series', caption: 'Serie', width: 90 },
-        { dataField: 'document_sequence', caption: 'Secuencia', width: 110 },
-        { dataField: 'payment_condition', caption: 'Pago', width: 100 },
-        { dataField: 'receipt_status', caption: 'Estado', width: 110, lookup: toLookup(purchaseReceiptStatusOptions) },
-        { dataField: 'currency', caption: 'Moneda', width: 90 },
-        { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+        { key: 'oc', label: 'OC', field: 'purchaseOrder.code', width: '130px', sortable: false, filter: { type: 'text', field: 'purchaseOrder.code' } },
+        { key: 'issue_date', label: 'F. emisión', field: 'issue_date', width: '110px', filter: { type: 'date' } },
+        { key: 'warehouse', label: 'Almacén', field: 'warehouse.name', sortable: false, filter: { type: 'text', field: 'warehouse.name' } },
+        { key: 'supplier', label: 'Proveedor', field: 'supplier.business_name', sortable: false, filter: { type: 'text', field: 'supplier.business_name' } },
+        { key: 'document_type', label: 'Tipo doc', field: 'document_type', width: '110px', filter: { type: 'text' } },
+        { key: 'document_series', label: 'Serie', field: 'document_series', width: '90px', filter: { type: 'text' } },
+        { key: 'document_sequence', label: 'Secuencia', field: 'document_sequence', width: '110px', filter: { type: 'text' } },
+        { key: 'payment_condition', label: 'Pago', field: 'payment_condition', width: '100px', filter: { type: 'text' } },
         {
-          dataField: 'items.id',
-          caption: 'Detalle',
-          minWidth: 320,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => {
-            const lines = (data?.items ?? []).map(item => `${item?.article?.name || 'Artículo'} | Lote ${item?.lot || '-'} | Cant. ${Number(item?.quantity || 0).toFixed(2)} | ${data.currency} ${Number(item?.total || 0).toFixed(2)}`)
-            ReactAppend(container, <div>
-              {lines.length === 0 && <small className='text-muted'>Sin detalle</small>}
-              {lines.map((line, idx) => <div key={`purchase-receipt-${data.id}-${idx}`}><small>{line}</small></div>)}
-            </div>)
-          }
+          key: 'receipt_status', label: 'Estado', field: 'receipt_status', width: '120px',
+          filter: { type: 'select', options: purchaseReceiptStatusOptions },
+          render: (row) => getPurchaseReceiptStatusLabel(row.receipt_status),
         },
         {
-          dataField: 'creator.fullname',
-          caption: 'Creado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
+          key: 'currency', label: 'Moneda', field: 'currency', width: '90px',
+          filter: { type: 'select', options: currencyOptions },
         },
         {
-          dataField: 'updater.fullname',
-          caption: 'Actualizado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
+          key: 'total', label: 'Total', field: 'total', width: '110px', align: 'right', filter: { type: 'number' },
+          render: (row) => Number(row.total || 0).toFixed(2),
         },
         {
-          dataField: 'status',
-          caption: 'Activo',
-          dataType: 'boolean',
-          width: 95,
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-              id: data.id,
-              field: 'status',
-              value: !data.status
-            })} />)
-          }
-        },
-        {
-          caption: 'Acciones',
-          width: 160,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Imprimir PDF',
-              icon: 'mdi mdi-file-pdf-box',
-              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.purchaseReceipt(data))
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary ms-1',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar recepción de compra',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.id)
-            }))
+          key: 'detalle', label: 'Detalle', field: 'items', sortable: false,
+          render: (row) => {
+            const lines = (row?.items ?? []).map(item => `${item?.article?.name || 'Artículo'} | Lote ${item?.lot || '-'} | Cant. ${Number(item?.quantity || 0).toFixed(2)} | ${row.currency} ${Number(item?.total || 0).toFixed(2)}`)
+            if (!lines.length) return <small className="text-muted">Sin detalle</small>
+            return <div>{lines.map((line, idx) => <div key={`purchase-receipt-${row.id}-${idx}`}><small>{line}</small></div>)}</div>
           },
-          allowFiltering: false,
-          allowExporting: false
-        }
+        },
+        {
+          key: 'creador', label: 'Creado por', field: 'creator.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.creator),
+        },
+        {
+          key: 'actualizador', label: 'Actualizado por', field: 'updater.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.updater),
+        },
+        {
+          key: 'status', label: 'Activo', field: 'status', width: '95px',
+          filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => {
+            if (row.status === null) return ''
+            return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => onBooleanChange({ id: row.id, field: 'status', value: !row.status })} />
+          },
+        },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onModalOpen(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.code || '-'}</p>
+              <small className="text-muted">{[row.purchaseOrder?.code, row.warehouse?.name].filter(Boolean).join(' · ')}</small>
+            </div>
+            {row.status !== null && <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>}
+          </div>
+          <small className="text-muted d-block mt-2">{row.supplier?.business_name || '-'}</small>
+          <div className="d-flex justify-content-between align-items-center mt-2">
+            <small className="text-muted">{getPurchaseReceiptStatusLabel(row.receipt_status)}</small>
+            <strong>{row.currency} {Number(row.total || 0).toFixed(2)}</strong>
+          </div>
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal modalRef={modalRef} title={isEditing ? 'Editar recepción de compra' : 'Agregar recepción de compra'} onSubmit={onModalSubmit} size='full-width'>
       <div className='row' id='purchase-receipt-form-container'>
         <input ref={idRef} type='hidden' />
 
-        <SelectAPIFormGroup
-          eRef={purchaseOrderRef}
+        <VdSelect
           label='Orden de compra'
           col='col-md-3'
-          searchAPI='/api/admin/purchase-orders/paginate'
-          searchBy='code'
-          dropdownParent='#purchase-receipt-form-container'
+          value={selectedPurchaseOrderId}
           onChange={onPurchaseOrderChanged}
+          options={purchaseOrderOptions}
+          placeholder='-- Sin orden de compra (opcional) --'
         />
-        <SelectAPIFormGroup
-          eRef={businessRef}
+        <VdSelect
           label='Empresa'
           col='col-md-3'
           required
-          searchAPI='/api/admin/businesses/paginate'
-          searchBy='name'
-          dropdownParent='#purchase-receipt-form-container'
+          value={selectedBusinessId}
           onChange={onBusinessChanged}
+          options={businessOptions}
+          placeholder='-- Seleccionar empresa --'
         />
-        <SelectFormGroup
-          eRef={branchRef}
+        <VdSelect
           label='Sede'
           col='col-md-3'
-          dropdownParent='#purchase-receipt-form-container'
           value={selectedBranchId}
-          onChange={(e) => setSelectedBranchId(e.target.value)}
-          effectWith={[selectedBranchId, branches.length]}
-        >
-          <option value=''>-- Seleccione sede --</option>
-          {branches.map(branch => <option key={`purchase-receipt-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
-        </SelectFormGroup>
-        <SelectAPIFormGroup
-          eRef={warehouseRef}
+          onChange={(value) => setSelectedBranchId(value)}
+          options={branches.map(branch => ({ value: `${branch.id}`, label: branch.name }))}
+          placeholder='-- Seleccione sede --'
+        />
+        <VdSelect
           label='Almacén'
           col='col-md-3'
           required
-          searchAPI='/api/admin/warehouses/paginate'
-          searchBy='name'
-          dropdownParent='#purchase-receipt-form-container'
-          onChange={(e) => setSelectedWarehouseId(e.target.value || '')}
+          value={selectedWarehouseId}
+          onChange={(value) => setSelectedWarehouseId(value || '')}
+          options={warehouseOptions}
+          placeholder='-- Seleccionar almacén --'
         />
-        <SelectAPIFormGroup
-          eRef={supplierRef}
+        <VdSelect
           label='Proveedor'
           col='col-md-3'
           required
-          searchAPI='/api/admin/suppliers/paginate'
-          searchBy='business_name'
-          dropdownParent='#purchase-receipt-form-container'
-          onChange={(e) => setSelectedSupplierId(e.target.value || '')}
+          value={selectedSupplierId}
+          onChange={(value) => setSelectedSupplierId(value || '')}
+          options={supplierOptions}
+          placeholder='-- Seleccionar proveedor --'
         />
         <div className='form-group col-md-2 mb-2'>
           <label className='form-label'>Código</label>
           <input ref={codeRef} className='form-control' disabled />
         </div>
         <InputFormGroup eRef={issueDateRef} label='Fecha emisión' col='col-md-2' type='date' required />
-        <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Estado recepción</label>
-          <select ref={receiptStatusRef} className='form-control'>
-            {purchaseReceiptStatusOptions.map((option) => (
-              <option key={`purchase-receipt-status-${option.value}`} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Tipo documento</label>
-          <select ref={documentTypeRef} className='form-control'>
-            <option value='Factura'>Factura</option>
-            <option value='Boleta'>Boleta</option>
-            <option value='Ticket'>Ticket</option>
-            <option value='Otro'>Otro</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Estado recepción'
+          col='col-md-2'
+          value={selectedReceiptStatus}
+          onChange={setSelectedReceiptStatus}
+          options={purchaseReceiptStatusOptions}
+        />
+        <VdSelect
+          label='Tipo documento'
+          col='col-md-2'
+          value={selectedDocumentType}
+          onChange={setSelectedDocumentType}
+          options={documentTypeOptions}
+        />
         <InputFormGroup eRef={documentSeriesRef} label='Serie' col='col-md-1' />
         <InputFormGroup eRef={documentSequenceRef} label='Secuencia' col='col-md-2' />
         <div className='form-group col-md-3 mb-2'>
           <label className='form-label'>Archivo documento</label>
           <input ref={documentFileRef} type='file' className='form-control' />
         </div>
-        <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Moneda</label>
-          <select ref={currencyRef} className='form-control'>
-            <option value='PEN'>PEN</option>
-            <option value='USD'>USD</option>
-            <option value='EUR'>EUR</option>
-          </select>
-        </div>
-        <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Condición de pago</label>
-          <select ref={paymentConditionRef} className='form-control'>
-            <option value='Contado'>Contado</option>
-            <option value='Credito'>Crédito</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Moneda'
+          col='col-md-2'
+          value={selectedCurrency}
+          onChange={setSelectedCurrency}
+          options={currencyOptions}
+        />
+        <VdSelect
+          label='Condición de pago'
+          col='col-md-2'
+          value={selectedPaymentCondition}
+          onChange={setSelectedPaymentCondition}
+          options={paymentConditionOptions}
+        />
         <InputFormGroup eRef={firstDueDateRef} label='Primera cuota' col='col-md-2' type='date' />
         <InputFormGroup eRef={installmentsRef} label='Cuotas' col='col-md-1' type='number' min='1' step='1' />
         <InputFormGroup
@@ -712,13 +752,13 @@ const PurchaseReceipts = () => {
                       {item.purchase_order_item_id ? (
                         <input className='form-control form-control-sm' value={item.article_label} readOnly />
                       ) : (
-                        <SelectAPIFormGroup
-                          eRef={getArticleRef(item.uid)}
-                          col='col-12'
-                          searchAPI='/api/admin/articles/paginate'
-                          searchBy='name'
-                          dropdownParent='#purchase-receipt-form-container'
-                          onChange={(e) => onItemArticleChanged(item.uid, e)}
+                        <VdSelect
+                          col=''
+                          noMargin
+                          value={item.article_id}
+                          onChange={(value) => onItemArticleChanged(item.uid, value)}
+                          options={articleOptionsForItem(item)}
+                          placeholder='-- Artículo --'
                         />
                       )}
                     </td>

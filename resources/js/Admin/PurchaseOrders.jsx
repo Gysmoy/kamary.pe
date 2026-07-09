@@ -1,33 +1,30 @@
-import React, { createRef, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Fetch } from 'sode-extend-react';
+import { toast } from 'sonner';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
-import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
+import Modal from '@Adminto/Modal';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
-import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
-import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
-import SetSelectValue from '../Utils/SetSelectValue';
 import PurchaseOrdersRest from '../Actions/Admin/PurchaseOrdersRest';
 import { scopedPermission } from '../Utils/permissionScope';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import setSwitchChecked from '../Utils/setSwitchChecked';
 import {
   approvalStatusOptions,
   purchaseOrderStatusOptions,
-  toLookup,
+  getApprovalStatusLabel,
+  getPurchaseOrderStatusLabel,
 } from '../Utils/statusLabels';
 
 const purchaseOrdersRest = new PurchaseOrdersRest()
 
 const MAGISTRAL_ARTICLE_TYPES = [
-  { value: '', label: 'Seleccione' },
   { value: 'INSUMOS Y ENVASES', label: 'Insumos y envases' },
   { value: 'PRODUCTOS COMERCIALES', label: 'Productos comerciales' },
 ]
@@ -62,28 +59,14 @@ const canonicalMagistralPurchaseArticleType = (value) => {
   return ''
 }
 
-const magistralArticleFilterByType = (value) => {
-  const type = canonicalMagistralPurchaseArticleType(value)
-  if (type === 'INSUMOS Y ENVASES') {
-    return [
-      ['article_type', '=', 'INSUMO'],
-      'or',
-      ['article_type', '=', 'INSUMOS'],
-      'or',
-      ['article_type', '=', 'ENVASE'],
-      'or',
-      ['article_type', '=', 'ENVASES'],
-    ]
-  }
-  if (type === 'PRODUCTOS COMERCIALES') {
-    return [
-      ['article_type', '=', 'PRODUCTO COMERCIAL'],
-      'or',
-      ['article_type', '=', 'PRODUCTOS COMERCIALES'],
-    ]
-  }
-
-  return ['id', '=', -1]
+// Equivalente client-side del filtro DevExtreme que antes se mandaba al backend
+// (magistralArticleFilterByType) para el picker de articulos de Magistrales. Ahora el
+// catalogo completo se precarga (ver loadArticleCatalog) y se filtra aqui mismo.
+const articleMatchesMagistralType = (article, type) => {
+  const raw = (article?.article_type ?? '').toString().trim().toUpperCase()
+  if (type === 'INSUMOS Y ENVASES') return ['INSUMO', 'INSUMOS', 'ENVASE', 'ENVASES'].includes(raw)
+  if (type === 'PRODUCTOS COMERCIALES') return ['PRODUCTO COMERCIAL', 'PRODUCTOS COMERCIALES'].includes(raw)
+  return false
 }
 
 const formatAuditUser = (user) => {
@@ -96,6 +79,16 @@ const formatAuditUser = (user) => {
   if (full) return full
   if (username) return `@${username}`
   return ''
+}
+
+const dateOnly = (value) => {
+  if (!value) return ''
+  return value.toString().slice(0, 10)
+}
+
+const dateTimeLabel = (value) => {
+  if (!value) return ''
+  return value.toString().slice(0, 16).replace('T', ' ')
 }
 
 const defaultPresentationLabel = (article = null) => (
@@ -191,6 +184,41 @@ const hydrateItemFromArticle = (item, article, currency) => {
   })
 }
 
+// Carga catalogos completos (isLoadingAll) para alimentar VdSelect, igual que hace
+// Warehouses.jsx con getBusinesses/getWarehouses. VdSelect no pega a la API por cada
+// tecleo: filtra en memoria, asi que el catalogo entero se trae de una vez.
+const fetchCatalogAll = async (url, sortField = 'name', take = 1000, extraBody = {}) => {
+  try {
+    const { status, result } = await Fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        isLoadingAll: true,
+        take,
+        sort: [{ selector: sortField, desc: false }],
+        ...extraBody,
+      })
+    })
+    if (!status) throw new Error(result?.message || 'No se pudo cargar el catalogo')
+    return result?.data ?? []
+  } catch (error) {
+    toast.error('Error', {
+      description: error.message,
+      duration: 3000,
+      richColors: true,
+    });
+    return []
+  }
+}
+
+// Inyecta el registro actual (empresa/almacen/proveedor de una OC existente) en la lista
+// precargada si no vino incluido (p.ej. quedo inactivo despues de crear la OC). Reemplaza
+// lo que antes hacia SetSelectValue con select2.
+const ensureOption = (list, record) => {
+  if (!record?.id) return list
+  const id = `${record.id}`
+  return list.some(item => `${item.id}` === id) ? list : [...list, record]
+}
+
 const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedWarehouse = null }) => {
   const isMagistrales = moduleScope === 'magistrales'
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
@@ -198,32 +226,19 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
   const fixedBranchId = fixedWarehouse?.business_branch_id ? `${fixedWarehouse.business_branch_id}` : ''
   const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
   const fixedBusinessLabel = fixedWarehouse?.business_name || 'KAMARY PERU SAC'
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
 
   const idRef = useRef()
   const codeRef = useRef()
-  const businessRef = useRef()
-  const branchRef = useRef()
-  const warehouseRef = useRef()
-  const supplierRef = useRef()
   const buyerNameRef = useRef()
-  const articleTypeRef = useRef()
   const issueDateRef = useRef()
   const expectedDateRef = useRef()
   const maxDeliveryDateRef = useRef()
-  const currencyRef = useRef()
-  const paymentConditionRef = useRef()
-  const paymentMethodRef = useRef()
-  const documentTypeRef = useRef()
-  const orderStatusRef = useRef()
-  const approvalStatusRef = useRef()
   const taxAmountRef = useRef()
   const observationsRef = useRef()
   const deliveryPlaceRef = useRef()
   const affectsIgvRef = useRef()
-  const listSupplierRef = useRef()
-  const articleRefs = useRef({})
 
   const [isEditing, setIsEditing] = useState(false)
   const [selectedBusinessId, setSelectedBusinessId] = useState(isMagistrales ? fixedBusinessId : '')
@@ -231,20 +246,25 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
   const [selectedWarehouseId, setSelectedWarehouseId] = useState(isMagistrales ? fixedWarehouseId : '')
   const [selectedSupplierId, setSelectedSupplierId] = useState('')
   const [selectedArticleType, setSelectedArticleType] = useState('')
+  const [businesses, setBusinesses] = useState([])
+  const [warehouses, setWarehouses] = useState([])
+  const [suppliers, setSuppliers] = useState([])
+  const [articleCatalog, setArticleCatalog] = useState([])
   const [branches, setBranches] = useState([])
   const [items, setItems] = useState([emptyItem()])
   const [taxAmount, setTaxAmount] = useState(0)
   const [currencyCode, setCurrencyCode] = useState('PEN')
+  const [paymentCondition, setPaymentCondition] = useState('Contado')
+  const [paymentMethod, setPaymentMethod] = useState('Seleccione')
+  const [documentType, setDocumentType] = useState('Seleccione')
+  const [orderStatus, setOrderStatus] = useState('draft')
+  const [approvalStatus, setApprovalStatus] = useState('pending')
   const [affectsIgv, setAffectsIgv] = useState(true)
   const [listSupplierId, setListSupplierId] = useState('')
   const [listStartDate, setListStartDate] = useState('')
   const [listEndDate, setListEndDate] = useState('')
   const [listFilterValue, setListFilterValue] = useState(null)
-
-  const getArticleRef = (uid) => {
-    if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
-    return articleRefs.current[uid]
-  }
+  const isFirstFilterRun = useRef(true)
 
   useEffect(() => {
     if (!isMagistrales) return
@@ -253,15 +273,36 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     setSelectedWarehouseId(fixedWarehouseId)
   }, [fixedBranchId, fixedBusinessId, fixedWarehouseId, isMagistrales])
 
+  // Precarga empresas/almacenes (solo modulo comercial, Magistrales usa el almacen fijo) y
+  // proveedores (ambos modulos), igual que Warehouses.jsx precarga empresas.
   useEffect(() => {
-    items.forEach(item => {
-      const ref = getArticleRef(item.uid)
-      if (!ref.current || !item.article_id || !item.article_label) return
-      const current = $(ref.current).val()
-      if (`${current}` === `${item.article_id}`) return
-      SetSelectValue(ref.current, item.article_id, item.article_label)
-    })
-  }, [items])
+    const loadCatalogs = async () => {
+      if (!isMagistrales) {
+        const [businessesData, warehousesData] = await Promise.all([
+          fetchCatalogAll('/api/admin/businesses/paginate', 'name', 300),
+          fetchCatalogAll('/api/admin/warehouses/paginate', 'name', 500),
+        ])
+        setBusinesses(businessesData.filter(item => item.status !== null))
+        setWarehouses(warehousesData.filter(item => item.status !== null))
+      }
+      const suppliersData = await fetchCatalogAll(purchaseOrdersRest.suppliersPaginateApi(), 'business_name', 1000)
+      setSuppliers(suppliersData)
+    }
+    loadCatalogs()
+  }, [isMagistrales])
+
+  // El almacen seleccionado en el encabezado decide si el picker de articulos muestra el
+  // catalogo estandar o el de Magistrales/Muestras (ver ArticleController::
+  // pickerEffectiveModuleScope, backend). Antes esto viajaba como `extraParams` en cada
+  // tecleo del select2; ahora recargamos el catalogo completo cuando cambia el almacen.
+  useEffect(() => {
+    const loadArticles = async () => {
+      const extra = (!isMagistrales && selectedWarehouseId) ? { picker_warehouse_id: Number(selectedWarehouseId) } : {}
+      const data = await fetchCatalogAll(purchaseOrdersRest.articlesPaginateApi(), 'name', 3000, extra)
+      setArticleCatalog(data)
+    }
+    loadArticles()
+  }, [isMagistrales, selectedWarehouseId])
 
   const loadBranches = async (businessId, preferredId = null) => {
     if (!businessId || isMagistrales) {
@@ -298,17 +339,15 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     setRefValue(issueDateRef, data?.issue_date ? data.issue_date.toString().slice(0, 10) : new Date().toISOString().slice(0, 10))
     setRefValue(expectedDateRef, data?.expected_date ? data.expected_date.toString().slice(0, 10) : '')
     setRefValue(maxDeliveryDateRef, data?.max_delivery_date ? data.max_delivery_date.toString().slice(0, 10) : '')
-    setRefValue(currencyRef, data?.currency ?? 'PEN')
     setCurrencyCode(data?.currency ?? 'PEN')
-    setRefValue(paymentConditionRef, data?.payment_condition ?? 'Contado')
-    setRefValue(paymentMethodRef, data?.payment_method ?? 'Seleccione')
-    setRefValue(documentTypeRef, data?.document_type ?? 'Seleccione')
+    setPaymentCondition(data?.payment_condition ?? 'Contado')
+    setPaymentMethod(data?.payment_method ?? 'Seleccione')
+    setDocumentType(data?.document_type ?? 'Seleccione')
     setRefValue(buyerNameRef, data?.buyer_name ?? '')
-    setRefValue(orderStatusRef, data?.order_status ?? 'draft')
-    setRefValue(approvalStatusRef, data?.approval_status ?? 'pending')
+    setOrderStatus(data?.order_status ?? 'draft')
+    setApprovalStatus(data?.approval_status ?? 'pending')
     setRefValue(deliveryPlaceRef, data?.delivery_place ?? '')
     const currentArticleType = canonicalMagistralPurchaseArticleType(data?.article_type)
-    setRefValue(articleTypeRef, currentArticleType)
     setSelectedArticleType(currentArticleType)
     const currentAffectsIgv = typeof data?.affects_igv === 'boolean' ? data.affects_igv : true
     setAffectsIgv(currentAffectsIgv)
@@ -328,23 +367,10 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     setSelectedSupplierId(supplierId)
 
     if (!isMagistrales) {
-      if (businessId && data?.business?.name) {
-        SetSelectValue(businessRef.current, businessId, data.business.name)
-      } else {
-        $(businessRef.current).empty().trigger('change')
-      }
-      if (warehouseId && data?.warehouse?.name) {
-        SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
-      } else if (warehouseRef.current) {
-        $(warehouseRef.current).empty().trigger('change')
-      }
+      if (data?.business) setBusinesses(prev => ensureOption(prev, data.business))
+      if (data?.warehouse) setWarehouses(prev => ensureOption(prev, data.warehouse))
     }
-
-    if (supplierId && data?.supplier?.business_name) {
-      SetSelectValue(supplierRef.current, supplierId, data.supplier.business_name)
-    } else {
-      $(supplierRef.current).empty().trigger('change')
-    }
+    if (data?.supplier) setSuppliers(prev => ensureOption(prev, data.supplier))
 
     const detail = (data?.items ?? []).map(row => {
       const article = row.article ?? null
@@ -380,6 +406,21 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
   const onModalSubmit = async (e) => {
     e.preventDefault()
 
+    if (!isMagistrales) {
+      if (!selectedBusinessId) {
+        Swal.fire({ icon: 'warning', title: 'Falta empresa', text: 'Selecciona una empresa.', confirmButtonText: 'Entendido' })
+        return
+      }
+      if (!selectedWarehouseId) {
+        Swal.fire({ icon: 'warning', title: 'Falta almacén', text: 'Selecciona un almacén.', confirmButtonText: 'Entendido' })
+        return
+      }
+    }
+    if (!selectedSupplierId) {
+      Swal.fire({ icon: 'warning', title: 'Falta proveedor', text: 'Selecciona un proveedor.', confirmButtonText: 'Entendido' })
+      return
+    }
+
     const request = {
       id: getRefValue(idRef) || undefined,
       business_id: isMagistrales ? (fixedBusinessId || null) : (selectedBusinessId || null),
@@ -387,18 +428,18 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
       warehouse_id: isMagistrales ? (fixedWarehouseId || null) : (selectedWarehouseId || null),
       supplier_id: selectedSupplierId || null,
       buyer_name: getRefValue(buyerNameRef).trim(),
-      article_type: isMagistrales ? (canonicalMagistralPurchaseArticleType(getRefValue(articleTypeRef)) || null) : null,
+      article_type: isMagistrales ? (canonicalMagistralPurchaseArticleType(selectedArticleType) || null) : null,
       issue_date: getRefValue(issueDateRef),
       expected_date: getRefValue(expectedDateRef) || null,
       max_delivery_date: isMagistrales ? (getRefValue(maxDeliveryDateRef) || null) : null,
       delivery_place: isMagistrales ? (getRefValue(deliveryPlaceRef).trim() || null) : null,
-      currency: getRefValue(currencyRef) || 'PEN',
-      payment_condition: getRefValue(paymentConditionRef) || 'Contado',
-      payment_method: isMagistrales ? ((getRefValue(paymentMethodRef) || '').replace('Seleccione', '').trim() || null) : null,
-      document_type: isMagistrales ? ((getRefValue(documentTypeRef) || '').replace('Seleccione', '').trim() || null) : null,
+      currency: currencyCode || 'PEN',
+      payment_condition: paymentCondition || 'Contado',
+      payment_method: isMagistrales ? ((paymentMethod || '').replace('Seleccione', '').trim() || null) : null,
+      document_type: isMagistrales ? ((documentType || '').replace('Seleccione', '').trim() || null) : null,
       affects_igv: isMagistrales ? affectsIgv : null,
-      order_status: getRefValue(orderStatusRef) || 'draft',
-      approval_status: getRefValue(approvalStatusRef) || 'pending',
+      order_status: orderStatus || 'draft',
+      approval_status: approvalStatus || 'pending',
       tax_amount: isMagistrales ? computedTaxAmount : Number(getRefValue(taxAmountRef) || 0),
       total: grandTotal,
       observations: getRefValue(observationsRef).trim(),
@@ -419,14 +460,14 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     const result = await purchaseOrdersRest.save(request)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(modalRef.current).modal('hide')
   }
 
   const onBooleanChange = async ({ id, field, value }) => {
     const result = await purchaseOrdersRest.boolean({ id, field, value })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -441,20 +482,18 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     if (!isConfirmed) return
     const result = await purchaseOrdersRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
-  const onBusinessChanged = async (e) => {
-    const businessId = e.target.value || ''
+  const onBusinessChanged = async (value) => {
+    const businessId = value || ''
     setSelectedBusinessId(businessId)
     await loadBranches(businessId, null)
   }
 
-  const onMagistralArticleTypeChanged = (e) => {
-    const nextType = canonicalMagistralPurchaseArticleType(e.target.value)
+  const onMagistralArticleTypeChanged = (value) => {
+    const nextType = canonicalMagistralPurchaseArticleType(value)
     setSelectedArticleType(nextType)
-    setRefValue(articleTypeRef, nextType)
-    articleRefs.current = {}
     setItems([emptyItem()])
   }
 
@@ -465,17 +504,16 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     }))
   }
 
-  const onItemArticleChanged = async (uid, e) => {
-    const selected = $(e.target).select2('data')?.[0]
-    const article = selected?.data ?? null
-    const articleId = e.target.value || ''
+  const onItemArticleChanged = async (uid, value) => {
+    const articleId = value || ''
 
     if (!articleId) {
       setItems(prev => prev.map(item => item.uid === uid ? { ...emptyItem(), uid: item.uid } : item))
       return
     }
 
-    const hydrated = article ?? await purchaseOrdersRest.getArticleById(articleId)
+    const found = articleCatalog.find(article => `${article.id}` === `${articleId}`)
+    const hydrated = found ?? await purchaseOrdersRest.getArticleById(articleId)
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
       return hydrateItemFromArticle(item, hydrated, currencyCode)
@@ -508,10 +546,32 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     })
   }
 
-  const articleFilter = useMemo(() => {
-    if (!isMagistrales) return null
-    return magistralArticleFilterByType(selectedArticleType)
-  }, [isMagistrales, selectedArticleType])
+  // Opciones base del picker de articulos: catalogo precargado (ya scopeado por almacen o
+  // por tipo de articulo magistral, ver los useEffect de arriba).
+  const articleOptionsBase = useMemo(() => {
+    const source = isMagistrales
+      ? articleCatalog.filter(article => articleMatchesMagistralType(article, selectedArticleType))
+      : articleCatalog
+    return source.map(article => ({
+      value: `${article.id}`,
+      label: `${article.code ?? ''} - ${article.name ?? ''}`.trim(),
+    }))
+  }, [articleCatalog, isMagistrales, selectedArticleType])
+
+  // Si el articulo ya elegido en esa fila no esta en el catalogo filtrado actual (p.ej. se
+  // cambio el almacen despues de elegirlo), lo agrega igual para no perder la seleccion.
+  const articleOptionsForItem = (item) => {
+    if (item.article_id && item.article_label && !articleOptionsBase.some(option => option.value === item.article_id)) {
+      return [{ value: item.article_id, label: item.article_label }, ...articleOptionsBase]
+    }
+    return articleOptionsBase
+  }
+
+  const presentationOptionsForItem = (item) => {
+    const options = (item.presentation_options ?? []).map(option => ({ value: `${option.id}`, label: option.name }))
+    if (options.length > 0) return options
+    return [{ value: '', label: item.presentation_label || 'UND' }]
+  }
 
   const subtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
   const computedTaxAmount = useMemo(() => {
@@ -531,8 +591,8 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
       : subtotal + Number(taxAmount || 0)
   ), [isMagistrales, subtotal, taxAmount])
 
-  const onCurrencyChanged = (e) => {
-    const nextCurrency = e.target.value || 'PEN'
+  const onCurrencyChanged = (value) => {
+    const nextCurrency = value || 'PEN'
     setCurrencyCode(nextCurrency)
     setItems(prev => prev.map(item => refreshLinePricing(item, nextCurrency)))
   }
@@ -556,8 +616,20 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     setListStartDate('')
     setListEndDate('')
     setListFilterValue(null)
-    if (listSupplierRef.current) $(listSupplierRef.current).empty().trigger('change')
   }
+
+  // VdTable no reacciona solo a cambios de `baseFilter` (su useEffect interno no lo tiene
+  // como dependencia): hay que pedirle refresh() explicito despues de cambiarlo.
+  useEffect(() => {
+    if (isFirstFilterRun.current) { isFirstFilterRun.current = false; return }
+    tableRef.current?.refresh()
+  }, [listFilterValue])
+
+  const rowActions = (row) => ([
+    { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir PDF', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.purchaseOrder(r)) },
+    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+    { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+  ])
 
   return (<>
     {isMagistrales && (
@@ -565,14 +637,13 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
         <div className='card-body'>
           <h4 className='header-title mb-3'>Consulta de ordenes de compra</h4>
           <div className='row align-items-end'>
-            <SelectAPIFormGroup
-              eRef={listSupplierRef}
+            <VdSelect
               label='Proveedor'
               col='col-md-4'
-              searchAPI={purchaseOrdersRest.suppliersPaginateApi()}
-              searchBy='business_name'
-              dropdownParent='#purchase-order-list-filter'
-              onChange={(e) => setListSupplierId(e.target.value || '')}
+              value={listSupplierId}
+              onChange={(value) => setListSupplierId(value || '')}
+              options={suppliers.map(supplier => ({ value: `${supplier.id}`, label: supplier.business_name }))}
+              placeholder='-- Todos --'
             />
             <InputFormGroup
               label='Fecha registro inicio'
@@ -601,131 +672,112 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
       </form>
     )}
 
-    <Table
-      gridRef={gridRef}
-      title={moduleTitle}
+    <VdTable
+      ref={tableRef}
       rest={purchaseOrdersRest}
-      filterValue={isMagistrales ? listFilterValue : null}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar orden de compra',
-            onClick: () => onModalOpen(null)
-          }
-        });
-      }}
-      pageSize={25}
+      icon="mdi mdi-cart-outline"
+      title={moduleTitle}
+      unit="órdenes"
+      defaultSort={{ field: 'id', desc: true }}
+      defaultPageSize={25}
+      baseFilter={isMagistrales ? listFilterValue : null}
+      searchFields={['code', 'business.name', 'branch.name', 'warehouse.name', 'supplier.business_name', 'buyer_name']}
+      searchPlaceholder="Buscar por código, empresa o proveedor…"
+      emptyText="No se encontraron órdenes de compra."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={() => tableRef.current?.refresh()}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen(null)}>
+          <i className="mdi mdi-plus"></i> Agregar orden de compra
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
-        { dataField: 'id', caption: 'ID', width: 80 },
+        { key: 'id', label: 'ID', field: 'id', width: '80px', filter: { type: 'number' } },
         {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: 130,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar orden de compra')
+          key: 'codigo', label: 'Codigo', field: 'code', width: '130px', filter: { type: 'text' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar orden de compra">
+              {row.code ?? '-'}
+            </a>
+          ),
         },
-        { dataField: 'issue_date', caption: 'F. emisión', width: 110, dataType: 'date' },
-        { dataField: 'expected_date', caption: 'F. estimada', width: 115, dataType: 'date' },
-        ...(isMagistrales ? [{ dataField: 'max_delivery_date', caption: 'F. máxima', width: 115, dataType: 'date' }] : []),
-        { dataField: 'business.name', caption: isMagistrales ? 'Comprador' : 'Empresa', minWidth: 160 },
+        { key: 'emision', label: 'F. emisión', field: 'issue_date', width: '110px', filter: { type: 'date' }, render: (row) => dateOnly(row.issue_date) },
+        { key: 'esperada', label: 'F. estimada', field: 'expected_date', width: '115px', filter: { type: 'date' }, render: (row) => dateOnly(row.expected_date) },
+        ...(isMagistrales ? [{ key: 'maxima', label: 'F. máxima', field: 'max_delivery_date', width: '115px', filter: { type: 'date' }, render: (row) => dateOnly(row.max_delivery_date) }] : []),
+        { key: 'empresa', label: isMagistrales ? 'Comprador' : 'Empresa', field: 'business.name', filter: { type: 'text' } },
         ...(!isMagistrales ? [
-          { dataField: 'branch.name', caption: 'Sede', minWidth: 130 },
-          { dataField: 'warehouse.name', caption: 'Almacén', minWidth: 130 },
+          { key: 'sede', label: 'Sede', field: 'branch.name', filter: { type: 'text' } },
+          { key: 'almacen', label: 'Almacén', field: 'warehouse.name', filter: { type: 'text' } },
         ] : []),
-        { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 220 },
-        ...(isMagistrales ? [{ dataField: 'article_type', caption: 'Tipo artículo', minWidth: 150 }] : []),
-        { dataField: 'payment_condition', caption: 'Condición', width: 110 },
-        ...(isMagistrales ? [{ dataField: 'payment_method', caption: 'Forma pago', width: 130 }] : []),
-        ...(isMagistrales ? [{ dataField: 'document_type', caption: 'Documento', width: 110 }] : []),
-        { dataField: 'approval_status', caption: isMagistrales ? 'Estado' : 'Aprobación', width: 110, lookup: toLookup(approvalStatusOptions) },
-        { dataField: 'order_status', caption: 'Estado OC', width: 110, lookup: toLookup(purchaseOrderStatusOptions) },
-        { dataField: 'currency', caption: 'Moneda', width: 90 },
-        { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
+        { key: 'proveedor', label: 'Proveedor', field: 'supplier.business_name', filter: { type: 'text' } },
+        ...(isMagistrales ? [{ key: 'tipo_articulo', label: 'Tipo artículo', field: 'article_type', filter: { type: 'text' } }] : []),
+        { key: 'condicion', label: 'Condición', field: 'payment_condition', width: '110px', filter: { type: 'text' } },
+        ...(isMagistrales ? [{ key: 'forma_pago', label: 'Forma pago', field: 'payment_method', width: '130px', filter: { type: 'text' } }] : []),
+        ...(isMagistrales ? [{ key: 'tipo_doc', label: 'Documento', field: 'document_type', width: '110px', filter: { type: 'text' } }] : []),
         {
-          dataField: 'items.id',
-          caption: 'Detalle',
-          minWidth: isMagistrales ? 340 : 280,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => {
-            const lines = (data?.items ?? []).map(item => {
+          key: 'aprobacion', label: isMagistrales ? 'Estado' : 'Aprobación', field: 'approval_status', width: '110px',
+          filter: { type: 'select', options: approvalStatusOptions },
+          render: (row) => getApprovalStatusLabel(row.approval_status),
+        },
+        {
+          key: 'estado_oc', label: 'Estado OC', field: 'order_status', width: '110px',
+          filter: { type: 'select', options: purchaseOrderStatusOptions },
+          render: (row) => getPurchaseOrderStatusLabel(row.order_status),
+        },
+        { key: 'moneda', label: 'Moneda', field: 'currency', width: '90px', filter: { type: 'text' } },
+        { key: 'total', label: 'Total', field: 'total', width: '110px', align: 'right', filter: { type: 'number' }, render: (row) => Number(row.total || 0).toFixed(2) },
+        {
+          key: 'detalle', label: 'Detalle', sortable: false,
+          render: (row) => {
+            const lines = (row?.items ?? []).map(item => {
               const articleName = item?.article?.name || 'Artículo'
               const presentation = item?.presentation_label || item?.presentation?.name || ''
-              const priceLabel = isMagistrales ? ` | P. IGV ${Number(item?.price_unit || 0).toFixed(2)}` : ` | ${data.currency} ${Number(item?.total || 0).toFixed(2)}`
+              const priceLabel = isMagistrales ? ` | P. IGV ${Number(item?.price_unit || 0).toFixed(2)}` : ` | ${row.currency} ${Number(item?.total || 0).toFixed(2)}`
               return `${articleName}${presentation ? ` | ${presentation}` : ''} | Cant. ${Number(item?.requested_quantity || 0).toFixed(2)}${priceLabel}`
             })
-            ReactAppend(container, <div>
+            return (<div>
               {lines.length === 0 && <small className='text-muted'>Sin detalle</small>}
-              {lines.map((line, idx) => <div key={`purchase-order-${data.id}-${idx}`}><small>{line}</small></div>)}
+              {lines.map((line, idx) => <div key={`purchase-order-${row.id}-${idx}`}><small>{line}</small></div>)}
             </div>)
           }
         },
-        ...(isMagistrales ? [{ dataField: 'created_at', caption: 'Fecha registro', width: 160, dataType: 'datetime' }] : []),
+        ...(isMagistrales ? [{ key: 'fecha_registro', label: 'Fecha registro', field: 'created_at', width: '160px', filter: { type: 'date' }, render: (row) => dateTimeLabel(row.created_at) }] : []),
         {
-          dataField: 'creator.fullname',
-          caption: isMagistrales ? 'Usuario registro' : 'Creado por',
-          visible: isMagistrales,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
+          key: 'usuario_registro', label: isMagistrales ? 'Usuario registro' : 'Creado por', field: 'creator.fullname',
+          visible: isMagistrales, sortable: false,
+          render: (row) => formatAuditUser(row.creator),
         },
         {
-          dataField: 'updater.fullname',
-          caption: 'Actualizado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
+          key: 'actualizado_por', label: 'Actualizado por', field: 'updater.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.updater),
         },
         {
-          dataField: 'status',
-          caption: 'Activo',
-          dataType: 'boolean',
-          visible: !isMagistrales,
-          width: 95,
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-              id: data.id,
-              field: 'status',
-              value: !data.status
-            })} />)
-          }
-        },
-        {
-          caption: 'Acciones',
-          width: 160,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Imprimir PDF',
-              icon: 'mdi mdi-file-pdf-box',
-              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.purchaseOrder(data))
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary ms-1',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar orden de compra',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.id)
-            }))
+          key: 'estado', label: 'Activo', field: 'status', visible: !isMagistrales, width: '95px',
+          filter: { type: 'select', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => {
+            if (row.status === null) return ''
+            return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => onBooleanChange({ id: row.id, field: 'status', value: !row.status })} />
           },
-          allowFiltering: false,
-          allowExporting: false
-        }
+        },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onModalOpen(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.code}</p>
+              <small className="text-muted">{[row.business?.name, row.supplier?.business_name].filter(Boolean).join(' · ')}</small>
+            </div>
+            <span className="badge badge-soft-primary">{getPurchaseOrderStatusLabel(row.order_status)}</span>
+          </div>
+          <small className="text-muted d-block mt-2">
+            <i className="mdi mdi-calendar me-1"></i>{dateOnly(row.issue_date)} · {row.currency} {Number(row.total || 0).toFixed(2)}
+          </small>
+          <small className="text-muted d-block mt-1">{getApprovalStatusLabel(row.approval_status)}</small>
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal modalRef={modalRef} title={isEditing ? 'Editar orden de compra' : 'Agregar orden de compra'} onSubmit={onModalSubmit} size='full-width'>
@@ -745,65 +797,55 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
           </>
         ) : (
           <>
-            <SelectAPIFormGroup
-              eRef={businessRef}
+            <VdSelect
               label='Empresa'
               col='col-md-3'
               required
-              searchAPI='/api/admin/businesses/paginate'
-              searchBy='name'
-              dropdownParent='#purchase-order-form-container'
+              value={selectedBusinessId}
               onChange={onBusinessChanged}
+              options={businesses.map(business => ({ value: `${business.id}`, label: business.name }))}
+              placeholder='-- Seleccionar empresa --'
             />
-            <SelectFormGroup
-              eRef={branchRef}
+            <VdSelect
               label='Sede'
               col='col-md-3'
-              dropdownParent='#purchase-order-form-container'
+              disabled={!selectedBusinessId}
               value={selectedBranchId}
-              onChange={(e) => setSelectedBranchId(e.target.value)}
-              effectWith={[selectedBranchId, branches.length]}
-            >
-              <option value=''>-- Seleccione sede --</option>
-              {branches.map(branch => <option key={`purchase-order-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
-            </SelectFormGroup>
-            <SelectAPIFormGroup
-              eRef={warehouseRef}
+              onChange={(value) => setSelectedBranchId(value || '')}
+              options={branches.map(branch => ({ value: `${branch.id}`, label: branch.name }))}
+              placeholder='-- Seleccione sede --'
+            />
+            <VdSelect
               label='Almacén'
               col='col-md-3'
               required
-              searchAPI='/api/admin/warehouses/paginate'
-              searchBy='name'
-              dropdownParent='#purchase-order-form-container'
-              onChange={(e) => setSelectedWarehouseId(e.target.value || '')}
+              value={selectedWarehouseId}
+              onChange={(value) => setSelectedWarehouseId(value || '')}
+              options={warehouses.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))}
+              placeholder='-- Seleccionar almacén --'
             />
           </>
         )}
 
-        <SelectAPIFormGroup
-          eRef={supplierRef}
+        <VdSelect
           label='Proveedor'
           col={isMagistrales ? 'col-md-6' : 'col-md-3'}
           required
-          searchAPI={purchaseOrdersRest.suppliersPaginateApi()}
-          searchBy='business_name'
-          dropdownParent='#purchase-order-form-container'
-          onChange={(e) => setSelectedSupplierId(e.target.value || '')}
+          value={selectedSupplierId}
+          onChange={(value) => setSelectedSupplierId(value || '')}
+          options={suppliers.map(supplier => ({ value: `${supplier.id}`, label: supplier.business_name }))}
+          placeholder='-- Seleccionar proveedor --'
         />
 
         {isMagistrales && (
-          <SelectFormGroup
-            eRef={articleTypeRef}
+          <VdSelect
             label='Tipo de artículo'
             col='col-md-3'
             value={selectedArticleType}
             onChange={onMagistralArticleTypeChanged}
-            effectWith={[selectedArticleType]}
-          >
-            {MAGISTRAL_ARTICLE_TYPES.map(option => (
-              <option key={`purchase-order-article-type-${option.value || 'empty'}`} value={option.value}>{option.label}</option>
-            ))}
-          </SelectFormGroup>
+            options={MAGISTRAL_ARTICLE_TYPES}
+            placeholder='Seleccione'
+          />
         )}
 
         {!isMagistrales && <InputFormGroup eRef={buyerNameRef} label='Comprador' col='col-md-3' />}
@@ -815,54 +857,53 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
         <InputFormGroup eRef={issueDateRef} label='Fecha emisión' col='col-md-2' type='date' required />
         <InputFormGroup eRef={expectedDateRef} label={isMagistrales ? 'Fecha estimada entrega' : 'Fecha esperada'} col='col-md-2' type='date' />
         {isMagistrales && <InputFormGroup eRef={maxDeliveryDateRef} label='Fecha máxima entrega' col='col-md-2' type='date' />}
-        <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Moneda</label>
-          <select ref={currencyRef} className='form-control' onChange={onCurrencyChanged}>
-            <option value='PEN'>PEN</option>
-            <option value='USD'>USD</option>
-            <option value='EUR'>EUR</option>
-          </select>
-        </div>
-        <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Condición de pago</label>
-          <select ref={paymentConditionRef} className='form-control'>
-            <option value='Contado'>Contado</option>
-            <option value='Credito'>Crédito</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Moneda'
+          col='col-md-2'
+          value={currencyCode}
+          onChange={onCurrencyChanged}
+          options={[{ value: 'PEN', label: 'PEN' }, { value: 'USD', label: 'USD' }, { value: 'EUR', label: 'EUR' }]}
+        />
+        <VdSelect
+          label='Condición de pago'
+          col='col-md-2'
+          value={paymentCondition}
+          onChange={(value) => setPaymentCondition(value || 'Contado')}
+          options={[{ value: 'Contado', label: 'Contado' }, { value: 'Credito', label: 'Crédito' }]}
+        />
         {isMagistrales && (
           <>
-            <div className='form-group col-md-2 mb-2'>
-              <label className='form-label'>Forma de pago</label>
-              <select ref={paymentMethodRef} className='form-control'>
-                {PAYMENT_METHOD_OPTIONS.map(option => <option key={`purchase-order-payment-method-${option}`} value={option}>{option}</option>)}
-              </select>
-            </div>
-            <div className='form-group col-md-2 mb-2'>
-              <label className='form-label'>Tipo documento</label>
-              <select ref={documentTypeRef} className='form-control'>
-                {DOCUMENT_TYPE_OPTIONS.map(option => <option key={`purchase-order-document-type-${option}`} value={option}>{option}</option>)}
-              </select>
-            </div>
+            <VdSelect
+              label='Forma de pago'
+              col='col-md-2'
+              value={paymentMethod}
+              onChange={(value) => setPaymentMethod(value || 'Seleccione')}
+              options={PAYMENT_METHOD_OPTIONS.map(option => ({ value: option, label: option }))}
+            />
+            <VdSelect
+              label='Tipo documento'
+              col='col-md-2'
+              value={documentType}
+              onChange={(value) => setDocumentType(value || 'Seleccione')}
+              options={DOCUMENT_TYPE_OPTIONS.map(option => ({ value: option, label: option }))}
+            />
             <SwitchFormGroup eRef={affectsIgvRef} label='Afecto IGV' col='col-md-2' checked={affectsIgv} onChange={onAffectsIgvChanged} refreshable={isMagistrales} />
           </>
         )}
-        <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Estado OC</label>
-          <select ref={orderStatusRef} className='form-control'>
-            {purchaseOrderStatusOptions.map((option) => (
-              <option key={`purchase-order-status-${option.value}`} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Aprobación</label>
-          <select ref={approvalStatusRef} className='form-control'>
-            {approvalStatusOptions.map((option) => (
-              <option key={`purchase-order-approval-status-${option.value}`} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
+        <VdSelect
+          label='Estado OC'
+          col='col-md-2'
+          value={orderStatus}
+          onChange={(value) => setOrderStatus(value || 'draft')}
+          options={purchaseOrderStatusOptions}
+        />
+        <VdSelect
+          label='Aprobación'
+          col='col-md-2'
+          value={approvalStatus}
+          onChange={(value) => setApprovalStatus(value || 'pending')}
+          options={approvalStatusOptions}
+        />
         {!isMagistrales && (
           <InputFormGroup
             eRef={taxAmountRef}
@@ -905,43 +946,28 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
                 </tr>
               </thead>
               <tbody>
-                {items.map(item => {
-                  // El almacen seleccionado en el encabezado decide si el selector de articulos
-                  // muestra el catalogo estandar o el de Magistrales (ver
-                  // ArticleController::pickerEffectiveModuleScope, backend). Para cualquier otro
-                  // almacen esto no cambia nada del comportamiento actual. No aplica al flujo
-                  // magistral fijo (fixedWarehouseId ya es el almacen 11 y usa su propio filtro).
-                  const articlePickerWarehouseId = !isMagistrales ? (selectedWarehouseId || '') : ''
-                  const articleExtraParams = articlePickerWarehouseId ? { picker_warehouse_id: Number(articlePickerWarehouseId) } : undefined
-                  return (
+                {items.map(item => (
                   <tr key={item.uid}>
                     <td style={{ width: isMagistrales ? '34%' : '24%' }}>
-                      <SelectAPIFormGroup
-                        eRef={getArticleRef(item.uid)}
+                      <VdSelect
                         col='col-12'
-                        searchAPI={purchaseOrdersRest.articlesPaginateApi()}
-                        searchBy='name'
-                        dropdownParent='#purchase-order-form-container'
-                        filter={articleFilter}
-                        extraParams={articleExtraParams}
+                        noMargin
+                        value={item.article_id}
+                        onChange={(value) => onItemArticleChanged(item.uid, value)}
+                        options={articleOptionsForItem(item)}
                         disabled={isMagistrales && !selectedArticleType}
-                        onChange={(e) => onItemArticleChanged(item.uid, e)}
+                        placeholder='-- Artículo --'
                       />
                     </td>
                     {isMagistrales ? (
                       <td style={{ width: '14%' }}>
-                        <select
-                          className='form-control form-control-sm'
+                        <VdSelect
+                          col='col-12'
+                          noMargin
                           value={item.presentation_id}
-                          onChange={(e) => onItemPresentationChanged(item.uid, e.target.value)}
-                        >
-                          {(item.presentation_options ?? []).map(option => (
-                            <option key={`purchase-order-presentation-${item.uid}-${option.id || option.name}`} value={option.id}>
-                              {option.name}
-                            </option>
-                          ))}
-                          {(item.presentation_options ?? []).length === 0 && <option value=''>{item.presentation_label || 'UND'}</option>}
-                        </select>
+                          onChange={(value) => onItemPresentationChanged(item.uid, value)}
+                          options={presentationOptionsForItem(item)}
+                        />
                       </td>
                     ) : (
                       <>
@@ -983,8 +1009,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
                       </button>
                     </td>
                   </tr>
-                )
-              })}
+                ))}
               </tbody>
             </table>
           </div>

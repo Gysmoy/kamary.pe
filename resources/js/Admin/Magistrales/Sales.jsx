@@ -2,22 +2,18 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../../Utils/CreateReactScript';
-import Table from '../../Components/Adminto/Table';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
 import Modal from '../../Components/Adminto/Modal';
-import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import SalesRest from '../../Actions/Admin/Magistrales/SalesRest';
 import BillingDocumentsRest from '../../Actions/Admin/BillingDocumentsRest';
 import ClientsRest from '../../Actions/Admin/ClientsRest';
 import DoctorsRest from '../../Actions/Admin/Magistrales/DoctorsRest';
-import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 import setSwitchChecked from '../../Utils/setSwitchChecked';
 import { getBillingDocumentStatusLabel } from '../../Utils/statusLabels';
-import select2SpanishLanguage from '../../Utils/select2SpanishLanguage';
-import { select2DropdownParentFor } from '../../Utils/select2DropdownParent';
-import xsrfToken from '../../Utils/xsrfToken';
 
 const rest = new SalesRest()
 const billingDocumentsRest = new BillingDocumentsRest()
@@ -82,7 +78,6 @@ const emptyPatientForm = () => ({
 })
 const patientName = (row) => row?.full_name || row?.display_name || row?.business_name || ''
 const patientDocument = (row) => [row?.document_type?.toString?.().toUpperCase?.(), row?.document_number].filter(Boolean).join(' ')
-const patientSelectLabel = (row) => [patientDocument(row), patientName(row)].filter(Boolean).join(' | ')
 const patientBillingRuc = (row) => {
   const companyRuc = (row?.company_ruc ?? '').toString().replace(/\D+/g, '')
   if (companyRuc.length === 11 && (companyRuc.startsWith('20') || companyRuc.startsWith('10'))) return companyRuc
@@ -130,18 +125,7 @@ const buildItemFromArticle = (article, warehouseId, fallbackWarehouseLabel) => (
   unit_price: Number(article?.sale_price ?? 0),
   discount: 0,
 })
-const setSelect2Value = (select, value, text = value) => {
-  if (!select) return
-  const $select = $(select)
-  $select.find('option').remove()
-  if (value) {
-    $select.append(new Option(text, value, true, true))
-    $select.val(value)
-  } else {
-    $select.val(null)
-  }
-  $select.trigger($select.data('select2') ? 'change.select2' : 'change')
-}
+const dateOnly = (value) => value ? `${value}`.toString().slice(0, 10) : ''
 
 const salesFilter = (tab, filters) => combineFilters([
   ['is_quote', '=', tab === 'quotes'],
@@ -172,7 +156,7 @@ const billingFilter = (tab, filters) => {
 }
 
 const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const patientSearchModalRef = useRef()
   const patientFormModalRef = useRef()
@@ -180,11 +164,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const idRef = useRef()
   const codeRef = useRef()
   const paymentStatusRef = useRef()
-  const documentTypeRef = useRef()
-  const patientSelectRef = useRef()
-  const doctorSelectRef = useRef()
-  const discountPolicyRef = useRef()
-  const saleTypeRef = useRef()
   const allergyRef = useRef()
   const intoleranceRef = useRef()
   const dateRef = useRef()
@@ -208,6 +187,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const [doctorForm, setDoctorForm] = useState(emptyDoctorForm())
   const [doctorValue, setDoctorValue] = useState('')
   const [selectedDocumentType, setSelectedDocumentType] = useState('Boleta')
+  const [discountPolicyValue, setDiscountPolicyValue] = useState('')
+  const [saleTypeValue, setSaleTypeValue] = useState('PRESENCIAL')
   const [billingRuc, setBillingRuc] = useState('')
   const [billingBusinessName, setBillingBusinessName] = useState('')
   const isBillingTab = activeTab === 'issued' || activeTab === 'cancelled'
@@ -242,103 +223,16 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   }, [fixedWarehouseId])
 
   useEffect(() => {
-    const select = patientSelectRef.current
-    const $select = $(select)
-    if ($select.data('select2')) $select.select2('destroy')
-
-    $select.select2({
-      ajax: {
-        url: '/api/admin/clients/paginate',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          'X-Xsrf-Token': xsrfToken(),
-        },
-        type: 'POST',
-        delay: 150,
-        data: ({ term, page }) => JSON.stringify({
-          sort: [{ selector: 'display_name', desc: false }],
-          skip: ((page ?? 1) - 1) * 10,
-          take: 10,
-          requireTotalCount: true,
-          filter: patientFilter(term),
-        }),
-        processResults: (response, { page }) => ({
-          results: (response?.data ?? []).map(row => ({
-            id: patientName(row) || patientDocument(row),
-            text: patientSelectLabel(row),
-            data: row,
-          })),
-          pagination: {
-            more: ((page ?? 1) * 10) < (response?.totalCount ?? 0),
-          },
-        }),
-      },
-      dropdownParent: select2DropdownParentFor(select, modalRef.current),
-      language: select2SpanishLanguage,
-      minimumInputLength: 0,
-      minimumResultsForSearch: 0,
-      placeholder: 'Seleccione paciente',
-      width: '100%',
-    })
-
-    $select
-      .off('select2:select.magSalePatient change.magSalePatient')
-      .on('select2:select.magSalePatient', (event) => {
-        const row = event.params?.data?.data
-        const value = row ? patientName(row) : (event.params?.data?.id ?? '')
-        setPatientValue(value)
-        setSelectedPatientData(row ?? null)
-        if (row) syncBillingDataFromPatient(row)
-      })
-      .on('change.magSalePatient', (event) => {
-        if (!$(event.currentTarget).val()) {
-          setPatientValue('')
-          setSelectedPatientData(null)
-        }
-      })
-
-    return () => {
-      $select.off('select2:select.magSalePatient change.magSalePatient')
-      if ($select.data('select2')) $select.select2('destroy')
-    }
-  }, [])
-
-  useEffect(() => {
-    const select = doctorSelectRef.current
-    const $select = $(select)
-    if ($select.data('select2')) $select.select2('destroy')
-
-    $select.select2({
-      dropdownParent: select2DropdownParentFor(select, modalRef.current),
-      language: select2SpanishLanguage,
-      minimumInputLength: 0,
-      minimumResultsForSearch: 0,
-      placeholder: 'Seleccione',
-      width: '100%',
-    })
-
-    $select
-      .off('change.magSaleDoctor')
-      .on('change.magSaleDoctor', (event) => setDoctorValue(event.target.value ?? ''))
-
-    $select.val(doctorValue || '').trigger('change.select2')
-
-    return () => {
-      $select.off('change.magSaleDoctor')
-      if ($select.data('select2')) $select.select2('destroy')
-    }
-  }, [doctorOptions])
-
-  useEffect(() => {
-    const $select = $(doctorSelectRef.current)
-    if ($select.data('select2')) $select.val(doctorValue || '').trigger('change.select2')
-  }, [doctorValue])
-
-  useEffect(() => {
     if (selectedDocumentType !== 'Factura' || !selectedPatientData) return
     syncBillingDataFromPatient(selectedPatientData)
   }, [selectedDocumentType, selectedPatientData])
+
+  // VdTable no vuelve a consultar automaticamente cuando cambia baseFilter (a
+  // diferencia del filterValue reactivo de dxDataGrid), asi que forzamos el
+  // refresh cuando se aplican los filtros de paciente/fechas del formulario.
+  useEffect(() => {
+    tableRef.current?.refresh()
+  }, [appliedFilters])
 
   const totals = items.reduce((carry, item) => {
     carry.discount += Number(item.discount || 0)
@@ -355,17 +249,15 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
     paymentStatusRef.current.value = data?.payment_status ?? 'pending'
     const nextDocumentType = saleDocumentTypes.includes(data?.document_type) ? data.document_type : 'Boleta'
-    documentTypeRef.current.value = nextDocumentType
     setSelectedDocumentType(nextDocumentType)
     setBillingRuc(data?.billing_ruc ?? '')
     setBillingBusinessName(data?.billing_business_name ?? '')
     setPatientValue(data?.patient ?? '')
     setSelectedPatientData(null)
-    setSelect2Value(patientSelectRef.current, data?.patient ?? '', data?.patient ?? '')
     setDoctorValue(data?.doctor ?? '')
     const nextDiscountPolicy = data?.discount_policy ?? ''
-    discountPolicyRef.current.value = discountPolicyOptions.some(option => option.value === nextDiscountPolicy) ? nextDiscountPolicy : noDiscountPolicyValue
-    saleTypeRef.current.value = saleTypeOptions.includes(data?.sale_type) ? data.sale_type : 'PRESENCIAL'
+    setDiscountPolicyValue(discountPolicyOptions.some(option => option.value === nextDiscountPolicy && option.value !== noDiscountPolicyValue) ? nextDiscountPolicy : '')
+    setSaleTypeValue(saleTypeOptions.includes(data?.sale_type) ? data.sale_type : 'PRESENCIAL')
     setSwitchChecked(allergyRef.current, !!data?.allergy)
     setSwitchChecked(intoleranceRef.current, !!data?.intolerance)
     dateRef.current.value = data?.sale_date?.toString?.().slice?.(0, 10) ?? new Date().toISOString().slice(0, 10)
@@ -497,7 +389,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     const value = patientName(row)
     setPatientValue(value)
     setSelectedPatientData(row)
-    setSelect2Value(patientSelectRef.current, value, patientSelectLabel(row) || value)
     syncBillingDataFromPatient(row)
     $(patientSearchModalRef.current).modal('hide')
     $(patientFormModalRef.current).modal('hide')
@@ -506,7 +397,6 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
   const clearPatient = () => {
     setPatientValue('')
     setSelectedPatientData(null)
-    setSelect2Value(patientSelectRef.current, '', '')
     if (selectedDocumentType === 'Factura') {
       setBillingRuc('')
       setBillingBusinessName('')
@@ -574,7 +464,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       Swal.fire('Empresa no disponible', 'No se encontro la configuracion fija de Kamary Peru para registrar la venta.', 'warning')
       return
     }
-    const documentType = documentTypeRef.current.value.trim()
+    const documentType = selectedDocumentType.trim()
     const normalizedBillingRuc = billingRuc.replace(/\D+/g, '')
     const normalizedBillingBusinessName = billingBusinessName.trim()
     if (documentType === 'Factura') {
@@ -595,8 +485,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       billing_business_name: documentType === 'Factura' ? normalizedBillingBusinessName : '',
       patient: patientValue.trim(),
       doctor: doctorValue.trim(),
-      discount_policy: discountPolicyRef.current.value === noDiscountPolicyValue ? '' : discountPolicyRef.current.value.trim(),
-      sale_type: saleTypeRef.current.value.trim(),
+      discount_policy: discountPolicyValue.trim(),
+      sale_type: saleTypeValue.trim(),
       allergy: allergyRef.current.checked,
       intolerance: intoleranceRef.current.checked,
       is_quote: asQuote,
@@ -613,7 +503,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       })),
     })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(modalRef.current).modal('hide')
   }
 
@@ -621,7 +511,7 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     const { isConfirmed } = await Swal.fire({ title: 'Eliminar venta', text: 'Se dara de baja la venta magistral.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
     if (!isConfirmed) return
     const result = await rest.delete(id)
-    if (result) $(gridRef.current).dxDataGrid('instance').refresh()
+    if (result) tableRef.current?.refresh()
   }
 
   const applyFilters = (event) => {
@@ -637,60 +527,70 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
     window.open(billingDocumentsRest.downloadUrl(row.id, 'pdf'), '_blank', 'noopener')
   }
 
-  const saleActionColumn = {
-    caption: 'Acciones',
-    width: 145,
-    minWidth: 145,
-    allowFiltering: false,
-    allowExporting: false,
-    cellTemplate: (container, { data }) => {
-      container.css({ overflow: 'visible', textOverflow: 'unset', whiteSpace: 'nowrap' })
-      const actions = $('<div>').addClass('d-flex align-items-center flex-nowrap')
-      actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.sale(data)) }))
-      actions.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openModal(data) }))
-      actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => remove(data.id) }))
-      container.append(actions)
+  // Botones de accion por fila. En comprobantes solo se puede ver el PDF; en
+  // cotizaciones/ventas se puede imprimir, editar y eliminar.
+  const rowActions = (row) => {
+    if (isBillingTab) {
+      return [
+        { icon: 'mdi mdi-file-pdf-box', title: 'Ver PDF', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openBillingPdf(r) },
+      ]
     }
+    return [
+      { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir PDF', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.sale(r)) },
+      { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => openModal(r) },
+      { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => remove(r.id) },
+    ]
   }
 
-  const saleColumns = [
-    saleActionColumn,
-    { dataField: 'is_quote', visible: false, showInColumnChooser: false },
-    { dataField: 'business_id', visible: false, showInColumnChooser: false },
-    { dataField: 'sale_date', visible: false, showInColumnChooser: false },
-    { dataField: 'code', caption: activeTab === 'quotes' ? 'Cod. Cotizacion' : 'Codigo', width: 145, cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => openModal(data), 'Editar venta magistral') },
+  const saleVdColumns = [
+    {
+      key: 'codigo', label: activeTab === 'quotes' ? 'Cod. Cotizacion' : 'Codigo', field: 'code', width: '145px', filter: { type: 'text' },
+      render: (row) => (
+        <a className='admin-grid-edit-link' style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => openModal(row)} title='Editar venta magistral'>
+          {row.code}
+        </a>
+      ),
+    },
     activeTab === 'quotes'
-      ? { dataField: 'sale_type', caption: 'Tipo Venta', width: 130 }
-      : { dataField: 'payment_status', caption: 'Estado Pago', width: 120, calculateCellValue: row => paymentLabels[row.payment_status] ?? row.payment_status },
-    activeTab === 'sales' ? { dataField: 'document_label', caption: 'Documento', width: 160, calculateCellValue: formatDocument } : null,
-    { dataField: 'patient', caption: 'Paciente', minWidth: 170 },
-    { dataField: 'total', caption: 'Total S/', dataType: 'number', width: 110, format: { type: 'fixedPoint', precision: 2 } },
-    { dataField: 'creator_label', caption: 'Usuario Registro', minWidth: 160, calculateCellValue: row => formatUser(row.creator) },
-    { dataField: 'created_at', caption: 'Fecha Registro', dataType: 'date', width: 130 },
+      ? { key: 'tipo_venta', label: 'Tipo Venta', field: 'sale_type', width: '130px', filter: { type: 'text' } }
+      : { key: 'estado_pago', label: 'Estado Pago', field: 'payment_status', width: '120px', filter: { type: 'text' }, render: (row) => paymentLabels[row.payment_status] ?? row.payment_status },
+    activeTab === 'sales' ? { key: 'documento', label: 'Documento', width: '160px', sortable: false, render: (row) => formatDocument(row) } : null,
+    { key: 'paciente', label: 'Paciente', field: 'patient', filter: { type: 'text' } },
+    { key: 'total', label: 'Total S/', field: 'total', align: 'right', width: '110px', filter: { type: 'number' }, render: (row) => money(row.total) },
+    { key: 'usuario_registro', label: 'Usuario Registro', field: 'creator.fullname', sortable: false, render: (row) => formatUser(row.creator) },
+    { key: 'fecha_registro', label: 'Fecha Registro', field: 'created_at', width: '130px', filter: { type: 'date' }, nowrap: true, render: (row) => dateOnly(row.created_at) },
   ].filter(Boolean)
 
-  const billingColumns = [
+  const billingVdColumns = [
     {
-      caption: 'Acciones',
-      width: 80,
-      allowFiltering: false,
-      allowExporting: false,
-      cellTemplate: (container, { data }) => {
-        container.css('text-overflow', 'unset')
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Ver PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openBillingPdf(data) }))
-      }
+      key: 'estado', label: activeTab === 'cancelled' ? 'Est. Anulacion' : 'Est. Comprobante', field: 'local_status', width: '145px', filter: { type: 'text' },
+      render: (row) => billingStatusLabel(row),
     },
-    { dataField: 'source_type', visible: false, showInColumnChooser: false },
-    { dataField: 'business_id', visible: false, showInColumnChooser: false },
-    { dataField: 'local_status', caption: activeTab === 'cancelled' ? 'Est. Anulacion' : 'Est. Comprobante', width: 145, calculateCellValue: billingStatusLabel },
-    { dataField: 'document_number', caption: 'Comprobante', width: 160, calculateCellValue: billingDocumentNumber },
-    { caption: 'Cliente', minWidth: 220, calculateCellValue: billingClientLabel },
-    { dataField: 'subtotal', caption: 'Total Gravada S/', dataType: 'number', width: 140, format: { type: 'fixedPoint', precision: 2 } },
-    { dataField: 'tax_amount', caption: 'IGV', dataType: 'number', width: 110, format: { type: 'fixedPoint', precision: 2 } },
-    { dataField: 'total', caption: 'Importe Factura', dataType: 'number', width: 140, format: { type: 'fixedPoint', precision: 2 } },
-    { dataField: 'issue_date', caption: 'F. Facturacion', dataType: 'date', width: 130 },
-    activeTab === 'cancelled' ? { dataField: 'cancelled_at', caption: 'F. Anulacion', dataType: 'date', width: 130 } : null,
+    { key: 'comprobante', label: 'Comprobante', field: 'document_number', width: '160px', filter: { type: 'text' }, render: (row) => billingDocumentNumber(row) },
+    { key: 'cliente', label: 'Cliente', sortable: false, render: (row) => billingClientLabel(row) },
+    { key: 'gravada', label: 'Total Gravada S/', field: 'subtotal', align: 'right', width: '140px', filter: { type: 'number' }, render: (row) => money(row.subtotal) },
+    { key: 'igv', label: 'IGV', field: 'tax_amount', align: 'right', width: '110px', filter: { type: 'number' }, render: (row) => money(row.tax_amount) },
+    { key: 'importe', label: 'Importe Factura', field: 'total', align: 'right', width: '140px', filter: { type: 'number' }, render: (row) => money(row.total) },
+    { key: 'f_facturacion', label: 'F. Facturacion', field: 'issue_date', width: '130px', filter: { type: 'date' }, nowrap: true, render: (row) => dateOnly(row.issue_date) },
+    activeTab === 'cancelled' ? { key: 'f_anulacion', label: 'F. Anulacion', field: 'cancelled_at', width: '130px', filter: { type: 'date' }, nowrap: true, render: (row) => dateOnly(row.cancelled_at) } : null,
   ].filter(Boolean)
+
+  // Opciones de doctor para el VdSelect: incluye una opcion vacia para poder
+  // limpiar el campo (el <select> nativo anterior tenia un <option value=''>)
+  // y, si la venta trae un doctor guardado que ya no esta activo, lo agrega
+  // como opcion "legado" para que siga visible/seleccionado.
+  const doctorSelectOptions = useMemo(() => {
+    const base = doctorOptions.map(doctor => ({ value: doctor.label, label: doctor.label }))
+    const withLegacy = showLegacyDoctorOption ? [{ value: doctorValue, label: doctorValue }, ...base] : base
+    return [{ value: '', label: 'Sin doctor asignado' }, ...withLegacy]
+  }, [doctorOptions, showLegacyDoctorOption, doctorValue])
+
+  // Idem para el articulo de cada linea: se agrega una opcion vacia para
+  // poder volver a dejar la linea sin articulo seleccionado.
+  const articleSelectOptions = useMemo(() => [
+    { value: '', label: 'Articulo' },
+    ...articles.map(article => ({ value: `${article.id}`, label: articleOptionLabel(article) })),
+  ], [articles])
 
   return <>
     <style>{`
@@ -701,35 +601,19 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       .magistrales-sale-content {
         min-height: calc(100vh - 64px);
       }
-      .mag-sale-select2-action {
+      .mag-sale-field-action {
         display: flex;
-        align-items: stretch;
+        align-items: flex-end;
+        gap: 6px;
         width: 100%;
       }
-      .mag-sale-select2-action .select2-container {
+      .mag-sale-field-action > div:first-child {
         flex: 1 1 auto;
-        width: auto !important;
         min-width: 0;
       }
-      .mag-sale-select2-action .select2-container .select2-selection--single {
+      .mag-sale-field-action .btn {
+        flex: 0 0 auto;
         height: 38px;
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
-      }
-      .mag-sale-select2-action .select2-selection__rendered {
-        line-height: 36px;
-      }
-      .mag-sale-select2-action .select2-selection__arrow {
-        height: 36px;
-      }
-      .mag-sale-select2-action .btn {
-        flex: 0 0 42px;
-        border-radius: 0;
-        margin-left: -1px;
-      }
-      .mag-sale-select2-action .btn:last-child {
-        border-top-right-radius: .25rem;
-        border-bottom-right-radius: .25rem;
       }
     `}</style>
     <div className='row mb-3'>
@@ -748,10 +632,8 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
       </div>
     </div>
 
-    <Table
-      key={`magistrales-sales-table-${activeTab}`}
-      gridRef={gridRef}
-      title={<div>
+    <div className='card mb-3'>
+      <div className='card-body'>
         <div className='d-flex align-items-center justify-content-between flex-wrap gap-2'>
           <h4 className='header-title mb-0'>Listado</h4>
           <span className='text-muted small'>{tabs.find(tab => tab.id === activeTab)?.label}</span>
@@ -787,17 +669,50 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         {isBillingTab && <div className='alert alert-info py-2 mt-2 mb-0'>
           Estas pestanas quedan separadas para comprobantes de origen magistral. La emision fiscal de ventas magistrales se conectara sin usar los comprobantes de almacenamiento.
         </div>}
-      </div>}
+      </div>
+    </div>
+
+    <VdTable
+      key={`magistrales-sales-table-${activeTab}`}
+      ref={tableRef}
       rest={activeRest}
-      pageSize={25}
-      baseFilterValue={activeFilterValue}
-      toolBar={(items) => {
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
-        if (!isBillingTab) {
-          items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', hint: activeTab === 'quotes' ? 'Crear cotizacion' : 'Crear venta', onClick: () => openModal(null, activeTab === 'quotes') } })
-        }
-      }}
-      columns={isBillingTab ? billingColumns : saleColumns}
+      icon={isBillingTab ? 'mdi mdi-file-document-outline' : (activeTab === 'quotes' ? 'mdi mdi-file-document-edit-outline' : 'mdi mdi-cash-register')}
+      title={tabs.find(tab => tab.id === activeTab)?.label ?? 'Listado'}
+      unit={isBillingTab ? 'comprobantes' : (activeTab === 'quotes' ? 'cotizaciones' : 'ventas')}
+      defaultPageSize={25}
+      searchFields={isBillingTab ? ['document_number', 'client.full_name', 'eventualClient.business_name'] : ['code', 'patient']}
+      searchPlaceholder='Buscar…'
+      emptyText={isBillingTab ? 'No se encontraron comprobantes.' : 'No se encontraron registros.'}
+      baseFilter={activeFilterValue}
+      headerActions={<>
+        <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => tableRef.current?.refresh()}>
+          <i className='mdi mdi-refresh'></i>
+        </button>
+        {!isBillingTab && <button type='button' className='vdt-btn-pri' onClick={() => openModal(null, activeTab === 'quotes')}>
+          <i className='mdi mdi-plus'></i> {activeTab === 'quotes' ? 'Crear cotizacion' : 'Crear venta'}
+        </button>}
+      </>}
+      actions={rowActions}
+      columns={isBillingTab ? billingVdColumns : saleVdColumns}
+      renderCard={(row, actionButtons) => (
+        <div className='vdt-card' onClick={() => (isBillingTab ? null : openModal(row))}>
+          <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>
+                {isBillingTab ? billingDocumentNumber(row) : row.code}
+              </p>
+              <small className='text-muted'>{isBillingTab ? billingClientLabel(row) : row.patient}</small>
+            </div>
+            <span className='fw-semibold'>S/ {money(row.total)}</span>
+          </div>
+          <small className='text-muted d-block mt-2'>
+            {isBillingTab
+              ? billingStatusLabel(row)
+              : (activeTab === 'quotes' ? row.sale_type : (paymentLabels[row.payment_status] ?? row.payment_status))}
+          </small>
+          {actionButtons && <div className='d-flex mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
     <Modal
       modalRef={modalRef}
@@ -831,8 +746,20 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha</label><input ref={dateRef} type='date' className='form-control' /></div>
         <div className='col-md-4 mb-3'>
           <label className='form-label'>Paciente</label>
-          <div className='mag-sale-select2-action'>
-            <select ref={patientSelectRef} data-select2-managed='component' className='form-control' style={{ width: '100%' }}></select>
+          <div className='mag-sale-field-action'>
+            <div>
+              <input
+                className='form-control'
+                value={patientValue}
+                placeholder='Seleccione paciente'
+                readOnly
+                onClick={openPatientSearch}
+                style={{ cursor: 'pointer', backgroundColor: '#fff' }}
+              />
+            </div>
+            <button type='button' className='btn btn-outline-primary' onClick={openPatientSearch} title='Buscar paciente'>
+              <i className='mdi mdi-magnify'></i>
+            </button>
             <button type='button' className='btn btn-outline-success' onClick={openPatientForm} title='Agregar paciente'>
               <i className='mdi mdi-account-plus'></i>
             </button>
@@ -842,29 +769,30 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
           </div>
         </div>
         <div className='col-md-4 mb-3'>
-          <label className='form-label'>Doctor</label>
-          <div className='mag-sale-select2-action'>
-            <select ref={doctorSelectRef} data-select2-managed='component' className='form-control' value={doctorValue} onChange={(event) => setDoctorValue(event.target.value)}>
-              <option value=''>Seleccione</option>
-              {showLegacyDoctorOption && <option value={doctorValue}>{doctorValue}</option>}
-              {doctorOptions.map(doctor => <option key={`mag-sale-doctor-${doctor.id}`} value={doctor.label}>{doctor.label}</option>)}
-            </select>
+          <div className='mag-sale-field-action'>
+            <div>
+              <VdSelect
+                label='Doctor'
+                noMargin
+                value={doctorValue}
+                onChange={(value) => setDoctorValue(value)}
+                options={doctorSelectOptions}
+                placeholder='Seleccione'
+              />
+            </div>
             <button type='button' className='btn btn-outline-success' onClick={openDoctorForm} title='Agregar doctor'>
               <i className='mdi mdi-plus'></i>
             </button>
           </div>
         </div>
-        <div className='col-md-4 mb-3'>
-          <label className='form-label'>Tipo documento</label>
-          <select
-            ref={documentTypeRef}
-            className='form-control'
-            value={selectedDocumentType}
-            onChange={(event) => setSelectedDocumentType(event.target.value)}
-          >
-            {saleDocumentTypes.map(type => <option key={`sale-document-type-${type}`} value={type}>{type}</option>)}
-          </select>
-        </div>
+        <VdSelect
+          label='Tipo documento'
+          col='col-md-4'
+          value={selectedDocumentType}
+          onChange={(value) => setSelectedDocumentType(value)}
+          options={saleDocumentTypes.map(type => ({ value: type, label: type }))}
+          placeholder='Seleccione'
+        />
         <input ref={paymentStatusRef} type='hidden' />
         {isFacturaDocumentType && <>
           <div className='col-md-3 mb-3'>
@@ -876,18 +804,22 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
             <input className='form-control' value={billingBusinessName} onChange={(event) => setBillingBusinessName(event.target.value)} />
           </div>
         </>}
-        <div className={isFacturaDocumentType ? 'col-md-3 mb-3' : 'col-md-4 mb-3'}>
-          <label className='form-label'>Politica descuento</label>
-          <select ref={discountPolicyRef} className='form-control'>
-            {discountPolicyOptions.map(option => <option key={`discount-policy-${option.value}`} value={option.value}>{option.label}</option>)}
-          </select>
-        </div>
-        <div className='col-md-3 mb-3'>
-          <label className='form-label'>Tipo de venta</label>
-          <select ref={saleTypeRef} className='form-control'>
-            {saleTypeOptions.map(type => <option key={`sale-type-${type}`} value={type}>{type}</option>)}
-          </select>
-        </div>
+        <VdSelect
+          label='Politica descuento'
+          col={isFacturaDocumentType ? 'col-md-3' : 'col-md-4'}
+          value={discountPolicyValue}
+          onChange={(value) => setDiscountPolicyValue(value)}
+          options={discountPolicyOptions.filter(option => option.value !== noDiscountPolicyValue)}
+          placeholder='Seleccione'
+        />
+        <VdSelect
+          label='Tipo de venta'
+          col='col-md-3'
+          value={saleTypeValue}
+          onChange={(value) => setSaleTypeValue(value)}
+          options={saleTypeOptions.map(type => ({ value: type, label: type }))}
+          placeholder='Seleccione'
+        />
         <SwitchFormGroup eRef={allergyRef} label='Alergia' col='col-md-3 mt-4' />
         <SwitchFormGroup eRef={intoleranceRef} label='Intolerancia' col='col-md-3 mt-4' />
 
@@ -913,11 +845,14 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
               <tbody>
                 {items.map(item => (
                   <tr key={item.uid}>
-                    <td>
-                      <select className='form-control form-control-sm' value={item.article_id} onChange={(e) => selectArticle(item.uid, e.target.value)}>
-                        <option value=''>Articulo</option>
-                        {articles.map(article => <option key={`sale-article-${article.id}`} value={article.id}>{articleOptionLabel(article)}</option>)}
-                      </select>
+                    <td style={{ minWidth: 230 }}>
+                      <VdSelect
+                        noMargin
+                        value={item.article_id}
+                        onChange={(value) => selectArticle(item.uid, value)}
+                        options={articleSelectOptions}
+                        placeholder='Articulo'
+                      />
                     </td>
                     <td className='align-middle text-muted small'>
                       <div className='d-flex flex-column'>
@@ -1071,12 +1006,14 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
         <div className='col-12'>
           <h6 className='border-bottom pb-2 mb-3'><i className='mdi mdi-account-plus-outline me-1'></i> General</h6>
         </div>
-        <div className='col-md-2 mb-3'>
-          <label className='form-label'>Tipo de Documento</label>
-          <select className='form-control' value={patientForm.document_type} onChange={(event) => updatePatientForm('document_type', event.target.value)}>
-            {identityDocumentTypes.map(type => <option key={`patient-document-type-${type}`} value={type}>{type}</option>)}
-          </select>
-        </div>
+        <VdSelect
+          label='Tipo de Documento'
+          col='col-md-2'
+          value={patientForm.document_type}
+          onChange={(value) => updatePatientForm('document_type', value)}
+          options={identityDocumentTypes.map(type => ({ value: type, label: type }))}
+          placeholder='Seleccione'
+        />
         <div className='col-md-3 mb-3'>
           <label className='form-label'>Documento</label>
           <input className='form-control' value={patientForm.document_number} onChange={(event) => updatePatientForm('document_number', event.target.value)} />
@@ -1113,12 +1050,14 @@ const Sales = ({ moduleTitle = 'Magistrales - Ventas', fixedWarehouse = null }) 
           <label className='form-label'>Cargo</label>
           <input className='form-control' value={patientForm.position} onChange={(event) => updatePatientForm('position', event.target.value)} />
         </div>
-        <div className='col-md-4 mb-3'>
-          <label className='form-label'>Sexo</label>
-          <select className='form-control' value={patientForm.sex} onChange={(event) => updatePatientForm('sex', event.target.value)}>
-            {patientSexOptions.map(option => <option key={`patient-sex-${option}`} value={option}>{option}</option>)}
-          </select>
-        </div>
+        <VdSelect
+          label='Sexo'
+          col='col-md-4'
+          value={patientForm.sex}
+          onChange={(value) => updatePatientForm('sex', value)}
+          options={patientSexOptions.map(option => ({ value: option, label: option }))}
+          placeholder='Seleccione'
+        />
         <div className='col-md-4 mb-3'>
           <label className='form-label'>Telefono 2</label>
           <input className='form-control' value={patientForm.secondary_phone} onChange={(event) => updatePatientForm('secondary_phone', event.target.value)} />

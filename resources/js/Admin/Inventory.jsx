@@ -3,9 +3,9 @@ import { createRoot } from 'react-dom/client';
 import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
-import DxButton from '../Components/dx/DxButton';
 import InventoryRest from '../Actions/Admin/InventoryRest';
 import { scopedPermission } from '../Utils/permissionScope';
 import Swal from 'sweetalert2';
@@ -84,6 +84,12 @@ const mapStandardItem = (item) => ({
   total_cost: Number(item.total_cost ?? 0),
 })
 
+const inventoryStatusOptions = [
+  { value: 'En espera', label: 'En espera' },
+  { value: 'Sin diferencias', label: 'Sin diferencias' },
+  { value: 'Con diferencias', label: 'Con diferencias' },
+  { value: 'Aplicado', label: 'Aplicado' },
+]
 const inventoryStatusBadge = (status) => {
   const normalized = status || 'En espera'
   const className = {
@@ -92,11 +98,11 @@ const inventoryStatusBadge = (status) => {
     'Con diferencias': 'badge-soft-danger',
     'En espera': 'badge-soft-warning',
   }[normalized] ?? 'badge-soft-secondary'
-  return `<span class="badge ${className}">${normalized}</span>`
+  return <span className={`badge ${className}`}>{normalized}</span>
 }
 
 const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessScopes = {}, businessScopeKey = 'kamary_peru' }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const fileRef = useRef()
   const [warehouses, setWarehouses] = useState([])
@@ -120,8 +126,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
 
   useEffect(() => {
     inventoryRest.setFilters({ warehouse_id: '', warehouse_ids: filterWarehouseIds || '' })
-    if (!gridRef.current) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }, [filterWarehouseIds])
 
   const fixedBusinessLabel = (businessScopes?.[businessScopeKey] || 'KAMARY PERU').toUpperCase()
@@ -216,7 +221,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
     if (!result) return
     setSelectedCount(result)
     setRows((result.items ?? []).map(mapStandardItem))
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const downloadFormat = () => {
@@ -274,7 +279,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
       if (!result) return
       setSelectedCount(result)
       setRows((result.items ?? []).map(mapStandardItem))
-      $(gridRef.current).dxDataGrid('instance').refresh()
+      tableRef.current?.refresh()
     } catch (error) {
       await Swal.fire({ icon: 'error', title: 'Formato invalido', text: error.message })
     }
@@ -296,7 +301,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
     if (!result) return
     setSelectedCount(result)
     setRows((result.items ?? []).map(mapStandardItem))
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const remove = async (id) => {
@@ -311,7 +316,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
     if (!isConfirmed) return
     const result = await inventoryRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   return <>
@@ -322,17 +327,14 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
             <label className='form-label'>Empresa</label>
             <input className='form-control bg-light' value={fixedBusinessLabel} readOnly />
           </div>
-          <div className='col-12 col-md-4'>
-            <label className='form-label'>Almacen</label>
-            <select className='form-control' value={filterWarehouseIds} onChange={(e) => setFilterWarehouseIds(e.target.value)}>
-              <option value=''>Todos</option>
-              {filterWarehouseOptions.map(warehouse => (
-                <option key={`standard-inv-filter-wh-${warehouse.value}`} value={warehouse.value}>
-                  {warehouse.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <VdSelect
+            col='col-12 col-md-4'
+            label='Almacen'
+            value={filterWarehouseIds}
+            onChange={(value) => setFilterWarehouseIds(value)}
+            options={[{ value: '', label: 'Todos' }, ...filterWarehouseOptions.map(warehouse => ({ value: warehouse.value, label: warehouse.name }))]}
+            placeholder='Todos'
+          />
           <div className='col-12 col-md-4'>
             <button type='button' className='btn btn-primary d-inline-flex align-items-center gap-2' onClick={openNewModal}>
               <i className='mdi mdi-plus-circle-outline'></i>
@@ -343,69 +345,66 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
       </div>
     </div>
 
-    <Table
-      gridRef={gridRef}
-      title='Inventarios registrados'
+    <VdTable
+      ref={tableRef}
       rest={inventoryRest}
-      pageSize={10}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton',
-          location: 'after',
-          options: { icon: 'refresh', hint: 'Refrescar tabla', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() }
-        })
-        container.unshift({
-          widget: 'dxButton',
-          location: 'after',
-          options: { icon: 'add', hint: 'Registrar inventario', onClick: openNewModal }
-        })
-      }}
+      icon='mdi mdi-clipboard-list-outline'
+      title='Inventarios registrados'
+      unit='inventarios'
+      defaultPageSize={10}
+      searchFields={['code', 'warehouse.name', 'laboratory.name']}
+      searchPlaceholder='Buscar por codigo, almacen o laboratorio…'
+      emptyText='No se encontraron inventarios registrados.'
+      headerActions={<>
+        <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => tableRef.current?.refresh()}>
+          <i className='mdi mdi-refresh'></i>
+        </button>
+        <button type='button' className='vdt-btn-pri' onClick={openNewModal}>
+          <i className='mdi mdi-plus'></i> Registrar inventario
+        </button>
+      </>}
+      actions={(row) => [
+        { icon: 'mdi mdi-pencil', title: 'Ver inventario', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => openExistingModal(r) },
+        { icon: 'mdi mdi-delete', title: 'Eliminar inventario', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => remove(r.id) },
+      ]}
       columns={[
         {
-          caption: 'Acciones',
-          width: 135,
-          minWidth: 135,
-          fixed: true,
-          fixedPosition: 'left',
-          allowFiltering: false,
-          allowSorting: false,
-          allowExporting: false,
-          cellTemplate: (container, { data }) => {
-            container.css({ overflow: 'visible', textOverflow: 'unset', whiteSpace: 'nowrap' })
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Ver inventario', icon: 'mdi mdi-pencil', onClick: () => openExistingModal(data) }))
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar inventario', icon: 'mdi mdi-delete', onClick: () => remove(data.id) }))
-          }
+          key: 'codigo', label: 'Codigo', field: 'code', width: '150px', filter: { type: 'text' },
+          render: (row) => (
+            <a className='admin-grid-edit-link' style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => openExistingModal(row)} title='Ver inventario'>
+              {row.code}
+            </a>
+          ),
+        },
+        { key: 'almacen', label: 'Almacen', field: 'warehouse.name', filter: { type: 'text', field: 'warehouse.name' } },
+        { key: 'laboratorio', label: 'Laboratorio', field: 'laboratory.name', filter: { type: 'text', field: 'laboratory.name' } },
+        {
+          key: 'usuario', label: 'Usuario registro', field: 'creator.fullname', sortable: false,
+          render: (row) => formatUser(row.creator),
         },
         {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: 185,
-          minWidth: 185,
-          cellTemplate: (container, { data }) => {
-            $('<a></a>').attr('href', '#').text(data.code ?? '').on('click', (e) => {
-              e.preventDefault()
-              openExistingModal(data)
-            }).appendTo(container)
-          }
-        },
-        { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 180 },
-        { dataField: 'laboratory.name', caption: 'Laboratorio', minWidth: 180 },
-        { dataField: 'creator.fullname', caption: 'Usuario registro', minWidth: 170, allowFiltering: false, calculateCellValue: row => formatUser(row.creator) },
-        {
-          dataField: 'created_at',
-          caption: 'Fecha registro',
-          minWidth: 165,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => container.text(formatDateTime(data.created_at))
+          key: 'fecha', label: 'Fecha registro', field: 'created_at', width: '165px', nowrap: true,
+          render: (row) => formatDateTime(row.created_at),
         },
         {
-          dataField: 'inventory_status',
-          caption: 'Estado',
-          width: 145,
-          minWidth: 145,
-          cellTemplate: (container, { data }) => container.html(inventoryStatusBadge(data.inventory_status))
+          key: 'estado', label: 'Estado', field: 'inventory_status', width: '145px',
+          filter: { type: 'select', field: 'inventory_status', options: inventoryStatusOptions },
+          render: (row) => inventoryStatusBadge(row.inventory_status),
         },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className='vdt-card' onClick={() => openExistingModal(row)}>
+          <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>{row.code}</p>
+              <small className='text-muted'>{[row.warehouse?.name, row.laboratory?.name].filter(Boolean).join(' · ')}</small>
+            </div>
+            {inventoryStatusBadge(row.inventory_status)}
+          </div>
+          <small className='text-muted d-block mt-2'>{formatUser(row.creator)} · {formatDateTime(row.created_at)}</small>
+          {actionButtons && <div className='d-flex mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal
@@ -499,26 +498,25 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
         INGRESAR DATOS
       </div>
       <div className='row g-3 align-items-end storage-inventory-filter-row mb-3'>
-        <div className='col-12 col-md-6 col-xl-4'>
-          <label className='form-label'>Almacen</label>
-          <select className='form-select' value={warehouseId} disabled={!!selectedCount} onChange={(e) => setWarehouseId(e.target.value)}>
-            <option value=''>Seleccione almacen</option>
-            {modalWarehouseOptions.map(warehouse => (
-              <option key={`standard-inv-wh-${warehouse.ids.join('-')}`} value={warehouse.value}>
-                {warehouse.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className='col-12 col-md-6 col-xl-4'>
-          <label className='form-label'>Laboratorio</label>
-          <select className='form-select' value={laboratoryId} disabled={!!selectedCount} onChange={(e) => setLaboratoryId(e.target.value)}>
-            <option value=''>Todos</option>
-            {laboratories.map(lab => (
-              <option key={`standard-inv-lab-${lab.id}`} value={lab.id}>{lab.name}</option>
-            ))}
-          </select>
-        </div>
+        <VdSelect
+          col='col-12 col-md-6 col-xl-4'
+          label='Almacen'
+          required
+          disabled={!!selectedCount}
+          value={warehouseId}
+          onChange={(value) => setWarehouseId(value)}
+          options={modalWarehouseOptions.map(warehouse => ({ value: warehouse.value, label: warehouse.name }))}
+          placeholder='Seleccione almacen'
+        />
+        <VdSelect
+          col='col-12 col-md-6 col-xl-4'
+          label='Laboratorio'
+          disabled={!!selectedCount}
+          value={laboratoryId}
+          onChange={(value) => setLaboratoryId(value)}
+          options={[{ value: '', label: 'Todos' }, ...laboratories.map(lab => ({ value: `${lab.id}`, label: lab.name }))]}
+          placeholder='Todos'
+        />
         <div className='col-12 col-xl-4 d-grid'>
           <button type='button' className='btn btn-outline-primary py-2 fw-semibold' disabled={!!selectedCount || !warehouseId || loadingRows} onClick={refreshPreview}>
             <i className='mdi mdi-magnify me-1'></i>
@@ -544,9 +542,14 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
       <div className='d-flex flex-wrap justify-content-between align-items-center gap-3 mb-2'>
         <label className='d-inline-flex align-items-center gap-2 mb-0'>
           Elementos:
-          <select className='form-select form-select-sm w-auto' value={tablePageSize} onChange={(e) => setTablePageSize(Number(e.target.value))}>
-            {[10, 25, 50, 100].map(size => <option key={`standard-inv-page-size-${size}`} value={size}>{size}</option>)}
-          </select>
+          <div style={{ width: 90 }}>
+            <VdSelect
+              noMargin
+              value={tablePageSize}
+              onChange={(value) => setTablePageSize(Number(value))}
+              options={[10, 25, 50, 100].map(size => ({ value: size, label: `${size}` }))}
+            />
+          </div>
         </label>
         <label className='d-inline-flex align-items-center gap-2 mb-0'>
           Filtrar:
@@ -619,7 +622,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
 }
 
 const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const fileRef = useRef()
   const [warehouses, setWarehouses] = useState([])
@@ -739,7 +742,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
     if (!result) return
     setSelectedCount(result)
     setRows((result.items ?? []).map(mapStoredItem))
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const downloadFormat = () => {
@@ -806,7 +809,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       if (!result) return
       setSelectedCount(result)
       setRows((result.items ?? []).map(mapStoredItem))
-      $(gridRef.current).dxDataGrid('instance').refresh()
+      tableRef.current?.refresh()
     } catch (error) {
       await Swal.fire({ icon: 'error', title: 'Formato invalido', text: error.message })
     }
@@ -828,7 +831,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
     if (!result) return
     setSelectedCount(result)
     setRows((result.items ?? []).map(mapStoredItem))
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const remove = async (id) => {
@@ -843,7 +846,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
     if (!isConfirmed) return
     const result = await inventoryRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   return <>
@@ -856,70 +859,67 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       </div>
     </div>
 
-    <Table
-      gridRef={gridRef}
-      title='Inventarios registrados'
+    <VdTable
+      ref={tableRef}
       rest={inventoryRest}
-      pageSize={10}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton',
-          location: 'after',
-          options: { icon: 'refresh', hint: 'Refrescar tabla', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() }
-        })
-        container.unshift({
-          widget: 'dxButton',
-          location: 'after',
-          options: { icon: 'add', hint: 'Registrar inventario', onClick: openNewModal }
-        })
-      }}
+      icon='mdi mdi-clipboard-list-outline'
+      title='Inventarios registrados'
+      unit='inventarios'
+      defaultPageSize={10}
+      searchFields={['code', 'warehouse.name', 'client.full_name', 'location']}
+      searchPlaceholder='Buscar por codigo, almacen, cliente o ubicacion…'
+      emptyText='No se encontraron inventarios registrados.'
+      headerActions={<>
+        <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => tableRef.current?.refresh()}>
+          <i className='mdi mdi-refresh'></i>
+        </button>
+        <button type='button' className='vdt-btn-pri' onClick={openNewModal}>
+          <i className='mdi mdi-plus'></i> Registrar inventario
+        </button>
+      </>}
+      actions={(row) => [
+        { icon: 'mdi mdi-pencil', title: 'Ver inventario', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => openExistingModal(r) },
+        { icon: 'mdi mdi-delete', title: 'Eliminar inventario', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => remove(r.id) },
+      ]}
       columns={[
         {
-          caption: 'Acciones',
-          width: 135,
-          minWidth: 135,
-          fixed: true,
-          fixedPosition: 'left',
-          allowFiltering: false,
-          allowSorting: false,
-          allowExporting: false,
-          cellTemplate: (container, { data }) => {
-            container.css({ overflow: 'visible', textOverflow: 'unset', whiteSpace: 'nowrap' })
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Ver inventario', icon: 'mdi mdi-pencil', onClick: () => openExistingModal(data) }))
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar inventario', icon: 'mdi mdi-delete', onClick: () => remove(data.id) }))
-          }
+          key: 'codigo', label: 'Codigo', field: 'code', width: '150px', filter: { type: 'text' },
+          render: (row) => (
+            <a className='admin-grid-edit-link' style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => openExistingModal(row)} title='Ver inventario'>
+              {row.code}
+            </a>
+          ),
+        },
+        { key: 'almacen', label: 'Almacen', field: 'warehouse.name', filter: { type: 'text', field: 'warehouse.name' } },
+        { key: 'cliente', label: 'Cliente', field: 'client.full_name', filter: { type: 'text', field: 'client.full_name' } },
+        { key: 'ubicacion', label: 'Ubicacion', field: 'location', filter: { type: 'text' } },
+        {
+          key: 'usuario', label: 'Usuario registro', field: 'creator.fullname', sortable: false,
+          render: (row) => formatUser(row.creator),
         },
         {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: 185,
-          minWidth: 185,
-          cellTemplate: (container, { data }) => {
-            $('<a></a>').attr('href', '#').text(data.code ?? '').on('click', (e) => {
-              e.preventDefault()
-              openExistingModal(data)
-            }).appendTo(container)
-          }
-        },
-        { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 180 },
-        { dataField: 'client.full_name', caption: 'Cliente', minWidth: 220 },
-        { dataField: 'location', caption: 'Ubicacion', minWidth: 120 },
-        { dataField: 'creator.fullname', caption: 'Usuario registro', minWidth: 170, allowFiltering: false, calculateCellValue: row => formatUser(row.creator) },
-        {
-          dataField: 'created_at',
-          caption: 'Fecha registro',
-          minWidth: 165,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => container.text(formatDateTime(data.created_at))
+          key: 'fecha', label: 'Fecha registro', field: 'created_at', width: '165px', nowrap: true,
+          render: (row) => formatDateTime(row.created_at),
         },
         {
-          dataField: 'inventory_status',
-          caption: 'Estado',
-          width: 145,
-          minWidth: 145,
-          cellTemplate: (container, { data }) => container.html(inventoryStatusBadge(data.inventory_status))
+          key: 'estado', label: 'Estado', field: 'inventory_status', width: '145px',
+          filter: { type: 'select', field: 'inventory_status', options: inventoryStatusOptions },
+          render: (row) => inventoryStatusBadge(row.inventory_status),
         },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className='vdt-card' onClick={() => openExistingModal(row)}>
+          <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>{row.code}</p>
+              <small className='text-muted'>{[row.warehouse?.name, row.client?.full_name].filter(Boolean).join(' · ')}</small>
+            </div>
+            {inventoryStatusBadge(row.inventory_status)}
+          </div>
+          <small className='text-muted d-block mt-2'>{formatUser(row.creator)} · {formatDateTime(row.created_at)}</small>
+          {actionButtons && <div className='d-flex mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal
@@ -1017,42 +1017,37 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         INGRESAR DATOS
       </div>
       <div className='row g-3 align-items-end storage-inventory-filter-row mb-3'>
-        <div className='col-12 col-md-6 col-xl-2'>
-          <label className='form-label'>Almacen</label>
-          <select className='form-select' value={warehouseId} disabled={!!selectedCount} onChange={(e) => changeWarehouse(e.target.value)}>
-            <option value=''>Seleccione Almacen</option>
-            {warehouses.map(warehouse => (
-              <option key={`storage-inv-wh-${warehouse.id}`} value={warehouse.id}>
-                {warehouse.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className='col-12 col-md-6 col-xl-3'>
-          <label className='form-label'>Ubicacion</label>
-          <select className='form-select' value={location} disabled={!!selectedCount || !warehouseId || !clientId} onChange={(e) => setLocation(e.target.value)}>
-            <option value=''>{warehouseId && clientId ? 'Seleccione ubicacion' : 'Seleccione almacen y cliente primero'}</option>
-            {filteredLocations.map(item => (
-              <option key={`storage-inv-location-${item.warehouse_id ?? 'all'}-${item.client_id ?? 'all'}-${item.location}`} value={item.location}>
-                {item.location}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className='col-12 col-xl-5'>
-          <label className='form-label'>Cliente</label>
-          <select className='form-select' value={clientId} disabled={!!selectedCount} onChange={(e) => {
-            setClientId(e.target.value)
+        <VdSelect
+          col='col-12 col-md-6 col-xl-2'
+          label='Almacen'
+          disabled={!!selectedCount}
+          value={warehouseId}
+          onChange={(value) => changeWarehouse(value)}
+          options={[{ value: '', label: 'Seleccione Almacen' }, ...warehouses.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))]}
+          placeholder='Seleccione Almacen'
+        />
+        <VdSelect
+          col='col-12 col-md-6 col-xl-3'
+          label='Ubicacion'
+          disabled={!!selectedCount || !warehouseId || !clientId}
+          value={location}
+          onChange={(value) => setLocation(value)}
+          options={[{ value: '', label: 'Seleccione ubicacion' }, ...filteredLocations.map(item => ({ value: item.location, label: item.location }))]}
+          placeholder={warehouseId && clientId ? 'Seleccione ubicacion' : 'Seleccione almacen y cliente primero'}
+        />
+        <VdSelect
+          col='col-12 col-xl-5'
+          label='Cliente'
+          required
+          disabled={!!selectedCount}
+          value={clientId}
+          onChange={(value) => {
+            setClientId(value)
             setLocation('')
-          }}>
-            <option value=''>Seleccione cliente</option>
-            {clients.map(client => (
-              <option key={`storage-inv-client-${client.id}`} value={client.id}>
-                {client.full_name}
-              </option>
-            ))}
-          </select>
-        </div>
+          }}
+          options={clients.map(client => ({ value: `${client.id}`, label: client.full_name }))}
+          placeholder='Seleccione cliente'
+        />
         <div className='col-12 col-xl-2 d-grid'>
           <button type='button' className='btn btn-outline-primary py-2 fw-semibold' disabled={!!selectedCount || !warehouseId || !clientId || loadingRows} onClick={refreshPreview}>
             <i className='mdi mdi-magnify me-1'></i>
@@ -1075,9 +1070,14 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       <div className='d-flex flex-wrap justify-content-between align-items-center gap-3 mb-2'>
         <label className='d-inline-flex align-items-center gap-2 mb-0'>
           Elementos:
-          <select className='form-select form-select-sm w-auto' value={tablePageSize} onChange={(e) => setTablePageSize(Number(e.target.value))}>
-            {[10, 25, 50, 100].map(size => <option key={`storage-inv-page-size-${size}`} value={size}>{size}</option>)}
-          </select>
+          <div style={{ width: 90 }}>
+            <VdSelect
+              noMargin
+              value={tablePageSize}
+              onChange={(value) => setTablePageSize(Number(value))}
+              options={[10, 25, 50, 100].map(size => ({ value: size, label: `${size}` }))}
+            />
+          </div>
         </label>
         <label className='d-inline-flex align-items-center gap-2 mb-0'>
           Filtrar:

@@ -2,16 +2,15 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
-import Modal from '../Components/Adminto/Modal';
-import DxButton from '../Components/dx/DxButton';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
+import Modal from '@Adminto/Modal';
 import Swal from 'sweetalert2';
 import BillingDocumentsRest from '../Actions/Admin/BillingDocumentsRest';
 import {
   billingDocumentStatusOptions,
   getBillingDocumentStatusLabel,
   getSourceTypeLabel,
-  toLookup,
 } from '../Utils/statusLabels';
 import { scopedPermission } from '../Utils/permissionScope';
 
@@ -78,6 +77,17 @@ const billingControlStatusOptions = [
   { value: 'rejected', label: 'Facturado' },
   { value: 'cancelled', label: 'Anulado' },
 ]
+const currencyFilterOptions = [{ value: 'PEN', label: 'Soles' }, { value: 'USD', label: 'Dolares' }]
+
+// Paleta de acciones por fila (misma paleta usada en el resto del panel admin)
+const rowActionColors = {
+  blue: { bg: '#e7f2fd', color: '#188ae2' },
+  red: { bg: '#fcebeb', color: '#e24b4a' },
+  slate: { bg: '#eef0f4', color: '#5b69bc' },
+  green: { bg: '#e7faf1', color: '#10c469' },
+  amber: { bg: '#fff4e5', color: '#f1a325' },
+}
+
 const toNumber = (value, fallback = 0) => {
   const number = Number(value)
   return Number.isFinite(number) ? number : fallback
@@ -366,7 +376,7 @@ const buildStorageFilter = (tab, filters) => {
 }
 
 const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, billingMode }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const payloadModalRef = useRef()
   const providerModalRef = useRef()
@@ -380,14 +390,10 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const idRef = useRef()
   const issueDateRef = useRef()
   const dueDateRef = useRef()
-  const documentTypeRef = useRef()
   const seriesRef = useRef()
   const sequenceRef = useRef()
-  const paymentConditionRef = useRef()
-  const paymentMethodRef = useRef()
   const customerEmailRef = useRef()
   const observationsRef = useRef()
-  const localStatusRef = useRef()
   const externalStatusRef = useRef()
   const externalIdRef = useRef()
   const externalReferenceRef = useRef()
@@ -400,7 +406,6 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const creditNoteNoteRef = useRef()
   const receivablePaymentAmountRef = useRef()
   const receivablePaymentDateRef = useRef()
-  const receivablePaymentMethodRef = useRef()
   const receivablePaymentBankRef = useRef()
   const receivablePaymentOperationRef = useRef()
   const receivablePaymentFileRef = useRef()
@@ -409,6 +414,11 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
 
   const [sourceType, setSourceType] = useState(isStorageBilling ? 'service_order' : 'commercial_order')
   const [sourceId, setSourceId] = useState('')
+  const [documentType, setDocumentType] = useState('Factura')
+  const [paymentCondition, setPaymentCondition] = useState('Contado')
+  const [paymentMethod, setPaymentMethod] = useState('Transferencia')
+  const [providerLocalStatus, setProviderLocalStatus] = useState('pending')
+  const [receivablePaymentMethod, setReceivablePaymentMethod] = useState('Transferencia')
   const [commercialOrders, setCommercialOrders] = useState([])
   const [serviceOrders, setServiceOrders] = useState([])
   const [businesses, setBusinesses] = useState([])
@@ -530,11 +540,11 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     idRef.current.value = data?.id ?? ''
     issueDateRef.current.value = data?.issue_date?.toString?.().slice?.(0, 10) ?? new Date().toISOString().slice(0, 10)
     dueDateRef.current.value = data?.due_date?.toString?.().slice?.(0, 10) ?? ''
-    documentTypeRef.current.value = data?.document_type ?? 'Factura'
+    setDocumentType(data?.document_type ?? 'Factura')
     seriesRef.current.value = data?.series ?? ''
     sequenceRef.current.value = data?.sequence ?? ''
-    paymentConditionRef.current.value = data?.payment_condition ?? 'Contado'
-    paymentMethodRef.current.value = data?.payment_method ?? 'Transferencia'
+    setPaymentCondition(data?.payment_condition ?? 'Contado')
+    setPaymentMethod(data?.payment_method ?? 'Transferencia')
     customerEmailRef.current.value = data?.customer_email ?? ''
     observationsRef.current.value = data?.observations ?? ''
     setSourceType(isStorageBilling ? 'service_order' : (data?.source_type ?? 'commercial_order'))
@@ -544,15 +554,21 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
 
   const onSave = async (e) => {
     e.preventDefault()
+
+    if (!sourceId) {
+      Swal.fire({ icon: 'warning', title: 'Falta documento origen', text: 'Selecciona el documento origen del comprobante.', confirmButtonText: 'Entendido' })
+      return
+    }
+
     const request = {
       id: idRef.current.value || undefined,
-      document_type: documentTypeRef.current.value,
+      document_type: documentType,
       issue_date: issueDateRef.current.value,
       due_date: dueDateRef.current.value || null,
       series: seriesRef.current.value.trim(),
       sequence: sequenceRef.current.value.trim(),
-      payment_condition: paymentConditionRef.current.value.trim(),
-      payment_method: paymentMethodRef.current.value.trim(),
+      payment_condition: paymentCondition,
+      payment_method: paymentMethod,
       customer_email: customerEmailRef.current.value.trim(),
       observations: observationsRef.current.value.trim(),
     }
@@ -561,7 +577,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
 
     const result = await billingDocumentsRest.save(request)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(modalRef.current).modal('hide')
   }
 
@@ -575,7 +591,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
 
   const onOpenProviderModal = (row) => {
     setSelectedRow(row)
-    localStatusRef.current.value = row.local_status ?? 'pending'
+    setProviderLocalStatus(row.local_status ?? 'pending')
     externalStatusRef.current.value = row.external_status ?? 'draft'
     externalIdRef.current.value = row.external_id ?? ''
     externalReferenceRef.current.value = row.external_reference ?? ''
@@ -591,7 +607,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     let decodedPayload = payload
     try { decodedPayload = payload ? JSON.parse(payload) : null } catch (error) { }
     const result = await billingDocumentsRest.registerProviderResponse(selectedRow.id, {
-      local_status: localStatusRef.current.value,
+      local_status: providerLocalStatus,
       external_status: externalStatusRef.current.value,
       external_id: externalIdRef.current.value.trim(),
       external_reference: externalReferenceRef.current.value.trim(),
@@ -600,7 +616,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     })
     if (!result) return
     $(providerModalRef.current).modal('hide')
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onIssue = async (row) => {
@@ -618,7 +634,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     if (!isConfirmed) return
     const result = await billingDocumentsRest.issue(row.id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onPrepareVoucher = async (row) => {
@@ -633,7 +649,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
 
     const result = await billingDocumentsRest.syncStatus(row.id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onOpenCancel = (row) => {
@@ -653,7 +669,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     const result = await billingDocumentsRest.cancel(selectedRow.id, { reason: cancelReasonRef.current.value.trim() })
     if (!result) return
     $(cancelModalRef.current).modal('hide')
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onOpenCreditNote = (row) => {
@@ -681,7 +697,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     })
     if (!result) return
     $(creditNoteModalRef.current).modal('hide')
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onDownload = (row, type) => {
@@ -721,7 +737,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const resetReceivablePaymentForm = (row = null) => {
     if (receivablePaymentAmountRef.current) receivablePaymentAmountRef.current.value = row ? formatPaymentAmount(rowBalanceAmount(row)) : ''
     if (receivablePaymentDateRef.current) receivablePaymentDateRef.current.value = new Date().toISOString().slice(0, 10)
-    if (receivablePaymentMethodRef.current) receivablePaymentMethodRef.current.value = 'Transferencia'
+    setReceivablePaymentMethod('Transferencia')
     if (receivablePaymentBankRef.current) receivablePaymentBankRef.current.value = ''
     if (receivablePaymentOperationRef.current) receivablePaymentOperationRef.current.value = ''
     if (receivablePaymentFileRef.current) receivablePaymentFileRef.current.value = ''
@@ -745,12 +761,17 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     e.preventDefault()
     if (!selectedRow || paymentSending) return
 
+    if (!receivablePaymentMethod) {
+      Swal.fire({ icon: 'warning', title: 'Falta tipo de pago', text: 'Selecciona el tipo de pago.', confirmButtonText: 'Entendido' })
+      return
+    }
+
     setPaymentSending(true)
     try {
       const formData = new FormData()
       formData.append('amount', receivablePaymentAmountRef.current?.value || '')
       formData.append('payment_date', receivablePaymentDateRef.current?.value || '')
-      formData.append('payment_method', receivablePaymentMethodRef.current?.value || '')
+      formData.append('payment_method', receivablePaymentMethod)
       formData.append('bank', receivablePaymentBankRef.current?.value || '')
       formData.append('operation_number', receivablePaymentOperationRef.current?.value || '')
       formData.append('observations', receivablePaymentObservationsRef.current?.value || '')
@@ -762,7 +783,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       if (!result?.data) return
 
       $(receivablePaymentModalRef.current).modal('hide')
-      $(gridRef.current).dxDataGrid('instance').refresh()
+      tableRef.current?.refresh()
     } finally {
       setPaymentSending(false)
     }
@@ -786,7 +807,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       const result = await billingDocumentsRest.email(selectedRow.id, emailDraft)
       if (!result) return
       $(emailModalRef.current).modal('hide')
-      $(gridRef.current).dxDataGrid('instance').refresh()
+      tableRef.current?.refresh()
     } finally {
       setEmailSending(false)
     }
@@ -887,7 +908,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     popup.print()
   }
 
-  const refreshGrid = () => $(gridRef.current).dxDataGrid('instance')?.refresh()
+  const refreshGrid = () => tableRef.current?.refresh()
   const updateStorageFilter = (field, value) => setStorageFilters(prev => ({ ...prev, [field]: value }))
   const applyStorageFilters = (e) => {
     e?.preventDefault?.()
@@ -917,16 +938,6 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     () => isStorageBilling ? buildStorageFilter(activeStorageTab, appliedStorageFilters) : null,
     [isStorageBilling, activeStorageTab, appliedStorageFilters]
   )
-  const gridRest = useMemo(() => {
-    if (!isStorageBilling) return billingDocumentsRest
-
-    return {
-      paginate: async (params = {}) => billingDocumentsRest.paginate({
-        ...params,
-        filter: combineFilters([storageFilterValue, params.filter]),
-      }),
-    }
-  }, [isStorageBilling, storageFilterValue])
   const gridKey = isStorageBilling
     ? `storage-billing-${activeStorageTab}-${JSON.stringify(storageFilterValue)}`
     : 'billing-documents'
@@ -1022,7 +1033,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     ['Saldo', row => rowBalanceAmount(row)],
     ['Fecha Facturacion', row => formatDateTime(rowIssuedAt(row))],
   ]
-  const exportRows = async (rows, fileName, type = 'xlsx') => {
+  const exportRows = async (rows, fileName, type = 'xlsx', columns = reportColumns) => {
     if (type === 'pdf') {
       const JsPDF = window.jspdf?.jsPDF || window.jsPDF
       if (!JsPDF || !JsPDF.API?.autoTable) throw new Error('jsPDF o AutoTable no estan disponibles')
@@ -1030,8 +1041,8 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       doc.setFontSize(12)
       doc.text(fileName, 24, 28)
       doc.autoTable({
-        head: [reportColumns.map(([label]) => label)],
-        body: rows.map(row => reportColumns.map(([, value]) => value(row))),
+        head: [columns.map(([label]) => label)],
+        body: rows.map(row => columns.map(([, value]) => value(row))),
         startY: 40,
         styles: { fontSize: 7, cellPadding: 3 },
       })
@@ -1041,16 +1052,16 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     if (window.ExcelJS && window.saveAs) {
       const workbook = new window.ExcelJS.Workbook()
       const worksheet = workbook.addWorksheet('Reporte')
-      worksheet.addRow(reportColumns.map(([label]) => label))
-      rows.forEach(row => worksheet.addRow(reportColumns.map(([, value]) => value(row))))
+      worksheet.addRow(columns.map(([label]) => label))
+      rows.forEach(row => worksheet.addRow(columns.map(([, value]) => value(row))))
       worksheet.columns.forEach(column => { column.width = 18 })
       const buffer = await workbook.xlsx.writeBuffer()
       window.saveAs(new Blob([buffer], { type: 'application/octet-stream' }), `${fileName}.xlsx`)
       return
     }
     const csv = [
-      reportColumns.map(([label]) => `"${label}"`).join(','),
-      ...rows.map(row => reportColumns.map(([, value]) => `"${`${value(row) ?? ''}`.replaceAll('"', '""')}"`).join(',')),
+      columns.map(([label]) => `"${label}"`).join(','),
+      ...rows.map(row => columns.map(([, value]) => `"${`${value(row) ?? ''}`.replaceAll('"', '""')}"`).join(',')),
     ].join('\n')
     window.saveAs(new Blob([csv], { type: 'text/csv;charset=utf-8' }), `${fileName}.csv`)
   }
@@ -1075,301 +1086,319 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     return { label: getBillingDocumentStatusLabel(row?.local_status), className: 'badge bg-soft-secondary text-secondary' }
   }
 
-  const appendStorageButton = (container, { className, title, icon, text = '', onClick, disabled = false }) => {
-    const button = $('<button>')
-      .attr('type', 'button')
-      .attr('title', title)
-      .attr('aria-disabled', disabled ? 'true' : 'false')
-      .prop('disabled', disabled)
-      .addClass(`btn btn-xs ${disabled ? 'btn-outline-secondary' : className} px-1 py-0 align-middle storage-billing-action-btn`)
-
-    if (!disabled && onClick) button.on('click', onClick)
-
-    button.append($('<i>').addClass(`${icon}${text ? ' me-1' : ''}`))
-    if (text) button.append(document.createTextNode(text))
-    container.append(button)
+  // Exportacion a Excel del listado (reemplaza el export nativo de dxDataGrid); respeta filtros/orden actuales via tableRef.loadAll()
+  const storageExportColumnsByTab = {
+    prefactures: [
+      ['Estado', row => storageStatusBadge(row).label],
+      ['Codigo', row => row.code ?? ''],
+      ['Comprobante', row => `${row.series || ''}${row.series || row.sequence ? ' - ' : ''}${row.sequence || ''}` || row.document_type || ''],
+      ['OS', row => rowSourceCode(row)],
+      ['Tipo', row => rowDescription(row)],
+      ['Cliente', row => rowClientName(row)],
+      ['Importe', row => Number(row.total ?? 0)],
+      ['Tipo comprobante', row => row.document_type ?? ''],
+      ['Moneda', row => currencyLabel(row.currency)],
+      ['F. OS', row => formatDate(rowServiceOrderDate(row))],
+      ['F. Registro', row => formatDateTime(row.created_at)],
+    ],
+    issued: reportColumns,
+    cancelled: [
+      ['Serie', row => row.series ?? ''],
+      ['Secuencia', row => row.sequence ?? ''],
+      ['Cliente', row => rowClientName(row)],
+      ['Moneda', row => currencyLabel(row.currency)],
+      ['Total Gravada', row => Number(row.subtotal ?? 0)],
+      ['IGV', row => Number(row.tax_amount ?? 0)],
+      ['Importe Factura', row => Number(row.total ?? 0)],
+      ['F. Facturacion', row => formatDate(row.issue_date)],
+      ['F. Anulacion', row => formatDateTime(row.cancelled_at)],
+    ],
+    'credit-notes': [
+      ['Serie', row => row.series ?? ''],
+      ['Secuencia', row => row.sequence ?? ''],
+      ['SUNAT', row => rowSunatLabel(row)],
+      ['Doc. Afecto', row => row.reference_document?.code ?? row.referenceDocument?.code ?? '-'],
+      ['Cliente', row => rowClientName(row)],
+      ['Moneda', row => currencyLabel(row.currency)],
+      ['Total Gravada', row => Number(row.subtotal ?? 0)],
+      ['IGV', row => Number(row.tax_amount ?? 0)],
+      ['Importe Factura', row => Number(row.total ?? 0)],
+      ['Tipo de pago', row => row.payment_condition ?? ''],
+      ['Fecha Facturacion', row => formatDate(row.issue_date)],
+    ],
   }
 
-  const storageActionColumn = {
-    caption: 'Acciones',
-    width: 320,
-    minWidth: 320,
-    allowFiltering: false,
-    allowExporting: false,
-    allowSorting: false,
-    cellTemplate: (container, { data }) => {
-      const canPreviewPdf = canPreviewPdfDocument(data)
-      const isPrepared = hasPreparedVoucher(data)
-      const canCancel = canCancelDocument(data)
-      const canCreditNote = canCreditNoteDocument(data)
-      const canDownload = canDownloadDocument(data)
-      const canPay = canPayDocument(data)
-      const actions = $('<div>').addClass('storage-billing-actions')
-      container.empty().append(actions)
-
-      if (activeStorageTab === 'prefactures') {
-        actions.append(DxButton({
-          className: `btn btn-xs ${isPrepared ? 'btn-outline-danger' : 'btn-outline-primary'}`,
-          title: isPrepared ? 'Previsualizar PDF' : 'Facturar',
-          icon: isPrepared ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-send-outline',
-          onClick: () => isPrepared ? onPrintPreparedVoucher(data) : onPrepareVoucher(data)
-        }))
-        return
-      }
-
-      if (activeStorageTab === 'issued') {
-        const canRetryIssue = canRetryIssueDocument(data)
-        const shouldShowRetryIssue = data?.local_status === 'pending' && hasPreparedVoucher(data)
-        const canDownloadFiscalFiles = canDownload && !isDemoProviderRow(data)
-        const canEmail = canPreviewPdf
-        const retryTitle = canRetryIssue
-          ? 'Reintentar envio a SUNAT'
-          : (isDemoProviderRow(data)
-            ? 'Envio a SUNAT deshabilitado en modo demo'
-            : (data?.local_status === 'pending' ? 'Envio a SUNAT no disponible' : 'Comprobante ya emitido o cerrado'))
-        appendStorageButton(actions, {
-          className: 'btn-outline-warning',
-          title: canPay ? 'Realizar pago' : 'Pago no disponible',
-          icon: 'mdi mdi-cash-plus',
-          disabled: !canPay,
-          onClick: () => onOpenReceivablePayment(data)
-        })
-        if (shouldShowRetryIssue) {
-          appendStorageButton(actions, {
-            className: 'btn-outline-success',
-            title: retryTitle,
-            icon: 'mdi mdi-send',
-            disabled: !canRetryIssue,
-            onClick: () => onIssue(data)
-          })
-        }
-        appendStorageButton(actions, {
-          className: 'btn-outline-warning',
-          title: canCreditNote ? 'Generar nota de credito' : 'Nota de credito no disponible',
-          icon: 'mdi mdi-refresh',
-          disabled: !canCreditNote,
-          onClick: () => onOpenCreditNote(data)
-        })
-        appendStorageButton(actions, {
-          className: 'btn-outline-primary',
-          title: canPreviewPdf ? 'Previsualizar PDF' : 'PDF no disponible',
-          icon: canPreviewPdf ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-cancel-outline',
-          disabled: !canPreviewPdf,
-          onClick: () => onPreviewPdf(data)
-        })
-        appendStorageButton(actions, {
-          className: 'btn-outline-danger',
-          title: canCancel ? 'Anular comprobante' : 'Anulacion no disponible',
-          icon: 'mdi mdi-minus-circle',
-          disabled: !canCancel,
-          onClick: () => onOpenCancel(data)
-        })
-        appendStorageButton(actions, {
-          className: rowCustomerEmail(data) ? 'btn-outline-success' : 'btn-outline-warning',
-          title: canEmail ? (rowCustomerEmail(data) ? 'Enviar por correo' : 'Enviar por correo sin destinatario guardado') : 'Correo no disponible',
-          icon: 'mdi mdi-email-outline',
-          disabled: !canEmail,
-          onClick: () => onEmailDocument(data)
-        })
-        appendStorageButton(actions, {
-          className: 'btn-outline-success',
-          title: canDownloadFiscalFiles ? 'Descargar XML' : 'XML no disponible',
-          icon: canDownloadFiscalFiles ? 'mdi mdi-file-code-outline' : 'mdi mdi-file-cancel-outline',
-          text: 'XML',
-          disabled: !canDownloadFiscalFiles,
-          onClick: () => onDownload(data, 'xml')
-        })
-        appendStorageButton(actions, {
-          className: 'btn-outline-warning',
-          title: canDownloadFiscalFiles ? 'Descargar CDR' : 'CDR no disponible',
-          icon: canDownloadFiscalFiles ? 'mdi mdi-file-document-outline' : 'mdi mdi-file-cancel-outline',
-          text: 'CDR',
-          disabled: !canDownloadFiscalFiles,
-          onClick: () => onDownload(data, 'cdr')
-        })
-        return
-      }
-
-      actions.append(DxButton({
-        className: `btn btn-xs ${canPreviewPdf ? 'btn-outline-danger' : 'btn-outline-info'}`,
-        title: canPreviewPdf ? 'Previsualizar PDF' : 'Ver validacion fiscal',
-        icon: canPreviewPdf ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-document-outline',
-        onClick: () => canPreviewPdf ? onPreviewPdf(data) : openReadinessModal(data, `Validacion fiscal - ${data.code}`)
-      }))
+  const exportStorageGrid = async () => {
+    try {
+      const rows = await tableRef.current?.loadAll()
+      if (!rows) return
+      const columns = storageExportColumnsByTab[activeStorageTab] ?? storageExportColumnsByTab.prefactures
+      await exportRows(rows, `control-facturacion-${activeStorageTab}`, 'xlsx', columns)
+    } catch (error) {
+      await showBlockedAction('Exportación no disponible', error.message || 'No se pudo exportar el listado.')
     }
-  }
-
-  const storageFilterFieldColumns = [
-    { dataField: 'local_status', caption: 'Estado local', visible: false, showInColumnChooser: false, lookup: toLookup(billingControlStatusOptions) },
-    { dataField: 'document_type', caption: 'Tipo comprobante', visible: false, showInColumnChooser: false },
-    { dataField: 'series', caption: 'Serie', visible: false, showInColumnChooser: false },
-    { dataField: 'sequence', caption: 'Secuencia', visible: false, showInColumnChooser: false },
-    { dataField: 'business_id', caption: 'Empresa', dataType: 'number', visible: false, showInColumnChooser: false },
-    { dataField: 'client_id', caption: 'Cliente', dataType: 'number', visible: false, showInColumnChooser: false },
-    { dataField: 'source_service_order.issue_date', caption: 'F. OS', dataType: 'date', visible: false, showInColumnChooser: false },
-    { dataField: 'created_at', caption: 'F. Registro', dataType: 'datetime', visible: false, showInColumnChooser: false },
-    { dataField: 'updated_at', caption: 'F. Facturacion', dataType: 'datetime', visible: false, showInColumnChooser: false },
-  ]
-
-  const withStorageFilterFields = (columns) => {
-    const dataFields = new Set(columns.map(column => column?.dataField).filter(Boolean))
-    return [
-      ...columns,
-      ...storageFilterFieldColumns.filter(column => !dataFields.has(column.dataField)),
-    ]
   }
 
   const storageColumnsByTab = {
     prefactures: [
-      storageActionColumn,
       {
-        dataField: 'local_status',
-        caption: 'E. Facturacion',
-        width: 130,
-        lookup: toLookup(billingControlStatusOptions),
-        cellTemplate: (container, { data }) => {
-          const badge = storageStatusBadge(data)
-          container.append($('<span>').addClass(badge.className).text(badge.label))
-        }
+        key: 'estado_facturacion', label: 'E. Facturación', field: 'local_status', width: '130px',
+        filter: { type: 'select', field: 'local_status', options: billingControlStatusOptions },
+        render: (row) => { const badge = storageStatusBadge(row); return <span className={badge.className}>{badge.label}</span> },
       },
-      { dataField: 'code', caption: 'Codigo', width: 115 },
-      { caption: 'Comprobante', width: 130, allowSorting: false, calculateCellValue: (data) => `${data.series || ''}${data.series || data.sequence ? ' - ' : ''}${data.sequence || ''}` || data.document_type },
-      { caption: 'OS', width: 120, allowSorting: false, calculateCellValue: rowSourceCode },
-      { caption: 'Tipo', minWidth: 260, allowSorting: false, calculateCellValue: rowDescription },
-      { caption: 'Cliente', minWidth: 220, allowSorting: false, calculateCellValue: rowClientName },
-      { dataField: 'total', caption: 'Importe', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'document_type', caption: 'Tipo comprobante', width: 140 },
-      { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (data) => currencyLabel(data.currency) },
-      { caption: 'F. OS', dataType: 'date', width: 120, allowSorting: false, allowFiltering: false, calculateCellValue: rowServiceOrderDate },
-      { dataField: 'created_at', caption: 'F. Registro', dataType: 'datetime', width: 160 },
+      { key: 'codigo', label: 'Código', field: 'code', width: '115px', filter: { type: 'text' } },
+      {
+        key: 'comprobante', label: 'Comprobante', sortable: false, width: '130px',
+        render: (row) => `${row.series || ''}${row.series || row.sequence ? ' - ' : ''}${row.sequence || ''}` || row.document_type,
+      },
+      { key: 'os', label: 'OS', sortable: false, width: '120px', render: (row) => rowSourceCode(row) },
+      { key: 'tipo', label: 'Tipo', sortable: false, render: (row) => rowDescription(row) },
+      { key: 'cliente', label: 'Cliente', sortable: false, render: (row) => rowClientName(row) },
+      { key: 'importe', label: 'Importe', field: 'total', width: '110px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.total) },
+      { key: 'tipo_comprobante', label: 'Tipo comprobante', field: 'document_type', width: '140px', filter: { type: 'text' } },
+      {
+        key: 'moneda', label: 'Moneda', field: 'currency', width: '100px',
+        filter: { type: 'select', field: 'currency', options: currencyFilterOptions },
+        render: (row) => currencyLabel(row.currency),
+      },
+      { key: 'fecha_os', label: 'F. OS', sortable: false, width: '120px', render: (row) => formatDate(rowServiceOrderDate(row)) },
+      { key: 'fecha_registro', label: 'F. Registro', field: 'created_at', width: '160px', filter: { type: 'date' }, render: (row) => formatDateTime(row.created_at) },
     ],
     issued: [
-      storageActionColumn,
-      { dataField: 'series', caption: 'Serie', width: 90 },
-      { dataField: 'sequence', caption: 'Secuencia', width: 110 },
+      { key: 'serie', label: 'Serie', field: 'series', width: '90px', filter: { type: 'text' } },
+      { key: 'secuencia', label: 'Secuencia', field: 'sequence', width: '110px', filter: { type: 'text' } },
       {
-        caption: 'SUNAT',
-        width: 110,
-        allowSorting: false,
-        calculateCellValue: rowSunatLabel,
-        cellTemplate: (container, { data }) => {
-          const badge = rowSunatMeta(data)
-          container.append($('<span>').addClass(badge.className).text(badge.label))
-        }
+        key: 'sunat', label: 'SUNAT', sortable: false, width: '110px',
+        render: (row) => { const badge = rowSunatMeta(row); return <span className={badge.className}>{badge.label}</span> },
       },
       {
-        caption: 'E. Pago',
-        width: 110,
-        allowSorting: false,
-        calculateCellValue: rowPaymentLabel,
-        cellTemplate: (container, { data }) => {
-          const badge = rowPaymentMeta(data)
-          container.append($('<span>').addClass(badge.className).text(badge.label))
-        }
+        key: 'e_pago', label: 'E. Pago', sortable: false, width: '110px',
+        render: (row) => { const badge = rowPaymentMeta(row); return <span className={badge.className}>{badge.label}</span> },
       },
-      { caption: 'Cliente', minWidth: 360, allowSorting: false, calculateCellValue: rowClientLabel },
-      { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (data) => currencyLabel(data.currency) },
-      { dataField: 'subtotal', caption: 'Gravada', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'tax_amount', caption: 'IGV', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'total', caption: 'Importe', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { caption: 'A cuenta', width: 105, dataType: 'number', allowSorting: false, calculateCellValue: rowPaidAmount, format: { type: 'fixedPoint', precision: 2 } },
-      { caption: 'Saldo', width: 105, dataType: 'number', allowSorting: false, calculateCellValue: rowBalanceAmount, format: { type: 'fixedPoint', precision: 2 } },
+      { key: 'cliente', label: 'Cliente', sortable: false, render: (row) => rowClientLabel(row) },
       {
-        dataField: 'updated_at',
-        caption: 'Fecha Facturacion',
-        dataType: 'datetime',
-        width: 170,
-        sortOrder: 'desc',
-        allowFiltering: false,
-        cellTemplate: (container, { data }) => {
-          container.text(formatDateTime(rowIssuedAt(data)))
-        },
+        key: 'moneda', label: 'Moneda', field: 'currency', width: '100px',
+        filter: { type: 'select', field: 'currency', options: currencyFilterOptions },
+        render: (row) => currencyLabel(row.currency),
       },
+      { key: 'gravada', label: 'Gravada', field: 'subtotal', width: '110px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.subtotal) },
+      { key: 'igv', label: 'IGV', field: 'tax_amount', width: '90px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.tax_amount) },
+      { key: 'importe', label: 'Importe', field: 'total', width: '110px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.total) },
+      { key: 'a_cuenta', label: 'A cuenta', sortable: false, width: '105px', align: 'right', render: (row) => formatMoney(rowPaidAmount(row)) },
+      { key: 'saldo', label: 'Saldo', sortable: false, width: '105px', align: 'right', render: (row) => formatMoney(rowBalanceAmount(row)) },
+      { key: 'fecha_facturacion', label: 'Fecha Facturación', field: 'updated_at', width: '170px', render: (row) => formatDateTime(rowIssuedAt(row)) },
     ],
     cancelled: [
-      storageActionColumn,
-      { dataField: 'series', caption: 'Serie', width: 90 },
-      { dataField: 'sequence', caption: 'Secuencia', width: 110 },
-      { caption: 'Cliente', minWidth: 220, allowSorting: false, calculateCellValue: rowClientName },
-      { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (data) => currencyLabel(data.currency) },
-      { dataField: 'subtotal', caption: 'Total Gravada', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'tax_amount', caption: 'IGV', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'total', caption: 'Importe Factura', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'issue_date', caption: 'F. Facturacion', dataType: 'date', width: 130 },
-      { dataField: 'cancelled_at', caption: 'F. Anulacion', dataType: 'datetime', width: 160 },
+      { key: 'serie', label: 'Serie', field: 'series', width: '90px', filter: { type: 'text' } },
+      { key: 'secuencia', label: 'Secuencia', field: 'sequence', width: '110px', filter: { type: 'text' } },
+      { key: 'cliente', label: 'Cliente', sortable: false, render: (row) => rowClientName(row) },
+      {
+        key: 'moneda', label: 'Moneda', field: 'currency', width: '100px',
+        filter: { type: 'select', field: 'currency', options: currencyFilterOptions },
+        render: (row) => currencyLabel(row.currency),
+      },
+      { key: 'gravada', label: 'Total Gravada', field: 'subtotal', width: '130px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.subtotal) },
+      { key: 'igv', label: 'IGV', field: 'tax_amount', width: '90px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.tax_amount) },
+      { key: 'importe', label: 'Importe Factura', field: 'total', width: '130px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.total) },
+      { key: 'fecha_facturacion', label: 'F. Facturación', field: 'issue_date', width: '130px', filter: { type: 'date' }, render: (row) => formatDate(row.issue_date) },
+      { key: 'fecha_anulacion', label: 'F. Anulación', field: 'cancelled_at', width: '160px', filter: { type: 'date' }, render: (row) => formatDateTime(row.cancelled_at) },
     ],
     'credit-notes': [
-      storageActionColumn,
-      { dataField: 'series', caption: 'Serie', width: 90 },
-      { dataField: 'sequence', caption: 'Secuencia', width: 110 },
-      { caption: 'SUNAT', width: 140, allowSorting: false, calculateCellValue: rowSunatLabel },
-      { caption: 'Doc. Afecto', width: 130, allowSorting: false, calculateCellValue: (data) => data.reference_document?.code ?? data.referenceDocument?.code ?? '-' },
-      { caption: 'Cliente', minWidth: 220, allowSorting: false, calculateCellValue: rowClientName },
-      { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (data) => currencyLabel(data.currency) },
-      { dataField: 'subtotal', caption: 'Total Gravada', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'tax_amount', caption: 'IGV', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'total', caption: 'Importe Factura', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'payment_condition', caption: 'Tipo de pago', width: 120 },
-      { dataField: 'issue_date', caption: 'Fecha Facturacion', dataType: 'date', width: 150 },
+      { key: 'serie', label: 'Serie', field: 'series', width: '90px', filter: { type: 'text' } },
+      { key: 'secuencia', label: 'Secuencia', field: 'sequence', width: '110px', filter: { type: 'text' } },
+      { key: 'sunat', label: 'SUNAT', sortable: false, width: '140px', render: (row) => rowSunatLabel(row) },
+      { key: 'doc_afecto', label: 'Doc. Afecto', sortable: false, width: '130px', render: (row) => row.reference_document?.code ?? row.referenceDocument?.code ?? '-' },
+      { key: 'cliente', label: 'Cliente', sortable: false, render: (row) => rowClientName(row) },
+      {
+        key: 'moneda', label: 'Moneda', field: 'currency', width: '100px',
+        filter: { type: 'select', field: 'currency', options: currencyFilterOptions },
+        render: (row) => currencyLabel(row.currency),
+      },
+      { key: 'gravada', label: 'Total Gravada', field: 'subtotal', width: '130px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.subtotal) },
+      { key: 'igv', label: 'IGV', field: 'tax_amount', width: '90px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.tax_amount) },
+      { key: 'importe', label: 'Importe Factura', field: 'total', width: '130px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.total) },
+      { key: 'tipo_pago', label: 'Tipo de pago', field: 'payment_condition', width: '120px', filter: { type: 'text' } },
+      { key: 'fecha_facturacion', label: 'Fecha Facturación', field: 'issue_date', width: '150px', filter: { type: 'date' }, render: (row) => formatDate(row.issue_date) },
     ],
   }
 
-  const currentStorageColumns = withStorageFilterFields(storageColumnsByTab[activeStorageTab] ?? storageColumnsByTab.prefactures)
-
-  const storageTitle = <div>
-    <div className='d-flex align-items-center justify-content-between mb-2'>
-      <h4 className='header-title mb-0'>Listado</h4>
-      <button type='button' className='btn btn-xs btn-light' onClick={refreshGrid} title='Actualizar'><i className='mdi mdi-refresh'></i></button>
-    </div>
-    <ul className='nav nav-tabs nav-bordered mb-3'>
-      {storageTabs.map(tab => (
-        <li className='nav-item' key={`storage-billing-tab-${tab.id}`}>
-          <button
-            type='button'
-            className={`nav-link ${activeStorageTab === tab.id ? 'active' : ''}`}
-            onClick={() => {
-              setActiveStorageTab(tab.id)
-              setStorageFilters(defaultStorageFilters())
-              setAppliedStorageFilters(emptyFilters())
-            }}
-          >
-            {tab.label}
+  const regularColumns = [
+    { key: 'id', label: 'ID', field: 'id', width: '70px', filter: { type: 'number' } },
+    { key: 'codigo', label: 'Código', field: 'code', width: '120px', filter: { type: 'text' } },
+    { key: 'origen', label: 'Origen', field: 'source_type', width: '120px', filter: { type: 'text' }, render: (row) => getSourceTypeLabel(row.source_type) },
+    { key: 'documento_origen', label: 'Documento origen', sortable: false, render: (row) => row.commercial_order?.code ?? row.commercialOrder?.code ?? row.service_order?.code ?? row.serviceOrder?.code ?? '-' },
+    { key: 'comprobante', label: 'Comprobante', field: 'document_type', width: '120px', filter: { type: 'text' } },
+    { key: 'referencia', label: 'Referencia', sortable: false, render: (row) => row.reference_document?.code ?? row.referenceDocument?.code ?? '-' },
+    { key: 'serie', label: 'Serie', field: 'series', width: '80px', filter: { type: 'text' } },
+    { key: 'numero', label: 'Número', field: 'sequence', width: '100px', filter: { type: 'text' } },
+    { key: 'fecha', label: 'Fecha', field: 'issue_date', width: '110px', filter: { type: 'date' }, render: (row) => formatDate(row.issue_date) },
+    { key: 'total', label: 'Total', field: 'total', width: '100px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.total) },
+    {
+      key: 'listo_fiscal', label: 'Listo fiscal', sortable: false, width: '120px',
+      render: (row) => {
+        const readiness = row?.fiscal_readiness ?? {}
+        const meta = getReadinessMeta(readiness)
+        return (
+          <button type='button' className={`btn btn-xs w-100 ${meta.className}`} title={readiness.summary ?? meta.label} onClick={() => openReadinessModal(row, `Validación fiscal - ${row.code}`)}>
+            {meta.label}
           </button>
-        </li>
-      ))}
-    </ul>
-    <form className='row g-3 align-items-end' onSubmit={applyStorageFilters}>
-      <div className='col-12 col-lg-4'>
-        <label className='form-label'>Empresa</label>
-        <select className='form-select' value={storageFilters.businessId} onChange={(e) => updateStorageFilter('businessId', e.target.value)}>
-          <option value=''>Todos</option>
-          {businesses.map(row => <option key={`billing-business-${row.id}`} value={row.id}>{row.name}</option>)}
-        </select>
-      </div>
-      {activeStorageTab === 'prefactures' && <div className='col-12 col-lg-3'>
-        <label className='form-label'>Cliente</label>
-        <select className='form-select' value={storageFilters.clientId} onChange={(e) => updateStorageFilter('clientId', e.target.value)}>
-          <option value=''>Todos</option>
-          {clients.map(row => <option key={`billing-client-${row.id}`} value={row.id}>{row.document_number ? `${row.document_number} - ` : ''}{row.full_name}</option>)}
-        </select>
-      </div>}
-      <div className='col-12 col-md-6 col-lg-2'>
-        <label className='form-label'>{activeStorageTab === 'prefactures' ? 'Fecha OS Inicio' : 'Fecha Registro Inicio'}</label>
-        <input type='date' className='form-control' value={storageFilters.startDate} onChange={(e) => updateStorageFilter('startDate', e.target.value)} />
-      </div>
-      <div className='col-12 col-md-6 col-lg-2'>
-        <label className='form-label'>{activeStorageTab === 'prefactures' ? 'Fecha OS Fin' : 'Fecha Registro Fin'}</label>
-        <input type='date' className='form-control' value={storageFilters.endDate} onChange={(e) => updateStorageFilter('endDate', e.target.value)} />
-      </div>
-      <div className='col-12 col-lg-1 d-flex gap-2'>
-        <button type='submit' className='btn btn-outline-primary w-100'><i className='mdi mdi-magnify me-1'></i>Filtrar</button>
-      </div>
-      {activeStorageTab === 'issued' && <div className='col-12 d-flex justify-content-center gap-2'>
-        <button type='button' className='btn btn-outline-danger' onClick={() => generateIssuedReport('pdf', appliedStorageFilters)}><i className='mdi mdi-file-pdf-box me-1'></i>Generar reporte</button>
-        <button type='button' className='btn btn-outline-success' onClick={() => generateIssuedReport('xlsx', appliedStorageFilters)}><i className='mdi mdi-file-excel-box me-1'></i>Reporte Excel</button>
-      </div>}
-    </form>
-  </div>
+        )
+      },
+    },
+    { key: 'estado_local', label: 'Estado local', field: 'local_status', width: '110px', filter: { type: 'text' }, render: (row) => getBillingDocumentStatusLabel(row.local_status) },
+    { key: 'estado_externo', label: 'Estado externo', field: 'external_status', width: '120px', filter: { type: 'text' }, render: (row) => getBillingDocumentStatusLabel(row.external_status) },
+  ]
+
+  // Botones de accion por fila (tabla regular): siempre visibles, coloreados segun disponibilidad;
+  // al hacer click en un estado bloqueado se explica el motivo (misma UX que ya usaba esta pantalla)
+  const regularRowActions = (row) => {
+    const readiness = row?.fiscal_readiness ?? {}
+    const canIssueNow = readiness?.can_issue !== false
+    const canEdit = canEditDocument(row)
+    const canSync = canSyncDocument(row)
+    const canCancel = canCancelDocument(row)
+    const canCreditNote = canCreditNoteDocument(row)
+    const canDownload = canDownloadDocument(row)
+    const canPreviewPdf = canPreviewPdfDocument(row)
+
+    return [
+      { icon: canEdit ? 'mdi mdi-pencil' : 'mdi mdi-lock-outline', title: canEdit ? 'Editar comprobante' : 'Solo lectura', ...(canEdit ? rowActionColors.blue : rowActionColors.slate), onClick: (r) => canEditDocument(r) ? onModalOpen(r) : showBlockedAction('Comprobante bloqueado', 'Solo puedes editar comprobantes pendientes.') },
+      { icon: 'mdi mdi-code-json', title: 'Ver payload del conector', ...rowActionColors.slate, onClick: (r) => onOpenPayload(r) },
+      { icon: canIssueNow ? 'mdi mdi-send' : 'mdi mdi-alert-circle-outline', title: canIssueNow ? 'Emitir comprobante' : 'Revisar requisitos fiscales', ...(canIssueNow ? rowActionColors.green : rowActionColors.slate), onClick: (r) => (r?.fiscal_readiness?.can_issue !== false) ? onIssue(r) : openReadinessModal(r, `Validación fiscal - ${r.code}`) },
+      { icon: canSync ? 'mdi mdi-sync' : 'mdi mdi-sync-off', title: canSync ? 'Sincronizar estado' : 'Sincronización no disponible', ...(canSync ? rowActionColors.blue : rowActionColors.slate), onClick: (r) => canSyncDocument(r) ? onSyncStatus(r) : showBlockedAction('Sync no disponible', 'El comprobante aún no tiene datos remotos para sincronizar.') },
+      { icon: canCancel ? 'mdi mdi-close-circle' : 'mdi mdi-lock-outline', title: canCancel ? 'Anular comprobante' : 'Anulación no disponible', ...(canCancel ? rowActionColors.red : rowActionColors.slate), onClick: (r) => canCancelDocument(r) ? onOpenCancel(r) : showBlockedAction('Anulación no disponible', 'Solo puedes anular comprobantes aceptados que no sean notas de crédito.') },
+      { icon: canCreditNote ? 'mdi mdi-file-replace' : 'mdi mdi-file-lock-outline', title: canCreditNote ? 'Generar nota de crédito' : 'Nota de crédito no disponible', ...rowActionColors.slate, onClick: (r) => canCreditNoteDocument(r) ? onOpenCreditNote(r) : showBlockedAction('Nota de crédito no disponible', 'Solo puedes generar nota de crédito desde comprobantes aceptados que no sean notas de crédito.') },
+      { icon: canPreviewPdf ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-cancel-outline', title: canPreviewPdf ? 'Previsualizar PDF' : 'PDF no disponible', ...(canPreviewPdf ? rowActionColors.red : rowActionColors.slate), onClick: (r) => canPreviewPdfDocument(r) ? onPreviewPdf(r) : showBlockedAction('PDF no disponible', 'El comprobante todavía no tiene PDF disponible.') },
+      { icon: canDownload ? 'mdi mdi-code-tags' : 'mdi mdi-file-cancel-outline', title: canDownload ? 'Descargar XML' : 'XML no disponible', ...(canDownload ? rowActionColors.blue : rowActionColors.slate), onClick: (r) => canDownloadDocument(r) ? onDownload(r, 'xml') : showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.') },
+      { icon: canDownload ? 'mdi mdi-shield-check' : 'mdi mdi-file-cancel-outline', title: canDownload ? 'Descargar CDR' : 'CDR no disponible', ...(canDownload ? rowActionColors.green : rowActionColors.slate), onClick: (r) => canDownloadDocument(r) ? onDownload(r, 'cdr') : showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.') },
+      { icon: 'mdi mdi-cloud-check', title: 'Registrar respuesta del proveedor', ...rowActionColors.slate, onClick: (r) => onOpenProviderModal(r) },
+    ]
+  }
+
+  const prefacturesRowActions = (row) => {
+    const isPrepared = hasPreparedVoucher(row)
+    return [
+      {
+        icon: isPrepared ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-send-outline',
+        title: isPrepared ? 'Previsualizar PDF' : 'Facturar',
+        ...(isPrepared ? rowActionColors.red : rowActionColors.blue),
+        onClick: (r) => hasPreparedVoucher(r) ? onPrintPreparedVoucher(r) : onPrepareVoucher(r),
+      },
+    ]
+  }
+
+  const issuedRowActions = (row) => {
+    const canPay = canPayDocument(row)
+    const shouldShowRetryIssue = row?.local_status === 'pending' && hasPreparedVoucher(row)
+    const canRetryIssue = canRetryIssueDocument(row)
+    const canCreditNote = canCreditNoteDocument(row)
+    const canPreviewPdf = canPreviewPdfDocument(row)
+    const canCancel = canCancelDocument(row)
+    const canDownloadFiscalFiles = canDownloadDocument(row) && !isDemoProviderRow(row)
+    const hasEmail = !!rowCustomerEmail(row)
+
+    return [
+      { icon: 'mdi mdi-cash-plus', title: canPay ? 'Realizar pago' : 'Pago no disponible', ...(canPay ? rowActionColors.amber : rowActionColors.slate), onClick: (r) => onOpenReceivablePayment(r) },
+      {
+        icon: 'mdi mdi-send',
+        title: canRetryIssue ? 'Reintentar envío a SUNAT' : (isDemoProviderRow(row) ? 'Envío a SUNAT deshabilitado en modo demo' : 'Comprobante ya emitido o cerrado'),
+        ...(canRetryIssue ? rowActionColors.green : rowActionColors.slate),
+        hidden: !shouldShowRetryIssue,
+        onClick: (r) => onIssue(r),
+      },
+      { icon: 'mdi mdi-refresh', title: canCreditNote ? 'Generar nota de crédito' : 'Nota de crédito no disponible', ...(canCreditNote ? rowActionColors.amber : rowActionColors.slate), onClick: (r) => onOpenCreditNote(r) },
+      { icon: canPreviewPdf ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-cancel-outline', title: canPreviewPdf ? 'Previsualizar PDF' : 'PDF no disponible', ...(canPreviewPdf ? rowActionColors.blue : rowActionColors.slate), onClick: (r) => onPreviewPdf(r) },
+      { icon: 'mdi mdi-minus-circle', title: canCancel ? 'Anular comprobante' : 'Anulación no disponible', ...(canCancel ? rowActionColors.red : rowActionColors.slate), onClick: (r) => onOpenCancel(r) },
+      {
+        icon: 'mdi mdi-email-outline',
+        title: canPreviewPdf ? (hasEmail ? 'Enviar por correo' : 'Enviar por correo sin destinatario guardado') : 'Correo no disponible',
+        ...(canPreviewPdf ? (hasEmail ? rowActionColors.green : rowActionColors.amber) : rowActionColors.slate),
+        onClick: (r) => canPreviewPdfDocument(r) ? onEmailDocument(r) : showBlockedAction('Correo no disponible', 'El comprobante todavía no tiene PDF disponible para enviar por correo.'),
+      },
+      { icon: canDownloadFiscalFiles ? 'mdi mdi-file-code-outline' : 'mdi mdi-file-cancel-outline', title: canDownloadFiscalFiles ? 'Descargar XML' : 'XML no disponible', ...(canDownloadFiscalFiles ? rowActionColors.green : rowActionColors.slate), onClick: (r) => (canDownloadDocument(r) && !isDemoProviderRow(r)) ? onDownload(r, 'xml') : showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.') },
+      { icon: canDownloadFiscalFiles ? 'mdi mdi-file-document-outline' : 'mdi mdi-file-cancel-outline', title: canDownloadFiscalFiles ? 'Descargar CDR' : 'CDR no disponible', ...(canDownloadFiscalFiles ? rowActionColors.amber : rowActionColors.slate), onClick: (r) => (canDownloadDocument(r) && !isDemoProviderRow(r)) ? onDownload(r, 'cdr') : showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.') },
+    ]
+  }
+
+  const readonlyRowActions = (row) => {
+    const canPreviewPdf = canPreviewPdfDocument(row)
+    return [
+      {
+        icon: canPreviewPdf ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-document-outline',
+        title: canPreviewPdf ? 'Previsualizar PDF' : 'Ver validación fiscal',
+        ...(canPreviewPdf ? rowActionColors.red : rowActionColors.blue),
+        onClick: (r) => canPreviewPdfDocument(r) ? onPreviewPdf(r) : openReadinessModal(r, `Validación fiscal - ${r.code}`),
+      },
+    ]
+  }
+
+  const rowActions = (row) => {
+    if (!isStorageBilling) return regularRowActions(row)
+    if (activeStorageTab === 'prefactures') return prefacturesRowActions(row)
+    if (activeStorageTab === 'issued') return issuedRowActions(row)
+    return readonlyRowActions(row)
+  }
+
+  const activeStorageTabLabel = storageTabs.find(tab => tab.id === activeStorageTab)?.label ?? 'Listado'
+
+  const storageToolbar = (
+    <div className='mb-3'>
+      <ul className='nav nav-tabs nav-bordered mb-3'>
+        {storageTabs.map(tab => (
+          <li className='nav-item' key={`storage-billing-tab-${tab.id}`}>
+            <button
+              type='button'
+              className={`nav-link ${activeStorageTab === tab.id ? 'active' : ''}`}
+              onClick={() => {
+                setActiveStorageTab(tab.id)
+                setStorageFilters(defaultStorageFilters())
+                setAppliedStorageFilters(emptyFilters())
+              }}
+            >
+              {tab.label}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <form className='row g-3 align-items-end' onSubmit={applyStorageFilters}>
+        <div className='col-12 col-lg-4'>
+          <VdSelect
+            label='Empresa'
+            noMargin
+            value={storageFilters.businessId}
+            onChange={(value) => updateStorageFilter('businessId', value)}
+            options={[{ value: '', label: 'Todos' }, ...businesses.map(row => ({ value: `${row.id}`, label: row.name }))]}
+            placeholder='Todos'
+          />
+        </div>
+        {activeStorageTab === 'prefactures' && <div className='col-12 col-lg-3'>
+          <VdSelect
+            label='Cliente'
+            noMargin
+            value={storageFilters.clientId}
+            onChange={(value) => updateStorageFilter('clientId', value)}
+            options={[{ value: '', label: 'Todos' }, ...clients.map(row => ({ value: `${row.id}`, label: `${row.document_number ? `${row.document_number} - ` : ''}${row.full_name}` }))]}
+            placeholder='Todos'
+          />
+        </div>}
+        <div className='col-12 col-md-6 col-lg-2'>
+          <label className='form-label'>{activeStorageTab === 'prefactures' ? 'Fecha OS Inicio' : 'Fecha Registro Inicio'}</label>
+          <input type='date' className='form-control' value={storageFilters.startDate} onChange={(e) => updateStorageFilter('startDate', e.target.value)} />
+        </div>
+        <div className='col-12 col-md-6 col-lg-2'>
+          <label className='form-label'>{activeStorageTab === 'prefactures' ? 'Fecha OS Fin' : 'Fecha Registro Fin'}</label>
+          <input type='date' className='form-control' value={storageFilters.endDate} onChange={(e) => updateStorageFilter('endDate', e.target.value)} />
+        </div>
+        <div className='col-12 col-lg-1 d-flex gap-2'>
+          <button type='submit' className='btn btn-outline-primary w-100'><i className='mdi mdi-magnify me-1'></i>Filtrar</button>
+        </div>
+        {activeStorageTab === 'issued' && <div className='col-12 d-flex justify-content-center gap-2'>
+          <button type='button' className='btn btn-outline-danger' onClick={() => generateIssuedReport('pdf', appliedStorageFilters)}><i className='mdi mdi-file-pdf-box me-1'></i>Generar reporte</button>
+          <button type='button' className='btn btn-outline-success' onClick={() => generateIssuedReport('xlsx', appliedStorageFilters)}><i className='mdi mdi-file-excel-box me-1'></i>Reporte Excel</button>
+        </div>}
+      </form>
+    </div>
+  )
 
   return <>
     <style>{`
@@ -1458,38 +1487,6 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
         box-shadow: none;
       }
     `}</style>
-    {isStorageBilling && <style>{`
-      .storage-billing-actions {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        width: 100%;
-        min-width: 0;
-        max-width: 100%;
-        white-space: nowrap;
-        overflow: hidden;
-      }
-      .storage-billing-actions .btn {
-        flex: 0 0 auto;
-        min-width: 27px;
-        height: 24px;
-        margin-right: 0 !important;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        line-height: 1;
-      }
-      .storage-billing-action-btn {
-        gap: 2px;
-      }
-      .storage-billing-action-btn:disabled {
-        background: #f8fafc;
-        border-color: #d1d5db;
-        color: #9ca3af;
-        cursor: not-allowed;
-        opacity: 1;
-      }
-    `}</style>}
     {isStorageBilling && <div className='row g-3 mb-3'>
       <div className='col-12 col-md-6 col-xl-3'>
         <button type='button' className='btn w-100 d-flex align-items-center justify-content-between py-3 text-white' style={{ background: '#23264f' }} onClick={openBulkModal}>
@@ -1505,70 +1502,62 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       </div>
     </div>}
 
-    <Table
+    {isStorageBilling && storageToolbar}
+
+    <VdTable
       key={gridKey}
-      gridRef={gridRef}
-      title={isStorageBilling ? storageTitle : moduleTitle}
-      rest={gridRest}
-      pageSize={isStorageBilling ? 20 : 25}
-      filterValue={isStorageBilling ? null : storageFilterValue}
-      allowQueryBuilder={!isStorageBilling}
-      exportable={isStorageBilling}
-      toolBar={(items) => {
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
-        if (!isStorageBilling) items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
+      ref={tableRef}
+      rest={billingDocumentsRest}
+      icon="mdi mdi-file-document-outline"
+      title={isStorageBilling ? `Listado - ${activeStorageTabLabel}` : moduleTitle}
+      unit="comprobantes"
+      defaultSort={isStorageBilling && activeStorageTab === 'issued' ? { field: 'updated_at', desc: true } : null}
+      defaultPageSize={isStorageBilling ? 20 : 25}
+      searchFields={['code', 'document_type', 'series', 'sequence']}
+      searchPlaceholder="Buscar…"
+      emptyText="No se encontraron comprobantes."
+      baseFilter={isStorageBilling ? storageFilterValue : null}
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={() => tableRef.current?.refresh()}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        {isStorageBilling && (
+          <button type="button" className="vdt-btn-soft" onClick={exportStorageGrid}>
+            <i className="mdi mdi-file-excel"></i> Exportar
+          </button>
+        )}
+        {!isStorageBilling && (
+          <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen()}>
+            <i className="mdi mdi-plus"></i> Nuevo comprobante
+          </button>
+        )}
+      </>}
+      actions={rowActions}
+      columns={isStorageBilling ? (storageColumnsByTab[activeStorageTab] ?? storageColumnsByTab.prefactures) : regularColumns}
+      renderCard={(row, actionButtons) => {
+        const isRegular = !isStorageBilling
+        const heading = isRegular ? (row.code ?? '-') : (rowDocumentNumber(row) || row.code)
+        const subtitle = isRegular
+          ? getSourceTypeLabel(row.source_type)
+          : (activeStorageTab === 'prefactures' ? rowDescription(row) : rowClientLabel(row))
+        const badge = isRegular
+          ? { label: getBillingDocumentStatusLabel(row.local_status), className: 'badge bg-soft-secondary text-secondary' }
+          : (activeStorageTab === 'prefactures' ? storageStatusBadge(row) : (activeStorageTab === 'issued' ? rowSunatMeta(row) : null))
+        return (
+          <div className="vdt-card">
+            <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+              <div style={{ minWidth: 0 }}>
+                <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{heading}</p>
+                <small className="text-muted">{subtitle}</small>
+              </div>
+              {badge && <span className={badge.className}>{badge.label}</span>}
+            </div>
+            <p className="text-muted mb-0 mt-2" style={{ fontSize: 12 }}>{rowClientName(row)}</p>
+            <small className="text-muted d-block mt-2"><i className="mdi mdi-cash me-1"></i>{formatMoney(row.total)} {currencyLabel(row.currency)}</small>
+            {actionButtons && <div className="d-flex flex-wrap mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+          </div>
+        )
       }}
-      columns={isStorageBilling ? currentStorageColumns : [
-        { dataField: 'id', caption: 'ID', width: 70 },
-        { dataField: 'code', caption: 'Código', width: 120 },
-        { dataField: 'source_type', caption: 'Origen', width: 120, calculateCellValue: (data) => getSourceTypeLabel(data.source_type) },
-        { caption: 'Documento origen', minWidth: 150, calculateCellValue: (data) => data.commercial_order?.code ?? data.commercialOrder?.code ?? data.service_order?.code ?? data.serviceOrder?.code ?? '-' },
-        { dataField: 'document_type', caption: 'Comprobante', width: 120 },
-        { caption: 'Referencia', minWidth: 140, calculateCellValue: (data) => data.reference_document?.code ?? data.referenceDocument?.code ?? '-' },
-        { dataField: 'series', caption: 'Serie', width: 80 },
-        { dataField: 'sequence', caption: 'Número', width: 100 },
-        { dataField: 'issue_date', caption: 'Fecha', dataType: 'date', width: 110 },
-        { dataField: 'total', caption: 'Total', width: 100, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        {
-          caption: 'Listo fiscal',
-          width: 120,
-          allowFiltering: false,
-          allowSorting: false,
-          cellTemplate: (container, { data }) => {
-            const readiness = data?.fiscal_readiness ?? {}
-            const meta = getReadinessMeta(readiness)
-            const button = $('<button type="button" class="btn btn-xs w-100">')
-              .addClass(meta.className)
-              .text(meta.label)
-              .attr('title', readiness.summary ?? meta.label)
-              .on('click', () => openReadinessModal(data, `Validación fiscal - ${data.code}`))
-            container.append(button)
-          }
-        },
-        { dataField: 'local_status', caption: 'Estado local', width: 110, calculateCellValue: (data) => getBillingDocumentStatusLabel(data.local_status) },
-        { dataField: 'external_status', caption: 'Estado externo', width: 120, calculateCellValue: (data) => getBillingDocumentStatusLabel(data.external_status) },
-        { caption: 'Acciones', width: 470, allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
-          const readiness = data?.fiscal_readiness ?? {}
-          const canIssue = readiness?.can_issue !== false
-          const canEdit = canEditDocument(data)
-          const canSync = canSyncDocument(data)
-          const canCancel = canCancelDocument(data)
-          const canCreditNote = canCreditNoteDocument(data)
-          const canDownload = canDownloadDocument(data)
-          const canPreviewPdf = canPreviewPdfDocument(data)
-          container.css('text-overflow', 'unset')
-          container.append(DxButton({ className: `btn btn-xs ${canEdit ? 'btn-soft-primary' : 'btn-soft-secondary'} `, title: canEdit ? 'Editar comprobante' : 'Solo lectura', icon: canEdit ? 'mdi mdi-pencil' : 'mdi mdi-lock-outline', onClick: () => canEdit ? onModalOpen(data) : showBlockedAction('Comprobante bloqueado', 'Solo puedes editar comprobantes pendientes.') }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-info ms-1', title: 'Ver payload del conector', icon: 'mdi mdi-code-json', onClick: () => onOpenPayload(data) }))
-          container.append(DxButton({ className: `btn btn-xs ${canIssue ? 'btn-soft-success' : 'btn-soft-secondary'} ms-1`, title: canIssue ? 'Emitir comprobante' : 'Revisar requisitos fiscales', icon: canIssue ? 'mdi mdi-send' : 'mdi mdi-alert-circle-outline', onClick: () => canIssue ? onIssue(data) : openReadinessModal(data, `Validación fiscal - ${data.code}`) }))
-          container.append(DxButton({ className: `btn btn-xs ${canSync ? 'btn-soft-info' : 'btn-soft-secondary'} ms-1`, title: canSync ? 'Sincronizar estado' : 'Sincronización no disponible', icon: canSync ? 'mdi mdi-sync' : 'mdi mdi-sync-off', onClick: () => canSync ? onSyncStatus(data) : showBlockedAction('Sync no disponible', 'El comprobante aún no tiene datos remotos para sincronizar.') }))
-          container.append(DxButton({ className: `btn btn-xs ${canCancel ? 'btn-soft-warning' : 'btn-soft-secondary'} ms-1`, title: canCancel ? 'Anular comprobante' : 'Anulación no disponible', icon: canCancel ? 'mdi mdi-close-circle' : 'mdi mdi-lock-outline', onClick: () => canCancel ? onOpenCancel(data) : showBlockedAction('Anulación no disponible', 'Solo puedes anular comprobantes aceptados que no sean notas de crédito.') }))
-          container.append(DxButton({ className: `btn btn-xs ${canCreditNote ? 'btn-soft-secondary' : 'btn-soft-secondary'} ms-1`, title: canCreditNote ? 'Generar nota de crédito' : 'Nota de crédito no disponible', icon: canCreditNote ? 'mdi mdi-file-replace' : 'mdi mdi-file-lock-outline', onClick: () => canCreditNote ? onOpenCreditNote(data) : showBlockedAction('Nota de crédito no disponible', 'Solo puedes generar nota de crédito desde comprobantes aceptados que no sean notas de crédito.') }))
-          container.append(DxButton({ className: `btn btn-xs ${canPreviewPdf ? 'btn-soft-danger' : 'btn-soft-secondary'} ms-1`, title: canPreviewPdf ? 'Previsualizar PDF' : 'PDF no disponible', icon: canPreviewPdf ? 'mdi mdi-file-pdf-box' : 'mdi mdi-file-cancel-outline', onClick: () => canPreviewPdf ? onPreviewPdf(data) : showBlockedAction('PDF no disponible', 'El comprobante todavía no tiene PDF disponible.') }))
-          container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-soft-primary' : 'btn-soft-secondary'} ms-1`, title: canDownload ? 'Descargar XML' : 'XML no disponible', icon: canDownload ? 'mdi mdi-code-tags' : 'mdi mdi-file-cancel-outline', onClick: () => canDownload ? onDownload(data, 'xml') : showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.') }))
-          container.append(DxButton({ className: `btn btn-xs ${canDownload ? 'btn-soft-success' : 'btn-soft-secondary'} ms-1`, title: canDownload ? 'Descargar CDR' : 'CDR no disponible', icon: canDownload ? 'mdi mdi-shield-check' : 'mdi mdi-file-cancel-outline', onClick: () => canDownload ? onDownload(data, 'cdr') : showBlockedAction('Descarga no disponible', 'El comprobante todavía no tiene archivos fiscales disponibles.') }))
-          container.append(DxButton({ className: 'btn btn-xs btn-soft-dark ms-1', title: 'Registrar respuesta del proveedor', icon: 'mdi mdi-cloud-check', onClick: () => onOpenProviderModal(data) }))
-        } }
-      ]}
     />
 
     <Modal modalRef={pdfPreviewModalRef} title={pdfPreview.title || 'Vista previa PDF'} size='xl' hideFooter asForm={false} bodyClass='p-0' bodyStyle={{ overflow: 'hidden' }}>
@@ -1670,12 +1659,15 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
           <input ref={receivablePaymentDateRef} type='date' className='form-control' required />
         </div>
         <div className='col-md-4 mb-3'>
-          <label className='form-label'>Tipo de pago</label>
-          <select ref={receivablePaymentMethodRef} className='form-control' required>
-            {receivablePaymentMethodOptions.map(option => (
-              <option key={`billing-receivable-payment-method-${option}`} value={option}>{option}</option>
-            ))}
-          </select>
+          <VdSelect
+            label='Tipo de pago'
+            noMargin
+            required
+            value={receivablePaymentMethod}
+            onChange={setReceivablePaymentMethod}
+            options={receivablePaymentMethodOptions.map(option => ({ value: option, label: option }))}
+            placeholder='-- Seleccionar --'
+          />
         </div>
         <div className='col-md-6 mb-3'>
           <label className='form-label'>Banco</label>
@@ -1700,25 +1692,33 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       <div className='row'>
         <input ref={idRef} hidden />
         {!isStorageBilling && <div className='col-md-4 mb-3'>
-          <label className='form-label'>Origen</label>
-          <select className='form-control' value={sourceType} onChange={(e) => { setSourceType(e.target.value); setSourceId('') }}>
-            <option value='commercial_order'>Pedido comercial</option>
-            <option value='service_order'>Orden de servicio</option>
-          </select>
+          <VdSelect
+            label='Origen'
+            noMargin
+            value={sourceType}
+            onChange={(value) => { setSourceType(value); setSourceId('') }}
+            options={[{ value: 'commercial_order', label: 'Pedido comercial' }, { value: 'service_order', label: 'Orden de servicio' }]}
+          />
         </div>}
         <div className={`${isStorageBilling ? 'col-md-12' : 'col-md-8'} mb-3`}>
-          <label className='form-label'>{isStorageBilling ? 'Orden de servicio de almacenamiento' : 'Documento origen'}</label>
-          <select className='form-control' value={sourceId} onChange={(e) => setSourceId(e.target.value)} required>
-            <option value=''>Seleccione</option>
-            {((!isStorageBilling && sourceType === 'commercial_order') ? commercialOrders : serviceOrders).map(row => <option key={`billing-source-${sourceType}-${row.id}`} value={row.id}>{row.code} - {row.client?.full_name ?? row.eventual_client?.business_name ?? row.eventualClient?.business_name ?? 'Cliente'}</option>)}
-          </select>
+          <VdSelect
+            label={isStorageBilling ? 'Orden de servicio de almacenamiento' : 'Documento origen'}
+            noMargin
+            required
+            value={sourceId}
+            onChange={setSourceId}
+            options={((!isStorageBilling && sourceType === 'commercial_order') ? commercialOrders : serviceOrders).map(row => ({ value: `${row.id}`, label: `${row.code} - ${row.client?.full_name ?? row.eventual_client?.business_name ?? row.eventualClient?.business_name ?? 'Cliente'}` }))}
+            placeholder='Seleccione'
+          />
         </div>
         <div className='col-md-3 mb-3'>
-          <label className='form-label'>Comprobante</label>
-          <select ref={documentTypeRef} className='form-control'>
-            <option value='Factura'>Factura</option>
-            <option value='Boleta'>Boleta</option>
-          </select>
+          <VdSelect
+            label='Comprobante'
+            noMargin
+            value={documentType}
+            onChange={setDocumentType}
+            options={[{ value: 'Factura', label: 'Factura' }, { value: 'Boleta', label: 'Boleta' }]}
+          />
         </div>
         <div className='col-md-3 mb-3'><label className='form-label'>Serie</label><input ref={seriesRef} className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Correlativo</label><input ref={sequenceRef} className='form-control' /></div>
@@ -1726,19 +1726,22 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha emisión</label><input ref={issueDateRef} type='date' className='form-control' required /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha vencimiento</label><input ref={dueDateRef} type='date' className='form-control' /></div>
         <div className='col-md-3 mb-3'>
-          <label className='form-label'>Condición de pago</label>
-          <select ref={paymentConditionRef} className='form-control'>
-            <option value='Contado'>Contado</option>
-            <option value='Credito'>Crédito</option>
-          </select>
+          <VdSelect
+            label='Condición de pago'
+            noMargin
+            value={paymentCondition}
+            onChange={setPaymentCondition}
+            options={[{ value: 'Contado', label: 'Contado' }, { value: 'Credito', label: 'Crédito' }]}
+          />
         </div>
         <div className='col-md-3 mb-3'>
-          <label className='form-label'>Medio pago</label>
-          <select ref={paymentMethodRef} className='form-control'>
-            <option value='Transferencia'>Transferencia</option>
-            <option value='Efectivo'>Efectivo</option>
-            <option value='Deposito'>Depósito</option>
-          </select>
+          <VdSelect
+            label='Medio pago'
+            noMargin
+            value={paymentMethod}
+            onChange={setPaymentMethod}
+            options={[{ value: 'Transferencia', label: 'Transferencia' }, { value: 'Efectivo', label: 'Efectivo' }, { value: 'Deposito', label: 'Depósito' }]}
+          />
         </div>
         <div className='col-12 mb-1'><label className='form-label'>Observaciones</label><textarea ref={observationsRef} className='form-control' rows='3' /></div>
       </div>
@@ -1747,11 +1750,14 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     {isStorageBilling && <Modal modalRef={reportModalRef} title='Reporte de Facturas Emitidas' size='xl' btnSubmitText='Generar Reporte Excel' onSubmit={(e) => { e.preventDefault(); generateIssuedReport('xlsx', modalReportFilters) }}>
       <div className='row align-items-end'>
         <div className='col-12 col-lg-4 mb-3'>
-          <label className='form-label'>Empresa</label>
-          <select className='form-select' value={modalReportFilters.businessId} onChange={(e) => setModalReportFilters(prev => ({ ...prev, businessId: e.target.value }))}>
-            <option value=''>Todos</option>
-            {businesses.map(row => <option key={`billing-report-business-${row.id}`} value={row.id}>{row.name}</option>)}
-          </select>
+          <VdSelect
+            label='Empresa'
+            noMargin
+            value={modalReportFilters.businessId}
+            onChange={(value) => setModalReportFilters(prev => ({ ...prev, businessId: value }))}
+            options={[{ value: '', label: 'Todos' }, ...businesses.map(row => ({ value: `${row.id}`, label: row.name }))]}
+            placeholder='Todos'
+          />
         </div>
         <div className='col-12 col-lg-4 mb-3'>
           <label className='form-label'>Fecha Inicio</label>
@@ -1767,25 +1773,32 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     {isStorageBilling && <Modal modalRef={bulkModalRef} title='Facturar Pre-Facturas' size='xl' btnSubmitText='Facturar' onSubmit={onIssueBulk}>
       <div className='row align-items-end'>
         <div className='col-12 col-lg-7 mb-3'>
-          <label className='form-label'>Cliente</label>
-          <select className='form-select' value={bulkFilters.clientId} onChange={(e) => setBulkFilters(prev => ({ ...prev, clientId: e.target.value }))}>
-            <option value=''>Seleccione cliente</option>
-            {clients.map(row => <option key={`billing-bulk-client-${row.id}`} value={row.id}>{row.document_number ? `${row.document_number} - ` : ''}{row.full_name}</option>)}
-          </select>
+          <VdSelect
+            label='Cliente'
+            noMargin
+            value={bulkFilters.clientId}
+            onChange={(value) => setBulkFilters(prev => ({ ...prev, clientId: value }))}
+            options={clients.map(row => ({ value: `${row.id}`, label: `${row.document_number ? `${row.document_number} - ` : ''}${row.full_name}` }))}
+            placeholder='Seleccione cliente'
+          />
         </div>
         <div className='col-12 col-md-6 col-lg-2 mb-3'>
-          <label className='form-label'>Tipo documento</label>
-          <select className='form-select' value={bulkFilters.documentType} onChange={(e) => setBulkFilters(prev => ({ ...prev, documentType: e.target.value }))}>
-            <option value='Factura'>Factura</option>
-            <option value='Boleta'>Boleta</option>
-          </select>
+          <VdSelect
+            label='Tipo documento'
+            noMargin
+            value={bulkFilters.documentType}
+            onChange={(value) => setBulkFilters(prev => ({ ...prev, documentType: value }))}
+            options={[{ value: 'Factura', label: 'Factura' }, { value: 'Boleta', label: 'Boleta' }]}
+          />
         </div>
         <div className='col-12 col-md-6 col-lg-2 mb-3'>
-          <label className='form-label'>Moneda</label>
-          <select className='form-select' value={bulkFilters.currency} onChange={(e) => setBulkFilters(prev => ({ ...prev, currency: e.target.value }))}>
-            <option value='PEN'>Soles</option>
-            <option value='USD'>Dolares</option>
-          </select>
+          <VdSelect
+            label='Moneda'
+            noMargin
+            value={bulkFilters.currency}
+            onChange={(value) => setBulkFilters(prev => ({ ...prev, currency: value }))}
+            options={currencyFilterOptions}
+          />
         </div>
         <div className='col-12 col-lg-1 mb-3'>
           <button type='button' className='btn btn-outline-primary w-100' onClick={loadBulkPrefactures} disabled={bulkLoading}>
@@ -1865,14 +1878,15 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     <Modal modalRef={providerModalRef} title={`Respuesta del proveedor${selectedRow ? ` - ${selectedRow.code}` : ''}`} size='lg' onSubmit={onSaveProvider}>
       <div className='row'>
         <div className='col-md-6 mb-3'>
-          <label className='form-label'>Estado local</label>
-          <select ref={localStatusRef} className='form-control'>
-            {billingDocumentStatusOptions
+          <VdSelect
+            label='Estado local'
+            noMargin
+            value={providerLocalStatus}
+            onChange={setProviderLocalStatus}
+            options={billingDocumentStatusOptions
               .filter((option) => ['pending', 'sent', 'accepted', 'observed', 'rejected', 'cancelled'].includes(option.value))
-              .map((option) => (
-                <option key={`billing-document-local-status-${option.value}`} value={option.value}>{option.label}</option>
-              ))}
-          </select>
+              .map((option) => ({ value: option.value, label: option.label }))}
+          />
         </div>
         <div className='col-md-6 mb-3'><label className='form-label'>Estado externo</label><input ref={externalStatusRef} className='form-control' /></div>
         <div className='col-md-6 mb-3'><label className='form-label'>ID externo</label><input ref={externalIdRef} className='form-control' /></div>

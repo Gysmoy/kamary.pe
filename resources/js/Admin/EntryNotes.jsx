@@ -3,20 +3,17 @@ import { createRoot } from 'react-dom/client';
 import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
-import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import EntryNotesRest from '../Actions/Admin/EntryNotesRest';
 import { isStoragePath, scopedPermission } from '../Utils/permissionScope';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 
 const entryNotesRest = new EntryNotesRest()
@@ -84,21 +81,16 @@ const emptyItem = () => ({
 
 const EntryNotes = () => {
   const storageContext = isStoragePath()
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const createBatchModalRef = useRef()
   const lotSearchModalRef = useRef()
   const lotSearchTextRef = useRef()
 
   const idRef = useRef()
-  const branchRef = useRef()
-  const warehouseRef = useRef()
-  const supplierRef = useRef()
-  const documentTypeRef = useRef()
   const documentSeriesRef = useRef()
   const documentSequenceRef = useRef()
   const documentFileRef = useRef()
-  const currencyRef = useRef()
   const observationsRef = useRef()
   const guideSeriesRef = useRef()
   const guideSequenceRef = useRef()
@@ -109,12 +101,10 @@ const EntryNotes = () => {
   const createBatchArticleRef = useRef()
   const createBatchLotRef = useRef()
   const createBatchExpirationRef = useRef()
-  const storageClientRef = useRef()
   const selectedStorageClientIdRef = useRef('')
   const providerDistributorRef = useRef()
   const entryDateRef = useRef()
   const documentDateRef = useRef()
-  const invoiceTypeRef = useRef()
   const invoiceSeriesRef = useRef()
   const invoiceSequenceRef = useRef()
   const invoiceDateRef = useRef()
@@ -130,8 +120,13 @@ const EntryNotes = () => {
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
   const [selectedSupplierId, setSelectedSupplierId] = useState('')
   const [selectedStorageClientId, setSelectedStorageClientId] = useState('')
+  const [documentType, setDocumentType] = useState('')
+  const [invoiceType, setInvoiceType] = useState('')
+  const [currency, setCurrency] = useState('PEN')
   const [branches, setBranches] = useState([])
   const [warehouses, setWarehouses] = useState([])
+  const [warehouseOptions, setWarehouseOptions] = useState([])
+  const [supplierOptions, setSupplierOptions] = useState([])
   const [storageOptions, setStorageOptions] = useState({ businesses: [], branches: [], warehouses: [], locations: [], clients: [] })
   const [storageFilterClientId, setStorageFilterClientId] = useState('')
   const [storageFilterStartDate, setStorageFilterStartDate] = useState('')
@@ -180,15 +175,17 @@ const EntryNotes = () => {
     return () => { mounted = false }
   }, [storageContext])
 
+  // Listas completas (cliente-side) para alimentar los VdSelect de almacen/proveedor
+  // del formulario estandar (no-almacenamiento); antes se buscaban vía select2 remoto.
   useEffect(() => {
-    if (!storageContext) return
-    const updateGridDimensions = () => {
-      try {
-        $(gridRef.current).dxDataGrid('instance')?.updateDimensions()
-      } catch (error) { }
-    }
-    const timers = [0, 250, 600].map(delay => setTimeout(updateGridDimensions, delay))
-    return () => timers.forEach(timer => clearTimeout(timer))
+    if (storageContext) return
+    let mounted = true
+    Promise.all([entryNotesRest.getWarehouses(), entryNotesRest.getSuppliers()]).then(([warehousesData, suppliersData]) => {
+      if (!mounted) return
+      setWarehouseOptions((warehousesData ?? []).filter(item => item.status !== null))
+      setSupplierOptions((suppliersData ?? []).filter(item => item.status !== null))
+    })
+    return () => { mounted = false }
   }, [storageContext])
 
   useEffect(() => {
@@ -210,13 +207,13 @@ const EntryNotes = () => {
     }
   }, [items])
 
-  const loadWarehouses = async (businessId = selectedBusinessId) => {
+  // Nota: ya no filtra por businessId (antes servia solo para acotar el <select> nativo de
+  // almacen); con VdSelect el picker usa la lista completa (warehouseOptions) y esta lista
+  // solo se usa para resolver nombres por ID (getWarehouseName), por lo que debe mantenerse
+  // completa para no perder el nombre al elegir un almacen de otra empresa.
+  const loadWarehouses = async () => {
     const warehousesData = await entryNotesRest.getWarehouses()
-    const active = (warehousesData ?? []).filter(item => item.status !== null)
-    setWarehouses(businessId
-      ? active.filter(item => `${warehouseBusinessId(item)}` === `${businessId}`)
-      : active
-    )
+    setWarehouses((warehousesData ?? []).filter(item => item.status !== null))
   }
 
   const loadBranches = async (businessId, preferredId = null) => {
@@ -251,10 +248,10 @@ const EntryNotes = () => {
     if (resetProducts && changed) resetStorageProductSelection()
   }
 
-  const currentStorageClientId = () => storageClientRef.current?.value || selectedStorageClientIdRef.current || selectedStorageClientId || ''
+  const currentStorageClientId = () => selectedStorageClientIdRef.current || selectedStorageClientId || ''
 
-  const onStorageClientChanged = (e) => {
-    setCurrentStorageClientId(e.target.value || '', { resetProducts: true })
+  const onStorageClientChanged = (value) => {
+    setCurrentStorageClientId(value || '', { resetProducts: true })
   }
 
   const getWarehouseName = (warehouseId) => {
@@ -293,10 +290,10 @@ const EntryNotes = () => {
     setIsViewing(Boolean(options.viewOnly))
 
     if (idRef.current) idRef.current.value = data?.id ?? ''
-    if (documentTypeRef.current) documentTypeRef.current.value = data?.document_type ?? (storageContext ? 'Guia Remision' : 'Boleta')
+    setDocumentType(data?.document_type ?? (storageContext ? 'Guia Remision' : 'Boleta'))
     if (documentSeriesRef.current) documentSeriesRef.current.value = data?.document_series ?? ''
     if (documentSequenceRef.current) documentSequenceRef.current.value = data?.document_sequence ?? ''
-    if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
+    setCurrency(data?.currency ?? 'PEN')
     if (observationsRef.current) observationsRef.current.value = data?.observations ?? ''
     if (guideSeriesRef.current) guideSeriesRef.current.value = data?.guide_series ?? ''
     if (guideSequenceRef.current) guideSequenceRef.current.value = data?.guide_sequence ?? ''
@@ -307,7 +304,7 @@ const EntryNotes = () => {
     if (providerDistributorRef.current) providerDistributorRef.current.value = data?.provider_distributor ?? ''
     if (entryDateRef.current) entryDateRef.current.value = toDateInput(data?.entry_date)
     if (documentDateRef.current) documentDateRef.current.value = toDateInput(data?.document_date)
-    if (invoiceTypeRef.current) invoiceTypeRef.current.value = data?.invoice_type ?? ''
+    setInvoiceType(data?.invoice_type ?? '')
     if (invoiceSeriesRef.current) invoiceSeriesRef.current.value = data?.invoice_series ?? ''
     if (invoiceSequenceRef.current) invoiceSequenceRef.current.value = data?.invoice_sequence ?? ''
     if (invoiceDateRef.current) invoiceDateRef.current.value = toDateInput(data?.invoice_date)
@@ -325,26 +322,6 @@ const EntryNotes = () => {
     setSelectedWarehouseId(warehouseId)
     setSelectedSupplierId(supplierId)
     setCurrentStorageClientId(clientId)
-
-    if (!storageContext && warehouseId && data?.warehouse?.name) {
-      SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
-    } else if (!storageContext && warehouseRef.current) {
-      $(warehouseRef.current).empty().trigger('change')
-    }
-
-    if (!storageContext && supplierId && data?.supplier?.business_name) {
-      SetSelectValue(supplierRef.current, supplierId, data.supplier.business_name)
-    } else if (!storageContext && supplierRef.current) {
-      $(supplierRef.current).empty().trigger('change')
-    }
-
-    if (storageContext && storageClientRef.current) {
-      if (clientId && data?.client) {
-        SetSelectValue(storageClientRef.current, clientId, clientLabel(data.client))
-      } else {
-        $(storageClientRef.current).empty().trigger('change')
-      }
-    }
 
     const detail = (data?.items ?? []).map(row => {
       const locationCode = locationCodeFromValue(row.location)
@@ -382,7 +359,7 @@ const EntryNotes = () => {
 
     $(modalRef.current).modal('show')
     if (!storageContext) {
-      await loadWarehouses(businessId)
+      await loadWarehouses()
       await loadBranches(data?.business_id ?? null, data?.business_branch_id ?? null)
     }
     await refreshAllStocks(warehouseId, loadedItems)
@@ -399,14 +376,14 @@ const EntryNotes = () => {
     formData.append('business_branch_id', selectedBranchId || '')
     formData.append('warehouse_id', selectedWarehouseId || '')
     formData.append('supplier_id', storageContext ? '' : (selectedSupplierId || ''))
-    formData.append('client_id', storageContext ? (storageClientRef.current?.value || '') : '')
+    formData.append('client_id', storageContext ? (currentStorageClientId() || '') : '')
     formData.append('provider_distributor', storageContext ? (providerDistributorRef.current?.value || '') : '')
     formData.append('entry_date', storageContext ? (entryDateRef.current?.value || '') : '')
-    formData.append('document_type', documentTypeRef.current.value || (storageContext ? 'Guia Remision' : 'Boleta'))
+    formData.append('document_type', documentType || (storageContext ? 'Guia Remision' : 'Boleta'))
     formData.append('document_series', documentSeriesRef.current.value || '')
     formData.append('document_sequence', documentSequenceRef.current.value || '')
     formData.append('document_date', storageContext ? (documentDateRef.current?.value || '') : '')
-    formData.append('invoice_type', storageContext ? (invoiceTypeRef.current?.value || '') : '')
+    formData.append('invoice_type', storageContext ? (invoiceType || '') : '')
     formData.append('invoice_series', storageContext ? (invoiceSeriesRef.current?.value || '') : '')
     formData.append('invoice_sequence', storageContext ? (invoiceSequenceRef.current?.value || '') : '')
     formData.append('invoice_date', storageContext ? (invoiceDateRef.current?.value || '') : '')
@@ -415,7 +392,7 @@ const EntryNotes = () => {
     formData.append('driver_name', storageContext ? (driverNameRef.current?.value || '') : '')
     formData.append('driver_license', storageContext ? (driverLicenseRef.current?.value || '') : '')
     formData.append('vehicle_plate', storageContext ? (vehiclePlateRef.current?.value || '') : '')
-    formData.append('currency', storageContext ? 'PEN' : (currencyRef.current.value || 'PEN'))
+    formData.append('currency', storageContext ? 'PEN' : (currency || 'PEN'))
     formData.append('observations', observationsRef.current.value || '')
     formData.append('guide_series', storageContext ? '' : (guideSeriesRef.current.value || ''))
     formData.append('guide_sequence', storageContext ? '' : (guideSequenceRef.current.value || ''))
@@ -455,14 +432,14 @@ const EntryNotes = () => {
     const result = await entryNotesRest.save(formData)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(modalRef.current).modal('hide')
   }
 
   const onBooleanChange = async ({ id, field, value }) => {
     const result = await entryNotesRest.boolean({ id, field, value })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -477,14 +454,14 @@ const EntryNotes = () => {
     if (!isConfirmed) return
     const result = await entryNotesRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
-  const onWarehouseChanged = async (e) => {
-    const warehouseId = e.target.value || ''
-    const selected = $(e.target).select2('data')?.[0]
-    const warehouse = selected?.data ?? null
-    const warehouseLabel = warehouseLocationLabel(warehouseId, selected?.text)
+  const onWarehouseChanged = async (warehouseId) => {
+    warehouseId = warehouseId || ''
+    const sourceList = storageContext ? storageOptions.warehouses : warehouseOptions
+    const warehouse = sourceList.find(item => `${item.id}` === `${warehouseId}`) ?? null
+    const warehouseLabel = warehouseLocationLabel(warehouseId, warehouse?.name)
     const businessId = warehouseBusinessId(warehouse)
     const branchId = warehouseBranchId(warehouse)
 
@@ -683,8 +660,8 @@ const EntryNotes = () => {
     }))
   }
 
-  const onStorageLocationsChanged = (uid, e) => {
-    const selected = locationCodeFromValue(e.target.value)
+  const onStorageLocationsChanged = (uid, value) => {
+    const selected = locationCodeFromValue(value)
     setItems(prev => prev.map(item => item.uid === uid ? {
       ...item,
       locations: selected ? [selected] : [],
@@ -925,7 +902,7 @@ const EntryNotes = () => {
     if (!isConfirmed) return
     const result = await entryNotesRest.setEntryStatus(data.id, entryStatus)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const openStorageDetailPdf = async (data) => {
@@ -938,9 +915,10 @@ const EntryNotes = () => {
     openMagistralesRecordPdf(buildMagistralesRows.storageEntryNoteActa(detail))
   }
 
-  const storageExportRows = () => {
-    const grid = $(gridRef.current).dxDataGrid('instance')
-    return (grid.getVisibleRows() ?? []).map(row => row.data).filter(Boolean)
+  // Exporta TODAS las filas que calzan con el filtro/orden actual de la tabla (no solo la pagina visible)
+  const storageExportRows = async () => {
+    const rows = await tableRef.current?.loadAll()
+    return Array.isArray(rows) ? rows.filter(Boolean) : []
   }
 
   const storageExportColumns = [
@@ -957,7 +935,7 @@ const EntryNotes = () => {
   ]
 
   const copyStorageGrid = async () => {
-    const rows = storageExportRows()
+    const rows = await storageExportRows()
     const text = [
       storageExportColumns.map(([title]) => title).join('\t'),
       ...rows.map(row => storageExportColumns.map(([, getter]) => getter(row)).join('\t')),
@@ -976,8 +954,8 @@ const EntryNotes = () => {
     URL.revokeObjectURL(url)
   }
 
-  const downloadStorageCsv = () => {
-    const rows = storageExportRows()
+  const downloadStorageCsv = async () => {
+    const rows = await storageExportRows()
     const csv = [
       storageExportColumns.map(([title]) => `"${title}"`).join(','),
       ...rows.map(row => storageExportColumns.map(([, getter]) => `"${`${getter(row)}`.replace(/"/g, '""')}"`).join(',')),
@@ -986,8 +964,8 @@ const EntryNotes = () => {
     downloadStorageBlob(blob, 'notas-entrada.csv')
   }
 
-  const downloadStorageExcel = () => {
-    const rows = storageExportRows()
+  const downloadStorageExcel = async () => {
+    const rows = await storageExportRows()
     const matrix = [
       storageExportColumns.map(([title]) => title),
       ...rows.map(row => storageExportColumns.map(([, getter]) => getter(row))),
@@ -1002,13 +980,13 @@ const EntryNotes = () => {
     downloadStorageBlob(blob, 'notas-entrada.xlsx')
   }
 
-  const downloadStoragePdf = () => {
+  const downloadStoragePdf = async () => {
     const JsPDF = window.jspdf?.jsPDF || window.jsPDF
     if (!JsPDF) {
       printStorageGrid()
       return
     }
-    const rows = storageExportRows()
+    const rows = await storageExportRows()
     const doc = new JsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
     doc.setFontSize(13)
     doc.text('Notas de entrada', 40, 35)
@@ -1033,212 +1011,124 @@ const EntryNotes = () => {
     setStorageGridFilter(filter)
   }
 
-  const storageColumns = [
-    { dataField: 'client_id', caption: 'Cliente ID', visible: false, showInColumnChooser: false },
-    {
-      caption: 'Acciones',
-      width: 275,
-      minWidth: 275,
-      fixed: true,
-      fixedPosition: 'left',
-      cellTemplate: (container, { data }) => {
-        container.css({
-          textOverflow: 'unset',
-          overflow: 'visible',
-          whiteSpace: 'nowrap'
-        })
-        const actions = $('<div>').css({
-          display: 'flex',
-          alignItems: 'center',
-          flexWrap: 'nowrap'
-        })
-        container.append(actions)
-        const appendAction = (options) => actions.append(DxButton(options))
-        const status = data?.entry_status ?? 'pending'
-        if (status === 'approved') {
-          appendAction({
-            className: 'btn btn-xs btn-soft-warning',
-            title: 'Ver nota de entrada',
-            icon: 'mdi mdi-menu',
-            onClick: () => onModalOpen(data, { viewOnly: true })
-          })
-          appendAction({
-            className: 'btn btn-xs btn-soft-info',
-            title: 'Vista previa de nota de entrada',
-            icon: 'mdi mdi-eye',
-            onClick: () => openStorageDetailPdf(data)
-          })
-          appendAction({
-            className: 'btn btn-xs btn-soft-danger',
-            title: 'Detalle de nota de entrada',
-            icon: 'mdi mdi-file-pdf-box',
-            onClick: () => openStorageDetailPdf(data)
-          })
-          appendAction({
-            className: 'btn btn-xs btn-soft-info',
-            title: 'Acta de nota de entrada',
-            icon: 'mdi mdi-file-document-outline',
-            onClick: () => openStorageActaPdf(data)
-          })
-          return
-        }
+  // Enlace de edicion inline reutilizado por las columnas "Codigo"/"Sede" (equivalente a renderGridEditLink, en JSX)
+  const gridEditLink = (label, onClick, title = 'Editar') => (
+    <button
+      type='button'
+      className='btn btn-link admin-grid-edit-link p-0 text-start fw-semibold'
+      title={title}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClick() }}
+    >
+      {label === null || label === undefined || label === '' ? '-' : `${label}`}
+    </button>
+  )
 
-        if (status !== 'cancelled') {
-          appendAction({
-            className: 'btn btn-xs btn-soft-success',
-            title: 'Aprobar nota de entrada',
-            icon: 'mdi mdi-check',
-            onClick: () => onEntryStatusChange(data, 'approved')
-          })
-          appendAction({
-            className: 'btn btn-xs btn-soft-danger',
-            title: 'Anular nota de entrada',
-            icon: 'mdi mdi-close',
-            onClick: () => onEntryStatusChange(data, 'cancelled')
-          })
-          appendAction({
-            className: 'btn btn-xs btn-soft-primary',
-            title: 'Editar nota de entrada',
-            icon: 'mdi mdi-pencil',
-            onClick: () => onModalOpen(data)
-          })
-        }
-        appendAction({
-          className: 'btn btn-xs btn-soft-danger',
-          title: 'Detalle de nota de entrada',
-          icon: 'mdi mdi-file-pdf-box',
-          onClick: () => openStorageDetailPdf(data)
-        })
-        appendAction({
-          className: 'btn btn-xs btn-soft-info',
-          title: 'Acta de nota de entrada',
-          icon: 'mdi mdi-file-document-outline',
-          onClick: () => openStorageActaPdf(data)
-        })
+  const storageRowActions = (row) => {
+    const status = row?.entry_status ?? 'pending'
+    if (status === 'approved') {
+      return [
+        { icon: 'mdi mdi-menu', title: 'Ver nota de entrada', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onModalOpen(r, { viewOnly: true }) },
+        { icon: 'mdi mdi-eye', title: 'Vista previa de nota de entrada', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openStorageDetailPdf(r) },
+        { icon: 'mdi mdi-file-pdf-box', title: 'Detalle de nota de entrada', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => openStorageDetailPdf(r) },
+        { icon: 'mdi mdi-file-document-outline', title: 'Acta de nota de entrada', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openStorageActaPdf(r) },
+      ]
+    }
+    const list = []
+    if (status !== 'cancelled') {
+      list.push({ icon: 'mdi mdi-check', title: 'Aprobar nota de entrada', bg: '#eafaf0', color: '#1bb99a', onClick: (r) => onEntryStatusChange(r, 'approved') })
+      list.push({ icon: 'mdi mdi-close', title: 'Anular nota de entrada', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onEntryStatusChange(r, 'cancelled') })
+      list.push({ icon: 'mdi mdi-pencil', title: 'Editar nota de entrada', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) })
+    }
+    list.push({ icon: 'mdi mdi-file-pdf-box', title: 'Detalle de nota de entrada', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => openStorageDetailPdf(r) })
+    list.push({ icon: 'mdi mdi-file-document-outline', title: 'Acta de nota de entrada', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openStorageActaPdf(r) })
+    return list
+  }
+
+  const standardRowActions = (row) => [
+    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+    { icon: 'mdi mdi-delete', title: 'Eliminar nota de entrada', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+  ]
+
+  const storageVdColumns = [
+    {
+      key: 'codigo', label: 'Codigo', field: 'code', width: '185px',
+      filter: { type: 'text' },
+      render: (row) => {
+        const isApproved = row?.entry_status === 'approved'
+        return gridEditLink(row?.code ?? row?.id, () => onModalOpen(row, { viewOnly: isApproved }), isApproved ? 'Ver nota de entrada' : 'Editar nota de entrada')
       },
-      allowFiltering: false,
-      allowExporting: false
     },
     {
-      dataField: 'code',
-      caption: 'Codigo',
-      width: 185,
-      minWidth: 185,
-      cellTemplate: (container, { data }) => {
-        const isApproved = data?.entry_status === 'approved'
-        renderGridEditLink(container, data?.code ?? data?.id, () => onModalOpen(data, { viewOnly: isApproved }), isApproved ? 'Ver nota de entrada' : 'Editar nota de entrada')
-      }
+      key: 'cliente', label: 'Cliente', field: 'client.full_name',
+      filter: { type: 'text', fields: ['client.full_name', 'client.document_number'] },
+      render: (row) => clientLabel(row?.client),
     },
+    { key: 'almacen', label: 'Almacen', field: 'warehouse.name', filter: { type: 'text' } },
+    { key: 'tipoDocumento', label: 'Tipo de documento', field: 'document_type', filter: { type: 'text' } },
+    { key: 'serie', label: 'Serie', field: 'document_series', width: '90px', filter: { type: 'text' } },
+    { key: 'secuencia', label: 'Secuencia', field: 'document_sequence', width: '120px', filter: { type: 'text' } },
+    { key: 'fechaIngreso', label: 'Fecha de ingreso', field: 'entry_date', width: '140px', filter: { type: 'date' } },
     {
-      dataField: 'client.full_name',
-      caption: 'Cliente',
-      minWidth: 260,
-      cellTemplate: (container, { data }) => container.text(clientLabel(data?.client))
+      key: 'usuarioRegistro', label: 'Usuario registro', field: 'creator.fullname', visible: false, sortable: false,
+      render: (row) => formatAuditUser(row.creator),
     },
-    { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 140 },
-    { dataField: 'document_type', caption: 'Tipo de documento', minWidth: 140 },
-    { dataField: 'document_series', caption: 'Serie', width: 90 },
-    { dataField: 'document_sequence', caption: 'Secuencia', width: 120 },
-    { dataField: 'entry_date', caption: 'Fecha de ingreso', dataType: 'date', minWidth: 140 },
+    { key: 'fechaRegistro', label: 'Fecha registro', field: 'created_at', visible: false, sortable: false },
     {
-      dataField: 'creator.fullname',
-      caption: 'Usuario registro',
-      minWidth: 150,
-      cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
-    },
-    { dataField: 'created_at', caption: 'Fecha registro', dataType: 'datetime', minWidth: 150 },
-    {
-      dataField: 'entry_status',
-      caption: 'Estado',
-      width: 145,
-      minWidth: 145,
-      cellTemplate: (container, { data }) => {
-        const status = data?.entry_status ?? 'pending'
+      key: 'estado', label: 'Estado', field: 'entry_status', width: '145px',
+      filter: {
+        type: 'select',
+        options: [
+          { value: 'approved', label: 'Aprobado' },
+          { value: 'cancelled', label: 'Anulado' },
+          { value: 'pending', label: 'En espera' },
+        ],
+      },
+      render: (row) => {
+        const status = row?.entry_status ?? 'pending'
         const className = status === 'approved' ? 'badge bg-success' : status === 'cancelled' ? 'badge bg-danger' : 'badge bg-warning text-dark'
-        ReactAppend(container, <span className={className}>{entryStatusLabel(status)}</span>)
-      }
+        return <span className={className}>{entryStatusLabel(status)}</span>
+      },
     },
   ]
 
-  const standardColumns = [
-    { dataField: 'id', caption: 'ID', visible: false },
+  const standardVdColumns = [
     {
-      dataField: 'branch.name',
-      caption: 'Sede',
-      minWidth: 140,
-      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.branch?.name, () => onModalOpen(data), 'Editar nota de entrada')
+      key: 'sede', label: 'Sede', field: 'branch.name', filter: { type: 'text' },
+      render: (row) => gridEditLink(row?.branch?.name, () => onModalOpen(row), 'Editar nota de entrada'),
     },
-    { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 140 },
-    { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 200 },
-    { dataField: 'document_type', caption: 'Tipo doc', width: 110 },
-    { dataField: 'document_series', caption: 'Serie', width: 90 },
-    { dataField: 'document_sequence', caption: 'Secuencia', width: 110 },
-    { dataField: 'currency', caption: 'Moneda', width: 90 },
+    { key: 'almacen', label: 'Almacen', field: 'warehouse.name', filter: { type: 'text' } },
+    { key: 'proveedor', label: 'Proveedor', field: 'supplier.business_name', filter: { type: 'text' } },
+    { key: 'tipoDoc', label: 'Tipo doc', field: 'document_type', width: '110px', filter: { type: 'text' } },
+    { key: 'serie', label: 'Serie', field: 'document_series', width: '90px', filter: { type: 'text' } },
+    { key: 'secuencia', label: 'Secuencia', field: 'document_sequence', width: '110px', filter: { type: 'text' } },
+    { key: 'moneda', label: 'Moneda', field: 'currency', width: '90px' },
     {
-      dataField: 'items.id',
-      caption: 'Detalle',
-      minWidth: 240,
-      allowFiltering: false,
-      cellTemplate: (container, { data }) => {
-        const lines = (data?.items ?? []).map(item => {
+      key: 'detalle', label: 'Detalle', field: 'items', sortable: false,
+      render: (row) => {
+        const lines = (row?.items ?? []).map(item => {
           const article = item?.article
           const label = [item?.lot || '-', article?.name || 'Articulo'].join(' - ')
           return `${label} | Cant. ${Number(item?.quantity || 0).toFixed(2)} | S/. ${Number(item?.total || 0).toFixed(2)}`
         })
-        ReactAppend(container, <div>
-          {lines.length === 0 && <small className='text-muted'>Sin detalle</small>}
-          {lines.map((line, idx) => <div key={`entry-note-${data.id}-item-${idx}`}><small>{line}</small></div>)}
-        </div>)
-      }
-    },
-    {
-      dataField: 'creator.fullname',
-      caption: 'Creado por',
-      visible: false,
-      cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
-    },
-    {
-      dataField: 'updater.fullname',
-      caption: 'Actualizado por',
-      visible: false,
-      cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
-    },
-    {
-      dataField: 'status',
-      caption: 'Estado',
-      dataType: 'boolean',
-      width: '95px',
-      cellTemplate: (container, { data }) => {
-        $(container).empty()
-        if (data.status === null) return
-        ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-          id: data.id,
-          field: 'status',
-          value: !data.status
-        })} />)
-      }
-    },
-    {
-      caption: 'Acciones',
-      width: '120px',
-      cellTemplate: (container, { data }) => {
-        container.css('text-overflow', 'unset')
-        container.append(DxButton({
-          className: 'btn btn-xs btn-soft-primary',
-          title: 'Editar',
-          icon: 'mdi mdi-pencil',
-          onClick: () => onModalOpen(data)
-        }))
-        container.append(DxButton({
-          className: 'btn btn-xs btn-soft-danger',
-          title: 'Eliminar nota de entrada',
-          icon: 'mdi mdi-delete',
-          onClick: () => onDeleteClicked(data.id)
-        }))
+        if (lines.length === 0) return <small className='text-muted'>Sin detalle</small>
+        return <div>{lines.map((line, idx) => <div key={`entry-note-${row.id}-item-${idx}`}><small>{line}</small></div>)}</div>
       },
-      allowFiltering: false,
-      allowExporting: false
-    }
+    },
+    {
+      key: 'creadoPor', label: 'Creado por', field: 'creator.fullname', visible: false, sortable: false,
+      render: (row) => formatAuditUser(row.creator),
+    },
+    {
+      key: 'actualizadoPor', label: 'Actualizado por', field: 'updater.fullname', visible: false, sortable: false,
+      render: (row) => formatAuditUser(row.updater),
+    },
+    {
+      key: 'estado', label: 'Estado', field: 'status', width: '95px',
+      render: (row) => {
+        if (row.status === null) return ''
+        return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => onBooleanChange({ id: row.id, field: 'status', value: !row.status })} />
+      },
+    },
   ]
 
   const lotSearchFilterNeedle = normalizeSearchText(lotSearchFilter)
@@ -1360,16 +1250,14 @@ const EntryNotes = () => {
       <div className='card-header'>Nota de entrada registrados</div>
       <div className='card-body'>
         <div className='row align-items-end'>
-          <SelectFormGroup
+          <VdSelect
             label='Cliente'
             col='col-md-4'
             value={storageFilterClientId}
-            onChange={(e) => setStorageFilterClientId(e.target.value)}
-            effectWith={[storageOptions.clients.length]}
-          >
-            <option value=''>Seleccione</option>
-            {storageOptions.clients.map(client => <option key={`entry-note-filter-client-${client.id}`} value={client.id}>{clientLabel(client)}</option>)}
-          </SelectFormGroup>
+            onChange={(value) => setStorageFilterClientId(value)}
+            options={storageOptions.clients.map(client => ({ value: `${client.id}`, label: clientLabel(client) }))}
+            placeholder='Seleccione'
+          />
           <InputFormGroup label='Fecha inicio' col='col-md-3' type='date' value={storageFilterStartDate} onChange={(e) => setStorageFilterStartDate(e.target.value)} />
           <InputFormGroup label='Fecha fin' col='col-md-3' type='date' value={storageFilterEndDate} onChange={(e) => setStorageFilterEndDate(e.target.value)} />
           <div className='form-group col-md-2 mb-2 text-center'>
@@ -1381,52 +1269,66 @@ const EntryNotes = () => {
       </div>
     </div>}
 
-    <Table
-      gridRef={gridRef}
-      title={storageContext ? 'Nota de entrada' : 'Notas de entrada'}
+    <VdTable
+      ref={tableRef}
       rest={entryNotesRest}
-      toolBar={(container) => {
-        if (storageContext) {
-          [
-            { text: 'Imprimir', onClick: printStorageGrid },
-            { text: 'PDF', onClick: downloadStoragePdf },
-            { text: 'Excel', onClick: downloadStorageExcel },
-            { text: 'CSV', onClick: downloadStorageCsv },
-            { text: 'Copiar', onClick: copyStorageGrid },
-          ].forEach(item => {
-            container.unshift({
-              widget: 'dxButton',
-              location: 'before',
-              options: {
-                text: item.text,
-                stylingMode: 'outlined',
-                onClick: item.onClick
-              }
-            });
-          })
-        }
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar nota de entrada',
-            onClick: () => onModalOpen(null)
-          }
-        });
-      }}
-      pageSize={storageContext ? 10 : 25}
-      exportable={storageContext}
-      filterValue={storageContext ? storageGridFilter : null}
-      columns={storageContext ? storageColumns : standardColumns}
+      icon='mdi mdi-tray-arrow-down'
+      title={storageContext ? 'Nota de entrada' : 'Notas de entrada'}
+      unit='notas'
+      defaultSort={{ field: 'id', desc: true }}
+      defaultPageSize={storageContext ? 10 : 25}
+      searchFields={storageContext
+        ? ['code', 'client.full_name', 'client.document_number', 'warehouse.name', 'document_series', 'document_sequence']
+        : ['branch.name', 'warehouse.name', 'supplier.business_name', 'document_series', 'document_sequence']}
+      searchPlaceholder='Buscar…'
+      emptyText='No se encontraron notas de entrada.'
+      baseFilter={storageContext ? storageGridFilter : null}
+      headerActions={<>
+        <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => tableRef.current?.refresh()}>
+          <i className='mdi mdi-refresh'></i>
+        </button>
+        <button type='button' className='vdt-btn-pri' onClick={() => onModalOpen(null)}>
+          <i className='mdi mdi-plus'></i> Agregar nota de entrada
+        </button>
+      </>}
+      toolbar={storageContext ? <>
+        <button type='button' className='vdt-btn-soft' onClick={printStorageGrid}>
+          <i className='mdi mdi-printer'></i> Imprimir
+        </button>
+        <button type='button' className='vdt-btn-soft' onClick={downloadStoragePdf}>
+          <i className='mdi mdi-file-pdf-box'></i> PDF
+        </button>
+        <button type='button' className='vdt-btn-soft' onClick={downloadStorageExcel}>
+          <i className='mdi mdi-file-excel'></i> Excel
+        </button>
+        <button type='button' className='vdt-btn-soft' onClick={downloadStorageCsv}>
+          <i className='mdi mdi-file-delimited-outline'></i> CSV
+        </button>
+        <button type='button' className='vdt-btn-soft' onClick={copyStorageGrid}>
+          <i className='mdi mdi-content-copy'></i> Copiar
+        </button>
+      </> : null}
+      actions={storageContext ? storageRowActions : standardRowActions}
+      columns={storageContext ? storageVdColumns : standardVdColumns}
+      renderCard={(row, actionButtons) => (
+        <div className='vdt-card' onClick={() => onModalOpen(row, storageContext ? { viewOnly: row.entry_status === 'approved' } : {})}>
+          <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>
+                {storageContext ? (row.code ?? row.id) : (row.branch?.name ?? '-')}
+              </p>
+              <small className='text-muted'>
+                {storageContext ? clientLabel(row.client) : [row.warehouse?.name, row.supplier?.business_name].filter(Boolean).join(' · ')}
+              </small>
+            </div>
+            {storageContext
+              ? <span className={`badge ${row.entry_status === 'approved' ? 'bg-success' : row.entry_status === 'cancelled' ? 'bg-danger' : 'bg-warning text-dark'}`}>{entryStatusLabel(row.entry_status)}</span>
+              : (row.status !== null && <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>)}
+          </div>
+          <small className='text-muted d-block mt-2'>{row.document_type} {row.document_series}-{row.document_sequence}</small>
+          {actionButtons && <div className='d-flex flex-wrap mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal
@@ -1445,55 +1347,56 @@ const EntryNotes = () => {
         <fieldset className='row storage-entry-form' id='entry-note-form-container' disabled={isViewing}>
           <input ref={idRef} type='hidden' />
 
-          <SelectAPIFormGroup
-            eRef={storageClientRef}
+          <VdSelect
             label='Cliente'
             col='col-md-6'
             required
-            searchAPI='/api/admin/storage/clients/paginate'
-            searchBy='full_name'
-            dropdownParent='#entry-note-form-container'
+            value={selectedStorageClientId}
             onChange={onStorageClientChanged}
+            options={storageOptions.clients.map(client => ({ value: `${client.id}`, label: clientLabel(client) }))}
+            placeholder='-- Seleccionar cliente --'
           />
           <InputFormGroup eRef={providerDistributorRef} label='Proveedor/Distribuidor' col='col-md-6' />
 
-          <SelectFormGroup
+          <VdSelect
             label='Almacen'
             col='col-md-6'
             required
             value={selectedWarehouseId}
             onChange={onWarehouseChanged}
-            effectWith={[storageOptions.warehouses.length, selectedWarehouseId]}
-          >
-            <option value=''>Seleccione</option>
-            {storageOptions.warehouses.map(warehouse => <option key={`entry-note-warehouse-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
-          </SelectFormGroup>
+            options={storageOptions.warehouses.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))}
+            placeholder='Seleccione'
+          />
           <InputFormGroup eRef={entryDateRef} label='Fecha ingreso' col='col-md-6' type='date' required />
 
-          <div className='form-group col-md-3 mb-2'>
-            <label className='form-label'>Tipo documento <b className='text-danger'>*</b></label>
-            <select ref={documentTypeRef} className='form-control' required>
-              <option value='Guia Remision'>Guia Remision</option>
-              <option value='Factura'>Factura</option>
-              <option value='Boleta'>Boleta</option>
-              <option value='Nota de salida interna'>Nota de salida interna</option>
-              <option value='Nota de entrada interna'>Nota de entrada interna</option>
-            </select>
-          </div>
+          <VdSelect
+            label='Tipo documento'
+            col='col-md-3'
+            required
+            value={documentType}
+            onChange={setDocumentType}
+            options={[
+              { value: 'Guia Remision', label: 'Guia Remision' },
+              { value: 'Factura', label: 'Factura' },
+              { value: 'Boleta', label: 'Boleta' },
+              { value: 'Nota de salida interna', label: 'Nota de salida interna' },
+              { value: 'Nota de entrada interna', label: 'Nota de entrada interna' },
+            ]}
+          />
           <InputFormGroup eRef={documentSeriesRef} label='Serie' col='col-md-3' required />
           <InputFormGroup eRef={documentSequenceRef} label='Secuencia' col='col-md-3' required />
           <InputFormGroup eRef={documentDateRef} label='Fecha Documento' col='col-md-3' type='date' required />
 
           <hr className='my-3' />
 
-          <div className='form-group col-md-3 mb-2'>
-            <label className='form-label'>Invoice</label>
-            <select ref={invoiceTypeRef} className='form-control'>
-              <option value=''>Invoice</option>
-              <option value='Invoice'>Invoice</option>
-              <option value='Factura'>Factura</option>
-            </select>
-          </div>
+          <VdSelect
+            label='Invoice'
+            col='col-md-3'
+            value={invoiceType}
+            onChange={setInvoiceType}
+            options={[{ value: 'Invoice', label: 'Invoice' }, { value: 'Factura', label: 'Factura' }]}
+            placeholder='Invoice'
+          />
           <InputFormGroup eRef={invoiceSeriesRef} label='Invoice Serie' col='col-md-3' />
           <InputFormGroup eRef={invoiceSequenceRef} label='Invoice Secuencia' col='col-md-3' />
           <InputFormGroup eRef={invoiceDateRef} label='Invoice Fecha' col='col-md-3' type='date' />
@@ -1557,21 +1460,18 @@ const EntryNotes = () => {
                         <td style={{ minWidth: 170 }}><input className='form-control form-control-sm' value={manufacturerLabel} readOnly /></td>
                         <td style={{ minWidth: 210 }}><input className='form-control form-control-sm' value={storageCondition} readOnly /></td>
                         <td style={{ minWidth: 240 }}>
-                          <SelectFormGroup
+                          <VdSelect
                             col='col-12'
                             noMargin
                             value={selectedLocation}
                             disabled={locations.length === 0}
-                            onChange={(e) => onStorageLocationsChanged(item.uid, e)}
-                            effectWith={[locations.length, selectedLocation]}
-                          >
-                            <option value=''>Seleccione</option>
-                            {locations.map(location => (
-                              <option key={`entry-note-location-${item.uid}-${location.id}`} value={`${location.code}`}>
-                                {storageLocationOptionLabel(location)}{location.occupancy_status === 'Ocupado' ? ' | Ocupado' : ''}
-                              </option>
-                            ))}
-                          </SelectFormGroup>
+                            onChange={(value) => onStorageLocationsChanged(item.uid, value)}
+                            options={locations.map(location => ({
+                              value: `${location.code}`,
+                              label: `${storageLocationOptionLabel(location)}${location.occupancy_status === 'Ocupado' ? ' | Ocupado' : ''}`,
+                            }))}
+                            placeholder='Seleccione'
+                          />
                         </td>
                         <td style={{ minWidth: 140 }}><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.requested_quantity} onChange={(e) => onItemUpdated(item.uid, 'requested_quantity', e.target.value)} /></td>
                         <td style={{ minWidth: 140 }}><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.received_quantity} onChange={(e) => onItemUpdated(item.uid, 'received_quantity', e.target.value)} /></td>
@@ -1602,61 +1502,57 @@ const EntryNotes = () => {
       <fieldset className='row' id='entry-note-form-container' disabled={isViewing}>
         <input ref={idRef} type='hidden' />
 
-        <SelectFormGroup
-          eRef={branchRef}
+        <VdSelect
           label='Sede'
           col='col-md-4'
-          dropdownParent='#entry-note-form-container'
           value={selectedBranchId}
-          onChange={(e) => setSelectedBranchId(e.target.value)}
-          effectWith={[selectedBranchId, branches.length]}
-        >
-          <option value=''>-- Seleccione sede --</option>
-          {branches.map(branch => <option key={`branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
-        </SelectFormGroup>
-        <SelectAPIFormGroup
-          eRef={warehouseRef}
+          onChange={(value) => setSelectedBranchId(value)}
+          options={branches.map(branch => ({ value: `${branch.id}`, label: branch.name }))}
+          placeholder='-- Seleccione sede --'
+        />
+        <VdSelect
           label='Almacen'
           col='col-md-4'
           required
-          searchAPI='/api/admin/warehouses/paginate'
-          searchBy='name'
-          dropdownParent='#entry-note-form-container'
+          value={selectedWarehouseId}
           onChange={onWarehouseChanged}
+          options={warehouseOptions.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))}
+          placeholder='-- Seleccionar almacen --'
         />
-        <SelectAPIFormGroup
-          eRef={supplierRef}
+        <VdSelect
           label='Proveedor'
           col='col-md-4'
-          searchAPI='/api/admin/suppliers/paginate'
-          searchBy='business_name'
-          dropdownParent='#entry-note-form-container'
-          onChange={(e) => setSelectedSupplierId(e.target.value || '')}
+          value={selectedSupplierId}
+          onChange={(value) => setSelectedSupplierId(value || '')}
+          options={supplierOptions.map(supplier => ({ value: `${supplier.id}`, label: supplier.business_name }))}
+          placeholder='-- Seleccionar proveedor --'
         />
 
-        <div className='form-group col-md-2 mb-2'>
-          <label className='form-label'>Tipo documento</label>
-          <select ref={documentTypeRef} className='form-control'>
-            <option value='Boleta'>Boleta</option>
-            <option value='Factura'>Factura</option>
-            <option value='Ticket'>Ticket</option>
-            <option value='Otro'>Otro</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Tipo documento'
+          col='col-md-2'
+          value={documentType}
+          onChange={setDocumentType}
+          options={[
+            { value: 'Boleta', label: 'Boleta' },
+            { value: 'Factura', label: 'Factura' },
+            { value: 'Ticket', label: 'Ticket' },
+            { value: 'Otro', label: 'Otro' },
+          ]}
+        />
         <InputFormGroup eRef={documentSeriesRef} label='Serie' col='col-md-2' />
         <InputFormGroup eRef={documentSequenceRef} label='Secuencia' col='col-md-2' />
         <div className='form-group col-md-3 mb-2'>
           <label className='form-label'>Archivo</label>
           <input ref={documentFileRef} type='file' className='form-control' />
         </div>
-        <div className='form-group col-md-3 mb-2'>
-          <label className='form-label'>Moneda</label>
-          <select ref={currencyRef} className='form-control'>
-            <option value='PEN'>PEN</option>
-            <option value='USD'>USD</option>
-            <option value='EUR'>EUR</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Moneda'
+          col='col-md-3'
+          value={currency}
+          onChange={setCurrency}
+          options={[{ value: 'PEN', label: 'PEN' }, { value: 'USD', label: 'USD' }, { value: 'EUR', label: 'EUR' }]}
+        />
 
         <TextareaFormGroup eRef={observationsRef} label='Observaciones' col='col-12' rows={2} />
 
@@ -1781,16 +1677,14 @@ const EntryNotes = () => {
               }}
             />
           </div>
-          <SelectFormGroup
+          <VdSelect
             label='Seleccionar almacen'
             col='col-md-6'
             value={lotSearchWarehouseId}
-            onChange={(e) => setLotSearchWarehouseId(e.target.value)}
-            effectWith={[storageOptions.warehouses.length, lotSearchWarehouseId]}
-          >
-            <option value=''>Seleccione</option>
-            {storageOptions.warehouses.map(warehouse => <option key={`entry-note-lot-search-warehouse-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
-          </SelectFormGroup>
+            onChange={(value) => setLotSearchWarehouseId(value)}
+            options={storageOptions.warehouses.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))}
+            placeholder='Seleccione'
+          />
         </div>
 
         <div className='d-flex gap-2 justify-content-center mb-4'>
@@ -1810,20 +1704,20 @@ const EntryNotes = () => {
         <hr className='mt-0' />
 
         <div className='d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2'>
-          <label className='d-flex align-items-center gap-2 mb-0'>
+          <div className='d-flex align-items-center gap-2'>
             <span>Elementos:</span>
-            <select
-              className='form-select form-select-sm'
-              style={{ width: 80 }}
-              value={lotSearchPageSize}
-              onChange={(e) => {
-                setLotSearchPageSize(Number(e.target.value))
-                setLotSearchPage(1)
-              }}
-            >
-              {[10, 20, 50].map(size => <option key={`entry-note-lot-search-size-${size}`} value={size}>{size}</option>)}
-            </select>
-          </label>
+            <div style={{ width: 90 }}>
+              <VdSelect
+                noMargin
+                value={lotSearchPageSize}
+                onChange={(value) => {
+                  setLotSearchPageSize(Number(value))
+                  setLotSearchPage(1)
+                }}
+                options={[10, 20, 50].map(size => ({ value: size, label: `${size}` }))}
+              />
+            </div>
+          </div>
           <label className='d-flex align-items-center gap-2 mb-0'>
             <span>Filtrar:</span>
             <input className='form-control form-control-sm' value={lotSearchFilter} onChange={(e) => { setLotSearchFilter(e.target.value); setLotSearchPage(1) }} />

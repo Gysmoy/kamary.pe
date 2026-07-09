@@ -2,21 +2,21 @@ import React, { createRef, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
+import VdTable from '../Components/Adminto/VdTable';
+import VdSelect from '../Components/Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
-import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import Global from '../Utils/Global';
 import TakeOrdersRestClient from '../Actions/Admin/TakeOrdersRest';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 import { openTakeOrderPdf } from '../Utils/takeOrderPdf';
 import {
   commercialOrderStatusOptions,
   dispatchStatusOptions,
-  toLookup,
+  getCommercialOrderStatusLabel,
+  getDispatchStatusLabel,
 } from '../Utils/statusLabels';
 
 const takeOrdersRest = new TakeOrdersRestClient()
@@ -75,6 +75,8 @@ const formatCustomer = (data) => (
   ?? '-'
 )
 
+const formatDateTime = (value) => value ? `${value}`.slice(0, 19).replace('T', ' ') : ''
+
 const mapItemTotals = (item) => {
   const quantity = Number(item.quantity || 0)
   const price = Number(item.price_unit || 0)
@@ -128,7 +130,7 @@ const textValue = (value, fallback = '') => {
 const paymentConditionFromClient = (client) => Number(client?.contract_due_days || 0) > 0 ? 'Credito' : 'Contado'
 
 const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
 
   const idRef = useRef()
@@ -136,12 +138,9 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const clientRef = useRef()
   const warehouseRef = useRef()
   const priceListRef = useRef()
-  const documentTypeRef = useRef()
-  const paymentConditionRef = useRef()
   const promisedDateRef = useRef()
   const deliveryAddressRef = useRef()
   const deliveryReferenceRef = useRef()
-  const ubigeoRef = useRef()
   const dispatchContactNameRef = useRef()
   const dispatchContactPhoneRef = useRef()
   const purchaseOrderRef = useRef()
@@ -162,6 +161,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const [selectedCommercialChannel, setSelectedCommercialChannel] = useState('')
   const [selectedSegment, setSelectedSegment] = useState('')
   const [selectedDocumentType, setSelectedDocumentType] = useState('Factura')
+  const [selectedPaymentCondition, setSelectedPaymentCondition] = useState('')
+  const [selectedUbigeo, setSelectedUbigeo] = useState('')
   const [clientSnapshot, setClientSnapshot] = useState(null)
   const [networks, setNetworks] = useState([])
   const [deliveryAddresses, setDeliveryAddresses] = useState([])
@@ -284,7 +285,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     setSelectedDeliveryAddressId('')
     if (deliveryAddressRef.current) deliveryAddressRef.current.value = ''
     if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = ''
-    if (ubigeoRef.current) ubigeoRef.current.value = ''
+    setSelectedUbigeo('')
     if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = ''
     if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = ''
     setMapPoint(defaultMapPoint)
@@ -298,7 +299,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 
     if (deliveryAddressRef.current) deliveryAddressRef.current.value = textValue(address?.address, textValue(fallbackClient?.full_address))
     if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = textValue(address?.reference)
-    if (ubigeoRef.current) ubigeoRef.current.value = textValue(address?.ubigeo, textValue(fallbackClient?.ubigeo))
+    setSelectedUbigeo(textValue(address?.ubigeo, textValue(fallbackClient?.ubigeo)))
     if (dispatchContactNameRef.current) {
       dispatchContactNameRef.current.value = textValue(address?.contact_name, textValue(fallbackClient?.primary_contact))
     }
@@ -350,9 +351,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
       setDeliveryAddresses([])
       setSelectedCommercialChannel('')
       setSelectedSegment('')
-      if (documentTypeRef.current) documentTypeRef.current.value = ''
       setSelectedDocumentType('')
-      if (paymentConditionRef.current) paymentConditionRef.current.value = ''
+      setSelectedPaymentCondition('')
       clearAddressSnapshot()
       return
     }
@@ -367,9 +367,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     setSelectedCommercialChannel(fallbackClient?.commercial_channel ?? selectedNetwork?.commercial_channel ?? '')
     setSelectedSegment(fallbackClient?.segment ?? selectedNetwork?.segment ?? '')
     const documentType = documentTypeFromClient(fallbackClient)
-    if (documentTypeRef.current) documentTypeRef.current.value = documentType
     setSelectedDocumentType(documentType)
-    if (paymentConditionRef.current) paymentConditionRef.current.value = paymentConditionFromClient(fallbackClient)
+    setSelectedPaymentCondition(paymentConditionFromClient(fallbackClient))
     await loadDeliveryAddresses(defaultNetworkId, preferredAddressId, active, fallbackClient)
   }
 
@@ -427,9 +426,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     if (idRef.current) idRef.current.value = data?.id ?? ''
     if (codeRef.current) codeRef.current.value = data?.code ?? 'Se genera al guardar'
     const documentType = data?.document_type ?? 'Factura'
-    if (documentTypeRef.current) documentTypeRef.current.value = documentType
     setSelectedDocumentType(documentType)
-    if (paymentConditionRef.current) paymentConditionRef.current.value = data?.payment_condition ?? ''
+    setSelectedPaymentCondition(data?.payment_condition ?? '')
     if (promisedDateRef.current) promisedDateRef.current.value = data?.promised_delivery_at ? data.promised_delivery_at.toString().slice(0, 10) : ''
     if (purchaseOrderRef.current) purchaseOrderRef.current.value = data?.purchase_order ?? ''
     if (referralGuideRef.current) referralGuideRef.current.value = data?.referral_guide ?? ''
@@ -523,9 +521,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     }
     if (data?.id) {
       const persistedDocumentType = data?.document_type ?? 'Factura'
-      if (documentTypeRef.current) documentTypeRef.current.value = persistedDocumentType
       setSelectedDocumentType(persistedDocumentType)
-      if (paymentConditionRef.current) paymentConditionRef.current.value = data?.payment_condition ?? ''
+      setSelectedPaymentCondition(data?.payment_condition ?? '')
     }
 
     setSelectedBusinessId(defaults.businessId)
@@ -543,10 +540,10 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     client_distribution_network_id: selectedNetworkId || null,
     client_delivery_address_id: selectedDeliveryAddressId || null,
     price_list_id: selectedPriceListId || null,
-    document_type: documentTypeRef.current?.value || 'Factura',
+    document_type: selectedDocumentType || 'Factura',
     currency: 'PEN',
-    payment_condition: paymentConditionRef.current?.value || '',
-    payment_method: paymentConditionRef.current?.value ? 'Transferencia' : '',
+    payment_condition: selectedPaymentCondition || '',
+    payment_method: selectedPaymentCondition ? 'Transferencia' : '',
     issue_date: new Date().toISOString().slice(0, 10),
     promised_delivery_at: promisedDateRef.current?.value || null,
     order_status: bill ? 'billed' : 'pending',
@@ -557,7 +554,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     segment: selectedSegment || '',
     delivery_address: deliveryAddressRef.current?.value?.trim() || '',
     delivery_reference: deliveryReferenceRef.current?.value?.trim() || '',
-    ubigeo: ubigeoRef.current?.value?.trim() || '',
+    ubigeo: `${selectedUbigeo || ''}`.trim(),
     map_lat: mapPoint.lat,
     map_lng: mapPoint.lng,
     dispatch_contact_name: dispatchContactNameRef.current?.value?.trim() || '',
@@ -596,7 +593,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 
     const result = await takeOrdersRest.save(buildRequest(bill))
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(modalRef.current).modal('hide')
   }
 
@@ -638,8 +635,8 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     await repriceAllItems()
   }
 
-  const onDeliveryAddressChanged = (e) => {
-    const addressId = e.target.value || ''
+  const onDeliveryAddressChanged = (value) => {
+    const addressId = value || ''
     setSelectedDeliveryAddressId(addressId)
     const selected = deliveryAddresses.find(item => `${item.id}` === `${addressId}`)
     applyDeliveryAddressSnapshot(selected, clientSnapshot)
@@ -781,7 +778,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     if (!isConfirmed) return
     const result = await takeOrdersRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const openMap = () => {
@@ -796,104 +793,104 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     ? `https://www.google.com/maps/embed/v1/place?key=${googleMapsApiKey}&q=${encodeURIComponent(mapQuery)}&zoom=13`
     : ''
 
+  const rowActions = (row) => [
+    { icon: 'mdi mdi-pencil', title: 'Editar pedido', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r, r?.order_profile ?? 'micro') },
+    { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir PDF', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openTakeOrderPdf(r) },
+    { icon: 'mdi mdi-delete', title: 'Eliminar pedido', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+  ]
+
   return (<>
-    <Table
-      gridRef={gridRef}
-      title='Lista de Toma pedido'
+    <VdTable
+      ref={tableRef}
       rest={takeOrdersRest}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        });
-        // Botones de Crear pedido por perfil, en la barra del grid (uno por perfil)
-        Object.values(orderProfiles).slice().reverse().forEach((item) => {
-          container.unshift({
-            widget: 'dxButton', location: 'after',
-            options: {
-              icon: 'add',
-              text: item.title,
-              type: 'default',
-              stylingMode: 'contained',
-              hint: `Crear pedido ${item.title}`,
-              onClick: () => onModalOpen(null, item.key)
-            }
-          });
-        });
-      }}
-      pageSize={25}
+      icon='mdi mdi-cart-outline'
+      title='Toma pedido'
+      unit='pedidos'
+      defaultPageSize={25}
+      searchFields={['code', 'referral_guide', 'client.full_name', 'eventual_client.business_name', 'business.name', 'creator.fullname']}
+      searchPlaceholder='Buscar por código, comprobante, cliente o empresa…'
+      emptyText='No se encontraron tomas de pedido.'
+      headerActions={<>
+        {Object.values(orderProfiles).map((item) => (
+          <button key={item.key} type='button' className='vdt-btn-pri' title={`Crear pedido ${item.title}`} onClick={() => onModalOpen(null, item.key)}>
+            <i className='mdi mdi-plus'></i> {item.title}
+          </button>
+        ))}
+        <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar tabla' onClick={() => tableRef.current?.refresh()}>
+          <i className='mdi mdi-refresh'></i>
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
         {
-          caption: 'Acciones',
-          width: 150,
-          fixed: true,
-          fixedPosition: 'left',
-          allowFiltering: false,
-          allowExporting: false,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Editar pedido',
-              icon: 'mdi mdi-menu',
-              onClick: () => onModalOpen(data, data?.order_profile ?? 'micro')
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger ms-1',
-              title: 'Imprimir PDF',
-              icon: 'mdi mdi-file-pdf-box',
-              onClick: () => openTakeOrderPdf(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger ms-1',
-              title: 'Eliminar pedido',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.id)
-            }))
-          }
-        },
-        { dataField: 'order_status', caption: 'Estado', width: 120, lookup: toLookup(commercialOrderStatusOptions) },
-        {
-          dataField: 'code',
-          caption: 'Código',
-          width: 150,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data, data?.order_profile ?? 'micro'), 'Editar pedido')
+          key: 'estado', label: 'Estado', field: 'order_status', width: '120px',
+          filter: { type: 'select', options: commercialOrderStatusOptions },
+          render: (row) => getCommercialOrderStatusLabel(row.order_status),
         },
         {
-          dataField: 'referral_guide',
-          caption: 'Comprobante',
-          width: 130,
-          calculateCellValue: (data) => data.referral_guide || '-'
+          key: 'codigo', label: 'Código', field: 'code', width: '150px', filter: { type: 'text' },
+          render: (row) => (
+            <a className='admin-grid-edit-link' style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row, row?.order_profile ?? 'micro')} title='Editar pedido'>
+              {row.code}
+            </a>
+          ),
         },
-        { dataField: 'document_type', caption: 'Tipo comprobante', width: 145 },
         {
-          dataField: 'customer',
-          caption: 'Cliente',
-          minWidth: 250,
-          calculateCellValue: formatCustomer
+          key: 'comprobante', label: 'Comprobante', field: 'referral_guide', width: '130px', filter: { type: 'text' },
+          render: (row) => row.referral_guide || '-',
         },
-        { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        { dataField: 'payment_condition', caption: 'Tipo de pago', width: 140 },
+        { key: 'tipo_comprobante', label: 'Tipo comprobante', field: 'document_type', width: '145px', filter: { type: 'text' } },
         {
-          dataField: 'creator.fullname',
-          caption: 'Usuario',
-          width: 150,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
+          key: 'cliente', label: 'Cliente', field: 'client.full_name', sortable: false,
+          filter: { type: 'text', fields: ['client.full_name', 'eventual_client.business_name'] },
+          render: (row) => formatCustomer(row),
         },
-        { dataField: 'created_at', caption: 'Fecha registro', width: 150, dataType: 'datetime' },
         {
-          dataField: 'updater.fullname',
-          caption: 'Usuario registro',
-          width: 160,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
+          key: 'total', label: 'Total', field: 'total', width: '110px', align: 'right', filter: { type: 'number' },
+          render: (row) => Number(row.total || 0).toFixed(2),
         },
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 160 },
-        { dataField: 'dispatch_status', caption: 'Despacho', width: 120, lookup: toLookup(dispatchStatusOptions), visible: false },
+        { key: 'tipo_pago', label: 'Tipo de pago', field: 'payment_condition', width: '140px', filter: { type: 'text' } },
+        {
+          key: 'usuario', label: 'Usuario', field: 'creator.fullname', width: '150px',
+          filter: { type: 'text', field: 'creator.fullname' },
+          render: (row) => formatAuditUser(row.creator),
+        },
+        {
+          key: 'fecha_registro', label: 'Fecha registro', field: 'created_at', width: '150px', filter: { type: 'date' },
+          render: (row) => formatDateTime(row.created_at),
+        },
+        {
+          key: 'usuario_registro', label: 'Usuario registro', field: 'updater.fullname', width: '160px',
+          filter: { type: 'text', field: 'updater.fullname' },
+          render: (row) => formatAuditUser(row.updater),
+        },
+        {
+          key: 'empresa', label: 'Empresa', field: 'business.name', visible: false, sortable: false,
+          filter: { type: 'text', field: 'business.name' },
+        },
+        {
+          key: 'despacho', label: 'Despacho', field: 'dispatch_status', visible: false,
+          filter: { type: 'select', options: dispatchStatusOptions },
+          render: (row) => getDispatchStatusLabel(row.dispatch_status),
+        },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className='vdt-card' onClick={() => onModalOpen(row, row?.order_profile ?? 'micro')}>
+          <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>{row.code}</p>
+              <small className='text-muted'>{formatCustomer(row)}</small>
+            </div>
+            <span className='badge badge-soft-primary'>{getCommercialOrderStatusLabel(row.order_status)}</span>
+          </div>
+          <div className='d-flex justify-content-between mt-2'>
+            <small className='text-muted'>{row.document_type}</small>
+            <span className='fw-semibold'>S/ {Number(row.total || 0).toFixed(2)}</span>
+          </div>
+          <small className='text-muted d-block mt-1'>{formatDateTime(row.created_at)}</small>
+          {actionButtons && <div className='d-flex mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal
@@ -935,42 +932,54 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
             </div>
           </div>
 
-          <div className='col-md-6 mb-2'>
-            <label className='form-label'>{profile.channelLabel}</label>
-            <select className='form-control' value={selectedCommercialChannel} disabled onChange={(e) => setSelectedCommercialChannel(e.target.value)}>
-              <option value=''>Seleccione</option>
-              {channelOptions.map(option => <option key={`channel-${option}`} value={option}>{option}</option>)}
-            </select>
-          </div>
-          <div className='col-md-6 mb-2'>
-            <label className='form-label'>{profile.segmentLabel}</label>
-            <select className='form-control' value={selectedSegment} disabled onChange={(e) => setSelectedSegment(e.target.value)}>
-              <option value=''>Seleccione</option>
-              {segmentOptions.map(option => <option key={`segment-${option}`} value={option}>{option}</option>)}
-            </select>
-          </div>
+          <VdSelect
+            label={profile.channelLabel}
+            col='col-md-6'
+            disabled
+            value={selectedCommercialChannel}
+            onChange={setSelectedCommercialChannel}
+            options={channelOptions.map(option => ({ value: option, label: option }))}
+            placeholder='Seleccione'
+          />
+          <VdSelect
+            label={profile.segmentLabel}
+            col='col-md-6'
+            disabled
+            value={selectedSegment}
+            onChange={setSelectedSegment}
+            options={segmentOptions.map(option => ({ value: option, label: option }))}
+            placeholder='Seleccione'
+          />
 
           <div className='col-md-6 mb-2'>
             <label className='form-label'>Celular</label>
             <input className='form-control' value={clientSnapshot?.phone ?? ''} disabled readOnly />
           </div>
-          <div className='col-md-6 mb-2'>
-            <label className='form-label'>Tipo comprobante</label>
-            <select ref={documentTypeRef} className='form-control' disabled>
-              <option value=''>Seleccione</option>
-              <option value='Factura'>Factura</option>
-              <option value='Boleta'>Boleta</option>
-              <option value='Nota de pedido'>Nota de pedido</option>
-            </select>
-          </div>
-          <div className='col-md-6 mb-2'>
-            <label className='form-label'>Tipo pago</label>
-            <select ref={paymentConditionRef} className='form-control' disabled>
-              <option value=''>Seleccione</option>
-              <option value='Contado'>TRANSFERENCIA [CONTADO]</option>
-              <option value='Credito'>TRANSFERENCIA [CREDITO]</option>
-            </select>
-          </div>
+          <VdSelect
+            label='Tipo comprobante'
+            col='col-md-6'
+            disabled
+            value={selectedDocumentType}
+            onChange={setSelectedDocumentType}
+            options={[
+              { value: 'Factura', label: 'Factura' },
+              { value: 'Boleta', label: 'Boleta' },
+              { value: 'Nota de pedido', label: 'Nota de pedido' },
+            ]}
+            placeholder='Seleccione'
+          />
+          <VdSelect
+            label='Tipo pago'
+            col='col-md-6'
+            disabled
+            value={selectedPaymentCondition}
+            onChange={setSelectedPaymentCondition}
+            options={[
+              { value: 'Contado', label: 'TRANSFERENCIA [CONTADO]' },
+              { value: 'Credito', label: 'TRANSFERENCIA [CREDITO]' },
+            ]}
+            placeholder='Seleccione'
+          />
           <div className='col-md-6 mb-2'>
             <label className='form-label'>Fecha entrega <i className='mdi mdi-information text-muted'></i></label>
             <input ref={promisedDateRef} type='date' className='form-control' placeholder='Fecha de documento' />
@@ -978,33 +987,37 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 
           <div className='col-12 mb-2'>
             <label className='form-label'>Dirección</label>
-            <div className='input-group flex-nowrap'>
-              <select className='form-control' style={{ minWidth: 0, width: '1%' }} value={selectedDeliveryAddressId} onChange={onDeliveryAddressChanged}>
-                <option value=''>Seleccione</option>
-                {deliveryAddresses.map(address => (
-                  <option key={`take-order-address-${address.id}`} value={address.id}>
-                    {`${address.code ?? ''} ${address.name ?? address.address ?? ''}`.trim()}
-                  </option>
-                ))}
-              </select>
-              <div className='input-group-append'>
-                <button type='button' className='btn btn-info text-white h-100 px-3' title='Abrir mapa' onClick={openMap}>
-                  <i className='mdi mdi-map-marker'></i>
-                </button>
+            <div className='d-flex align-items-start' style={{ gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <VdSelect
+                  noMargin
+                  value={selectedDeliveryAddressId}
+                  onChange={onDeliveryAddressChanged}
+                  options={deliveryAddresses.map(address => ({
+                    value: `${address.id}`,
+                    label: `${address.code ?? ''} ${address.name ?? address.address ?? ''}`.trim(),
+                  }))}
+                  placeholder='Seleccione'
+                />
               </div>
+              <button type='button' className='btn btn-info text-white' style={{ height: 38 }} title='Abrir mapa' onClick={openMap}>
+                <i className='mdi mdi-map-marker'></i>
+              </button>
             </div>
           </div>
 
-          <div className='col-12 mb-2'>
-            <label className='form-label'>Ubigeo</label>
-            <select ref={ubigeoRef} className='form-control' defaultValue='' disabled>
-              <option value=''>Seleccione</option>
-              {deliveryAddresses.map(address => address.ubigeo && (
-                <option key={`take-order-ubigeo-${address.id}`} value={address.ubigeo}>{address.ubigeo}</option>
-              ))}
-              {clientSnapshot?.ubigeo && <option value={clientSnapshot.ubigeo}>{clientSnapshot.ubigeo}</option>}
-            </select>
-          </div>
+          <VdSelect
+            label='Ubigeo'
+            col='col-12'
+            disabled
+            value={selectedUbigeo}
+            onChange={setSelectedUbigeo}
+            options={[
+              ...deliveryAddresses.filter(address => address.ubigeo).map(address => ({ value: address.ubigeo, label: address.ubigeo })),
+              ...(clientSnapshot?.ubigeo ? [{ value: clientSnapshot.ubigeo, label: clientSnapshot.ubigeo }] : []),
+            ]}
+            placeholder='Seleccione'
+          />
 
           <div className='col-12 mb-2'>
             <label className='form-label'>Referencia</label>

@@ -2,14 +2,12 @@ import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, use
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
-import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import UbigeoCascade from '@Adminto/form/UbigeoCascade';
 import ClientsRest from '../Actions/Admin/ClientsRest';
@@ -18,7 +16,6 @@ import StorageClientNotificationsRest from '../Actions/Admin/StorageClientNotifi
 import StorageClientTariffsRest from '../Actions/Admin/StorageClientTariffsRest';
 import StorageClientContractsRest from '../Actions/Admin/StorageClientContractsRest';
 import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const clientsRest = new ClientsRest()
 const usersRest = new UsersRest()
@@ -49,10 +46,6 @@ const setRefChecked = (ref, value) => {
 const getRefChecked = (ref) => !!ref?.current?.checked
 const normalizePrefix = (value) => (value ?? '').toString().replace(/\D+/g, '')
 const normalizeDigits = (value) => (value ?? '').toString().replace(/\D+/g, '')
-const renderStatusBadge = (container, value) => {
-  const active = value === true || value === 1 || value === '1'
-  container.html(`<span class="badge ${active ? 'bg-soft-success text-success border border-success' : 'bg-soft-secondary text-secondary border border-secondary'}">${active ? 'Activo' : 'Inactivo'}</span>`)
-}
 const splitEmailList = (value) => (value ?? '').toString().split(/[,\n;]+/).map(email => email.trim()).filter(Boolean)
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 const uniqueEmailList = (emails = []) => {
@@ -160,7 +153,7 @@ const EmailTagsInput = forwardRef(({
   return <div className={`form-group ${col} mb-2`}>
     {label && <label className='form-label mb-1'>
       {label}
-      {specification && <small className='ms-1 fa fa-question-circle text-muted' title={specification}></small>}
+      {specification && <small className='ms-1 mdi mdi-help-circle-outline text-muted' title={specification}></small>}
     </label>}
     <div
       className='form-control d-flex flex-wrap align-items-center gap-1 py-1'
@@ -220,6 +213,17 @@ const formatFileSize = (bytes = 0) => {
   return `${(size / 1024 / 1024).toFixed(1)} MB`
 }
 
+const EmailListCell = ({ value }) => {
+  const emails = splitEmailList(value)
+  if (!emails.length) return '-'
+  return <>{emails.map((email, index) => <div key={`${email}-${index}`}>{email}</div>)}</>
+}
+
+const StatusBadge = ({ value }) => {
+  const active = value === true || value === 1 || value === '1'
+  return <span className={`badge ${active ? 'bg-soft-success text-success border border-success' : 'bg-soft-secondary text-secondary border border-secondary'}`}>{active ? 'Activo' : 'Inactivo'}</span>
+}
+
 const fileIdentity = (file) => `${file.name}-${file.size}-${file.lastModified}`
 const contractFileUrl = (id, download = false) => `/api/admin/storage/client-contracts/${id}/file${download ? '?download=1' : ''}`
 const contractAnnexFileUrl = (id, download = false) => `/api/admin/storage/client-contract-annexes/${id}/file${download ? '?download=1' : ''}`
@@ -274,17 +278,17 @@ const Clients = ({
   serviceContext = false,
   storageNotificationOptions = [],
 }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const usersModalRef = useRef()
   const userFormModalRef = useRef()
-  const usersGridRef = useRef()
+  const usersTableRef = useRef()
   const notificationsModalRef = useRef()
-  const notificationsGridRef = useRef()
+  const notificationsTableRef = useRef()
   const tariffModalRef = useRef()
   const contractsModalRef = useRef()
   const contractFormModalRef = useRef()
-  const contractsGridRef = useRef()
+  const contractsTableRef = useRef()
   const lookupTimeoutRef = useRef()
   const pendingModalDataRef = useRef(null)
 
@@ -363,7 +367,7 @@ const Clients = ({
   const [lastLookedDocumentKey, setLastLookedDocumentKey] = useState('')
   const [phonePrefix, setPhonePrefix] = useState('51')
   const [quickFilter, setQuickFilter] = useState(initialQuickFilter)
-  const [totalRows, setTotalRows] = useState(0)
+  const [statusValue, setStatusValue] = useState('1')
   const [ubigeoLocation, setUbigeoLocation] = useState(EMPTY_UBIGEO_SELECTION)
   const [selectedClientForUsers, setSelectedClientForUsers] = useState(null)
   const [selectedClientForNotifications, setSelectedClientForNotifications] = useState(null)
@@ -385,6 +389,8 @@ const Clients = ({
     storageContext ? ['has_storage_service', '=', 1] : null,
     resolveQuickFilterValue(quickFilter)
   ), [quickFilter, storageContext])
+
+  const refresh = () => tableRef.current?.refresh()
 
   const displayNameLabel = isEventual
     ? (isRuc ? 'Razon social' : 'Nombre o razon social')
@@ -435,6 +441,7 @@ const Clients = ({
     setRefValue(taxLastUpdatedAtRef, '')
     setRefValue(notesRef, '')
     setRefValue(statusRef, '1')
+    setStatusValue('1')
   }
 
   const applyApiClientData = (client = {}, kind = clientKind) => {
@@ -511,9 +518,10 @@ const Clients = ({
     setIsDocumentDataLocked(true)
   }
 
-  const onDocumentTypeChanged = (e) => {
-    const nextType = e.target.value || 'dni'
+  const onDocumentTypeChanged = (value) => {
+    const nextType = value || 'dni'
     setDocumentType(nextType)
+    setRefValue(documentTypeRef, nextType)
     setIsDocumentDataLocked(false)
     setLastLookedDocumentKey('')
     setRefValue(documentNumberRef, '')
@@ -600,7 +608,9 @@ const Clients = ({
     setRefValue(taxpayerStatusRef, data.taxpayer_status ?? '')
     setRefValue(taxLastUpdatedAtRef, data.tax_last_updated_at ?? '')
     setRefValue(notesRef, data.notes ?? '')
-    setRefValue(statusRef, data.status === false || data.status === 0 ? '0' : '1')
+    const nextStatus = data.status === false || data.status === 0 ? '0' : '1'
+    setRefValue(statusRef, nextStatus)
+    setStatusValue(nextStatus)
   }
 
   const onModalOpen = (data = null, forcedKind = null) => {
@@ -660,8 +670,8 @@ const Clients = ({
     const request = {
       id: getRefValue(idRef) || undefined,
       data_source: storageContext ? 'client' : (getRefValue(dataSourceRef) || (clientKind === 'eventual' ? 'eventual_client' : 'client')),
-      client_kind: storageContext ? 'regular' : getRefValue(clientKindRef),
-      document_type: getRefValue(documentTypeRef),
+      client_kind: storageContext ? 'regular' : clientKind,
+      document_type: documentType,
       document_number: normalizeDigits(getRefValue(documentNumberRef)),
       full_name: getRefValue(fullNameRef).trim(),
       has_storage_service: storageContext ? true : getRefChecked(hasStorageServiceRef),
@@ -674,7 +684,7 @@ const Clients = ({
       primary_contact: storageContext ? '' : getRefValue(primaryContactRef).trim(),
       primary_contact_phone: storageContext ? '' : getRefValue(primaryContactPhoneRef).trim(),
       phone: getRefValue(phoneRef).trim(),
-      phone_prefix: normalizePrefix(getRefValue(phonePrefixRef)) || '51',
+      phone_prefix: normalizePrefix(phonePrefix) || '51',
       short_code: getRefValue(shortCodeRef).trim(),
       ubigeo: serviceContext ? getRefValue(serviceUbigeoRef).trim() : (storageContext ? '' : (ubigeoLocation.ubigeo?.trim?.() ?? '')),
       full_address: serviceContext ? getRefValue(fiscalAddressRef).trim() : getRefValue(addressRef).trim(),
@@ -697,13 +707,13 @@ const Clients = ({
       taxpayer_status: serviceContext ? getRefValue(taxpayerStatusRef).trim() : undefined,
       tax_last_updated_at: serviceContext ? getRefValue(taxLastUpdatedAtRef).trim() : undefined,
       notes: getRefValue(notesRef).trim(),
-      status: getRefValue(statusRef) || undefined,
+      status: (storageContext || serviceContext) ? statusValue : (getRefValue(statusRef) || undefined),
     }
 
     const result = await clientsRest.save(request)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
     $(modalRef.current).modal('hide')
   }
 
@@ -716,7 +726,7 @@ const Clients = ({
       data_source: data.data_source,
     })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
   }
 
   const onDeleteClicked = async (data) => {
@@ -732,26 +742,14 @@ const Clients = ({
 
     const result = await clientsRest.delete(data)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
   }
 
-  const refreshUsersGrid = () => {
-    if (!usersGridRef.current) return
-    const instance = $(usersGridRef.current).dxDataGrid('instance')
-    instance?.refresh()
-  }
+  const refreshUsersGrid = () => usersTableRef.current?.refresh()
 
-  const refreshNotificationsGrid = () => {
-    if (!notificationsGridRef.current) return
-    const instance = $(notificationsGridRef.current).dxDataGrid('instance')
-    instance?.refresh()
-  }
+  const refreshNotificationsGrid = () => notificationsTableRef.current?.refresh()
 
-  const refreshContractsGrid = () => {
-    if (!contractsGridRef.current) return
-    const instance = $(contractsGridRef.current).dxDataGrid('instance')
-    instance?.refresh()
-  }
+  const refreshContractsGrid = () => contractsTableRef.current?.refresh()
 
   const selectedClientId = selectedClientForUsers?.entity_id ?? selectedClientForUsers?.id ?? null
   const selectedClientName = selectedClientForUsers?.display_name ?? selectedClientForUsers?.full_name ?? selectedClientForUsers?.business_name ?? ''
@@ -777,16 +775,6 @@ const Clients = ({
   const getNotificationLabel = (value) => {
     const option = notificationOptions.find(current => getNotificationOptionValue(current) === `${value ?? ''}`)
     return getNotificationOptionLabel(option)
-  }
-
-  const renderEmailList = (container, value) => {
-    container.empty()
-    const emails = splitEmailList(value)
-    if (!emails.length) {
-      container.text('-')
-      return
-    }
-    emails.forEach(email => $('<div></div>').text(email).appendTo(container))
   }
 
   const onUsersModalOpen = (data) => {
@@ -933,7 +921,7 @@ const Clients = ({
     if (!result) return
 
     $(tariffModalRef.current).modal('hide')
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
   }
 
   const clearContractForm = () => {
@@ -1197,241 +1185,166 @@ const Clients = ({
   const isIdentityBlocked = isEditing || (isDocumentDataLocked && ['dni', 'ruc'].includes(documentType))
 
   return (<>
-    <Table
-      gridRef={gridRef}
-      title={<div className='d-flex flex-wrap align-items-center justify-content-between gap-3'>
-        <div>
-          <h4 className='mb-1'>{serviceContext ? 'Clientes' : `Lista de ${sectionTitle}`}</h4>
-          {!serviceContext && <small className='text-muted'>{storageContext ? 'Clientes con servicio de almacenamiento.' : 'Modulo unificado para clientes regulares y eventuales.'}</small>}
-        </div>
-        {!storageContext && !serviceContext && <div className='d-flex flex-wrap align-items-center gap-2'>
+    <VdTable
+      key={quickFilter}
+      ref={tableRef}
+      rest={clientsRest}
+      icon="mdi mdi-account-multiple"
+      title={serviceContext ? 'Clientes' : `Lista de ${sectionTitle}`}
+      unit="clientes"
+      defaultPageSize={serviceContext ? 10 : 25}
+      baseFilter={filterValue}
+      searchFields={serviceContext
+        ? ['document_number', 'display_name', 'fiscal_address', 'full_address', 'short_code']
+        : ['document_number', 'display_name', 'full_name', 'business_name', 'email', 'primary_contact']}
+      searchPlaceholder="Buscar cliente…"
+      emptyText="No se encontraron clientes."
+      toolbar={(!storageContext && !serviceContext) ? (
+        <div className="d-flex flex-wrap align-items-center gap-2">
           {QUICK_FILTERS.map(filter => (
             <button
               key={filter.key}
-              type='button'
+              type="button"
               className={`btn btn-sm ${quickFilter === filter.key ? 'btn-primary' : 'btn-outline-primary'}`}
               onClick={() => setQuickFilter(filter.key)}
             >
               {filter.label}
             </button>
           ))}
-          <span className='badge badge-soft-secondary'>{totalRows} registros</span>
-        </div>}
-      </div>}
-      rest={clientsRest}
-      filterValue={filterValue}
-      onRefresh={(payload) => setTotalRows(payload?.totalCount ?? 0)}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        })
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: `Agregar cliente ${getCreateKindFromFilter(quickFilter, defaultClientKind) === 'eventual' ? 'eventual' : 'regular'}`,
-            onClick: () => onModalOpen(null, getCreateKindFromFilter(quickFilter, defaultClientKind))
-          }
-        })
+        </div>
+      ) : null}
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refresh}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen(null, getCreateKindFromFilter(quickFilter, defaultClientKind))}>
+          <i className="mdi mdi-plus"></i> Nuevo cliente {getCreateKindFromFilter(quickFilter, defaultClientKind) === 'eventual' ? 'eventual' : ''}
+        </button>
+      </>}
+      actions={(row) => {
+        if (serviceContext) return [
+          { icon: 'mdi mdi-pencil', title: 'Editar cliente', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+          { icon: 'mdi mdi-delete', title: 'Eliminar cliente', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r) },
+        ]
+        const list = [{ icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) }]
+        if (storageContext) {
+          list.push({ icon: 'mdi mdi-currency-usd', title: 'Tarifario', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onTariffModalOpen(r) })
+          list.push({ icon: 'mdi mdi-file-document', title: 'Contrato cliente', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onContractsModalOpen(r) })
+          list.push({ icon: 'mdi mdi-account-group', title: 'Mantenimiento usuarios', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onUsersModalOpen(r) })
+          list.push({ icon: 'mdi mdi-send', title: 'Notificaciones cliente', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onNotificationsModalOpen(r) })
+        }
+        list.push({ icon: 'mdi mdi-delete', title: 'Eliminar cliente', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r) })
+        return list
       }}
-      pageSize={serviceContext ? 10 : 25}
       columns={serviceContext ? [
-        { dataField: 'client_kind', visible: false, showInColumnChooser: false },
         {
-          dataField: 'entity_id',
-          caption: 'ID',
-          width: 80,
-          cellTemplate: (container, { data }) => container.text(String(data?.entity_id ?? '').padStart(3, '0'))
+          key: 'id', label: 'ID', field: 'entity_id', width: '80px', filter: { type: 'number' },
+          render: (row) => String(row?.entity_id ?? '').padStart(3, '0'),
+        },
+        { key: 'ruc', label: 'RUC', field: 'document_number', width: '140px', filter: { type: 'text' } },
+        {
+          key: 'razon', label: 'Razón social', field: 'display_name', filter: { type: 'text', fields: ['display_name', 'full_name'] },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar cliente">
+              {row?.display_name ?? row?.full_name ?? '-'}
+            </a>
+          ),
         },
         {
-          caption: 'ACCIONES',
-          width: 120,
-          allowFiltering: false,
-          allowExporting: false,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-info',
-              title: 'Editar cliente',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar cliente',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data)
-            }))
-          }
+          key: 'fiscal', label: 'Dirección fiscal', field: 'fiscal_address', filter: { type: 'text', fields: ['fiscal_address', 'full_address'] },
+          render: (row) => row.fiscal_address ?? row.full_address ?? '',
         },
-        { dataField: 'document_number', caption: 'RUC', width: 140 },
+        { key: 'short', label: 'Código corto', field: 'short_code', width: '140px', filter: { type: 'text' } },
         {
-          dataField: 'display_name',
-          caption: 'RAZON SOCIAL',
-          minWidth: 260,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.display_name ?? data?.full_name, () => onModalOpen(data), 'Editar cliente')
-        },
-        { dataField: 'fiscal_address', caption: 'DIRECCION FISCAL', minWidth: 260, calculateCellValue: (data) => data.fiscal_address ?? data.full_address ?? '' },
-        { dataField: 'short_code', caption: 'CODIGO CORTO', width: 140 },
-        {
-          dataField: 'contract_due_days',
-          caption: 'DIAS VCTO. CONTRATO',
-          width: 165,
-          cellTemplate: (container, { data }) => {
-            if (data.contract_due_days) container.addClass('bg-success text-white')
-            container.text(data.contract_due_days ?? '')
-          }
+          key: 'due', label: 'Días vcto. contrato', field: 'contract_due_days', width: '165px', align: 'right',
+          render: (row) => row.contract_due_days ? <span className="badge bg-success">{row.contract_due_days}</span> : '',
         },
         {
-          dataField: 'status',
-          caption: 'ESTADO',
-          width: 110,
-          cellTemplate: (container, { data }) => renderStatusBadge(container, data.status)
+          key: 'estado', label: 'Estado', field: 'status', width: '110px',
+          filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => <StatusBadge value={row.status} />,
         },
       ] : [
+        { key: 'id', label: 'ID', field: 'entity_id', width: '80px', filter: { type: 'number' } },
         {
-          caption: 'Acciones',
-          width: storageContext ? 220 : 120,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-            if (storageContext) {
-              container.append(DxButton({
-                className: 'btn btn-xs btn-soft-success',
-                title: 'Tarifario',
-                icon: 'mdi mdi-currency-usd',
-                onClick: () => onTariffModalOpen(data)
-              }))
-              container.append(DxButton({
-                className: 'btn btn-xs btn-soft-secondary',
-                title: 'Contrato cliente',
-                icon: 'mdi mdi-file-document',
-                onClick: () => onContractsModalOpen(data)
-              }))
-              container.append(DxButton({
-                className: 'btn btn-xs btn-soft-warning',
-                title: 'Mantenimiento usuarios',
-                icon: 'mdi mdi-account-group',
-                onClick: () => onUsersModalOpen(data)
-              }))
-              container.append(DxButton({
-                className: 'btn btn-xs btn-soft-info',
-                title: 'Notificaciones cliente',
-                icon: 'mdi mdi-send',
-                onClick: () => onNotificationsModalOpen(data)
-              }))
-            }
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar cliente',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data)
-            }))
+          key: 'tipo', label: 'Tipo', field: 'client_kind', width: '105px', align: 'center',
+          filter: { type: 'select', field: 'client_kind', options: [{ value: 'regular', label: 'Regular' }, { value: 'eventual', label: 'Eventual' }] },
+          render: (row) => row.client_kind === 'eventual'
+            ? <span className="badge bg-warning text-dark">Eventual</span>
+            : <span className="badge bg-primary">Regular</span>,
+        },
+        { key: 'tipodoc', label: 'Tipo Doc.', field: 'document_type', width: '95px', filter: { type: 'text' } },
+        { key: 'numero', label: 'Número', field: 'document_number', width: '125px', filter: { type: 'text' } },
+        {
+          key: 'cliente', label: 'Cliente', field: 'display_name', filter: { type: 'text', fields: ['display_name', 'full_name', 'business_name'] },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar cliente">
+              {row?.display_name ?? row?.full_name ?? '-'}
+            </a>
+          ),
+        },
+        { key: 'compras', label: 'Compras', field: 'purchase_count', width: '95px', align: 'right', filter: { type: 'number' } },
+        {
+          key: 'habitual', label: 'Habitual', field: 'is_habitual', width: '110px', align: 'center', sortable: false,
+          render: (row) => row?.is_habitual
+            ? <span className="badge bg-success"><i className="mdi mdi-star me-1"></i>Habitual</span>
+            : <span className="badge bg-soft-secondary">—</span>,
+        },
+        {
+          key: 'ultima', label: 'Última compra', field: 'last_purchase_at', width: '120px', filter: { type: 'date' },
+          render: (row) => formatDate(row.last_purchase_at),
+        },
+        { key: 'correo', label: 'Correo', field: 'email', filter: { type: 'text' } },
+        {
+          key: 'celular', label: 'Celular', field: 'phone', width: '140px', sortable: false,
+          render: (row) => {
+            const prefix = normalizePrefix(row.phone_prefix)
+            return `${prefix ? `+${prefix}` : ''} ${row.phone ?? ''}`.trim()
           },
-          allowFiltering: false,
-          allowExporting: false
-        },
-        { dataField: 'entity_id', caption: 'ID', width: 80 },
-        {
-          dataField: 'client_kind',
-          caption: 'Tipo',
-          width: 105,
-          alignment: 'center',
-          calculateCellValue: (data) => data.client_kind === 'eventual' ? 'Eventual' : 'Regular',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            ReactAppend(container, data.client_kind === 'eventual'
-              ? <span className='badge bg-warning text-dark'>Eventual</span>
-              : <span className='badge bg-primary'>Regular</span>)
-          }
-        },
-        { dataField: 'document_type', caption: 'Tipo Doc.', width: 95 },
-        { dataField: 'document_number', caption: 'Numero', width: 125 },
-        {
-          dataField: 'display_name',
-          caption: 'Cliente',
-          minWidth: 220,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.display_name ?? data?.full_name, () => onModalOpen(data), 'Editar cliente')
         },
         {
-          dataField: 'purchase_count',
-          caption: 'Compras',
-          width: 95,
+          key: 'contacto', label: 'Contacto', field: 'primary_contact', filter: { type: 'text', fields: ['primary_contact', 'contact_name'] },
+          render: (row) => row.primary_contact ?? row.contact_name ?? '',
         },
         {
-          dataField: 'is_habitual',
-          caption: 'Habitual',
-          width: 110,
-          dataType: 'boolean',
-          alignment: 'center',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            // Indicador de solo lectura (se calcula solo: cliente con 3+ compras)
-            ReactAppend(container, data?.is_habitual
-              ? <span className='badge bg-success'><i className='mdi mdi-star me-1'></i>Habitual</span>
-              : <span className='badge bg-soft-secondary'>—</span>)
-          }
+          key: 'direccion', label: 'Dirección', field: 'full_address', filter: { type: 'text', fields: ['full_address', 'address'] },
+          render: (row) => row.full_address ?? row.address ?? '',
         },
         {
-          dataField: 'last_purchase_at',
-          caption: 'Ultima compra',
-          width: 120,
-          cellTemplate: (container, { data }) => container.text(formatDate(data.last_purchase_at))
+          key: 'almacenamiento', label: 'Almacenamiento', field: 'has_storage_service', width: '130px', sortable: false,
+          render: (row) => <SwitchFormGroup checked={!!row.has_storage_service} disabled noMargin />,
         },
-        { dataField: 'email', caption: 'Correo', minWidth: 180 },
+        { key: 'diasvcto', label: 'Días vcto.', field: 'contract_due_days', width: '105px', visible: false },
+        { key: 'canal', label: 'Canal', field: 'commercial_channel', visible: false },
+        { key: 'segmento', label: 'Segmento', field: 'segment', visible: false },
+        { key: 'correofact', label: 'Correo facturación', field: 'billing_email', visible: false },
+        { key: 'codigocorto', label: 'Código corto', field: 'short_code', visible: false },
+        { key: 'ubigeo', label: 'Ubigeo', field: 'ubigeo', visible: false },
+        { key: 'notas', label: 'Notas', field: 'notes', visible: false },
+        { key: 'creador', label: 'Creado por', field: 'creator_label', visible: false },
+        { key: 'actualizador', label: 'Actualizado por', field: 'updater_label', visible: false },
         {
-          dataField: 'mobile_full',
-          caption: 'Celular',
-          width: 140,
-          calculateCellValue: (data) => {
-            const prefix = normalizePrefix(data.phone_prefix)
-            return `${prefix ? `+${prefix}` : ''} ${data.phone ?? ''}`.trim()
-          }
+          key: 'estado', label: 'Estado', field: 'status', width: '95px',
+          filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => row.status === null
+            ? ''
+            : <SwitchFormGroup checked={row.status == 1} onChange={() => onBooleanChange(row)} />,
         },
-        { dataField: 'primary_contact', caption: 'Contacto', minWidth: 160, calculateCellValue: (data) => data.primary_contact ?? data.contact_name ?? '' },
-        { dataField: 'full_address', caption: 'Direccion', minWidth: 220, calculateCellValue: (data) => data.full_address ?? data.address ?? '' },
-        {
-          dataField: 'has_storage_service',
-          caption: 'Almacenamiento',
-          width: 130,
-          dataType: 'boolean',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            ReactAppend(container, <SwitchFormGroup checked={!!data.has_storage_service} disabled noMargin />)
-          }
-        },
-        { dataField: 'contract_due_days', caption: 'Dias vcto.', width: 105, visible: false },
-        { dataField: 'commercial_channel', caption: 'Canal', minWidth: 120, visible: false },
-        { dataField: 'segment', caption: 'Segmento', minWidth: 120, visible: false },
-        { dataField: 'billing_email', caption: 'Correo facturacion', minWidth: 180, visible: false },
-        { dataField: 'short_code', caption: 'Codigo corto', width: 120, visible: false },
-        { dataField: 'ubigeo', caption: 'Ubigeo', width: 110, visible: false },
-        { dataField: 'notes', caption: 'Notas', minWidth: 180, visible: false },
-        { dataField: 'creator_label', caption: 'Creado por', minWidth: 160, visible: false },
-        { dataField: 'updater_label', caption: 'Actualizado por', minWidth: 160, visible: false },
-        {
-          dataField: 'status',
-          caption: 'Estado',
-          dataType: 'boolean',
-          width: 95,
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange(data)} />)
-          }
-        }
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onModalOpen(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.display_name ?? row.full_name ?? '-'}</p>
+              <small className="text-muted">{[(row.document_type || '').toUpperCase(), row.document_number].filter(Boolean).join(' · ')}</small>
+            </div>
+            {row.status !== null && <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>}
+          </div>
+          {row.email && <small className="text-muted d-block mt-2"><i className="mdi mdi-email-outline me-1"></i>{row.email}</small>}
+          {!serviceContext && <small className="text-muted d-block mt-1"><i className="mdi mdi-cart-outline me-1"></i>{row.purchase_count ?? 0} compras</small>}
+          {actionButtons && <div className="d-flex mt-3 pt-3 flex-wrap" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal modalRef={modalRef} title={serviceContext ? 'Cliente' : (storageContext ? 'Formulario cliente' : (isEditing ? `Editar cliente ${kindLabel}` : `Agregar cliente ${kindLabel}`))} onSubmit={onModalSubmit} size={storageContext || serviceContext ? 'xl' : 'lg'} btnSubmitText={serviceContext ? 'Registrar' : (storageContext ? 'Registrar cliente' : 'Guardar')}>
@@ -1482,47 +1395,43 @@ const Clients = ({
           <div className='col-md-4 mb-3'><label className='form-label'>Distrito</label><input ref={districtRef} className='form-control' /></div>
           <div className='col-md-4 mb-3'><label className='form-label'>Estado del Contribuyente</label><input ref={taxpayerStatusRef} className='form-control' /></div>
           <div className='col-md-4 mb-3'><label className='form-label'>Codigo corto</label><input ref={shortCodeRef} className='form-control' /></div>
-          <div className='col-md-4 mb-3'>
-            <label className='form-label'>Estado</label>
-            <select ref={statusRef} className='form-control'>
-              <option value='1'>Activo</option>
-              <option value='0'>Inactivo</option>
-            </select>
-          </div>
+          <VdSelect
+            label='Estado'
+            col='col-md-4'
+            required
+            value={statusValue}
+            onChange={(value) => { setStatusValue(value); setRefValue(statusRef, value) }}
+            options={[{ value: '1', label: 'Activo' }, { value: '0', label: 'Inactivo' }]}
+          />
         </>}
         {storageContext && <>
           <input ref={clientKindRef} type='hidden' />
           <input ref={phonePrefixRef} type='hidden' />
         </>}
 
-        {!storageContext && !serviceContext && <SelectFormGroup
-            eRef={clientKindRef}
-            label='Tipo de cliente'
-            col='col-md-4'
-            required
-            disabled={isEditing}
-            value={clientKind}
-            onChange={(e) => setClientKind(e.target.value || defaultClientKind)}
-            effectWith={[clientKind]}
-          >
-            <option value='regular'>Regular</option>
-            <option value='eventual'>Eventual</option>
-          </SelectFormGroup>}
+        {!storageContext && !serviceContext && <VdSelect
+          label='Tipo de cliente'
+          col='col-md-4'
+          required
+          disabled={isEditing}
+          value={clientKind}
+          onChange={(value) => setClientKind(value || defaultClientKind)}
+          options={[{ value: 'regular', label: 'Regular' }, { value: 'eventual', label: 'Eventual' }]}
+        />}
 
-        {!serviceContext && <SelectFormGroup
-          eRef={documentTypeRef}
+        {!serviceContext && <VdSelect
           label={storageContext ? 'Tipo de Documento' : 'Tipo Doc.'}
           col={storageContext ? 'col-md-2' : 'col-md-4'}
           required
           disabled={isEditing}
           value={documentType}
           onChange={onDocumentTypeChanged}
-          effectWith={[documentType]}
-        >
-          <option value='dni'>DNI</option>
-          <option value='ce'>{storageContext ? 'CARNE DE EXTRANJERIA' : 'CE'}</option>
-          <option value='ruc'>RUC</option>
-        </SelectFormGroup>}
+          options={[
+            { value: 'dni', label: 'DNI' },
+            { value: 'ce', label: storageContext ? 'CARNE DE EXTRANJERIA' : 'CE' },
+            { value: 'ruc', label: 'RUC' },
+          ]}
+        />}
 
         {!serviceContext && <InputFormGroup
           eRef={documentNumberRef}
@@ -1550,10 +1459,14 @@ const Clients = ({
             col='col-md-6'
           />
           <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-6' />
-          <SelectFormGroup eRef={statusRef} label='Estado' col='col-md-6' required>
-            <option value='1'>ACTIVO</option>
-            <option value='0'>INACTIVO</option>
-          </SelectFormGroup>
+          <VdSelect
+            label='Estado'
+            col='col-md-6'
+            required
+            value={statusValue}
+            onChange={(value) => { setStatusValue(value); setRefValue(statusRef, value) }}
+            options={[{ value: '1', label: 'ACTIVO' }, { value: '0', label: 'INACTIVO' }]}
+          />
           <div className='form-group col-md-6 mb-2'>
             <label className='form-label d-block'>
               Tarifario por cliente <span className='text-danger'>(Referente al tarifario de servicio de almacen)</span>
@@ -1594,21 +1507,15 @@ const Clients = ({
         {!storageContext && !serviceContext && <InputFormGroup eRef={primaryContactRef} label='Contacto principal' col={isEventual ? 'col-md-6' : 'col-md-6'} />}
         {!storageContext && !serviceContext && !isEventual && <InputFormGroup eRef={primaryContactPhoneRef} label='Telefono contacto' col='col-md-6' />}
 
-        {!storageContext && !serviceContext && <SelectFormGroup
-          eRef={phonePrefixRef}
+        {!storageContext && !serviceContext && <VdSelect
           label='Prefijo celular'
           col='col-md-4'
           value={phonePrefix}
-          onChange={(e) => setPhonePrefix(normalizePrefix(e.target.value))}
-          effectWith={[phonePrefix]}
-        >
-          {!prefixes.length && <option value='51'>+51 - Peru</option>}
-          {prefixes.map((prefix, idx) => (
-            <option key={`prefix-${idx}`} value={prefix.realCode}>
-              {prefix.beautyCode} - {prefix.country}
-            </option>
-          ))}
-        </SelectFormGroup>}
+          onChange={(value) => setPhonePrefix(normalizePrefix(value))}
+          options={prefixes.length
+            ? prefixes.map((prefix) => ({ value: `${prefix.realCode}`, label: `${prefix.beautyCode} - ${prefix.country}` }))
+            : [{ value: '51', label: '+51 - Peru' }]}
+        />}
         {!storageContext && !serviceContext && <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-4' />}
         {!storageContext && !serviceContext && !isEventual && <InputFormGroup eRef={shortCodeRef} label='Codigo corto' col='col-md-4' />}
 
@@ -1653,134 +1560,60 @@ const Clients = ({
             <input className='form-control' value={selectedContractClientName} readOnly />
           </div>
         </div>
-        <Table
-          gridRef={contractsGridRef}
-          title='Contratos registrados'
+        <VdTable
+          key={`contracts-${selectedContractClientId ?? 'none'}`}
+          ref={contractsTableRef}
           rest={storageClientContractsRest}
-          filterValue={contractsFilterValue}
-          allowQueryBuilder={false}
-          pageSize={10}
-          toolBar={(container) => {
-            container.unshift({
-              widget: 'dxButton', location: 'after',
-              options: {
-                icon: 'add',
-                hint: 'Registrar contrato',
-                disabled: !selectedContractClientId,
-                onClick: onContractCreateClicked
-              }
-            })
-            container.unshift({
-              widget: 'dxButton', location: 'after',
-              options: {
-                icon: 'refresh',
-                hint: 'Refrescar tabla',
-                onClick: refreshContractsGrid
-              }
-            })
-          }}
+          icon="mdi mdi-file-document"
+          title="Contratos registrados"
+          unit="contratos"
+          defaultPageSize={10}
+          baseFilter={contractsFilterValue}
+          searchFields={['contract_code', 'file_name']}
+          searchPlaceholder="Buscar contrato…"
+          emptyText="Sin contratos registrados."
+          headerActions={<>
+            <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refreshContractsGrid}>
+              <i className="mdi mdi-refresh"></i>
+            </button>
+            <button type="button" className="vdt-btn-pri" disabled={!selectedContractClientId} onClick={onContractCreateClicked}>
+              <i className="mdi mdi-plus"></i> Registrar contrato
+            </button>
+          </>}
+          actions={(row) => [
+            { icon: 'mdi mdi-pencil', title: 'Editar contrato', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onContractEditClicked(r) },
+            { icon: 'mdi mdi-delete', title: 'Eliminar contrato', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onContractDeleteClicked(r.id) },
+          ]}
           columns={[
-            { dataField: 'id', caption: '#', width: 70 },
+            { key: 'id', label: '#', field: 'id', width: '70px', filter: { type: 'number' } },
             {
-              caption: 'Acciones',
-              width: 95,
-              allowFiltering: false,
-              allowExporting: false,
-              cellTemplate: (container, { data }) => {
-                container.css('text-overflow', 'unset')
-                container.append(DxButton({
-                  className: 'btn btn-xs btn-soft-info',
-                  title: 'Editar contrato',
-                  icon: 'mdi mdi-pencil',
-                  onClick: () => onContractEditClicked(data)
-                }))
-                container.append(DxButton({
-                  className: 'btn btn-xs btn-soft-danger',
-                  title: 'Eliminar contrato',
-                  icon: 'mdi mdi-delete',
-                  onClick: () => onContractDeleteClicked(data.id)
-                }))
-              }
+              key: 'estado', label: 'Estado', field: 'status', width: '95px',
+              render: (row) => {
+                const active = row.status === true || row.status === 1
+                return <span className={`badge ${active ? 'bg-success' : 'badge-soft-secondary'}`}>{active ? 'Activo' : 'Inactivo'}</span>
+              },
             },
-            { dataField: 'client_id', visible: false },
+            { key: 'codigo', label: 'Código', field: 'contract_code', filter: { type: 'text' } },
+            { key: 'inicio', label: 'Fecha inicio', field: 'starts_at', width: '130px', render: (row) => formatDate(row.starts_at?.toString().slice(0, 10)) },
+            { key: 'fin', label: 'Fecha fin', field: 'ends_at', width: '130px', render: (row) => formatDate(row.ends_at?.toString().slice(0, 10)) },
             {
-              dataField: 'status',
-              caption: 'Estado',
-              width: 95,
-              dataType: 'boolean',
-              cellTemplate: (container, { data }) => {
-                const isActive = data.status === true || data.status === 1
-                container.html(`<span class="badge ${isActive ? 'bg-success' : 'badge-soft-secondary'}">${isActive ? 'Activo' : 'Inactivo'}</span>`)
-              }
-            },
-            { dataField: 'contract_code', caption: 'Codigo', minWidth: 140 },
-            {
-              dataField: 'starts_at',
-              caption: 'Fecha inicio',
-              width: 130,
-              cellTemplate: (container, { data }) => container.text(formatDate(data.starts_at?.toString().slice(0, 10)))
+              key: 'doc', label: 'Documento oficial', field: 'file_name', sortable: false,
+              render: (row) => row.file_path
+                ? <a href={`/api/admin/storage/client-contracts/${row.id}/file`} target="_blank" rel="noopener noreferrer" className="text-primary fw-semibold text-decoration-underline" title="Ver documento oficial">{row.file_name || 'Ver archivo'}</a>
+                : '-',
             },
             {
-              dataField: 'ends_at',
-              caption: 'Fecha fin',
-              width: 130,
-              cellTemplate: (container, { data }) => container.text(formatDate(data.ends_at?.toString().slice(0, 10)))
+              key: 'anexos', label: 'Anexos', field: 'annexes_count', sortable: false,
+              render: (row) => {
+                const annexes = Array.isArray(row.annexes) ? row.annexes : []
+                if (!annexes.length) return '-'
+                return <div className="d-flex flex-column gap-1">{annexes.map((annex, index) => (
+                  <a key={annex.id ?? index} href={`/api/admin/storage/client-contract-annexes/${annex.id}/file`} target="_blank" rel="noopener noreferrer" className="text-primary fw-semibold text-decoration-underline" title="Ver anexo">{annex.file_name || `Anexo ${index + 1}`}</a>
+                ))}</div>
+              },
             },
-            {
-              dataField: 'file_name',
-              caption: 'Documento oficial',
-              minWidth: 220,
-              allowFiltering: false,
-              allowSorting: false,
-              cellTemplate: (container, { data }) => {
-                container.empty()
-                if (!data.file_path) return container.text('-')
-                const url = `/api/admin/storage/client-contracts/${data.id}/file`
-                $('<a></a>')
-                  .attr({
-                    href: url,
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                    title: 'Ver documento oficial'
-                  })
-                  .addClass('text-primary fw-semibold text-decoration-underline')
-                  .text(data.file_name || 'Ver archivo')
-                  .appendTo(container)
-              }
-            },
-            {
-              dataField: 'annexes_count',
-              caption: 'Anexos',
-              minWidth: 260,
-              allowFiltering: false,
-              allowSorting: false,
-              cellTemplate: (container, { data }) => {
-                container.empty()
-                const annexes = Array.isArray(data.annexes) ? data.annexes : []
-                if (!annexes.length) return container.text('-')
-                const wrapper = $('<div></div>').addClass('d-flex flex-column gap-1')
-                annexes.forEach((annex, index) => {
-                  $('<a></a>')
-                    .attr({
-                      href: `/api/admin/storage/client-contract-annexes/${annex.id}/file`,
-                      target: '_blank',
-                      rel: 'noopener noreferrer',
-                      title: 'Ver anexo'
-                    })
-                    .addClass('text-primary fw-semibold text-decoration-underline')
-                    .text(annex.file_name || `Anexo ${index + 1}`)
-                    .appendTo(wrapper)
-                })
-                wrapper.appendTo(container)
-              }
-            },
-            {
-              dataField: 'created_at',
-              caption: 'Fecha registro',
-              width: 165,
-              cellTemplate: (container, { data }) => container.text(formatDateTime(data.created_at))
-            },
-            { dataField: 'creator_label', caption: 'Usuario registro', minWidth: 150, allowFiltering: false, allowSorting: false },
+            { key: 'registro', label: 'Fecha registro', field: 'created_at', width: '165px', render: (row) => formatDateTime(row.created_at) },
+            { key: 'usuario', label: 'Usuario registro', field: 'creator_label', sortable: false },
           ]}
         />
       </Modal>
@@ -1988,38 +1821,24 @@ const Clients = ({
         </div>}
         <div className='row justify-content-center'>
           <div className='col-md-4'>
-            <div className='form-group mb-3'>
-              <label htmlFor='storage-client-tariff-temperature' className='form-label mb-1'>Temperatura</label>
-              <select
-                id='storage-client-tariff-temperature'
-                ref={tariffTemperatureRef}
-                className='form-select'
-                required
-                value={tariffTemperature}
-                onChange={(e) => setTariffTemperature(e.target.value)}
-              >
-                <option value=''>Seleccione temperatura</option>
-                {STORAGE_TEMPERATURE_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className='form-group mb-3'>
-              <label htmlFor='storage-client-tariff-currency' className='form-label mb-1'>Moneda</label>
-              <select
-                id='storage-client-tariff-currency'
-                ref={tariffCurrencyRef}
-                className='form-select'
-                required
-                value={tariffCurrency}
-                onChange={(e) => setTariffCurrency(e.target.value)}
-              >
-                <option value=''>Seleccione moneda</option>
-                {STORAGE_CURRENCY_OPTIONS.map(option => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </div>
+            <VdSelect
+              label='Temperatura'
+              col='col-12'
+              required
+              value={tariffTemperature}
+              onChange={(value) => setTariffTemperature(value)}
+              options={STORAGE_TEMPERATURE_OPTIONS}
+              placeholder='Seleccione temperatura'
+            />
+            <VdSelect
+              label='Moneda'
+              col='col-12'
+              required
+              value={tariffCurrency}
+              onChange={(value) => setTariffCurrency(value)}
+              options={STORAGE_CURRENCY_OPTIONS}
+              placeholder='Seleccione moneda'
+            />
           </div>
         </div>
         <hr />
@@ -2054,25 +1873,16 @@ const Clients = ({
         </div>
         <input ref={notificationIdRef} type='hidden' />
         <div className='row'>
-          <div className='form-group col-md-4 mb-2'>
-            <label htmlFor='storage-client-notification-select' className='form-label mb-1'>
-              Notificacion: <b className='text-danger'>*</b>
-            </label>
-            <select
-              id='storage-client-notification-select'
-              ref={notificationSelectRef}
-              className='form-select'
-              required
-              value={notificationValue}
-              onChange={(e) => setNotificationValue(e.target.value)}
-            >
-              <option value=''>Seleccione</option>
-              {notificationOptions.map((option, index) => {
-                const value = getNotificationOptionValue(option)
-                return <option key={`notification-option-${value || index}`} value={value}>{getNotificationOptionLabel(option)}</option>
-              })}
-            </select>
-          </div>
+          <VdSelect
+            id='storage-client-notification-select'
+            label='Notificacion:'
+            col='col-md-4'
+            required
+            value={notificationValue}
+            onChange={(value) => setNotificationValue(value)}
+            options={notificationOptions.map((option) => ({ value: getNotificationOptionValue(option), label: getNotificationOptionLabel(option) }))}
+            placeholder='Seleccione'
+          />
           <EmailTagsInput
             ref={notificationToRef}
             label='Para:'
@@ -2100,78 +1910,39 @@ const Clients = ({
             {isNotificationEditing ? 'Guardar' : 'Registrar'}
           </button>
         </div>
-        <Table
-          gridRef={notificationsGridRef}
-          title='Notificaciones registradas'
+        <VdTable
+          key={`notifications-${selectedNotificationClientId ?? 'none'}`}
+          ref={notificationsTableRef}
           rest={storageClientNotificationsRest}
-          filterValue={notificationsFilterValue}
-          allowQueryBuilder={false}
-          pageSize={10}
-          toolBar={(container) => {
-            container.unshift({
-              widget: 'dxButton', location: 'after',
-              options: {
-                icon: 'refresh',
-                hint: 'Refrescar tabla',
-                onClick: refreshNotificationsGrid
-              }
-            })
-          }}
+          icon="mdi mdi-send"
+          title="Notificaciones registradas"
+          unit="notificaciones"
+          defaultPageSize={10}
+          baseFilter={notificationsFilterValue}
+          searchFields={['notification_name', 'to_emails', 'cc_emails']}
+          searchPlaceholder="Buscar notificación…"
+          emptyText="Sin notificaciones registradas."
+          headerActions={<button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refreshNotificationsGrid}>
+            <i className="mdi mdi-refresh"></i>
+          </button>}
+          actions={(row) => [
+            { icon: 'mdi mdi-pencil', title: 'Editar notificación', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onNotificationEditClicked(r) },
+            { icon: 'mdi mdi-delete', title: 'Eliminar notificación', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onNotificationDeleteClicked(r.id) },
+          ]}
           columns={[
-            { dataField: 'id', caption: '#', width: 70 },
+            { key: 'id', label: '#', field: 'id', width: '70px', filter: { type: 'number' } },
             {
-              caption: 'Acciones',
-              width: 110,
-              allowFiltering: false,
-              allowExporting: false,
-              cellTemplate: (container, { data }) => {
-                container.css('text-overflow', 'unset')
-                container.append(DxButton({
-                  className: 'btn btn-xs btn-soft-info',
-                  title: 'Editar notificacion',
-                  icon: 'mdi mdi-pencil',
-                  onClick: () => onNotificationEditClicked(data)
-                }))
-                container.append(DxButton({
-                  className: 'btn btn-xs btn-soft-danger',
-                  title: 'Eliminar notificacion',
-                  icon: 'mdi mdi-delete',
-                  onClick: () => onNotificationDeleteClicked(data.id)
-                }))
-              }
+              key: 'estado', label: 'Estado', field: 'status', width: '95px',
+              render: (row) => {
+                const active = row.status === true || row.status === 1
+                return <span className={`badge ${active ? 'bg-success' : 'badge-soft-secondary'}`}>{active ? 'Activo' : 'Inactivo'}</span>
+              },
             },
-            { dataField: 'client_id', visible: false },
-            { dataField: 'notification_key', visible: false },
-            {
-              dataField: 'status',
-              caption: 'Estado',
-              width: 95,
-              dataType: 'boolean',
-              cellTemplate: (container, { data }) => {
-                const isActive = data.status === true || data.status === 1
-                container.html(`<span class="badge ${isActive ? 'bg-success' : 'badge-soft-secondary'}">${isActive ? 'Activo' : 'Inactivo'}</span>`)
-              }
-            },
-            { dataField: 'notification_name', caption: 'Notificacion', minWidth: 270 },
-            {
-              dataField: 'to_emails',
-              caption: 'Para',
-              minWidth: 220,
-              cellTemplate: (container, { data }) => renderEmailList(container, data.to_emails)
-            },
-            {
-              dataField: 'cc_emails',
-              caption: 'Copia',
-              minWidth: 180,
-              cellTemplate: (container, { data }) => renderEmailList(container, data.cc_emails)
-            },
-            { dataField: 'creator_label', caption: 'Usuario registro', minWidth: 150, allowFiltering: false, allowSorting: false },
-            {
-              dataField: 'created_at',
-              caption: 'Fecha registro',
-              width: 165,
-              cellTemplate: (container, { data }) => container.text(formatDateTime(data.created_at))
-            },
+            { key: 'notif', label: 'Notificación', field: 'notification_name', filter: { type: 'text' } },
+            { key: 'para', label: 'Para', field: 'to_emails', render: (row) => <EmailListCell value={row.to_emails} /> },
+            { key: 'copia', label: 'Copia', field: 'cc_emails', render: (row) => <EmailListCell value={row.cc_emails} /> },
+            { key: 'usuario', label: 'Usuario registro', field: 'creator_label', sortable: false },
+            { key: 'registro', label: 'Fecha registro', field: 'created_at', width: '165px', render: (row) => formatDateTime(row.created_at) },
           ]}
         />
       </Modal>
@@ -2196,74 +1967,43 @@ const Clients = ({
           </button>
           {selectedClientName && <span className='badge badge-soft-secondary fs-14'>{selectedClientName}</span>}
         </div>
-        <Table
-          gridRef={usersGridRef}
-          title='Usuarios registrados'
+        <VdTable
+          key={`users-${selectedClientId ?? 'none'}`}
+          ref={usersTableRef}
           rest={usersRest}
-          filterValue={usersFilterValue}
-          allowQueryBuilder={false}
-          pageSize={10}
-          toolBar={(container) => {
-            container.unshift({
-              widget: 'dxButton', location: 'after',
-              options: {
-                icon: 'refresh',
-                hint: 'Refrescar tabla',
-                onClick: refreshUsersGrid
-              }
-            })
-          }}
+          icon="mdi mdi-account-group"
+          title="Usuarios registrados"
+          unit="usuarios"
+          defaultPageSize={10}
+          baseFilter={usersFilterValue}
+          searchFields={['username', 'name', 'lastname', 'email']}
+          searchPlaceholder="Buscar usuario…"
+          emptyText="Sin usuarios registrados."
+          headerActions={<button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refreshUsersGrid}>
+            <i className="mdi mdi-refresh"></i>
+          </button>}
+          actions={(row) => [
+            { icon: 'mdi mdi-pencil', title: 'Editar usuario', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onUserModalOpen(r) },
+            { icon: 'mdi mdi-delete', title: 'Eliminar usuario', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onUserDeleteClicked(r.uuid) },
+          ]}
           columns={[
+            { key: 'id', label: 'ID', field: 'entity_id', width: '80px', sortable: false },
+            { key: 'username', label: 'Usuario', field: 'username', filter: { type: 'text' } },
+            { key: 'nombres', label: 'Nombres', field: 'name', filter: { type: 'text' } },
+            { key: 'apellidos', label: 'Apellidos', field: 'lastname', filter: { type: 'text' } },
+            { key: 'email', label: 'Email', field: 'email', filter: { type: 'text' } },
             {
-              caption: 'Acciones',
-              width: 130,
-              allowFiltering: false,
-              allowExporting: false,
-              cellTemplate: (container, { data }) => {
-                container.css('text-overflow', 'unset')
-                container.append(DxButton({
-                  className: 'btn btn-xs btn-soft-primary',
-                  title: 'Editar usuario',
-                  icon: 'mdi mdi-pencil',
-                  onClick: () => onUserModalOpen(data)
-                }))
-                container.append(DxButton({
-                  className: 'btn btn-xs btn-soft-danger',
-                  title: 'Eliminar usuario',
-                  icon: 'mdi mdi-delete',
-                  onClick: () => onUserDeleteClicked(data.uuid)
-                }))
-              }
-            },
-            { dataField: 'entity_id', caption: 'ID', width: 80, allowFiltering: false, allowSorting: false },
-            { dataField: 'storage_client_id', visible: false },
-            { dataField: 'username', caption: 'Usuario', minWidth: 120 },
-            { dataField: 'name', caption: 'Nombres', minWidth: 150 },
-            { dataField: 'lastname', caption: 'Apellidos', minWidth: 150 },
-            { dataField: 'email', caption: 'Email', minWidth: 190 },
-            {
-              dataField: 'phone',
-              caption: 'Telefono',
-              minWidth: 130,
-              calculateCellValue: (data) => {
-                const prefix = normalizePrefix(data.phone_prefix)
-                return `${prefix ? `+${prefix}` : ''} ${data.phone ?? ''}`.trim()
-              }
+              key: 'telefono', label: 'Teléfono', field: 'phone', sortable: false,
+              render: (row) => {
+                const prefix = normalizePrefix(row.phone_prefix)
+                return `${prefix ? `+${prefix}` : ''} ${row.phone ?? ''}`.trim()
+              },
             },
             {
-              dataField: 'status',
-              caption: 'Estado',
-              dataType: 'boolean',
-              width: 100,
-              cellTemplate: (container, { data }) => {
-                container.empty()
-                if (data.status === null) return container.text('Eliminado')
-                ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onUserBooleanChange({
-                  id: data.uuid,
-                  field: 'status',
-                  value: !data.status
-                })} />)
-              }
+              key: 'estado', label: 'Estado', field: 'status', width: '100px',
+              render: (row) => row.status === null
+                ? 'Eliminado'
+                : <SwitchFormGroup checked={row.status == 1} onChange={() => onUserBooleanChange({ id: row.uuid, field: 'status', value: !row.status })} />,
             },
           ]}
         />
@@ -2287,19 +2027,14 @@ const Clients = ({
           <InputFormGroup eRef={userLastNameMotherRef} label='Apellido Materno' col='col-md-4' required />
           <InputFormGroup eRef={userEmailRef} label='Email' col='col-md-4' type='email' required />
           <InputFormGroup eRef={userPhoneRef} label='Telefono' col='col-md-4' required />
-          <SelectFormGroup
-            eRef={userStatusRef}
+          <VdSelect
             label='Estado'
             col='col-md-4'
             required
             value={userStatus}
-            onChange={(e) => setUserStatus(e.target.value || '1')}
-            effectWith={[userStatus]}
-            minimumResultsForSearch={Infinity}
-          >
-            <option value='1'>Activo</option>
-            <option value='0'>Inactivo</option>
-          </SelectFormGroup>
+            onChange={(value) => setUserStatus(value || '1')}
+            options={[{ value: '1', label: 'Activo' }, { value: '0', label: 'Inactivo' }]}
+          />
         </div>
       </Modal>
     </>}

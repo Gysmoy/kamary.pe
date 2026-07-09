@@ -3,6 +3,8 @@ import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Table from '../Components/Adminto/Table';
+import VdTable from '../Components/Adminto/VdTable';
+import VdSelect from '../Components/Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
 import DxButton from '../Components/dx/DxButton';
 import KardexRest from '../Actions/Admin/KardexRest';
@@ -134,12 +136,13 @@ const drawKardexDocumentLogo = async (doc, x, y, width, height) => {
 }
 
 const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const movementModalRef = useRef()
 
   const [laboratories, setLaboratories] = useState([])
   const [articles, setArticles] = useState([])
   const [warehouses, setWarehouses] = useState([])
+  const [exporting, setExporting] = useState(false)
 
   const [laboratoryId, setLaboratoryId] = useState('')
   const [articleId, setArticleId] = useState('')
@@ -188,7 +191,7 @@ const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
       client_id: '',
       stock_mode: 'with_stock',
     })
-    refreshGrid(gridRef)
+    tableRef.current?.refresh()
   }, [laboratoryId, articleId, warehouseId, isMagistrales])
 
   const selectedArticle = useMemo(
@@ -384,52 +387,35 @@ const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
     setTimeout(() => URL.revokeObjectURL(url), 60000)
   }
 
-  const magistralesColumns = [
+  // Columnas VdTable (Magistrales): el backend de este endpoint no expone
+  // stock_min/stock_max/currency (nunca lo hizo con dxDataGrid tampoco), por
+  // eso se preservan mostrando 0.000 / vacio, igual que antes.
+  const magistralesVdColumns = [
+    { key: 'article_code', label: 'Codigo', field: 'article_code', width: '110px' },
+    { key: 'article_name', label: 'Nombre', field: 'article_name' },
     {
-      caption: 'Acciones',
-      width: 95,
-      allowFiltering: false,
-      allowExporting: false,
-      cellTemplate: (container, { data }) => {
-        container.css('text-overflow', 'unset')
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Transacciones', icon: 'mdi mdi-format-list-bulleted', onClick: () => openMovements(data) }))
-      }
+      key: 'stock', label: 'Stock', field: 'stock', width: '100px', align: 'right', nowrap: true,
+      render: (row) => Number(row.stock ?? 0).toFixed(3),
     },
-    { dataField: 'article_code', caption: 'Codigo', minWidth: 110 },
-    { dataField: 'article_name', caption: 'Nombre', minWidth: 260 },
+    { key: 'unit_label', label: 'Und', field: 'unit_label', width: '80px' },
     {
-      dataField: 'stock',
-      caption: 'Stock',
-      minWidth: 100,
-      cellTemplate: (container, { data }) => container.text(Number(data.stock ?? 0).toFixed(3))
-    },
-    { dataField: 'unit_label', caption: 'Und', minWidth: 80 },
-    {
-      dataField: 'stock_min',
-      caption: 'Min',
-      minWidth: 80,
-      cellTemplate: (container, { data }) => container.text(Number(data.stock_min ?? 0).toFixed(3))
+      key: 'stock_min', label: 'Min', field: 'stock_min', width: '80px', align: 'right', nowrap: true,
+      render: (row) => Number(row.stock_min ?? 0).toFixed(3),
     },
     {
-      dataField: 'stock_max',
-      caption: 'Max',
-      minWidth: 80,
-      cellTemplate: (container, { data }) => container.text(Number(data.stock_max ?? 0).toFixed(3))
+      key: 'stock_max', label: 'Max', field: 'stock_max', width: '80px', align: 'right', nowrap: true,
+      render: (row) => Number(row.stock_max ?? 0).toFixed(3),
     },
-    { dataField: 'currency', caption: 'Moneda', minWidth: 90 },
+    { key: 'currency', label: 'Moneda', field: 'currency', width: '90px' },
     {
-      dataField: 'cost_unit',
-      caption: 'Costo Unitario',
-      minWidth: 130,
-      cellTemplate: (container, { data }) => container.text(Number(data.cost_unit ?? 0).toFixed(4))
+      key: 'cost_unit', label: 'Costo Unitario', field: 'cost_unit', width: '130px', align: 'right', nowrap: true,
+      render: (row) => Number(row.cost_unit ?? 0).toFixed(4),
     },
     {
-      dataField: 'total_cost',
-      caption: 'Total Costo',
-      minWidth: 130,
-      cellTemplate: (container, { data }) => container.text(Number(data.total_cost ?? 0).toFixed(2))
+      key: 'total_cost', label: 'Total Costo', field: 'total_cost', width: '130px', align: 'right', nowrap: true,
+      render: (row) => Number(row.total_cost ?? 0).toFixed(2),
     },
-    { dataField: 'warehouse_name', caption: 'Almacen', minWidth: 150 },
+    { key: 'warehouse_name', label: 'Almacen', field: 'warehouse_name', width: '150px' },
   ]
 
   const movementColumns = [
@@ -474,54 +460,119 @@ const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
     },
   ]
 
-  const standardProductColumns = [
+  const standardProductVdColumns = [
+    { key: 'article_code', label: 'Codigo', field: 'article_code', width: '110px' },
+    { key: 'article_name', label: 'Nombre', field: 'article_name' },
+    { key: 'laboratory_name', label: 'Laboratorio', field: 'laboratory_name', width: '160px' },
+    { key: 'principle_name', label: 'Principio activo', field: 'principle_name', width: '180px' },
+    { key: 'unit_label', label: 'Und', field: 'unit_label', width: '80px' },
     {
-      caption: 'Acciones',
-      width: 95,
-      allowFiltering: false,
-      allowExporting: false,
-      cellTemplate: (container, { data }) => {
-        container.css('text-overflow', 'unset')
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Ver movimientos', icon: 'mdi mdi-format-list-bulleted', onClick: () => openMovements(data) }))
-      }
-    },
-    { dataField: 'article_code', caption: 'Codigo', minWidth: 110 },
-    { dataField: 'article_name', caption: 'Nombre', minWidth: 260 },
-    { dataField: 'laboratory_name', caption: 'Laboratorio', minWidth: 160 },
-    { dataField: 'principle_name', caption: 'Principio activo', minWidth: 180 },
-    { dataField: 'unit_label', caption: 'Und', minWidth: 80 },
-    {
-      dataField: 'qty_in',
-      caption: 'Entradas',
-      minWidth: 100,
-      cellTemplate: (container, { data }) => container.text(Number(data.qty_in ?? 0).toFixed(3))
+      key: 'qty_in', label: 'Entradas', field: 'qty_in', width: '100px', align: 'right', nowrap: true,
+      render: (row) => Number(row.qty_in ?? 0).toFixed(3),
     },
     {
-      dataField: 'qty_out',
-      caption: 'Salidas',
-      minWidth: 100,
-      cellTemplate: (container, { data }) => container.text(Number(data.qty_out ?? 0).toFixed(3))
+      key: 'qty_out', label: 'Salidas', field: 'qty_out', width: '100px', align: 'right', nowrap: true,
+      render: (row) => Number(row.qty_out ?? 0).toFixed(3),
     },
     {
-      dataField: 'stock',
-      caption: 'Stock',
-      minWidth: 100,
-      cellTemplate: (container, { data }) => container.text(Number(data.stock ?? 0).toFixed(3))
+      key: 'stock', label: 'Stock', field: 'stock', width: '100px', align: 'right', nowrap: true,
+      render: (row) => Number(row.stock ?? 0).toFixed(3),
     },
     {
-      dataField: 'cost_unit',
-      caption: 'Costo Unit.',
-      minWidth: 120,
-      cellTemplate: (container, { data }) => container.text(Number(data.cost_unit ?? 0).toFixed(4))
+      key: 'cost_unit', label: 'Costo Unit.', field: 'cost_unit', width: '120px', align: 'right', nowrap: true,
+      render: (row) => Number(row.cost_unit ?? 0).toFixed(4),
     },
     {
-      dataField: 'total_cost',
-      caption: 'Total Val.',
-      minWidth: 120,
-      cellTemplate: (container, { data }) => container.text(Number(data.total_cost ?? 0).toFixed(2))
+      key: 'total_cost', label: 'Total Val.', field: 'total_cost', width: '120px', align: 'right', nowrap: true,
+      render: (row) => Number(row.total_cost ?? 0).toFixed(2),
     },
-    { dataField: 'warehouse_name', caption: 'Almacen', minWidth: 150 },
+    { key: 'warehouse_name', label: 'Almacen', field: 'warehouse_name', width: '150px' },
   ]
+
+  // Exportacion (loadAll + ExcelJS): este grid no tenia export antes (el
+  // dxDataGrid original no pasaba exportable=true), se agrega ahora siguiendo
+  // el mismo patron ya usado en InventoryReport.jsx.
+  const kardexExportColumns = isMagistrales
+    ? [
+      ['Codigo', row => row.article_code ?? ''],
+      ['Nombre', row => row.article_name ?? ''],
+      ['Stock', row => Number(row.stock ?? 0)],
+      ['Und', row => row.unit_label ?? ''],
+      ['Min', row => Number(row.stock_min ?? 0)],
+      ['Max', row => Number(row.stock_max ?? 0)],
+      ['Moneda', row => row.currency ?? ''],
+      ['Costo Unitario', row => Number(row.cost_unit ?? 0)],
+      ['Total Costo', row => Number(row.total_cost ?? 0)],
+      ['Almacen', row => row.warehouse_name ?? ''],
+    ]
+    : [
+      ['Codigo', row => row.article_code ?? ''],
+      ['Nombre', row => row.article_name ?? ''],
+      ['Laboratorio', row => row.laboratory_name ?? ''],
+      ['Principio activo', row => row.principle_name ?? ''],
+      ['Und', row => row.unit_label ?? ''],
+      ['Entradas', row => Number(row.qty_in ?? 0)],
+      ['Salidas', row => Number(row.qty_out ?? 0)],
+      ['Stock', row => Number(row.stock ?? 0)],
+      ['Costo Unit.', row => Number(row.cost_unit ?? 0)],
+      ['Total Val.', row => Number(row.total_cost ?? 0)],
+      ['Almacen', row => row.warehouse_name ?? ''],
+    ]
+
+  const exportKardex = async () => {
+    if (exporting) return
+    setExporting(true)
+    try {
+      const rows = await tableRef.current?.loadAll()
+      if (!rows?.length) {
+        await Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay filas para exportar', confirmButtonText: 'Entendido' })
+        return
+      }
+
+      if (window.ExcelJS && window.saveAs) {
+        const workbook = new window.ExcelJS.Workbook()
+        const worksheet = workbook.addWorksheet('Kardex')
+        worksheet.addRow(kardexExportColumns.map(([label]) => label))
+        rows.forEach(row => worksheet.addRow(kardexExportColumns.map(([, value]) => value(row))))
+        worksheet.columns.forEach(column => { column.width = 18 })
+        const buffer = await workbook.xlsx.writeBuffer()
+        window.saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'kardex.xlsx')
+        return
+      }
+
+      const csv = [
+        kardexExportColumns.map(([label]) => `"${label}"`).join(','),
+        ...rows.map(row => kardexExportColumns.map(([, value]) => `"${`${value(row) ?? ''}`.replaceAll('"', '""')}"`).join(',')),
+      ].join('\n')
+      window.saveAs(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'kardex.csv')
+    } catch (error) {
+      await Swal.fire({ icon: 'error', title: 'Error', text: error?.message || 'No se pudo exportar el kardex', confirmButtonText: 'Entendido' })
+    } finally {
+      setExporting(false)
+    }
+  }
+
+  const kardexRenderCard = (row, actionButtons) => (
+    <div className='vdt-card'>
+      <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>{row.article_name}</p>
+          <small className='text-muted'>{[row.article_code, !isMagistrales && row.laboratory_name].filter(Boolean).join(' · ')}</small>
+        </div>
+        <span className='badge badge-soft-primary' style={{ whiteSpace: 'nowrap' }}>{Number(row.stock ?? 0).toFixed(3)} {row.unit_label}</span>
+      </div>
+      <small className='text-muted d-block mt-2'><i className='mdi mdi-warehouse me-1'></i>{row.warehouse_name}</small>
+      {!isMagistrales && <div className='d-flex flex-wrap mt-2' style={{ gap: 12 }}>
+        <small className='text-muted'>Entradas: <b>{Number(row.qty_in ?? 0).toFixed(3)}</b></small>
+        <small className='text-muted'>Salidas: <b>{Number(row.qty_out ?? 0).toFixed(3)}</b></small>
+      </div>}
+      <div className='d-flex flex-wrap mt-1' style={{ gap: 12 }}>
+        <small className='text-muted'>Costo unit.: <b>{Number(row.cost_unit ?? 0).toFixed(4)}</b></small>
+        <small className='text-muted'>Total: <b>{Number(row.total_cost ?? 0).toFixed(2)}</b></small>
+      </div>
+      {actionButtons && <div className='d-flex mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+    </div>
+  )
 
   return (
     <div className='row'>
@@ -529,33 +580,36 @@ const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
         <div className='card mb-3'>
           <div className='card-body'>
             <div className='row'>
-              {!isMagistrales && <div className='col-md-3'>
-                <label className='form-label'>Almacen</label>
-                <select className='form-control' value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
-                  <option value=''>-- Todos los almacenes --</option>
-                  {warehouses.map(item => <option key={`kardex-warehouse-${item.id}`} value={item.id}>{item.name}</option>)}
-                </select>
-              </div>}
-              {!isMagistrales && <div className='col-md-3'>
-                <label className='form-label'>Laboratorio</label>
-                <select className='form-control' value={laboratoryId} onChange={(e) => { setLaboratoryId(e.target.value); setArticleId('') }}>
-                  <option value=''>-- Todos los laboratorios --</option>
-                  {laboratories.map(item => <option key={`kardex-lab-${item.id}`} value={item.id}>{item.name}</option>)}
-                </select>
-              </div>}
+              {!isMagistrales && <VdSelect
+                label='Almacen'
+                col='col-md-3'
+                value={warehouseId}
+                onChange={(value) => setWarehouseId(value)}
+                options={warehouses.map(item => ({ value: `${item.id}`, label: item.name }))}
+                placeholder='-- Todos los almacenes --'
+              />}
+              {!isMagistrales && <VdSelect
+                label='Laboratorio'
+                col='col-md-3'
+                value={laboratoryId}
+                onChange={(value) => { setLaboratoryId(value); setArticleId('') }}
+                options={laboratories.map(item => ({ value: `${item.id}`, label: item.name }))}
+                placeholder='-- Todos los laboratorios --'
+              />}
               {isMagistrales && <div className='col-md-4'>
                 <label className='form-label'>Almacen fijo</label>
                 <input className='form-control' value={fixedWarehouseLabel} disabled />
               </div>}
-              <div className={isMagistrales ? 'col-md-4' : 'col-md-3'}>
-                <label className='form-label'>Producto</label>
-                <select className='form-control' value={articleId} onChange={(e) => setArticleId(e.target.value)}>
-                  <option value=''>-- Seleccionar producto --</option>
-                  {articles
-                    .filter(item => !laboratoryId || `${item.laboratory_id}` === `${laboratoryId}`)
-                    .map(item => <option key={`kardex-article-${item.id}`} value={item.id}>{item.code} - {item.name}</option>)}
-                </select>
-              </div>
+              <VdSelect
+                label='Producto'
+                col={isMagistrales ? 'col-md-4' : 'col-md-3'}
+                value={articleId}
+                onChange={(value) => setArticleId(value)}
+                options={articles
+                  .filter(item => !laboratoryId || `${item.laboratory_id}` === `${laboratoryId}`)
+                  .map(item => ({ value: `${item.id}`, label: `${item.code} - ${item.name}` }))}
+                placeholder='-- Seleccionar producto --'
+              />
               {!isMagistrales && <div className='col-md-3'>
                 <label className='form-label'>Desde</label>
                 <input className='form-control' type='date' value={startDate} onChange={(e) => setStartDate(e.target.value)} />
@@ -627,19 +681,28 @@ const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
       </div>}
 
       <div className='col-12'>
-        <Table
-          gridRef={gridRef}
-          title='Kardex'
+        <VdTable
+          ref={tableRef}
           rest={kardexRest}
-          pageSize={25}
-          toolBar={(container) => {
-            container.unshift({
-              widget: 'dxButton',
-              location: 'after',
-              options: { icon: 'refresh', hint: 'Refrescar tabla', onClick: () => refreshGrid(gridRef) }
-            })
-          }}
-          columns={isMagistrales ? magistralesColumns : standardProductColumns}
+          icon='mdi mdi-clipboard-text-outline'
+          title='Kardex'
+          unit='productos'
+          defaultSort={{ field: 'article_name', desc: false }}
+          defaultPageSize={25}
+          emptyText='No se encontraron productos.'
+          headerActions={<>
+            <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => tableRef.current?.refresh()}>
+              <i className='mdi mdi-refresh'></i>
+            </button>
+            <button type='button' className='vdt-btn-soft' disabled={exporting} onClick={exportKardex}>
+              <i className={`mdi ${exporting ? 'mdi-loading mdi-spin' : 'mdi-file-excel'}`}></i> Exportar
+            </button>
+          </>}
+          actions={(row) => [
+            { icon: 'mdi mdi-format-list-bulleted', title: isMagistrales ? 'Transacciones' : 'Ver movimientos', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openMovements(r) },
+          ]}
+          columns={isMagistrales ? magistralesVdColumns : standardProductVdColumns}
+          renderCard={kardexRenderCard}
         />
       </div>
 

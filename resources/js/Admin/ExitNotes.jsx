@@ -2,20 +2,17 @@ import React, { createRef, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
-import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import ExitNotesRest from '../Actions/Admin/ExitNotesRest';
 import { isStoragePath, scopedPermission } from '../Utils/permissionScope';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 
 const exitNotesRest = new ExitNotesRest()
@@ -127,21 +124,16 @@ const emptyItem = () => ({
 
 const ExitNotes = () => {
   const storageContext = isStoragePath()
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const stockSearchModalRef = useRef()
   const stockSearchTextRef = useRef()
 
   const idRef = useRef()
-  const branchRef = useRef()
-  const warehouseRef = useRef()
   const clientNameRef = useRef()
-  const storageClientRef = useRef()
   const observationsRef = useRef()
   const motiveInputRef = useRef()
-  const motiveSelectRef = useRef()
   const exitDateRef = useRef()
-  const documentTypeRef = useRef()
   const documentSeriesRef = useRef()
   const documentSequenceRef = useRef()
   const documentDateRef = useRef()
@@ -158,6 +150,8 @@ const ExitNotes = () => {
   const [storageClients, setStorageClients] = useState([])
   const [items, setItems] = useState(storageContext ? [] : [emptyItem()])
   const [motives, setMotives] = useState([])
+  const [documentTypeValue, setDocumentTypeValue] = useState('')
+  const [motiveSelectValue, setMotiveSelectValue] = useState('')
   const [storageFilterClientId, setStorageFilterClientId] = useState('')
   const [storageFilterStartDate, setStorageFilterStartDate] = useState('')
   const [storageFilterEndDate, setStorageFilterEndDate] = useState('')
@@ -186,6 +180,14 @@ const ExitNotes = () => {
     loadWarehouses()
     loadStorageClients()
   }, [])
+
+  // VdTable no re-consulta automaticamente cuando cambia baseFilter (a diferencia del
+  // filterValue reactivo de dxDataGrid), asi que forzamos el refresh cuando el filtro
+  // de la cabecera (cliente/fechas) cambia.
+  useEffect(() => {
+    if (!storageContext) return
+    tableRef.current?.refresh()
+  }, [storageGridFilter])
 
   useEffect(() => {
     if (storageContext) return
@@ -254,23 +256,15 @@ const ExitNotes = () => {
     await syncWarehouseContext(warehouseId)
   }
 
-  const onWarehouseChanged = async (e) => {
-    const warehouseId = e.target.value || ''
-    const selected = $(e.target).select2('data')?.[0]
-    const warehouse = selected?.data ?? null
-    const businessId = warehouseBusinessId(warehouse)
-    const branchId = warehouseBranchId(warehouse)
-
+  // Antes usaba SelectAPIFormGroup (select2 + ajax) y leia el almacen elegido desde
+  // e.target/select2('data'). VdSelect entrega el value directo y las opciones salen
+  // de la lista `warehouses` ya cargada (mismo endpoint /api/admin/warehouses/paginate
+  // que usaba el ajax), asi que reutilizamos syncWarehouseContext tal cual lo hace
+  // onStorageWarehouseChanged.
+  const onWarehouseChanged = async (value) => {
+    const warehouseId = value || ''
     setSelectedWarehouseId(warehouseId)
-    if (warehouse || !warehouseId) {
-      setSelectedBusinessId(businessId ? `${businessId}` : '')
-      if (businessId) {
-        await loadBranches(businessId, branchId || null)
-      } else {
-        setBranches([])
-        setSelectedBranchId('')
-      }
-    }
+    await syncWarehouseContext(warehouseId, warehouses)
   }
 
   const onModalOpen = async (data = null) => {
@@ -280,7 +274,7 @@ const ExitNotes = () => {
     if (clientNameRef.current) clientNameRef.current.value = data?.client_name ?? ''
     if (observationsRef.current) observationsRef.current.value = data?.observations ?? ''
     if (exitDateRef.current) exitDateRef.current.value = toDateInput(data?.exit_date) || todayInput()
-    if (documentTypeRef.current) documentTypeRef.current.value = data?.document_type ?? ''
+    setDocumentTypeValue(data?.document_type ?? '')
     if (documentSeriesRef.current) documentSeriesRef.current.value = data?.document_series ?? ''
     if (documentSequenceRef.current) documentSequenceRef.current.value = data?.document_sequence ?? ''
     if (documentDateRef.current) documentDateRef.current.value = toDateInput(data?.document_date) || todayInput()
@@ -297,11 +291,8 @@ const ExitNotes = () => {
     if (storageContext) {
       await syncWarehouseContext(warehouseId, currentWarehouses)
     } else {
-      if (warehouseId && data?.warehouse?.name) {
-        SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
-      } else {
-        $(warehouseRef.current).empty().trigger('change')
-      }
+      // El Almacen ahora es un VdSelect controlado por selectedWarehouseId (ya
+      // seteado arriba) contra la lista `warehouses`; no requiere sincronizar el DOM.
       await loadBranches(data?.business_id ?? null, data?.business_branch_id ?? null)
     }
 
@@ -333,23 +324,41 @@ const ExitNotes = () => {
 
   const onModalSubmit = async (e) => {
     e.preventDefault()
-    const rawClientValue = storageContext
-      ? `${$(storageClientRef.current).val() || storageClientRef.current?.value || selectedClientId || ''}`
-      : ''
-    const selectedOptionText = storageContext ? storageClientRef.current?.selectedOptions?.[0]?.textContent?.trim() || '' : ''
-    const selectedDocumentNumber = extractDocumentNumber(selectedOptionText || rawClientValue)
+
+    // Los selects de Cliente/Almacen/Tipo de documento ya no son <select required>
+    // nativos (ahora son VdSelect, que no participa de la validacion HTML5), asi que
+    // validamos a mano lo que antes garantizaba el atributo required.
+    if (storageContext) {
+      if (!selectedClientId) {
+        await Swal.fire({ icon: 'warning', title: 'Cliente requerido', text: 'Selecciona el cliente.' })
+        return
+      }
+      if (!selectedWarehouseId) {
+        await Swal.fire({ icon: 'warning', title: 'Almacen requerido', text: 'Selecciona el almacen.' })
+        return
+      }
+      if (!documentTypeValue) {
+        await Swal.fire({ icon: 'warning', title: 'Tipo de documento requerido', text: 'Selecciona el tipo de documento.' })
+        return
+      }
+    } else if (!selectedWarehouseId) {
+      await Swal.fire({ icon: 'warning', title: 'Almacen requerido', text: 'Selecciona el almacen.' })
+      return
+    }
+
+    // selectedClientId ya queda sincronizado por el onChange del VdSelect, asi que
+    // el cliente elegido se resuelve directo desde el estado (antes se leia del DOM
+    // del <select> nativo).
+    const rawClientValue = storageContext ? `${selectedClientId || ''}` : ''
     const selectedClient = storageContext
-      ? storageClients.find(client => (
-        clientRealId(client) === rawClientValue ||
-        `${client.id ?? ''}` === rawClientValue ||
-        (selectedDocumentNumber && clientDocumentNumber(client) === selectedDocumentNumber)
-      ))
+      ? storageClients.find(client => clientRealId(client) === rawClientValue || `${client.id ?? ''}` === rawClientValue)
       : null
+    const selectedDocumentNumber = selectedClient ? clientDocumentNumber(selectedClient) : extractDocumentNumber(rawClientValue)
     const currentClientId = storageContext
       ? (selectedClient ? clientRealId(selectedClient) : normalizeClientSelectionValue(rawClientValue))
       : ''
     const selectedClientText = storageContext
-      ? (selectedClient ? clientLabel(selectedClient) : selectedOptionText)
+      ? (selectedClient ? clientLabel(selectedClient) : '')
       : ''
     const request = {
       id: idRef.current.value || undefined,
@@ -360,7 +369,7 @@ const ExitNotes = () => {
       client_document_number: storageContext ? (selectedClient ? clientDocumentNumber(selectedClient) : selectedDocumentNumber) || undefined : undefined,
       client_name: storageContext ? selectedClientText : (clientNameRef.current.value ?? '').trim(),
       exit_date: storageContext ? exitDateRef.current?.value || null : undefined,
-      document_type: storageContext ? (documentTypeRef.current?.value ?? '').trim() : undefined,
+      document_type: storageContext ? documentTypeValue.trim() : undefined,
       document_series: storageContext ? (documentSeriesRef.current?.value ?? '').trim() : undefined,
       document_sequence: storageContext ? (documentSequenceRef.current?.value ?? '').trim() : undefined,
       document_date: storageContext ? documentDateRef.current?.value || null : undefined,
@@ -384,7 +393,7 @@ const ExitNotes = () => {
     const result = await exitNotesRest.save(request)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(modalRef.current).modal('hide')
   }
 
@@ -404,7 +413,7 @@ const ExitNotes = () => {
 
     const result = await exitNotesRest.status({ id: data.id, status: data.status ? 1 : 0 })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onExitStatusChange = async (data, nextStatus) => {
@@ -424,7 +433,7 @@ const ExitNotes = () => {
 
     const result = await exitNotesRest.setExitStatus(data.id, cancelling ? 'cancelled' : 'approved')
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -439,16 +448,16 @@ const ExitNotes = () => {
     if (!isConfirmed) return
     const result = await exitNotesRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const addMotive = () => {
     const value = storageContext
-      ? (motiveSelectRef.current?.value ?? '').trim()
+      ? (motiveSelectValue ?? '').trim()
       : (motiveInputRef.current?.value ?? '').trim()
     if (!value || motives.includes(value)) return
     setMotives(prev => [...prev, value])
-    if (storageContext && motiveSelectRef.current) motiveSelectRef.current.value = ''
+    if (storageContext) setMotiveSelectValue('')
     if (!storageContext && motiveInputRef.current) motiveInputRef.current.value = ''
   }
 
@@ -758,93 +767,90 @@ const ExitNotes = () => {
       : prev.filter(id => !pageIds.includes(id)))
   }
 
-  const storageColumns = [
-    { dataField: 'client_id', caption: 'Cliente ID', visible: false, showInColumnChooser: false },
+  // Botones de accion por fila. En el modulo de almacenamiento cambian segun el
+  // estado de la nota (pending/approved/cancelled); en el modulo comercial son
+  // simplemente editar/eliminar.
+  const rowActions = (row) => {
+    if (storageContext) {
+      const status = row?.exit_status ?? 'pending'
+      if (status === 'pending') {
+        return [
+          { icon: 'mdi mdi-check-bold', title: 'Aprobar nota de salida', bg: '#e9f9ef', color: '#1bc47d', onClick: (r) => onExitStatusChange(r, 'approved') },
+          { icon: 'mdi mdi-pencil', title: 'Editar nota de salida', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+          { icon: 'mdi mdi-close', title: 'Anular nota de salida', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onExitStatusChange(r, 'cancelled') },
+          { icon: 'mdi mdi-file-pdf-box', title: 'PDF nota de salida', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(r)) },
+        ]
+      }
+      return [
+        { icon: 'mdi mdi-menu', title: 'Detalle nota de salida', bg: '#fff4e5', color: '#f1a325', onClick: (r) => onModalOpen(r) },
+        { icon: 'mdi mdi-eye', title: 'Ver nota de salida', bg: '#e7f6fb', color: '#17a2b8', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(r)) },
+        { icon: 'mdi mdi-file-pdf-box', title: 'PDF nota de salida', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(r)) },
+      ]
+    }
+    return [
+      { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+      { icon: 'mdi mdi-delete', title: 'Eliminar nota de salida', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+    ]
+  }
+
+  const storageVdColumns = [
     {
-      caption: 'Acciones',
-      width: 245,
-      minWidth: 245,
-      fixed: true,
-      fixedPosition: 'left',
-      cellTemplate: (container, { data }) => {
-        container.css({ overflow: 'visible', 'text-overflow': 'unset' })
-        const actions = $('<div/>').addClass('storage-exit-actions')
-        const status = data?.exit_status ?? 'pending'
-        if (status === 'pending') {
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-success tippy-here', title: 'Aprobar nota de salida', icon: 'mdi mdi-check-bold', onClick: () => onExitStatusChange(data, 'approved') }))
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-primary tippy-here', title: 'Editar nota de salida', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger tippy-here', title: 'Anular nota de salida', icon: 'mdi mdi-close', onClick: () => onExitStatusChange(data, 'cancelled') }))
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger tippy-here', title: 'PDF nota de salida', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
-          container.append(actions)
-          return
-        }
-        actions.append(DxButton({ className: 'btn btn-xs btn-soft-warning tippy-here', title: 'Detalle nota de salida', icon: 'mdi mdi-menu', onClick: () => onModalOpen(data) }))
-        actions.append(DxButton({ className: 'btn btn-xs btn-soft-info tippy-here', title: 'Ver nota de salida', icon: 'mdi mdi-eye', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
-        actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger tippy-here', title: 'PDF nota de salida', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.storageExitNote(data)) }))
-        container.append(actions)
-      },
-      allowFiltering: false,
-      allowExporting: false,
+      key: 'codigo', label: 'Codigo', field: 'code', width: '185px', filter: { type: 'text' },
+      render: (row) => (
+        <a className='admin-grid-edit-link' style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title='Editar nota de salida'>
+          {row.code || `NS${`${row.id ?? ''}`.padStart(5, '0')}`}
+        </a>
+      ),
     },
-    { dataField: 'code', caption: 'Codigo', width: 185, minWidth: 185, cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code || `NS${`${data?.id ?? ''}`.padStart(5, '0')}`, () => onModalOpen(data), 'Editar nota de salida') },
-    { dataField: 'client_name', caption: 'Cliente', minWidth: 260 },
-    { dataField: 'warehouse.name', caption: 'Almacen origen', minWidth: 180 },
-    { caption: 'Destino', minWidth: 150, calculateCellValue: storageDestinationLabel, allowFiltering: false },
-    { caption: 'Motivo', minWidth: 160, calculateCellValue: storageMotivesLabel, allowFiltering: false },
-    { dataField: 'document_type', caption: 'Tipo de documento', minWidth: 160 },
-    { dataField: 'document_series', caption: 'Serie', minWidth: 100 },
-    { dataField: 'document_sequence', caption: 'Secuencia', minWidth: 120 },
-    { dataField: 'exit_date', caption: 'Fecha salida', dataType: 'date', minWidth: 120 },
-    { dataField: 'creator.fullname', caption: 'Usuario registro', minWidth: 150, cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator)) },
-    { dataField: 'created_at', caption: 'Fecha registro', dataType: 'datetime', minWidth: 160 },
+    { key: 'cliente', label: 'Cliente', field: 'client_name', filter: { type: 'text' } },
+    { key: 'almacen', label: 'Almacen origen', field: 'warehouse.name', sortable: false, filter: { type: 'text', field: 'warehouse.name' } },
+    { key: 'destino', label: 'Destino', sortable: false, render: (row) => storageDestinationLabel(row) },
+    { key: 'motivo', label: 'Motivo', sortable: false, render: (row) => storageMotivesLabel(row) },
+    { key: 'tipo_documento', label: 'Tipo de documento', field: 'document_type', filter: { type: 'text' } },
+    { key: 'serie', label: 'Serie', field: 'document_series', filter: { type: 'text' } },
+    { key: 'secuencia', label: 'Secuencia', field: 'document_sequence', filter: { type: 'text' } },
+    { key: 'fecha_salida', label: 'Fecha salida', field: 'exit_date', filter: { type: 'date' }, render: (row) => toDateInput(row.exit_date), nowrap: true },
+    { key: 'usuario_registro', label: 'Usuario registro', field: 'creator.fullname', sortable: false, render: (row) => formatAuditUser(row.creator) },
+    { key: 'fecha_registro', label: 'Fecha registro', field: 'created_at', filter: { type: 'date' }, nowrap: true },
     {
-      dataField: 'exit_status',
-      caption: 'Estado',
-      minWidth: 145,
-      cellTemplate: (container, { data }) => ReactAppend(container, <span className={exitStatusClass(data?.exit_status)}>{exitStatusLabel(data?.exit_status)}</span>)
+      key: 'estado', label: 'Estado', field: 'exit_status', width: '145px',
+      filter: { type: 'select', field: 'exit_status', options: [{ value: 'pending', label: 'En espera' }, { value: 'approved', label: 'Aprobado' }, { value: 'cancelled', label: 'Anulado' }] },
+      render: (row) => <span className={exitStatusClass(row?.exit_status)}>{exitStatusLabel(row?.exit_status)}</span>,
     },
   ]
 
-  const standardColumns = [
-    { dataField: 'id', caption: 'ID', visible: false },
+  const standardVdColumns = [
     {
-      dataField: 'branch.name',
-      caption: 'Sede',
-      minWidth: 140,
-      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.branch?.name, () => onModalOpen(data), 'Editar nota de salida')
+      key: 'sede', label: 'Sede', field: 'branch.name', filter: { type: 'text', field: 'branch.name' },
+      render: (row) => (
+        <a className='admin-grid-edit-link' style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title='Editar nota de salida'>
+          {row.branch?.name}
+        </a>
+      ),
     },
-    { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 140 },
-    { dataField: 'client_name', caption: 'Cliente', minWidth: 180 },
-    { dataField: 'motives', caption: 'Motivos', minWidth: 220, cellTemplate: (container, { data }) => container.text((data?.motives ?? []).join(', ')) },
+    { key: 'almacen', label: 'Almacen', field: 'warehouse.name', filter: { type: 'text', field: 'warehouse.name' } },
+    { key: 'cliente', label: 'Cliente', field: 'client_name', filter: { type: 'text' } },
+    { key: 'motivos', label: 'Motivos', sortable: false, render: (row) => (row?.motives ?? []).join(', ') },
     {
-      dataField: 'items.id', caption: 'Detalle', minWidth: 240, allowFiltering: false,
-      cellTemplate: (container, { data }) => {
-        const lines = (data?.items ?? []).map(item => `${item?.article?.name || 'Articulo'} | Cant. ${Number(item?.quantity || 0).toFixed(2)} | Total ${Number(item?.total || 0).toFixed(2)}`)
-        ReactAppend(container, <div>
+      key: 'detalle', label: 'Detalle', sortable: false,
+      render: (row) => {
+        const lines = (row?.items ?? []).map(item => `${item?.article?.name || 'Articulo'} | Cant. ${Number(item?.quantity || 0).toFixed(2)} | Total ${Number(item?.total || 0).toFixed(2)}`)
+        return (<div>
           {lines.length === 0 && <small className='text-muted'>Sin detalle</small>}
-          {lines.map((line, idx) => <div key={`exit-note-${data.id}-${idx}`}><small>{line}</small></div>)}
+          {lines.map((line, idx) => <div key={`exit-note-${row.id}-${idx}`}><small>{line}</small></div>)}
         </div>)
-      }
-    },
-    { dataField: 'creator.fullname', caption: 'Creado por', visible: false, cellTemplate: (c, { data }) => c.text(formatAuditUser(data.creator)) },
-    { dataField: 'updater.fullname', caption: 'Actualizado por', visible: false, cellTemplate: (c, { data }) => c.text(formatAuditUser(data.updater)) },
-    {
-      dataField: 'status', caption: 'Estado', dataType: 'boolean', width: '95px',
-      cellTemplate: (container, { data }) => {
-        $(container).empty()
-        if (data.status === null) return
-        ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onStatusChange(data)} />)
-      }
-    },
-    {
-      caption: 'Acciones', width: '120px',
-      cellTemplate: (container, { data }) => {
-        container.css('text-overflow', 'unset')
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-primary me-1', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar nota de salida', icon: 'mdi mdi-delete', onClick: () => onDeleteClicked(data.id) }))
       },
-      allowFiltering: false, allowExporting: false
-    }
+    },
+    { key: 'creado_por', label: 'Creado por', field: 'creator.fullname', visible: false, sortable: false, render: (row) => formatAuditUser(row.creator) },
+    { key: 'actualizado_por', label: 'Actualizado por', field: 'updater.fullname', visible: false, sortable: false, render: (row) => formatAuditUser(row.updater) },
+    {
+      key: 'estado', label: 'Estado', field: 'status', width: '95px',
+      filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+      render: (row) => {
+        if (row.status === null) return ''
+        return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => onStatusChange(row)} />
+      },
+    },
   ]
 
   return (<>
@@ -871,13 +877,14 @@ const ExitNotes = () => {
       <div className='card mb-3'>
         <div className='card-body'>
           <div className='row align-items-end g-3'>
-            <div className='col-md-4'>
-              <label className='form-label'>Cliente</label>
-              <select className='form-select' value={storageFilterClientId} onChange={(e) => setStorageFilterClientId(e.target.value)}>
-                <option value=''>Seleccione</option>
-                {storageClients.map(client => <option key={`exit-filter-client-${client.id}`} value={clientRealId(client)}>{clientLabel(client)}</option>)}
-              </select>
-            </div>
+            <VdSelect
+              label='Cliente'
+              col='col-md-4'
+              value={storageFilterClientId}
+              onChange={(value) => setStorageFilterClientId(value)}
+              options={storageClients.map(client => ({ value: clientRealId(client), label: clientLabel(client) }))}
+              placeholder='Seleccione'
+            />
             <div className='col-md-3'>
               <label className='form-label'>Fecha inicio</label>
               <input className='form-control' type='date' value={storageFilterStartDate} onChange={(e) => setStorageFilterStartDate(e.target.value)} />
@@ -896,23 +903,47 @@ const ExitNotes = () => {
       </div>
     </>}
 
-    <Table
-      gridRef={gridRef}
-      title={storageContext ? 'Nota de salida' : 'Notas de salida'}
+    <VdTable
+      ref={tableRef}
       rest={exitNotesRest}
-      filterValue={storageContext ? storageGridFilter : null}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: { icon: 'refresh', hint: 'Refrescar tabla', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: { icon: 'add', title: 'Agregar', hint: 'Agregar nota de salida', onClick: () => onModalOpen(null) }
-        });
-      }}
-      pageSize={storageContext ? 10 : 25}
-      columns={storageContext ? storageColumns : standardColumns}
+      icon='mdi mdi-tray-arrow-up'
+      title={storageContext ? 'Nota de salida' : 'Notas de salida'}
+      unit='notas de salida'
+      defaultPageSize={storageContext ? 10 : 25}
+      searchFields={storageContext
+        ? ['code', 'client_name', 'warehouse.name', 'document_type', 'document_series', 'document_sequence']
+        : ['branch.name', 'warehouse.name', 'client_name']}
+      searchPlaceholder='Buscar…'
+      emptyText='No se encontraron notas de salida.'
+      baseFilter={storageContext ? storageGridFilter : null}
+      headerActions={<>
+        <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => tableRef.current?.refresh()}>
+          <i className='mdi mdi-refresh'></i>
+        </button>
+        <button type='button' className='vdt-btn-pri' onClick={() => onModalOpen(null)}>
+          <i className='mdi mdi-plus'></i> Agregar nota de salida
+        </button>
+      </>}
+      actions={rowActions}
+      columns={storageContext ? storageVdColumns : standardVdColumns}
+      renderCard={(row, actionButtons) => (
+        <div className='vdt-card' onClick={() => onModalOpen(row)}>
+          <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>
+                {storageContext ? (row.code || `NS${`${row.id ?? ''}`.padStart(5, '0')}`) : (row.branch?.name || `Nota #${row.id}`)}
+              </p>
+              <small className='text-muted'>{row.client_name}</small>
+            </div>
+            {storageContext
+              ? <span className={exitStatusClass(row?.exit_status)}>{exitStatusLabel(row?.exit_status)}</span>
+              : (row.status !== null && <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>)}
+          </div>
+          <small className='text-muted d-block mt-2'><i className='mdi mdi-warehouse me-1'></i>{row.warehouse?.name}</small>
+          {storageContext && <small className='text-muted d-block'>{storageMotivesLabel(row)}</small>}
+          {actionButtons && <div className='d-flex flex-wrap mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal
@@ -943,20 +974,24 @@ const ExitNotes = () => {
 
           <div className='px-2 pt-4'>
             <div className='row g-3'>
-              <div className='col-md-3'>
-                <label>Cliente</label>
-                <select ref={storageClientRef} className='form-select' value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} required>
-                  <option value=''>Seleccione Cliente</option>
-                  {storageClients.map(client => <option key={`exit-client-${client.id}`} value={clientRealId(client)} data-document-number={clientDocumentNumber(client)}>{clientLabel(client)}</option>)}
-                </select>
-              </div>
-              <div className='col-md-3'>
-                <label>Almacen</label>
-                <select className='form-select' value={selectedWarehouseId} onChange={(e) => onStorageWarehouseChanged(e.target.value)} required>
-                  <option value=''>Seleccione</option>
-                  {warehouses.map(warehouse => <option key={`exit-warehouse-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
-                </select>
-              </div>
+              <VdSelect
+                label='Cliente'
+                col='col-md-3'
+                required
+                value={selectedClientId}
+                onChange={(value) => setSelectedClientId(value)}
+                options={storageClients.map(client => ({ value: clientRealId(client), label: clientLabel(client) }))}
+                placeholder='Seleccione Cliente'
+              />
+              <VdSelect
+                label='Almacen'
+                col='col-md-3'
+                required
+                value={selectedWarehouseId}
+                onChange={onStorageWarehouseChanged}
+                options={warehouses.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))}
+                placeholder='Seleccione'
+              />
               <div className='col-md-2'>
                 <label>Fecha salida</label>
                 <input ref={exitDateRef} className='form-control' type='date' required />
@@ -964,10 +999,15 @@ const ExitNotes = () => {
               <div className='col-md-4'>
                 <label>Motivos</label>
                 <div className='d-flex gap-2'>
-                  <select ref={motiveSelectRef} className='form-select'>
-                    <option value=''>Seleccione motivos</option>
-                    {motiveOptions.map(option => <option key={`exit-motive-${option}`} value={option}>{option}</option>)}
-                  </select>
+                  <div style={{ flex: 1 }}>
+                    <VdSelect
+                      noMargin
+                      value={motiveSelectValue}
+                      onChange={(value) => setMotiveSelectValue(value)}
+                      options={motiveOptions.map(option => ({ value: option, label: option }))}
+                      placeholder='Seleccione motivos'
+                    />
+                  </div>
                   <button type='button' className='btn btn-light border' onClick={addMotive}>+</button>
                 </div>
                 {motives.length > 0 && <div className='d-flex flex-wrap gap-1 mt-2'>
@@ -980,13 +1020,15 @@ const ExitNotes = () => {
                 </div>}
               </div>
 
-              <div className='col-md-3'>
-                <label>Tipo documento</label>
-                <select ref={documentTypeRef} className='form-select' required>
-                  <option value=''>Seleccione</option>
-                  {documentOptions.map(option => <option key={`exit-doc-${option}`} value={option}>{option}</option>)}
-                </select>
-              </div>
+              <VdSelect
+                label='Tipo documento'
+                col='col-md-3'
+                required
+                value={documentTypeValue}
+                onChange={(value) => setDocumentTypeValue(value)}
+                options={documentOptions.map(option => ({ value: option, label: option }))}
+                placeholder='Seleccione'
+              />
               <div className='col-md-3'>
                 <label>Serie</label>
                 <input ref={documentSeriesRef} className='form-control' required />
@@ -1056,11 +1098,23 @@ const ExitNotes = () => {
             </div>
           </div>
         </> : <div className='row'>
-          <SelectFormGroup eRef={branchRef} label='Sede' col='col-md-4' dropdownParent='#exit-note-form-container' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)} effectWith={[selectedBranchId, branches.length]}>
-            <option value=''>-- Seleccionar sede --</option>
-            {branches.map(branch => <option key={`exit-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
-          </SelectFormGroup>
-          <SelectAPIFormGroup eRef={warehouseRef} label='Almacen' col='col-md-4' required searchAPI='/api/admin/warehouses/paginate' searchBy='name' dropdownParent='#exit-note-form-container' onChange={onWarehouseChanged} />
+          <VdSelect
+            label='Sede'
+            col='col-md-4'
+            value={selectedBranchId}
+            onChange={(value) => setSelectedBranchId(value)}
+            options={branches.map(branch => ({ value: `${branch.id}`, label: branch.name }))}
+            placeholder='-- Seleccionar sede --'
+          />
+          <VdSelect
+            label='Almacen'
+            col='col-md-4'
+            required
+            value={selectedWarehouseId}
+            onChange={onWarehouseChanged}
+            options={warehouses.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))}
+            placeholder='-- Seleccionar almacen --'
+          />
           <InputFormGroup eRef={clientNameRef} label='Cliente' col='col-md-4' />
 
           <div className='form-group col-md-8 mb-2'>
@@ -1158,11 +1212,14 @@ const ExitNotes = () => {
                         <td><small>{articleExtra}</small></td>
                         <td><small>{unitLabel}</small></td>
                         <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.stock} onChange={(e) => onItemUpdated(item.uid, 'stock', e.target.value)} /></td>
-                        <td>
-                          <select className='form-control form-control-sm' value={item.warehouse_id || selectedWarehouseId || ''} onChange={(e) => onItemUpdated(item.uid, 'warehouse_id', e.target.value)}>
-                            <option value=''>Seleccionar...</option>
-                            {warehouses.map(warehouse => <option key={`exit-warehouse-item-${item.uid}-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
-                          </select>
+                        <td style={{ minWidth: 160 }}>
+                          <VdSelect
+                            noMargin
+                            value={`${item.warehouse_id || selectedWarehouseId || ''}`}
+                            onChange={(value) => onItemUpdated(item.uid, 'warehouse_id', value)}
+                            options={warehouses.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))}
+                            placeholder='Seleccionar...'
+                          />
                         </td>
                         <td><input className='form-control form-control-sm' type='date' value={item.expiration_date} onChange={(e) => onItemUpdated(item.uid, 'expiration_date', e.target.value)} /></td>
                         <td><input className='form-control form-control-sm' value={item.location} onChange={(e) => onItemUpdated(item.uid, 'location', e.target.value)} /></td>
@@ -1221,16 +1278,14 @@ const ExitNotes = () => {
               }}
             />
           </div>
-          <SelectFormGroup
+          <VdSelect
             label='Seleccionar almacen'
             col='col-md-6'
             value={stockSearchWarehouseId}
-            onChange={(e) => setStockSearchWarehouseId(e.target.value)}
-            effectWith={[warehouses.length, stockSearchWarehouseId]}
-          >
-            <option value=''>Seleccione</option>
-            {warehouses.map(warehouse => <option key={`exit-note-stock-search-warehouse-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
-          </SelectFormGroup>
+            onChange={(value) => setStockSearchWarehouseId(value)}
+            options={warehouses.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))}
+            placeholder='Seleccione'
+          />
         </div>
 
         <div className='d-flex gap-2 justify-content-center mb-4'>
@@ -1250,20 +1305,20 @@ const ExitNotes = () => {
         <hr className='mt-0' />
 
         <div className='d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2'>
-          <label className='d-flex align-items-center gap-2 mb-0'>
+          <div className='d-flex align-items-center gap-2'>
             <span>Elementos:</span>
-            <select
-              className='form-select form-select-sm'
-              style={{ width: 80 }}
-              value={stockSearchPageSize}
-              onChange={(e) => {
-                setStockSearchPageSize(Number(e.target.value))
-                setStockSearchPage(1)
-              }}
-            >
-              {[10, 20, 50].map(size => <option key={`exit-note-stock-search-size-${size}`} value={size}>{size}</option>)}
-            </select>
-          </label>
+            <div style={{ width: 90 }}>
+              <VdSelect
+                noMargin
+                value={`${stockSearchPageSize}`}
+                onChange={(value) => {
+                  setStockSearchPageSize(Number(value))
+                  setStockSearchPage(1)
+                }}
+                options={[10, 20, 50].map(size => ({ value: `${size}`, label: `${size}` }))}
+              />
+            </div>
+          </div>
           <label className='d-flex align-items-center gap-2 mb-0'>
             <span>Filtrar:</span>
             <input className='form-control form-control-sm' value={stockSearchFilter} onChange={(e) => { setStockSearchFilter(e.target.value); setStockSearchPage(1) }} />

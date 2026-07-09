@@ -4,12 +4,11 @@ import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import Global from '../Utils/Global';
-import Table from '../Components/Adminto/Table';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
 import Swal from 'sweetalert2';
 import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
-import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import BillingDocumentsRest from '../Actions/Admin/BillingDocumentsRest';
@@ -22,7 +21,6 @@ import {
   commercialOrderStatusOptions,
   getCommercialOrderStatusLabel,
   getReferralGuideStatusLabel,
-  toLookup,
 } from '../Utils/statusLabels';
 
 const commercialOrdersRest = new CommercialOrdersRest()
@@ -60,34 +58,32 @@ const staticListingTabs = {
   },
 }
 
-const appendGridActionButton = (container, { variant, title, icon, onClick }) => {
-  const button = $('<button type="button"></button>')
-    .addClass(`btn btn-xs btn-soft-${variant} commercial-order-action-btn tippy-here`)
-    .attr('title', title)
-    .attr('aria-label', title)
-    .attr('data-tippy-content', title)
-    .append($('<i></i>').addClass(icon))
-    .on('click', (event) => {
-      event.preventDefault()
-      event.stopPropagation()
-      onClick()
-    })
-
-  container.append(button)
-}
-
 const statusBadgeClass = (value) => {
   const key = `${value ?? 'empty'}`.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-')
   return `commercial-order-status-badge commercial-order-status-${key || 'empty'}`
 }
 
-const appendStatusBadge = (container, value, labelResolver) => {
-  container.addClass('commercial-order-status-cell')
-  ReactAppend(container, (
-    <span className={statusBadgeClass(value)}>
-      {labelResolver(value)}
-    </span>
-  ))
+const StatusBadge = ({ value, label }) => (
+  <span className={statusBadgeClass(value)}>{label}</span>
+)
+
+const formatDateCell = (value) => {
+  if (!value) return ''
+  const date = new Date(`${value}`.replace(' ', 'T'))
+  return Number.isNaN(date.getTime()) ? `${value}` : date.toLocaleDateString('es-PE')
+}
+
+const formatMoneyCell = (value) => Number(value || 0).toFixed(2)
+
+// Colores de los botones de accion por fila (paleta de marca)
+const ACTION_COLORS = {
+  primary: { bg: '#e7f2fd', color: '#188ae2' },
+  success: { bg: '#e6f7ef', color: '#10c469' },
+  info: { bg: '#e6f6fb', color: '#35b8e0' },
+  warning: { bg: '#fef4e4', color: '#f7b84b' },
+  dark: { bg: '#eef0f4', color: '#5b69bc' },
+  secondary: { bg: '#eef0f4', color: '#5b69bc' },
+  danger: { bg: '#fcebeb', color: '#e24b4a' },
 }
 
 const emptyItem = () => ({
@@ -885,6 +881,7 @@ const buildTrackingRows = (order) => {
 
 const LegacyListingPanel = ({ title, config }) => {
   const pageSize = config?.pageSize ?? 20
+  const [listSize, setListSize] = useState(`${pageSize}`)
   return (
     <div className='row'>
       <div className='col-12'>
@@ -894,9 +891,14 @@ const LegacyListingPanel = ({ title, config }) => {
             <div className='d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2'>
               <div className='d-flex align-items-center gap-2'>
                 <label className='form-label mb-0'>Elementos :</label>
-                <select className='form-select form-select-sm commercial-order-page-size' defaultValue={pageSize}>
-                  {[10, 20, 25, 50].map(size => <option key={`commercial-list-size-${size}`} value={size}>{size}</option>)}
-                </select>
+                <div style={{ width: 90 }}>
+                  <VdSelect
+                    noMargin
+                    value={listSize}
+                    onChange={(value) => setListSize(value)}
+                    options={[10, 20, 25, 50].map(size => ({ value: `${size}`, label: `${size}` }))}
+                  />
+                </div>
               </div>
               <div className='d-flex align-items-center gap-2'>
                 <label className='form-label mb-0'>Filtrar :</label>
@@ -949,7 +951,6 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const delayReasonModalRef = useRef()
   const delayReasonIdRef = useRef()
   const delayReasonDescriptionRef = useRef()
-  const delayReasonStatusRef = useRef()
   const trackingModalRef = useRef()
   const evidenceModalRef = useRef()
   const evidenceFileRef = useRef()
@@ -960,7 +961,6 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const idRef = useRef()
   const codeRef = useRef()
   const businessRef = useRef()
-  const branchRef = useRef()
   const warehouseRef = useRef()
   const clientRef = useRef()
   const eventualClientRef = useRef()
@@ -968,10 +968,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const doctorNameRef = useRef()
   const issueDateRef = useRef()
   const promisedDateRef = useRef()
-  const documentTypeRef = useRef()
-  const currencyRef = useRef()
   const paymentConditionRef = useRef()
-  const paymentMethodRef = useRef()
   const purchaseOrderRef = useRef()
   const guideNumberRef = useRef()
   const referralGuideRef = useRef()
@@ -1004,6 +1001,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const [deliveryAddresses, setDeliveryAddresses] = useState([])
   const [items, setItems] = useState([emptyItem()])
   const [selectedDocumentType, setSelectedDocumentType] = useState('Factura')
+  const [selectedCurrency, setSelectedCurrency] = useState('PEN')
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('')
+  const [delayReasonStatus, setDelayReasonStatus] = useState('1')
   const [discountMenu, setDiscountMenu] = useState(null)
   const [trackingOrder, setTrackingOrder] = useState(null)
   const [evidenceOrder, setEvidenceOrder] = useState(null)
@@ -1269,9 +1269,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     if (issueDateRef.current) issueDateRef.current.value = data?.issue_date ? data.issue_date.toString().slice(0, 10) : new Date().toISOString().slice(0, 10)
     if (promisedDateRef.current) promisedDateRef.current.value = data?.promised_delivery_at ? data.promised_delivery_at.toString().slice(0, 10) : ''
     setSelectedDocumentType(normalizeDocumentType(data?.document_type ?? 'Factura'))
-    if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
+    setSelectedCurrency(data?.currency ?? 'PEN')
     if (paymentConditionRef.current) paymentConditionRef.current.value = data?.payment_condition ?? 'Contado'
-    if (paymentMethodRef.current) paymentMethodRef.current.value = normalizePaymentMethodForForm(data?.payment_method)
+    setSelectedPaymentMethod(normalizePaymentMethodForForm(data?.payment_method))
     if (installmentsRef.current) installmentsRef.current.value = data?.installments ?? 1
     if (firstDueDateRef.current) firstDueDateRef.current.value = data?.first_due_date ? data.first_due_date.toString().slice(0, 10) : ''
     if (orderStatusRef.current) orderStatusRef.current.value = data?.order_status ?? (data?.external_source ? 'pending' : 'draft')
@@ -1387,9 +1387,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       client_distribution_network_id: selectedNetworkId || null,
       client_delivery_address_id: selectedDeliveryAddressId || null,
       document_type: selectedDocumentType,
-      currency: currencyRef.current?.value || 'PEN',
-      payment_condition: paymentConditionFromPaymentMethod(paymentMethodRef.current?.value || paymentConditionRef.current?.value || 'Contado'),
-      payment_method: paymentMethodRef.current?.value || '',
+      currency: selectedCurrency || 'PEN',
+      payment_condition: paymentConditionFromPaymentMethod(selectedPaymentMethod || paymentConditionRef.current?.value || 'Contado'),
+      payment_method: selectedPaymentMethod || '',
       purchase_order: purchaseOrderRef.current?.value?.trim() || '',
       guide_number: guideNumberRef.current?.value?.trim() || '',
       referral_guide: referralGuideRef.current?.value?.trim() || '',
@@ -1453,7 +1453,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     const result = await commercialOrdersRest.save(request)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refreshActiveListingGrid()
     $(modalRef.current).modal('hide')
   }
 
@@ -1465,8 +1465,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     await loadBranches(businessId, null)
   }
 
-  const onBranchChanged = (e) => {
-    const branchId = e.target.value || ''
+  const onBranchChanged = (value) => {
+    const branchId = value || ''
     setSelectedBranchId(branchId)
     setSelectedWarehouseId('')
     clearSelectValue(warehouseRef)
@@ -1519,18 +1519,13 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     }))
   }
 
-  const getActiveListingGridInstance = (tabId = activeListingTab) => {
-    const ref = tabId === 'multivende'
-      ? multivendeGridRef
-      : listingTabs.find(tab => tab.id === tabId)?.kind === 'billing'
-        ? billingGridRef
-        : gridRef
-    return ref.current ? $(ref.current).dxDataGrid('instance') : null
+  const getActiveListingTableRef = (tabId = activeListingTab) => {
+    if (tabId === 'multivende') return multivendeGridRef
+    return listingTabs.find(tab => tab.id === tabId)?.kind === 'billing' ? billingGridRef : gridRef
   }
 
   const refreshActiveListingGrid = (tabId = activeListingTab) => {
-    const instance = getActiveListingGridInstance(tabId)
-    if (instance) instance.refresh()
+    getActiveListingTableRef(tabId).current?.refresh()
   }
 
   const applyListingFiltersForTab = (tabId = activeListingTab) => {
@@ -1552,20 +1547,115 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     applyListingFiltersForTab(activeListingTab)
   }
 
+  // Columnas de exportacion (etiqueta + extractor de texto) por pestaña
+  const listingExportColumns = (tabId) => {
+    if (tabId === 'orders') return [
+      ['Estado', row => getCommercialOrderStatusLabel(row.order_status)],
+      ['Comprobante', row => orderVoucherLabel(row)],
+      ['Tipo documento', row => orderDocumentTypeLabel(row)],
+      ['Cliente', row => orderCustomerLabel(row)],
+      ['Total', row => Number(row.total || 0)],
+      ['Tipo de pago', row => orderPaymentLabel(row)],
+      ['Usuario', row => formatPlainUser(row.seller)],
+      ['Fecha registro', row => formatDateCell(row.created_at)],
+      ['Usuario registro', row => formatUserRegistry(row.creator)],
+      ['Codigo', row => row.code ?? ''],
+      ['Empresa', row => row.business?.name ?? ''],
+    ]
+    if (tabId === 'issued' || tabId === 'credit-notes') {
+      const columns = [
+        ['Serie', row => row.series ?? ''],
+        ['Secuencia', row => row.sequence ?? ''],
+        ['SUNAT', row => billingDocumentSunatLabel(row)],
+      ]
+      if (tabId === 'credit-notes') columns.push(['Doc. Afecto', row => billingDocumentAffectedLabel(row)])
+      return [
+        ...columns,
+        ['Cliente', row => billingDocumentClientLabel(row)],
+        ['Moneda', row => currencyLabel(row.currency)],
+        ['Total Gravada', row => Number(row.subtotal || 0)],
+        ['IGV', row => Number(row.tax_amount || 0)],
+        ['Importe Factura', row => Number(row.total || 0)],
+        ['Tipo de Pago', row => row.payment_method ?? ''],
+        ['Fecha Facturacion', row => formatDateCell(row.issue_date)],
+      ]
+    }
+    if (tabId === 'multivende') return [
+      ['E. Pedido', row => getCommercialOrderStatusLabel(row.order_status)],
+      ['E. SUNAT', row => orderSunatLabel(row)],
+      ['Pedido VTEX', row => orderExternalIdLabel(row)],
+      ['Canal', row => row.external_channel ?? ''],
+      ['Comprobante', row => orderVoucherLabel(row)],
+      ['Tipo Documento', row => orderDocumentTypeLabel(row)],
+      ['Cliente', row => orderCustomerLabel(row)],
+      ['Total', row => Number(row.total || 0)],
+      ['F. Entrega Estimada', row => formatDateCell(row.promised_delivery_at)],
+      ['F. de Entrega', row => formatDateCell(orderDeliveredDate(row))],
+      ['Tiempo de Proceso', row => orderProcessTime(row)],
+      ['Fecha Registro', row => formatDateCell(row.created_at)],
+      ['Codigo', row => row.code ?? ''],
+    ]
+    return null
+  }
+
+  const exportFileName = (tabId) => ({
+    orders: 'pedidos-comerciales',
+    issued: 'facturas-emitidas',
+    'credit-notes': 'notas-de-credito',
+    multivende: 'pedidos-multivende',
+  }[tabId] || 'reporte')
+
+  const exportRowsToFile = async (columns, rows, fileName) => {
+    if (window.ExcelJS && window.saveAs) {
+      const workbook = new window.ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Reporte')
+      worksheet.addRow(columns.map(([label]) => label))
+      rows.forEach(row => worksheet.addRow(columns.map(([, value]) => value(row))))
+      worksheet.columns.forEach(column => { column.width = 20 })
+      const buffer = await workbook.xlsx.writeBuffer()
+      window.saveAs(new Blob([buffer], { type: 'application/octet-stream' }), `${fileName}.xlsx`)
+      return
+    }
+    const csv = [
+      columns.map(([label]) => `"${label}"`).join(','),
+      ...rows.map(row => columns.map(([, value]) => `"${`${value(row) ?? ''}`.replaceAll('"', '""')}"`).join(',')),
+    ].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    if (window.saveAs) {
+      window.saveAs(blob, `${fileName}.csv`)
+      return
+    }
+    const anchor = document.createElement('a')
+    anchor.href = URL.createObjectURL(blob)
+    anchor.download = `${fileName}.csv`
+    anchor.click()
+    URL.revokeObjectURL(anchor.href)
+  }
+
   const exportActiveListingGrid = (applyFiltersFirst = false) => {
     const tabId = activeListingTab
     if (applyFiltersFirst) applyListingFiltersForTab(tabId)
 
-    setTimeout(() => {
-      const instance = getActiveListingGridInstance(tabId)
-      if (instance?.exportToExcel) instance.exportToExcel(false)
-    }, applyFiltersFirst ? 350 : 0)
+    const run = async () => {
+      const columns = listingExportColumns(tabId)
+      if (!columns) return
+      let rows = []
+      try {
+        rows = await getActiveListingTableRef(tabId).current?.loadAll() ?? []
+      } catch (error) {
+        rows = []
+      }
+      await exportRowsToFile(columns, rows, exportFileName(tabId))
+    }
+
+    if (applyFiltersFirst) setTimeout(run, 350)
+    else run()
   }
 
   const onBooleanChange = async ({ id, field, value }) => {
     const result = await commercialOrdersRest.boolean({ id, field, value })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    gridRef.current?.refresh()
   }
 
   const openTracking = (data) => {
@@ -1639,7 +1729,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     setEvidencePreview('')
     if (evidenceFileRef.current) evidenceFileRef.current.value = ''
     $(evidenceModalRef.current).modal('hide')
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    gridRef.current?.refresh()
   }
 
   const onOpenReferralGuide = async (order) => {
@@ -1660,7 +1750,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         if (result.isConfirmed) {
           const issued = await referralGuidesRest.issue(existingGuide.id)
           if (!issued?.data) return
-          $(gridRef.current).dxDataGrid('instance').refresh()
+          refreshActiveListingGrid()
           await openMagistralesRecordPdf(buildMagistralesRows.referralGuide(issued.data))
           return
         }
@@ -1674,7 +1764,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
     const result = await referralGuidesRest.prepareFromCommercialOrder(order.id)
     if (!result?.data) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refreshActiveListingGrid()
     await openMagistralesRecordPdf(buildMagistralesRows.referralGuide(result.data))
   }
 
@@ -1749,7 +1839,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
       const prepared = await billingDocumentsRest.prepareVoucher(saved.data.id)
       document = prepared?.data ?? saved.data
-      $(gridRef.current).dxDataGrid('instance').refresh()
+      gridRef.current?.refresh()
 
       const issueNow = await Swal.fire({
         title: 'Comprobante generado',
@@ -1788,7 +1878,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
     const issued = await billingDocumentsRest.issue(document.id)
     if (!issued) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    gridRef.current?.refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -1803,7 +1893,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     if (!isConfirmed) return
     const result = await commercialOrdersRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    gridRef.current?.refresh()
   }
 
   const openMultivendeModal = () => {
@@ -1836,7 +1926,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const resetDelayReasonForm = () => {
     if (delayReasonIdRef.current) delayReasonIdRef.current.value = ''
     if (delayReasonDescriptionRef.current) delayReasonDescriptionRef.current.value = ''
-    if (delayReasonStatusRef.current) delayReasonStatusRef.current.value = '1'
+    setDelayReasonStatus('1')
   }
 
   const loadDelayReasons = async () => {
@@ -1865,7 +1955,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const editDelayReason = (reason) => {
     if (delayReasonIdRef.current) delayReasonIdRef.current.value = reason?.id ?? ''
     if (delayReasonDescriptionRef.current) delayReasonDescriptionRef.current.value = reason?.description ?? ''
-    if (delayReasonStatusRef.current) delayReasonStatusRef.current.value = reason?.status ? '1' : '0'
+    setDelayReasonStatus(reason?.status ? '1' : '0')
     delayReasonDescriptionRef.current?.focus()
   }
 
@@ -1884,7 +1974,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     const result = await deliveryDelayReasonsRest.save({
       id: delayReasonIdRef.current?.value || undefined,
       description,
-      status: delayReasonStatusRef.current?.value === '1',
+      status: delayReasonStatus === '1',
     })
     if (!result) return
     resetDelayReasonForm()
@@ -2057,21 +2147,29 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         {field.helper && <span className='commercial-order-filter-helper'> {field.helper}</span>}
       </label>
       {field.type === 'business' ? (
-        <select className='form-select' value={activeFilters[field.key] ?? ''} onChange={(event) => updateListingFilter(tabId, field.key, event.target.value)}>
-          <option value=''>Todos</option>
-          {businessOptions.map(business => <option key={`commercial-order-filter-business-${business.id}`} value={business.id}>{business.name}</option>)}
-        </select>
+        <VdSelect
+          noMargin
+          value={`${activeFilters[field.key] ?? ''}`}
+          onChange={(value) => updateListingFilter(tabId, field.key, value)}
+          options={businessOptions.map(business => ({ value: `${business.id}`, label: business.name }))}
+          placeholder='Todos'
+        />
       ) : field.type === 'laboratory' ? (
-        <select className='form-select' value={activeFilters[field.key] ?? ''} onChange={(event) => updateListingFilter(tabId, field.key, event.target.value)}>
-          <option value=''>Todos</option>
-          {laboratoryOptions.map(laboratory => <option key={`commercial-order-filter-laboratory-${laboratory.id}`} value={laboratory.id}>{laboratory.name}</option>)}
-        </select>
+        <VdSelect
+          noMargin
+          value={`${activeFilters[field.key] ?? ''}`}
+          onChange={(value) => updateListingFilter(tabId, field.key, value)}
+          options={laboratoryOptions.map(laboratory => ({ value: `${laboratory.id}`, label: laboratory.name }))}
+          placeholder='Todos'
+        />
       ) : field.type === 'select' ? (
-        <select className='form-select' value={activeFilters[field.key] ?? ''} onChange={(event) => updateListingFilter(tabId, field.key, event.target.value)}>
-          {(field.options ?? []).map(option => (
-            <option key={`commercial-order-filter-${field.key}-${option.value ?? option}`} value={option.value ?? option}>{option.label ?? option}</option>
-          ))}
-        </select>
+        <VdSelect
+          noMargin
+          value={`${activeFilters[field.key] ?? ''}`}
+          onChange={(value) => updateListingFilter(tabId, field.key, value)}
+          options={(field.options ?? []).map(option => ({ value: `${option.value ?? option}`, label: option.label ?? option }))}
+          placeholder='Seleccionar'
+        />
       ) : field.type === 'dateRange' ? (
         <input
           className='form-control commercial-order-date-range-input'
@@ -2300,140 +2398,142 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     refreshActiveListingGrid()
   }
 
-  const billingActionColumn = {
-    caption: 'Acciones',
-    width: 100,
-    fixed: true,
-    fixedPosition: 'left',
-    allowFiltering: false,
-    allowSorting: false,
-    cellTemplate: (container, { data }) => {
-      container.addClass('commercial-order-actions')
-      appendGridActionButton(container, {
-        variant: 'danger',
-        title: 'Previsualizar PDF del comprobante',
-        icon: 'mdi mdi-file-eye-outline',
-        onClick: () => openPdfUrlInModal(
-          billingDocumentsRest.downloadUrl(data.id, 'pdf'),
-          `Comprobante ${billingDocumentNumber(data) || data.code}`,
-        )
-      })
-      if (`${data.document_type ?? ''}`.trim().toLowerCase() !== 'nota de credito') {
-        appendGridActionButton(container, {
-          variant: 'warning',
-          title: 'Anular: generar nota de credito de este comprobante',
-          icon: 'mdi mdi-file-cancel-outline',
-          onClick: () => onCreditNoteOpen(data)
-        })
-      }
-    }
-  }
-  const orderFilterColumns = [
-    { dataField: 'external_source', visible: false, showInColumnChooser: false },
-    { dataField: 'business_id', visible: false, showInColumnChooser: false },
-    { dataField: 'dispatch_status', visible: false, showInColumnChooser: false },
+  // --- Acciones y columnas VdTable ---
+  const billingActions = (row) => [
+    {
+      icon: 'mdi mdi-file-eye-outline', title: 'Previsualizar PDF del comprobante', ...ACTION_COLORS.danger,
+      onClick: () => openPdfUrlInModal(billingDocumentsRest.downloadUrl(row.id, 'pdf'), `Comprobante ${billingDocumentNumber(row) || row.code}`),
+    },
+    {
+      icon: 'mdi mdi-file-cancel-outline', title: 'Anular: generar nota de credito de este comprobante', ...ACTION_COLORS.warning,
+      hidden: `${row.document_type ?? ''}`.trim().toLowerCase() === 'nota de credito',
+      onClick: () => onCreditNoteOpen(row),
+    },
   ]
-  const billingFilterColumns = [
-    { dataField: 'source_type', visible: false, showInColumnChooser: false },
-    { dataField: 'local_status', visible: false, showInColumnChooser: false },
-    { dataField: 'document_type', visible: false, showInColumnChooser: false },
-    { dataField: 'business_id', visible: false, showInColumnChooser: false },
-    { dataField: 'created_at', visible: false, showInColumnChooser: false },
+  const billingColumnsBase = [
+    { key: 'series', label: 'Serie', field: 'series', width: '90px', filter: { type: 'text' } },
+    { key: 'sequence', label: 'Secuencia', field: 'sequence', width: '110px', filter: { type: 'text' } },
+    { key: 'sunat', label: 'SUNAT', field: 'external_reference', width: '140px', sortable: false, render: (row) => billingDocumentSunatLabel(row) },
   ]
-  const multivendeFilterColumns = [
-    { dataField: 'external_source', visible: false, showInColumnChooser: false },
-    { dataField: 'external_order_id', visible: false, showInColumnChooser: false },
-    { dataField: 'external_checkout_id', visible: false, showInColumnChooser: false },
+  const billingColumnsTail = [
+    { key: 'cliente', label: 'Cliente', field: 'client.full_name', sortable: false, render: (row) => billingDocumentClientLabel(row) },
+    { key: 'moneda', label: 'Moneda', field: 'currency', width: '100px', render: (row) => currencyLabel(row.currency) },
+    { key: 'subtotal', label: 'Total Gravada', field: 'subtotal', width: '130px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoneyCell(row.subtotal) },
+    { key: 'tax_amount', label: 'IGV', field: 'tax_amount', width: '90px', align: 'right', render: (row) => formatMoneyCell(row.tax_amount) },
+    { key: 'total', label: 'Importe Factura', field: 'total', width: '130px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoneyCell(row.total) },
+    { key: 'payment_method', label: 'Tipo de Pago', field: 'payment_method', width: '150px', filter: { type: 'text' } },
+    { key: 'issue_date', label: 'Fecha Facturacion', field: 'issue_date', width: '150px', filter: { type: 'date' }, render: (row) => formatDateCell(row.issue_date) },
   ]
   const billingColumnsByTab = {
-    issued: [
-      ...billingFilterColumns,
-      billingActionColumn,
-      { dataField: 'series', caption: 'Serie', width: 90 },
-      { dataField: 'sequence', caption: 'Secuencia', width: 110 },
-      { caption: 'SUNAT', width: 140, calculateCellValue: billingDocumentSunatLabel },
-      { caption: 'Cliente', minWidth: 260, calculateCellValue: billingDocumentClientLabel },
-      { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (row) => currencyLabel(row.currency) },
-      { dataField: 'subtotal', caption: 'Total Gravada', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'tax_amount', caption: 'IGV', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'total', caption: 'Importe Factura', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'payment_method', caption: 'Tipo de Pago', width: 150 },
-      { dataField: 'issue_date', caption: 'Fecha Facturacion', dataType: 'date', width: 150 },
-    ],
+    issued: [...billingColumnsBase, ...billingColumnsTail],
     'credit-notes': [
-      ...billingFilterColumns,
-      billingActionColumn,
-      { dataField: 'series', caption: 'Serie', width: 90 },
-      { dataField: 'sequence', caption: 'Secuencia', width: 110 },
-      { caption: 'SUNAT', width: 140, calculateCellValue: billingDocumentSunatLabel },
-      { caption: 'Doc. Afecto', width: 130, calculateCellValue: billingDocumentAffectedLabel },
-      { caption: 'Cliente', minWidth: 260, calculateCellValue: billingDocumentClientLabel },
-      { dataField: 'currency', caption: 'Moneda', width: 100, calculateCellValue: (row) => currencyLabel(row.currency) },
-      { dataField: 'subtotal', caption: 'Total Gravada', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'tax_amount', caption: 'IGV', width: 90, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'total', caption: 'Importe Factura', width: 130, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'payment_method', caption: 'Tipo de Pago', width: 150 },
-      { dataField: 'issue_date', caption: 'Fecha Facturacion', dataType: 'date', width: 150 },
+      ...billingColumnsBase,
+      { key: 'doc_afecto', label: 'Doc. Afecto', field: 'reference_document.code', width: '130px', sortable: false, render: (row) => billingDocumentAffectedLabel(row) },
+      ...billingColumnsTail,
     ],
   }
+
+  const multivendeActions = (row) => {
+    const hasReferralGuide = orderGuides(row).length > 0
+    return [
+      { icon: 'mdi mdi-pencil', title: 'Editar pedido Multivende', ...ACTION_COLORS.primary, onClick: () => onModalOpen(row) },
+      { icon: 'mdi mdi-timeline-clock-outline', title: 'Ver tracking del pedido Multivende', ...ACTION_COLORS.info, onClick: () => openTracking(row) },
+      {
+        icon: hasReferralGuide ? 'mdi mdi-eye' : 'mdi mdi-file-document',
+        title: hasReferralGuide ? 'Ver guia de remision asociada' : 'Generar guia de remision',
+        ...(hasReferralGuide ? ACTION_COLORS.dark : ACTION_COLORS.warning),
+        onClick: () => onOpenReferralGuide(row),
+      },
+    ]
+  }
   const multivendeColumns = [
-    ...multivendeFilterColumns,
-    {
-      caption: 'Acciones',
-      width: 230,
-      fixed: true,
-      fixedPosition: 'left',
-      allowFiltering: false,
-      allowExporting: false,
-      cellTemplate: (container, { data }) => {
-        const hasReferralGuide = orderGuides(data).length > 0
-        container.css('text-overflow', 'unset')
-        container.addClass('commercial-order-actions')
-        appendGridActionButton(container, {
-          variant: 'primary',
-          title: 'Editar pedido Multivende',
-          icon: 'mdi mdi-pencil',
-          onClick: () => onModalOpen(data)
-        })
-        appendGridActionButton(container, {
-          variant: 'info',
-          title: 'Ver tracking del pedido Multivende',
-          icon: 'mdi mdi-timeline-clock-outline',
-          onClick: () => openTracking(data)
-        })
-        appendGridActionButton(container, {
-          variant: hasReferralGuide ? 'dark' : 'warning',
-          title: hasReferralGuide ? 'Ver guia de remision asociada' : 'Generar guia de remision',
-          icon: hasReferralGuide ? 'mdi mdi-eye' : 'mdi mdi-file-document',
-          onClick: () => onOpenReferralGuide(data)
-        })
-      }
-    },
-    {
-      dataField: 'order_status',
-      caption: 'E. Pedido',
-      width: 130,
-      lookup: toLookup(commercialOrderStatusOptions),
-      cellTemplate: (container, { value }) => appendStatusBadge(container, value, getCommercialOrderStatusLabel)
-    },
-    { caption: 'E. SUNAT', width: 120, calculateCellValue: orderSunatLabel },
-    { caption: 'Pedido VTEX', width: 150, calculateCellValue: orderExternalIdLabel },
-    { dataField: 'external_channel', caption: 'Canal', width: 130 },
-    { dataField: 'voucher_label', caption: 'Comprobante', width: 130, calculateCellValue: orderVoucherLabel },
-    {
-      dataField: 'document_type',
-      caption: 'Tipo Documento',
-      width: 140,
-      calculateCellValue: orderDocumentTypeLabel,
-      cellTemplate: (container, { value }) => appendStatusBadge(container, value, (label) => label || '-')
-    },
-    { dataField: 'customer_label', caption: 'Cliente', minWidth: 300, calculateCellValue: orderCustomerLabel },
-    { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-    { dataField: 'promised_delivery_at', caption: 'F. Entrega Estimada', dataType: 'date', width: 160 },
-    { caption: 'F. de Entrega', width: 150, dataType: 'date', calculateCellValue: orderDeliveredDate },
-    { caption: 'Tiempo de Proceso', width: 150, calculateCellValue: orderProcessTime },
-    { dataField: 'created_at', caption: 'Fecha Registro', dataType: 'date', width: 140 },
-    { dataField: 'code', caption: 'Codigo', width: 130 },
+    { key: 'order_status', label: 'E. Pedido', field: 'order_status', width: '130px', nowrap: true, filter: { type: 'select', field: 'order_status', options: commercialOrderStatusOptions }, render: (row) => <StatusBadge value={row.order_status} label={getCommercialOrderStatusLabel(row.order_status)} /> },
+    { key: 'sunat', label: 'E. SUNAT', field: 'external_status', width: '120px', sortable: false, render: (row) => orderSunatLabel(row) },
+    { key: 'vtex', label: 'Pedido VTEX', field: 'external_order_id', width: '150px', sortable: false, render: (row) => orderExternalIdLabel(row) },
+    { key: 'external_channel', label: 'Canal', field: 'external_channel', width: '130px', filter: { type: 'text' } },
+    { key: 'voucher_label', label: 'Comprobante', field: 'voucher_label', width: '130px', sortable: false, render: (row) => orderVoucherLabel(row) },
+    { key: 'document_type', label: 'Tipo Documento', field: 'document_type', width: '140px', nowrap: true, render: (row) => { const label = orderDocumentTypeLabel(row); return <StatusBadge value={label} label={label || '-'} /> } },
+    { key: 'customer_label', label: 'Cliente', field: 'customer_label', sortable: false, render: (row) => orderCustomerLabel(row) },
+    { key: 'total', label: 'Total', field: 'total', width: '110px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoneyCell(row.total) },
+    { key: 'promised_delivery_at', label: 'F. Entrega Estimada', field: 'promised_delivery_at', width: '160px', filter: { type: 'date' }, render: (row) => formatDateCell(row.promised_delivery_at) },
+    { key: 'delivered_at', label: 'F. de Entrega', field: 'delivered_at', width: '150px', sortable: false, render: (row) => formatDateCell(orderDeliveredDate(row)) },
+    { key: 'process_time', label: 'Tiempo de Proceso', field: 'process_time', width: '150px', sortable: false, render: (row) => orderProcessTime(row) },
+    { key: 'created_at', label: 'Fecha Registro', field: 'created_at', width: '140px', filter: { type: 'date' }, render: (row) => formatDateCell(row.created_at) },
+    { key: 'code', label: 'Codigo', field: 'code', width: '130px', filter: { type: 'text' } },
+  ]
+
+  const ordersActions = (row) => {
+    const hasReferralGuide = orderGuides(row).length > 0
+    const editLockReason = commercialOrderEditLockReason(row)
+    const billingMeta = billingDocumentActionMeta(row)
+    return [
+      {
+        icon: editLockReason ? 'mdi mdi-eye-outline' : 'mdi mdi-pencil',
+        title: editLockReason || 'Editar datos, cliente, entrega y productos del pedido comercial',
+        ...ACTION_COLORS.primary,
+        onClick: () => onModalOpen(row),
+      },
+      {
+        icon: 'mdi mdi-clipboard-check-outline',
+        title: 'Enviar este pedido a preparacion para iniciar picking',
+        ...ACTION_COLORS.success,
+        hidden: !canSendToPreparation(row),
+        onClick: () => onBooleanChange({ id: row.id, field: 'dispatch_status', value: 'preparing' }),
+      },
+      {
+        icon: 'mdi mdi-timeline-clock-outline',
+        title: 'Ver tracking del pedido: estados, guia, ruta y entrega',
+        ...ACTION_COLORS.info,
+        onClick: () => openTracking(row),
+      },
+      {
+        icon: billingMeta.icon,
+        title: billingMeta.title,
+        ...ACTION_COLORS.secondary,
+        onClick: () => onOpenBillingDocument(row),
+      },
+      {
+        icon: hasReferralGuide ? 'mdi mdi-eye' : 'mdi mdi-file-document',
+        title: hasReferralGuide
+          ? 'Ver, emitir o descargar la guia de remision asociada al pedido'
+          : 'Generar guia de remision para este pedido',
+        ...(hasReferralGuide ? ACTION_COLORS.dark : ACTION_COLORS.warning),
+        onClick: () => onOpenReferralGuide(row),
+      },
+      {
+        icon: 'mdi mdi-camera',
+        title: latestEvidence(row)
+          ? 'Ver o actualizar foto y datos de evidencia de entrega'
+          : 'Registrar foto y datos de evidencia de entrega',
+        ...ACTION_COLORS.success,
+        onClick: () => openEvidence(row),
+      },
+      {
+        icon: 'mdi mdi-file-pdf-box',
+        title: 'Previsualizar o descargar PDF resumen del pedido comercial',
+        ...ACTION_COLORS.danger,
+        onClick: () => openMagistralesRecordPdf(buildMagistralesRows.commercialOrder(row)),
+      },
+      {
+        icon: 'mdi mdi-delete',
+        title: 'Eliminar este pedido comercial del listado',
+        ...ACTION_COLORS.danger,
+        onClick: () => onDeleteClicked(row.id),
+      },
+    ]
+  }
+  const ordersColumns = [
+    { key: 'order_status', label: 'Estado', field: 'order_status', width: '140px', nowrap: true, filter: { type: 'select', field: 'order_status', options: commercialOrderStatusOptions }, render: (row) => <StatusBadge value={row.order_status} label={getCommercialOrderStatusLabel(row.order_status)} /> },
+    { key: 'voucher_label', label: 'Comprobante', field: 'voucher_label', width: '130px', sortable: false, render: (row) => orderVoucherLabel(row) },
+    { key: 'document_type', label: 'Tipo documento', field: 'document_type', width: '140px', nowrap: true, render: (row) => { const label = orderDocumentTypeLabel(row); return <StatusBadge value={label} label={label || '-'} /> } },
+    { key: 'customer_label', label: 'Cliente', field: 'customer_label', sortable: false, render: (row) => orderCustomerLabel(row) },
+    { key: 'total', label: 'Total', field: 'total', width: '110px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoneyCell(row.total) },
+    { key: 'payment_label', label: 'Tipo de pago', field: 'payment_label', width: '170px', sortable: false, render: (row) => orderPaymentLabel(row) },
+    { key: 'seller', label: 'Usuario', field: 'seller.fullname', width: '190px', sortable: false, render: (row) => formatPlainUser(row.seller) },
+    { key: 'created_at', label: 'Fecha registro', field: 'created_at', width: '140px', filter: { type: 'date' }, render: (row) => formatDateCell(row.created_at) },
+    { key: 'creator', label: 'Usuario registro', field: 'creator.username', width: '160px', sortable: false, render: (row) => formatUserRegistry(row.creator) },
+    { key: 'code', label: 'Código', field: 'code', width: '130px', filter: { type: 'text' } },
+    { key: 'business', label: 'Empresa', field: 'business.name', sortable: false, filter: { type: 'text', field: 'business.name' }, render: (row) => row.business?.name ?? '' },
   ]
 
   return (<>
@@ -2998,200 +3098,130 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         <i className='mdi mdi-cog'></i>
       </button>
     </div>
-    {activeListingTab === 'orders' && <Table
+    <div className='row'>
+      <div className='col-12'>
+        <div className='card'>
+          <div className='card-body'>
+            {listingHeader}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {activeListingTab === 'orders' && <VdTable
       key='orders'
-      gridRef={gridRef}
-      title={listingHeader}
+      ref={gridRef}
       rest={commercialOrdersRest}
-      baseFilterValue={ordersFilterValue}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar pedido comercial',
-            onClick: () => onModalOpen(null)
-          }
-        });
-      }}
-      pageSize={25}
-      exportable
-      columns={[
-        ...orderFilterColumns,
-        {
-          caption: 'Acciones',
-          width: 340,
-          fixed: true,
-          fixedPosition: 'left',
-          allowFiltering: false,
-          allowExporting: false,
-          cellTemplate: (container, { data }) => {
-            const hasReferralGuide = orderGuides(data).length > 0
-            const editLockReason = commercialOrderEditLockReason(data)
-
-            container.css('text-overflow', 'unset')
-            container.addClass('commercial-order-actions')
-            appendGridActionButton(container, {
-              variant: 'primary',
-              title: editLockReason || 'Editar datos, cliente, entrega y productos del pedido comercial',
-              icon: editLockReason ? 'mdi mdi-eye-outline' : 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            })
-            if (canSendToPreparation(data)) {
-              appendGridActionButton(container, {
-                variant: 'success',
-                title: 'Enviar este pedido a preparacion para iniciar picking',
-                icon: 'mdi mdi-clipboard-check-outline',
-                onClick: () => onBooleanChange({ id: data.id, field: 'dispatch_status', value: 'preparing' })
-              })
-            }
-            appendGridActionButton(container, {
-              variant: 'info',
-              title: 'Ver tracking del pedido: estados, guia, ruta y entrega',
-              icon: 'mdi mdi-timeline-clock-outline',
-              onClick: () => openTracking(data)
-            })
-            const billingMeta = billingDocumentActionMeta(data)
-            appendGridActionButton(container, {
-              variant: 'secondary',
-              title: billingMeta.title,
-              icon: billingMeta.icon,
-              onClick: () => onOpenBillingDocument(data)
-            })
-            appendGridActionButton(container, {
-              variant: hasReferralGuide ? 'dark' : 'warning',
-              title: hasReferralGuide
-                ? 'Ver, emitir o descargar la guia de remision asociada al pedido'
-                : 'Generar guia de remision para este pedido',
-              icon: hasReferralGuide ? 'mdi mdi-eye' : 'mdi mdi-file-document',
-              onClick: () => onOpenReferralGuide(data)
-            })
-            appendGridActionButton(container, {
-              variant: 'success',
-              title: latestEvidence(data)
-                ? 'Ver o actualizar foto y datos de evidencia de entrega'
-                : 'Registrar foto y datos de evidencia de entrega',
-              icon: 'mdi mdi-camera',
-              onClick: () => openEvidence(data)
-            })
-            appendGridActionButton(container, {
-              variant: 'danger',
-              title: 'Previsualizar o descargar PDF resumen del pedido comercial',
-              icon: 'mdi mdi-file-pdf-box',
-              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.commercialOrder(data))
-            })
-            appendGridActionButton(container, {
-              variant: 'danger',
-              title: 'Eliminar este pedido comercial del listado',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.id)
-            })
-          }
-        },
-        {
-          dataField: 'order_status',
-          caption: 'Estado',
-          width: 140,
-          lookup: toLookup(commercialOrderStatusOptions),
-          cellTemplate: (container, { value }) => appendStatusBadge(container, value, getCommercialOrderStatusLabel)
-        },
-        {
-          dataField: 'voucher_label',
-          caption: 'Comprobante',
-          width: 130,
-          calculateCellValue: orderVoucherLabel
-        },
-        {
-          dataField: 'document_type',
-          caption: 'Tipo documento',
-          width: 130,
-          calculateCellValue: orderDocumentTypeLabel,
-          cellTemplate: (container, { value }) => appendStatusBadge(container, value, (label) => label || '-')
-        },
-        {
-          dataField: 'customer_label',
-          caption: 'Cliente',
-          minWidth: 320,
-          calculateCellValue: orderCustomerLabel
-        },
-        { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        {
-          dataField: 'payment_label',
-          caption: 'Tipo de pago',
-          width: 170,
-          calculateCellValue: orderPaymentLabel
-        },
-        {
-          dataField: 'seller.fullname',
-          caption: 'Usuario',
-          width: 190,
-          cellTemplate: (container, { data }) => container.text(formatPlainUser(data.seller))
-        },
-        { dataField: 'created_at', caption: 'Fecha registro', width: 130, dataType: 'date' },
-        {
-          dataField: 'creator.username',
-          caption: 'Usuario registro',
-          width: 150,
-          cellTemplate: (container, { data }) => container.text(formatUserRegistry(data.creator))
-        },
-        { dataField: 'code', caption: 'Código', width: 130 },
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 150 }
-      ]}
+      icon='mdi mdi-cart-outline'
+      title='Pedidos'
+      unit='pedidos'
+      defaultSort={{ field: 'created_at', desc: true }}
+      defaultPageSize={25}
+      searchFields={['code', 'purchase_order', 'guide_number', 'referral_guide']}
+      searchPlaceholder='Buscar por codigo, O. compra, guia…'
+      emptyText='No se encontraron pedidos comerciales.'
+      baseFilter={ordersFilterValue}
+      headerActions={<>
+        <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => gridRef.current?.refresh()}>
+          <i className='mdi mdi-refresh'></i>
+        </button>
+        <button type='button' className='vdt-btn-pri' onClick={() => onModalOpen(null)}>
+          <i className='mdi mdi-plus'></i> Nuevo pedido
+        </button>
+      </>}
+      actions={ordersActions}
+      columns={ordersColumns}
+      renderCard={(row, actionButtons) => (
+        <div className='vdt-card'>
+          <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>{row.code || orderVoucherLabel(row)}</p>
+              <small className='text-muted'>{orderCustomerLabel(row)}</small>
+            </div>
+            <StatusBadge value={row.order_status} label={getCommercialOrderStatusLabel(row.order_status)} />
+          </div>
+          <div className='d-flex justify-content-between mt-2' style={{ fontSize: 12 }}>
+            <span className='text-muted'>{orderPaymentLabel(row)}</span>
+            <span className='fw-semibold'>S/ {formatMoneyCell(row.total)}</span>
+          </div>
+          <small className='text-muted d-block mt-1'>{formatDateCell(row.created_at)}{row.business?.name ? ` · ${row.business.name}` : ''}</small>
+          {actionButtons && <div className='d-flex flex-wrap mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }}>{actionButtons}</div>}
+        </div>
+      )}
     />}
 
-    {activeTab.kind === 'billing' && <Table
+    {activeTab.kind === 'billing' && <VdTable
       key={`billing-${activeListingTab}`}
-      gridRef={billingGridRef}
-      title={listingHeader}
+      ref={billingGridRef}
       rest={billingDocumentsRest}
-      baseFilterValue={billingFilterValue}
-      pageSize={20}
-      exportable
+      icon='mdi mdi-file-document-outline'
+      title={activeListingTab === 'credit-notes' ? 'Notas de Credito' : 'Facturas Emitidas'}
+      unit='comprobantes'
+      defaultSort={{ field: 'issue_date', desc: true }}
+      defaultPageSize={20}
+      searchFields={['series', 'sequence', 'code']}
+      searchPlaceholder='Buscar por serie, secuencia o codigo…'
+      emptyText='No se encontraron comprobantes.'
+      baseFilter={billingFilterValue}
+      headerActions={<button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => billingGridRef.current?.refresh()}>
+        <i className='mdi mdi-refresh'></i>
+      </button>}
+      actions={billingActions}
       columns={billingColumnsByTab[activeListingTab] ?? billingColumnsByTab.issued}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar listado',
-            onClick: () => $(billingGridRef.current).dxDataGrid('instance').refresh()
-          }
-        })
-      }}
+      renderCard={(row, actionButtons) => (
+        <div className='vdt-card'>
+          <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>{[row.series, row.sequence].filter(Boolean).join('-') || row.code}</p>
+              <small className='text-muted'>{billingDocumentClientLabel(row)}</small>
+            </div>
+            <span className='fw-semibold'>S/ {formatMoneyCell(row.total)}</span>
+          </div>
+          <small className='text-muted d-block mt-2'>{row.payment_method || '-'} · {formatDateCell(row.issue_date)}</small>
+          {actionButtons && <div className='d-flex flex-wrap mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }}>{actionButtons}</div>}
+        </div>
+      )}
     />}
 
-    {activeListingTab === 'multivende' && <Table
+    {activeListingTab === 'multivende' && <VdTable
       key='multivende'
-      gridRef={multivendeGridRef}
-      title={listingHeader}
+      ref={multivendeGridRef}
       rest={multivendeOrdersRest}
-      baseFilterValue={multivendeFilterValue}
-      pageSize={10}
-      exportable
+      icon='mdi mdi-storefront-outline'
+      title='Pedidos Multivende'
+      unit='pedidos'
+      defaultSort={{ field: 'created_at', desc: true }}
+      defaultPageSize={10}
+      searchFields={['code', 'external_order_id', 'external_checkout_id']}
+      searchPlaceholder='Buscar por codigo o pedido…'
+      emptyText='No se encontraron pedidos Multivende.'
+      baseFilter={multivendeFilterValue}
+      headerActions={<button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => multivendeGridRef.current?.refresh()}>
+        <i className='mdi mdi-refresh'></i>
+      </button>}
+      actions={multivendeActions}
       columns={multivendeColumns}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar pedidos Multivende',
-            onClick: () => $(multivendeGridRef.current).dxDataGrid('instance').refresh()
-          }
-        })
-      }}
+      renderCard={(row, actionButtons) => (
+        <div className='vdt-card'>
+          <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>{orderExternalIdLabel(row)}</p>
+              <small className='text-muted'>{orderCustomerLabel(row)}</small>
+            </div>
+            <StatusBadge value={row.order_status} label={getCommercialOrderStatusLabel(row.order_status)} />
+          </div>
+          <div className='d-flex justify-content-between mt-2' style={{ fontSize: 12 }}>
+            <span className='text-muted'>{row.external_channel || '-'}</span>
+            <span className='fw-semibold'>S/ {formatMoneyCell(row.total)}</span>
+          </div>
+          <small className='text-muted d-block mt-1'>{formatDateCell(row.created_at)}</small>
+          {actionButtons && <div className='d-flex flex-wrap mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }}>{actionButtons}</div>}
+        </div>
+      )}
     />}
 
     {activeTab.kind === 'static' && <LegacyListingPanel
-      title={listingHeader}
+      title={activeTab.label}
       config={staticListingTabs[activeListingTab]}
     />}
 
@@ -3236,12 +3266,15 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             <div className='col-12 col-md-6 col-xl-4'>
               <SelectAPIFormGroup eRef={businessRef} label='Empresa' required searchAPI='/api/admin/businesses/paginate' searchBy='name' dropdownParent='#commercial-orders-form-container' onChange={onBusinessChanged} />
             </div>
-            <div className='col-12 col-md-6 col-xl-4'>
-              <SelectFormGroup eRef={branchRef} label='Sede' dropdownParent='#commercial-orders-form-container' value={selectedBranchId} onChange={onBranchChanged}>
-                <option value=''>Sin sede</option>
-                {branches.map(branch => <option key={`commercial-order-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
-              </SelectFormGroup>
-            </div>
+            <VdSelect
+              col='col-12 col-md-6 col-xl-4'
+              label='Sede'
+              disabled={isFormLocked}
+              value={selectedBranchId}
+              onChange={onBranchChanged}
+              options={branches.map(branch => ({ value: `${branch.id}`, label: branch.name }))}
+              placeholder='Sin sede'
+            />
             <div className='col-12 col-md-6 col-xl-4'>
               <SelectAPIFormGroup
                 eRef={warehouseRef}
@@ -3256,29 +3289,40 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                 templateSelection={warehouseOptionTemplate}
               />
             </div>
-            <div className='col-12 col-sm-6 col-lg-4 col-xl-3'>
-              <label className='form-label'>Doc. venta</label>
-              <select ref={documentTypeRef} className='form-control' value={selectedDocumentType} onChange={(e) => setSelectedDocumentType(normalizeDocumentType(e.target.value))}>
-                <option value='Factura'>Factura</option>
-                <option value='Boleta'>Boleta</option>
-                <option value='Nota de pedido'>Nota de pedido</option>
-              </select>
-            </div>
-            <div className='col-12 col-sm-6 col-lg-4 col-xl-3'>
-              <label className='form-label'>Moneda</label>
-              <select ref={currencyRef} className='form-control'>
-                <option value='PEN'>PEN</option>
-                <option value='USD'>USD</option>
-                <option value='EUR'>EUR</option>
-              </select>
-            </div>
-            <div className='col-12 col-sm-6 col-lg-4 col-xl-3'>
-              <label className='form-label'>Forma de pago</label>
-              <select ref={paymentMethodRef} className='form-control'>
-                <option value=''>Seleccione</option>
-                {paymentMethodOptions.map(option => <option key={`commercial-order-payment-${option}`} value={option}>{option}</option>)}
-              </select>
-            </div>
+            <VdSelect
+              col='col-12 col-sm-6 col-lg-4 col-xl-3'
+              label='Doc. venta'
+              disabled={isFormLocked}
+              value={selectedDocumentType}
+              onChange={(value) => setSelectedDocumentType(normalizeDocumentType(value))}
+              options={[
+                { value: 'Factura', label: 'Factura' },
+                { value: 'Boleta', label: 'Boleta' },
+                { value: 'Nota de pedido', label: 'Nota de pedido' },
+              ]}
+              placeholder='Seleccione'
+            />
+            <VdSelect
+              col='col-12 col-sm-6 col-lg-4 col-xl-3'
+              label='Moneda'
+              disabled={isFormLocked}
+              value={selectedCurrency}
+              onChange={(value) => setSelectedCurrency(value)}
+              options={[
+                { value: 'PEN', label: 'PEN' },
+                { value: 'USD', label: 'USD' },
+                { value: 'EUR', label: 'EUR' },
+              ]}
+            />
+            <VdSelect
+              col='col-12 col-sm-6 col-lg-4 col-xl-3'
+              label='Forma de pago'
+              disabled={isFormLocked}
+              value={selectedPaymentMethod}
+              onChange={(value) => setSelectedPaymentMethod(value)}
+              options={paymentMethodOptions.map(option => ({ value: option, label: option }))}
+              placeholder='Seleccione'
+            />
           </div>
         </section>
 
@@ -3443,20 +3487,22 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                       <div>
                         <div className='commercial-order-readonly-cell'>{item.article_unit || '-'}</div>
                         {item.presentations.length > 0 && (
-                          <select
-                            className='form-control mt-1'
-                            data-no-select2='true'
-                            value={item.presentation_id}
-                            disabled={!item.article_id}
-                            onChange={(e) => onItemFieldChanged(item.uid, 'presentation_id', e.target.value)}
-                          >
-                            <option value=''>{presentationEmptyLabel(item)}</option>
-                            {item.presentations.map(presentation => (
-                              <option key={`commercial-order-presentation-${item.uid}-${presentation.id}`} value={presentation.id}>
-                                {presentationOptionLabel(presentation, item)}
-                              </option>
-                            ))}
-                          </select>
+                          <div className='mt-1'>
+                            <VdSelect
+                              noMargin
+                              value={item.presentation_id}
+                              disabled={!item.article_id || isFormLocked}
+                              onChange={(value) => onItemFieldChanged(item.uid, 'presentation_id', value)}
+                              options={[
+                                { value: '', label: presentationEmptyLabel(item) },
+                                ...item.presentations.map(presentation => ({
+                                  value: `${presentation.id}`,
+                                  label: presentationOptionLabel(presentation, item),
+                                })),
+                              ]}
+                              placeholder={presentationEmptyLabel(item)}
+                            />
+                          </div>
                         )}
                       </div>
                     </td>
@@ -3611,13 +3657,16 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             <label className='form-label'>Descripcion:</label>
             <input ref={delayReasonDescriptionRef} className='form-control' autoComplete='off' />
           </div>
-          <div className='col-12 mb-3'>
-            <label className='form-label'>Estado:</label>
-            <select ref={delayReasonStatusRef} className='form-control' defaultValue='1'>
-              <option value='1'>Activo</option>
-              <option value='0'>Inactivo</option>
-            </select>
-          </div>
+          <VdSelect
+            col='col-12 mb-3'
+            label='Estado:'
+            value={delayReasonStatus}
+            onChange={(value) => setDelayReasonStatus(value)}
+            options={[
+              { value: '1', label: 'Activo' },
+              { value: '0', label: 'Inactivo' },
+            ]}
+          />
         </div>
 
         <hr />
@@ -3712,15 +3761,18 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
           <label className='form-label'>Recibido por</label>
           <input className='form-control' value={evidenceForm.recipient_name} onChange={(e) => onEvidenceFieldChange('recipient_name', e.target.value)} />
         </div>
-        <div className='col-md-3 mb-3'>
-          <label className='form-label'>Tipo doc.</label>
-          <select className='form-control' value={evidenceForm.recipient_document_type} onChange={(e) => onEvidenceFieldChange('recipient_document_type', e.target.value)}>
-            <option value='DNI'>DNI</option>
-            <option value='RUC'>RUC</option>
-            <option value='CE'>CE</option>
-            <option value='OTRO'>Otro</option>
-          </select>
-        </div>
+        <VdSelect
+          col='col-md-3 mb-3'
+          label='Tipo doc.'
+          value={evidenceForm.recipient_document_type}
+          onChange={(value) => onEvidenceFieldChange('recipient_document_type', value)}
+          options={[
+            { value: 'DNI', label: 'DNI' },
+            { value: 'RUC', label: 'RUC' },
+            { value: 'CE', label: 'CE' },
+            { value: 'OTRO', label: 'Otro' },
+          ]}
+        />
         <div className='col-md-3 mb-3'>
           <label className='form-label'>Numero</label>
           <input className='form-control' value={evidenceForm.recipient_document_number} onChange={(e) => onEvidenceFieldChange('recipient_document_number', e.target.value)} />

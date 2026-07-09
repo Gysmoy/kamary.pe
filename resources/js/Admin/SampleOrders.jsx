@@ -2,12 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
+import VdTable from '../Components/Adminto/VdTable';
+import VdSelect from '../Components/Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
-import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import SampleOrdersRest from '../Actions/Admin/SampleOrdersRest';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 import Global from '../Utils/Global';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import { getUbigeoCatalog } from '../Utils/ubigeoInei';
@@ -33,6 +32,11 @@ const emailStatusOptions = [
   { value: 'pending', label: 'Pendiente', className: 'bg-warning-subtle text-warning border border-warning' },
   { value: 'delivered', label: 'Entregado', className: 'bg-success-subtle text-success border border-success' },
   { value: 'failed', label: 'Fallido', className: 'bg-danger-subtle text-danger border border-danger' },
+]
+
+const activeStatusOptions = [
+  { value: '1', label: 'Activo' },
+  { value: '0', label: 'Inactivo' },
 ]
 
 
@@ -113,7 +117,6 @@ const normalizeUbigeoName = (value) => normalizeSearchText(value)
   .join(' ')
 const normalizeOrderStatus = (value) => ({ processing: 'preparing', completed: 'delivered' }[value] ?? value)
 const normalizeEmailStatus = (value) => ({ sent: 'delivered' }[value] ?? value)
-const getOptionLabel = (options, value, normalizer = value => value) => options.find(option => option.value === normalizer(value))?.label ?? value ?? ''
 const getStatusOption = (options, value, normalizer = value => value) => options.find(option => option.value === normalizer(value)) ?? options[0]
 const asDateText = (value) => normalizeText(value).slice(0, 10)
 const asDateTimeText = (value) => normalizeText(value).replace('T', ' ').slice(0, 19)
@@ -124,13 +127,6 @@ const isEvidenceImage = (value) => {
     || url.startsWith('data:image/')
     || /\.(png|jpe?g|webp|gif|bmp|svg)(\?.*)?$/i.test(url)
     || url.includes('/sample-orders/evidence-media/')
-}
-
-const renderBadge = (container, label, className) => {
-  $(container).empty().append($('<span/>', {
-    class: `badge rounded-pill px-2 py-1 ${className}`,
-    text: label,
-  }))
 }
 
 const makeSelectOptions = (rows, formatter, valueResolver = row => row.id) => rows.map(row => ({
@@ -290,11 +286,14 @@ const CatalogList = ({ items, editingId, onEdit, onDelete, extraColumn, getLabel
       <div className='d-flex flex-wrap justify-content-between align-items-center mb-1 gap-2'>
         <div className='fw-bold' style={{ fontSize: 13 }}>Registrados</div>
         <div className='d-flex align-items-center gap-2'>
-          <select className='form-select form-select-sm' style={{ width: 'auto' }} value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1) }}>
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-          </select>
+          <div style={{ width: 76 }}>
+            <VdSelect
+              noMargin
+              value={`${pageSize}`}
+              onChange={value => { setPageSize(Number(value)); setPage(1) }}
+              options={[{ value: '5', label: '5' }, { value: '10', label: '10' }, { value: '25', label: '25' }]}
+            />
+          </div>
           <input className='form-control form-control-sm' style={{ width: 170 }} placeholder='Filtrar...' value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} />
         </div>
       </div>
@@ -337,10 +336,15 @@ const SampleSelect = ({ label, value, options = [], onChange, placeholder = 'Sel
   <div className='sample-field'>
     <label className='form-label'>{label}</label>
     <div className='sample-input-group'>
-      <select className='form-select' data-placeholder={placeholder} value={value ?? ''} onChange={e => onChange(e.target.value)} disabled={disabled}>
-        <option value=''>{placeholder}</option>
-        {options.map(option => <option key={`${label}-${option.value ?? option}`} value={option.value ?? option}>{option.label ?? option}</option>)}
-      </select>
+      <VdSelect
+        noMargin
+        style={{ flex: 1 }}
+        value={value ?? ''}
+        onChange={onChange}
+        options={options}
+        placeholder={placeholder}
+        disabled={disabled}
+      />
       {addButton && <button type='button' className='btn btn-outline-success sample-plus' onClick={onAdd ?? (() => Swal.fire('Dato adicional', 'Puedes escribir o seleccionar el valor requerido para este pedido.', 'info'))}>+</button>}
     </div>
   </div>
@@ -357,7 +361,7 @@ const SampleInput = ({ label, value, onChange, type = 'text', placeholder = '', 
 )
 
 const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const articleModalRef = useRef()
   const trackingModalRef = useRef()
@@ -578,7 +582,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     )
   }
   const closeMainModal = () => $(modalRef.current).modal('hide')
-  const refreshGrid = () => $(gridRef.current).dxDataGrid('instance').refresh()
+  const refreshGrid = () => tableRef.current?.refresh()
 
   const onClientSelect = (clientId) => {
     const selected = clients.find(row => `${row.entity_id ?? row.id}` === `${clientId}`)
@@ -606,6 +610,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
   const onSaveClient = async (e) => {
     e.preventDefault()
+    if (!clientForm.document_type) {
+      Swal.fire({ icon: 'warning', title: 'Falta tipo de documento', text: 'Selecciona el tipo de documento.', confirmButtonText: 'Entendido' })
+      return
+    }
     const payload = {
       document_type: clientForm.document_type,
       document_number: (clientForm.document_number ?? '').trim(),
@@ -786,7 +794,11 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     e.preventDefault()
     const name = (subchannelForm.name ?? '').trim()
     const channelId = subchannelForm.sales_channel_id
-    if (!name || !channelId) return
+    if (!channelId) {
+      Swal.fire({ icon: 'warning', title: 'Falta canal de venta', text: 'Selecciona el canal de venta.', confirmButtonText: 'Entendido' })
+      return
+    }
+    if (!name) return
     const payload = { sales_channel_id: channelId, name, status: subchannelForm.status === '1' }
     if (subchannelForm.id) payload.id = subchannelForm.id
     const result = await sampleOrdersRest.saveSalesSubchannel(payload)
@@ -870,7 +882,11 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     e.preventDefault()
     const name = (subGiroForm.name ?? '').trim()
     const giroId = subGiroForm.giro_id
-    if (!name || !giroId) return
+    if (!giroId) {
+      Swal.fire({ icon: 'warning', title: 'Falta giro', text: 'Selecciona el giro.', confirmButtonText: 'Entendido' })
+      return
+    }
+    if (!name) return
     const payload = { giro_id: giroId, name, status: subGiroForm.status === '1' }
     if (subGiroForm.id) payload.id = subGiroForm.id
     const result = await sampleOrdersRest.saveSubGiro(payload)
@@ -1146,6 +1162,63 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     return rows
   }, [trackingOrder])
 
+  // Botones de accion por fila, segun el estado del pedido
+  const rowActions = (row) => {
+    const currentStatus = normalizeOrderStatus(row.order_status)
+    const complete = isOrderComplete(row)
+    const approvedOrBeyond = ['approved', 'preparing', 'in_route', 'delivered'].includes(currentStatus)
+    return [
+      { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => openModal(r) },
+      { icon: 'mdi mdi-check', title: 'Aprobar pedido', bg: '#e9f9ef', color: '#2f9e44', onClick: (r) => changeOrderStatus(r, 'approved', 'Aprobar pedido'), hidden: !(currentStatus === 'registered' && complete) },
+      { icon: 'mdi mdi-package-variant-closed', title: 'Enviar a picking', bg: '#eef2ff', color: '#4a5fc1', onClick: (r) => changeOrderStatus(r, 'preparing', 'Enviar pedido a picking'), hidden: currentStatus !== 'approved' },
+      { icon: 'mdi mdi-truck-fast-outline', title: 'En ruta', bg: '#fff4e5', color: '#e2941f', onClick: (r) => changeOrderStatus(r, 'in_route', 'Marcar pedido en ruta'), hidden: currentStatus !== 'preparing' },
+      { icon: 'mdi mdi-check-all', title: 'Entregado', bg: '#e9f9ef', color: '#2f9e44', onClick: (r) => changeOrderStatus(r, 'delivered', 'Marcar pedido entregado'), hidden: currentStatus !== 'in_route' },
+      { icon: 'mdi mdi-eye', title: 'Ver evidencia', bg: '#e6f7fb', color: '#17a2b8', onClick: (r) => openEvidence(r), hidden: !approvedOrBeyond },
+      { icon: 'mdi mdi-map-marker-path', title: 'Tracking pedido', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openTracking(r), hidden: !approvedOrBeyond },
+      { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir guia de remision', bg: '#fdeee6', color: '#e2593f', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.sampleOrder(r)), hidden: !approvedOrBeyond },
+      { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDelete(r) },
+    ]
+  }
+
+  // Columnas para exportar a Excel (misma info que la grilla, en texto plano)
+  const exportColumns = [
+    ['Nro pedido', row => row.order_number ?? ''],
+    ['E. Pedido', row => getStatusOption(orderStatusOptions, row.order_status, normalizeOrderStatus).label],
+    ['E. Email', row => getStatusOption(emailStatusOptions, row.email_status, normalizeEmailStatus).label],
+    ['Guia Remision', row => row.referral_guide ?? ''],
+    ['Producto', row => sampleProducts(row)],
+    ['Cantidad', row => sampleQuantity(row)],
+    ['Peso Unitario (Kg)', row => sampleUnitWeight(row)],
+    ['Peso bruto total', row => formatNumber(sampleGrossWeight(row), 3)],
+    ['Fecha solicitada', row => asDateText(row.requested_at)],
+    ['Fecha aprobacion', row => row.approved_at ? asDateTimeText(row.approved_at) : ''],
+    ['Fecha entrega', row => asDateText(row.delivered_at)],
+    ['Canal', row => row.sales_channel ?? row.channel ?? ''],
+    ['Cliente', row => row.client_name ?? ''],
+    ['Pedido completo', row => isOrderComplete(row) ? 'COMPLETO' : 'INCOMPLETO'],
+    ['Supervisor', row => row.supervisor_name ?? ''],
+  ]
+
+  const onExport = async () => {
+    const rows = await tableRef.current?.loadAll()
+    if (!rows?.length) {
+      Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay pedidos para exportar.', confirmButtonText: 'Entendido' })
+      return
+    }
+    if (!window.ExcelJS || !window.saveAs) {
+      Swal.fire({ icon: 'error', title: 'Exportacion no disponible', text: 'No se pudo cargar el motor de exportacion.', confirmButtonText: 'Entendido' })
+      return
+    }
+    const workbook = new window.ExcelJS.Workbook()
+    const worksheet = workbook.addWorksheet('Pedidos muestra')
+    worksheet.addRow(exportColumns.map(([label]) => label))
+    rows.forEach(row => worksheet.addRow(exportColumns.map(([, value]) => value(row))))
+    worksheet.columns.forEach(column => { column.width = 18 })
+    worksheet.getRow(1).font = { bold: true }
+    const buffer = await workbook.xlsx.writeBuffer()
+    window.saveAs(new Blob([buffer], { type: 'application/octet-stream' }), 'pedidos-muestra.xlsx')
+  }
+
   return <>
     <style>{`
       .sample-form-title { text-align: center; font-size: 22px; font-weight: 700; color: #565c68; margin-bottom: 26px; }
@@ -1153,9 +1226,9 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       .sample-grid .span-2 { grid-column: span 2; }
       .sample-grid .span-4 { grid-column: span 4; }
       .sample-field .form-label { font-size: 13px; font-weight: 600; color: #27314c; margin-bottom: 6px; }
-      .sample-input-group { display: flex; align-items: stretch; }
+      .sample-input-group { display: flex; align-items: stretch; gap: 8px; }
       .sample-input-group .form-control { min-height: 38px; border-radius: 4px; }
-      .sample-plus { width: 34px; border-radius: 0 4px 4px 0; font-weight: 700; }
+      .sample-plus { width: 34px; border-radius: 4px; font-weight: 700; }
       .sample-map { width: 100%; height: 225px; border: 0; background: #90dcea; }
       .sample-map-empty { width: 100%; min-height: 225px; display: flex; align-items: center; justify-content: center; padding: 16px; border: 1px solid #d5dbe5; border-radius: 4px; color: #687385; background: #edf2f7; text-align: center; }
       .sample-table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -1163,8 +1236,6 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       .sample-table th { color: #27314c; font-weight: 700; text-transform: uppercase; font-size: 11px; }
       .sample-table input { width: 100%; border: 1px solid #d5dbe5; border-radius: 3px; min-height: 32px; padding: 4px 8px; }
       .sample-items-scroll { width: 100%; overflow-x: auto; }
-      .sample-grid-actions { display: inline-flex; gap: 6px; flex-wrap: nowrap; align-items: center; width: max-content; max-width: 100%; }
-      .sample-grid-actions .btn { flex: 0 0 34px; width: 34px; height: 34px; margin-right: 0 !important; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
       @media (max-width: 991px) {
         .sample-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .sample-grid .span-2, .sample-grid .span-4 { grid-column: span 2; }
@@ -1175,124 +1246,130 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       }
     `}</style>
 
-    <Table
-      gridRef={gridRef}
-      title='Pedido Muestra'
+    <VdTable
+      ref={tableRef}
       rest={sampleOrdersRest}
-      pageSize={25}
-      exportable
-      toolBar={(items) => {
-        items.unshift(
-          { widget: 'dxButton', location: 'after', options: { icon: 'plus', text: 'Registrar Pedido', type: 'normal', stylingMode: 'contained', onClick: () => openModal() } },
-          { widget: 'dxButton', location: 'after', options: { icon: 'plus', text: 'Registrar Pedido Masivo', type: 'normal', stylingMode: 'contained', onClick: () => Swal.fire('Pedido masivo', 'El registro masivo queda preparado para conectar con importacion.', 'info') } },
-          { widget: 'dxButton', location: 'after', options: { icon: 'refresh', hint: 'Actualizar', onClick: refreshGrid } },
-        )
-      }}
+      icon="mdi mdi-flask-outline"
+      title="Pedido Muestra"
+      unit="pedidos"
+      defaultSort={{ field: 'requested_at', desc: true }}
+      defaultPageSize={25}
+      searchFields={['order_number', 'referral_guide', 'sales_channel', 'client_name', 'supervisor_name']}
+      searchPlaceholder="Buscar por numero, guia, cliente, canal o supervisor…"
+      emptyText="No se encontraron pedidos de muestra."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refreshGrid}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-soft" onClick={() => Swal.fire('Pedido masivo', 'El registro masivo queda preparado para conectar con importacion.', 'info')}>
+          <i className="mdi mdi-plus"></i> Registrar Pedido Masivo
+        </button>
+        <button type="button" className="vdt-btn-soft" onClick={onExport}>
+          <i className="mdi mdi-file-excel"></i> Exportar
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => openModal()}>
+          <i className="mdi mdi-plus"></i> Registrar Pedido
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
         {
-          caption: '#',
-          width: 55,
-          allowFiltering: false,
-          allowSorting: false,
-          cellTemplate: (container, options) => container.text((options.rowIndex ?? 0) + 1),
+          key: 'numero', label: 'Nro pedido', field: 'order_number', width: '130px',
+          filter: { type: 'text' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => openModal(row)} title="Editar pedido">
+              {row.order_number || '-'}
+            </a>
+          ),
         },
         {
-          caption: 'Acciones',
-          width: 315,
-          minWidth: 315,
-          fixed: true,
-          fixedPosition: 'left',
-          allowFiltering: false,
-          allowSorting: false,
-          allowExporting: false,
-          cellTemplate: (container, { data }) => {
-            container.css({ overflow: 'hidden', whiteSpace: 'nowrap' })
-            const currentStatus = normalizeOrderStatus(data.order_status)
-            const complete = isOrderComplete(data)
-            const approvedOrBeyond = ['approved', 'preparing', 'in_route', 'delivered'].includes(currentStatus)
-            const actions = $('<div/>', { class: 'sample-grid-actions' })
-
-            // Editar siempre disponible
-            actions.append(DxButton({ className: 'btn btn-xs btn-outline-warning tippy-here', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openModal(data) }))
-
-            // Registrado: solo se puede Aprobar si el stock alcanza (pedido completo)
-            if (currentStatus === 'registered' && complete) {
-              actions.append(DxButton({ className: 'btn btn-xs btn-outline-success tippy-here', title: 'Aprobar pedido', icon: 'mdi mdi-check', onClick: () => changeOrderStatus(data, 'approved', 'Aprobar pedido') }))
-            }
-
-            // Avance de estado (recien despues de aprobado)
-            if (currentStatus === 'approved') {
-              actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'Enviar a picking', icon: 'mdi mdi-package-variant-closed', onClick: () => changeOrderStatus(data, 'preparing', 'Enviar pedido a picking') }))
-            }
-            if (currentStatus === 'preparing') {
-              actions.append(DxButton({ className: 'btn btn-xs btn-outline-primary tippy-here', title: 'En ruta', icon: 'mdi mdi-truck-fast-outline', onClick: () => changeOrderStatus(data, 'in_route', 'Marcar pedido en ruta') }))
-            }
-            if (currentStatus === 'in_route') {
-              actions.append(DxButton({ className: 'btn btn-xs btn-outline-success tippy-here', title: 'Entregado', icon: 'mdi mdi-check-all', onClick: () => changeOrderStatus(data, 'delivered', 'Marcar pedido entregado') }))
-            }
-
-            // Evidencia, tracking y guia de remision: solo desde que el pedido esta aprobado en adelante
-            if (approvedOrBeyond) {
-              actions.append(DxButton({ className: 'btn btn-xs btn-outline-info tippy-here', title: 'Ver evidencia', icon: 'mdi mdi-eye', onClick: () => openEvidence(data) }))
-              actions.append(DxButton({ className: 'btn btn-xs btn-outline-dark tippy-here', title: 'Tracking pedido', icon: 'mdi mdi-map-marker-path', onClick: () => openTracking(data) }))
-              actions.append(DxButton({ className: 'btn btn-xs btn-outline-danger tippy-here', title: 'Imprimir guia de remision', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.sampleOrder(data)) }))
-            }
-
-            // Eliminar siempre disponible
-            actions.append(DxButton({ className: 'btn btn-xs btn-outline-danger tippy-here', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data) }))
-            container.empty().append(actions)
-          }
+          key: 'estado_pedido', label: 'E. Pedido', field: 'order_status', width: '150px',
+          filter: { type: 'select', field: 'order_status', options: orderStatusOptions.map(o => ({ value: o.value, label: o.label })) },
+          render: (row) => {
+            const option = getStatusOption(orderStatusOptions, row.order_status, normalizeOrderStatus)
+            return <span className={`badge rounded-pill px-2 py-1 ${option.className}`}>{option.label}</span>
+          },
         },
         {
-          dataField: 'order_number',
-          caption: 'Nro pedido',
-          minWidth: 120,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.order_number, () => openModal(data), 'Editar pedido')
+          key: 'estado_email', label: 'E. Email', field: 'email_status', width: '130px',
+          filter: { type: 'select', field: 'email_status', options: emailStatusOptions.map(o => ({ value: o.value, label: o.label })) },
+          render: (row) => {
+            const option = getStatusOption(emailStatusOptions, row.email_status, normalizeEmailStatus)
+            return <span className={`badge rounded-pill px-2 py-1 ${option.className}`}>{option.label}</span>
+          },
+        },
+        { key: 'guia', label: 'Guia Remision', field: 'referral_guide', width: '130px', filter: { type: 'text' } },
+        {
+          key: 'productos', label: 'Producto', field: 'products', sortable: false, width: '300px',
+          render: (row) => sampleProducts(row) || '-',
         },
         {
-          dataField: 'order_status',
-          caption: 'E. Pedido',
-          minWidth: 125,
-          lookup: { dataSource: orderStatusOptions, valueExpr: 'value', displayExpr: 'label' },
-          calculateCellValue: data => getOptionLabel(orderStatusOptions, data.order_status, normalizeOrderStatus),
-          cellTemplate: (container, { data }) => {
-            const option = getStatusOption(orderStatusOptions, data.order_status, normalizeOrderStatus)
-            renderBadge(container, option.label, option.className)
-          }
+          key: 'cantidad', label: 'Cantidad', field: 'quantity_total', sortable: false, align: 'right', width: '105px',
+          render: (row) => formatNumber(sampleQuantity(row), 0),
         },
         {
-          dataField: 'email_status',
-          caption: 'E. Email',
-          minWidth: 120,
-          lookup: { dataSource: emailStatusOptions, valueExpr: 'value', displayExpr: 'label' },
-          calculateCellValue: data => getOptionLabel(emailStatusOptions, data.email_status, normalizeEmailStatus),
-          cellTemplate: (container, { data }) => {
-            const option = getStatusOption(emailStatusOptions, data.email_status, normalizeEmailStatus)
-            renderBadge(container, option.label, option.className)
-          }
+          key: 'peso_unitario', label: 'Peso Unitario (Kg)', field: 'unit_weight_total', sortable: false, width: '155px',
+          render: (row) => sampleUnitWeight(row) || '-',
         },
-        { dataField: 'referral_guide', caption: 'Guia Remision', minWidth: 130 },
-        { dataField: 'products', caption: 'Producto', minWidth: 300, calculateCellValue: sampleProducts, allowFiltering: false, allowSorting: false },
-        { dataField: 'quantity_total', caption: 'Cantidad', dataType: 'number', minWidth: 105, calculateCellValue: sampleQuantity, format: { type: 'fixedPoint', precision: 0 }, allowFiltering: false, allowSorting: false },
-        { dataField: 'unit_weight_total', caption: 'Peso Unitario (Kg)', minWidth: 155, calculateCellValue: sampleUnitWeight, allowFiltering: false, allowSorting: false },
-        { dataField: 'total_gross_weight', caption: 'Peso bruto total', dataType: 'number', minWidth: 140, calculateCellValue: sampleGrossWeight, format: { type: 'fixedPoint', precision: 3 }, allowFiltering: false, allowSorting: false },
-        { dataField: 'requested_at', caption: 'Fecha solicitada', dataType: 'date', minWidth: 145 },
-        { dataField: 'approved_at', caption: 'Fecha aprobacion', dataType: 'datetime', minWidth: 155 },
-        { dataField: 'delivered_at', caption: 'Fecha entrega', dataType: 'date', minWidth: 130 },
-        { dataField: 'sales_channel', caption: 'Canal', minWidth: 110, calculateCellValue: row => row.sales_channel ?? row.channel ?? '' },
-        { dataField: 'client_name', caption: 'Cliente', minWidth: 260 },
         {
-          dataField: 'order_complete',
-          caption: 'Pedido completo',
-          minWidth: 140,
-          calculateCellValue: data => isOrderComplete(data) ? 'COMPLETO' : 'INCOMPLETO',
-          cellTemplate: (container, { data }) => {
-            const complete = isOrderComplete(data)
-            renderBadge(container, complete ? 'COMPLETO' : 'INCOMPLETO', complete ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-warning border border-warning')
-          }
+          key: 'peso_bruto', label: 'Peso bruto total', field: 'total_gross_weight', sortable: false, align: 'right', width: '140px',
+          render: (row) => formatNumber(sampleGrossWeight(row), 3),
         },
-        { dataField: 'supervisor_name', caption: 'Supervisor', minWidth: 200 },
+        {
+          key: 'fecha_solicitada', label: 'Fecha solicitada', field: 'requested_at', width: '145px',
+          filter: { type: 'date' },
+          render: (row) => asDateText(row.requested_at) || '-',
+        },
+        {
+          key: 'fecha_aprobacion', label: 'Fecha aprobacion', field: 'approved_at', width: '155px',
+          filter: { type: 'date' },
+          render: (row) => row.approved_at ? asDateTimeText(row.approved_at) : '-',
+        },
+        {
+          key: 'fecha_entrega', label: 'Fecha entrega', field: 'delivered_at', width: '130px',
+          filter: { type: 'date' },
+          render: (row) => asDateText(row.delivered_at) || '-',
+        },
+        {
+          key: 'canal', label: 'Canal', field: 'sales_channel', width: '110px', filter: { type: 'text' },
+          render: (row) => row.sales_channel ?? row.channel ?? '',
+        },
+        { key: 'cliente', label: 'Cliente', field: 'client_name', width: '220px', filter: { type: 'text' } },
+        {
+          key: 'pedido_completo', label: 'Pedido completo', field: 'order_complete', sortable: false, width: '140px',
+          filter: { type: 'select', field: 'order_complete', options: [{ value: 1, label: 'COMPLETO' }, { value: 0, label: 'INCOMPLETO' }] },
+          render: (row) => {
+            const complete = isOrderComplete(row)
+            return <span className={`badge rounded-pill px-2 py-1 ${complete ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-warning border border-warning'}`}>{complete ? 'COMPLETO' : 'INCOMPLETO'}</span>
+          },
+        },
+        { key: 'supervisor', label: 'Supervisor', field: 'supervisor_name', width: '180px', filter: { type: 'text' } },
       ]}
+      renderCard={(row, actionButtons) => {
+        const statusOption = getStatusOption(orderStatusOptions, row.order_status, normalizeOrderStatus)
+        const emailOption = getStatusOption(emailStatusOptions, row.email_status, normalizeEmailStatus)
+        const complete = isOrderComplete(row)
+        return (
+          <div className="vdt-card" onClick={() => openModal(row)}>
+            <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+              <div style={{ minWidth: 0 }}>
+                <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.order_number || '-'}</p>
+                <small className="text-muted">{row.client_name}</small>
+              </div>
+              <span className={`badge rounded-pill px-2 py-1 ${statusOption.className}`}>{statusOption.label}</span>
+            </div>
+            <div className="d-flex flex-wrap mt-2" style={{ gap: 6 }}>
+              <span className={`badge rounded-pill px-2 py-1 ${emailOption.className}`}>{emailOption.label}</span>
+              <span className={`badge rounded-pill px-2 py-1 ${complete ? 'bg-success-subtle text-success border border-success' : 'bg-warning-subtle text-warning border border-warning'}`}>{complete ? 'COMPLETO' : 'INCOMPLETO'}</span>
+            </div>
+            <p className="text-muted mb-0 mt-2" style={{ fontSize: 12 }}>{sampleProducts(row) || 'Sin productos'}</p>
+            <small className="text-muted d-block mt-2">
+              <i className="mdi mdi-calendar me-1"></i>Solicitado: {asDateText(row.requested_at) || '-'} &middot; Entrega: {asDateText(row.delivered_at) || '-'}
+            </small>
+            {actionButtons && <div className="d-flex flex-wrap mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+          </div>
+        )
+      }}
     />
 
     <Modal
@@ -1454,9 +1531,14 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         <div className='fw-semibold'><i className='mdi mdi-menu me-2'></i>SELECCIONAR ARTICULOS</div>
         <div className='d-flex align-items-center gap-2'>
           <span>Elementos:</span>
-          <select className='form-control form-control-sm' style={{ width: 78 }} value={articlePageSize} onChange={e => { setArticlePageSize(Number(e.target.value)); setArticlePage(1) }}>
-            {[10, 20, 50, 100].map(size => <option key={`article-page-${size}`} value={size}>{size}</option>)}
-          </select>
+          <div style={{ width: 84 }}>
+            <VdSelect
+              noMargin
+              value={`${articlePageSize}`}
+              onChange={value => { setArticlePageSize(Number(value)); setArticlePage(1) }}
+              options={[10, 20, 50, 100].map(size => ({ value: `${size}`, label: `${size}` }))}
+            />
+          </div>
         </div>
       </div>
       <div className='sample-items-scroll'>
@@ -1583,15 +1665,13 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
     <Modal modalRef={clientModalRef} title='Registrar Cliente' size='lg' btnSubmitText='Registrar' onSubmit={onSaveClient}>
       <div className='row'>
-        <div className='form-group col-md-6 mb-2'>
-          <label className='form-label mb-1'>Tipo de Documento <b className='text-danger'>*</b></label>
-          <select className='form-select' value={clientForm.document_type} onChange={e => setClientForm(prev => ({ ...prev, document_type: e.target.value }))} required>
-            <option value=''>Seleccione</option>
-            <option value='dni'>DNI</option>
-            <option value='ruc'>RUC</option>
-            <option value='ce'>Carnet de extranjeria</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Tipo de Documento' col='col-md-6' required
+          value={clientForm.document_type}
+          onChange={value => setClientForm(prev => ({ ...prev, document_type: value }))}
+          options={[{ value: 'dni', label: 'DNI' }, { value: 'ruc', label: 'RUC' }, { value: 'ce', label: 'Carnet de extranjeria' }]}
+          placeholder='Seleccione'
+        />
         <div className='form-group col-md-6 mb-2'>
           <label className='form-label mb-1'>N&deg; Documento <b className='text-danger'>*</b></label>
           <input className='form-control' value={clientForm.document_number} onChange={e => setClientForm(prev => ({ ...prev, document_number: e.target.value }))} required />
@@ -1612,13 +1692,12 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           <label className='form-label mb-1'>Codigo corto</label>
           <input className='form-control' value={clientForm.short_code} onChange={e => setClientForm(prev => ({ ...prev, short_code: e.target.value }))} />
         </div>
-        <div className='form-group col-md-6 mb-2'>
-          <label className='form-label mb-1'>Estado</label>
-          <select className='form-select' value={clientForm.status} onChange={e => setClientForm(prev => ({ ...prev, status: e.target.value }))}>
-            <option value='1'>Activo</option>
-            <option value='0'>Inactivo</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Estado' col='col-md-6'
+          value={clientForm.status}
+          onChange={value => setClientForm(prev => ({ ...prev, status: value }))}
+          options={activeStatusOptions}
+        />
         <div className='form-group col-12 mb-2'>
           <label className='form-label mb-1'>Direccion</label>
           <input className='form-control' value={clientForm.full_address} onChange={e => setClientForm(prev => ({ ...prev, full_address: e.target.value }))} />
@@ -1642,13 +1721,12 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           </label>
           <input className='form-control' value={supervisorForm.name} onChange={e => setSupervisorForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombres' required />
         </div>
-        <div className='form-group col-md-6 mb-2'>
-          <label className='form-label mb-1'>Estado</label>
-          <select className='form-select' value={supervisorForm.status} onChange={e => setSupervisorForm(prev => ({ ...prev, status: e.target.value }))}>
-            <option value='1'>Activo</option>
-            <option value='0'>Inactivo</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Estado' col='col-md-6'
+          value={supervisorForm.status}
+          onChange={value => setSupervisorForm(prev => ({ ...prev, status: value }))}
+          options={activeStatusOptions}
+        />
         <div className='form-group col-md-6 mb-2'>
           <label className='form-label mb-1'>Apellido Paterno</label>
           <input className='form-control' value={supervisorForm.lastname_p} onChange={e => setSupervisorForm(prev => ({ ...prev, lastname_p: e.target.value }))} />
@@ -1670,13 +1748,12 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         </label>
         <input className='form-control' value={serviceTypeForm.name} onChange={e => setServiceTypeForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del tipo de servicio' required />
       </div>
-      <div className='form-group mb-2'>
-        <label className='form-label mb-1'>Estado</label>
-        <select className='form-select' value={serviceTypeForm.status} onChange={e => setServiceTypeForm(prev => ({ ...prev, status: e.target.value }))}>
-          <option value='1'>Activo</option>
-          <option value='0'>Inactivo</option>
-        </select>
-      </div>
+      <VdSelect
+        label='Estado'
+        value={serviceTypeForm.status}
+        onChange={value => setServiceTypeForm(prev => ({ ...prev, status: value }))}
+        options={activeStatusOptions}
+      />
       <CatalogList items={serviceTypes} editingId={serviceTypeForm.id} onEdit={editServiceType} onDelete={onDeleteServiceType} />
     </Modal>
 
@@ -1687,13 +1764,12 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         </label>
         <input className='form-control' value={reasonForm.name} onChange={e => setReasonForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del motivo' required />
       </div>
-      <div className='form-group mb-2'>
-        <label className='form-label mb-1'>Estado</label>
-        <select className='form-select' value={reasonForm.status} onChange={e => setReasonForm(prev => ({ ...prev, status: e.target.value }))}>
-          <option value='1'>Activo</option>
-          <option value='0'>Inactivo</option>
-        </select>
-      </div>
+      <VdSelect
+        label='Estado'
+        value={reasonForm.status}
+        onChange={value => setReasonForm(prev => ({ ...prev, status: value }))}
+        options={activeStatusOptions}
+      />
       <CatalogList items={requestReasons} editingId={reasonForm.id} onEdit={editReason} onDelete={onDeleteReason} />
     </Modal>
 
@@ -1704,37 +1780,35 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         </label>
         <input className='form-control' value={channelForm.name} onChange={e => setChannelForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del canal' required />
       </div>
-      <div className='form-group mb-2'>
-        <label className='form-label mb-1'>Estado</label>
-        <select className='form-select' value={channelForm.status} onChange={e => setChannelForm(prev => ({ ...prev, status: e.target.value }))}>
-          <option value='1'>Activo</option>
-          <option value='0'>Inactivo</option>
-        </select>
-      </div>
+      <VdSelect
+        label='Estado'
+        value={channelForm.status}
+        onChange={value => setChannelForm(prev => ({ ...prev, status: value }))}
+        options={activeStatusOptions}
+      />
       <CatalogList items={salesChannels} editingId={channelForm.id} onEdit={editChannel} onDelete={onDeleteChannel} />
     </Modal>
 
     <Modal modalRef={subchannelModalRef} title='Registrar Sub Canal Venta' size='md' btnSubmitText={subchannelForm.id ? 'Actualizar' : 'Registrar'} onSubmit={onSaveSubchannel}>
-      <div className='form-group mb-2'>
-        <label className='form-label mb-1'>Canal venta <b className='text-danger'>*</b></label>
-        <select className='form-select' value={subchannelForm.sales_channel_id} onChange={e => setSubchannelForm(prev => ({ ...prev, sales_channel_id: e.target.value }))} required>
-          <option value=''>Seleccione</option>
-          {channelOptions.map(option => <option key={`subchannel-channel-${option.value}`} value={option.value}>{option.label}</option>)}
-        </select>
-      </div>
+      <VdSelect
+        label='Canal venta' required
+        value={subchannelForm.sales_channel_id}
+        onChange={value => setSubchannelForm(prev => ({ ...prev, sales_channel_id: value }))}
+        options={channelOptions}
+        placeholder='Seleccione'
+      />
       <div className='form-group mb-2'>
         <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b>
           {subchannelForm.id && <a role='button' className='ms-2 small text-decoration-underline' onClick={() => setSubchannelForm({ id: '', sales_channel_id: form.sales_channel_id || '', name: '', status: '1' })}>Cancelar edicion</a>}
         </label>
         <input className='form-control' value={subchannelForm.name} onChange={e => setSubchannelForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del sub canal' required />
       </div>
-      <div className='form-group mb-2'>
-        <label className='form-label mb-1'>Estado</label>
-        <select className='form-select' value={subchannelForm.status} onChange={e => setSubchannelForm(prev => ({ ...prev, status: e.target.value }))}>
-          <option value='1'>Activo</option>
-          <option value='0'>Inactivo</option>
-        </select>
-      </div>
+      <VdSelect
+        label='Estado'
+        value={subchannelForm.status}
+        onChange={value => setSubchannelForm(prev => ({ ...prev, status: value }))}
+        options={activeStatusOptions}
+      />
       <CatalogList items={salesSubchannels} editingId={subchannelForm.id} onEdit={editSubchannel} onDelete={onDeleteSubchannel}
         extraColumn={{ header: 'Canal venta', value: item => salesChannels.find(row => `${row.id}` === `${item.sales_channel_id}`)?.name ?? '-' }} />
     </Modal>
@@ -1746,37 +1820,35 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         </label>
         <input className='form-control' value={giroForm.name} onChange={e => setGiroForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del giro' required />
       </div>
-      <div className='form-group mb-2'>
-        <label className='form-label mb-1'>Estado</label>
-        <select className='form-select' value={giroForm.status} onChange={e => setGiroForm(prev => ({ ...prev, status: e.target.value }))}>
-          <option value='1'>Activo</option>
-          <option value='0'>Inactivo</option>
-        </select>
-      </div>
+      <VdSelect
+        label='Estado'
+        value={giroForm.status}
+        onChange={value => setGiroForm(prev => ({ ...prev, status: value }))}
+        options={activeStatusOptions}
+      />
       <CatalogList items={giros} editingId={giroForm.id} onEdit={editGiro} onDelete={onDeleteGiro} />
     </Modal>
 
     <Modal modalRef={subGiroModalRef} title='Registrar Sub Giro' size='md' btnSubmitText={subGiroForm.id ? 'Actualizar' : 'Registrar'} onSubmit={onSaveSubGiro}>
-      <div className='form-group mb-2'>
-        <label className='form-label mb-1'>Giro <b className='text-danger'>*</b></label>
-        <select className='form-select' value={subGiroForm.giro_id} onChange={e => setSubGiroForm(prev => ({ ...prev, giro_id: e.target.value }))} required>
-          <option value=''>Seleccione</option>
-          {giroOptions.map(option => <option key={`subgiro-giro-${option.value}`} value={option.value}>{option.label}</option>)}
-        </select>
-      </div>
+      <VdSelect
+        label='Giro' required
+        value={subGiroForm.giro_id}
+        onChange={value => setSubGiroForm(prev => ({ ...prev, giro_id: value }))}
+        options={giroOptions}
+        placeholder='Seleccione'
+      />
       <div className='form-group mb-2'>
         <label className='form-label mb-1'>Descripcion <b className='text-danger'>*</b>
           {subGiroForm.id && <a role='button' className='ms-2 small text-decoration-underline' onClick={() => setSubGiroForm({ id: '', giro_id: form.giro_id || '', name: '', status: '1' })}>Cancelar edicion</a>}
         </label>
         <input className='form-control' value={subGiroForm.name} onChange={e => setSubGiroForm(prev => ({ ...prev, name: e.target.value }))} placeholder='Nombre del sub giro' required />
       </div>
-      <div className='form-group mb-2'>
-        <label className='form-label mb-1'>Estado</label>
-        <select className='form-select' value={subGiroForm.status} onChange={e => setSubGiroForm(prev => ({ ...prev, status: e.target.value }))}>
-          <option value='1'>Activo</option>
-          <option value='0'>Inactivo</option>
-        </select>
-      </div>
+      <VdSelect
+        label='Estado'
+        value={subGiroForm.status}
+        onChange={value => setSubGiroForm(prev => ({ ...prev, status: value }))}
+        options={activeStatusOptions}
+      />
       <CatalogList items={subGiros} editingId={subGiroForm.id} onEdit={editSubGiro} onDelete={onDeleteSubGiro}
         extraColumn={{ header: 'Giro', value: item => giros.find(row => `${row.id}` === `${item.giro_id}`)?.name ?? '-' }} />
     </Modal>

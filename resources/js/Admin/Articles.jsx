@@ -3,19 +3,16 @@ import { createRoot } from 'react-dom/client';
 import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
-import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import { scopedPermission } from '../Utils/permissionScope';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 import ArticlesRest from '../Actions/Admin/ArticlesRest';
 import UnitsRest from '../Actions/Admin/UnitsRest';
 import LaboratoriesRest from '../Actions/Admin/LaboratoriesRest';
@@ -380,7 +377,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     }
   }
 
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const stockModalRef = useRef()
   const importModalRef = useRef()
@@ -395,15 +392,9 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const codeRef = useRef()
   const nameRef = useRef()
   const compositionRef = useRef()
-  const articleTypeRef = useRef()
-  const administrationRouteRef = useRef()
   const magistralCategoryRef = useRef()
-  const subCategoryRef = useRef()
-  const magistralPresentationRef = useRef()
   const healthRegistrationRef = useRef()
   const laboratoryRef = useRef()
-  const principleRef = useRef()
-  const unitRef = useRef()
   const volumeRef = useRef()
   const marginRuleRef = useRef()
   const igvRuleRef = useRef()
@@ -413,22 +404,17 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const defaultExpirationDateRef = useRef()
   const stockMinRef = useRef()
   const stockMaxRef = useRef()
-  const currencyRef = useRef()
   const stockHasExpirationRef = useRef()
   const stockHasLotRef = useRef()
-  const statusRef = useRef()
   const costPriceRef = useRef()
   const salePriceRef = useRef()
   const equivalenceExchangeRateRef = useRef()
   const equivalenceQuantityRef = useRef()
-  const equivalenceUnitRef = useRef()
   const salePriceNationalRef = useRef()
   const purchasePriceNationalRef = useRef()
   const purchasePriceForeignRef = useRef()
   const notesRef = useRef()
   const newManufacturerNameRef = useRef()
-  const newManufacturerCountryRef = useRef()
-  const newManufacturerStatusRef = useRef()
   const suppressMagistralCategoryChangeRef = useRef(false)
   const subcategoryLoadSequenceRef = useRef(0)
 
@@ -486,6 +472,12 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const [selectedImportLaboratoryName, setSelectedImportLaboratoryName] = useState('')
   const [selectedImportType, setSelectedImportType] = useState('upsert')
   const [mapping, setMapping] = useState(emptyArticleImportMapping())
+  const [selectedStatus, setSelectedStatus] = useState('1')
+  const [selectedArticleType, setSelectedArticleType] = useState('')
+  const [selectedAdministrationRoute, setSelectedAdministrationRoute] = useState('')
+  const [selectedCurrency, setSelectedCurrency] = useState('PEN')
+  const [selectedManufacturerCountry, setSelectedManufacturerCountry] = useState(manufacturerCountryOptions[0])
+  const [selectedManufacturerStatus, setSelectedManufacturerStatus] = useState('1')
 
   const defaultBusinessId = (rows = businesses) => {
     const scoped = rows.find(item => item.business_key === businessScopeKey)
@@ -647,8 +639,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     nameRef.current.value = data?.name ?? ''
     if (compositionRef.current) compositionRef.current.value = data?.composition ?? ''
     const normalizedArticleType = normalizeMagistralArticleType(data?.article_type ?? '')
-    if (articleTypeRef.current) articleTypeRef.current.value = normalizedArticleType
-    if (administrationRouteRef.current) administrationRouteRef.current.value = data?.administration_route ?? ''
+    setSelectedArticleType(isMagistrales ? normalizedArticleType : '')
+    setSelectedAdministrationRoute(isMagistrales ? (data?.administration_route ?? '') : '')
     if (healthRegistrationRef.current) healthRegistrationRef.current.value = data?.health_registration ?? ''
     if (volumeRef.current) volumeRef.current.value = data?.volume ?? ''
     if (marginRuleRef.current) marginRuleRef.current.checked = !!data?.margin_rule
@@ -665,7 +657,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     if (defaultExpirationDateRef.current) defaultExpirationDateRef.current.value = data?.default_expiration_date ? data.default_expiration_date.toString().slice(0, 10) : ''
     if (stockMinRef.current) stockMinRef.current.value = data?.stock_min ?? ''
     if (stockMaxRef.current) stockMaxRef.current.value = data?.stock_max ?? ''
-    if (currencyRef.current) currencyRef.current.value = data?.currency ?? 'PEN'
+    setSelectedCurrency(isMagistrales ? (data?.currency ?? 'PEN') : '')
     if (stockHasExpirationRef.current) {
       if (isMagistrales) {
         setSwitchChecked(stockHasExpirationRef.current, !!data?.stock_has_expiration)
@@ -680,14 +672,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
         stockHasLotRef.current.checked = !!data?.stock_has_lot
       }
     }
-    if (statusRef.current) {
-      if (isMagistrales) {
-        statusRef.current.value = getMagistralStatusValue(data)
-      } else if (isStorageProduct) {
-        statusRef.current.value = data?.status === false || data?.status === 0 ? '0' : '1'
-      } else {
-        statusRef.current.value = data?.status === false || data?.status === 0 ? '0' : '1'
-      }
+    if (isMagistrales) {
+      setSelectedStatus(getMagistralStatusValue(data))
+    } else {
+      setSelectedStatus(data?.status === false || data?.status === 0 ? '0' : '1')
     }
     if (costPriceRef.current) costPriceRef.current.value = data?.cost_price ?? ''
     if (salePriceRef.current) salePriceRef.current.value = data?.sale_price ?? ''
@@ -767,11 +755,11 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       code: codeRef.current.value.trim(),
       name: nameRef.current.value.trim(),
       composition: compositionRef.current?.value?.trim() ?? '',
-      article_type: isMagistrales ? normalizeMagistralArticleType(articleTypeRef.current?.value) : (articleTypeRef.current?.value?.trim() ?? ''),
-      administration_route: administrationRouteRef.current?.value?.trim() ?? '',
+      article_type: isMagistrales ? normalizeMagistralArticleType(selectedArticleType) : '',
+      administration_route: (selectedAdministrationRoute ?? '').toString().trim(),
       magistral_category_id: magistralCategoryRef.current?.value || null,
-      sub_category: (subCategoryRef.current?.value || selectedSubCategory || '').trim(),
-      magistral_presentation: selectedMagistralPresentation || magistralPresentationRef.current?.value || null,
+      sub_category: (selectedSubCategory || '').trim(),
+      magistral_presentation: selectedMagistralPresentation || null,
       health_registration: healthRegistrationRef.current?.value?.trim() ?? '',
       business_id: (!isStorageProduct && !isMagistrales) ? (selectedBusinessId || null) : null,
       warehouse_id: (!isStorageProduct && !isMagistrales) ? (selectedWarehouseId || null) : null,
@@ -783,15 +771,15 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       igv_rule: igvRuleRef.current?.checked ?? false,
       units_per_article: unitsPerArticleRef.current?.value || 1,
       ...(isMagistrales ? {
-        magistral_status: statusRef.current?.value || 'vigente',
-        status: statusRef.current?.value !== 'de_baja',
+        magistral_status: selectedStatus || 'vigente',
+        status: selectedStatus !== 'de_baja',
       } : {}),
       ...(!isMagistrales && !isStorageProduct ? {
-        status: statusRef.current?.value === '0' ? false : true,
+        status: selectedStatus === '0' ? false : true,
       } : {}),
       ...(isStorageProduct ? {
         client_id: selectedStorageClientId || null,
-        status: statusRef.current?.value === '0' ? false : true,
+        status: selectedStatus === '0' ? false : true,
         storage_lots: storageLots.map(item => ({
           lot: (item.lot ?? '').toString().trim(),
           expiration_date: item.expiration_date || null,
@@ -805,7 +793,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       default_expiration_date: defaultExpirationDateRef.current?.value || null,
       stock_min: stockMinRef.current?.value ?? '',
       stock_max: stockMaxRef.current?.value ?? '',
-      currency: currencyRef.current?.value ?? '',
+      currency: selectedCurrency ?? '',
       stock_has_expiration: stockHasExpirationRef.current?.checked ?? false,
       stock_has_lot: stockHasLotRef.current?.checked ?? false,
       cost_price: costPriceRef.current?.value ?? '',
@@ -829,14 +817,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     const result = await articlesRest.save(request)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(modalRef.current).modal('hide')
   }
 
   const onBooleanChange = async ({ id, field, value }) => {
     const result = await articlesRest.boolean({ id, field, value })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -851,7 +839,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     if (!isConfirmed) return
     const result = await articlesRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onOpenStockModal = async (article) => {
@@ -1023,8 +1011,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     }
 
     if (!rows.length) {
-      const instance = $(gridRef.current).dxDataGrid('instance')
-      rows = instance?.getDataSource()?.items?.() ?? []
+      rows = (await tableRef.current?.loadAll()) ?? []
     }
 
     const worksheet = XLSX.utils.aoa_to_sheet([
@@ -1068,7 +1055,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     setIsImporting(false)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(importModalRef.current).modal('hide')
 
     const errorsPreview = (result.errors || []).slice(0, 5).join('\n')
@@ -1100,7 +1087,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
   const onMagistralArticleTypeChanged = (value) => {
     const normalizedType = normalizeMagistralArticleType(value)
-    if (articleTypeRef.current) articleTypeRef.current.value = normalizedType
+    setSelectedArticleType(normalizedType)
     setPresentations(getMagistralEquivalenceDefaults(normalizedType))
   }
 
@@ -1140,8 +1127,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
     setManufacturerTargetLotUid(uid)
     if (newManufacturerNameRef.current) newManufacturerNameRef.current.value = ''
-    if (newManufacturerCountryRef.current) newManufacturerCountryRef.current.value = manufacturerCountryOptions[0]
-    if (newManufacturerStatusRef.current) newManufacturerStatusRef.current.value = '1'
+    setSelectedManufacturerCountry(manufacturerCountryOptions[0])
+    setSelectedManufacturerStatus('1')
     $(manufacturerCreateModalRef.current).modal('show')
   }
 
@@ -1150,8 +1137,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
     const value = {
       name: newManufacturerNameRef.current?.value?.trim() ?? '',
-      country: newManufacturerCountryRef.current?.value || manufacturerCountryOptions[0],
-      status: newManufacturerStatusRef.current?.value !== '0',
+      country: selectedManufacturerCountry || manufacturerCountryOptions[0],
+      status: selectedManufacturerStatus !== '0',
     }
 
     if (!value.name) {
@@ -1187,15 +1174,10 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     status: mapping.status ? (row[mapping.status] ?? '') : '',
   }))
 
-  const getStorageProductExportRows = () => {
-    const instance = $(gridRef.current).dxDataGrid('instance')
-    return instance?.getDataSource()?.items?.() ?? []
-  }
-
-  const buildStorageProductExportMatrix = () => {
-    const rows = getStorageProductExportRows()
+  const buildStorageProductExportMatrix = (rows) => {
+    const list = Array.isArray(rows) ? rows : []
     const headers = storageProductExportColumns.map(column => column.caption)
-    const body = rows.map(row => storageProductExportColumns.map(column => column.value(row)))
+    const body = list.map(row => storageProductExportColumns.map(column => column.value(row)))
     return { headers, body }
   }
 
@@ -1210,7 +1192,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   }
 
   const onStorageProductExport = async (format) => {
-    const { headers, body } = buildStorageProductExportMatrix()
+    const rows = (await tableRef.current?.loadAll()) ?? []
+    const { headers, body } = buildStorageProductExportMatrix(rows)
     if (!body.length) {
       Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay filas para exportar' })
       return
@@ -1300,284 +1283,89 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     }
   }
 
-  const igvColumn = {
-    dataField: 'igv_rule',
-    caption: isMagistrales ? 'Afecto IGV' : 'Regla IGV',
-    dataType: 'boolean',
-    width: isMagistrales ? '105px' : '95px',
-    cellTemplate: (container, { data }) => {
-      $(container).empty()
-      if (data.status === null) return
-      ReactAppend(container, <SwitchFormGroup checked={data.igv_rule == 1} onChange={() => onBooleanChange({
-        id: data.id,
-        field: 'igv_rule',
-        value: !data.igv_rule
-      })} />)
-    }
+  const renderStatusSwitch = (row, field) => {
+    if (row.status === null) return ''
+    return <SwitchFormGroup noMargin checked={row[field] == 1} onChange={() => onBooleanChange({ id: row.id, field, value: !row[field] })} />
   }
 
-  const statusColumn = {
-    dataField: 'status',
-    caption: 'Estado',
-    dataType: 'boolean',
-    width: '95px',
-    cellTemplate: (container, { data }) => {
-      $(container).empty()
-      if (data.status === null) return
-      ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-        id: data.id,
-        field: 'status',
-        value: !data.status
-      })} />)
-    }
+  const renderCodeLink = (row) => (
+    <a className='admin-grid-edit-link' style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title='Editar articulo'>{row?.code ?? ''}</a>
+  )
+
+  const renderPresentations = (row) => {
+    const lines = (row?.presentations ?? []).map(item => `${item.name} (${Number(item.units).toFixed(2)}) - S/. ${Number(item.price).toFixed(2)}`)
+    return <div>
+      {lines.length === 0 && <small className='text-muted'>Sin presentaciones</small>}
+      {lines.map((line, idx) => <div key={`p-${row.id}-${idx}`}><small>{line}</small></div>)}
+    </div>
   }
-
-  const magistralIgvColumn = {
-    dataField: 'igv_rule',
-    caption: 'Afecto IGV',
-    width: '110px',
-    cellTemplate: (container, { data }) => {
-      $(container).empty()
-      if (data.status === null) return
-      ReactAppend(container, <SwitchFormGroup checked={data.igv_rule == 1} onChange={() => onBooleanChange({
-        id: data.id,
-        field: 'igv_rule',
-        value: !data.igv_rule
-      })} />)
-    }
-  }
-
-  const magistralStatusColumn = {
-    dataField: 'magistral_status',
-    caption: 'Estado',
-    width: '120px',
-    calculateCellValue: (data) => magistralStatusMeta[getMagistralStatusValue(data)]?.label ?? 'VIGENTE',
-    cellTemplate: (container, { data }) => {
-      const meta = magistralStatusMeta[getMagistralStatusValue(data)] ?? magistralStatusMeta.vigente
-      ReactAppend(container, <span className={`badge ${meta.className}`}>
-        {meta.label}
-      </span>)
-    }
-  }
-
-  const actionsColumn = {
-    caption: 'Acciones',
-    width: isStorageProduct ? '135px' : (isMagistrales ? '95px' : '160px'),
-    minWidth: isStorageProduct ? 135 : (isMagistrales ? 95 : 160),
-    fixed: true,
-    fixedPosition: 'left',
-    cellTemplate: (container, { data }) => {
-      container.css({
-        alignItems: 'center',
-        display: 'flex',
-        gap: '6px',
-        overflow: 'hidden',
-        textOverflow: 'unset',
-        whiteSpace: 'nowrap',
-      })
-      if (isMagistrales) {
-        container.append(DxButton({
-          className: 'btn btn-xs btn-soft-success',
-          title: 'Mostrar',
-          icon: 'mdi mdi-eye',
-          onClick: () => onModalOpen(data, 'view')
-        }))
-        container.append(DxButton({
-          className: 'btn btn-xs btn-soft-info',
-          title: 'Editar',
-          icon: 'mdi mdi-pencil',
-          onClick: () => onModalOpen(data)
-        }))
-        return
-      }
-
-      if (isStorageProduct) {
-        container.append(DxButton({
-          className: 'btn btn-xs btn-soft-primary',
-          title: 'Editar',
-          icon: 'mdi mdi-pencil',
-          onClick: () => onModalOpen(data)
-        }))
-        container.append(DxButton({
-          className: 'btn btn-xs btn-soft-danger',
-          title: 'Eliminar articulo',
-          icon: 'mdi mdi-delete',
-          onClick: () => onDeleteClicked(data.id)
-        }))
-        return
-      }
-
-      container.append(DxButton({
-        className: 'btn btn-xs btn-soft-primary',
-        title: 'Editar',
-        icon: 'mdi mdi-pencil',
-        onClick: () => onModalOpen(data)
-      }))
-      container.append(DxButton({
-        className: 'btn btn-xs btn-soft-info',
-        title: 'Stock por almacen',
-        icon: 'mdi mdi-package-variant-closed',
-        onClick: () => onOpenStockModal(data)
-      }))
-      container.append(DxButton({
-        className: 'btn btn-xs btn-soft-danger',
-        title: 'Eliminar articulo',
-        icon: 'mdi mdi-delete',
-        onClick: () => onDeleteClicked(data.id)
-      }))
-    },
-    allowFiltering: false,
-    allowExporting: false
-  }
-
-  const unitColumn = {
-    dataField: 'unit.symbol',
-    caption: 'Unidad',
-    width: '110px',
-    cellTemplate: (container, { data }) => container.text(data?.unit?.symbol || data?.unit?.name || '')
-  }
-
-  const storageStatusColumn = {
-    dataField: 'status',
-    caption: 'Estado',
-    width: '110px',
-    cellTemplate: (container, { data }) => {
-      const active = data?.status !== false && data?.status !== 0
-      ReactAppend(container, <span className={`badge ${active ? 'bg-success' : 'bg-secondary'}`}>
-        {active ? 'Activo' : 'Inactivo'}
-      </span>)
-    }
-  }
-
-  const presentationsColumn = {
-    dataField: 'presentations.name',
-    caption: isMagistrales ? 'Equivalencias' : 'Presentaciones',
-    allowFiltering: false,
-    minWidth: 220,
-    cellTemplate: (container, { data }) => {
-      const lines = (data?.presentations ?? []).map(item => `${item.name} (${Number(item.units).toFixed(2)}) - S/. ${Number(item.price).toFixed(2)}`)
-      ReactAppend(container, <div>
-        {lines.length === 0 && <small className='text-muted'>Sin presentaciones</small>}
-        {lines.map((line, idx) => <div key={`p-${data.id}-${idx}`}><small>{line}</small></div>)}
-      </div>)
-    }
-  }
-
-  const auditColumns = [
-    { dataField: 'notes', caption: 'Notas', visible: false },
-    { dataField: 'composition', caption: 'Composicion', visible: false },
-    {
-      dataField: 'creator.fullname',
-      caption: 'Creado por',
-      visible: false,
-      cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
-    },
-    {
-      dataField: 'updater.fullname',
-      caption: 'Actualizado por',
-      visible: false,
-      cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
-    },
-  ]
 
   const magistralesColumns = [
-    actionsColumn,
-    {
-      dataField: 'code',
-      caption: 'Codigo',
-      width: '130px',
-      cellTemplate: (container, { data }) => container.text(data?.code ?? '')
-    },
-    {
-      dataField: 'article_type',
-      caption: 'Tipo',
-      width: '140px',
-      cellTemplate: (container, { data }) => container.text(normalizeMagistralArticleType(data?.article_type ?? '') || '')
-    },
-    { dataField: 'magistral_presentation', caption: 'Presentacion', width: '150px' },
-    { dataField: 'administration_route', caption: 'Via adm.', width: '120px' },
-    { dataField: 'name', caption: 'Articulo', minWidth: 200 },
-    {
-      dataField: 'laboratory.name',
-      caption: 'Laboratorio',
-      width: '150px',
-      cellTemplate: (container, { data }) => container.text(getArticleLaboratoryLabel(data))
-    },
-    magistralIgvColumn,
-    { dataField: 'default_expiration_date', caption: 'F. venc.', width: '110px', dataType: 'date' },
-    { dataField: 'default_lot', caption: 'Lote', width: '110px' },
-    magistralStatusColumn,
+    { key: 'code', label: 'Codigo', field: 'code', width: '130px', filter: { type: 'text' } },
+    { key: 'article_type', label: 'Tipo', field: 'article_type', width: '140px', filter: { type: 'text' }, render: (row) => normalizeMagistralArticleType(row?.article_type ?? '') || '' },
+    { key: 'magistral_presentation', label: 'Presentacion', field: 'magistral_presentation', width: '150px' },
+    { key: 'administration_route', label: 'Via adm.', field: 'administration_route', width: '120px' },
+    { key: 'name', label: 'Articulo', field: 'name', filter: { type: 'text' } },
+    { key: 'laboratory', label: 'Laboratorio', field: 'laboratory.name', width: '150px', filter: { type: 'text', field: 'laboratory.name' }, render: (row) => getArticleLaboratoryLabel(row) },
+    { key: 'igv_rule', label: 'Afecto IGV', field: 'igv_rule', width: '110px', align: 'center', sortable: false, render: (row) => renderStatusSwitch(row, 'igv_rule') },
+    { key: 'default_expiration_date', label: 'F. venc.', field: 'default_expiration_date', width: '110px' },
+    { key: 'default_lot', label: 'Lote', field: 'default_lot', width: '110px' },
+    { key: 'magistral_status', label: 'Estado', field: 'magistral_status', width: '120px', render: (row) => { const meta = magistralStatusMeta[getMagistralStatusValue(row)] ?? magistralStatusMeta.vigente; return <span className={`badge ${meta.className}`}>{meta.label}</span> } },
   ]
 
   const standardColumns = [
-    { dataField: 'id', caption: 'ID', visible: false },
-    actionsColumn,
-    {
-      dataField: 'code',
-      caption: 'Codigo',
-      width: '170px',
-      minWidth: 170,
-      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar articulo')
-    },
-    {
-      dataField: 'warehouse.name',
-      caption: 'Almacen',
-      width: '180px',
-      cellTemplate: (container, { data }) => container.text(data?.warehouse?.name ?? '')
-    },
-    { dataField: 'name', caption: 'Articulo', minWidth: 180 },
-    { dataField: 'laboratory.name', caption: 'Laboratorio', width: '150px' },
-    {
-      dataField: 'active_principle.name',
-      caption: 'Principio activo',
-      width: '180px',
-      cellTemplate: (container, { data }) => container.text(data?.active_principle?.name ?? data?.activePrinciple?.name ?? '')
-    },
-    unitColumn,
-    { dataField: 'volume', caption: 'Volumen', width: '100px' },
-    { dataField: 'units_per_article', caption: 'Und x articulo', width: '110px' },
-    { dataField: 'unit_weight', caption: 'Peso unit.', width: '100px' },
-    {
-      dataField: 'margin_rule',
-      caption: 'Regla margen',
-      dataType: 'boolean',
-      width: '105px',
-      cellTemplate: (container, { data }) => {
-        $(container).empty()
-        if (data.status === null) return
-        ReactAppend(container, <SwitchFormGroup checked={data.margin_rule == 1} onChange={() => onBooleanChange({
-          id: data.id,
-          field: 'margin_rule',
-          value: !data.margin_rule
-        })} />)
-      }
-    },
-    igvColumn,
-    presentationsColumn,
-    ...auditColumns,
-    statusColumn,
+    { key: 'id', label: 'ID', field: 'id', visible: false },
+    { key: 'code', label: 'Codigo', field: 'code', width: '170px', filter: { type: 'text' }, render: renderCodeLink },
+    { key: 'warehouse', label: 'Almacen', field: 'warehouse.name', width: '180px', filter: { type: 'text', field: 'warehouse.name' }, render: (row) => row?.warehouse?.name ?? '' },
+    { key: 'name', label: 'Articulo', field: 'name', filter: { type: 'text' } },
+    { key: 'laboratory', label: 'Laboratorio', field: 'laboratory.name', width: '150px', filter: { type: 'text', field: 'laboratory.name' } },
+    { key: 'active_principle', label: 'Principio activo', field: 'active_principle.name', width: '180px', filter: { type: 'text', field: 'active_principle.name' }, render: (row) => row?.active_principle?.name ?? row?.activePrinciple?.name ?? '' },
+    { key: 'unit', label: 'Unidad', field: 'unit.symbol', width: '110px', render: (row) => row?.unit?.symbol || row?.unit?.name || '' },
+    { key: 'volume', label: 'Volumen', field: 'volume', width: '100px' },
+    { key: 'units_per_article', label: 'Und x articulo', field: 'units_per_article', width: '110px' },
+    { key: 'unit_weight', label: 'Peso unit.', field: 'unit_weight', width: '100px' },
+    { key: 'margin_rule', label: 'Regla margen', field: 'margin_rule', width: '105px', align: 'center', sortable: false, render: (row) => renderStatusSwitch(row, 'margin_rule') },
+    { key: 'igv_rule', label: 'Regla IGV', field: 'igv_rule', width: '95px', align: 'center', sortable: false, render: (row) => renderStatusSwitch(row, 'igv_rule') },
+    { key: 'presentations', label: 'Presentaciones', field: 'presentations.name', sortable: false, render: (row) => renderPresentations(row) },
+    { key: 'notes', label: 'Notas', field: 'notes', visible: false },
+    { key: 'composition', label: 'Composicion', field: 'composition', visible: false },
+    { key: 'creator', label: 'Creado por', field: 'creator.fullname', visible: false, render: (row) => formatAuditUser(row.creator) },
+    { key: 'updater', label: 'Actualizado por', field: 'updater.fullname', visible: false, render: (row) => formatAuditUser(row.updater) },
+    { key: 'status', label: 'Estado', field: 'status', width: '95px', filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] }, render: (row) => renderStatusSwitch(row, 'status') },
   ]
 
   const storageProductColumns = [
-    actionsColumn,
-    {
-      dataField: 'code',
-      caption: 'Codigo',
-      width: '130px',
-      cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar articulo')
-    },
-    {
-      dataField: 'client.full_name',
-      caption: 'Cliente',
-      minWidth: 220,
-      cellTemplate: (container, { data }) => container.text(data?.client?.full_name ?? '')
-    },
-    { dataField: 'name', caption: 'Nombre articulo', minWidth: 320 },
-    unitColumn,
-    storageStatusColumn,
+    { key: 'code', label: 'Codigo', field: 'code', width: '130px', filter: { type: 'text' }, render: renderCodeLink },
+    { key: 'client', label: 'Cliente', field: 'client.full_name', filter: { type: 'text', field: 'client.full_name' }, render: (row) => row?.client?.full_name ?? '' },
+    { key: 'name', label: 'Nombre articulo', field: 'name', filter: { type: 'text' } },
+    { key: 'unit', label: 'Unidad', field: 'unit.symbol', width: '110px', render: (row) => row?.unit?.symbol || row?.unit?.name || '' },
+    { key: 'status', label: 'Estado', field: 'status', width: '110px', render: (row) => { const active = row?.status !== false && row?.status !== 0; return <span className={`badge ${active ? 'bg-success' : 'bg-secondary'}`}>{active ? 'Activo' : 'Inactivo'}</span> } },
   ]
 
+  const articleActions = (row) => {
+    if (isMagistrales) {
+      return [
+        { icon: 'mdi mdi-eye', title: 'Mostrar', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onModalOpen(r, 'view') },
+        { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+      ]
+    }
+    if (isStorageProduct) {
+      return [
+        { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+        { icon: 'mdi mdi-delete', title: 'Eliminar articulo', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+      ]
+    }
+    return [
+      { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+      { icon: 'mdi mdi-package-variant-closed', title: 'Stock por almacen', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onOpenStockModal(r) },
+      { icon: 'mdi mdi-delete', title: 'Eliminar articulo', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+    ]
+  }
+
   const articleColumns = isMagistrales ? magistralesColumns : (isStorageProduct ? storageProductColumns : standardColumns)
+  const articleSearchFields = isMagistrales
+    ? ['code', 'name', 'laboratory.name', 'article_type', 'magistral_presentation', 'default_lot']
+    : (isStorageProduct ? ['code', 'name', 'client.full_name'] : ['code', 'name', 'laboratory.name', 'active_principle.name', 'warehouse.name'])
   const magistralesFilterValue = useMemo(
     () => isMagistrales ? buildMagistralFilterValue(magistralAppliedFilters) : null,
     [isMagistrales, magistralAppliedFilters.articleType, magistralAppliedFilters.status]
@@ -1592,6 +1380,35 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   }, [isStorageProduct, isMagistrales, standardAppliedFilters.laboratoryId, standardAppliedFilters.principleId, standardAppliedFilters.code])
   const articleFilterValue = isMagistrales ? magistralesFilterValue : standardFilterValue
 
+  const didFilterMountRef = useRef(false)
+  useEffect(() => {
+    if (!didFilterMountRef.current) { didFilterMountRef.current = true; return }
+    tableRef.current?.refresh()
+  }, [articleFilterValue])
+
+  const renderArticleCard = (row, actionButtons) => {
+    const active = row.status !== false && row.status !== 0
+    return (
+      <div className='vdt-card'>
+        <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+          <div style={{ minWidth: 0 }}>
+            <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>{row.name}</p>
+            <small className='text-muted'>{row.code}</small>
+          </div>
+          {isMagistrales
+            ? (() => { const meta = magistralStatusMeta[getMagistralStatusValue(row)] ?? magistralStatusMeta.vigente; return <span className={`badge ${meta.className}`}>{meta.label}</span> })()
+            : (row.status !== null && <span className={`badge ${active ? 'badge-soft-success' : 'badge-soft-danger'}`}>{active ? 'Activo' : 'Inactivo'}</span>)}
+        </div>
+        <div className='text-muted mt-2' style={{ fontSize: 12 }}>
+          {isStorageProduct
+            ? (row.client?.full_name ?? '')
+            : [getArticleLaboratoryLabel(row) || row.laboratory?.name, row.unit?.symbol || row.unit?.name].filter(Boolean).join(' · ')}
+        </div>
+        {actionButtons && <div className='d-flex mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }}>{actionButtons}</div>}
+      </div>
+    )
+  }
+
   const renderMagistralesArticleForm = () => (
     <fieldset className='magistrales-article-form' data-select2-local-dropdown disabled={isViewing}>
       <div className='magistrales-section'>
@@ -1602,14 +1419,13 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           <InputFormGroup eRef={codeRef} label='Código' col='col-md-2' readOnly placeholder='Se genera al guardar' />
           <InputFormGroup eRef={nameRef} label='Descripción' col='col-md-4' required />
           <InputFormGroup eRef={compositionRef} label='Composición' col='col-md-4' />
-          <div className='form-group col-md-2 mb-2'>
-            <label className='form-label'>Estado</label>
-            <select ref={statusRef} className='form-control' defaultValue='vigente'>
-              {magistralStatusOptions.map(option => (
-                <option key={`magistral-status-${option.value}`} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </div>
+          <VdSelect
+            label='Estado'
+            col='col-md-2'
+            value={selectedStatus}
+            onChange={(value) => setSelectedStatus(value)}
+            options={magistralStatusOptions}
+          />
         </div>
       </div>
 
@@ -1629,59 +1445,39 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
                 dropdownParent='#article-form-container'
                 onChange={onMagistralCategoryChanged}
               />
-              <SelectFormGroup
-                eRef={subCategoryRef}
+              <VdSelect
                 label='Subcategoría'
                 col='col-md-4'
-                dropdownParent='#article-form-container'
                 value={selectedSubCategory}
                 disabled={!selectedMagistralCategoryId || isLoadingSubcategories || magistralSubcategories.length === 0}
-                effectWith={[selectedMagistralCategoryId, isLoadingSubcategories, magistralSubcategories.map(item => `${item.id}:${item.description}`).join('|')]}
-                onChange={(e) => setSelectedSubCategory(e.target.value)}
-              >
-                <option value=''>
-                  {!selectedMagistralCategoryId ? 'Seleccione una categoría' : (isLoadingSubcategories ? 'Cargando...' : (magistralSubcategories.length ? 'Seleccione' : 'Sin subcategorías'))}
-                </option>
-                {magistralSubcategories.map(subcategory => (
-                  <option key={`magistral-subcategory-${subcategory.id}`} value={subcategory.description}>{subcategory.description}</option>
-                ))}
-              </SelectFormGroup>
-              <SelectFormGroup
-                eRef={magistralPresentationRef}
+                onChange={(value) => setSelectedSubCategory(value)}
+                options={magistralSubcategories.map(subcategory => ({ value: subcategory.description, label: subcategory.description }))}
+                placeholder={!selectedMagistralCategoryId ? 'Seleccione una categoría' : (isLoadingSubcategories ? 'Cargando...' : (magistralSubcategories.length ? 'Seleccione' : 'Sin subcategorías'))}
+              />
+              <VdSelect
                 label='Presentación'
                 col='col-md-4'
-                dropdownParent='#article-form-container'
                 value={selectedMagistralPresentation}
-                onChange={(e) => setSelectedMagistralPresentation(e.target.value)}
-              >
-                <option value=''>Seleccione</option>
-                {magistralPresentationOptions.map(option => (
-                  <option key={`magistral-presentation-${option}`} value={option}>{option}</option>
-                ))}
-              </SelectFormGroup>
-              <div className='form-group col-md-3 mb-2'>
-                <label className='form-label'>Tipo de artículo</label>
-                <select
-                  ref={articleTypeRef}
-                  className='form-control'
-                  defaultValue=''
-                  onChange={(e) => onMagistralArticleTypeChanged(e.target.value)}
-                >
-                  <option value=''>Seleccione</option>
-                  {magistralArticleTypeOptions.map(option => (
-                    <option key={`magistral-type-${option}`} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
-              <div className='form-group col-md-3 mb-2'>
-                <label className='form-label'>Vía administración</label>
-                <select ref={administrationRouteRef} className='form-control' defaultValue=''>
-                  <option value=''>Seleccione</option>
-                  {magistralAdministrationRouteOptions.map(option => (
-                    <option key={`magistral-route-${option}`} value={option}>{option}</option>
-                  ))}
-                </select>
-              </div>
+                onChange={(value) => setSelectedMagistralPresentation(value)}
+                options={magistralPresentationOptions.map(option => ({ value: option, label: option }))}
+                placeholder='Seleccione'
+              />
+              <VdSelect
+                label='Tipo de artículo'
+                col='col-md-3'
+                value={selectedArticleType}
+                onChange={(value) => onMagistralArticleTypeChanged(value)}
+                options={magistralArticleTypeOptions.map(option => ({ value: option, label: option }))}
+                placeholder='Seleccione'
+              />
+              <VdSelect
+                label='Vía administración'
+                col='col-md-3'
+                value={selectedAdministrationRoute}
+                onChange={(value) => setSelectedAdministrationRoute(value)}
+                options={magistralAdministrationRouteOptions.map(option => ({ value: option, label: option }))}
+                placeholder='Seleccione'
+              />
               <SelectAPIFormGroup
                 eRef={laboratoryRef}
                 label='Laboratorio'
@@ -1706,13 +1502,13 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
               <InputFormGroup eRef={stockMinRef} label='Stock mínimo' col='col-md-3' type='number' min='0' step='0.001' />
               <InputFormGroup eRef={stockMaxRef} label='Stock máximo' col='col-md-3' type='number' min='0' step='0.001' />
               <SwitchFormGroup eRef={igvRuleRef} label='Afecto a IGV' col='col-md-3' checked={false} />
-              <div className='form-group col-md-3 mb-2'>
-                <label className='form-label'>Moneda</label>
-                <select ref={currencyRef} className='form-control' defaultValue='PEN'>
-                  <option value='PEN'>Soles</option>
-                  <option value='USD'>Dolares</option>
-                </select>
-              </div>
+              <VdSelect
+                label='Moneda'
+                col='col-md-3'
+                value={selectedCurrency}
+                onChange={(value) => setSelectedCurrency(value)}
+                options={[{ value: 'PEN', label: 'Soles' }, { value: 'USD', label: 'Dolares' }]}
+              />
               <SwitchFormGroup eRef={stockHasExpirationRef} label='Stock con Vencim.' col='col-md-3' checked={false} />
               <SwitchFormGroup eRef={stockHasLotRef} label='Stock con Lote' col='col-md-3' checked={false} />
               <InputFormGroup eRef={costPriceRef} label='Precio Costo' col='col-md-3' type='number' min='0' step='0.01' />
@@ -2085,17 +1881,15 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     {!isStorageProduct && (
       <div className='card mb-3'>
         <div className='card-body d-flex flex-wrap align-items-center gap-2'>
-          <label className='form-label mb-0 fw-semibold' htmlFor='article-scope-selector'>Ver artículos de:</label>
-          <select
-            id='article-scope-selector'
-            className='form-control'
-            style={{ maxWidth: 260 }}
+          <label className='form-label mb-0 fw-semibold'>Ver artículos de:</label>
+          <VdSelect
+            col=''
+            noMargin
+            style={{ minWidth: 260, maxWidth: 260 }}
             value={isMagistrales ? 'magistrales' : 'standard'}
-            onChange={(e) => onArticleScopeChanged(e.target.value)}
-          >
-            <option value='standard'>Almacén general</option>
-            <option value='magistrales'>Magistrales (almacén 11)</option>
-          </select>
+            onChange={(value) => onArticleScopeChanged(value)}
+            options={[{ value: 'standard', label: 'Almacén general' }, { value: 'magistrales', label: 'Magistrales (almacén 11)' }]}
+          />
         </div>
       </div>
     )}
@@ -2119,30 +1913,24 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           <div className='row g-3 align-items-end'>
             <div className='col-12 col-lg-4'>
               <label className='form-label'>Seleccionar Laboratorio</label>
-              <select
-                className='form-control'
+              <VdSelect
+                col=''
+                noMargin
                 value={standardFilterDraft.laboratoryId}
-                onChange={(e) => onStandardFilterLaboratoryChanged(e.target.value)}
-              >
-                <option value=''>TODOS</option>
-                {filterLaboratories.map(item => (
-                  <option key={`article-filter-lab-${item.id}`} value={item.id}>{item.name ?? item.description}</option>
-                ))}
-              </select>
+                onChange={(value) => onStandardFilterLaboratoryChanged(value)}
+                options={[{ value: '', label: 'TODOS' }, ...filterLaboratories.map(item => ({ value: `${item.id}`, label: item.name ?? item.description }))]}
+              />
             </div>
             <div className='col-12 col-lg-4'>
               <label className='form-label'>Seleccionar Principio activo</label>
-              <select
-                className='form-control'
-                value={standardFilterDraft.principleId}
+              <VdSelect
+                col=''
+                noMargin
                 disabled={!standardFilterDraft.laboratoryId}
-                onChange={(e) => setStandardFilterDraft(prev => ({ ...prev, principleId: e.target.value }))}
-              >
-                <option value=''>TODOS</option>
-                {filterPrinciples.map(item => (
-                  <option key={`article-filter-principle-${item.id}`} value={item.id}>{item.name}</option>
-                ))}
-              </select>
+                value={standardFilterDraft.principleId}
+                onChange={(value) => setStandardFilterDraft(prev => ({ ...prev, principleId: value }))}
+                options={[{ value: '', label: 'TODOS' }, ...filterPrinciples.map(item => ({ value: `${item.id}`, label: item.name }))]}
+              />
             </div>
             <div className='col-12 col-lg-2'>
               <label className='form-label'>Codigo</label>
@@ -2168,27 +1956,23 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           <div className='row g-3 align-items-end'>
             <div className='col-12 col-md-5'>
               <label className='form-label'>Seleccionar tipo</label>
-              <select
-                className='form-control'
+              <VdSelect
+                col=''
+                noMargin
                 value={magistralFilterDraft.articleType}
-                onChange={(e) => onMagistralFilterChanged('articleType', e.target.value)}
-              >
-                {magistralArticleTypeFilterOptions.map(option => (
-                  <option key={`magistral-filter-type-${option || 'all'}`} value={option}>{option || 'TODOS'}</option>
-                ))}
-              </select>
+                onChange={(value) => onMagistralFilterChanged('articleType', value)}
+                options={magistralArticleTypeFilterOptions.map(option => ({ value: option, label: option || 'TODOS' }))}
+              />
             </div>
             <div className='col-12 col-md-5'>
               <label className='form-label'>Estado del Articulo</label>
-              <select
-                className='form-control'
+              <VdSelect
+                col=''
+                noMargin
                 value={magistralFilterDraft.status}
-                onChange={(e) => onMagistralFilterChanged('status', e.target.value)}
-              >
-                {magistralStatusOptions.map(option => (
-                  <option key={`magistral-filter-status-${option.value}`} value={option.value}>{option.label}</option>
-                ))}
-              </select>
+                onChange={(value) => onMagistralFilterChanged('status', value)}
+                options={magistralStatusOptions}
+              />
             </div>
             <div className='col-12 col-md-2'>
               <button type='submit' className='btn btn-outline-primary w-100'>
@@ -2200,61 +1984,34 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       </form>
     )}
 
-    <Table
-      gridRef={gridRef}
-      title={moduleTitle}
+    <VdTable
+      ref={tableRef}
       rest={articlesRest}
-      toolBar={(container) => {
-        if (isStorageProduct) {
-          [
-            { text: 'Imprimir', format: 'print' },
-            { text: 'PDF', format: 'pdf' },
-            { text: 'Excel', format: 'excel' },
-            { text: 'CSV', format: 'csv' },
-            { text: 'Copiar', format: 'copy' },
-          ].forEach(item => {
-            container.unshift({
-              widget: 'dxButton',
-              location: 'before',
-              options: {
-                text: item.text,
-                stylingMode: 'outlined',
-                onClick: () => onStorageProductExport(item.format)
-              }
-            })
-          })
-          container.unshift({
-            widget: 'dxButton', location: 'after',
-            options: {
-              icon: 'refresh',
-              hint: 'Refrescar tabla',
-              onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-            }
-          })
-          container.unshift({
-            widget: 'dxButton', location: 'after',
-            options: {
-              icon: 'add',
-              title: 'Agregar',
-              hint: 'Agregar articulo',
-              onClick: () => onModalOpen()
-            }
-          })
-          return
-        }
-
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        });
-      }}
-      pageSize={25}
+      icon='mdi mdi-package-variant-closed'
+      title={moduleTitle}
+      unit='articulos'
+      defaultSort={{ field: 'code', desc: false }}
+      defaultPageSize={25}
+      searchFields={articleSearchFields}
+      searchPlaceholder='Buscar por codigo, nombre…'
+      emptyText='No se encontraron articulos.'
+      baseFilter={articleFilterValue}
+      headerActions={<>
+        <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => tableRef.current?.refresh()}>
+          <i className='mdi mdi-refresh'></i>
+        </button>
+        {isStorageProduct && <>
+          <button type='button' className='vdt-btn-soft' onClick={() => onStorageProductExport('excel')}><i className='mdi mdi-file-excel'></i> Excel</button>
+          <button type='button' className='vdt-btn-soft' onClick={() => onStorageProductExport('csv')}><i className='mdi mdi-download'></i> CSV</button>
+          <button type='button' className='vdt-btn-soft' onClick={() => onStorageProductExport('pdf')}><i className='mdi mdi-file-pdf-box'></i> PDF</button>
+          <button type='button' className='vdt-btn-soft' onClick={() => onStorageProductExport('print')}><i className='mdi mdi-printer'></i> Imprimir</button>
+          <button type='button' className='vdt-btn-soft' onClick={() => onStorageProductExport('copy')}><i className='mdi mdi-content-copy'></i> Copiar</button>
+          <button type='button' className='vdt-btn-pri' onClick={() => onModalOpen()}><i className='mdi mdi-plus'></i> Nuevo articulo</button>
+        </>}
+      </>}
+      actions={articleActions}
       columns={articleColumns}
-      filterValue={articleFilterValue}
+      renderCard={renderArticleCard}
     />
 
     <Modal
@@ -2342,48 +2099,33 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
         <input ref={idRef} type='hidden' />
         {isStorageProduct ? (
         <fieldset className='row m-0 storage-product-form storage-product-section' disabled={isViewing}>
-          <div className='form-group col-md-4 mb-2'>
-            <label className='form-label'>Cliente <span className='text-danger'>*</span></label>
-            <select
-              className='form-control'
-              value={selectedStorageClientId}
-              onChange={(e) => setSelectedStorageClientId(e.target.value)}
-              required
-            >
-              <option value=''>Seleccione Cliente</option>
-              {storageClients.map(client => (
-                <option key={`storage-client-${client.entity_id ?? client.id}`} value={client.entity_id ?? client.id}>
-                  {client.document_number ? `${client.document_number} | ` : ''}{client.full_name ?? client.display_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <VdSelect
+            label='Cliente'
+            col='col-md-4'
+            required
+            value={selectedStorageClientId}
+            onChange={(value) => setSelectedStorageClientId(value)}
+            options={storageClients.map(client => ({ value: `${client.entity_id ?? client.id}`, label: `${client.document_number ? `${client.document_number} | ` : ''}${client.full_name ?? client.display_name}` }))}
+            placeholder='Seleccione Cliente'
+          />
           <InputFormGroup eRef={codeRef} label='Codigo de Articulo' col='col-md-4' readOnly placeholder='Se genera al guardar' />
           <InputFormGroup eRef={nameRef} label='Nombre de Articulo' col='col-md-4' required />
-          <SelectFormGroup
-            eRef={unitRef}
+          <VdSelect
             label='Und. Med.'
             col='col-md-6'
-            dropdownParent='#article-form-container'
             required
             value={selectedUnitId}
-            onChange={(e) => setSelectedUnitId(e.target.value)}
-            effectWith={[selectedUnitId, units.length]}
-          >
-            <option value=''>Seleccione Unidad</option>
-            {units.map(unit => (
-              <option key={`storage-unit-${unit.id}`} value={unit.id}>
-                {unit.name}{unit.symbol ? ` (${unit.symbol})` : ''}
-              </option>
-            ))}
-          </SelectFormGroup>
-          <div className='form-group col-md-6 mb-2'>
-            <label className='form-label'>Estado</label>
-            <select ref={statusRef} className='form-control' defaultValue='1'>
-              <option value='1'>Activo</option>
-              <option value='0'>Inactivo</option>
-            </select>
-          </div>
+            onChange={(value) => setSelectedUnitId(value)}
+            options={units.map(unit => ({ value: `${unit.id}`, label: `${unit.name}${unit.symbol ? ` (${unit.symbol})` : ''}` }))}
+            placeholder='Seleccione Unidad'
+          />
+          <VdSelect
+            label='Estado'
+            col='col-md-6'
+            value={selectedStatus}
+            onChange={(value) => setSelectedStatus(value)}
+            options={[{ value: '1', label: 'Activo' }, { value: '0', label: 'Inactivo' }]}
+          />
           <TextareaFormGroup eRef={notesRef} label='Observaciones' col='col-12' rows={3} />
 
           <div className='col-12 mt-2'>
@@ -2421,29 +2163,26 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
                         />
                       </td>
                       <td>
-                        <select
-                          className='form-control form-control-sm'
+                        <VdSelect
+                          col=''
+                          noMargin
                           value={lot.storage_condition}
-                          onChange={(e) => onStorageLotUpdated(lot.uid, 'storage_condition', e.target.value)}
-                        >
-                          <option value=''>Seleccione</option>
-                          {storageConditionOptions.map(condition => (
-                            <option key={`storage-condition-${condition}`} value={condition}>{condition}</option>
-                          ))}
-                        </select>
+                          onChange={(value) => onStorageLotUpdated(lot.uid, 'storage_condition', value)}
+                          options={[{ value: '', label: 'Seleccione' }, ...storageConditionOptions.map(condition => ({ value: condition, label: condition }))]}
+                          placeholder='Seleccione'
+                        />
                       </td>
                       <td>
                         <div className='storage-manufacturer-picker'>
-                          <select
-                            className='form-control form-control-sm'
+                          <VdSelect
+                            col=''
+                            noMargin
+                            style={{ flex: '1 1 auto', minWidth: 0 }}
                             value={lot.manufacturer_id}
-                            onChange={(e) => onStorageLotUpdated(lot.uid, 'manufacturer_id', e.target.value)}
-                          >
-                            <option value=''>Seleccione</option>
-                            {storageManufacturers.map(manufacturer => (
-                              <option key={`manufacturer-${manufacturer.id}`} value={manufacturer.id}>{manufacturer.name}</option>
-                            ))}
-                          </select>
+                            onChange={(value) => onStorageLotUpdated(lot.uid, 'manufacturer_id', value)}
+                            options={[{ value: '', label: 'Seleccione' }, ...storageManufacturers.map(manufacturer => ({ value: `${manufacturer.id}`, label: manufacturer.name }))]}
+                            placeholder='Seleccione'
+                          />
                           <button
                             type='button'
                             className='btn btn-sm btn-outline-success'
@@ -2470,78 +2209,17 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           renderMagistralesArticleForm()
         ) : (
         <fieldset className='row p-0 m-0' disabled={isViewing}>
-        {!isMagistrales && !isStorageProduct && (
-          <div className='form-group col-md-4 mb-2'>
-            <label className='form-label'>Almacen <span className='text-danger'>*</span></label>
-            <select
-              className='form-control'
-              value={selectedWarehouseId}
-              onChange={(e) => setSelectedWarehouseId(e.target.value)}
-              required
-            >
-              <option value=''>Seleccione almacen</option>
-              {warehouses.map(warehouse => (
-                <option key={`article-warehouse-${warehouse.id}`} value={warehouse.id}>
-                  {warehouse.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-        <InputFormGroup eRef={codeRef} label={isMagistrales ? 'Codigo' : 'Codigo de articulo'} col='col-md-4' readOnly placeholder='Se genera al guardar' />
-        <InputFormGroup eRef={nameRef} label={isMagistrales ? 'Descripcion' : 'Nombre del articulo'} col={isMagistrales ? 'col-md-8' : 'col-md-4'} required />
-
-        {isMagistrales && <>
-          <TextareaFormGroup eRef={compositionRef} label='Composicion' col='col-md-8' rows={2} />
-          <div className='form-group col-md-4 mb-2'>
-            <label className='form-label d-block'>Estado</label>
-            <div className='form-check form-switch'>
-              <input ref={statusRef} className='form-check-input' type='checkbox' />
-            </div>
-          </div>
-          <SelectAPIFormGroup
-            eRef={magistralCategoryRef}
-            label='Categoria'
-            col='col-md-3'
-            searchAPI='/api/admin/magistrales/categories/paginate'
-            searchBy='description'
-            dropdownParent='#article-form-container'
-            onChange={onMagistralCategoryChanged}
-          />
-          <SelectFormGroup
-            eRef={subCategoryRef}
-            label='Sub categoria'
-            col='col-md-3'
-            dropdownParent='#article-form-container'
-            value={selectedSubCategory}
-            disabled={!selectedMagistralCategoryId || isLoadingSubcategories || magistralSubcategories.length === 0}
-            effectWith={[selectedMagistralCategoryId, isLoadingSubcategories, magistralSubcategories.map(item => `${item.id}:${item.description}`).join('|')]}
-            onChange={(e) => setSelectedSubCategory(e.target.value)}
-          >
-            <option value=''>
-              {!selectedMagistralCategoryId ? 'Seleccione una categoria' : (isLoadingSubcategories ? 'Cargando...' : (magistralSubcategories.length ? 'Seleccione' : 'Sin subcategorias'))}
-            </option>
-            {magistralSubcategories.map(subcategory => (
-              <option key={`magistral-subcategory-legacy-${subcategory.id}`} value={subcategory.description}>{subcategory.description}</option>
-            ))}
-          </SelectFormGroup>
-          <SelectFormGroup
-            eRef={magistralPresentationRef}
-            label='Presentacion'
-            col='col-md-3'
-            dropdownParent='#article-form-container'
-            value={selectedMagistralPresentation}
-            onChange={(e) => setSelectedMagistralPresentation(e.target.value)}
-          >
-            <option value=''>Seleccione</option>
-            {magistralPresentationOptions.map(option => (
-              <option key={`magistral-presentation-legacy-${option}`} value={option}>{option}</option>
-            ))}
-          </SelectFormGroup>
-          <InputFormGroup eRef={unitsPerArticleRef} label='Unidades por caja' col='col-md-3' type='number' min='1' required />
-          <InputFormGroup eRef={articleTypeRef} label='Tipo de articulo' col='col-md-3' />
-          <InputFormGroup eRef={administrationRouteRef} label='Via administracion' col='col-md-3' />
-        </>}
+        <VdSelect
+          label='Almacen'
+          col='col-md-4'
+          required
+          value={selectedWarehouseId}
+          onChange={(value) => setSelectedWarehouseId(value)}
+          options={warehouses.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))}
+          placeholder='Seleccione almacen'
+        />
+        <InputFormGroup eRef={codeRef} label='Codigo de articulo' col='col-md-4' readOnly placeholder='Se genera al guardar' />
+        <InputFormGroup eRef={nameRef} label='Nombre del articulo' col='col-md-4' required />
 
         <SelectAPIFormGroup
           eRef={laboratoryRef}
@@ -2555,119 +2233,63 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           append={<button type='button' className='btn btn-success' title='Gestionar laboratorios' onClick={() => $(labManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button>}
         />
 
-        {isMagistrales && <InputFormGroup eRef={healthRegistrationRef} label='R. sanitario' col='col-md-4' />}
-
-        {!isMagistrales && <SelectFormGroup
-          eRef={principleRef}
-          label='Principio activo'
-          col='col-md-4'
-          dropdownParent='#article-form-container'
-          required
-          value={selectedPrincipleId}
-          onChange={(e) => setSelectedPrincipleId(e.target.value)}
-          effectWith={[selectedPrincipleId, principles.length]}
-          append={<button type='button' className='btn btn-success' title='Gestionar principios activos' onClick={() => $(principleManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button>}
-        >
-          <option value=''>Seleccionar...</option>
-          {principles.map(principle => (
-            <option key={`principle-${principle.id}`} value={principle.id}>{principle.name}</option>
-          ))}
-        </SelectFormGroup>}
-
-        <SelectFormGroup
-          eRef={unitRef}
-          label='Unidad de medida'
-          col='col-md-4'
-          dropdownParent='#article-form-container'
-          required
-          value={selectedUnitId}
-          onChange={(e) => setSelectedUnitId(e.target.value)}
-          effectWith={[selectedUnitId, units.length]}
-          append={<button type='button' className='btn btn-success' title='Gestionar unidades de medida' onClick={() => $(unitManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button>}
-        >
-          <option value=''>Seleccionar...</option>
-          {units.map(unit => (
-            <option key={`unit-${unit.id}`} value={unit.id}>
-              {unit.name}{unit.symbol ? ` (${unit.symbol})` : ''}
-            </option>
-          ))}
-        </SelectFormGroup>
-
-        {!isMagistrales && <>
-          <InputFormGroup eRef={volumeRef} label='Volumen' col='col-md-3' type='number' step='0.001' />
-          <InputFormGroup eRef={unitsPerArticleRef} label='Unidad por articulo' col='col-md-3' type='number' min='1' required />
-          <InputFormGroup eRef={unitWeightRef} label='Peso Unitario (Kg)' col='col-md-3' type='number' step='0.0001' />
-          <div className='form-group col-md-3 mb-2'>
-            <label className='form-label d-block'>Regla de margen</label>
-            <div className='form-check form-switch'>
-              <input ref={marginRuleRef} className='form-check-input' type='checkbox' />
-            </div>
+        <div className='form-group col-md-4 mb-2'>
+          <label className='form-label'>Principio activo <b style={{ color: '#ff5b5b' }}>*</b></label>
+          <div className='d-flex' style={{ gap: 6 }}>
+            <VdSelect
+              col=''
+              noMargin
+              style={{ flex: 1 }}
+              value={selectedPrincipleId}
+              onChange={(value) => setSelectedPrincipleId(value)}
+              options={principles.map(principle => ({ value: `${principle.id}`, label: principle.name }))}
+              placeholder='Seleccionar...'
+            />
+            <button type='button' className='btn btn-success' title='Gestionar principios activos' onClick={() => $(principleManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button>
           </div>
-          <div className='form-group col-md-3 mb-2'>
-            <label className='form-label'>Estado</label>
-            <select ref={statusRef} className='form-control' defaultValue='1'>
-              <option value='1'>Activo</option>
-              <option value='0'>Inactivo</option>
-            </select>
-          </div>
-        </>}
+        </div>
 
-        {isMagistrales && <>
-          <InputFormGroup eRef={stockMinRef} label='Stock minimo' col='col-md-3' type='number' min='0' step='0.001' />
-          <InputFormGroup eRef={stockMaxRef} label='Stock maximo' col='col-md-3' type='number' min='0' step='0.001' />
-          <SelectFormGroup eRef={currencyRef} label='Moneda' col='col-md-3' dropdownParent='#article-form-container'>
-            <option value='PEN'>S/ - PEN</option>
-            <option value='USD'>US$ - USD</option>
-          </SelectFormGroup>
-          <InputFormGroup eRef={costPriceRef} label='Precio costo' col='col-md-3' type='number' min='0' step='0.01' />
-          <InputFormGroup eRef={salePriceRef} label='Precio venta' col='col-md-3' type='number' min='0' step='0.01' />
-          <InputFormGroup eRef={defaultExpirationDateRef} label='F. vencimiento' col='col-md-3' type='date' />
-          <InputFormGroup eRef={defaultLotRef} label='Lote' col='col-md-3' />
-        </>}
+        <div className='form-group col-md-4 mb-2'>
+          <label className='form-label'>Unidad de medida <b style={{ color: '#ff5b5b' }}>*</b></label>
+          <div className='d-flex' style={{ gap: 6 }}>
+            <VdSelect
+              col=''
+              noMargin
+              style={{ flex: 1 }}
+              value={selectedUnitId}
+              onChange={(value) => setSelectedUnitId(value)}
+              options={units.map(unit => ({ value: `${unit.id}`, label: `${unit.name}${unit.symbol ? ` (${unit.symbol})` : ''}` }))}
+              placeholder='Seleccionar...'
+            />
+            <button type='button' className='btn btn-success' title='Gestionar unidades de medida' onClick={() => $(unitManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button>
+          </div>
+        </div>
+
+        <InputFormGroup eRef={volumeRef} label='Volumen' col='col-md-3' type='number' step='0.001' />
+        <InputFormGroup eRef={unitsPerArticleRef} label='Unidad por articulo' col='col-md-3' type='number' min='1' required />
+        <InputFormGroup eRef={unitWeightRef} label='Peso Unitario (Kg)' col='col-md-3' type='number' step='0.0001' />
+        <div className='form-group col-md-3 mb-2'>
+          <label className='form-label d-block'>Regla de margen</label>
+          <div className='form-check form-switch'>
+            <input ref={marginRuleRef} className='form-check-input' type='checkbox' />
+          </div>
+        </div>
+        <VdSelect
+          label='Estado'
+          col='col-md-3'
+          value={selectedStatus}
+          onChange={(value) => setSelectedStatus(value)}
+          options={[{ value: '1', label: 'Activo' }, { value: '0', label: 'Inactivo' }]}
+        />
 
         <div className='form-group col-md-3 mb-2'>
-          <label className='form-label d-block'>{isMagistrales ? 'Afecto a IGV' : 'Regla de IGV'}</label>
+          <label className='form-label d-block'>Regla de IGV</label>
           <div className='form-check form-switch'>
             <input ref={igvRuleRef} className='form-check-input' type='checkbox' />
           </div>
         </div>
 
-        {isMagistrales && <>
-          <div className='form-group col-md-3 mb-2'>
-            <label className='form-label d-block'>Stock con vencim.</label>
-            <div className='form-check form-switch'>
-              <input ref={stockHasExpirationRef} className='form-check-input' type='checkbox' />
-            </div>
-          </div>
-          <div className='form-group col-md-3 mb-2'>
-            <label className='form-label d-block'>Stock con lote</label>
-            <div className='form-check form-switch'>
-              <input ref={stockHasLotRef} className='form-check-input' type='checkbox' />
-            </div>
-          </div>
-          <InputFormGroup eRef={equivalenceQuantityRef} label='Cantidad equivalente' col='col-md-3' type='number' min='0' step='0.001' />
-          <SelectFormGroup
-            eRef={equivalenceUnitRef}
-            label='Unidad equivalente'
-            col='col-md-3'
-            dropdownParent='#article-form-container'
-            value={selectedEquivalenceUnitId}
-            onChange={(e) => setSelectedEquivalenceUnitId(e.target.value)}
-            effectWith={[selectedEquivalenceUnitId, units.length]}
-          >
-            <option value=''>Seleccionar...</option>
-            {units.map(unit => (
-              <option key={`equivalence-unit-${unit.id}`} value={unit.id}>
-                {unit.name}{unit.symbol ? ` (${unit.symbol})` : ''}
-              </option>
-            ))}
-          </SelectFormGroup>
-          <InputFormGroup eRef={salePriceNationalRef} label='P. venta (M.N)' col='col-md-3' type='number' min='0' step='0.01' />
-          <InputFormGroup eRef={purchasePriceNationalRef} label='P. compra (M.N)' col='col-md-3' type='number' min='0' step='0.01' />
-          <InputFormGroup eRef={purchasePriceForeignRef} label='P. compra (M.E)' col='col-md-3' type='number' min='0' step='0.01' />
-        </>}
-
-        {!isMagistrales && <TextareaFormGroup eRef={notesRef} label='Observaciones' col='col-12' rows={3} />}
+        <TextareaFormGroup eRef={notesRef} label='Observaciones' col='col-12' rows={3} />
 
         <div className='col-12 mt-2'>
           <div className='d-flex justify-content-between align-items-center mb-2'>
@@ -2752,21 +2374,22 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           <label className='form-label'>Nombre del fabricante</label>
           <input ref={newManufacturerNameRef} className='form-control' required />
         </div>
-        <div className='form-group mb-2'>
-          <label className='form-label'>Pais</label>
-          <select ref={newManufacturerCountryRef} className='form-control' defaultValue={manufacturerCountryOptions[0]} required>
-            {manufacturerCountryOptions.map(country => (
-              <option key={`manufacturer-country-${country}`} value={country}>{country}</option>
-            ))}
-          </select>
-        </div>
-        <div className='form-group mb-2'>
-          <label className='form-label'>Estado</label>
-          <select ref={newManufacturerStatusRef} className='form-control' defaultValue='1' required>
-            <option value='1'>Activo</option>
-            <option value='0'>Inactivo</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Pais'
+          col=''
+          noMargin
+          value={selectedManufacturerCountry}
+          onChange={(value) => setSelectedManufacturerCountry(value)}
+          options={manufacturerCountryOptions.map(country => ({ value: country, label: country }))}
+        />
+        <VdSelect
+          label='Estado'
+          col=''
+          noMargin
+          value={selectedManufacturerStatus}
+          onChange={(value) => setSelectedManufacturerStatus(value)}
+          options={[{ value: '1', label: 'Activo' }, { value: '0', label: 'Inactivo' }]}
+        />
       </div>
     </Modal>
 
@@ -2782,15 +2405,13 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           {!isStorageProduct && !isMagistrales && (
             <div className='col-md-6'>
               <label className='form-label'>Empresa</label>
-              <select
-                className='form-control'
+              <VdSelect
+                col=''
+                noMargin
                 value={selectedImportBusinessId}
-                onChange={(e) => setSelectedImportBusinessId(e.target.value)}
-              >
-                {businesses.map(item => (
-                  <option key={`import-business-${item.id}`} value={item.id}>{item.name}</option>
-                ))}
-              </select>
+                onChange={(value) => setSelectedImportBusinessId(value)}
+                options={businesses.map(item => ({ value: `${item.id}`, label: item.name }))}
+              />
             </div>
           )}
           <SelectAPIFormGroup
@@ -2807,15 +2428,13 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           />
           <div className='col-md-6'>
             <label className='form-label'>Tipo de carga</label>
-            <select
-              className='form-control'
+            <VdSelect
+              col=''
+              noMargin
               value={selectedImportType}
-              onChange={(e) => setSelectedImportType(e.target.value)}
-            >
-              {importTypeOptions.map(option => (
-                <option key={`article-import-type-${option.value}`} value={option.value}>{option.label}</option>
-              ))}
-            </select>
+              onChange={(value) => setSelectedImportType(value)}
+              options={importTypeOptions}
+            />
           </div>
           <div className='col-md-6'>
             <label className='form-label'>Subir archivo</label>
@@ -2838,92 +2457,56 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
                     <>
                       <div className='col-md-4'>
                         <label className='form-label'>Codigo pack *</label>
-                        <select className='form-control' value={mapping.pack_code} onChange={(e) => setMapping(prev => ({ ...prev, pack_code: e.target.value }))}>
-                          <option value=''>Seleccionar...</option>
-                          {importHeaders.map(header => <option key={`pack-code-${header}`} value={header}>{header}</option>)}
-                        </select>
+                        <VdSelect col='' noMargin value={mapping.pack_code} onChange={(value) => setMapping(prev => ({ ...prev, pack_code: value }))} placeholder='Seleccionar...' options={[{ value: '', label: 'Seleccionar...' }, ...importHeaders.map(header => ({ value: header, label: header }))]} />
                       </div>
                       <div className='col-md-4'>
                         <label className='form-label'>Nombre pack</label>
-                        <select className='form-control' value={mapping.pack_name} onChange={(e) => setMapping(prev => ({ ...prev, pack_name: e.target.value }))}>
-                          <option value=''>Usar codigo pack</option>
-                          {importHeaders.map(header => <option key={`pack-name-${header}`} value={header}>{header}</option>)}
-                        </select>
+                        <VdSelect col='' noMargin value={mapping.pack_name} onChange={(value) => setMapping(prev => ({ ...prev, pack_name: value }))} placeholder='Usar codigo pack' options={[{ value: '', label: 'Usar codigo pack' }, ...importHeaders.map(header => ({ value: header, label: header }))]} />
                       </div>
                       <div className='col-md-4'>
                         <label className='form-label'>Codigo componente *</label>
-                        <select className='form-control' value={mapping.component_code} onChange={(e) => setMapping(prev => ({ ...prev, component_code: e.target.value }))}>
-                          <option value=''>Seleccionar...</option>
-                          {importHeaders.map(header => <option key={`component-code-${header}`} value={header}>{header}</option>)}
-                        </select>
+                        <VdSelect col='' noMargin value={mapping.component_code} onChange={(value) => setMapping(prev => ({ ...prev, component_code: value }))} placeholder='Seleccionar...' options={[{ value: '', label: 'Seleccionar...' }, ...importHeaders.map(header => ({ value: header, label: header }))]} />
                       </div>
                       <div className='col-md-4'>
                         <label className='form-label'>Nombre componente</label>
-                        <select className='form-control' value={mapping.component_name} onChange={(e) => setMapping(prev => ({ ...prev, component_name: e.target.value }))}>
-                          <option value=''>Usar codigo componente</option>
-                          {importHeaders.map(header => <option key={`component-name-${header}`} value={header}>{header}</option>)}
-                        </select>
+                        <VdSelect col='' noMargin value={mapping.component_name} onChange={(value) => setMapping(prev => ({ ...prev, component_name: value }))} placeholder='Usar codigo componente' options={[{ value: '', label: 'Usar codigo componente' }, ...importHeaders.map(header => ({ value: header, label: header }))]} />
                       </div>
                       <div className='col-md-4'>
                         <label className='form-label'>Cantidad componente</label>
-                        <select className='form-control' value={mapping.component_quantity} onChange={(e) => setMapping(prev => ({ ...prev, component_quantity: e.target.value }))}>
-                          <option value=''>Usar 1</option>
-                          {importHeaders.map(header => <option key={`component-quantity-${header}`} value={header}>{header}</option>)}
-                        </select>
+                        <VdSelect col='' noMargin value={mapping.component_quantity} onChange={(value) => setMapping(prev => ({ ...prev, component_quantity: value }))} placeholder='Usar 1' options={[{ value: '', label: 'Usar 1' }, ...importHeaders.map(header => ({ value: header, label: header }))]} />
                       </div>
                     </>
                   ) : (
                     <>
                       <div className='col-md-4'>
                         <label className='form-label'>{!isStorageProduct && !isMagistrales ? 'LOTE (EAN) *' : 'Codigo *'}</label>
-                        <select className='form-control' value={mapping.code} onChange={(e) => setMapping(prev => ({ ...prev, code: e.target.value }))}>
-                          <option value=''>Seleccionar...</option>
-                          {importHeaders.map(header => <option key={`code-${header}`} value={header}>{header}</option>)}
-                        </select>
+                        <VdSelect col='' noMargin value={mapping.code} onChange={(value) => setMapping(prev => ({ ...prev, code: value }))} placeholder='Seleccionar...' options={[{ value: '', label: 'Seleccionar...' }, ...importHeaders.map(header => ({ value: header, label: header }))]} />
                       </div>
                       <div className='col-md-4'>
                         <label className='form-label'>{!isStorageProduct && !isMagistrales ? 'Nombre' : 'Descripcion'}</label>
-                        <select className='form-control' value={mapping.name} onChange={(e) => setMapping(prev => ({ ...prev, name: e.target.value }))}>
-                          <option value=''>Seleccionar...</option>
-                          {importHeaders.map(header => <option key={`name-${header}`} value={header}>{header}</option>)}
-                        </select>
+                        <VdSelect col='' noMargin value={mapping.name} onChange={(value) => setMapping(prev => ({ ...prev, name: value }))} placeholder='Seleccionar...' options={[{ value: '', label: 'Seleccionar...' }, ...importHeaders.map(header => ({ value: header, label: header }))]} />
                       </div>
                     </>
                   )}
                   {!isStorageProduct && !isMagistrales && <div className='col-md-4'>
                     <label className='form-label'>Almacen</label>
-                    <select className='form-control' value={mapping.warehouse} onChange={(e) => setMapping(prev => ({ ...prev, warehouse: e.target.value }))}>
-                      <option value=''>Usar almacen por empresa</option>
-                      {importHeaders.map(header => <option key={`warehouse-${header}`} value={header}>{header}</option>)}
-                    </select>
+                    <VdSelect col='' noMargin value={mapping.warehouse} onChange={(value) => setMapping(prev => ({ ...prev, warehouse: value }))} placeholder='Usar almacen por empresa' options={[{ value: '', label: 'Usar almacen por empresa' }, ...importHeaders.map(header => ({ value: header, label: header }))]} />
                   </div>}
                   <div className='col-md-4'>
                     <label className='form-label'>Laboratorio</label>
-                    <select className='form-control' value={mapping.laboratory} onChange={(e) => setMapping(prev => ({ ...prev, laboratory: e.target.value }))}>
-                      <option value=''>Usar laboratorio seleccionado</option>
-                      {importHeaders.map(header => <option key={`lab-${header}`} value={header}>{header}</option>)}
-                    </select>
+                    <VdSelect col='' noMargin value={mapping.laboratory} onChange={(value) => setMapping(prev => ({ ...prev, laboratory: value }))} placeholder='Usar laboratorio seleccionado' options={[{ value: '', label: 'Usar laboratorio seleccionado' }, ...importHeaders.map(header => ({ value: header, label: header }))]} />
                   </div>
                   <div className='col-md-4'>
                     <label className='form-label'>Principio activo</label>
-                    <select className='form-control' value={mapping.active_principle} onChange={(e) => setMapping(prev => ({ ...prev, active_principle: e.target.value }))}>
-                      <option value=''>Seleccionar...</option>
-                      {importHeaders.map(header => <option key={`principle-${header}`} value={header}>{header}</option>)}
-                    </select>
+                    <VdSelect col='' noMargin value={mapping.active_principle} onChange={(value) => setMapping(prev => ({ ...prev, active_principle: value }))} placeholder='Seleccionar...' options={[{ value: '', label: 'Seleccionar...' }, ...importHeaders.map(header => ({ value: header, label: header }))]} />
                   </div>
                   <div className='col-md-4'>
                     <label className='form-label'>Unidad</label>
-                    <select className='form-control' value={mapping.unit} onChange={(e) => setMapping(prev => ({ ...prev, unit: e.target.value }))}>
-                      <option value=''>Seleccionar...</option>
-                      {importHeaders.map(header => <option key={`unit-${header}`} value={header}>{header}</option>)}
-                    </select>
+                    <VdSelect col='' noMargin value={mapping.unit} onChange={(value) => setMapping(prev => ({ ...prev, unit: value }))} placeholder='Seleccionar...' options={[{ value: '', label: 'Seleccionar...' }, ...importHeaders.map(header => ({ value: header, label: header }))]} />
                   </div>
                   <div className='col-md-4'>
                     <label className='form-label'>Estado</label>
-                    <select className='form-control' value={mapping.status} onChange={(e) => setMapping(prev => ({ ...prev, status: e.target.value }))}>
-                      <option value=''>Seleccionar...</option>
-                      {importHeaders.map(header => <option key={`status-${header}`} value={header}>{header}</option>)}
-                    </select>
+                    <VdSelect col='' noMargin value={mapping.status} onChange={(value) => setMapping(prev => ({ ...prev, status: value }))} placeholder='Seleccionar...' options={[{ value: '', label: 'Seleccionar...' }, ...importHeaders.map(header => ({ value: header, label: header }))]} />
                   </div>
                 </div>
               </details>
