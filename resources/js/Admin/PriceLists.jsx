@@ -1,20 +1,17 @@
-import React, { createRef, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
-import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
-import SelectFormGroup from '@Adminto/form/SelectFormGroup';
-import SetSelectValue from '../Utils/SetSelectValue';
 import PriceListsRest from '../Actions/Admin/PriceListsRest';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
+import { Fetch } from 'sode-extend-react';
+import { toast } from 'sonner';
 
 const priceListsRest = new PriceListsRest()
 
@@ -30,12 +27,21 @@ const formatAuditUser = (user) => {
   return ''
 }
 
+// Etiqueta de alcance (a quien/que aplica el tarifario), usada en la columna y en la card mobile
+const buildScopeLabel = (data) => {
+  const parts = []
+  if (data.client?.full_name) parts.push(`Cliente: ${data.client.full_name}`)
+  if (data.eventual_client?.business_name) parts.push(`Eventual: ${data.eventual_client.business_name}`)
+  if (data.distribution_network?.name) parts.push(`Nodo: ${data.distribution_network.name}`)
+  if (data.channel) parts.push(`Canal: ${data.channel}`)
+  if (data.segment) parts.push(`Segmento: ${data.segment}`)
+  return parts.join(' | ') || 'General'
+}
+
 const emptyItem = () => ({
   uid: crypto.randomUUID(),
   article_id: '',
-  article_label: '',
   laboratory_id: '',
-  laboratory_label: '',
   category: '',
   subcategory: '',
   fixed_price: '',
@@ -43,60 +49,101 @@ const emptyItem = () => ({
   minimum_quantity: 1,
 })
 
+// Fusiona registros puntuales (p.ej. los relacionados de un tarifario en edicion) a una lista de opciones,
+// para que VdSelect pueda mostrarlos aunque no vengan en la carga general (p.ej. si quedaron inactivos)
+const mergeOptionRecords = (setList, records) => {
+  const valid = (records || []).filter(Boolean)
+  if (!valid.length) return
+  setList(prev => {
+    const seen = new Set(prev.map(item => `${item.id}`))
+    const extra = []
+    valid.forEach(r => {
+      if (r?.id == null) return
+      const key = `${r.id}`
+      if (seen.has(key)) return
+      seen.add(key)
+      extra.push(r)
+    })
+    return extra.length ? [...prev, ...extra] : prev
+  })
+}
+
+const loadFullList = async (url, { sortField = 'name', filter = null } = {}) => {
+  try {
+    const { status, result } = await Fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        isLoadingAll: true,
+        sort: [{ selector: sortField, desc: false }],
+        ...(filter ? { filter } : {}),
+      })
+    })
+    if (!status) throw new Error(result?.message || 'No se pudo cargar la lista')
+    return result.data ?? []
+  } catch (error) {
+    toast.error("Error", {
+      description: error.message,
+      duration: 3000,
+      richColors: true,
+    });
+    return []
+  }
+}
+
 const PriceLists = ({ requiredPermission = 'pricing' }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
 
   const idRef = useRef()
   const codeRef = useRef()
-  const businessRef = useRef()
-  const branchRef = useRef()
-  const warehouseRef = useRef()
-  const clientRef = useRef()
-  const eventualClientRef = useRef()
-  const networkRef = useRef()
   const channelRef = useRef()
   const segmentRef = useRef()
-  const currencyRef = useRef()
   const priorityRef = useRef()
   const startsAtRef = useRef()
   const endsAtRef = useRef()
   const observationsRef = useRef()
-  const articleRefs = useRef({})
-  const laboratoryRefs = useRef({})
 
   const [isEditing, setIsEditing] = useState(false)
+  const [currency, setCurrency] = useState('PEN')
+
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
+  const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
   const [selectedClientId, setSelectedClientId] = useState('')
+  const [selectedEventualClientId, setSelectedEventualClientId] = useState('')
+  const [selectedNetworkId, setSelectedNetworkId] = useState('')
+
+  const [businesses, setBusinesses] = useState([])
   const [branches, setBranches] = useState([])
+  const [warehouses, setWarehouses] = useState([])
+  const [clients, setClients] = useState([])
+  const [eventualClients, setEventualClients] = useState([])
+  const [distributionNetworks, setDistributionNetworks] = useState([])
+  const [articles, setArticles] = useState([])
+  const [laboratories, setLaboratories] = useState([])
+
   const [items, setItems] = useState([emptyItem()])
 
-  const getArticleRef = (uid) => {
-    if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
-    return articleRefs.current[uid]
-  }
+  const loadBusinesses = async () => setBusinesses(await loadFullList('/api/admin/businesses/paginate', { sortField: 'name' }))
+  const loadClients = async () => setClients(await loadFullList('/api/admin/clients/paginate', { sortField: 'full_name', filter: ['client_kind', '=', 'regular'] }))
+  const loadEventualClients = async () => setEventualClients(await loadFullList('/api/admin/eventual-clients/paginate', { sortField: 'business_name' }))
+  const loadArticlesList = async () => setArticles(await loadFullList('/api/admin/articles/paginate', { sortField: 'name' }))
+  const loadLaboratoriesList = async () => setLaboratories(await loadFullList('/api/admin/laboratories/paginate', { sortField: 'name' }))
+  const loadWarehousesList = async (branchId) => setWarehouses(await loadFullList('/api/admin/warehouses/paginate', { sortField: 'name', filter: branchId ? ['business_branch_id', '=', Number(branchId)] : null }))
+  const loadNetworksList = async (clientId) => setDistributionNetworks(await loadFullList('/api/admin/client-distribution/paginate', { sortField: 'name', filter: clientId ? ['client_id', '=', Number(clientId)] : null }))
 
-  const getLaboratoryRef = (uid) => {
-    if (!laboratoryRefs.current[uid]) laboratoryRefs.current[uid] = createRef()
-    return laboratoryRefs.current[uid]
-  }
-
+  // Catalogos de tamaño acotado: se cargan una sola vez al montar
   useEffect(() => {
-    items.forEach(item => {
-      const articleRef = getArticleRef(item.uid)
-      if (articleRef.current && item.article_id && item.article_label) {
-        const current = $(articleRef.current).val()
-        if (`${current}` !== `${item.article_id}`) SetSelectValue(articleRef.current, item.article_id, item.article_label)
-      }
+    loadBusinesses()
+    loadClients()
+    loadEventualClients()
+    loadArticlesList()
+    loadLaboratoriesList()
+  }, [])
 
-      const laboratoryRef = getLaboratoryRef(item.uid)
-      if (laboratoryRef.current && item.laboratory_id && item.laboratory_label) {
-        const current = $(laboratoryRef.current).val()
-        if (`${current}` !== `${item.laboratory_id}`) SetSelectValue(laboratoryRef.current, item.laboratory_id, item.laboratory_label)
-      }
-    })
-  }, [items])
+  // Cascadas: almacenes por sede, red de distribucion por cliente (tambien cubren la carga inicial sin filtro)
+  useEffect(() => { loadWarehousesList(selectedBranchId || null) }, [selectedBranchId])
+  useEffect(() => { loadNetworksList(selectedClientId || null) }, [selectedClientId])
 
   const loadBranches = async (businessId, preferredId = null) => {
     if (!businessId) {
@@ -115,24 +162,29 @@ const PriceLists = ({ requiredPermission = 'pricing' }) => {
     setSelectedBranchId('')
   }
 
+  const onBusinessChange = async (value) => {
+    const id = value || ''
+    setSelectedBusinessId(id)
+    setSelectedWarehouseId('')
+    await loadBranches(id)
+  }
+
   const clearForm = () => {
     if (idRef.current) idRef.current.value = ''
     if (codeRef.current) codeRef.current.value = 'Se genera al guardar'
     if (channelRef.current) channelRef.current.value = ''
     if (segmentRef.current) segmentRef.current.value = ''
-    if (currencyRef.current) currencyRef.current.value = 'PEN'
     if (priorityRef.current) priorityRef.current.value = '100'
     if (startsAtRef.current) startsAtRef.current.value = ''
     if (endsAtRef.current) endsAtRef.current.value = ''
     if (observationsRef.current) observationsRef.current.value = ''
-    SetSelectValue(businessRef.current, null)
-    SetSelectValue(warehouseRef.current, null)
-    SetSelectValue(clientRef.current, null)
-    SetSelectValue(eventualClientRef.current, null)
-    SetSelectValue(networkRef.current, null)
+    setCurrency('PEN')
     setSelectedBusinessId('')
     setSelectedBranchId('')
+    setSelectedWarehouseId('')
     setSelectedClientId('')
+    setSelectedEventualClientId('')
+    setSelectedNetworkId('')
     setBranches([])
     setItems([emptyItem()])
   }
@@ -146,7 +198,7 @@ const PriceLists = ({ requiredPermission = 'pricing' }) => {
       codeRef.current.value = data.code ?? ''
       channelRef.current.value = data.channel ?? ''
       segmentRef.current.value = data.segment ?? ''
-      currencyRef.current.value = data.currency ?? 'PEN'
+      setCurrency(data.currency ?? 'PEN')
       priorityRef.current.value = data.priority ?? 100
       startsAtRef.current.value = data.starts_at ? data.starts_at.toString().slice(0, 10) : ''
       endsAtRef.current.value = data.ends_at ? data.ends_at.toString().slice(0, 10) : ''
@@ -155,21 +207,30 @@ const PriceLists = ({ requiredPermission = 'pricing' }) => {
       const businessId = data.business_id ? `${data.business_id}` : ''
       const branchId = data.business_branch_id ? `${data.business_branch_id}` : ''
       const clientId = data.client_id ? `${data.client_id}` : ''
+      const warehouseId = data.warehouse_id ? `${data.warehouse_id}` : ''
+      const eventualClientId = data.eventual_client_id ? `${data.eventual_client_id}` : ''
+      const networkId = data.client_distribution_network_id ? `${data.client_distribution_network_id}` : ''
+
       setSelectedBusinessId(businessId)
       setSelectedClientId(clientId)
+      setSelectedWarehouseId(warehouseId)
+      setSelectedEventualClientId(eventualClientId)
+      setSelectedNetworkId(networkId)
 
-      if (businessId && data.business?.name) SetSelectValue(businessRef.current, businessId, data.business.name)
-      if (data.warehouse_id && data.warehouse?.name) SetSelectValue(warehouseRef.current, `${data.warehouse_id}`, data.warehouse.name)
-      if (clientId && data.client?.full_name) SetSelectValue(clientRef.current, clientId, data.client.full_name)
-      if (data.eventual_client_id && data.eventual_client?.business_name) SetSelectValue(eventualClientRef.current, `${data.eventual_client_id}`, data.eventual_client.business_name)
-      if (data.client_distribution_network_id && data.distribution_network?.name) SetSelectValue(networkRef.current, `${data.client_distribution_network_id}`, `${data.distribution_network.code ?? ''} - ${data.distribution_network.name}`)
+      // Asegura que las opciones referenciadas por este registro esten disponibles en los VdSelect
+      // aunque el catalogo activo no las incluya (p.ej. quedaron inactivas luego de crear el tarifario)
+      mergeOptionRecords(setBusinesses, [data.business])
+      mergeOptionRecords(setWarehouses, [data.warehouse])
+      mergeOptionRecords(setClients, [data.client])
+      mergeOptionRecords(setEventualClients, [data.eventual_client])
+      mergeOptionRecords(setDistributionNetworks, [data.distribution_network])
+      mergeOptionRecords(setArticles, (data.items ?? []).map(row => row.article))
+      mergeOptionRecords(setLaboratories, (data.items ?? []).map(row => row.laboratory))
 
       const detail = (data.items ?? []).map(row => ({
         uid: crypto.randomUUID(),
         article_id: row.article_id ? `${row.article_id}` : '',
-        article_label: row.article ? `${row.article.code ?? ''} - ${row.article.name ?? ''}`.trim() : '',
         laboratory_id: row.laboratory_id ? `${row.laboratory_id}` : '',
-        laboratory_label: row.laboratory?.name ?? '',
         category: row.category ?? '',
         subcategory: row.subcategory ?? '',
         fixed_price: row.fixed_price ?? '',
@@ -193,18 +254,23 @@ const PriceLists = ({ requiredPermission = 'pricing' }) => {
   const onModalSubmit = async (e) => {
     e.preventDefault()
 
+    if (!selectedBusinessId) {
+      Swal.fire({ icon: 'warning', title: 'Falta empresa', text: 'Selecciona una empresa.', confirmButtonText: 'Entendido' })
+      return
+    }
+
     const request = {
       id: idRef.current.value || undefined,
       business_id: selectedBusinessId || null,
       business_branch_id: selectedBranchId || null,
-      warehouse_id: warehouseRef.current?.value || null,
-      client_id: clientRef.current?.value || null,
-      eventual_client_id: eventualClientRef.current?.value || null,
-      client_distribution_network_id: networkRef.current?.value || null,
+      warehouse_id: selectedWarehouseId || null,
+      client_id: selectedClientId || null,
+      eventual_client_id: selectedEventualClientId || null,
+      client_distribution_network_id: selectedNetworkId || null,
       code: codeRef.current.value?.trim(),
       channel: channelRef.current.value?.trim(),
       segment: segmentRef.current.value?.trim(),
-      currency: currencyRef.current.value || 'PEN',
+      currency: currency || 'PEN',
       priority: priorityRef.current.value || 100,
       starts_at: startsAtRef.current.value || null,
       ends_at: endsAtRef.current.value || null,
@@ -224,14 +290,14 @@ const PriceLists = ({ requiredPermission = 'pricing' }) => {
     const result = await priceListsRest.save(request)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(modalRef.current).modal('hide')
   }
 
   const onBooleanChange = async ({ id, value }) => {
     const result = await priceListsRest.boolean({ id, field: 'status', value })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -246,187 +312,161 @@ const PriceLists = ({ requiredPermission = 'pricing' }) => {
     if (!isConfirmed) return
     const result = await priceListsRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
+  const rowActions = (row) => [
+    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+    { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir PDF', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.priceList(r)) },
+    { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+  ]
+
   return (<>
-    <Table
-      gridRef={gridRef}
-      title='Tarifario'
+    <VdTable
+      ref={tableRef}
       rest={priceListsRest}
-      pageSize={20}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            hint: 'Agregar tarifario',
-            onClick: () => onModalOpen()
-          }
-        });
-      }}
+      icon="mdi mdi-cash-multiple"
+      title="Tarifario"
+      unit="tarifarios"
+      defaultPageSize={20}
+      searchFields={['code', 'business.name', 'branch.name', 'warehouse.name', 'channel', 'segment']}
+      searchPlaceholder="Buscar por codigo, empresa, sede…"
+      emptyText="No se encontraron tarifarios."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={() => tableRef.current?.refresh()}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen()}>
+          <i className="mdi mdi-plus"></i> Nuevo tarifario
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
-        { dataField: 'id', caption: 'ID', width: 70 },
+        { key: 'id', label: 'ID', field: 'id', width: '70px' },
         {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: 120,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onModalOpen(data), 'Editar tarifario')
+          key: 'codigo', label: 'Codigo', field: 'code', width: '120px', filter: { type: 'text' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar tarifario">
+              {row.code || '-'}
+            </a>
+          ),
         },
-        { dataField: 'business.name', caption: 'Empresa', minWidth: 180 },
-        { dataField: 'branch.name', caption: 'Sede', minWidth: 140, visible: false },
-        { dataField: 'warehouse.name', caption: 'Almacen', minWidth: 140, visible: false },
+        { key: 'empresa', label: 'Empresa', field: 'business.name', filter: { type: 'text' } },
+        { key: 'sede', label: 'Sede', field: 'branch.name', visible: false, filter: { type: 'text' } },
+        { key: 'almacen', label: 'Almacén', field: 'warehouse.name', visible: false, filter: { type: 'text' } },
         {
-          dataField: 'scope',
-          caption: 'Alcance',
-          minWidth: 250,
-          calculateCellValue: (data) => {
-            const parts = []
-            if (data.client?.full_name) parts.push(`Cliente: ${data.client.full_name}`)
-            if (data.eventual_client?.business_name) parts.push(`Eventual: ${data.eventual_client.business_name}`)
-            if (data.distribution_network?.name) parts.push(`Nodo: ${data.distribution_network.name}`)
-            if (data.channel) parts.push(`Canal: ${data.channel}`)
-            if (data.segment) parts.push(`Segmento: ${data.segment}`)
-            return parts.join(' | ') || 'General'
-          }
+          key: 'alcance', label: 'Alcance', sortable: false,
+          render: (row) => buildScopeLabel(row),
         },
-        { dataField: 'currency', caption: 'Moneda', width: 90 },
-        { dataField: 'priority', caption: 'Prioridad', width: 90 },
+        { key: 'moneda', label: 'Moneda', field: 'currency', width: '90px' },
+        { key: 'prioridad', label: 'Prioridad', field: 'priority', width: '90px' },
         {
-          dataField: 'items_count',
-          caption: 'Reglas',
-          width: 80,
-          calculateCellValue: (data) => (data.items ?? []).filter(item => item.status !== null).length
+          key: 'reglas', label: 'Reglas', width: '80px', sortable: false, align: 'right',
+          render: (row) => (row.items ?? []).filter(item => item.status !== null).length,
         },
-        { dataField: 'starts_at', caption: 'Vigencia inicio', width: 110, dataType: 'date' },
-        { dataField: 'ends_at', caption: 'Vigencia fin', width: 110, dataType: 'date' },
+        { key: 'vigencia_inicio', label: 'Vigencia inicio', field: 'starts_at', width: '110px', filter: { type: 'date' } },
+        { key: 'vigencia_fin', label: 'Vigencia fin', field: 'ends_at', width: '110px', filter: { type: 'date' } },
         {
-          dataField: 'creator.fullname',
-          caption: 'Creado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
+          key: 'creador', label: 'Creado por', field: 'creator.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.creator),
         },
         {
-          dataField: 'updater.fullname',
-          caption: 'Actualizado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
+          key: 'actualizador', label: 'Actualizado por', field: 'updater.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.updater),
         },
         {
-          dataField: 'status',
-          caption: 'Estado',
-          width: 95,
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({ id: data.id, value: !data.status })} />)
-          }
-        },
-        {
-          caption: 'Acciones',
-          width: 160,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger ms-1',
-              title: 'Imprimir PDF',
-              icon: 'mdi mdi-file-pdf-box',
-              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.priceList(data))
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger ms-1',
-              title: 'Eliminar',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.id)
-            }))
+          key: 'estado', label: 'Estado', field: 'status', width: '110px',
+          filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => {
+            if (row.status === null) return ''
+            return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => onBooleanChange({ id: row.id, value: !row.status })} />
           },
-          allowFiltering: false,
-          allowExporting: false
-        }
+        },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onModalOpen(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.code || '-'}</p>
+              <small className="text-muted">{[row.business?.name, row.branch?.name].filter(Boolean).join(' · ')}</small>
+            </div>
+            {row.status !== null && (
+              <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>
+            )}
+          </div>
+          <p className="text-muted mb-0 mt-2" style={{ fontSize: 12 }}>{buildScopeLabel(row)}</p>
+          <small className="text-muted d-block mt-2">
+            <i className="mdi mdi-currency-usd me-1"></i>{row.currency} · Prioridad {row.priority} · {(row.items ?? []).filter(item => item.status !== null).length} reglas
+          </small>
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal modalRef={modalRef} title={isEditing ? 'Editar tarifario' : 'Agregar tarifario'} onSubmit={onModalSubmit} size='xl' btnSubmitText='Guardar'>
-      <div className='row' id='price-lists-container'>
+      <div className='row'>
         <input ref={idRef} type='hidden' />
         <InputFormGroup eRef={codeRef} label='Codigo' col='col-md-3' />
-        <SelectAPIFormGroup
-          eRef={businessRef}
+        <VdSelect
           label='Empresa'
           col='col-md-5'
           required
-          searchAPI='/api/admin/businesses/paginate'
-          searchBy='name'
-          dropdownParent='#price-lists-container'
-          onChange={async (e) => {
-            const value = e.target.value || ''
-            setSelectedBusinessId(value)
-            await loadBranches(value)
-          }}
+          value={selectedBusinessId}
+          onChange={onBusinessChange}
+          options={businesses.map(b => ({ value: `${b.id}`, label: b.name }))}
+          placeholder='-- Seleccionar empresa --'
         />
-        <SelectFormGroup eRef={branchRef} label='Sede' col='col-md-4' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value || '')} effectWith={[selectedBranchId, branches.length]}>
-          <option value=''>Todas</option>
-          {branches.map(branch => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
-        </SelectFormGroup>
+        <VdSelect
+          label='Sede'
+          col='col-md-4'
+          value={selectedBranchId}
+          onChange={(value) => { setSelectedBranchId(value || ''); setSelectedWarehouseId('') }}
+          options={[{ value: '', label: 'Todas' }, ...branches.map(b => ({ value: `${b.id}`, label: b.name }))]}
+          placeholder='Todas'
+        />
 
-        <SelectAPIFormGroup
-          eRef={warehouseRef}
+        <VdSelect
           label='Almacen'
           col='col-md-4'
-          searchAPI='/api/admin/warehouses/paginate'
-          searchBy='name'
-          filter={selectedBranchId ? ['business_branch_id', '=', Number(selectedBranchId)] : null}
-          dropdownParent='#price-lists-container'
+          value={selectedWarehouseId}
+          onChange={(value) => setSelectedWarehouseId(value || '')}
+          options={warehouses.map(w => ({ value: `${w.id}`, label: w.name }))}
+          placeholder='-- Seleccionar almacen --'
         />
-        <SelectAPIFormGroup
-          eRef={clientRef}
+        <VdSelect
           label='Cliente regular'
           col='col-md-4'
-          searchAPI='/api/admin/clients/paginate'
-          searchBy='full_name'
-          filter={['client_kind', '=', 'regular']}
-          dropdownParent='#price-lists-container'
-          onChange={(e) => setSelectedClientId(e.target.value || '')}
+          value={selectedClientId}
+          onChange={(value) => { setSelectedClientId(value || ''); setSelectedNetworkId('') }}
+          options={clients.map(c => ({ value: `${c.id}`, label: c.full_name }))}
+          placeholder='-- Seleccionar cliente --'
         />
-        <SelectAPIFormGroup
-          eRef={eventualClientRef}
+        <VdSelect
           label='Cliente eventual'
           col='col-md-4'
-          searchAPI='/api/admin/eventual-clients/paginate'
-          searchBy='business_name'
-          dropdownParent='#price-lists-container'
+          value={selectedEventualClientId}
+          onChange={(value) => setSelectedEventualClientId(value || '')}
+          options={eventualClients.map(c => ({ value: `${c.id}`, label: c.business_name }))}
+          placeholder='-- Seleccionar cliente eventual --'
         />
 
-        <SelectAPIFormGroup
-          eRef={networkRef}
+        <VdSelect
           label='Red de distribucion'
           col='col-md-4'
-          searchAPI='/api/admin/client-distribution/paginate'
-          searchBy='name'
-          filter={selectedClientId ? ['client_id', '=', Number(selectedClientId)] : null}
-          dropdownParent='#price-lists-container'
+          value={selectedNetworkId}
+          onChange={(value) => setSelectedNetworkId(value || '')}
+          options={distributionNetworks.map(n => ({ value: `${n.id}`, label: [n.code, n.name].filter(Boolean).join(' - ') }))}
+          placeholder='-- Seleccionar red --'
         />
         <InputFormGroup eRef={channelRef} label='Canal' col='col-md-2' />
         <InputFormGroup eRef={segmentRef} label='Segmento' col='col-md-2' />
-        <SelectFormGroup eRef={currencyRef} label='Moneda' col='col-md-2'>
-          <option value='PEN'>PEN</option>
-          <option value='USD'>USD</option>
-          <option value='EUR'>EUR</option>
-        </SelectFormGroup>
+        <VdSelect
+          label='Moneda'
+          col='col-md-2'
+          value={currency}
+          onChange={(value) => setCurrency(value || 'PEN')}
+          options={[{ value: 'PEN', label: 'PEN' }, { value: 'USD', label: 'USD' }, { value: 'EUR', label: 'EUR' }]}
+        />
         <InputFormGroup eRef={priorityRef} label='Prioridad' col='col-md-2' type='number' min='1' />
         <InputFormGroup eRef={startsAtRef} label='Vigencia inicio' col='col-md-2' type='date' />
         <InputFormGroup eRef={endsAtRef} label='Vigencia fin' col='col-md-2' type='date' />
@@ -456,29 +496,21 @@ const PriceLists = ({ requiredPermission = 'pricing' }) => {
                   </button>
                 </div>
                 <div className='row'>
-                  <SelectAPIFormGroup
-                    eRef={getArticleRef(item.uid)}
+                  <VdSelect
                     label='Articulo'
                     col='col-md-5'
-                    searchAPI='/api/admin/articles/paginate'
-                    searchBy='name'
-                    dropdownParent='#price-lists-container'
-                    onChange={(e) => updateItem(item.uid, {
-                      article_id: e.target.value || '',
-                      article_label: $(e.target).find('option:selected').text() || '',
-                    })}
+                    value={item.article_id}
+                    onChange={(value) => updateItem(item.uid, { article_id: value })}
+                    options={articles.map(a => ({ value: `${a.id}`, label: [a.code, a.name].filter(Boolean).join(' - ') }))}
+                    placeholder='-- Seleccionar articulo --'
                   />
-                  <SelectAPIFormGroup
-                    eRef={getLaboratoryRef(item.uid)}
+                  <VdSelect
                     label='Laboratorio'
                     col='col-md-3'
-                    searchAPI='/api/admin/laboratories/paginate'
-                    searchBy='name'
-                    dropdownParent='#price-lists-container'
-                    onChange={(e) => updateItem(item.uid, {
-                      laboratory_id: e.target.value || '',
-                      laboratory_label: $(e.target).find('option:selected').text() || '',
-                    })}
+                    value={item.laboratory_id}
+                    onChange={(value) => updateItem(item.uid, { laboratory_id: value })}
+                    options={laboratories.map(l => ({ value: `${l.id}`, label: l.name }))}
+                    placeholder='-- Seleccionar laboratorio --'
                   />
                   <div className='form-group col-md-2 mb-2'>
                     <label className='form-label'>Categoria</label>

@@ -1,22 +1,20 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
-import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
+import Modal from '@Adminto/Modal';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
-import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
-import SetSelectValue from '../Utils/SetSelectValue';
 import BatchesRest from '../Actions/Admin/BatchesRest';
+import ArticlesRest from '../Actions/Admin/ArticlesRest';
 import { scopedPermission } from '../Utils/permissionScope';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const batchesRest = new BatchesRest()
+const articlesRest = new ArticlesRest()
 
 const formatAuditUser = (user) => {
   if (!user) return ''
@@ -30,11 +28,15 @@ const formatAuditUser = (user) => {
   return ''
 }
 
+const formatDate = (value) => value?.toString?.().slice?.(0, 10) || value || '-'
+
+const articleLabel = (article) => `${article?.code ?? ''} ${article?.name ?? ''}`.trim()
+
 const normalizeHeader = (value) => (value ?? '')
   .toString()
   .trim()
   .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[̀-ͯ]/g, '')
   .toLowerCase()
   .replaceAll('_', '')
   .replaceAll('-', '')
@@ -71,18 +73,19 @@ const parseFileRows = async (file) => {
 }
 
 const Batches = () => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const importModalRef = useRef()
   const importFileRef = useRef()
 
   const idRef = useRef()
-  const articleRef = useRef()
   const lotRef = useRef()
   const expirationDateRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
+  const [articles, setArticles] = useState([])
   const [selectedArticleId, setSelectedArticleId] = useState('')
+  const [editingArticle, setEditingArticle] = useState(null)
   const [isImporting, setIsImporting] = useState(false)
   const [importRows, setImportRows] = useState([])
   const [importHeaders, setImportHeaders] = useState([])
@@ -94,6 +97,32 @@ const Batches = () => {
     status: '',
   })
 
+  // Catalogo de articulos para el VdSelect del modal (reemplaza el buscador remoto select2)
+  useEffect(() => {
+    const loadArticles = async () => {
+      const res = await articlesRest.paginate({
+        isLoadingAll: true,
+        take: 3000,
+        sort: [{ selector: 'name', desc: false }],
+      })
+      setArticles(Array.isArray(res?.data) ? res.data : [])
+    }
+    loadArticles()
+  }, [])
+
+  const articleOptions = useMemo(() => {
+    const base = articles.map(a => ({ value: `${a.id}`, label: articleLabel(a) }))
+    if (editingArticle?.id && !base.some(o => o.value === `${editingArticle.id}`)) {
+      base.unshift({ value: `${editingArticle.id}`, label: articleLabel(editingArticle) })
+    }
+    return base
+  }, [articles, editingArticle])
+
+  const mappingOptions = useMemo(() => [
+    { value: '', label: 'Seleccionar...' },
+    ...importHeaders.map(header => ({ value: header, label: header })),
+  ], [importHeaders])
+
   const onModalOpen = (data = null) => {
     setIsEditing(!!data?.id)
 
@@ -101,21 +130,19 @@ const Batches = () => {
     lotRef.current.value = data?.lot ?? ''
     expirationDateRef.current.value = (data?.expiration_date ?? '').toString().slice(0, 10)
 
-    const articleId = data?.article_id ? `${data.article_id}` : ''
-    setSelectedArticleId(articleId)
-
-    if (articleId && data?.article?.name) {
-      const articleLabel = `${data.article.code ?? ''} ${data.article.name ?? ''}`.trim()
-      SetSelectValue(articleRef.current, articleId, articleLabel)
-    } else {
-      $(articleRef.current).empty().trigger('change')
-    }
+    setSelectedArticleId(data?.article_id ? `${data.article_id}` : '')
+    setEditingArticle(data?.article ?? null)
 
     $(modalRef.current).modal('show')
   }
 
   const onModalSubmit = async (e) => {
     e.preventDefault()
+
+    if (!selectedArticleId) {
+      Swal.fire({ icon: 'warning', title: 'Falta articulo', text: 'Selecciona un articulo.', confirmButtonText: 'Entendido' })
+      return
+    }
 
     const request = {
       id: idRef.current.value || undefined,
@@ -127,14 +154,14 @@ const Batches = () => {
     const result = await batchesRest.save(request)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(modalRef.current).modal('hide')
   }
 
   const onBooleanChange = async ({ id, field, value }) => {
     const result = await batchesRest.boolean({ id, field, value })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -149,7 +176,7 @@ const Batches = () => {
     if (!isConfirmed) return
     const result = await batchesRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onImportModalOpen = () => {
@@ -234,7 +261,7 @@ const Batches = () => {
     setIsImporting(false)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(importModalRef.current).modal('hide')
 
     const errorsPreview = (result.errors || []).slice(0, 5).join('\n')
@@ -261,114 +288,99 @@ const Batches = () => {
   }))
 
   return (<>
-    <Table
-      gridRef={gridRef}
-      title='Lotes'
+    <VdTable
+      ref={tableRef}
       rest={batchesRest}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'upload',
-            title: 'Importar',
-            hint: 'Importar masivamente',
-            onClick: () => onImportModalOpen()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar lote',
-            onClick: () => onModalOpen(null)
-          }
-        });
-      }}
-      pageSize={25}
-      columns={[
-        { dataField: 'id', caption: 'ID', visible: false },
-        {
-          dataField: 'article.code',
-          caption: 'Cod. articulo',
-          width: '130px',
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.article?.code, () => onModalOpen(data), 'Editar lote')
-        },
-        { dataField: 'article.name', caption: 'Articulo', minWidth: 220 },
-        { dataField: 'lot', caption: 'Lote', width: '140px' },
-        { dataField: 'expiration_date', caption: 'F. vencimiento', dataType: 'date', width: '140px' },
-        {
-          dataField: 'creator.fullname',
-          caption: 'Creado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
-        },
-        {
-          dataField: 'updater.fullname',
-          caption: 'Actualizado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
-        },
-        {
-          dataField: 'status',
-          caption: 'Estado',
-          dataType: 'boolean',
-          width: '95px',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-              id: data.id,
-              field: 'status',
-              value: !data.status
-            })} />)
-          }
-        },
-        {
-          caption: 'Acciones',
-          width: '120px',
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar lote',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.id)
-            }))
-          },
-          allowFiltering: false,
-          allowExporting: false
-        }
+      icon="mdi mdi-package-variant-closed"
+      title="Lotes"
+      unit="lotes"
+      defaultSort={{ field: 'id', desc: true }}
+      defaultPageSize={25}
+      searchFields={['article.code', 'article.name', 'lot']}
+      searchPlaceholder="Buscar por articulo o lote…"
+      emptyText="No se encontraron lotes."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft" onClick={onImportModalOpen}>
+          <i className="mdi mdi-upload"></i> Importar
+        </button>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={() => tableRef.current?.refresh()}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen(null)}>
+          <i className="mdi mdi-plus"></i> Nuevo lote
+        </button>
+      </>}
+      actions={(row) => [
+        { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+        { icon: 'mdi mdi-delete', title: 'Eliminar lote', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
       ]}
+      columns={[
+        { key: 'id', label: 'ID', field: 'id', visible: false },
+        {
+          key: 'codigo', label: 'Cod. articulo', field: 'article.code', width: '130px',
+          filter: { type: 'text', field: 'article.code' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar lote">
+              {row.article?.code ?? '-'}
+            </a>
+          ),
+        },
+        {
+          key: 'articulo', label: 'Articulo', field: 'article.name',
+          filter: { type: 'text', field: 'article.name' },
+        },
+        { key: 'lote', label: 'Lote', field: 'lot', width: '140px', filter: { type: 'text' } },
+        {
+          key: 'vencimiento', label: 'F. vencimiento', field: 'expiration_date', width: '140px',
+          filter: { type: 'date' },
+          render: (row) => formatDate(row.expiration_date),
+        },
+        {
+          key: 'creador', label: 'Creado por', field: 'creator.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.creator),
+        },
+        {
+          key: 'actualizador', label: 'Actualizado por', field: 'updater.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.updater),
+        },
+        {
+          key: 'estado', label: 'Estado', field: 'status', width: '95px',
+          filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => {
+            if (row.status === null) return ''
+            return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => onBooleanChange({ id: row.id, field: 'status', value: !row.status })} />
+          },
+        },
+      ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onModalOpen(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.article?.code} — {row.article?.name}</p>
+              <small className="text-muted">Lote: {row.lot}</small>
+            </div>
+            {row.status !== null && (
+              <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>
+            )}
+          </div>
+          <small className="text-muted d-block mt-2"><i className="mdi mdi-calendar me-1"></i>Vence: {formatDate(row.expiration_date)}</small>
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal modalRef={modalRef} title={isEditing ? 'Editar lote' : 'Agregar lote'} onSubmit={onModalSubmit} size='lg'>
       <div className='row' id='batch-form-container'>
         <input ref={idRef} type='hidden' />
 
-        <SelectAPIFormGroup
-          eRef={articleRef}
+        <VdSelect
           label='Articulo'
           col='col-md-12'
           required
-          searchAPI='/api/admin/articles/paginate'
-          searchBy='name'
-          dropdownParent='#batch-form-container'
-          onChange={(e) => setSelectedArticleId(e.target.value || '')}
+          value={selectedArticleId}
+          onChange={(value) => setSelectedArticleId(value || '')}
+          options={articleOptions}
+          placeholder='-- Seleccionar articulo --'
         />
 
         <InputFormGroup eRef={lotRef} label='Lote' col='col-md-6' required />
@@ -396,34 +408,40 @@ const Batches = () => {
           {importFileName && <div className='mt-1'><small className='text-muted'>Archivo: {importFileName} ({importRows.length} filas)</small></div>}
         </div>
 
-        <div className='col-md-6 mb-2'>
-          <label className='form-label'>Articulo *</label>
-          <select className='form-control' value={mapping.article} onChange={(e) => setMapping(prev => ({ ...prev, article: e.target.value }))}>
-            <option value=''>Seleccionar...</option>
-            {importHeaders.map(header => <option key={`article-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-6 mb-2'>
-          <label className='form-label'>Lote *</label>
-          <select className='form-control' value={mapping.lot} onChange={(e) => setMapping(prev => ({ ...prev, lot: e.target.value }))}>
-            <option value=''>Seleccionar...</option>
-            {importHeaders.map(header => <option key={`lot-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-6 mb-2'>
-          <label className='form-label'>Fecha de vencimiento</label>
-          <select className='form-control' value={mapping.expiration_date} onChange={(e) => setMapping(prev => ({ ...prev, expiration_date: e.target.value }))}>
-            <option value=''>Seleccionar...</option>
-            {importHeaders.map(header => <option key={`expiration-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-6 mb-2'>
-          <label className='form-label'>Estado</label>
-          <select className='form-control' value={mapping.status} onChange={(e) => setMapping(prev => ({ ...prev, status: e.target.value }))}>
-            <option value=''>Seleccionar...</option>
-            {importHeaders.map(header => <option key={`status-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
+        <VdSelect
+          label='Articulo'
+          col='col-md-6'
+          required
+          value={mapping.article}
+          onChange={(value) => setMapping(prev => ({ ...prev, article: value }))}
+          options={mappingOptions}
+          placeholder='Seleccionar...'
+        />
+        <VdSelect
+          label='Lote'
+          col='col-md-6'
+          required
+          value={mapping.lot}
+          onChange={(value) => setMapping(prev => ({ ...prev, lot: value }))}
+          options={mappingOptions}
+          placeholder='Seleccionar...'
+        />
+        <VdSelect
+          label='Fecha de vencimiento'
+          col='col-md-6'
+          value={mapping.expiration_date}
+          onChange={(value) => setMapping(prev => ({ ...prev, expiration_date: value }))}
+          options={mappingOptions}
+          placeholder='Seleccionar...'
+        />
+        <VdSelect
+          label='Estado'
+          col='col-md-6'
+          value={mapping.status}
+          onChange={(value) => setMapping(prev => ({ ...prev, status: value }))}
+          options={mappingOptions}
+          placeholder='Seleccionar...'
+        />
 
         <div className='col-12 mt-3'>
           <h6 className='mb-2'>Vista previa (primeras 5 filas)</h6>

@@ -3,6 +3,15 @@
     "file": "assets/ArrayJoin-2k6ba35P.js",
     "name": "ArrayJoin"
   },
+  "_ArticlesRest-BrZ5iN7y.js": {
+    "file": "assets/ArticlesRest-BrZ5iN7y.js",
+    "name": "ArticlesRest",
+    "imports": [
+      "_BasicRest-CfowDrFz.js",
+      "_CreateReactScript-BZK8oH6G.js",
+      "_permissionScope-DOiR_Kst.js"
+    ]
+  },
   "_Base-!~{01J}~.js": {
     "file": "Base.css",
     "src": "_Base-!~{01J}~.js"
@@ -441,7 +450,7 @@
     ]
   },
   "resources/js/Admin/Articles.jsx": {
-    "file": "assets/Articles-D9NFo3fA.js",
+    "file": "assets/Articles-BtviOlsd.js",
     "name": "Articles",
     "src": "resources/js/Admin/Articles.jsx",
     "isEntry": true,
@@ -460,16 +469,17 @@
       "_SelectFormGroup-CAn1lCXc.js",
       "_permissionScope-DOiR_Kst.js",
       "_renderGridEditLink-D8NGEeKJ.js",
-      "_BasicRest-CfowDrFz.js",
+      "_ArticlesRest-BrZ5iN7y.js",
       "_UnitsRest-CDcq-QHE.js",
       "_LaboratoriesRest-DAR9fdWj.js",
       "_setSwitchChecked-BcAIL3nj.js",
+      "_BasicRest-CfowDrFz.js",
       "_statusLabels-BmPcQUZ_.js",
       "_tippy-react.esm-DNee90TV.js"
     ]
   },
   "resources/js/Admin/Batches.jsx": {
-    "file": "assets/Batches-CTparS-v.js",
+    "file": "assets/Batches-CfN4NnbU.js",
     "name": "Batches",
     "src": "resources/js/Admin/Batches.jsx",
     "isEntry": true,
@@ -477,17 +487,14 @@
       "_CreateReactScript-BZK8oH6G.js",
       "node_modules/xlsx/xlsx.mjs",
       "_Base-My-5SOT3.js",
-      "_Table-0KKZm6CF.js",
+      "_VdTable-aoeO4HR9.js",
+      "_VdSelect-BurPWoNX.js",
       "_Modal-tZyrY8-T.js",
-      "_ReactAppend-CU4p49rt.js",
-      "_DxButton-CsjWvhyj.js",
       "_SwitchFormGroup-CunZTacy.js",
       "_InputFormGroup-B975TFs1.js",
-      "_SetSelectValue-BdNO2SCN.js",
       "_BasicRest-CfowDrFz.js",
+      "_ArticlesRest-BrZ5iN7y.js",
       "_permissionScope-DOiR_Kst.js",
-      "_renderGridEditLink-D8NGEeKJ.js",
-      "_statusLabels-BmPcQUZ_.js",
       "_tippy-react.esm-DNee90TV.js"
     ]
   },
@@ -1411,26 +1418,22 @@
     ]
   },
   "resources/js/Admin/PriceLists.jsx": {
-    "file": "assets/PriceLists-P_W5OpOD.js",
+    "file": "assets/PriceLists-DBrQQ31o.js",
     "name": "PriceLists",
     "src": "resources/js/Admin/PriceLists.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-BZK8oH6G.js",
       "_Base-My-5SOT3.js",
-      "_Table-0KKZm6CF.js",
+      "_VdTable-aoeO4HR9.js",
+      "_VdSelect-BurPWoNX.js",
       "_Modal-tZyrY8-T.js",
-      "_ReactAppend-CU4p49rt.js",
-      "_DxButton-CsjWvhyj.js",
       "_SwitchFormGroup-CunZTacy.js",
       "_InputFormGroup-B975TFs1.js",
-      "_SetSelectValue-BdNO2SCN.js",
-      "_SelectFormGroup-CAn1lCXc.js",
       "_BasicRest-CfowDrFz.js",
-      "_renderGridEditLink-D8NGEeKJ.js",
       "_magistralesRecordPdf-EB05QFrq.js",
-      "_statusLabels-BmPcQUZ_.js",
       "_tippy-react.esm-DNee90TV.js",
+      "_statusLabels-BmPcQUZ_.js",
       "_ubigeoInei-D0FnAslC.js"
     ]
   },
