@@ -2,18 +2,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../../Utils/CreateReactScript';
-import Table from '../../Components/Adminto/Table';
+import VdTable from '../../Components/Adminto/VdTable';
+import VdSelect from '../../Components/Adminto/VdSelect';
 import Modal from '../../Components/Adminto/Modal';
-import ReactAppend from '../../Utils/ReactAppend';
-import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import ProductionOrdersRest from '../../Actions/Admin/Magistrales/ProductionOrdersRest';
-import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 
 const rest = new ProductionOrdersRest()
 const statusLabels = { pending: 'Pendiente', in_process: 'En proceso', finished: 'Finalizado', cancelled: 'Cancelado' }
+const statusOptions = Object.entries(statusLabels).map(([value, label]) => ({ value, label }))
 const toNumber = (value) => Number.parseFloat(value || 0) || 0
 const normalizeText = (value) => (value ?? '').toString().trim().toLowerCase()
 const isInputArticle = (article) => {
@@ -34,15 +33,11 @@ const emptyItem = () => ({
 })
 
 const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWarehouse = null }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
   const codeRef = useRef()
-  const statusRef = useRef()
-  const responsibleRef = useRef()
   const warehouseRef = useRef()
-  const articleRef = useRef()
-  const formatRef = useRef()
   const batchQuantityRef = useRef()
   const quantityRef = useRef()
   const deliveryDateRef = useRef()
@@ -54,13 +49,18 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
   const [formulas, setFormulas] = useState([])
   const [items, setItems] = useState([emptyItem()])
   const [isEditing, setIsEditing] = useState(false)
+  const [orderStatus, setOrderStatus] = useState('pending')
+  const [selectedResponsibleId, setSelectedResponsibleId] = useState('')
   const [selectedArticleId, setSelectedArticleId] = useState('')
+  const [selectedFormatId, setSelectedFormatId] = useState('')
   const [productionQuantity, setProductionQuantity] = useState(1)
   const fixedWarehouseId = fixedWarehouse?.id ? `${fixedWarehouse.id}` : ''
   const fixedWarehouseLabel = [fixedWarehouse?.branch_name, fixedWarehouse?.name].filter(Boolean).join(' - ') || 'Almacen fijo de Magistrales'
   const productArticles = articles.filter(article => !isInputArticle(article))
   const inputArticles = articles.filter(isInputArticle)
   const selectedFormula = formulas.find(formula => `${formula.article_id}` === `${selectedArticleId}`)
+
+  const refresh = () => tableRef.current?.refresh()
 
   useEffect(() => {
     Promise.all([
@@ -113,12 +113,12 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
     setIsEditing(!!data?.id)
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
-    statusRef.current.value = data?.order_status ?? 'pending'
-    responsibleRef.current.value = data?.responsible_id ?? ''
+    setOrderStatus(data?.order_status ?? 'pending')
+    setSelectedResponsibleId(data?.responsible_id ? `${data.responsible_id}` : '')
     warehouseRef.current.value = data?.destination_warehouse_id ?? fixedWarehouseId
     const nextArticleId = data?.article_id ? `${data.article_id}` : ''
     setSelectedArticleId(nextArticleId)
-    formatRef.current.value = data?.format_id ?? ''
+    setSelectedFormatId(data?.format_id ? `${data.format_id}` : '')
     batchQuantityRef.current.value = data?.batch_quantity ?? 0
     const nextQuantity = data?.quantity ?? 1
     setProductionQuantity(nextQuantity)
@@ -174,12 +174,12 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
     const result = await rest.save({
       id: idRef.current.value || undefined,
       code: isEditing ? codeRef.current.value.trim() : '',
-      order_status: statusRef.current.value,
-      responsible_id: responsibleRef.current.value || null,
+      order_status: orderStatus,
+      responsible_id: selectedResponsibleId || null,
       destination: fixedWarehouse?.name ?? fixedWarehouseLabel,
       destination_warehouse_id: warehouseRef.current.value || fixedWarehouseId || null,
       article_id: selectedArticleId || null,
-      format_id: formatRef.current.value || null,
+      format_id: selectedFormatId || null,
       batch_quantity: batchQuantityRef.current.value,
       quantity: productionQuantity,
       delivery_date: deliveryDateRef.current.value || null,
@@ -195,7 +195,7 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
       })),
     })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
     $(modalRef.current).modal('hide')
   }
 
@@ -203,68 +203,114 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
     const { isConfirmed } = await Swal.fire({ title: 'Eliminar orden', text: 'Se dara de baja la orden de produccion.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Si, eliminar', cancelButtonText: 'Cancelar' })
     if (!isConfirmed) return
     const result = await rest.delete(id)
-    if (result) $(gridRef.current).dxDataGrid('instance').refresh()
+    if (result) refresh()
   }
 
+  const rowActions = (row) => [
+    { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir PDF', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.productionOrder(r)) },
+    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => openModal(r) },
+    { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => remove(r.id) },
+  ]
+
   return <>
-    <Table
-      gridRef={gridRef}
-      title={moduleTitle}
+    <VdTable
+      ref={tableRef}
       rest={rest}
-      pageSize={25}
-      toolBar={(items) => {
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => openModal() } })
-      }}
+      icon="mdi mdi-flask-outline"
+      title={moduleTitle}
+      unit="ordenes"
+      defaultSort={{ field: 'created_at', desc: true }}
+      defaultPageSize={25}
+      searchFields={['code', 'responsible.name', 'destinationWarehouse.name', 'article.name']}
+      searchPlaceholder="Buscar por codigo, responsable, destino o producto…"
+      emptyText="No se encontraron ordenes de produccion."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refresh}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => openModal()}>
+          <i className="mdi mdi-plus"></i> Nueva orden
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
         {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: 145,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => openModal(data), 'Editar orden de produccion')
-        },
-        { dataField: 'order_status', caption: 'Estado', width: 120, calculateCellValue: row => statusLabels[row.order_status] ?? row.order_status },
-        { dataField: 'responsible.name', caption: 'Responsable', minWidth: 170 },
-        { dataField: 'destinationWarehouse.name', caption: 'Destino', minWidth: 160 },
-        { dataField: 'article.name', caption: 'Producto', minWidth: 220 },
-        { dataField: 'created_at', caption: 'Fecha Registro', dataType: 'date', width: 130 },
-        {
-          dataField: 'status',
-          caption: 'Activo',
-          dataType: 'boolean',
-          width: 90,
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => rest.status(data).then(ok => ok && $(gridRef.current).dxDataGrid('instance').refresh())} />)
-          }
+          key: 'codigo', label: 'Codigo', field: 'code', width: '145px', filter: { type: 'text' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => openModal(row)} title="Editar orden de produccion">
+              {row.code}
+            </a>
+          ),
         },
         {
-          caption: 'Acciones',
-          width: 160,
-          allowFiltering: false,
-          allowExporting: false,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.productionOrder(data)) }))
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary ms-1', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openModal(data) }))
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => remove(data.id) }))
-          }
+          key: 'estado_orden', label: 'Estado', field: 'order_status', width: '120px',
+          filter: { type: 'select', field: 'order_status', options: statusOptions },
+          render: (row) => statusLabels[row.order_status] ?? row.order_status,
+        },
+        { key: 'responsable', label: 'Responsable', field: 'responsible.name', filter: { type: 'text' } },
+        { key: 'destino', label: 'Destino', field: 'destinationWarehouse.name', filter: { type: 'text' } },
+        { key: 'producto', label: 'Producto', field: 'article.name', filter: { type: 'text' } },
+        {
+          key: 'fecha_registro', label: 'Fecha Registro', field: 'created_at', width: '130px',
+          filter: { type: 'date' },
+          render: (row) => row.created_at?.toString?.().slice?.(0, 10) ?? '',
+        },
+        {
+          key: 'activo', label: 'Activo', field: 'status', width: '90px',
+          filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => {
+            if (row.status === null) return ''
+            return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => rest.status(row).then(ok => ok && refresh())} />
+          },
         },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => openModal(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.code}</p>
+              <small className="text-muted">{row.article?.name || '-'}</small>
+            </div>
+            <span className="badge badge-soft-primary">{statusLabels[row.order_status] ?? row.order_status}</span>
+          </div>
+          <small className="text-muted d-block mt-2">{[row.responsible?.name, row.destinationWarehouse?.name].filter(Boolean).join(' · ')}</small>
+          {row.status !== null && (
+            <span className={`badge mt-2 ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>
+          )}
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
     <Modal modalRef={modalRef} title={isEditing ? 'Editar orden de produccion' : 'Registrar orden de produccion'} onSubmit={save} size='xl'>
       <div className='row'>
         <input ref={idRef} hidden />
         <div className='col-md-3 mb-3'><label className='form-label'>Codigo</label><input ref={codeRef} className='form-control' disabled={!isEditing} /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Estado</label><select ref={statusRef} className='form-control'>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+        <VdSelect label='Estado' col='col-md-3' value={orderStatus} onChange={setOrderStatus} options={statusOptions} />
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha entrega</label><input ref={deliveryDateRef} type='date' className='form-control' /></div>
         <div className='col-md-3 mb-3'><label className='form-label'>Fecha registro</label><input ref={dateRef} type='date' className='form-control' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Responsable</label><select ref={responsibleRef} className='form-control'><option value=''>Seleccione</option>{responsibles.map(row => <option key={`mag-po-resp-${row.id}`} value={row.id}>{row.document_number} - {row.name}</option>)}</select></div>
+        <VdSelect
+          label='Responsable' col='col-md-4'
+          value={selectedResponsibleId}
+          onChange={setSelectedResponsibleId}
+          options={responsibles.map(row => ({ value: `${row.id}`, label: `${row.document_number} - ${row.name}` }))}
+          placeholder='-- Seleccionar --'
+        />
         <input ref={warehouseRef} hidden />
         <div className='col-md-4 mb-3'><label className='form-label'>Almacen fijo</label><input className='form-control' value={fixedWarehouseLabel} disabled /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Producto</label><select ref={articleRef} className='form-control' value={selectedArticleId} onChange={(e) => onProductChange(e.target.value)}><option value=''>Seleccione</option>{productArticles.map(row => <option key={`mag-po-article-${row.id}`} value={row.id}>{row.code} - {row.name}</option>)}</select></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Formato</label><select ref={formatRef} className='form-control'><option value=''>Seleccione</option>{formats.map(row => <option key={`mag-po-format-${row.id}`} value={row.id}>{row.description} ({row.quantity})</option>)}</select></div>
+        <VdSelect
+          label='Producto' col='col-md-4'
+          value={selectedArticleId}
+          onChange={onProductChange}
+          options={productArticles.map(row => ({ value: `${row.id}`, label: `${row.code} - ${row.name}` }))}
+          placeholder='-- Seleccionar --'
+        />
+        <VdSelect
+          label='Formato' col='col-md-4'
+          value={selectedFormatId}
+          onChange={setSelectedFormatId}
+          options={formats.map(row => ({ value: `${row.id}`, label: `${row.description} (${row.quantity})` }))}
+          placeholder='-- Seleccionar --'
+        />
         <div className='col-md-4 mb-3'><label className='form-label'>Cantidad tanda</label><input ref={batchQuantityRef} type='number' min='0' step='0.001' className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Cantidad producto</label><input ref={quantityRef} type='number' min='0' step='0.001' className='form-control' value={productionQuantity} onChange={(e) => onProductionQuantityChange(e.target.value)} /></div>
         <div className='col-12 mb-2'><label className='form-label'>Observaciones generales</label><textarea ref={observationsRef} className='form-control' rows='2' /></div>
@@ -289,7 +335,16 @@ const ProductionOrders = ({ moduleTitle = 'Magistrales - O. Produccion', fixedWa
               <tbody>
                 {items.map(item => (
                   <tr key={item.uid}>
-                    <td><select className='form-control form-control-sm' value={item.article_id} disabled={!!selectedFormula} onChange={(e) => updateItem(item.uid, 'article_id', e.target.value)}><option value=''>Articulo</option>{inputArticles.map(article => <option key={`po-item-article-${article.id}`} value={article.id}>{article.code} - {article.name}</option>)}</select></td>
+                    <td style={{ minWidth: 230 }}>
+                      <VdSelect
+                        noMargin
+                        value={item.article_id}
+                        disabled={!!selectedFormula}
+                        onChange={(value) => updateItem(item.uid, 'article_id', value)}
+                        options={inputArticles.map(article => ({ value: `${article.id}`, label: `${article.code} - ${article.name}` }))}
+                        placeholder='Articulo'
+                      />
+                    </td>
                     <td><input className='form-control form-control-sm' type='date' value={item.expiration_date} onChange={(e) => updateItem(item.uid, 'expiration_date', e.target.value)} /></td>
                     <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} disabled={!!selectedFormula} onChange={(e) => updateItem(item.uid, 'quantity', e.target.value)} /></td>
                     <td><input className='form-control form-control-sm' value={item.formula_label || (selectedFormula ? `${selectedFormula.article?.code ?? selectedFormula.id} - ${selectedFormula.article?.name ?? 'Formula'}` : '')} disabled /></td>

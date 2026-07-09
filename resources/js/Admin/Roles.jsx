@@ -2,14 +2,11 @@
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
+import VdTable from '@Adminto/VdTable';
 import Modal from '../Components/Adminto/Modal';
-import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
-import { renderToString } from 'react-dom/server';
 import RolesRest from '../Actions/Admin/roles-rest';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const rolesRest = new RolesRest()
 
@@ -163,7 +160,7 @@ const surfaceClass = 'border rounded-3 bg-white shadow-sm h-100'
 const surfaceMutedClass = 'border rounded-3 bg-light-subtle shadow-sm h-100'
 
 const Roles = ({ permissions }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
   const nameRef = useRef()
@@ -229,7 +226,7 @@ const Roles = ({ permissions }) => {
   const selectedPermissionsSet = useMemo(() => new Set(selectedPermissions), [selectedPermissions])
   const currentProfileLabel = useMemo(() => resolveProfileLabel(selectedPermissions), [selectedPermissions])
 
-  const refreshGrid = () => $(gridRef.current).dxDataGrid('instance').refresh()
+  const refreshGrid = () => tableRef.current?.refresh()
 
   const onModalOpen = (data) => {
     setIsEditing(!!data?.id)
@@ -326,95 +323,85 @@ const Roles = ({ permissions }) => {
     })
   }
 
+  const rowActions = (role) => [
+    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+    { icon: 'mdi mdi-delete', title: 'Eliminar rol', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+  ]
+
   return (<>
-    <Table
-      gridRef={gridRef}
-      title='Roles'
+    <VdTable
+      ref={tableRef}
       rest={rolesRest}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: refreshGrid
-          }
-        })
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar rol',
-            onClick: () => onModalOpen(null)
-          }
-        })
-      }}
-      pageSize={25}
+      icon="mdi mdi-account-key"
+      title="Roles"
+      unit="roles"
+      defaultSort={{ field: 'name', desc: false }}
+      defaultPageSize={25}
+      searchFields={['name']}
+      searchPlaceholder="Buscar por nombre de rol…"
+      emptyText="No se encontraron roles."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refreshGrid}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen(null)}>
+          <i className="mdi mdi-plus"></i> Nuevo rol
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
+        { key: 'id', label: 'ID', field: 'id', visible: false },
         {
-          dataField: 'id',
-          caption: 'ID',
-          visible: false
+          key: 'nombre', label: 'Nombre del rol', field: 'name', filter: { type: 'text' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar rol">
+              {row.name}
+            </a>
+          ),
         },
         {
-          dataField: 'name',
-          caption: 'Nombre del rol',
-          minWidth: 180,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.name, () => onModalOpen(data), 'Editar rol')
+          key: 'perfil', label: 'Perfil sugerido', sortable: false, width: '150px',
+          render: (row) => resolveProfileLabel((row.permissions ?? []).map(permission => permission.name)),
         },
         {
-          caption: 'Perfil sugerido',
-          width: 150,
-          calculateCellValue: (data) => resolveProfileLabel((data.permissions ?? []).map(permission => permission.name))
+          key: 'total_permisos', label: 'Total permisos', sortable: false, align: 'right', width: '120px', nowrap: true,
+          render: (row) => <span className="fw-semibold">{row.permissions?.length ?? 0}</span>,
         },
         {
-          caption: 'Total permisos',
-          width: 120,
-          calculateCellValue: (data) => data.permissions?.length ?? 0
-        },
-        {
-          dataField: 'permissions',
-          caption: 'Permisos',
-          allowSorting: false,
-          allowFiltering: false,
-          minWidth: 420,
-          cellTemplate: (container, { data }) => {
-            if (data.permissions && data.permissions.length) {
-              const badgesHtml = data.permissions
-                .map(permission => `<span class="badge badge-soft-primary me-1 mb-1">${permission.beauty_name}</span>`)
-                .join('')
-
-              container.html(`<div class='d-flex flex-wrap align-items-start' style='max-height: 4.5em; overflow: hidden;'>${badgesHtml}</div>`)
-            } else {
-              container.html(renderToString(<i className='text-muted'>Sin permisos</i>))
+          key: 'permisos', label: 'Permisos', field: 'permissions', sortable: false,
+          render: (row) => {
+            if (row.permissions && row.permissions.length) {
+              return (
+                <div className="d-flex flex-wrap align-items-start" style={{ maxHeight: '4.5em', overflow: 'hidden' }}>
+                  {row.permissions.map(permission => (
+                    <span key={permission.name} className="badge badge-soft-primary me-1 mb-1">{permission.beauty_name}</span>
+                  ))}
+                </div>
+              )
             }
-          }
-        },
-        {
-          caption: 'Acciones',
-          width: 160,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar rol',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.id)
-            }))
+            return <i className="text-muted">Sin permisos</i>
           },
-          allowFiltering: false,
-          allowExporting: false
-        }
+        },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onModalOpen(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.name}</p>
+              <small className="text-muted">{resolveProfileLabel((row.permissions ?? []).map(permission => permission.name))}</small>
+            </div>
+            <span className="badge badge-soft-secondary">{row.permissions?.length ?? 0} permisos</span>
+          </div>
+          {row.permissions && row.permissions.length > 0 && (
+            <div className="d-flex flex-wrap mt-2" style={{ maxHeight: '4.5em', overflow: 'hidden' }}>
+              {row.permissions.map(permission => (
+                <span key={permission.name} className="badge badge-soft-primary me-1 mb-1">{permission.beauty_name}</span>
+              ))}
+            </div>
+          )}
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal

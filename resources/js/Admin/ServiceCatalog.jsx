@@ -2,9 +2,10 @@ import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
-import Modal from '../Components/Adminto/Modal';
-import DxButton from '../Components/dx/DxButton';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
+import Modal from '@Adminto/Modal';
+import InputFormGroup from '@Adminto/form/InputFormGroup';
 import Swal from 'sweetalert2';
 import ServiceCatalogRest from '../Actions/Admin/ServiceCatalogRest';
 
@@ -19,44 +20,49 @@ const selectOptions = (rows, currentValue = '') => {
   return options
 }
 
+const isRowActive = (row) => row.status !== false && row.status !== 0 && row.status !== '0'
+
+const formatDateTime = (value) => {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('es-PE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
 const ServiceCatalog = ({ moduleTitle = 'Servicios', serviceScope = 'services' }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
   const codeRef = useRef()
   const nameRef = useRef()
-  const categoryRef = useRef()
-  const subcategoryRef = useRef()
-  const serviceTypeRef = useRef()
   const unitPricePenRef = useRef()
   const unitPriceUsdRef = useRef()
   const applicableZoneRef = useRef()
   const linkedVehicleTypeRef = useRef()
   const commissionEnabledRef = useRef()
   const observationsRef = useRef()
-  const statusRef = useRef()
   const [isEditing, setIsEditing] = useState(false)
-  const [modalOptions, setModalOptions] = useState({ category: '', subcategory: '', serviceType: '' })
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [selectedSubcategory, setSelectedSubcategory] = useState('')
+  const [selectedServiceType, setSelectedServiceType] = useState('')
+  const [selectedStatus, setSelectedStatus] = useState('1')
   const isStorageGeneral = serviceScope === 'storage_general'
+
+  const refresh = () => tableRef.current?.refresh()
 
   const onModalOpen = (data = null) => {
     setIsEditing(!!data?.id)
-    setModalOptions({
-      category: data?.category ?? '',
-      subcategory: data?.subcategory ?? '',
-      serviceType: data?.service_type ?? '',
-    })
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? ''
     nameRef.current.value = data?.name ?? ''
     unitPricePenRef.current.value = Number(data?.unit_price_pen ?? 0)
     observationsRef.current.value = data?.observations ?? ''
     if (isStorageGeneral) {
-      statusRef.current.value = data?.status === false || data?.status === 0 || data?.status === '0' ? '0' : '1'
+      setSelectedStatus(data?.status === false || data?.status === 0 || data?.status === '0' ? '0' : '1')
     } else {
-      categoryRef.current.value = data?.category ?? ''
-      subcategoryRef.current.value = data?.subcategory ?? ''
-      serviceTypeRef.current.value = data?.service_type ?? ''
+      setSelectedCategory(data?.category ?? '')
+      setSelectedSubcategory(data?.subcategory ?? '')
+      setSelectedServiceType(data?.service_type ?? '')
       unitPriceUsdRef.current.value = Number(data?.unit_price_usd ?? 0)
       applicableZoneRef.current.value = data?.applicable_zone ?? ''
       linkedVehicleTypeRef.current.value = data?.linked_vehicle_type ?? ''
@@ -78,15 +84,15 @@ const ServiceCatalog = ({ moduleTitle = 'Servicios', serviceScope = 'services' }
         unit_price_pen: unitPricePenRef.current.value,
         unit_price_usd: 0,
         observations: observationsRef.current.value.trim(),
-        status: statusRef.current.value === '1',
+        status: selectedStatus === '1',
       }
       : {
         id: idRef.current.value || undefined,
         code: codeRef.current.value.trim(),
         name: nameRef.current.value.trim(),
-        category: categoryRef.current.value.trim(),
-        subcategory: subcategoryRef.current.value.trim(),
-        service_type: serviceTypeRef.current.value.trim(),
+        category: selectedCategory.trim(),
+        subcategory: selectedSubcategory.trim(),
+        service_type: selectedServiceType.trim(),
         billing_unit: 'Servicio',
         unit_price_pen: unitPricePenRef.current.value,
         unit_price_usd: unitPriceUsdRef.current.value,
@@ -97,7 +103,7 @@ const ServiceCatalog = ({ moduleTitle = 'Servicios', serviceScope = 'services' }
       }
     const result = await serviceCatalogRest.save(request)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
     $(modalRef.current).modal('hide')
   }
 
@@ -106,66 +112,63 @@ const ServiceCatalog = ({ moduleTitle = 'Servicios', serviceScope = 'services' }
     if (!isConfirmed) return
     const result = await serviceCatalogRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
   }
 
-  const actionColumn = {
-    caption: 'Acciones',
-    width: 110,
-    allowFiltering: false,
-    allowExporting: false,
-    cellTemplate: (container, { data }) => {
-      container.css('text-overflow', 'unset')
-      container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
-      container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
-    }
-  }
-  const statusColumn = {
-    dataField: 'status',
-    caption: 'Estado',
-    width: 110,
-    cellTemplate: (container, { data }) => {
-      const active = data.status !== false && data.status !== 0 && data.status !== '0'
-      container.html(`<span class="badge ${active ? 'bg-success-subtle text-success border border-success' : 'bg-secondary-subtle text-secondary border border-secondary'}">${active ? 'Activo' : 'Inactivo'}</span>`)
-    },
-    lookup: {
-      dataSource: [
-        { value: true, label: 'Activo' },
-        { value: false, label: 'Inactivo' },
-      ],
-      valueExpr: 'value',
-      displayExpr: 'label',
-    },
-  }
+  const rowActions = (row) => [
+    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+    { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDelete(r.id) },
+  ]
 
   const columns = isStorageGeneral
     ? [
-      actionColumn,
-      { dataField: 'name', caption: 'Nombre', minWidth: 260 },
+      { key: 'nombre', label: 'Nombre', field: 'name', filter: { type: 'text' } },
       {
-        dataField: 'observations',
-        caption: 'Descripcion',
-        minWidth: 320,
-        cellTemplate: (container, { data }) => container.text(data.observations || data.name || '')
+        key: 'descripcion', label: 'Descripcion', field: 'observations', filter: { type: 'text' }, muted: true,
+        render: (row) => row.observations || row.name || '',
       },
-      { dataField: 'unit_price_pen', caption: 'Tarifa', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-      { dataField: 'creator_label', caption: 'Usuario Registro', minWidth: 150, allowFiltering: false, allowSorting: false },
-      { dataField: 'registered_at', caption: 'F. Registro', minWidth: 170, dataType: 'datetime', allowFiltering: false },
+      {
+        key: 'tarifa', label: 'Tarifa', field: 'unit_price_pen', align: 'right', width: '120px', filter: { type: 'number' },
+        render: (row) => Number(row.unit_price_pen ?? 0).toFixed(2),
+      },
+      { key: 'creador', label: 'Usuario Registro', field: 'creator_label', sortable: false },
+      {
+        key: 'fechaRegistro', label: 'F. Registro', field: 'registered_at', nowrap: true,
+        render: (row) => formatDateTime(row.registered_at),
+      },
     ]
     : [
-      { dataField: 'id', caption: '#', width: 55, allowFiltering: false },
-      actionColumn,
-      statusColumn,
-      { dataField: 'code', caption: 'Codigo', width: 95 },
-      { dataField: 'name', caption: 'Servicio', minWidth: 360 },
-      { dataField: 'unit_price_pen', caption: 'Valor Unitario (S/)', minWidth: 140, dataType: 'number', format: { type: 'fixedPoint', precision: 5 } },
-      { dataField: 'unit_price_usd', caption: 'Valor Unitario ($)', minWidth: 140, dataType: 'number', format: { type: 'fixedPoint', precision: 5 } },
-      { dataField: 'category', caption: 'Categoria', minWidth: 130 },
-      { dataField: 'subcategory', caption: 'Sub Categoria', minWidth: 140 },
-      { dataField: 'service_type', caption: 'Tipo Servicio', minWidth: 150 },
-      { dataField: 'creator_label', caption: 'Usuario Registro', minWidth: 150, allowFiltering: false, allowSorting: false },
-      { dataField: 'registered_at', caption: 'Fecha Registro', minWidth: 170, dataType: 'datetime', allowFiltering: false, allowSorting: false },
+      { key: 'id', label: '#', field: 'id', width: '60px' },
+      {
+        key: 'estado', label: 'Estado', field: 'status', width: '110px',
+        filter: { type: 'select', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+        render: (row) => (
+          <span className={`badge ${isRowActive(row) ? 'bg-success-subtle text-success border border-success' : 'bg-secondary-subtle text-secondary border border-secondary'}`}>
+            {isRowActive(row) ? 'Activo' : 'Inactivo'}
+          </span>
+        ),
+      },
+      { key: 'codigo', label: 'Codigo', field: 'code', width: '100px', filter: { type: 'text' } },
+      { key: 'nombre', label: 'Servicio', field: 'name', filter: { type: 'text' } },
+      {
+        key: 'valorPen', label: 'Valor Unitario (S/)', field: 'unit_price_pen', align: 'right', filter: { type: 'number' },
+        render: (row) => Number(row.unit_price_pen ?? 0).toFixed(5),
+      },
+      {
+        key: 'valorUsd', label: 'Valor Unitario ($)', field: 'unit_price_usd', align: 'right', filter: { type: 'number' },
+        render: (row) => Number(row.unit_price_usd ?? 0).toFixed(5),
+      },
+      { key: 'categoria', label: 'Categoria', field: 'category', filter: { type: 'text' } },
+      { key: 'subcategoria', label: 'Sub Categoria', field: 'subcategory', filter: { type: 'text' } },
+      { key: 'tipoServicio', label: 'Tipo Servicio', field: 'service_type', filter: { type: 'text' } },
+      { key: 'creador', label: 'Usuario Registro', field: 'creator_label', sortable: false },
+      {
+        key: 'fechaRegistro', label: 'Fecha Registro', field: 'registered_at', sortable: false, nowrap: true,
+        render: (row) => formatDateTime(row.registered_at),
+      },
     ]
+
+  const searchFields = isStorageGeneral ? ['name', 'observations'] : ['name', 'code', 'category', 'subcategory', 'service_type']
 
   return <>
     {!isStorageGeneral && <style>{`
@@ -199,16 +202,52 @@ const ServiceCatalog = ({ moduleTitle = 'Servicios', serviceScope = 'services' }
         min-height: 32px;
       }
     `}</style>}
-    <Table
-      gridRef={gridRef}
-      title={moduleTitle}
+
+    <VdTable
+      ref={tableRef}
       rest={serviceCatalogRest}
-      pageSize={25}
-      toolBar={(items) => {
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
-      }}
+      icon="mdi mdi-briefcase-variant-outline"
+      title={moduleTitle}
+      unit="servicios"
+      defaultSort={{ field: 'name', desc: false }}
+      defaultPageSize={25}
+      searchFields={searchFields}
+      searchPlaceholder="Buscar servicio…"
+      emptyText="No se encontraron servicios."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refresh}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen()}>
+          <i className="mdi mdi-plus"></i> Nuevo servicio
+        </button>
+      </>}
+      actions={rowActions}
       columns={columns}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onModalOpen(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.name}</p>
+              {!isStorageGeneral && <small className="text-muted">{row.code}</small>}
+            </div>
+            {!isStorageGeneral && (
+              <span className={`badge ${isRowActive(row) ? 'bg-success-subtle text-success border border-success' : 'bg-secondary-subtle text-secondary border border-secondary'}`}>
+                {isRowActive(row) ? 'Activo' : 'Inactivo'}
+              </span>
+            )}
+          </div>
+          {isStorageGeneral
+            ? (row.observations || row.name) && <p className="text-muted mb-0 mt-2" style={{ fontSize: 12 }}>{row.observations || row.name}</p>
+            : (row.category || row.subcategory || row.service_type) && <small className="text-muted d-block mt-2">{[row.category, row.subcategory, row.service_type].filter(Boolean).join(' · ')}</small>}
+          <small className="text-muted d-block mt-2">
+            <i className="mdi mdi-cash-multiple me-1"></i>
+            S/ {Number(row.unit_price_pen ?? 0).toFixed(isStorageGeneral ? 2 : 5)}
+            {!isStorageGeneral && <> · $ {Number(row.unit_price_usd ?? 0).toFixed(5)}</>}
+          </small>
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal
@@ -223,44 +262,47 @@ const ServiceCatalog = ({ moduleTitle = 'Servicios', serviceScope = 'services' }
         <input ref={idRef} hidden />
         {isStorageGeneral && <input ref={codeRef} hidden />}
         {isStorageGeneral ? <>
-          <div className='col-md-6 mb-3'><label className='form-label'>Nombre</label><input ref={nameRef} className='form-control' required /></div>
-          <div className='col-md-6 mb-3'><label className='form-label'>Descripcion</label><input ref={observationsRef} className='form-control' /></div>
-          <div className='col-md-6 mb-3'><label className='form-label'>Tarifa</label><input ref={unitPricePenRef} type='number' min='0' step='0.01' className='form-control' /></div>
-          <div className='col-md-6 mb-3'>
-            <label className='form-label'>Estado</label>
-            <select ref={statusRef} className='form-select'>
-              <option value='1'>Activo</option>
-              <option value='0'>Inactivo</option>
-            </select>
-          </div>
+          <InputFormGroup eRef={nameRef} label='Nombre' col='col-md-6' required />
+          <InputFormGroup eRef={observationsRef} label='Descripcion' col='col-md-6' />
+          <InputFormGroup eRef={unitPricePenRef} label='Tarifa' col='col-md-6' type='number' min='0' step='0.01' />
+          <VdSelect
+            label='Estado'
+            col='col-md-6'
+            value={selectedStatus}
+            onChange={(value) => setSelectedStatus(value)}
+            options={[{ value: '1', label: 'Activo' }, { value: '0', label: 'Inactivo' }]}
+          />
         </> : <>
-          <div className='col-md-4 mb-3'>
-            <label className='form-label'>Categoria</label>
-            <select ref={categoryRef} className='form-select' onChange={(e) => setModalOptions(prev => ({ ...prev, category: e.target.value }))}>
-              <option value=''>Seleccione</option>
-              {selectOptions(categoryOptions, modalOptions.category).map(option => <option key={`service-category-${option}`} value={option}>{option}</option>)}
-            </select>
-          </div>
-          <div className='col-md-4 mb-3'>
-            <label className='form-label'>Sub Categoria</label>
-            <select ref={subcategoryRef} className='form-select' onChange={(e) => setModalOptions(prev => ({ ...prev, subcategory: e.target.value }))}>
-              <option value=''>Seleccione</option>
-              {selectOptions(subcategoryOptions, modalOptions.subcategory).map(option => <option key={`service-subcategory-${option}`} value={option}>{option}</option>)}
-            </select>
-          </div>
-          <div className='col-md-4 mb-3'>
-            <label className='form-label'>Tipo Servicio</label>
-            <select ref={serviceTypeRef} className='form-select' onChange={(e) => setModalOptions(prev => ({ ...prev, serviceType: e.target.value }))}>
-              <option value=''>Seleccione</option>
-              {selectOptions(serviceTypeOptions, modalOptions.serviceType).map(option => <option key={`service-type-${option}`} value={option}>{option}</option>)}
-            </select>
-          </div>
+          <VdSelect
+            label='Categoria'
+            col='col-md-4'
+            value={selectedCategory}
+            onChange={(value) => setSelectedCategory(value)}
+            options={selectOptions(categoryOptions, selectedCategory).map(option => ({ value: option, label: option }))}
+            placeholder='-- Seleccione --'
+          />
+          <VdSelect
+            label='Sub Categoria'
+            col='col-md-4'
+            value={selectedSubcategory}
+            onChange={(value) => setSelectedSubcategory(value)}
+            options={selectOptions(subcategoryOptions, selectedSubcategory).map(option => ({ value: option, label: option }))}
+            placeholder='-- Seleccione --'
+          />
+          <VdSelect
+            label='Tipo Servicio'
+            col='col-md-4'
+            value={selectedServiceType}
+            onChange={(value) => setSelectedServiceType(value)}
+            options={selectOptions(serviceTypeOptions, selectedServiceType).map(option => ({ value: option, label: option }))}
+            placeholder='-- Seleccione --'
+          />
           <input ref={applicableZoneRef} hidden />
           <input ref={linkedVehicleTypeRef} hidden />
-          <div className='col-md-2 mb-3'><label className='form-label'>Valor Unitario (S/)</label><input ref={unitPricePenRef} type='number' min='0' step='0.00001' className='form-control' /></div>
-          <div className='col-md-2 mb-3'><label className='form-label'>Valor Unitario ($)</label><input ref={unitPriceUsdRef} type='number' min='0' step='0.00001' className='form-control' /></div>
-          <div className='col-md-4 mb-3'><label className='form-label'>Codigo Servicio</label><input ref={codeRef} className='form-control' required /></div>
-          <div className='col-md-8 mb-3'><label className='form-label'>Nombre Servicio</label><input ref={nameRef} className='form-control' required /></div>
+          <InputFormGroup eRef={unitPricePenRef} label='Valor Unitario (S/)' col='col-md-2' type='number' min='0' step='0.00001' />
+          <InputFormGroup eRef={unitPriceUsdRef} label='Valor Unitario ($)' col='col-md-2' type='number' min='0' step='0.00001' />
+          <InputFormGroup eRef={codeRef} label='Codigo Servicio' col='col-md-4' required />
+          <InputFormGroup eRef={nameRef} label='Nombre Servicio' col='col-md-8' required />
           <div className='col-12 mb-3'>
             <div className='service-catalog-alert'>
               <strong>Importante!</strong>
@@ -273,7 +315,7 @@ const ServiceCatalog = ({ moduleTitle = 'Servicios', serviceScope = 'services' }
               <div>Servicio Mensual de 5 cuentas/de Usuario Binance.</div>
             </div>
           </div>
-          <div className='col-12 mb-3'><label className='form-label'>Glosa</label><input ref={observationsRef} className='form-control' /></div>
+          <InputFormGroup eRef={observationsRef} label='Glosa' col='col-12' />
           <div className='col-12 mb-1'>
             <label className='form-label d-block'>Este servicio paga comision al vendedor?</label>
             <div className='form-check form-switch'>

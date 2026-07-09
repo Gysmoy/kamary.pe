@@ -2,18 +2,18 @@ import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
-import Modal from '../Components/Adminto/Modal';
-import DxButton from '../Components/dx/DxButton';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
+import Modal from '@Adminto/Modal';
+import Swal from 'sweetalert2';
 import AccountsReceivableRest from '../Actions/Admin/AccountsReceivableRest';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import {
   getOperationalOrderStatusLabel,
   getPaymentStatusLabel,
   getSourceTypeLabel,
   paymentStatusOptions,
-  toLookup,
+  sourceTypeOptions,
 } from '../Utils/statusLabels';
 
 const accountsReceivableRest = new AccountsReceivableRest()
@@ -34,26 +34,26 @@ const formatDate = (value) => value?.toString?.().slice?.(0, 10) || value || '-'
 const fileUrl = (filename) => filename ? `/api/admin/accounts-receivable/payments/media/${filename}` : null
 
 const AccountsReceivable = () => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const paymentModalRef = useRef()
 
   const amountRef = useRef()
   const paymentDateRef = useRef()
-  const paymentMethodRef = useRef()
   const bankRef = useRef()
   const operationNumberRef = useRef()
   const paymentFileRef = useRef()
   const observationsRef = useRef()
 
   const [selectedRow, setSelectedRow] = useState(null)
+  const [paymentMethod, setPaymentMethod] = useState('Transferencia')
 
-  const refreshGrid = () => $(gridRef.current).dxDataGrid('instance').refresh()
+  const refresh = () => tableRef.current?.refresh()
 
   const resetPaymentForm = (row = null) => {
     if (amountRef.current) amountRef.current.value = row ? formatMoney(row.balance_amount) : ''
     if (paymentDateRef.current) paymentDateRef.current.value = new Date().toISOString().slice(0, 10)
-    if (paymentMethodRef.current) paymentMethodRef.current.value = 'Transferencia'
+    setPaymentMethod('Transferencia')
     if (bankRef.current) bankRef.current.value = ''
     if (operationNumberRef.current) operationNumberRef.current.value = ''
     if (observationsRef.current) observationsRef.current.value = ''
@@ -77,10 +77,15 @@ const AccountsReceivable = () => {
     e.preventDefault()
     if (!selectedRow) return
 
+    if (!paymentMethod) {
+      Swal.fire({ icon: 'warning', title: 'Falta tipo de pago', text: 'Selecciona el tipo de pago.', confirmButtonText: 'Entendido' })
+      return
+    }
+
     const formData = new FormData()
     formData.append('amount', amountRef.current?.value || '')
     formData.append('payment_date', paymentDateRef.current?.value || '')
-    formData.append('payment_method', paymentMethodRef.current?.value || '')
+    formData.append('payment_method', paymentMethod || '')
     formData.append('bank', bankRef.current?.value || '')
     formData.append('operation_number', operationNumberRef.current?.value || '')
     formData.append('observations', observationsRef.current?.value || '')
@@ -93,109 +98,119 @@ const AccountsReceivable = () => {
 
     setSelectedRow(result.data)
     $(paymentModalRef.current).modal('hide')
-    refreshGrid()
+    refresh()
+  }
+
+  const rowActions = (row) => {
+    const canPay = !!row?.status && Number(row?.balance_amount || 0) > 0
+    return [
+      { icon: 'mdi mdi-eye', title: 'Ver detalle', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onViewDetail(r) },
+      { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir PDF', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.accountsReceivable(r)) },
+      { icon: 'mdi mdi-cash-plus', title: 'Registrar pago', bg: '#e7faf1', color: '#10c469', onClick: (r) => onOpenPayment(r), hidden: !canPay },
+    ]
   }
 
   return (<>
-    <Table
-      gridRef={gridRef}
-      title='Cuentas por cobrar'
+    <VdTable
+      ref={tableRef}
       rest={accountsReceivableRest}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: refreshGrid
-          }
-        });
-      }}
-      pageSize={25}
+      icon="mdi mdi-cash-multiple"
+      title="Cuentas por cobrar"
+      unit="cuentas por cobrar"
+      defaultPageSize={25}
+      searchFields={['code', 'document_type', 'payment_condition', 'currency']}
+      searchPlaceholder="Buscar por codigo, tipo doc, condicion o moneda…"
+      emptyText="No se encontraron cuentas por cobrar."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refresh}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
-        { dataField: 'id', caption: 'ID', width: 80 },
+        { key: 'id', label: 'ID', field: 'id', width: '80px', align: 'right' },
         {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: 130,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onViewDetail(data), 'Ver detalle')
+          key: 'code', label: 'Codigo', field: 'code', width: '130px',
+          filter: { type: 'text' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onViewDetail(row)} title="Ver detalle">
+              {row.code || '-'}
+            </a>
+          ),
         },
         {
-          dataField: 'source_type',
-          caption: 'Origen',
-          width: 120,
-          calculateCellValue: (data) => getSourceTypeLabel(data.source_type)
+          key: 'origen', label: 'Origen', field: 'source_type', width: '120px',
+          filter: { type: 'select', options: sourceTypeOptions },
+          render: (row) => getSourceTypeLabel(row.source_type),
         },
         {
-          dataField: 'source_code',
-          caption: 'Documento origen',
-          minWidth: 150,
-          calculateCellValue: (data) => data.commercial_order?.code ?? data.commercialOrder?.code ?? data.service_order?.code ?? data.serviceOrder?.code ?? '-'
+          key: 'documento_origen', label: 'Documento origen', sortable: false, width: '160px',
+          render: (row) => row.commercial_order?.code ?? row.commercialOrder?.code ?? row.service_order?.code ?? row.serviceOrder?.code ?? '-',
         },
         {
-          dataField: 'customer_name',
-          caption: 'Cliente',
-          minWidth: 220,
-          calculateCellValue: (data) => data.client?.full_name ?? data.eventual_client?.business_name ?? data.eventualClient?.business_name ?? '-'
+          key: 'cliente', label: 'Cliente', sortable: false, width: '220px',
+          render: (row) => row.client?.full_name ?? row.eventual_client?.business_name ?? row.eventualClient?.business_name ?? '-',
         },
-        { dataField: 'document_type', caption: 'Tipo doc', width: 100 },
-        { dataField: 'issue_date', caption: 'F. emision', width: 110, dataType: 'date' },
-        { dataField: 'due_date', caption: 'F. vcto', width: 110, dataType: 'date' },
-        { dataField: 'payment_condition', caption: 'Condicion', width: 100 },
-        { dataField: 'currency', caption: 'Moneda', width: 90 },
-        { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        { dataField: 'paid_amount', caption: 'Pagado', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        { dataField: 'balance_amount', caption: 'Saldo', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        { dataField: 'payment_status', caption: 'Estado pago', width: 110, lookup: toLookup(paymentStatusOptions) },
+        { key: 'tipo_doc', label: 'Tipo doc', field: 'document_type', width: '100px', filter: { type: 'text' } },
         {
-          dataField: 'installments.id',
-          caption: 'Cuotas',
-          width: 90,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => {
-            container.text((data?.installments ?? []).length || 0)
-          }
+          key: 'f_emision', label: 'F. emision', field: 'issue_date', width: '110px',
+          filter: { type: 'date' },
+          render: (row) => formatDate(row.issue_date),
         },
         {
-          dataField: 'payments.id',
-          caption: 'Pagos',
-          width: 90,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => {
-            container.text((data?.payments ?? []).length || 0)
-          }
+          key: 'f_vcto', label: 'F. vcto', field: 'due_date', width: '110px',
+          filter: { type: 'date' },
+          render: (row) => formatDate(row.due_date),
+        },
+        { key: 'condicion', label: 'Condicion', field: 'payment_condition', width: '100px', filter: { type: 'text' } },
+        { key: 'moneda', label: 'Moneda', field: 'currency', width: '90px', filter: { type: 'text' } },
+        {
+          key: 'total', label: 'Total', field: 'total', width: '110px', align: 'right',
+          filter: { type: 'number' },
+          render: (row) => formatMoney(row.total),
         },
         {
-          caption: 'Acciones',
-          width: 180,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Ver detalle',
-              icon: 'mdi mdi-eye',
-              onClick: () => onViewDetail(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger ms-1',
-              title: 'Imprimir PDF',
-              icon: 'mdi mdi-file-pdf-box',
-              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.accountsReceivable(data))
-            }))
-
-            if (data?.status && Number(data?.balance_amount || 0) > 0) {
-              container.append(DxButton({
-                className: 'btn btn-xs btn-soft-success ms-1',
-                title: 'Registrar pago',
-                icon: 'mdi mdi-cash-plus',
-                onClick: () => onOpenPayment(data)
-              }))
-            }
-          },
-          allowFiltering: false,
-          allowExporting: false
-        }
+          key: 'pagado', label: 'Pagado', field: 'paid_amount', width: '110px', align: 'right',
+          filter: { type: 'number' },
+          render: (row) => formatMoney(row.paid_amount),
+        },
+        {
+          key: 'saldo', label: 'Saldo', field: 'balance_amount', width: '110px', align: 'right',
+          filter: { type: 'number' },
+          render: (row) => formatMoney(row.balance_amount),
+        },
+        {
+          key: 'estado_pago', label: 'Estado pago', field: 'payment_status', width: '120px',
+          filter: { type: 'select', options: paymentStatusOptions },
+          render: (row) => getPaymentStatusLabel(row.payment_status),
+        },
+        {
+          key: 'cuotas', label: 'Cuotas', sortable: false, align: 'right', width: '90px', nowrap: true,
+          render: (row) => (row?.installments ?? []).length || 0,
+        },
+        {
+          key: 'pagos', label: 'Pagos', sortable: false, align: 'right', width: '90px', nowrap: true,
+          render: (row) => (row?.payments ?? []).length || 0,
+        },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onViewDetail(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.code}</p>
+              <small className="text-muted">{row.client?.full_name ?? row.eventual_client?.business_name ?? row.eventualClient?.business_name ?? '-'}</small>
+            </div>
+            <span className={`badge ${row.payment_status === 'paid' ? 'badge-soft-success' : row.payment_status === 'cancelled' ? 'badge-soft-danger' : 'badge-soft-warning'}`}>
+              {getPaymentStatusLabel(row.payment_status)}
+            </span>
+          </div>
+          <div className="d-flex justify-content-between align-items-center mt-2">
+            <small className="text-muted">{getSourceTypeLabel(row.source_type)} · vence {formatDate(row.due_date)}</small>
+            <small className="fw-semibold">{row.currency} {formatMoney(row.balance_amount)}</small>
+          </div>
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal modalRef={modalRef} title='Detalle de cuenta por cobrar' size='xl' hideFooter>
@@ -337,14 +352,15 @@ const AccountsReceivable = () => {
           <label className='form-label'>Fecha de pago</label>
           <input ref={paymentDateRef} type='date' className='form-control' required />
         </div>
-        <div className='col-md-4 mb-3'>
-          <label className='form-label'>Tipo de pago</label>
-          <select ref={paymentMethodRef} className='form-control' required>
-            {paymentMethodOptions.map(option => (
-              <option key={`accounts-receivable-payment-method-${option}`} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
+        <VdSelect
+          label='Tipo de pago'
+          col='col-md-4'
+          required
+          value={paymentMethod}
+          onChange={setPaymentMethod}
+          options={paymentMethodOptions.map(option => ({ value: option, label: option }))}
+          placeholder='-- Seleccionar --'
+        />
         <div className='col-md-6 mb-3'>
           <label className='form-label'>Banco</label>
           <input ref={bankRef} type='text' className='form-control' />

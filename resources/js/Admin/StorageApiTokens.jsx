@@ -2,14 +2,12 @@ import React, { useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import BaseAdminto from '@Adminto/Base'
 import CreateReactScript from '../Utils/CreateReactScript'
-import Table from '../Components/Adminto/Table'
-import Modal from '../Components/Adminto/Modal'
-import ReactAppend from '../Utils/ReactAppend'
-import DxButton from '../Components/dx/DxButton'
+import VdTable from '@Adminto/VdTable'
+import VdSelect from '@Adminto/VdSelect'
+import Modal from '@Adminto/Modal'
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup'
 import Swal from 'sweetalert2'
 import StorageApiTokensRest from '../Actions/Admin/StorageApiTokensRest'
-import renderGridEditLink from '../Utils/renderGridEditLink'
 
 const tokensRest = new StorageApiTokensRest()
 
@@ -18,6 +16,12 @@ const defaultAbilities = ['stock:read', 'orders:read', 'orders:write']
 const normalizeDate = (value) => {
   if (!value) return ''
   return value.toString().slice(0, 10)
+}
+
+const formatDateTime = (value) => {
+  if (!value) return ''
+  const [date, time] = value.toString().split(/[ T]/)
+  return time ? `${date} ${time.slice(0, 5)}` : date
 }
 
 const copyText = async (text) => {
@@ -59,15 +63,15 @@ const showTokenDialog = async (token, title = 'Token de acceso') => {
 }
 
 const StorageApiTokens = ({ moduleTitle = 'Tokens acceso API', clients = [], abilityOptions = [], apiDocsUrl = '/api-docs/storage' }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
 
   const idRef = useRef()
-  const clientRef = useRef()
   const nameRef = useRef()
   const expiresAtRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
+  const [selectedClientId, setSelectedClientId] = useState('')
   const [selectedAbilities, setSelectedAbilities] = useState(defaultAbilities)
   const [tokenEnabled, setTokenEnabled] = useState(true)
 
@@ -78,11 +82,11 @@ const StorageApiTokens = ({ moduleTitle = 'Tokens acceso API', clients = [], abi
     { value: '*', label: 'Acceso completo' },
   ], [abilityOptions])
 
-  const refreshGrid = () => $(gridRef.current).dxDataGrid('instance').refresh()
+  const refresh = () => tableRef.current?.refresh()
 
   const resetForm = () => {
     idRef.current.value = ''
-    clientRef.current.value = ''
+    setSelectedClientId('')
     nameRef.current.value = ''
     expiresAtRef.current.value = ''
     setSelectedAbilities(defaultAbilities)
@@ -95,7 +99,7 @@ const StorageApiTokens = ({ moduleTitle = 'Tokens acceso API', clients = [], abi
 
     if (data?.id) {
       idRef.current.value = data.id
-      clientRef.current.value = data.client_id ?? ''
+      setSelectedClientId(data.client_id ? `${data.client_id}` : '')
       nameRef.current.value = data.name ?? ''
       expiresAtRef.current.value = normalizeDate(data.expires_at)
       setSelectedAbilities(data.abilities?.length ? data.abilities : defaultAbilities)
@@ -124,9 +128,14 @@ const StorageApiTokens = ({ moduleTitle = 'Tokens acceso API', clients = [], abi
   const submitModal = async (event) => {
     event.preventDefault()
 
+    if (!selectedClientId) {
+      Swal.fire({ icon: 'warning', title: 'Falta cliente', text: 'Selecciona un cliente.', confirmButtonText: 'Entendido' })
+      return
+    }
+
     const payload = {
       id: idRef.current.value || undefined,
-      client_id: clientRef.current.value,
+      client_id: selectedClientId,
       name: nameRef.current.value.trim(),
       expires_at: expiresAtRef.current.value || null,
       abilities: selectedAbilities,
@@ -136,7 +145,7 @@ const StorageApiTokens = ({ moduleTitle = 'Tokens acceso API', clients = [], abi
     const result = await tokensRest.save(payload)
     if (!result) return
 
-    refreshGrid()
+    refresh()
     $(modalRef.current).modal('hide')
 
     if (result.data?.token) {
@@ -164,7 +173,7 @@ const StorageApiTokens = ({ moduleTitle = 'Tokens acceso API', clients = [], abi
     const result = await tokensRest.renew(data.id)
     if (!result?.token) return
 
-    refreshGrid()
+    refresh()
     await showTokenDialog(result.token, 'Token renovado')
   }
 
@@ -180,115 +189,96 @@ const StorageApiTokens = ({ moduleTitle = 'Tokens acceso API', clients = [], abi
     if (!isConfirmed) return
 
     const ok = await tokensRest.delete(data.id)
-    if (ok) refreshGrid()
+    if (ok) refresh()
   }
 
   const onBooleanChange = async ({ id, value }) => {
     const ok = await tokensRest.boolean({ id, field: 'status', value })
-    if (ok) refreshGrid()
+    if (ok) refresh()
   }
 
+  const rowActions = (row) => [
+    { icon: 'mdi mdi-eye', title: row.can_reveal ? 'Ver token' : 'No disponible, renovar', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => revealToken(r) },
+    { icon: 'mdi mdi-refresh', title: 'Renovar token', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => renewToken(r) },
+    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => openModal(r) },
+    { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => deleteToken(r) },
+  ]
+
   return (<>
-    <Table
-      gridRef={gridRef}
-      title={moduleTitle}
+    <VdTable
+      ref={tableRef}
       rest={tokensRest}
-      pageSize={25}
-      toolBar={(items) => {
-        items.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'doc',
-            text: 'Ver manual API',
-            stylingMode: 'contained',
-            type: 'default',
-            hint: 'Ver documentacion API',
-            elementAttr: {
-              class: 'storage-api-manual-btn'
-            },
-            onClick: () => window.open(apiDocsUrl, '_blank')
-          }
-        })
-        items.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: refreshGrid
-          }
-        })
-        items.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            hint: 'Generar token',
-            onClick: () => openModal()
-          }
-        })
-      }}
+      icon="mdi mdi-key-variant"
+      title={moduleTitle}
+      unit="tokens"
+      defaultPageSize={25}
+      searchFields={['name', 'client_name', 'client_document_number', 'token_prefix']}
+      searchPlaceholder="Buscar por cliente, nombre o token…"
+      emptyText="No se encontraron tokens."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft" onClick={() => window.open(apiDocsUrl, '_blank')}>
+          <i className="mdi mdi-book-open-page-variant"></i> Ver manual API
+        </button>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refresh}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => openModal()}>
+          <i className="mdi mdi-plus"></i> Generar token
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
-        { dataField: 'id', caption: 'ID', visible: false },
+        { key: 'id', label: 'ID', field: 'id', visible: false },
         {
-          dataField: 'client_label',
-          caption: 'Cliente',
-          minWidth: 240,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data.client_label, () => openModal(data), 'Editar token')
+          key: 'cliente', label: 'Cliente', field: 'client_name',
+          filter: { type: 'text', fields: ['client_name', 'client_document_number'] },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => openModal(row)} title="Editar token">
+              {row.client_label}
+            </a>
+          ),
         },
-        { dataField: 'name', caption: 'Nombre', width: 180 },
-        { dataField: 'token_mask', caption: 'Token', width: 140 },
-        { dataField: 'abilities_label', caption: 'Permisos', minWidth: 220 },
-        { dataField: 'expires_at', caption: 'Expira', dataType: 'date', width: 120 },
-        { dataField: 'last_used_at', caption: 'Ultimo uso', dataType: 'datetime', width: 160 },
+        { key: 'nombre', label: 'Nombre', field: 'name', width: '180px', filter: { type: 'text' } },
         {
-          dataField: 'status',
-          caption: 'Activo',
-          dataType: 'boolean',
-          width: 100,
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            ReactAppend(container, <SwitchFormGroup checked={data.status === true} onChange={() => onBooleanChange({ id: data.id, value: !data.status })} />)
-          }
+          key: 'token', label: 'Token', field: 'token_prefix', width: '140px', nowrap: true,
+          filter: { type: 'text' },
+          render: (row) => row.token_mask,
         },
-        { dataField: 'creator_label', caption: 'Creado por', visible: false },
-        { dataField: 'updater_label', caption: 'Actualizado por', visible: false },
         {
-          caption: 'Acciones',
-          width: 190,
-          allowFiltering: false,
-          allowExporting: false,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-secondary',
-              title: data.can_reveal ? 'Ver token' : 'No disponible, renovar',
-              icon: 'mdi mdi-eye',
-              onClick: () => revealToken(data)
-            }))
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-warning',
-              title: 'Renovar token',
-              icon: 'mdi mdi-refresh',
-              onClick: () => renewToken(data)
-            }))
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => openModal(data)
-            }))
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar',
-              icon: 'mdi mdi-delete',
-              onClick: () => deleteToken(data)
-            }))
-          }
-        }
+          key: 'permisos', label: 'Permisos', field: 'abilities', sortable: false, muted: true,
+          render: (row) => row.abilities_label,
+        },
+        {
+          key: 'expira', label: 'Expira', field: 'expires_at', width: '120px', filter: { type: 'date' },
+          render: (row) => row.expires_at ? normalizeDate(row.expires_at) : <span className="text-muted">—</span>,
+        },
+        {
+          key: 'ultimo_uso', label: 'Ultimo uso', field: 'last_used_at', width: '160px', filter: { type: 'date' },
+          render: (row) => row.last_used_at ? formatDateTime(row.last_used_at) : <span className="text-muted">—</span>,
+        },
+        {
+          key: 'estado', label: 'Activo', field: 'status', width: '100px',
+          filter: { type: 'select', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => <SwitchFormGroup noMargin checked={row.status === true} onChange={() => onBooleanChange({ id: row.id, value: !row.status })} />,
+        },
+        { key: 'creador', label: 'Creado por', field: 'creator_label', visible: false, sortable: false },
+        { key: 'actualizador', label: 'Actualizado por', field: 'updater_label', visible: false, sortable: false },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => openModal(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.client_label}</p>
+              <small className="text-muted">{row.name || 'Sin nombre'}</small>
+            </div>
+            <span className={`badge ${row.status ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status ? 'Activo' : 'Inactivo'}</span>
+          </div>
+          <small className="text-muted d-block mt-2"><i className="mdi mdi-key-variant me-1"></i>{row.token_mask}</small>
+          {row.abilities_label && <small className="text-muted d-block mt-1">{row.abilities_label}</small>}
+          {row.expires_at && <small className="text-muted d-block mt-1"><i className="mdi mdi-calendar me-1"></i>Expira {normalizeDate(row.expires_at)}</small>}
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal
@@ -301,14 +291,17 @@ const StorageApiTokens = ({ moduleTitle = 'Tokens acceso API', clients = [], abi
       <input ref={idRef} type='hidden' />
 
       <div className='row g-3'>
-        <div className='col-12'>
-          <label className='form-label'>Cliente <b className='text-danger'>*</b></label>
-          <select ref={clientRef} className='form-select' required disabled={isEditing}>
-            <option value=''>Seleccione cliente</option>
-            {clients.map(client => <option key={`storage-token-client-${client.id}`} value={client.id}>{client.label}</option>)}
-          </select>
-          {isEditing && <small className='text-muted'>Para otro cliente, genera un token nuevo.</small>}
-        </div>
+        <VdSelect
+          label='Cliente'
+          col='col-12'
+          required
+          disabled={isEditing}
+          value={selectedClientId}
+          onChange={setSelectedClientId}
+          options={clients.map(client => ({ value: `${client.id}`, label: client.label }))}
+          placeholder='-- Seleccionar cliente --'
+        />
+        {isEditing && <div className='col-12'><small className='text-muted'>Para otro cliente, genera un token nuevo.</small></div>}
 
         <div className='col-md-8'>
           <label className='form-label'>Nombre</label>

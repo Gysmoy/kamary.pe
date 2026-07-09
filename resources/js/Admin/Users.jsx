@@ -2,17 +2,14 @@
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
-import { renderToString } from 'react-dom/server';
 import UsersRest from '../Actions/Admin/UsersRest';
 import PasswordFormGroup from '../Components/Adminto/form/PasswordFormGroup';
-import SelectFormGroup from '../Components/Adminto/Form/SelectFormGroup';
 
 const usersRest = new UsersRest()
 
@@ -22,7 +19,7 @@ const scopes = {
 }
 
 const Users = ({ prefixes, roles, drivers = [] }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const passwordModalRef = useRef()
 
@@ -33,7 +30,6 @@ const Users = ({ prefixes, roles, drivers = [] }) => {
   const emailRef = useRef()
   const usernameRef = useRef()
   const passwordRef = useRef()
-  const phonePrefixRef = useRef()
   const phoneRef = useRef()
   const rolesRef = useRef()
 
@@ -100,14 +96,14 @@ const Users = ({ prefixes, roles, drivers = [] }) => {
     const result = await usersRest.save(request)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(modalRef.current).modal('hide')
   }
 
   const onBooleanChange = async ({ id, field, value }) => {
     const result = await usersRest.boolean({ id, field, value })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -122,7 +118,7 @@ const Users = ({ prefixes, roles, drivers = [] }) => {
     if (!isConfirmed) return
     const result = await usersRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onPasswordModalSubmit = async (e) => {
@@ -156,167 +152,134 @@ const Users = ({ prefixes, roles, drivers = [] }) => {
   ].filter(Boolean).join(' - ')
 
   return (<>
-    <Table gridRef={gridRef} title='Usuarios' rest={usersRest}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar usuario',
-            onClick: () => onModalOpen(null)
-          }
-        });
-      }}
-      pageSize={25}
+    <VdTable
+      ref={tableRef}
+      rest={usersRest}
+      icon="mdi mdi-account-multiple"
+      title="Usuarios"
+      unit="usuarios"
+      defaultSort={{ field: 'fullname', desc: false }}
+      defaultPageSize={25}
+      searchFields={['name', 'lastname', 'fullname', 'username', 'email', 'phone']}
+      searchPlaceholder="Buscar por nombre, usuario, correo o celular…"
+      emptyText="No se encontraron usuarios."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={() => tableRef.current?.refresh()}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen(null)}>
+          <i className="mdi mdi-plus"></i> Nuevo usuario
+        </button>
+      </>}
+      actions={(row) => [
+        { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+        { icon: 'mdi mdi-key', title: 'Cambiar contraseña', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onPasswordModalOpen(r) },
+        { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.uuid) },
+      ]}
       columns={[
+        { key: 'id', label: 'ID', field: 'id', visible: false },
         {
-          dataField: 'id',
-          caption: 'ID',
-          visible: false
-        },
-        {
-          dataField: 'fullname',
-          caption: 'Nombre completo',
-          cellTemplate: (container, { data }) => {
-            const label = data.fullname || [data.name, data.lastname].filter(Boolean).join(' ') || data.username || ''
-            if (!label) return
-
-            container.empty()
-            $('<button type="button" class="btn btn-link admin-grid-edit-link p-0 text-start fw-semibold"></button>')
-              .text(label)
-              .attr('title', 'Editar usuario')
-              .on('click', (e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onModalOpen(data)
-              })
-              .appendTo(container)
-          }
-        },
-        {
-          dataField: 'username',
-          caption: 'Usuario',
-          cellTemplate: (container, { data }) => {
-            const verifiedIcon = data.verified
-              ? '<i class="mdi mdi-check-decagram text-primary ms-1" title="Verificado"></i>'
-              : '';
-            container.html(`<span>${data.username || ''}</span>${verifiedIcon}`);
-          }
-        },
-        {
-          dataField: 'email',
-          caption: 'Correo electronico',
-        },
-        {
-          dataField: 'phone',
-          caption: 'Celular',
-          cellTemplate: (container, { data }) => {
-            if (!data.phone) return
-            container.text(`+${data.phone_prefix} ${data.phone}`)
-          }
-        },
-        {
-          dataField: 'scope',
-          caption: 'Con acceso a',
-          cellTemplate: (container, { data }) => {
-            if (!data.scope || !data.scope.length) return;
-            const labels = {
-              'kamary-peru': 'Kamary Perú',
-              'kamary-medicals': 'Kamary Medicals'
-            };
-            const badges = data.scope.map(s => `<span class="badge badge-soft-secondary me-1">${labels[s] || s}</span>`).join('');
-            container.html(`<div class="d-flex gap-1">${badges}</div>`);
-          }
-        },
-        {
-          dataField: 'is_driver',
-          caption: 'Chofer',
-          width: 95,
-          allowFiltering: true,
-          cellTemplate: (container, { data }) => {
-            container.html(data.is_driver
-              ? '<span class="badge badge-soft-success">Si</span>'
-              : '<span class="badge badge-soft-secondary">No</span>')
-          }
-        },
-        {
-          caption: 'Conductor vinculado',
-          minWidth: 190,
-          calculateCellValue: (data) => data.driver?.full_name ?? '-'
-        },
-        {
-          dataField: 'roles',
-          caption: 'Roles',
-          allowSorting: false,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => {
-            if (data.roles && data.roles.length) {
-              const badgesHtml = data.roles.map(r => `<span class="badge badge-soft-primary mr-1">${r.name}</span>`).join('')
-              container.html(`<div class='d-flex gap-1'>${badgesHtml}</div>`)
-            } else {
-              container.html(renderToString(<i className='text-muted'>Sin roles</i>))
-            }
-          }
-        },
-        {
-          dataField: 'status',
-          caption: 'Estado',
-          dataType: 'boolean',
-          width: '100px',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) {
-              container.html(renderToString(<i className='text-muted'>Baneado</i>))
-            } else {
-              ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-                id: data.uuid,
-                field: 'status',
-                value: !data.status
-              })} />)
-            }
-          }
-        },
-        {
-          caption: 'Acciones',
-          width: '160px',
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-info',
-              title: 'Cambiar contraseña',
-              icon: 'mdi mdi-key',
-              onClick: () => onPasswordModalOpen(data)
-            }))
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar usuario',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.uuid)
-            }))
-
+          key: 'fullname', label: 'Nombre completo', field: 'fullname',
+          filter: { type: 'text', fields: ['name', 'lastname', 'fullname', 'username'] },
+          render: (row) => {
+            const label = row.fullname || [row.name, row.lastname].filter(Boolean).join(' ') || row.username || ''
+            if (!label) return ''
+            return (
+              <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar usuario">
+                {label}
+              </a>
+            )
           },
-          allowFiltering: false,
-          allowExporting: false
-        }
-      ]} />
+        },
+        {
+          key: 'username', label: 'Usuario', field: 'username', filter: { type: 'text' },
+          render: (row) => (
+            <span>
+              {row.username || ''}
+              {row.verified && <i className="mdi mdi-check-decagram text-primary ms-1" title="Verificado"></i>}
+            </span>
+          ),
+        },
+        { key: 'email', label: 'Correo electronico', field: 'email', filter: { type: 'text' } },
+        {
+          key: 'phone', label: 'Celular', field: 'phone', filter: { type: 'text' },
+          render: (row) => row.phone ? `+${row.phone_prefix} ${row.phone}` : '',
+        },
+        {
+          key: 'scope', label: 'Con acceso a', field: 'scope', sortable: false,
+          render: (row) => {
+            if (!row.scope || !row.scope.length) return ''
+            return (
+              <div className="d-flex gap-1 flex-wrap">
+                {row.scope.map((s, i) => <span key={i} className="badge badge-soft-secondary">{scopes[s] || s}</span>)}
+              </div>
+            )
+          },
+        },
+        {
+          key: 'is_driver', label: 'Chofer', field: 'is_driver', width: '95px',
+          filter: { type: 'select', options: [{ value: 1, label: 'Si' }, { value: 0, label: 'No' }] },
+          render: (row) => row.is_driver
+            ? <span className="badge badge-soft-success">Si</span>
+            : <span className="badge badge-soft-secondary">No</span>,
+        },
+        {
+          key: 'driver', label: 'Conductor vinculado', field: 'driver.full_name', sortable: false,
+          render: (row) => row.driver?.full_name ?? '-',
+        },
+        {
+          key: 'roles', label: 'Roles', field: 'roles', sortable: false,
+          render: (row) => row.roles && row.roles.length
+            ? <div className="d-flex gap-1 flex-wrap">{row.roles.map((r, i) => <span key={i} className="badge badge-soft-primary">{r.name}</span>)}</div>
+            : <i className="text-muted">Sin roles</i>,
+        },
+        {
+          key: 'status', label: 'Estado', field: 'status', width: '100px',
+          filter: { type: 'select', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => {
+            if (row.status === null) return <i className="text-muted">Baneado</i>
+            return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => onBooleanChange({ id: row.uuid, field: 'status', value: !row.status })} />
+          },
+        },
+      ]}
+      renderCard={(row, actionButtons) => {
+        const label = row.fullname || [row.name, row.lastname].filter(Boolean).join(' ') || row.username || ''
+        return (
+          <div className="vdt-card" onClick={() => onModalOpen(row)}>
+            <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+              <div style={{ minWidth: 0 }}>
+                <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{label}</p>
+                <small className="text-muted">
+                  {row.username}
+                  {row.verified && <i className="mdi mdi-check-decagram text-primary ms-1" title="Verificado"></i>}
+                </small>
+              </div>
+              {row.status === null
+                ? <span className="badge badge-soft-secondary">Baneado</span>
+                : <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>}
+            </div>
+            <small className="text-muted d-block mt-2">{row.email}</small>
+            {row.phone && <small className="text-muted d-block">+{row.phone_prefix} {row.phone}</small>}
+            {row.scope && row.scope.length > 0 && (
+              <div className="d-flex gap-1 flex-wrap mt-2">
+                {row.scope.map((s, i) => <span key={i} className="badge badge-soft-secondary">{scopes[s] || s}</span>)}
+              </div>
+            )}
+            {row.roles && row.roles.length > 0 && (
+              <div className="d-flex gap-1 flex-wrap mt-2">
+                {row.roles.map((r, i) => <span key={i} className="badge badge-soft-primary">{r.name}</span>)}
+              </div>
+            )}
+            {row.is_driver && (
+              <small className="text-muted d-block mt-2">
+                <i className="mdi mdi-car me-1"></i>Chofer{row.driver?.full_name ? ` · ${row.driver.full_name}` : ''}
+              </small>
+            )}
+            {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+          </div>
+        )
+      }}
+    />
     <Modal modalRef={modalRef} title={isEditing ? 'Editar usuario' : 'Agregar usuario'} onSubmit={onModalSubmit} size='md'>
       <input ref={idRef} type='hidden' />
       <div className='row'>
@@ -329,13 +292,14 @@ const Users = ({ prefixes, roles, drivers = [] }) => {
           </div>
         </div>
         <InputFormGroup eRef={emailRef} label='Correo' required />
-        <SelectFormGroup eRef={phonePrefixRef} label='Prefijo' col='col-md-4' value={phonePrefix} onChange={e => setPhonePrefix(e.target.value)}>
-          {
-            prefixes.map((prefix, idx) => {
-              return <option value={prefix.realCode}>{prefix.beautyCode} • {prefix.country}</option>
-            })
-          }
-        </SelectFormGroup>
+        <VdSelect
+          label='Prefijo'
+          col='col-md-4'
+          value={phonePrefix}
+          onChange={(value) => setPhonePrefix(value)}
+          options={prefixes.map((prefix) => ({ value: prefix.realCode, label: `${prefix.beautyCode} • ${prefix.country}` }))}
+          placeholder='-- Seleccionar --'
+        />
         <InputFormGroup eRef={phoneRef} label='Celular' col='col-md-8' />
         <div className='col-12 mb-2'>
           <div className='form-check form-switch'>
@@ -355,18 +319,22 @@ const Users = ({ prefixes, roles, drivers = [] }) => {
           </div>
         </div>
         {isDriver && (
-          <SelectFormGroup
-            label='Conductor vinculado'
-            col='col-12'
-            value={selectedDriverId}
-            onChange={(e) => setSelectedDriverId(e.target.value)}
-            specification='Si lo dejas vacio, se vinculara o creara un conductor usando el nombre del usuario.'
-          >
-            <option value=''>Crear o vincular por nombre del usuario</option>
-            {drivers.map((driver) => (
-              <option key={`user-driver-${driver.id}`} value={driver.id}>{driverOptionLabel(driver)}</option>
-            ))}
-          </SelectFormGroup>
+          <>
+            <VdSelect
+              label='Conductor vinculado'
+              col='col-12'
+              value={selectedDriverId}
+              onChange={(value) => setSelectedDriverId(value)}
+              options={[
+                { value: '', label: 'Crear o vincular por nombre del usuario' },
+                ...drivers.map((driver) => ({ value: `${driver.id}`, label: driverOptionLabel(driver) })),
+              ]}
+              placeholder='-- Seleccionar --'
+            />
+            <div className='col-12' style={{ marginTop: '-8px' }}>
+              <small className='text-muted'>Si lo dejas vacio, se vinculara o creara un conductor usando el nombre del usuario.</small>
+            </div>
+          </>
         )}
         <div className='col-md-4 mb-2'>
           <label className='form-label'>Con acceso a</label>

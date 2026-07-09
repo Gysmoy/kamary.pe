@@ -2,13 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../../Utils/CreateReactScript';
-import Table from '../../Components/Adminto/Table';
+import VdTable from '../../Components/Adminto/VdTable';
+import VdSelect from '../../Components/Adminto/VdSelect';
 import Modal from '../../Components/Adminto/Modal';
-import ReactAppend from '../../Utils/ReactAppend';
-import DxButton from '../../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
+import Swal from 'sweetalert2';
 import FormulasRest from '../../Actions/Admin/Magistrales/FormulasRest';
-import renderGridEditLink from '../../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../../Utils/magistralesRecordPdf';
 
 const formulasRest = new FormulasRest()
@@ -100,11 +99,10 @@ const recalculateItem = (item) => {
 }
 
 const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const historyModalRef = useRef()
   const idRef = useRef()
-  const articleRef = useRef()
   const changeReasonRef = useRef()
   const specialPreparationConditionsRef = useRef()
   const specializedEquipmentRef = useRef()
@@ -119,6 +117,7 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
   const [historyRows, setHistoryRows] = useState([])
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [selectedArticleId, setSelectedArticleId] = useState('')
   const formulaArticles = articles.filter(article => !isInputArticle(article))
   const inputArticles = articles.filter(isInputArticle)
   const inputCostTotal = formulaItems.reduce((sum, item) => sum + toNumber(item.subtotal), 0)
@@ -165,7 +164,7 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
   const onModalOpen = (data = null) => {
     setIsEditing(!!data?.id)
     idRef.current.value = data?.id ?? ''
-    articleRef.current.value = data?.article_id ?? ''
+    setSelectedArticleId(data?.article_id ? `${data.article_id}` : '')
     changeReasonRef.current.value = ''
     structuredFields.forEach(field => {
       field.ref.current.value = data?.[field.key] ?? ''
@@ -225,6 +224,12 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
 
   const onSave = async (e) => {
     e.preventDefault()
+
+    if (!selectedArticleId) {
+      Swal.fire({ icon: 'warning', title: 'Falta articulo', text: 'Selecciona el articulo de la formula.', confirmButtonText: 'Entendido' })
+      return
+    }
+
     const structuredPayload = structuredFields.reduce((carry, field) => ({
       ...carry,
       [field.key]: field.ref.current.value.trim(),
@@ -236,7 +241,7 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
 
     const result = await formulasRest.save({
       id: idRef.current.value || undefined,
-      article_id: articleRef.current.value || null,
+      article_id: selectedArticleId || null,
       change_reason: changeReasonRef.current.value.trim(),
       detail,
       ...structuredPayload,
@@ -253,14 +258,14 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
       })),
     })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(modalRef.current).modal('hide')
   }
 
-  const onStatusChange = async ({ id, status }) => {
-    const result = await formulasRest.status({ id, status })
+  const onStatusChange = async (row) => {
+    const result = await formulasRest.status({ id: row.id, status: row.status })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onHistoryOpen = async (data) => {
@@ -273,64 +278,99 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
     setIsHistoryLoading(false)
   }
 
+  const rowActions = (row) => [
+    { icon: 'mdi mdi-file-document-edit', title: 'Detalle formula', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+    { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir PDF', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.magistralFormula(r)) },
+    { icon: 'mdi mdi-history', title: 'Historial de actualizaciones', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onHistoryOpen(r) },
+  ]
+
   return <>
-    <Table
-      gridRef={gridRef}
-      title={moduleTitle}
+    <VdTable
+      ref={tableRef}
       rest={formulasRest}
-      pageSize={25}
-      toolBar={(items) => {
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
-      }}
+      icon="mdi mdi-flask-outline"
+      title={moduleTitle}
+      unit="formulas"
+      defaultPageSize={25}
+      searchFields={['article.code', 'article.name', 'detail']}
+      searchPlaceholder="Buscar por codigo, articulo o detalle…"
+      emptyText="No se encontraron formulas magistrales."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={() => tableRef.current?.refresh()}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen()}>
+          <i className="mdi mdi-plus"></i> Nueva formula
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
         {
-          dataField: 'article.code',
-          caption: 'Codigo',
-          width: 140,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.article?.code, () => onModalOpen(data), 'Editar formula')
-        },
-        { dataField: 'article.name', caption: 'Articulo', minWidth: 220 },
-        { dataField: 'last_edited_at', caption: 'F. ultima edicion', width: 155, calculateCellValue: (data) => formatDateTime(data.last_edited_at) },
-        { dataField: 'last_editor_label', caption: 'Usuario ult. edicion', minWidth: 180, calculateCellValue: (data) => formatUser(data.last_editor ?? data.lastEditor) },
-        { dataField: 'detail', caption: 'Detalle formula', visible: false },
-        {
-          caption: 'Acciones',
-          width: 190,
-          allowFiltering: false,
-          allowExporting: false,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Detalle formula', icon: 'mdi mdi-file-document-edit', onClick: () => onModalOpen(data) }))
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-danger ms-1', title: 'Imprimir PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openMagistralesRecordPdf(buildMagistralesRows.magistralFormula(data)) }))
-            container.append(DxButton({ className: 'btn btn-xs btn-soft-info ms-1', title: 'Historial de actualizaciones', icon: 'mdi mdi-history', onClick: () => onHistoryOpen(data) }))
-          }
+          key: 'codigo', label: 'Codigo', field: 'article.code', width: '140px',
+          filter: { type: 'text', field: 'article.code' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar formula">
+              {row.article?.code || '-'}
+            </a>
+          ),
         },
         {
-          dataField: 'status',
-          caption: 'Estado',
-          dataType: 'boolean',
-          visible: false,
-          width: 95,
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onStatusChange(data)} />)
-          }
+          key: 'articulo', label: 'Articulo', field: 'article.name',
+          filter: { type: 'text', field: 'article.name' },
+        },
+        {
+          key: 'fecha_edicion', label: 'F. ultima edicion', field: 'last_edited_at', width: '155px', nowrap: true,
+          filter: { type: 'date', field: 'last_edited_at' },
+          render: (row) => formatDateTime(row.last_edited_at),
+        },
+        {
+          key: 'usuario_edicion', label: 'Usuario ult. edicion', sortable: false,
+          render: (row) => formatUser(row.last_editor ?? row.lastEditor),
+        },
+        {
+          key: 'detalle', label: 'Detalle formula', field: 'detail', visible: false,
+        },
+        {
+          key: 'estado', label: 'Estado', field: 'status', width: '110px',
+          filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => {
+            if (row.status === null) return ''
+            return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => onStatusChange(row)} />
+          },
         },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card">
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <a style={{ cursor: 'pointer', fontWeight: 600, color: '#188ae2' }} onClick={() => onModalOpen(row)} title="Editar formula">{row.article?.code || '-'}</a>
+              <p className="mb-0" style={{ color: 'var(--vd-ink)' }}>{row.article?.name}</p>
+            </div>
+            {row.status !== null && (
+              <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>
+            )}
+          </div>
+          <small className="text-muted d-block mt-2">
+            {formatDateTime(row.last_edited_at) || 'Sin editar'} · {formatUser(row.last_editor ?? row.lastEditor) || 'Sin usuario'}
+          </small>
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal modalRef={modalRef} title='Detalle formula' size='xl' onSubmit={onSave} btnSubmitText='Guardar'>
       <div className='row'>
         <input ref={idRef} hidden />
-        <div className='col-md-8 mb-3'>
-          <label className='form-label'>Articulo</label>
-          <select ref={articleRef} className='form-control' required disabled={isEditing}>
-            <option value=''>Seleccione</option>
-            {formulaArticles.map(row => <option key={`mag-formula-article-${row.id}`} value={row.id}>{row.code} - {row.name}</option>)}
-          </select>
-        </div>
+        <VdSelect
+          label='Articulo'
+          col='col-md-8'
+          required
+          disabled={isEditing}
+          value={selectedArticleId}
+          onChange={setSelectedArticleId}
+          options={formulaArticles.map(row => ({ value: `${row.id}`, label: `${row.code} - ${row.name}` }))}
+          placeholder='-- Seleccionar --'
+        />
         <div className='col-md-4 mb-3'>
           <label className='form-label'>Motivo</label>
           <input ref={changeReasonRef} className='form-control' placeholder={isEditing ? 'Actualizacion de formula' : 'Creacion de formula'} />
@@ -349,7 +389,7 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
                   <th style={{ width: 130 }}>Codigo</th>
                   <th style={{ minWidth: 240 }}>Articulo</th>
                   <th style={{ width: 110 }}>Cantidad</th>
-                  <th style={{ width: 110 }}>Prese.</th>
+                  <th style={{ minWidth: 150 }}>Prese.</th>
                   <th style={{ width: 125 }}>Cantidad Total</th>
                   <th style={{ width: 110 }}>Precio</th>
                   <th style={{ width: 110 }}>Subtotal</th>
@@ -365,13 +405,25 @@ const Formulas = ({ moduleTitle = 'Magistrales - Formulas' }) => {
                     <tr key={item.uid}>
                       <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.total_units} onChange={(e) => updateItem(item.uid, 'total_units', e.target.value)} /></td>
                       <td><input className='form-control form-control-sm' value={item.code} onChange={(e) => updateItem(item.uid, 'code', e.target.value)} /></td>
-                      <td><select className='form-control form-control-sm' value={item.article_id} onChange={(e) => updateItem(item.uid, 'article_id', e.target.value)}><option value=''>Seleccione</option>{inputArticles.map(article => <option key={`formula-item-article-${article.id}`} value={article.id}>{article.code} - {article.name}</option>)}</select></td>
+                      <td>
+                        <VdSelect
+                          noMargin
+                          value={item.article_id}
+                          onChange={(value) => updateItem(item.uid, 'article_id', value)}
+                          options={inputArticles.map(article => ({ value: `${article.id}`, label: `${article.code} - ${article.name}` }))}
+                          placeholder='Seleccione'
+                        />
+                      </td>
                       <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => updateItem(item.uid, 'quantity', e.target.value)} /></td>
                       <td>
-                        <select className='form-control form-control-sm' value={item.presentation} disabled={!item.article_id} onChange={(e) => updateItem(item.uid, 'presentation', e.target.value)}>
-                          <option value=''>Seleccione</option>
-                          {presentationOptions.map(option => <option key={`formula-item-presentation-${item.uid}-${option.value}`} value={option.value}>{option.label}</option>)}
-                        </select>
+                        <VdSelect
+                          noMargin
+                          disabled={!item.article_id}
+                          value={item.presentation}
+                          onChange={(value) => updateItem(item.uid, 'presentation', value)}
+                          options={presentationOptions}
+                          placeholder='Seleccione'
+                        />
                       </td>
                       <td><input className='form-control form-control-sm' type='number' min='0' step='0.001' value={item.total_quantity} onChange={(e) => updateItem(item.uid, 'total_quantity', e.target.value)} /></td>
                       <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.unit_price} disabled /></td>

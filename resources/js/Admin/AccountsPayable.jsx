@@ -2,16 +2,15 @@ import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
-import Modal from '../Components/Adminto/Modal';
-import DxButton from '../Components/dx/DxButton';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
+import Modal from '@Adminto/Modal';
+import Swal from 'sweetalert2';
 import AccountsPayableRest from '../Actions/Admin/AccountsPayableRest';
 import { scopedPermission } from '../Utils/permissionScope';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 import {
   getPaymentStatusLabel,
   paymentStatusOptions,
-  toLookup,
 } from '../Utils/statusLabels';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 
@@ -33,26 +32,26 @@ const formatDate = (value) => value?.toString?.().slice?.(0, 10) || value || '-'
 const fileUrl = (filename) => filename ? `/api/${accountsPayableRest.path}/payments/media/${filename}` : null
 
 const AccountsPayable = ({ moduleTitle = 'Cuentas por pagar' }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const paymentModalRef = useRef()
 
   const amountRef = useRef()
   const paymentDateRef = useRef()
-  const paymentMethodRef = useRef()
   const bankRef = useRef()
   const operationNumberRef = useRef()
   const paymentFileRef = useRef()
   const observationsRef = useRef()
 
   const [selectedRow, setSelectedRow] = useState(null)
+  const [paymentMethod, setPaymentMethod] = useState('Transferencia')
 
-  const refreshGrid = () => $(gridRef.current).dxDataGrid('instance').refresh()
+  const refresh = () => tableRef.current?.refresh()
 
   const resetPaymentForm = (row = null) => {
     if (amountRef.current) amountRef.current.value = row ? formatMoney(row.balance_amount) : ''
     if (paymentDateRef.current) paymentDateRef.current.value = new Date().toISOString().slice(0, 10)
-    if (paymentMethodRef.current) paymentMethodRef.current.value = 'Transferencia'
+    setPaymentMethod('Transferencia')
     if (bankRef.current) bankRef.current.value = ''
     if (operationNumberRef.current) operationNumberRef.current.value = ''
     if (observationsRef.current) observationsRef.current.value = ''
@@ -76,10 +75,15 @@ const AccountsPayable = ({ moduleTitle = 'Cuentas por pagar' }) => {
     e.preventDefault()
     if (!selectedRow) return
 
+    if (!paymentMethod) {
+      Swal.fire({ icon: 'warning', title: 'Falta tipo de pago', text: 'Selecciona un tipo de pago.', confirmButtonText: 'Entendido' })
+      return
+    }
+
     const formData = new FormData()
     formData.append('amount', amountRef.current?.value || '')
     formData.append('payment_date', paymentDateRef.current?.value || '')
-    formData.append('payment_method', paymentMethodRef.current?.value || '')
+    formData.append('payment_method', paymentMethod || '')
     formData.append('bank', bankRef.current?.value || '')
     formData.append('operation_number', operationNumberRef.current?.value || '')
     formData.append('observations', observationsRef.current?.value || '')
@@ -92,96 +96,91 @@ const AccountsPayable = ({ moduleTitle = 'Cuentas por pagar' }) => {
 
     setSelectedRow(result.data)
     $(paymentModalRef.current).modal('hide')
-    refreshGrid()
+    refresh()
+  }
+
+  const rowActions = (row) => {
+    const list = [
+      { icon: 'mdi mdi-eye', title: 'Ver detalle', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onViewDetail(r) },
+      { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir PDF', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.accountsPayable(r)) },
+    ]
+    if (row?.status && Number(row?.balance_amount || 0) > 0) {
+      list.push({ icon: 'mdi mdi-cash-plus', title: 'Registrar pago', bg: '#e6f7ee', color: '#1b9e6d', onClick: (r) => onOpenPayment(r) })
+    }
+    return list
   }
 
   return (<>
-    <Table
-      gridRef={gridRef}
-      title={moduleTitle}
+    <VdTable
+      ref={tableRef}
       rest={accountsPayableRest}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: refreshGrid
-          }
-        });
-      }}
-      pageSize={25}
+      icon="mdi mdi-cash-multiple"
+      title={moduleTitle}
+      unit="cuentas"
+      defaultSort={{ field: 'id', desc: true }}
+      defaultPageSize={25}
+      searchFields={['code', 'purchase_receipt_code', 'purchase_order_code', 'supplier.business_name', 'document_type', 'series', 'sequence', 'payment_condition', 'currency']}
+      searchPlaceholder="Buscar por codigo, proveedor, OC…"
+      emptyText="No se encontraron cuentas por pagar."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refresh}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
-        { dataField: 'id', caption: 'ID', width: 80 },
+        { key: 'id', label: 'ID', field: 'id', width: '80px', filter: { type: 'number' } },
         {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: 130,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.code, () => onViewDetail(data), 'Ver detalle')
+          key: 'code', label: 'Codigo', field: 'code', width: '130px', filter: { type: 'text' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onViewDetail(row)} title="Ver detalle">
+              {row.code || '-'}
+            </a>
+          ),
         },
-        { dataField: 'purchase_receipt_code', caption: 'Recepcion', width: 130 },
-        { dataField: 'purchase_order_code', caption: 'OC', width: 130 },
-        { dataField: 'supplier.business_name', caption: 'Proveedor', minWidth: 220 },
-        { dataField: 'document_type', caption: 'Tipo doc', width: 100 },
-        { dataField: 'series', caption: 'Serie', width: 90 },
-        { dataField: 'sequence', caption: 'Secuencia', width: 110 },
-        { dataField: 'issue_date', caption: 'F. emision', width: 110, dataType: 'date' },
-        { dataField: 'due_date', caption: 'F. vcto', width: 110, dataType: 'date' },
-        { dataField: 'payment_condition', caption: 'Condicion', width: 100 },
-        { dataField: 'currency', caption: 'Moneda', width: 90 },
-        { dataField: 'total', caption: 'Total', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        { dataField: 'paid_amount', caption: 'Pagado', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        { dataField: 'balance_amount', caption: 'Saldo', width: 110, dataType: 'number', format: { type: 'fixedPoint', precision: 2 } },
-        { dataField: 'payment_status', caption: 'Estado pago', width: 110, lookup: toLookup(paymentStatusOptions) },
+        { key: 'recepcion', label: 'Recepcion', field: 'purchase_receipt_code', width: '130px', filter: { type: 'text' } },
+        { key: 'oc', label: 'OC', field: 'purchase_order_code', width: '130px', filter: { type: 'text' } },
+        { key: 'proveedor', label: 'Proveedor', field: 'supplier.business_name', filter: { type: 'text' } },
+        { key: 'tipo_doc', label: 'Tipo doc', field: 'document_type', width: '100px', filter: { type: 'text' } },
+        { key: 'serie', label: 'Serie', field: 'series', width: '90px', filter: { type: 'text' } },
+        { key: 'secuencia', label: 'Secuencia', field: 'sequence', width: '110px', filter: { type: 'text' } },
+        { key: 'f_emision', label: 'F. emision', field: 'issue_date', width: '110px', filter: { type: 'date' }, render: (row) => formatDate(row.issue_date) },
+        { key: 'f_vcto', label: 'F. vcto', field: 'due_date', width: '110px', filter: { type: 'date' }, render: (row) => formatDate(row.due_date) },
+        { key: 'condicion', label: 'Condicion', field: 'payment_condition', width: '100px', filter: { type: 'text' } },
+        { key: 'moneda', label: 'Moneda', field: 'currency', width: '90px', filter: { type: 'text' } },
+        { key: 'total', label: 'Total', field: 'total', width: '110px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.total) },
+        { key: 'pagado', label: 'Pagado', field: 'paid_amount', width: '110px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.paid_amount) },
+        { key: 'saldo', label: 'Saldo', field: 'balance_amount', width: '110px', align: 'right', filter: { type: 'number' }, render: (row) => formatMoney(row.balance_amount) },
         {
-          dataField: 'installments.id',
-          caption: 'Cuotas',
-          width: 90,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => {
-            container.text((data?.installments ?? []).length || 0)
-          }
+          key: 'estado_pago', label: 'Estado pago', field: 'payment_status', width: '110px',
+          filter: { type: 'select', options: paymentStatusOptions },
+          render: (row) => getPaymentStatusLabel(row.payment_status),
         },
         {
-          dataField: 'payments.id',
-          caption: 'Pagos',
-          width: 90,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => {
-            container.text((data?.payments ?? []).length || 0)
-          }
+          key: 'cuotas', label: 'Cuotas', field: 'installments', sortable: false, align: 'right', width: '90px', nowrap: true,
+          render: (row) => (row.installments ?? []).length || 0,
         },
         {
-          caption: 'Acciones',
-          width: 180,
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Ver detalle',
-              icon: 'mdi mdi-eye',
-              onClick: () => onViewDetail(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger ms-1',
-              title: 'Imprimir PDF',
-              icon: 'mdi mdi-file-pdf-box',
-              onClick: () => openMagistralesRecordPdf(buildMagistralesRows.accountsPayable(data))
-            }))
-
-            if (data?.status && Number(data?.balance_amount || 0) > 0) {
-              container.append(DxButton({
-                className: 'btn btn-xs btn-soft-success ms-1',
-                title: 'Registrar pago',
-                icon: 'mdi mdi-cash-plus',
-                onClick: () => onOpenPayment(data)
-              }))
-            }
-          },
-          allowFiltering: false,
-          allowExporting: false
-        }
+          key: 'pagos', label: 'Pagos', field: 'payments', sortable: false, align: 'right', width: '90px', nowrap: true,
+          render: (row) => (row.payments ?? []).length || 0,
+        },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onViewDetail(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.code}</p>
+              <small className="text-muted">{row.supplier?.business_name || '-'}</small>
+            </div>
+            <span className="badge badge-soft-primary">{getPaymentStatusLabel(row.payment_status)}</span>
+          </div>
+          <div className="d-flex justify-content-between mt-2">
+            <small className="text-muted">Total: {formatMoney(row.total)}</small>
+            <small className="text-muted">Saldo: {formatMoney(row.balance_amount)}</small>
+          </div>
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal modalRef={modalRef} title='Detalle de cuenta por pagar' size='xl' hideFooter>
@@ -322,14 +321,15 @@ const AccountsPayable = ({ moduleTitle = 'Cuentas por pagar' }) => {
           <label className='form-label'>Fecha de pago</label>
           <input ref={paymentDateRef} type='date' className='form-control' required />
         </div>
-        <div className='col-md-4 mb-3'>
-          <label className='form-label'>Tipo de pago</label>
-          <select ref={paymentMethodRef} className='form-control' required>
-            {paymentMethodOptions.map(option => (
-              <option key={`accounts-payable-payment-method-${option}`} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
+        <VdSelect
+          label='Tipo de pago'
+          col='col-md-4'
+          required
+          value={paymentMethod}
+          onChange={setPaymentMethod}
+          options={paymentMethodOptions.map(option => ({ value: option, label: option }))}
+          placeholder='-- Seleccionar --'
+        />
         <div className='col-md-6 mb-3'>
           <label className='form-label'>Banco</label>
           <input ref={bankRef} type='text' className='form-control' />

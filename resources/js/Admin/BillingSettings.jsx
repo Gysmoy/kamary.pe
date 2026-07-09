@@ -47,8 +47,6 @@ const BillingSettings = ({ can }) => {
   const paymentAccountsLinesRef = useRef()
   const certificateDueRef = useRef()
   const facturadorBaseUrlRef = useRef()
-  const facturadorAuthModeRef = useRef()
-  const facturadorTokenRef = useRef()
   const facturadorApiEmailRef = useRef()
   const facturadorApiPasswordRef = useRef()
   const logoFileRef = useRef()
@@ -159,8 +157,6 @@ const BillingSettings = ({ can }) => {
     paymentAccountsLinesRef.current.value = (paymentAccounts?.lines ?? []).join('\n')
     certificateDueRef.current.value = business?.certificate_due?.toString?.().slice?.(0, 10) ?? ''
     facturadorBaseUrlRef.current.value = business?.facturador_base_url ?? ''
-    facturadorAuthModeRef.current.value = business?.facturador_auth_mode ?? ''
-    facturadorTokenRef.current.value = business?.facturador_token ?? ''
     facturadorApiEmailRef.current.value = business?.facturador_api_email ?? ''
     facturadorApiPasswordRef.current.value = business?.facturador_api_password ?? ''
     if (logoFileRef.current) logoFileRef.current.value = ''
@@ -210,8 +206,7 @@ const BillingSettings = ({ can }) => {
       },
       certificate_due: certificateDueRef.current.value || null,
       facturador_base_url: facturadorBaseUrlRef.current.value.trim(),
-      facturador_auth_mode: facturadorAuthModeRef.current.value,
-      facturador_token: facturadorTokenRef.current.value.trim(),
+      facturador_auth_mode: (facturadorApiEmailRef.current.value.trim() && facturadorApiPasswordRef.current.value) ? 'login' : '',
       facturador_api_email: facturadorApiEmailRef.current.value.trim(),
       facturador_api_password: facturadorApiPasswordRef.current.value,
     }
@@ -581,15 +576,12 @@ const BillingSettings = ({ can }) => {
         <div className='col-md-4 mb-3'><label className='form-label'>Cuenta detracción</label><input ref={detractionAccountRef} className='form-control' /><small className='text-muted'>Solo si emites facturas con detracción.</small></div>
         <div className='col-12'>
           <hr className='my-2' />
-          <h5 className='mb-1'>Conexión al facturador</h5>
-          <small className='text-muted'>Cada empresa puede apuntar a su propio facturador (URL y credenciales). Si se deja vacío se usa la conexión global del .env.</small>
+          <h5 className='mb-1'>Facturador interno de esta empresa</h5>
+          <small className='text-muted'>Cada empresa usa su propia instalación del facturador. Si dejas todo vacío, se usa la del servidor (.env).</small>
         </div>
-        <div className='col-md-6 mb-3'><label className='form-label'>URL del facturador (API)</label><input ref={facturadorBaseUrlRef} className='form-control' placeholder='https://empresa.facturador.host/api' /></div>
-        <div className='col-md-2 mb-3'><label className='form-label'>Auth</label><select ref={facturadorAuthModeRef} className='form-control'><option value=''>Global</option><option value='token'>Token</option><option value='login'>Login</option></select></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Token API</label><input ref={facturadorTokenRef} className='form-control' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Email API (login)</label><input ref={facturadorApiEmailRef} className='form-control' /></div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Clave API (login)</label><input ref={facturadorApiPasswordRef} type='password' className='form-control' autoComplete='new-password' /></div>
-        <div className='col-md-4 mb-3'></div>
+        <div className='col-md-6 mb-3'><label className='form-label'>URL del facturador</label><input ref={facturadorBaseUrlRef} className='form-control' placeholder='https://mi-facturador.host/api' /></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Usuario del facturador</label><input ref={facturadorApiEmailRef} className='form-control' placeholder='admin@correo.com' /></div>
+        <div className='col-md-3 mb-3'><label className='form-label'>Clave del facturador</label><input ref={facturadorApiPasswordRef} type='password' className='form-control' autoComplete='new-password' /></div>
         <div className='col-12'>
           <hr className='my-2' />
           <h5 className='mb-1'>Datos bancarios para comprobantes</h5>

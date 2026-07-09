@@ -3,16 +3,14 @@ import { createRoot } from 'react-dom/client';
 import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
-import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
+import Modal from '@Adminto/Modal';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import SuppliersRest from '../Actions/Admin/SuppliersRest';
 import { scopedPermission } from '../Utils/permissionScope';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const suppliersRest = new SuppliersRest()
 
@@ -69,7 +67,7 @@ const parseFileRows = async (file) => {
 }
 
 const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const importModalRef = useRef()
   const importFileRef = useRef()
@@ -91,7 +89,6 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
   const businessLineRef = useRef()
   const billingTypeRef = useRef()
   const creditTypeRef = useRef()
-  const paymentConditionRef = useRef()
   const bankRef = useRef()
   const bankAccountCciRef = useRef()
   const paymentSystemRef = useRef()
@@ -101,6 +98,7 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [isSearchingRuc, setIsSearchingRuc] = useState(false)
   const [lastLookedRuc, setLastLookedRuc] = useState('')
+  const [paymentCondition, setPaymentCondition] = useState('')
   const [isImporting, setIsImporting] = useState(false)
   const [importRows, setImportRows] = useState([])
   const [importHeaders, setImportHeaders] = useState([])
@@ -115,6 +113,8 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
     payment_condition: '',
     status: '',
   })
+
+  const refresh = () => tableRef.current?.refresh()
 
   const clearSupplierForm = () => {
     idRef.current.value = ''
@@ -133,7 +133,7 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
     businessLineRef.current.value = ''
     billingTypeRef.current.value = ''
     creditTypeRef.current.value = ''
-    if (paymentConditionRef.current) paymentConditionRef.current.value = ''
+    setPaymentCondition('')
     bankRef.current.value = ''
     bankAccountCciRef.current.value = ''
     paymentSystemRef.current.value = ''
@@ -208,7 +208,7 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
       businessLineRef.current.value = data.business_line ?? ''
       billingTypeRef.current.value = data.billing_type ?? ''
       creditTypeRef.current.value = data.credit_type ?? ''
-      if (paymentConditionRef.current) paymentConditionRef.current.value = data.payment_condition ?? ''
+      setPaymentCondition(data.payment_condition ?? '')
       bankRef.current.value = data.bank ?? ''
       bankAccountCciRef.current.value = data.bank_account_cci ?? ''
       paymentSystemRef.current.value = data.payment_system ?? ''
@@ -239,7 +239,7 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
       business_line: businessLineRef.current.value.trim(),
       billing_type: billingTypeRef.current.value.trim(),
       credit_type: creditTypeRef.current.value.trim(),
-      payment_condition: paymentConditionRef.current?.value || '',
+      payment_condition: paymentCondition || '',
       bank: bankRef.current.value.trim(),
       bank_account_cci: bankAccountCciRef.current.value.trim(),
       payment_system: paymentSystemRef.current.value.trim(),
@@ -250,14 +250,14 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
     const result = await suppliersRest.save(request)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
     $(modalRef.current).modal('hide')
   }
 
   const onBooleanChange = async ({ id, field, value }) => {
     const result = await suppliersRest.boolean({ id, field, value })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -272,7 +272,7 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
     if (!isConfirmed) return
     const result = await suppliersRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
   }
 
   const onImportModalOpen = () => {
@@ -365,7 +365,7 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
     setIsImporting(false)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
     $(importModalRef.current).modal('hide')
 
     const errorsPreview = (result.errors || []).slice(0, 5).join('\n')
@@ -395,125 +395,107 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
     status: mapping.status ? (row[mapping.status] ?? '') : '',
   }))
 
+  const rowActions = (row) => [
+    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+    { icon: 'mdi mdi-delete', title: 'Eliminar proveedor', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+  ]
+
   return (<>
-    <Table
-      gridRef={gridRef}
-      title={moduleTitle}
+    <VdTable
+      ref={tableRef}
       rest={suppliersRest}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'upload',
-            title: 'Importar',
-            hint: 'Importar masivamente',
-            onClick: () => onImportModalOpen()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar proveedor',
-            onClick: () => onModalOpen()
-          }
-        });
-      }}
-      pageSize={25}
+      icon="mdi mdi-truck-delivery"
+      title={moduleTitle}
+      unit="proveedores"
+      defaultSort={{ field: 'business_name', desc: false }}
+      defaultPageSize={25}
+      searchFields={['ruc', 'business_name', 'trade_name', 'address', 'phone', 'mobile', 'contact_phone', 'email_1', 'contact_email', 'bank_account_cci']}
+      searchPlaceholder="Buscar por RUC, razón social, dirección…"
+      emptyText="No se encontraron proveedores."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refresh}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-soft" title="Importar masivamente" onClick={() => onImportModalOpen()}>
+          <i className="mdi mdi-upload"></i> Importar
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen()}>
+          <i className="mdi mdi-plus"></i> Nuevo proveedor
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
-        { dataField: 'id', caption: 'ID', visible: false },
+        { key: 'id', label: 'ID', field: 'id', visible: false },
         {
-          dataField: 'ruc',
-          caption: 'RUC',
-          width: '130px',
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.ruc, () => onModalOpen(data), 'Editar proveedor')
+          key: 'ruc', label: 'RUC', field: 'ruc', width: '130px', filter: { type: 'text' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar proveedor">
+              {row.ruc || '-'}
+            </a>
+          ),
         },
-        { dataField: 'business_name', caption: 'Razon Social', minWidth: 220 },
-        { dataField: 'trade_name', caption: 'Nombre comercial', minWidth: 180, visible: false },
-        { dataField: 'address', caption: 'Direccion', minWidth: 220 },
+        { key: 'business_name', label: 'Razón Social', field: 'business_name', filter: { type: 'text' } },
+        { key: 'trade_name', label: 'Nombre comercial', field: 'trade_name', visible: false, filter: { type: 'text' } },
+        { key: 'address', label: 'Dirección', field: 'address', filter: { type: 'text' } },
         {
-          dataField: 'phone_display',
-          caption: 'Telefono',
-          width: 140,
-          calculateCellValue: (data) => data.phone || data.mobile || data.contact_phone || ''
-        },
-        {
-          dataField: 'email_display',
-          caption: 'Email',
-          minWidth: 180,
-          calculateCellValue: (data) => data.email_1 || data.contact_email || data.email_2 || ''
-        },
-        { dataField: 'bank_account_cci', caption: 'Cuenta / CCI', minWidth: 170 },
-        { dataField: 'contact_name', caption: 'Contacto', minWidth: 160, visible: false },
-        { dataField: 'contact_position', caption: 'Cargo contacto', minWidth: 140, visible: false },
-        { dataField: 'contact_phone', caption: 'Celular contacto', width: 130, visible: false },
-        { dataField: 'contact_email', caption: 'Email contacto', minWidth: 180, visible: false },
-        { dataField: 'business_line', caption: 'Giro del negocio', visible: false },
-        { dataField: 'billing_type', caption: 'Tipo de facturacion', visible: false },
-        { dataField: 'credit_type', caption: 'Tipo de credito', visible: false },
-        { dataField: 'payment_condition', caption: 'Condicion pago', width: 130 },
-        { dataField: 'bank', caption: 'Banco', visible: false },
-        { dataField: 'payment_system', caption: 'Sistema de pago', visible: false },
-        { dataField: 'payment_term_days', caption: 'Dias de pago', width: 110, visible: false },
-        { dataField: 'evaluation', caption: 'Evaluacion', visible: false },
-        {
-          dataField: 'creator.fullname',
-          caption: 'Creado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator))
+          key: 'phone_display', label: 'Teléfono', field: 'phone', width: '140px', sortable: false,
+          filter: { type: 'text', fields: ['phone', 'mobile', 'contact_phone'] },
+          render: (row) => row.phone || row.mobile || row.contact_phone || '',
         },
         {
-          dataField: 'updater.fullname',
-          caption: 'Actualizado por',
-          visible: false,
-          cellTemplate: (container, { data }) => container.text(formatAuditUser(data.updater))
+          key: 'email_display', label: 'Email', field: 'email_1', sortable: false,
+          filter: { type: 'text', fields: ['email_1', 'contact_email', 'email_2'] },
+          render: (row) => row.email_1 || row.contact_email || row.email_2 || '',
+        },
+        { key: 'bank_account_cci', label: 'Cuenta / CCI', field: 'bank_account_cci', filter: { type: 'text' } },
+        { key: 'contact_name', label: 'Contacto', field: 'contact_name', visible: false, sortable: false },
+        { key: 'contact_position', label: 'Cargo contacto', field: 'contact_position', visible: false, sortable: false },
+        { key: 'contact_phone', label: 'Celular contacto', field: 'contact_phone', width: '130px', visible: false, sortable: false },
+        { key: 'contact_email', label: 'Email contacto', field: 'contact_email', visible: false, sortable: false },
+        { key: 'business_line', label: 'Giro del negocio', field: 'business_line', visible: false, sortable: false },
+        { key: 'billing_type', label: 'Tipo de facturacion', field: 'billing_type', visible: false, sortable: false },
+        { key: 'credit_type', label: 'Tipo de credito', field: 'credit_type', visible: false, sortable: false },
+        { key: 'payment_condition', label: 'Condición pago', field: 'payment_condition', width: '130px', filter: { type: 'text' } },
+        { key: 'bank', label: 'Banco', field: 'bank', visible: false, sortable: false },
+        { key: 'payment_system', label: 'Sistema de pago', field: 'payment_system', visible: false, sortable: false },
+        { key: 'payment_term_days', label: 'Dias de pago', field: 'payment_term_days', width: '110px', visible: false, sortable: false },
+        { key: 'evaluation', label: 'Evaluacion', field: 'evaluation', visible: false, sortable: false },
+        {
+          key: 'creador', label: 'Creado por', field: 'creator.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.creator),
         },
         {
-          dataField: 'status',
-          caption: 'Estado',
-          dataType: 'boolean',
-          width: '95px',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-              id: data.id,
-              field: 'status',
-              value: !data.status
-            })} />)
-          }
+          key: 'actualizador', label: 'Actualizado por', field: 'updater.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.updater),
         },
         {
-          caption: 'Acciones',
-          width: '120px',
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar proveedor',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.id)
-            }))
+          key: 'status', label: 'Estado', field: 'status', width: '110px',
+          filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => {
+            if (row.status === null) return ''
+            return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => onBooleanChange({ id: row.id, field: 'status', value: !row.status })} />
           },
-          allowFiltering: false,
-          allowExporting: false
-        }
+        },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onModalOpen(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.business_name}</p>
+              <small className="text-muted">RUC {row.ruc || '-'}</small>
+            </div>
+            {row.status !== null && (
+              <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>
+            )}
+          </div>
+          {row.address && <p className="text-muted mb-0 mt-2" style={{ fontSize: 12 }}>{row.address}</p>}
+          <small className="text-muted d-block mt-2">
+            {(row.phone || row.mobile || row.contact_phone) && <><i className="mdi mdi-phone me-1"></i>{row.phone || row.mobile || row.contact_phone}</>}
+            {(row.email_1 || row.contact_email || row.email_2) && <><i className="mdi mdi-email-outline ms-3 me-1"></i>{row.email_1 || row.contact_email || row.email_2}</>}
+          </small>
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal modalRef={modalRef} title={isEditing ? 'Editar proveedor' : 'Agregar proveedor'} onSubmit={onModalSubmit} size='lg'>
@@ -551,14 +533,15 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
         <InputFormGroup eRef={billingTypeRef} label='Tipo de Facturacion' col='col-md-4' disabled={isSearchingRuc} />
         <InputFormGroup eRef={creditTypeRef} label='Tipo de Credito' col='col-md-4' disabled={isSearchingRuc} />
 
-        <div className='form-group col-md-4 mb-2'>
-          <label className='form-label'>Condicion de pago</label>
-          <select ref={paymentConditionRef} className='form-control' disabled={isSearchingRuc}>
-            <option value=''>No definido</option>
-            <option value='Contado'>Contado</option>
-            <option value='Credito'>Credito</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Condicion de pago'
+          col='col-md-4'
+          disabled={isSearchingRuc}
+          value={paymentCondition}
+          onChange={setPaymentCondition}
+          options={[{ value: 'Contado', label: 'Contado' }, { value: 'Credito', label: 'Credito' }]}
+          placeholder='No definido'
+        />
         <InputFormGroup eRef={paymentSystemRef} label='Sistema de Pago' col='col-md-4' disabled={isSearchingRuc} />
         <InputFormGroup eRef={paymentTermDaysRef} label='Dias de pago' col='col-md-4' type='number' min='0' />
         <InputFormGroup eRef={bankRef} label='Banco' col='col-md-4' disabled={isSearchingRuc} />
@@ -607,17 +590,15 @@ const Suppliers = ({ moduleTitle = 'Proveedores' }) => {
                 ['payment_condition', 'Condicion pago'],
                 ['status', 'Estado'],
               ].map(([key, label]) => (
-                <div className='form-group mb-2' key={key}>
-                  <label className='form-label mb-1'>{label}</label>
-                  <select
-                    className='form-control'
-                    value={mapping[key]}
-                    onChange={(e) => setMapping((old) => ({ ...old, [key]: e.target.value }))}
-                  >
-                    <option value=''>-- No mapear --</option>
-                    {importHeaders.map(header => <option key={`${key}-${header}`} value={header}>{header}</option>)}
-                  </select>
-                </div>
+                <VdSelect
+                  key={key}
+                  label={label}
+                  col='col-12'
+                  value={mapping[key]}
+                  onChange={(value) => setMapping((old) => ({ ...old, [key]: value }))}
+                  options={[{ value: '', label: '-- No mapear --' }, ...importHeaders.map(header => ({ value: header, label: header }))]}
+                  placeholder='-- No mapear --'
+                />
               ))}
             </div>
           </div>

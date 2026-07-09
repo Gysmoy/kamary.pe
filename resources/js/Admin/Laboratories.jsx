@@ -3,16 +3,14 @@ import { createRoot } from 'react-dom/client';
 import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import LaboratoriesRest from '../Actions/Admin/LaboratoriesRest';
 import { scopedPermission } from '../Utils/permissionScope';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const laboratoriesRest = new LaboratoriesRest()
 
@@ -66,7 +64,7 @@ const parseFileRows = async (file) => {
 }
 
 const Laboratories = ({ moduleTitle = 'Laboratorios' }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const importModalRef = useRef()
   const importFileRef = useRef()
@@ -126,14 +124,14 @@ const Laboratories = ({ moduleTitle = 'Laboratorios' }) => {
     const result = await laboratoriesRest.save(request)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(modalRef.current).modal('hide')
   }
 
   const onBooleanChange = async ({ id, field, value }) => {
     const result = await laboratoriesRest.boolean({ id, field, value })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -148,7 +146,7 @@ const Laboratories = ({ moduleTitle = 'Laboratorios' }) => {
     if (!isConfirmed) return
     const result = await laboratoriesRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
   }
 
   const onImportModalOpen = () => {
@@ -223,7 +221,7 @@ const Laboratories = ({ moduleTitle = 'Laboratorios' }) => {
     setIsImporting(false)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    tableRef.current?.refresh()
     $(importModalRef.current).modal('hide')
 
     const errorsPreview = (result.errors || []).slice(0, 5).join('\n')
@@ -395,117 +393,74 @@ const Laboratories = ({ moduleTitle = 'Laboratorios' }) => {
   }))
 
   return (<>
-    <Table
-      gridRef={gridRef}
-      title={moduleTitle}
+    <VdTable
+      ref={tableRef}
       rest={laboratoriesRest}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'upload',
-            title: 'Importar',
-            hint: 'Importar masivamente',
-            onClick: () => onImportModalOpen()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar laboratorio',
-            onClick: () => onModalOpen(null)
-          }
-        });
-      }}
-      pageSize={25}
+      icon="mdi mdi-flask"
+      title={moduleTitle}
+      unit="laboratorios"
+      defaultSort={{ field: 'name', desc: false }}
+      defaultPageSize={25}
+      searchFields={['name', 'code']}
+      searchPlaceholder="Buscar por nombre o codigo…"
+      emptyText="No se encontraron laboratorios."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={() => tableRef.current?.refresh()}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-soft" onClick={() => onImportModalOpen()}>
+          <i className="mdi mdi-upload"></i> Importar
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen(null)}>
+          <i className="mdi mdi-plus"></i> Nuevo laboratorio
+        </button>
+      </>}
+      actions={(row) => [
+        { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+        { icon: 'mdi mdi-layers', title: 'Principios activos', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onPrinciplesOpen(r) },
+        { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+      ]}
       columns={[
         {
-          dataField: 'id',
-          caption: 'ID',
-          visible: false
+          key: 'nombre', label: 'Nombre', field: 'name', filter: { type: 'text' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar laboratorio">
+              {row.name}
+            </a>
+          ),
+        },
+        { key: 'codigo', label: 'Codigo', field: 'code', width: '180px', filter: { type: 'text' } },
+        {
+          key: 'creador', label: 'Creado por', field: 'creator.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.creator),
         },
         {
-          dataField: 'name',
-          caption: 'Nombre',
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.name, () => onModalOpen(data), 'Editar laboratorio')
+          key: 'actualizador', label: 'Actualizado por', field: 'updater.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.updater),
         },
         {
-          dataField: 'code',
-          caption: 'Codigo',
-          width: '180px',
-        },
-        {
-          dataField: 'creator.fullname',
-          caption: 'Creado por',
-          visible: false,
-          cellTemplate: (container, { data }) => {
-            container.text(formatAuditUser(data.creator))
-          }
-        },
-        {
-          dataField: 'updater.fullname',
-          caption: 'Actualizado por',
-          visible: false,
-          cellTemplate: (container, { data }) => {
-            container.text(formatAuditUser(data.updater))
-          }
-        },
-        {
-          dataField: 'status',
-          caption: 'Estado',
-          dataType: 'boolean',
-          width: '100px',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-              id: data.id,
-              field: 'status',
-              value: !data.status
-            })} />)
-          }
-        },
-        {
-          caption: 'Acciones',
-          width: '210px',
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-info',
-              title: 'Principios activos',
-              icon: 'mdi mdi-layers',
-              onClick: () => onPrinciplesOpen(data)
-            }))
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar laboratorio',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.id)
-            }))
+          key: 'estado', label: 'Estado', field: 'status', width: '100px',
+          filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => {
+            if (row.status === null) return ''
+            return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => onBooleanChange({ id: row.id, field: 'status', value: !row.status })} />
           },
-          allowFiltering: false,
-          allowExporting: false
-        }
+        },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onModalOpen(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.name}</p>
+              <small className="text-muted">{row.code}</small>
+            </div>
+            {row.status !== null && (
+              <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>
+            )}
+          </div>
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal modalRef={modalRef} title={isEditing ? 'Editar laboratorio' : 'Agregar laboratorio'} onSubmit={onModalSubmit} size='md'>
@@ -605,20 +560,23 @@ const Laboratories = ({ moduleTitle = 'Laboratorios' }) => {
           {principleImportFileName && <div className='mt-1'><small className='text-muted'>Archivo: {principleImportFileName} ({principleImportRows.length} filas)</small></div>}
         </div>
 
-        <div className='col-md-6 mb-2'>
-          <label className='form-label'>Mapeo: Nombre *</label>
-          <select className='form-select' value={principleMapping.name} onChange={e => setPrincipleMapping(prev => ({ ...prev, name: e.target.value }))}>
-            <option value=''>Sin mapear</option>
-            {principleImportHeaders.map(header => <option key={`p-name-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-6 mb-2'>
-          <label className='form-label'>Mapeo: Estado</label>
-          <select className='form-select' value={principleMapping.status} onChange={e => setPrincipleMapping(prev => ({ ...prev, status: e.target.value }))}>
-            <option value=''>Sin mapear</option>
-            {principleImportHeaders.map(header => <option key={`p-status-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
+        <VdSelect
+          label='Mapeo: Nombre'
+          col='col-md-6'
+          required
+          value={principleMapping.name}
+          onChange={(value) => setPrincipleMapping(prev => ({ ...prev, name: value }))}
+          options={[{ value: '', label: 'Sin mapear' }, ...principleImportHeaders.map(header => ({ value: header, label: header }))]}
+          placeholder='Sin mapear'
+        />
+        <VdSelect
+          label='Mapeo: Estado'
+          col='col-md-6'
+          value={principleMapping.status}
+          onChange={(value) => setPrincipleMapping(prev => ({ ...prev, status: value }))}
+          options={[{ value: '', label: 'Sin mapear' }, ...principleImportHeaders.map(header => ({ value: header, label: header }))]}
+          placeholder='Sin mapear'
+        />
 
         <div className='col-12 mt-2'>
           <h6 className='mb-2'>Vista previa (primeros 5)</h6>
@@ -668,27 +626,31 @@ const Laboratories = ({ moduleTitle = 'Laboratorios' }) => {
           {importFileName && <div className='mt-1'><small className='text-muted'>Archivo: {importFileName} ({importRows.length} filas)</small></div>}
         </div>
 
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Mapeo: Nombre</label>
-          <select className='form-select' value={mapping.name} onChange={e => setMapping(prev => ({ ...prev, name: e.target.value }))}>
-            <option value=''>Sin mapear</option>
-            {importHeaders.map(header => <option key={`name-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Mapeo: Codigo *</label>
-          <select className='form-select' value={mapping.code} onChange={e => setMapping(prev => ({ ...prev, code: e.target.value }))}>
-            <option value=''>Sin mapear</option>
-            {importHeaders.map(header => <option key={`code-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
-        <div className='col-md-4 mb-2'>
-          <label className='form-label'>Mapeo: Estado</label>
-          <select className='form-select' value={mapping.status} onChange={e => setMapping(prev => ({ ...prev, status: e.target.value }))}>
-            <option value=''>Sin mapear</option>
-            {importHeaders.map(header => <option key={`status-${header}`} value={header}>{header}</option>)}
-          </select>
-        </div>
+        <VdSelect
+          label='Mapeo: Nombre'
+          col='col-md-4'
+          value={mapping.name}
+          onChange={(value) => setMapping(prev => ({ ...prev, name: value }))}
+          options={[{ value: '', label: 'Sin mapear' }, ...importHeaders.map(header => ({ value: header, label: header }))]}
+          placeholder='Sin mapear'
+        />
+        <VdSelect
+          label='Mapeo: Codigo'
+          col='col-md-4'
+          required
+          value={mapping.code}
+          onChange={(value) => setMapping(prev => ({ ...prev, code: value }))}
+          options={[{ value: '', label: 'Sin mapear' }, ...importHeaders.map(header => ({ value: header, label: header }))]}
+          placeholder='Sin mapear'
+        />
+        <VdSelect
+          label='Mapeo: Estado'
+          col='col-md-4'
+          value={mapping.status}
+          onChange={(value) => setMapping(prev => ({ ...prev, status: value }))}
+          options={[{ value: '', label: 'Sin mapear' }, ...importHeaders.map(header => ({ value: header, label: header }))]}
+          placeholder='Sin mapear'
+        />
 
         <div className='col-12 mt-2'>
           <h6 className='mb-2'>Vista previa (primeros 5)</h6>

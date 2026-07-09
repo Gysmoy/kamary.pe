@@ -2,13 +2,11 @@ import React, { useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import BaseAdminto from '@Adminto/Base'
 import CreateReactScript from '../Utils/CreateReactScript'
-import Table from '../Components/Adminto/Table'
-import Modal from '../Components/Adminto/Modal'
-import DxButton from '../Components/dx/DxButton'
+import VdTable from '@Adminto/VdTable'
+import Modal from '@Adminto/Modal'
 import InputFormGroup from '@Adminto/form/InputFormGroup'
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup'
 import BusinessesRest from '../Actions/Admin/BusinessesRest'
-import renderGridEditLink from '../Utils/renderGridEditLink'
 
 const businessesRest = new BusinessesRest()
 
@@ -25,13 +23,15 @@ const formatAuditUser = (user) => {
 }
 
 const Businesses = ({ can }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const idRef = useRef()
   const nameRef = useRef()
   const descriptionRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
+
+  const refresh = () => tableRef.current?.refresh()
 
   const onModalOpen = (data) => {
     setIsEditing(!!data?.id)
@@ -53,7 +53,7 @@ const Businesses = ({ can }) => {
     const result = await businessesRest.save(request)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
     $(modalRef.current).modal('hide')
   }
 
@@ -73,92 +73,82 @@ const Businesses = ({ can }) => {
       )}
     </div>
 
-    <Table
-      gridRef={gridRef}
-      title='Empresas'
+    <VdTable
+      ref={tableRef}
       rest={businessesRest}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        })
-      }}
-      pageSize={25}
-      columns={[
-        {
-          dataField: 'id',
-          caption: 'ID',
-          visible: false
-        },
-        {
-          dataField: 'business_key',
-          caption: 'Grupo',
-          width: 130,
-          cellTemplate: (container, { data }) => {
-            const label = data.business_key === 'kamary_medicals' ? 'Kamary Medicals' : 'Kamary Peru'
-            const color = data.business_key === 'kamary_medicals' ? 'success' : 'primary'
-            container.html(`<span class="badge bg-${color}-subtle text-${color}">${label}</span>`)
-          }
-        },
-        {
-          dataField: 'name',
-          caption: 'Nombre',
-          minWidth: 220,
-          cellTemplate: (container, { data }) => renderGridEditLink(container, data?.name, () => onModalOpen(data), 'Editar empresa')
-        },
-        {
-          dataField: 'description',
-          caption: 'Descripcion',
-          minWidth: 280
-        },
-        {
-          dataField: 'creator.fullname',
-          caption: 'Creado por',
-          visible: false,
-          cellTemplate: (container, { data }) => {
-            container.text(formatAuditUser(data.creator))
-          }
-        },
-        {
-          dataField: 'updater.fullname',
-          caption: 'Actualizado por',
-          visible: false,
-          cellTemplate: (container, { data }) => {
-            container.text(formatAuditUser(data.updater))
-          }
-        },
-        {
-          dataField: 'status',
-          caption: 'Estado',
-          width: '100px',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            const status = data.status == 1 ? 'Activo' : 'Inactivo'
-            const color = data.status == 1 ? 'success' : 'secondary'
-            container.html(`<span class="badge bg-${color}-subtle text-${color}">${status}</span>`)
-          }
-        },
-        {
-          caption: 'Acciones',
-          width: '90px',
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-          },
-          allowFiltering: false,
-          allowExporting: false
-        }
+      icon="mdi mdi-domain"
+      title="Empresas"
+      unit="empresas"
+      defaultSort={{ field: 'name', desc: false }}
+      defaultPageSize={25}
+      searchFields={['name', 'description', 'business_key']}
+      searchPlaceholder="Buscar por nombre o descripción…"
+      emptyText="No se encontraron empresas."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar tabla" onClick={refresh}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+      </>}
+      actions={(row) => [
+        { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
       ]}
+      columns={[
+        { key: 'id', label: 'ID', field: 'id', visible: false },
+        {
+          key: 'grupo', label: 'Grupo', field: 'business_key', width: '130px',
+          filter: {
+            type: 'select',
+            options: [
+              { value: 'kamary_medicals', label: 'Kamary Medicals' },
+              { value: 'kamary_peru', label: 'Kamary Peru' },
+            ],
+          },
+          render: (row) => {
+            const label = row.business_key === 'kamary_medicals' ? 'Kamary Medicals' : 'Kamary Peru'
+            const color = row.business_key === 'kamary_medicals' ? 'success' : 'primary'
+            return <span className={`badge bg-${color}-subtle text-${color}`}>{label}</span>
+          },
+        },
+        {
+          key: 'nombre', label: 'Nombre', field: 'name', filter: { type: 'text' },
+          render: (row) => (
+            <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar empresa">
+              {row.name}
+            </a>
+          ),
+        },
+        { key: 'descripcion', label: 'Descripción', field: 'description', filter: { type: 'text' }, muted: true },
+        {
+          key: 'creador', label: 'Creado por', field: 'creator.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.creator),
+        },
+        {
+          key: 'actualizador', label: 'Actualizado por', field: 'updater.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.updater),
+        },
+        {
+          key: 'estado', label: 'Estado', field: 'status', width: '100px',
+          filter: { type: 'select', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => {
+            const status = row.status == 1 ? 'Activo' : 'Inactivo'
+            const color = row.status == 1 ? 'success' : 'secondary'
+            return <span className={`badge bg-${color}-subtle text-${color}`}>{status}</span>
+          },
+        },
+      ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onModalOpen(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.name}</p>
+              <small className="text-muted">{row.business_key === 'kamary_medicals' ? 'Kamary Medicals' : 'Kamary Peru'}</small>
+            </div>
+            <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-secondary'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>
+          </div>
+          {row.description && <p className="text-muted mb-0 mt-2" style={{ fontSize: 12 }}>{row.description}</p>}
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal modalRef={modalRef} title={isEditing ? 'Editar empresa' : 'Agregar empresa'} onSubmit={onModalSubmit} size='md'>
