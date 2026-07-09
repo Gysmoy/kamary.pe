@@ -30,7 +30,7 @@ class SeriesController extends Controller
         $validated = Validator::make($request->all(), [
             'records' => ['required', 'array', 'min:1'],
             'records.*.establishment_id' => ['required', 'integer', Rule::exists('establishments', 'id')],
-            'records.*.document_type_id' => ['required', 'string', Rule::in(['01', '03', '07'])],
+            'records.*.document_type_id' => ['required', 'string', Rule::in(['01', '03', '07', '09'])],
             'records.*.number' => ['required', 'string', 'max:10'],
         ])->validate();
 
