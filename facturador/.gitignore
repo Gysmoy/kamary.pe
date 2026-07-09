@@ -24,6 +24,7 @@
 /storage/framework/views/*
 /storage/framework/.composer_lock_hash_*
 /docker-data/
+/docker-data2/
 /tmp/
 
 # Legacy frontend artifacts removed from the backend-only billing service.

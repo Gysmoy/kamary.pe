@@ -117,6 +117,10 @@ services:
     networks:
       - app-network-kamary
 
+  # ============================================================
+  # FACTURADOR INSTANCIA 1 (conexion global del ERP: http://facturador-nginx)
+  # Una instancia del facturador = UNA empresa (monoempresa).
+  # ============================================================
   facturador-app:
     build:
       context: ./facturador
@@ -142,9 +146,11 @@ services:
       DB_PASSWORD: ${FACTURADOR_DB_PASSWORD:-facturador}
       AUTO_RUN_COMPOSER_INSTALL: "false"
       AUTO_RUN_STORAGE_LINK: "true"
-      AUTO_RUN_MIGRATIONS: "false"
+      AUTO_RUN_MIGRATIONS: "true"
       AUTO_RUN_DB_CLEANUP: "false"
-      AUTO_RUN_SEEDERS: "false"
+      AUTO_RUN_SEEDERS: "true"
+      SEED_DEMO_DATA: "false"
+      SEED_COMPANY_DEFAULTS: "false"
       AUTO_RUN_OPTIMIZE: "true"
       AUTO_RUN_OPTIMIZE_CLEAR: "true"
       AUTO_RUN_SMOKE_TESTS: "false"
@@ -159,6 +165,12 @@ services:
       - ./facturador/docker-data/storage/public_uploads:/var/www/html/storage/app/public/uploads
       - ./facturador/docker-data/storage/tenancy:/var/www/html/storage/app/tenancy
       - ./facturador/docker-data/storage/sessions:/var/www/html/storage/framework/sessions
+      # persistencia fiscal: certificados y comprobantes sobreviven al recrear el contenedor
+      - ./facturador/docker-data/storage/certificates:/var/www/html/storage/app/certificates
+      - ./facturador/docker-data/storage/signed:/var/www/html/storage/app/signed
+      - ./facturador/docker-data/storage/unsigned:/var/www/html/storage/app/unsigned
+      - ./facturador/docker-data/storage/pdf:/var/www/html/storage/app/pdf
+      - ./facturador/docker-data/storage/cdr:/var/www/html/storage/app/cdr
     expose:
       - "9000"
     networks:
@@ -196,10 +208,104 @@ services:
     networks:
       - facturador-network
 
+  # ============================================================
+  # FACTURADOR INSTANCIA 2 (segunda empresa)
+  # En el panel de la empresa: URL http://facturador2-nginx
+  # + usuario admin@gmail.com / clave 123456
+  # ============================================================
+  facturador2-app:
+    build:
+      context: ./facturador
+    container_name: facturador2-app
+    restart: unless-stopped
+    depends_on:
+      - facturador2-db
+    env_file:
+      - ./facturador/.env
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: ${FACTURADOR2_APP_KEY:-base64:oDMuBZK3fZUsZfr5zgCCHX+haaRsK7cxnCjfWyKzdLA=}
+      APP_URL_BASE: facturador2-nginx
+      APP_URL: http://facturador2-nginx
+      APP_TIMEZONE: America/Lima
+      TZ: America/Lima
+      FORCE_HTTPS: "false"
+      DB_CONNECTION: mysql
+      DB_HOST: facturador2-db
+      DB_PORT: 3306
+      DB_DATABASE: ${FACTURADOR2_DB_DATABASE:-facturador2}
+      DB_USERNAME: ${FACTURADOR2_DB_USERNAME:-facturador2}
+      DB_PASSWORD: ${FACTURADOR2_DB_PASSWORD:-facturador2}
+      AUTO_RUN_COMPOSER_INSTALL: "false"
+      AUTO_RUN_STORAGE_LINK: "true"
+      AUTO_RUN_MIGRATIONS: "true"
+      AUTO_RUN_DB_CLEANUP: "false"
+      AUTO_RUN_SEEDERS: "true"
+      SEED_DEMO_DATA: "false"
+      SEED_COMPANY_DEFAULTS: "false"
+      AUTO_RUN_OPTIMIZE: "true"
+      AUTO_RUN_OPTIMIZE_CLEAR: "true"
+      AUTO_RUN_SMOKE_TESTS: "false"
+      AUTO_RUN_E2E_DOCUMENT_SMOKE: "false"
+      AUTO_RUN_CONFIG_CACHE: "false"
+      AUTO_RUN_ROUTE_CACHE: "false"
+      AUTO_RUN_VIEW_CACHE: "false"
+      DB_WAIT_MAX_TRIES: 90
+      DB_WAIT_SECONDS: 2
+      MIGRATION_MAX_TRIES: 8
+    volumes:
+      - ./facturador/docker-data2/storage/public_uploads:/var/www/html/storage/app/public/uploads
+      - ./facturador/docker-data2/storage/tenancy:/var/www/html/storage/app/tenancy
+      - ./facturador/docker-data2/storage/sessions:/var/www/html/storage/framework/sessions
+      - ./facturador/docker-data2/storage/certificates:/var/www/html/storage/app/certificates
+      - ./facturador/docker-data2/storage/signed:/var/www/html/storage/app/signed
+      - ./facturador/docker-data2/storage/unsigned:/var/www/html/storage/app/unsigned
+      - ./facturador/docker-data2/storage/pdf:/var/www/html/storage/app/pdf
+      - ./facturador/docker-data2/storage/cdr:/var/www/html/storage/app/cdr
+    expose:
+      - "9000"
+    networks:
+      - facturador2-network
+
+  facturador2-nginx:
+    image: nginx:1.27-alpine
+    container_name: facturador2-nginx
+    restart: unless-stopped
+    depends_on:
+      - facturador2-app
+    expose:
+      - "80"
+    volumes:
+      - ./facturador/docker/nginx/instancia2.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./facturador:/var/www/html
+      - ./facturador/docker-data2/storage/public_uploads:/var/www/html/storage/app/public/uploads:ro
+    networks:
+      - facturador2-network
+      - billing-network
+
+  facturador2-db:
+    image: mysql:8.0
+    container_name: facturador2-db
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_DATABASE: ${FACTURADOR2_DB_DATABASE:-facturador2}
+      MYSQL_USER: ${FACTURADOR2_DB_USERNAME:-facturador2}
+      MYSQL_PASSWORD: ${FACTURADOR2_DB_PASSWORD:-facturador2}
+      MYSQL_ROOT_PASSWORD: ${FACTURADOR2_DB_ROOT_PASSWORD:-facturador2_root}
+      TZ: America/Lima
+    volumes:
+      - facturador2-dbdata:/var/lib/mysql
+    networks:
+      - facturador2-network
+
 networks:
   app-network-kamary:
     driver: bridge
   facturador-network:
+    driver: bridge
+  facturador2-network:
     driver: bridge
   billing-network:
     driver: bridge
@@ -208,6 +314,8 @@ volumes:
   dbdata:
     driver: local
   facturador-dbdata:
+    driver: local
+  facturador2-dbdata:
     driver: local
   storage:
     driver: local
