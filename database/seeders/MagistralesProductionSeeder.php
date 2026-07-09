@@ -49,7 +49,8 @@ class MagistralesProductionSeeder extends Seeder
 
     private function ensureBusiness(): Business
     {
-        return Business::query()->updateOrCreate(
+        // firstOrCreate: no sobreescribir la config fiscal/sync cargada en produccion
+        return Business::query()->firstOrCreate(
             ['business_key' => BusinessScope::KAMARY_PERU],
             [
                 'name' => 'Kamary Peru',
@@ -65,7 +66,8 @@ class MagistralesProductionSeeder extends Seeder
 
     private function ensureBranch(Business $business): BusinessBranch
     {
-        return BusinessBranch::query()->updateOrCreate(
+        // firstOrCreate: el codigo de establecimiento y las series se administran desde el panel
+        return BusinessBranch::query()->firstOrCreate(
             [
                 'business_id' => $business->id,
                 'name' => 'Principal Magistrales',
@@ -90,7 +92,7 @@ class MagistralesProductionSeeder extends Seeder
 
     private function ensureWarehouse(BusinessBranch $branch): Warehouse
     {
-        return Warehouse::query()->updateOrCreate(
+        return Warehouse::query()->firstOrCreate(
             [
                 'business_branch_id' => $branch->id,
                 'name' => 'Almacen Magistrales Principal',

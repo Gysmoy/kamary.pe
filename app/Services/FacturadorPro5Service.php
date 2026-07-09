@@ -985,14 +985,21 @@ class FacturadorPro5Service
         $response = $this->buildClient($requiresAuth)->send($method, $this->makeUrl($endpoint), $options);
 
         if (!$response->successful()) {
-            $message = Arr::get($response->json() ?? [], 'message')
-                ?: Arr::get($response->json() ?? [], 'error')
-                ?: $response->body()
-                ?: 'Error de comunicacion con el facturador';
-            throw new \RuntimeException($message);
+            throw new \RuntimeException($this->providerErrorMessage($response));
         }
 
         return $response->json() ?: [];
+    }
+
+    private function providerErrorMessage($response): string
+    {
+        $message = Arr::get($response->json() ?? [], 'message')
+            ?: Arr::get($response->json() ?? [], 'error')
+            ?: $response->body()
+            ?: 'Error de comunicacion con el facturador';
+
+        // El facturador puede devolver message como array (errores de validacion)
+        return is_array($message) ? json_encode($message, JSON_UNESCAPED_UNICODE) : (string) $message;
     }
 
     private function requestMultipart(string $method, string $endpoint, array $fields, array $files, bool $requiresAuth): array
@@ -1013,11 +1020,7 @@ class FacturadorPro5Service
         $response = $client->post($this->makeUrl($endpoint), $fields);
 
         if (!$response->successful()) {
-            $message = Arr::get($response->json() ?? [], 'message')
-                ?: Arr::get($response->json() ?? [], 'error')
-                ?: $response->body()
-                ?: 'Error de comunicacion con el facturador';
-            throw new \RuntimeException($message);
+            throw new \RuntimeException($this->providerErrorMessage($response));
         }
 
         return $response->json() ?: [];

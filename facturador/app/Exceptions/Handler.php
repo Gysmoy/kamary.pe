@@ -101,7 +101,10 @@ class Handler extends ExceptionHandler
                 ->withErrors($errors);
         }
 
-        return $this->errorResponse($errors, 422, $e);
+        // Los consumidores API esperan message como string, no como array de errores
+        $message = collect($errors)->flatten()->implode(' | ') ?: 'Datos invalidos';
+
+        return $this->errorResponse($message, 422, $e);
     }
 
     private function isFrontend(Request $request)
