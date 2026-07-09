@@ -2,18 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
-import Modal from '../Components/Adminto/Modal';
-import ReactAppend from '../Utils/ReactAppend';
-import DxButton from '../Components/dx/DxButton';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
+import Modal from '@Adminto/Modal';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
-import SelectFormGroup from '@Adminto/form/SelectFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import WarehousesRest from '../Actions/Admin/WarehousesRest';
 import { isMagistralesPath } from '../Utils/permissionScope';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 
 const warehousesRest = new WarehousesRest()
 
@@ -30,13 +27,11 @@ const formatAuditUser = (user) => {
 }
 
 const Warehouses = ({ fixedWarehouse = null, sampleWarehouse = null, fixedBusiness = null, defaultBranch = null }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const locationModalRef = useRef()
 
   const idRef = useRef()
-  const businessRef = useRef()
-  const branchRef = useRef()
   const nameRef = useRef()
   const descriptionRef = useRef()
   const locationIdRef = useRef()
@@ -56,12 +51,16 @@ const Warehouses = ({ fixedWarehouse = null, sampleWarehouse = null, fixedBusine
   const fixedBusinessId = fixedBusiness?.id ? `${fixedBusiness.id}` : ''
   const fixedBranchId = defaultBranch?.id ? `${defaultBranch.id}` : ''
 
+  const refresh = () => tableRef.current?.refresh()
+
   const isLockedWarehouse = (warehouse) => {
     const id = `${warehouse?.id ?? ''}`
     return id !== '' && (id === fixedWarehouseId || id === sampleWarehouseId)
   }
   // Etiqueta del almacen fijo segun a que modulo pertenece
   const lockedLabel = (warehouse) => `${warehouse?.id ?? ''}` === sampleWarehouseId ? 'Muestras fijo' : 'Magistrales fijo'
+
+  const locationsCount = (warehouse) => (warehouse?.locations ?? []).filter(item => item.status !== null).length
 
   useEffect(() => {
     const load = async () => {
@@ -129,6 +128,17 @@ const Warehouses = ({ fixedWarehouse = null, sampleWarehouse = null, fixedBusine
   const onModalSubmit = async (e) => {
     e.preventDefault()
 
+    if (!fixedBusinessId) {
+      if (!selectedBusinessId) {
+        Swal.fire({ icon: 'warning', title: 'Falta empresa', text: 'Selecciona una empresa.', confirmButtonText: 'Entendido' })
+        return
+      }
+      if (!selectedBranchId) {
+        Swal.fire({ icon: 'warning', title: 'Falta sede', text: 'Selecciona una sede.', confirmButtonText: 'Entendido' })
+        return
+      }
+    }
+
     const request = {
       id: idRef.current.value || undefined,
       name: nameRef.current.value.trim(),
@@ -139,14 +149,14 @@ const Warehouses = ({ fixedWarehouse = null, sampleWarehouse = null, fixedBusine
     const result = await warehousesRest.save(request)
     if (!result) return
 
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
     $(modalRef.current).modal('hide')
   }
 
   const onBooleanChange = async ({ id, field, value }) => {
     const result = await warehousesRest.boolean({ id, field, value })
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
   }
 
   const onDeleteClicked = async (id) => {
@@ -171,7 +181,7 @@ const Warehouses = ({ fixedWarehouse = null, sampleWarehouse = null, fixedBusine
     if (!isConfirmed) return
     const result = await warehousesRest.delete(id)
     if (!result) return
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
   }
 
   const openLocationsModal = async (warehouse) => {
@@ -207,7 +217,7 @@ const Warehouses = ({ fixedWarehouse = null, sampleWarehouse = null, fixedBusine
     if (!result) return
     setLocations(await warehousesRest.getLocations(selectedWarehouse.id))
     clearLocationForm()
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
   }
 
   const deleteLocation = async (locationId) => {
@@ -224,187 +234,134 @@ const Warehouses = ({ fixedWarehouse = null, sampleWarehouse = null, fixedBusine
     const result = await warehousesRest.deleteLocation(selectedWarehouse.id, locationId)
     if (!result) return
     setLocations(await warehousesRest.getLocations(selectedWarehouse.id))
-    $(gridRef.current).dxDataGrid('instance').refresh()
+    refresh()
   }
 
-  const onBusinessChange = async (e) => {
-    const businessId = e.target.value || ''
-    setSelectedBusinessId(businessId)
-    await loadBranches(businessId)
+  const onBusinessChange = async (businessId) => {
+    const id = businessId || ''
+    setSelectedBusinessId(id)
+    await loadBranches(id)
+  }
+
+  const rowActions = (warehouse) => {
+    if (isLockedWarehouse(warehouse)) return []
+    return [
+      { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+      { icon: 'mdi mdi-map-marker', title: 'Ubicaciones', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openLocationsModal(r) },
+      { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+    ]
   }
 
   return (<>
-    <Table
-      gridRef={gridRef}
-      title='Almacenes'
+    <VdTable
+      ref={tableRef}
       rest={warehousesRest}
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'refresh',
-            hint: 'Refrescar tabla',
-            onClick: () => $(gridRef.current).dxDataGrid('instance').refresh()
-          }
-        });
-        container.unshift({
-          widget: 'dxButton', location: 'after',
-          options: {
-            icon: 'add',
-            title: 'Agregar',
-            hint: 'Agregar almacen',
-            onClick: () => onModalOpen(null)
-          }
-        });
-      }}
-      pageSize={25}
+      icon="mdi mdi-warehouse"
+      title="Almacenes"
+      unit="almacenes"
+      defaultSort={{ field: 'name', desc: false }}
+      defaultPageSize={25}
+      searchFields={['name', 'description', 'branch.name', 'branch.business.name']}
+      searchPlaceholder="Buscar almacén…"
+      searchMobileOnly
+      emptyText="No se encontraron almacenes."
+      headerActions={<>
+        <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refresh}>
+          <i className="mdi mdi-refresh"></i>
+        </button>
+        <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen(null)}>
+          <i className="mdi mdi-plus"></i> Nuevo almacén
+        </button>
+      </>}
+      actions={rowActions}
       columns={[
-        { dataField: 'id', caption: 'ID', visible: false },
         {
-          dataField: 'branch.business.name',
-          caption: 'Empresa',
-          minWidth: 180,
-          visible: false
+          key: 'empresa', label: 'Empresa', field: 'branch.business.name', visible: false, sortable: false,
+          filter: { type: 'text', field: 'branch.business.name' },
         },
         {
-          dataField: 'branch.name',
-          caption: 'Sede',
-          minWidth: 160,
-          visible: false
+          key: 'sede', label: 'Sede', field: 'branch.name', visible: false, sortable: false,
+          filter: { type: 'text', field: 'branch.name' },
         },
         {
-          dataField: 'name',
-          caption: 'Nombre',
-          minWidth: 220,
-          cellTemplate: (container, { data }) => {
-            const locked = isLockedWarehouse(data)
-            $(container).empty()
-            if (!locked) {
-              renderGridEditLink(container, data?.name, () => onModalOpen(data), 'Editar almacen')
-              return
+          key: 'nombre', label: 'Nombre', field: 'name', filter: { type: 'text' },
+          render: (row) => {
+            if (isLockedWarehouse(row)) {
+              return (<div>
+                <span className="fw-semibold" style={{ color: '#188ae2' }}>{row.name}</span>
+                <div><small className="badge badge-soft-primary mt-1">{lockedLabel(row)}</small></div>
+              </div>)
             }
-
-            ReactAppend(container, <div>
-              <span className='fw-semibold text-primary'>{data?.name}</span>
-              <div><small className='badge badge-soft-primary mt-1'>{lockedLabel(data)}</small></div>
-            </div>)
-          }
-        },
-        { dataField: 'description', caption: 'Descripcion', minWidth: 260 },
-        {
-          dataField: 'locations',
-          caption: 'Ubicaciones',
-          width: 120,
-          allowFiltering: false,
-          cellTemplate: (container, { data }) => {
-            container.text((data?.locations ?? []).filter(item => item.status !== null).length)
-          }
-        },
-        {
-          dataField: 'creator.fullname',
-          caption: 'Creado por',
-          visible: false,
-          cellTemplate: (container, { data }) => {
-            container.text(formatAuditUser(data.creator))
-          }
-        },
-        {
-          dataField: 'updater.fullname',
-          caption: 'Actualizado por',
-          visible: false,
-          cellTemplate: (container, { data }) => {
-            container.text(formatAuditUser(data.updater))
-          }
-        },
-        {
-          dataField: 'status',
-          caption: 'Estado',
-          dataType: 'boolean',
-          width: '100px',
-          cellTemplate: (container, { data }) => {
-            $(container).empty()
-            if (data.status === null) return
-            if (isLockedWarehouse(data)) {
-              ReactAppend(container, <span className='badge badge-soft-primary'>Protegido</span>)
-              return
-            }
-            ReactAppend(container, <SwitchFormGroup checked={data.status == 1} onChange={() => onBooleanChange({
-              id: data.id,
-              field: 'status',
-              value: !data.status
-            })} />)
-          }
-        },
-        {
-          caption: 'Acciones',
-          width: '140px',
-          cellTemplate: (container, { data }) => {
-            container.css('text-overflow', 'unset')
-            if (isLockedWarehouse(data)) {
-              container.append('<span class="text-muted small">Sin acciones</span>')
-              return
-            }
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-primary',
-              title: 'Editar',
-              icon: 'mdi mdi-pencil',
-              onClick: () => onModalOpen(data)
-            }))
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-secondary',
-              title: 'Ubicaciones',
-              icon: 'mdi mdi-map-marker',
-              onClick: () => openLocationsModal(data)
-            }))
-
-            container.append(DxButton({
-              className: 'btn btn-xs btn-soft-danger',
-              title: 'Eliminar almacen',
-              icon: 'mdi mdi-delete',
-              onClick: () => onDeleteClicked(data.id)
-            }))
+            return (
+              <a className="admin-grid-edit-link" style={{ cursor: 'pointer', fontWeight: 600 }} onClick={() => onModalOpen(row)} title="Editar almacen">
+                {row.name}
+              </a>
+            )
           },
-          allowFiltering: false,
-          allowExporting: false
-        }
+        },
+        { key: 'descripcion', label: 'Descripción', field: 'description', filter: { type: 'text' }, muted: true },
+        {
+          key: 'ubicaciones', label: 'Ubicaciones', field: 'locations', sortable: false, align: 'right', width: '120px', nowrap: true,
+          render: (row) => <span className="fw-semibold">{locationsCount(row)}</span>,
+        },
+        {
+          key: 'creador', label: 'Creado por', field: 'creator.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.creator),
+        },
+        {
+          key: 'actualizador', label: 'Actualizado por', field: 'updater.fullname', visible: false, sortable: false,
+          render: (row) => formatAuditUser(row.updater),
+        },
+        {
+          key: 'estado', label: 'Estado', field: 'status', width: '110px',
+          filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+          render: (row) => {
+            if (row.status === null) return ''
+            if (isLockedWarehouse(row)) return <span className="badge badge-soft-primary">Protegido</span>
+            return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => onBooleanChange({ id: row.id, field: 'status', value: !row.status })} />
+          },
+        },
       ]}
+      renderCard={(row, actionButtons) => (
+        <div className="vdt-card" onClick={() => onModalOpen(row)}>
+          <div className="d-flex justify-content-between align-items-start" style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.name}</p>
+              <small className="text-muted">{[row.branch?.business?.name, row.branch?.name].filter(Boolean).join(' · ')}</small>
+            </div>
+            {row.status !== null && (isLockedWarehouse(row)
+              ? <span className="badge badge-soft-primary">Protegido</span>
+              : <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>)}
+          </div>
+          {row.description && <p className="text-muted mb-0 mt-2" style={{ fontSize: 12 }}>{row.description}</p>}
+          <small className="text-muted d-block mt-2"><i className="mdi mdi-map-marker me-1"></i>{locationsCount(row)} ubicaciones</small>
+          {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+        </div>
+      )}
     />
 
     <Modal modalRef={modalRef} title={isEditing ? 'Editar almacen' : 'Agregar almacen'} onSubmit={onModalSubmit} size='md'>
       <input ref={idRef} type='hidden' />
       <div className='row' id='warehouse-form-container'>
-        {!fixedBusinessId && <SelectFormGroup
-          eRef={businessRef}
+        {!fixedBusinessId && <VdSelect
           label='Empresa'
           col='col-12'
           required
-          dropdownParent='#warehouse-form-container'
           value={selectedBusinessId}
           onChange={onBusinessChange}
-          effectWith={[selectedBusinessId, businesses.length]}
-        >
-          <option value=''>-- Seleccionar empresa --</option>
-          {businesses.map(item => (
-            <option key={`warehouse-business-${item.id}`} value={item.id}>{item.name}</option>
-          ))}
-        </SelectFormGroup>}
-        {!fixedBusinessId && <SelectFormGroup
-          eRef={branchRef}
+          options={businesses.map(item => ({ value: `${item.id}`, label: item.name }))}
+          placeholder='-- Seleccionar empresa --'
+        />}
+        {!fixedBusinessId && <VdSelect
           label='Sede'
           col='col-12'
           required
-          dropdownParent='#warehouse-form-container'
+          disabled={!selectedBusinessId}
           value={selectedBranchId}
-          onChange={(e) => setSelectedBranchId(e.target.value)}
-          effectWith={[selectedBranchId, branches.length]}
-        >
-          <option value=''>-- Seleccionar sede --</option>
-          {branches.map(item => (
-            <option key={`warehouse-branch-${item.id}`} value={item.id}>{item.name}</option>
-          ))}
-        </SelectFormGroup>}
+          onChange={(value) => setSelectedBranchId(value)}
+          options={branches.map(item => ({ value: `${item.id}`, label: item.name }))}
+          placeholder='-- Seleccionar sede --'
+        />}
         <InputFormGroup eRef={nameRef} label='Nombre' col='col-12' required />
         <TextareaFormGroup eRef={descriptionRef} label='Descripcion' col='col-12' rows={3} />
       </div>

@@ -18,6 +18,7 @@ class BusinessFacturadorSyncService
     {
         $business->loadMissing('branches');
         $this->assertBusinessIsReady($business);
+        $this->facturadorPro5Service->forBusiness($business);
 
         $company = $this->facturadorPro5Service->syncCompany($this->buildCompanyPayload($business));
         $establishments = [];

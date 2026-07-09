@@ -55,6 +55,11 @@ const BillingSettings = ({ can }) => {
   const clientIdPseRef = useRef()
   const integratedQueryClientIdRef = useRef()
   const integratedQueryClientSecretRef = useRef()
+  const facturadorBaseUrlRef = useRef()
+  const facturadorAuthModeRef = useRef()
+  const facturadorTokenRef = useRef()
+  const facturadorApiEmailRef = useRef()
+  const facturadorApiPasswordRef = useRef()
   const logoFileRef = useRef()
   const logoObjectUrlRef = useRef(null)
   const certificateFileRef = useRef()
@@ -171,6 +176,11 @@ const BillingSettings = ({ can }) => {
     clientIdPseRef.current.value = business?.client_id_pse ?? ''
     integratedQueryClientIdRef.current.value = business?.integrated_query_client_id ?? ''
     integratedQueryClientSecretRef.current.value = business?.integrated_query_client_secret ?? ''
+    facturadorBaseUrlRef.current.value = business?.facturador_base_url ?? ''
+    facturadorAuthModeRef.current.value = business?.facturador_auth_mode ?? ''
+    facturadorTokenRef.current.value = business?.facturador_token ?? ''
+    facturadorApiEmailRef.current.value = business?.facturador_api_email ?? ''
+    facturadorApiPasswordRef.current.value = business?.facturador_api_password ?? ''
     if (logoFileRef.current) logoFileRef.current.value = ''
     if (certificateFileRef.current) certificateFileRef.current.value = ''
     if (certificatePasswordRef.current) certificatePasswordRef.current.value = ''
@@ -225,6 +235,11 @@ const BillingSettings = ({ can }) => {
       client_id_pse: clientIdPseRef.current.value.trim(),
       integrated_query_client_id: integratedQueryClientIdRef.current.value.trim(),
       integrated_query_client_secret: integratedQueryClientSecretRef.current.value.trim(),
+      facturador_base_url: facturadorBaseUrlRef.current.value.trim(),
+      facturador_auth_mode: facturadorAuthModeRef.current.value,
+      facturador_token: facturadorTokenRef.current.value.trim(),
+      facturador_api_email: facturadorApiEmailRef.current.value.trim(),
+      facturador_api_password: facturadorApiPasswordRef.current.value,
     }
 
     const result = await businessesRest.save(request)
@@ -592,6 +607,17 @@ const BillingSettings = ({ can }) => {
         <div className='col-md-4 mb-3'><label className='form-label'>SOAP clave</label><input ref={soapPasswordRef} className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>SOAP URL</label><input ref={soapUrlRef} className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Cuenta detracción</label><input ref={detractionAccountRef} className='form-control' /></div>
+        <div className='col-12'>
+          <hr className='my-2' />
+          <h5 className='mb-1'>Conexión al facturador</h5>
+          <small className='text-muted'>Cada empresa puede apuntar a su propio facturador (URL y credenciales). Si se deja vacío se usa la conexión global del .env.</small>
+        </div>
+        <div className='col-md-6 mb-3'><label className='form-label'>URL del facturador (API)</label><input ref={facturadorBaseUrlRef} className='form-control' placeholder='https://empresa.facturador.host/api' /></div>
+        <div className='col-md-2 mb-3'><label className='form-label'>Auth</label><select ref={facturadorAuthModeRef} className='form-control'><option value=''>Global</option><option value='token'>Token</option><option value='login'>Login</option></select></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Token API</label><input ref={facturadorTokenRef} className='form-control' /></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Email API (login)</label><input ref={facturadorApiEmailRef} className='form-control' /></div>
+        <div className='col-md-4 mb-3'><label className='form-label'>Clave API (login)</label><input ref={facturadorApiPasswordRef} type='password' className='form-control' autoComplete='new-password' /></div>
+        <div className='col-md-4 mb-3'></div>
         <div className='col-12'>
           <hr className='my-2' />
           <h5 className='mb-1'>Datos bancarios para comprobantes</h5>

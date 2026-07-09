@@ -46,7 +46,7 @@ class BillingDocumentService
                 'tax_amount' => $order->tax_amount,
                 'total' => $order->total,
                 'provider' => $document->provider ?: 'facturadorpro5',
-                'provider_endpoint' => rtrim((string) config('facturadorpro5.base_url'), '/') . (string) config('facturadorpro5.issue_endpoint'),
+                'provider_endpoint' => $this->providerEndpointUrl($order->business, 'issue_endpoint'),
                 'provider_mode' => config('facturadorpro5.mode', 'demo'),
                 'local_status' => $document->local_status ?: 'pending',
                 'external_status' => $document->external_status ?: 'draft',
@@ -112,7 +112,7 @@ class BillingDocumentService
                 'tax_amount' => $order->tax_amount,
                 'total' => $order->total,
                 'provider' => $document->provider ?: 'facturadorpro5',
-                'provider_endpoint' => rtrim((string) config('facturadorpro5.base_url'), '/') . (string) config('facturadorpro5.issue_endpoint'),
+                'provider_endpoint' => $this->providerEndpointUrl($order->business, 'issue_endpoint'),
                 'provider_mode' => config('facturadorpro5.mode', 'demo'),
                 'local_status' => $document->local_status ?: 'pending',
                 'external_status' => $document->external_status ?: 'draft',
@@ -169,14 +169,14 @@ class BillingDocumentService
     public function buildConnectorPayload(BillingDocument $document): array
     {
         $document->loadMissing('items', 'client', 'eventualClient', 'business', 'commercialOrder', 'serviceOrder', 'referenceDocument');
-        $providerService = app(FacturadorPro5Service::class);
+        $providerService = app(FacturadorPro5Service::class)->forBusiness($document->business);
 
         return [
             'provider' => 'facturadorpro5',
             'mode' => config('facturadorpro5.mode', 'demo'),
             'request' => [
                 'method' => 'POST',
-                'url' => $this->joinProviderUrl((string) config('facturadorpro5.issue_endpoint')),
+                'url' => $providerService->resolveEndpointUrl((string) config('facturadorpro5.issue_endpoint')),
                 'headers' => $providerService->previewHeaders(),
                 'body' => $providerService->buildIssueRequestBody($document),
             ],
@@ -185,14 +185,15 @@ class BillingDocumentService
 
     public function buildCancelPayload(BillingDocument $document, ?string $reason): array
     {
-        $providerService = app(FacturadorPro5Service::class);
+        $document->loadMissing('business');
+        $providerService = app(FacturadorPro5Service::class)->forBusiness($document->business);
 
         return [
             'provider' => 'facturadorpro5',
             'mode' => config('facturadorpro5.mode', 'demo'),
             'request' => [
                 'method' => 'POST',
-                'url' => $this->joinProviderUrl((string) config('facturadorpro5.cancel_endpoint')),
+                'url' => $providerService->resolveEndpointUrl((string) config('facturadorpro5.cancel_endpoint')),
                 'headers' => $providerService->previewHeaders(),
                 'body' => $providerService->buildCancelRequestBody($document, $reason),
             ],
@@ -445,7 +446,7 @@ class BillingDocumentService
             $payload,
             $providerResponse,
             'issued',
-            rtrim((string) config('facturadorpro5.base_url'), '/') . (string) config('facturadorpro5.issue_endpoint')
+            $this->providerEndpointUrl($document->business, 'issue_endpoint')
         );
     }
 
@@ -499,6 +500,9 @@ class BillingDocumentService
         if (mb_strtolower(trim((string) $document->document_type)) === 'nota de credito') {
             throw new \Exception('La nota de credito no se anula desde este flujo');
         }
+        if (mb_strtolower(trim((string) $document->document_type)) === 'boleta') {
+            throw new \Exception('La comunicacion de baja solo aplica a facturas; para revertir una boleta emite una nota de credito');
+        }
 
         $payload = $this->buildCancelPayload($document, $reason);
         $providerResponse = app(FacturadorPro5Service::class)->cancel($document, $payload);
@@ -507,7 +511,7 @@ class BillingDocumentService
         $document->update([
             'local_status' => $localStatus,
             'external_status' => (string) ($providerResponse['external_status'] ?? 'cancelled'),
-            'provider_endpoint' => rtrim((string) config('facturadorpro5.base_url'), '/') . (string) config('facturadorpro5.cancel_endpoint'),
+            'provider_endpoint' => $this->providerEndpointUrl($document->business, 'cancel_endpoint'),
             'provider_mode' => config('facturadorpro5.mode', 'demo'),
             'response_payload' => json_encode($providerResponse, JSON_UNESCAPED_UNICODE),
             'error_message' => null,
@@ -589,7 +593,7 @@ class BillingDocumentService
         }
         $referenceBranchId = $this->resolveSourceBranchId($reference->business, $reference->business_branch_id, $reference->warehouse);
 
-        $issueDate = $data['issue_date'] ?? now()->toDateString();
+        $issueDate = $data['issue_date'] ?? now('America/Lima')->toDateString();
         $document = BillingDocument::create([
             'code' => $this->nextCode(),
             'source_type' => $reference->source_type,
@@ -608,6 +612,7 @@ class BillingDocumentService
             'sequence' => $this->nextSequence((new BillingDocument([
                 'series' => $data['series'] ?? $this->resolveSeries('nota de credito', $reference->branch),
                 'document_type' => 'Nota de credito',
+                'business_id' => $reference->business_id,
             ]))),
             'issue_date' => $issueDate,
             'due_date' => $issueDate,
@@ -615,7 +620,7 @@ class BillingDocumentService
             'payment_condition' => $reference->payment_condition,
             'payment_method' => $reference->payment_method,
             'customer_email' => $reference->customer_email,
-            'provider_endpoint' => rtrim((string) config('facturadorpro5.base_url'), '/') . (string) config('facturadorpro5.credit_note_endpoint', config('facturadorpro5.issue_endpoint')),
+            'provider_endpoint' => $this->providerEndpointUrl($reference->business, 'credit_note_endpoint', 'issue_endpoint'),
             'provider_mode' => config('facturadorpro5.mode', 'demo'),
             'subtotal' => -abs((float) $reference->subtotal),
             'tax_amount' => -abs((float) $reference->tax_amount),
@@ -659,7 +664,7 @@ class BillingDocumentService
             $payload,
             $providerResponse,
             'credit_note_issued',
-            rtrim((string) config('facturadorpro5.base_url'), '/') . (string) config('facturadorpro5.credit_note_endpoint', config('facturadorpro5.issue_endpoint'))
+            $this->providerEndpointUrl($reference->business, 'credit_note_endpoint', 'issue_endpoint')
         );
     }
 
@@ -806,20 +811,14 @@ class BillingDocumentService
         return (int) $branch->id;
     }
 
-    private function joinProviderUrl(string $endpoint): string
+    private function providerEndpointUrl($business, string $endpointKey, ?string $fallbackKey = null): string
     {
-        $baseUrl = rtrim((string) config('facturadorpro5.base_url'), '/');
-        $endpoint = '/' . ltrim($endpoint, '/');
+        $endpoint = (string) config(
+            "facturadorpro5.{$endpointKey}",
+            $fallbackKey ? config("facturadorpro5.{$fallbackKey}") : null
+        );
 
-        if (str_ends_with($baseUrl, '/api') && str_starts_with($endpoint, '/api/')) {
-            return $baseUrl . substr($endpoint, 4);
-        }
-
-        if (str_ends_with($baseUrl, '/api') && $endpoint === '/api') {
-            return $baseUrl;
-        }
-
-        return $baseUrl . $endpoint;
+        return app(FacturadorPro5Service::class)->forBusiness($business)->resolveEndpointUrl($endpoint);
     }
 
     private function buildDetractionMetadata(BillingDocument $document, array $options): ?array
@@ -1010,6 +1009,8 @@ class BillingDocumentService
     {
         $series = trim((string) $document->series);
         $query = BillingDocument::query()->where('series', $series);
+        // Cada empresa emite contra su propio tenant del facturador: el correlativo es por empresa.
+        if ($document->business_id) $query->where('business_id', $document->business_id);
         if ($document->id) $query->where('id', '!=', $document->id);
 
         $max = 0;

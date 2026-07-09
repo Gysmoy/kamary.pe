@@ -83,6 +83,11 @@ class BusinessController extends BasicController
         $body['client_id_pse'] = array_key_exists('client_id_pse', $body) ? $this->nullableTrim($body['client_id_pse']) : $existing?->client_id_pse;
         $body['integrated_query_client_id'] = array_key_exists('integrated_query_client_id', $body) ? $this->nullableTrim($body['integrated_query_client_id']) : $existing?->integrated_query_client_id;
         $body['integrated_query_client_secret'] = array_key_exists('integrated_query_client_secret', $body) ? $this->nullableTrim($body['integrated_query_client_secret']) : $existing?->integrated_query_client_secret;
+        $body['facturador_base_url'] = array_key_exists('facturador_base_url', $body) ? $this->nullableTrim($body['facturador_base_url']) : $existing?->facturador_base_url;
+        $body['facturador_auth_mode'] = array_key_exists('facturador_auth_mode', $body) ? $this->normalizeFacturadorAuthMode($body['facturador_auth_mode']) : $existing?->facturador_auth_mode;
+        $body['facturador_token'] = array_key_exists('facturador_token', $body) ? $this->nullableTrim($body['facturador_token']) : $existing?->facturador_token;
+        $body['facturador_api_email'] = array_key_exists('facturador_api_email', $body) ? $this->nullableTrim($body['facturador_api_email']) : $existing?->facturador_api_email;
+        $body['facturador_api_password'] = array_key_exists('facturador_api_password', $body) ? $this->nullableTrim($body['facturador_api_password']) : $existing?->facturador_api_password;
 
         $plainCertificatePassword = trim((string) ($body['fiscal_certificate_password'] ?? ''));
         unset($body['fiscal_certificate_password']);
@@ -655,6 +660,20 @@ class BusinessController extends BasicController
 
         if (!preg_match('/^\d{11}$/', $text)) {
             throw new \Exception('El RUC de la empresa debe tener 11 digitos');
+        }
+
+        return $text;
+    }
+
+    private function normalizeFacturadorAuthMode($value): ?string
+    {
+        $text = strtolower((string) $this->nullableTrim($value));
+        if ($text === '') {
+            return null;
+        }
+
+        if (!in_array($text, ['token', 'login', 'none'], true)) {
+            throw new \Exception('facturador_auth_mode invalido (token, login o none)');
         }
 
         return $text;

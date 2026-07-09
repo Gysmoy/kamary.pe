@@ -16,8 +16,48 @@ use Illuminate\Support\Facades\Storage;
 
 class FacturadorPro5Service
 {
+    private ?Business $contextBusiness = null;
+
+    /**
+     * Cada empresa puede tener su propio tenant del facturador (monoempresa);
+     * el contexto define base_url/credenciales, con fallback a la config global.
+     */
+    public function forBusiness(?Business $business): self
+    {
+        $this->contextBusiness = $business;
+        return $this;
+    }
+
+    private function useDocumentContext(BillingDocument $document): void
+    {
+        $document->loadMissing('business');
+        if ($document->business) {
+            $this->contextBusiness = $document->business;
+        }
+    }
+
+    private function useGuideContext(ReferralGuide $guide): void
+    {
+        $guide->loadMissing('business');
+        if ($guide->business) {
+            $this->contextBusiness = $guide->business;
+        }
+    }
+
+    private function connectionValue(string $key): ?string
+    {
+        $override = trim((string) ($this->contextBusiness?->{'facturador_' . $key} ?? ''));
+        if ($override !== '') {
+            return $override;
+        }
+
+        $value = config('facturadorpro5.' . $key);
+        return $value === null || $value === '' ? null : (string) $value;
+    }
+
     public function issue(BillingDocument $document, array $payload): array
     {
+        $this->useDocumentContext($document);
         if ($this->usesDemoMode()) {
             return $this->demoIssueResponse($document, $payload);
         }
@@ -30,6 +70,7 @@ class FacturadorPro5Service
 
     public function issueReferralGuide(ReferralGuide $guide, array $payload): array
     {
+        $this->useGuideContext($guide);
         if ($this->usesDemoMode()) {
             return $this->demoReferralGuideResponse($guide, $payload);
         }
@@ -42,17 +83,13 @@ class FacturadorPro5Service
 
     public function cancel(BillingDocument $document, array $payload): array
     {
+        $this->useDocumentContext($document);
         if ($this->usesDemoMode()) {
             return $this->demoCancelResponse($document, $payload);
         }
 
         $requestBody = Arr::get($payload, 'request.body', []);
-        $endpoint = trim((string) config('facturadorpro5.dispatch_cancel_endpoint', ''));
-        if ($endpoint === '') {
-            throw new \RuntimeException('El facturador hijo no expone aun un endpoint de anulacion fiscal para guias de remision. Configura FACTURADORPRO5_DISPATCH_CANCEL_ENDPOINT cuando ese endpoint exista.');
-        }
-
-        $response = $this->requestJson('POST', $endpoint, $requestBody, true);
+        $response = $this->requestJson('POST', (string) config('facturadorpro5.cancel_endpoint'), $requestBody, true);
 
         return [
             'success' => (bool) ($response['success'] ?? false),
@@ -72,12 +109,18 @@ class FacturadorPro5Service
 
     public function cancelReferralGuide(ReferralGuide $guide, array $payload): array
     {
+        $this->useGuideContext($guide);
         if ($this->usesDemoMode()) {
             return $this->demoReferralGuideCancelResponse($guide, $payload);
         }
 
         $requestBody = Arr::get($payload, 'request.body', []);
-        $response = $this->requestJson('POST', (string) config('facturadorpro5.cancel_endpoint'), $requestBody, true);
+        $endpoint = trim((string) config('facturadorpro5.dispatch_cancel_endpoint', ''));
+        if ($endpoint === '') {
+            throw new \RuntimeException('El facturador hijo no expone aun un endpoint de anulacion fiscal para guias de remision. Configura FACTURADORPRO5_DISPATCH_CANCEL_ENDPOINT cuando ese endpoint exista.');
+        }
+
+        $response = $this->requestJson('POST', $endpoint, $requestBody, true);
 
         return [
             'success' => (bool) ($response['success'] ?? false),
@@ -97,6 +140,7 @@ class FacturadorPro5Service
 
     public function creditNote(BillingDocument $document, array $payload): array
     {
+        $this->useDocumentContext($document);
         if ($this->usesDemoMode()) {
             return $this->demoCreditNoteResponse($document, $payload);
         }
@@ -109,6 +153,7 @@ class FacturadorPro5Service
 
     public function status(BillingDocument $document): array
     {
+        $this->useDocumentContext($document);
         if ($this->usesDemoMode()) {
             $decoded = $this->decodeJson($document->response_payload);
 
@@ -179,6 +224,7 @@ class FacturadorPro5Service
 
     public function downloadFile(BillingDocument $document, string $type): array
     {
+        $this->useDocumentContext($document);
         $type = strtolower(trim($type));
         if (!in_array($type, ['pdf', 'xml', 'cdr'], true)) {
             throw new \InvalidArgumentException('Tipo de archivo no soportado');
@@ -225,6 +271,7 @@ class FacturadorPro5Service
 
     public function downloadReferralGuideFile(ReferralGuide $guide, string $type): array
     {
+        $this->useGuideContext($guide);
         $type = strtolower(trim($type));
         if (!in_array($type, ['pdf', 'xml', 'cdr'], true)) {
             throw new \InvalidArgumentException('Tipo de archivo no soportado');
@@ -320,7 +367,7 @@ class FacturadorPro5Service
         $document->loadMissing('items', 'client', 'eventualClient', 'commercialOrder', 'serviceOrder', 'referenceDocument', 'branch', 'business');
 
         $documentTypeId = $this->mapDocumentTypeId($document->document_type);
-        $issueDate = optional($document->issue_date)->format('Y-m-d') ?: now()->format('Y-m-d');
+        $issueDate = optional($document->issue_date)->format('Y-m-d') ?: now('America/Lima')->format('Y-m-d');
         $customer = $document->client ?: $document->eventualClient;
         $source = $document->source_type === 'commercial_order' ? $document->commercialOrder : $document->serviceOrder;
         $paymentConditionId = $this->mapPaymentConditionId($document->payment_condition);
@@ -335,7 +382,7 @@ class FacturadorPro5Service
             'serie_documento' => $document->series ?: $this->resolveSeriesFromTypeId($documentTypeId),
             'numero_documento' => $sequence,
             'fecha_de_emision' => $issueDate,
-            'hora_de_emision' => now()->format('H:i:s'),
+            'hora_de_emision' => now('America/Lima')->format('H:i:s'),
             'codigo_tipo_documento' => $documentTypeId,
             'codigo_tipo_operacion' => $detractionPayload ? '1001' : '0101',
             'fecha_de_vencimiento' => optional($document->due_date)->format('Y-m-d') ?: $issueDate,
@@ -398,15 +445,17 @@ class FacturadorPro5Service
 
     public function buildCancelRequestBody(BillingDocument $document, ?string $reason): array
     {
+        $externalId = $this->providerExternalId($document);
+        if (!$this->usesDemoMode() && !$externalId) {
+            throw new \RuntimeException('El comprobante no tiene identificador externo del facturador; no se puede enviar la comunicacion de baja.');
+        }
+
+        // El facturador espera la fecha de emision de los documentos a dar de baja y los identifica por external_id.
         return [
-            'external_id' => 'void-' . strtolower($document->code),
-            'date_of_reference' => optional($document->issue_date)->format('Y-m-d') ?: now()->format('Y-m-d'),
-            'date_of_issue' => now()->format('Y-m-d'),
-            'documents' => [[
-                'document_type_id' => $this->mapDocumentTypeId($document->document_type),
-                'series' => $document->series,
-                'number' => $this->normalizeSequenceForProvider($document->sequence),
-                'description' => $reason ?: 'Anulacion operativa',
+            'fecha_de_emision_de_documentos' => optional($document->issue_date)->format('Y-m-d') ?: now('America/Lima')->format('Y-m-d'),
+            'documentos' => [[
+                'external_id' => $externalId,
+                'motivo_anulacion' => $reason ?: 'Anulacion operativa',
             ]],
         ];
     }
@@ -434,15 +483,15 @@ class FacturadorPro5Service
         ];
 
         if ($this->mode() === 'demo') {
-            if (config('facturadorpro5.token')) {
-                $headers['Authorization'] = 'Bearer ' . (string) config('facturadorpro5.token');
+            if ($this->connectionValue('token')) {
+                $headers['Authorization'] = 'Bearer ' . (string) $this->connectionValue('token');
             }
             return $headers;
         }
 
-        $authMode = strtolower((string) config('facturadorpro5.auth_mode', 'token'));
-        if ($authMode === 'token' && config('facturadorpro5.token')) {
-            $headers['Authorization'] = 'Bearer ' . (string) config('facturadorpro5.token');
+        $authMode = strtolower((string) ($this->connectionValue('auth_mode') ?: 'token'));
+        if ($authMode === 'token' && $this->connectionValue('token')) {
+            $headers['Authorization'] = 'Bearer ' . (string) $this->connectionValue('token');
         } elseif ($authMode === 'login') {
             $headers['Authorization'] = 'Bearer {runtime-token}';
         }
@@ -485,7 +534,7 @@ class FacturadorPro5Service
             'external_status' => 'cancelled',
             'external_id' => $document->external_id ?: ('FP5-' . $document->code),
             'external_reference' => $document->external_reference,
-            'reason' => Arr::get($payload, 'request.body.documents.0.description'),
+            'reason' => Arr::get($payload, 'request.body.documentos.0.motivo_anulacion'),
         ]);
     }
 
@@ -608,9 +657,15 @@ class FacturadorPro5Service
 
     private function buildTotalsPayload(BillingDocument $document): array
     {
+        // SUNAT exige montos positivos tambien en notas de credito; el signo negativo es solo contable interno.
+        $isCreditNote = $this->mapDocumentTypeId($document->document_type) === '07';
+        $subtotal = round($isCreditNote ? abs((float) $document->subtotal) : (float) $document->subtotal, 2);
+        $taxAmount = round($isCreditNote ? abs((float) $document->tax_amount) : (float) $document->tax_amount, 2);
+        $total = round($isCreditNote ? abs((float) $document->total) : (float) $document->total, 2);
+
         $totalPending = 0;
         $source = $document->source_type === 'commercial_order' ? $document->commercialOrder : $document->serviceOrder;
-        if ($this->mapPaymentConditionId($document->payment_condition) === '02') {
+        if (!$isCreditNote && $this->mapPaymentConditionId($document->payment_condition) === '02') {
             $totalPending = round(abs((float) ($source?->balance_amount ?? $document->total)), 2);
         }
 
@@ -620,20 +675,20 @@ class FacturadorPro5Service
             'total_cargos' => 0,
             'total_exportacion' => 0,
             'total_operaciones_gratuitas' => 0,
-            'total_operaciones_gravadas' => round((float) $document->subtotal, 2),
+            'total_operaciones_gravadas' => $subtotal,
             'total_operaciones_inafectas' => 0,
             'total_operaciones_exoneradas' => 0,
-            'total_igv' => round((float) $document->tax_amount, 2),
+            'total_igv' => $taxAmount,
             'total_igv_operaciones_gratuitas' => 0,
             'total_base_isc' => 0,
             'total_isc' => 0,
             'total_base_otros_impuestos' => 0,
             'total_otros_impuestos' => 0,
             'total_impuestos_bolsa_plastica' => 0,
-            'total_impuestos' => round((float) $document->tax_amount, 2),
-            'total_valor' => round((float) $document->subtotal, 2),
-            'subtotal_venta' => round((float) $document->total, 2),
-            'total_venta' => round((float) $document->total, 2),
+            'total_impuestos' => $taxAmount,
+            'total_valor' => $subtotal,
+            'subtotal_venta' => $total,
+            'total_venta' => $total,
             'total_pendiente_pago' => $totalPending,
         ];
     }
@@ -641,14 +696,16 @@ class FacturadorPro5Service
     private function buildItemsPayload(BillingDocument $document, float $effectiveTaxRate): array
     {
         $pricesIncludeTax = $document->source_type === 'commercial_order' && $effectiveTaxRate > 0;
+        // SUNAT exige cantidades y montos positivos tambien en notas de credito.
+        $isCreditNote = $this->mapDocumentTypeId($document->document_type) === '07';
 
         return $document->items
             ->where('status', true)
             ->values()
-            ->map(function ($item) use ($effectiveTaxRate, $pricesIncludeTax) {
-                $quantity = round((float) $item->quantity, 3);
-                $storedUnitPrice = round((float) $item->unit_price, 2);
-                $storedLineTotal = round((float) $item->total, 2);
+            ->map(function ($item) use ($effectiveTaxRate, $pricesIncludeTax, $isCreditNote) {
+                $quantity = round($isCreditNote ? abs((float) $item->quantity) : (float) $item->quantity, 3);
+                $storedUnitPrice = round($isCreditNote ? abs((float) $item->unit_price) : (float) $item->unit_price, 2);
+                $storedLineTotal = round($isCreditNote ? abs((float) $item->total) : (float) $item->total, 2);
 
                 if ($pricesIncludeTax) {
                     $lineTotal = $storedLineTotal;
@@ -720,11 +777,22 @@ class FacturadorPro5Service
         }
 
         return [
-            'external_id' => $reference->external_id ?: null,
+            'external_id' => $this->providerExternalId($reference),
             'serie_documento' => $reference->series,
             'numero_documento' => $this->normalizeSequenceForProvider($reference->sequence),
             'codigo_tipo_documento' => $this->mapDocumentTypeId($reference->document_type),
         ];
+    }
+
+    private function providerExternalId(BillingDocument $document): ?string
+    {
+        // Los ids 'FP5-*' son placeholders del modo demo; no existen en el facturador y su lookup falla.
+        $externalId = trim((string) $document->external_id);
+        if ($externalId === '' || str_starts_with($externalId, 'FP5-')) {
+            return null;
+        }
+
+        return $externalId;
     }
 
     private function hasDetraction(BillingDocument $document): bool
@@ -889,13 +957,13 @@ class FacturadorPro5Service
             return $request;
         }
 
-        $authMode = strtolower((string) config('facturadorpro5.auth_mode', 'token'));
+        $authMode = strtolower((string) ($this->connectionValue('auth_mode') ?: 'token'));
         if ($authMode === 'none') {
             return $request;
         }
 
-        if ($authMode === 'token' && config('facturadorpro5.token')) {
-            return $request->withToken((string) config('facturadorpro5.token'));
+        if ($authMode === 'token' && $this->connectionValue('token')) {
+            return $request->withToken((string) $this->connectionValue('token'));
         }
 
         if ($authMode === 'login') {
@@ -968,11 +1036,11 @@ class FacturadorPro5Service
 
     private function resolveRuntimeToken(): string
     {
-        $cacheKey = 'facturadorpro5-token-' . md5(((string) config('facturadorpro5.base_url')) . '|' . ((string) config('facturadorpro5.api_email')));
+        $cacheKey = 'facturadorpro5-token-' . md5(((string) $this->connectionValue('base_url')) . '|' . ((string) $this->connectionValue('api_email')));
 
         return Cache::remember($cacheKey, now()->addMinutes(50), function () {
-            $email = trim((string) config('facturadorpro5.api_email'));
-            $password = (string) config('facturadorpro5.api_password');
+            $email = trim((string) $this->connectionValue('api_email'));
+            $password = (string) $this->connectionValue('api_password');
 
             if ($email === '' || $password === '') {
                 throw new \RuntimeException('Faltan credenciales API del facturador');
@@ -1905,7 +1973,7 @@ class FacturadorPro5Service
 
     private function makeUrl(string $endpoint): string
     {
-        $baseUrl = rtrim((string) config('facturadorpro5.base_url'), '/');
+        $baseUrl = rtrim((string) $this->connectionValue('base_url'), '/');
         $endpoint = '/' . ltrim($endpoint, '/');
 
         if (str_ends_with($baseUrl, '/api') && str_starts_with($endpoint, '/api/')) {
@@ -1921,7 +1989,7 @@ class FacturadorPro5Service
 
     private function resolveAppBaseUrl(): string
     {
-        return preg_replace('#/api/?$#', '', rtrim((string) config('facturadorpro5.base_url'), '/'));
+        return preg_replace('#/api/?$#', '', rtrim((string) $this->connectionValue('base_url'), '/'));
     }
 
     private function usesDemoMode(): bool

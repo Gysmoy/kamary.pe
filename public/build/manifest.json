@@ -478,7 +478,7 @@
     ]
   },
   "resources/js/Admin/BillingSettings.jsx": {
-    "file": "assets/BillingSettings-YY_Ib0RF.js",
+    "file": "assets/BillingSettings-DKLXOqjp.js",
     "name": "BillingSettings",
     "src": "resources/js/Admin/BillingSettings.jsx",
     "isEntry": true,
@@ -1932,25 +1932,23 @@
     ]
   },
   "resources/js/Admin/Warehouses.jsx": {
-    "file": "assets/Warehouses-DkW6OvGr.js",
+    "file": "assets/Warehouses-btzHYWHw.js",
     "name": "Warehouses",
     "src": "resources/js/Admin/Warehouses.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-BZK8oH6G.js",
       "_Base-My-5SOT3.js",
-      "_Table-CFxtCd01.js",
       "_Modal-tZyrY8-T.js",
-      "_ReactAppend-CU4p49rt.js",
-      "_DxButton-CsjWvhyj.js",
       "_SwitchFormGroup-CunZTacy.js",
       "_InputFormGroup-B975TFs1.js",
-      "_SelectFormGroup-CAn1lCXc.js",
       "_TextareaFormGroup-BzRWvtCz.js",
       "_BasicRest-CfowDrFz.js",
       "_permissionScope-DOiR_Kst.js",
-      "_renderGridEditLink-D8NGEeKJ.js",
       "_tippy-react.esm-DNee90TV.js"
+    ],
+    "css": [
+      "Warehouses.css"
     ]
   },
   "resources/js/CardDetail.jsx": {
