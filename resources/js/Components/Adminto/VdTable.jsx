@@ -174,6 +174,7 @@ const VdTable = forwardRef(({
   actions = null,
   columns = [],
   renderCard = null,
+  onRefresh = null,
 }, ref) => {
   const [rows, setRows] = useState([])
   const [totalCount, setTotalCount] = useState(0)
@@ -235,6 +236,7 @@ const VdTable = forwardRef(({
       const count = Number.isFinite(Number(res?.totalCount)) ? Number(res.totalCount) : data.length
       setRows(data)
       setTotalCount(count)
+      if (onRefresh) onRefresh(data, count)
     } catch (e) {
       if (id !== reqIdRef.current) return
       if (e?.name !== 'AbortError') { setRows([]); setTotalCount(0) }
@@ -244,7 +246,9 @@ const VdTable = forwardRef(({
   }
   reloadRef.current = load
 
-  useEffect(() => { load() }, [page, pageSize, sort, filters, search])
+  // baseFilter reactivo: si el padre cambia el filtro fijo, recargamos
+  const baseFilterKey = JSON.stringify(baseFilter ?? null)
+  useEffect(() => { load() }, [page, pageSize, sort, filters, search, baseFilterKey])
 
   /* -------- imperativo -------- */
   useImperativeHandle(ref, () => ({
@@ -338,8 +342,8 @@ const VdTable = forwardRef(({
   const colSpanAll = visibleColumns.length + (actions ? 1 : 0)
 
   /* -------- render de celda -------- */
-  const renderCell = (col, row) => {
-    if (col.render) return col.render(row)
+  const renderCell = (col, row, index) => {
+    if (col.render) return col.render(row, index)
     const val = getByPath(row, col.field || col.key)
     return val ?? ''
   }
@@ -446,7 +450,7 @@ const VdTable = forwardRef(({
                       className={c.muted ? 'vdt-muted' : ''}
                       style={{ textAlign: c.align || 'left', whiteSpace: c.nowrap ? 'nowrap' : undefined }}
                     >
-                      {renderCell(c, row)}
+                      {renderCell(c, row, (page - 1) * pageSize + ri)}
                     </td>
                   ))}
                   {actions && (
@@ -472,7 +476,7 @@ const VdTable = forwardRef(({
           ))}
           {!loading && rows.length === 0 && <p className="vdt-empty">{emptyText}</p>}
           {!loading && rows.map((row, ri) => (
-            <div key={row.id ?? ri}>{renderCard(row, buildActions(row, 'card'))}</div>
+            <div key={row.id ?? ri}>{renderCard(row, buildActions(row, 'card'), (page - 1) * pageSize + ri)}</div>
           ))}
         </div>
       )}
