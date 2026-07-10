@@ -263,7 +263,7 @@ class TenantDemoLiteSeeder extends Seeder
         }
 
         $payload = $this->filterColumns('configurations', [
-            'send_auto' => 0,
+            'send_auto' => 1,
             'cron' => 1,
             'stock' => 1,
             'sunat_alternate_server' => 0,

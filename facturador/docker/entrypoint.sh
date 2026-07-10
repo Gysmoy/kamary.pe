@@ -276,6 +276,11 @@ elif [ "$AUTO_RUN_SEEDERS" = "true" ] && [ -f artisan ]; then
   log "Skipping seeders because database is not reachable."
 fi
 
+if [ "${AUTO_RUN_SEND_PENDING:-false}" = "true" ] && [ -f artisan ] && [ "$DB_READY" = "true" ]; then
+  log "Sending pending SUNAT documents..."
+  php artisan online:send-all || log "Pending SUNAT send failed. Continuing startup to avoid downtime."
+fi
+
 if [ "$AUTO_RUN_OPTIMIZE" = "true" ] && [ -f artisan ] && [ "$IS_PRODUCTION" = "true" ] && [ "$DB_READY" = "true" ]; then
   log "Caching framework metadata for production..."
   if [ "$AUTO_RUN_CONFIG_CACHE" = "true" ]; then
