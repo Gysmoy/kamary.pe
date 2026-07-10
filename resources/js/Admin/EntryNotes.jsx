@@ -1,6 +1,7 @@
 import React, { createRef, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import * as XLSX from 'xlsx';
+import { Fetch } from 'sode-extend-react';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import VdTable from '@Adminto/VdTable';
@@ -10,7 +11,6 @@ import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
-import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import SetSelectValue from '../Utils/SetSelectValue';
 import EntryNotesRest from '../Actions/Admin/EntryNotesRest';
 import { isStoragePath, scopedPermission } from '../Utils/permissionScope';
@@ -96,9 +96,9 @@ const EntryNotes = () => {
   const guideSequenceRef = useRef()
   const guideRucRef = useRef()
   const guideFileRef = useRef()
-  const batchRefs = useRef({})
   const articleRefs = useRef({})
-  const createBatchArticleRef = useRef()
+  const batchOptionCacheRef = useRef({})
+  const createBatchArticleCacheRef = useRef({})
   const createBatchLotRef = useRef()
   const createBatchExpirationRef = useRef()
   const selectedStorageClientIdRef = useRef('')
@@ -136,6 +136,7 @@ const EntryNotes = () => {
   const [items, setItems] = useState([emptyItem()])
   const [createBatchTargetUid, setCreateBatchTargetUid] = useState('')
   const [createBatchArticleId, setCreateBatchArticleId] = useState('')
+  const [createBatchArticleLabel, setCreateBatchArticleLabel] = useState('')
   const [lotSearchWarehouseId, setLotSearchWarehouseId] = useState('')
   const [lotSearchTerm, setLotSearchTerm] = useState('')
   const [lotSearchRows, setLotSearchRows] = useState([])
@@ -144,11 +145,6 @@ const EntryNotes = () => {
   const [lotSearchPage, setLotSearchPage] = useState(1)
   const [lotSearchPageSize, setLotSearchPageSize] = useState(20)
   const [lotSearchLoading, setLotSearchLoading] = useState(false)
-
-  const getBatchRef = (uid) => {
-    if (!batchRefs.current[uid]) batchRefs.current[uid] = createRef()
-    return batchRefs.current[uid]
-  }
 
   const getArticleRef = (uid) => {
     if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
@@ -189,13 +185,6 @@ const EntryNotes = () => {
   }, [storageContext])
 
   useEffect(() => {
-    items.forEach(item => {
-      const ref = getBatchRef(item.uid)
-      if (!ref.current || !item.batch_id || !item.batch_label) return
-      const current = $(ref.current).val()
-      if (`${current}` === `${item.batch_id}`) return
-      SetSelectValue(ref.current, item.batch_id, item.batch_label)
-    })
     if (storageContext) {
       items.forEach(item => {
         const ref = getArticleRef(item.uid)
@@ -497,10 +486,10 @@ const EntryNotes = () => {
     }))
   }
 
-  const onItemBatchChanged = async (uid, e) => {
-    const selected = $(e.target).select2('data')?.[0]
-    const batch = selected?.data ?? null
-    const batchId = e.target.value || ''
+  const onItemBatchChanged = async (uid, value) => {
+    const batchId = value || ''
+    let batch = batchId ? (batchOptionCacheRef.current[batchId] ?? null) : null
+    if (batchId && !batch) batch = await entryNotesRest.getBatchById(batchId)
     const currentItem = items.find(item => item.uid === uid)
     const warehouseLabel = warehouseLocationLabel(selectedWarehouseId, currentItem?.location)
 
@@ -526,9 +515,9 @@ const EntryNotes = () => {
         return {
           ...item,
           batch_id: batchId,
-          batch_label: selected?.text ?? batchId,
-          batch_code: selected?.text ?? batchId,
-          lot: selected?.text ?? batchId,
+          batch_label: batchId,
+          batch_code: batchId,
+          lot: batchId,
           warehouse_id: selectedWarehouseId || item.warehouse_id,
           location: storageContext ? item.location : warehouseLabel,
         }
@@ -539,7 +528,7 @@ const EntryNotes = () => {
       return {
         ...item,
         batch_id: batchId,
-        batch_label: selected?.text ?? batch.lot ?? item.batch_label,
+        batch_label: batch.lot ?? item.batch_label,
         batch_code: batch.lot ?? item.batch_code,
         lot: batch.lot ?? item.lot,
         article_id: nextArticleId,
@@ -559,6 +548,27 @@ const EntryNotes = () => {
     if (batch?.article?.id && selectedWarehouseId) {
       await refreshItemStock(uid, batch.article.id, selectedWarehouseId)
     }
+  }
+
+  // Picker de lote por item (antes select2 AJAX vía SelectAPIFormGroup). Mismo endpoint/campos
+  // que usaba select2 (searchAPI '/api/admin/batches/paginate', searchBy 'lot', filter por
+  // business_id). Cachea las filas completas (con .article) para que onItemBatchChanged pueda
+  // resolver el articulo asociado sin depender de datos de select2.
+  const loadBatchOptions = async (query, filter) => {
+    const { status, result } = await Fetch('/api/admin/batches/paginate', {
+      method: 'POST',
+      body: JSON.stringify({
+        sort: [{ selector: 'lot', desc: false }],
+        take: 20,
+        filter: filter
+          ? [['lot', 'contains', query || ''], 'and', filter]
+          : ['lot', 'contains', query || ''],
+      }),
+    })
+    if (!status) return []
+    const rows = result?.data ?? []
+    rows.forEach(row => { batchOptionCacheRef.current[`${row.id}`] = row })
+    return rows.map(row => ({ value: `${row.id}`, label: row.lot ?? `${row.id}` }))
   }
 
   const storageLocationsForWarehouse = (warehouseId, selectedLocation = '') => {
@@ -682,13 +692,9 @@ const EntryNotes = () => {
     const currentItem = items.find(item => item.uid === uid)
     setCreateBatchTargetUid(uid)
     setCreateBatchArticleId(currentItem?.article_id || '')
+    setCreateBatchArticleLabel(currentItem?.article_id ? (currentItem?.article_label || '') : '')
     if (createBatchLotRef.current) createBatchLotRef.current.value = currentItem?.lot || ''
     if (createBatchExpirationRef.current) createBatchExpirationRef.current.value = ''
-    if (currentItem?.article_id && currentItem?.article_label && createBatchArticleRef.current) {
-      SetSelectValue(createBatchArticleRef.current, currentItem.article_id, currentItem.article_label)
-    } else if (createBatchArticleRef.current) {
-      $(createBatchArticleRef.current).empty().trigger('change')
-    }
     $(createBatchModalRef.current).modal('show')
   }
 
@@ -696,9 +702,14 @@ const EntryNotes = () => {
     e.preventDefault()
     if (storageContext && !selectedBusinessId) return
 
+    if (!createBatchArticleId) {
+      await Swal.fire({ icon: 'warning', title: 'Articulo requerido', text: 'Selecciona el articulo antes de crear el lote' })
+      return
+    }
+
     const lot = (createBatchLotRef.current?.value ?? '').trim()
     const expiration = createBatchExpirationRef.current?.value ?? ''
-    if (!createBatchArticleId || !lot || !expiration) return
+    if (!lot || !expiration) return
 
     const request = {
       article_id: createBatchArticleId,
@@ -710,15 +721,13 @@ const EntryNotes = () => {
     const createdBatch = await entryNotesRest.createBatch(request)
     if (!createdBatch?.id) return
 
-    const selectedArticle = $(createBatchArticleRef.current).select2('data')?.[0] ?? null
     const hydratedBatch = await entryNotesRest.getBatchById(createdBatch.id)
     const batchData = hydratedBatch ?? createdBatch
     const articleData = batchData?.article ?? await entryNotesRest.getArticleById(createBatchArticleId)
-    const selectedArticleText = selectedArticle?.text ?? ''
 
     const articleLabel = articleData
       ? [articleData.code, articleData.name].filter(Boolean).join(' - ')
-      : selectedArticleText
+      : createBatchArticleLabel
 
     setItems(prev => prev.map(item => item.uid === createBatchTargetUid ? {
       ...item,
@@ -739,6 +748,35 @@ const EntryNotes = () => {
     }
 
     $(createBatchModalRef.current).modal('hide')
+  }
+
+  // Picker de articulo del modal "Crear lote" (antes select2 AJAX vía SelectAPIFormGroup).
+  // Mismo endpoint/scope que usaba select2: comercial vs magistrales via picker_warehouse_id
+  // (createBatchArticleExtraParams, calculado mas abajo a partir del almacen del item destino),
+  // y filtro por cliente en contexto de almacenamiento (storageArticleClientFilter).
+  const loadCreateBatchArticleOptions = async (query) => {
+    const request = {
+      sort: [{ selector: 'name', desc: false }],
+      take: 20,
+      filter: storageArticleClientFilter
+        ? [['name', 'contains', query || ''], 'and', storageArticleClientFilter]
+        : ['name', 'contains', query || ''],
+    }
+    if (createBatchArticleExtraParams) Object.assign(request, createBatchArticleExtraParams)
+    const { status, result } = await Fetch(
+      storageContext ? '/api/admin/storage/articles/paginate' : '/api/admin/articles/paginate',
+      { method: 'POST', body: JSON.stringify(request) }
+    )
+    if (!status) return []
+    const rows = result?.data ?? []
+    rows.forEach(row => { createBatchArticleCacheRef.current[`${row.id}`] = row.name ?? `${row.id}` })
+    return rows.map(row => ({ value: `${row.id}`, label: row.name ?? `${row.id}` }))
+  }
+
+  const onCreateBatchArticleChanged = (value) => {
+    value = value || ''
+    setCreateBatchArticleId(value)
+    setCreateBatchArticleLabel(value ? (createBatchArticleCacheRef.current[value] ?? '') : '')
   }
 
   const openLotSearchModal = async () => {
@@ -1602,14 +1640,15 @@ const EntryNotes = () => {
                       <td style={{ width: '20%' }}>
                         <div className='d-flex gap-1 align-items-center'>
                           <div style={{ flex: 1 }}>
-                            <SelectAPIFormGroup
-                              eRef={getBatchRef(item.uid)}
+                            <VdSelect
                               col='col-12'
-                              searchAPI='/api/admin/batches/paginate'
-                              searchBy='lot'
-                              filter={batchFilter ?? undefined}
-                              dropdownParent='#entry-note-form-container'
-                              onChange={(e) => onItemBatchChanged(item.uid, e)}
+                              noMargin
+                              clearable
+                              value={item.batch_id}
+                              valueLabel={item.batch_label}
+                              placeholder='-- Seleccionar lote --'
+                              onChange={(value) => onItemBatchChanged(item.uid, value)}
+                              loadOptions={(q) => loadBatchOptions(q, batchFilter)}
                             />
                           </div>
                           <button type='button' className='btn btn-xs btn-soft-success' title='Crear lote' onClick={() => onCreateBatchForItem(item.uid)}>
@@ -1776,17 +1815,16 @@ const EntryNotes = () => {
 
     <Modal modalRef={createBatchModalRef} title='Crear lote' onSubmit={onCreateBatchModalSubmit} size='md'>
       <div className='row' id='entry-note-create-batch-container'>
-        <SelectAPIFormGroup
-          eRef={createBatchArticleRef}
+        <VdSelect
           label='Articulo'
           col='col-12'
           required
-          searchAPI={storageContext ? '/api/admin/storage/articles/paginate' : '/api/admin/articles/paginate'}
-          searchBy='name'
-          filter={storageArticleClientFilter ?? undefined}
-          extraParams={createBatchArticleExtraParams}
-          dropdownParent='#entry-note-create-batch-container'
-          onChange={(e) => setCreateBatchArticleId(e.target.value || '')}
+          clearable
+          value={createBatchArticleId}
+          valueLabel={createBatchArticleLabel}
+          placeholder='-- Seleccionar articulo --'
+          onChange={onCreateBatchArticleChanged}
+          loadOptions={loadCreateBatchArticleOptions}
         />
         <InputFormGroup eRef={createBatchLotRef} label='Lote' col='col-12' required />
         <InputFormGroup eRef={createBatchExpirationRef} label='Fecha de vencimiento' col='col-12' type='date' required />

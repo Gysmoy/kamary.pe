@@ -2,11 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
 import VdTable from '../Components/Adminto/VdTable';
 import VdSelect from '../Components/Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
-import DxButton from '../Components/dx/DxButton';
 import KardexRest from '../Actions/Admin/KardexRest';
 import { isMagistralesPath, isStoragePath, scopedPermission } from '../Utils/permissionScope';
 import Swal from 'sweetalert2';
@@ -34,11 +32,6 @@ const formatDateTime = (value) => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
   return date.toLocaleString('es-PE', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
-const refreshGrid = (gridRef) => {
-  if (!gridRef.current) return
-  const instance = $(gridRef.current).dxDataGrid('instance')
-  instance?.refresh()
 }
 const currentMonth = () => new Date().toISOString().slice(0, 7)
 const firstMonthOfCurrentYear = () => `${new Date().getFullYear()}-01`
@@ -805,7 +798,7 @@ const StandardKardex = ({ fixedWarehouse = null, session = null }) => {
 }
 
 const StorageKardex = () => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const warehouseModalRef = useRef()
   const locationModalRef = useRef()
   const monthlyKardexModalRef = useRef()
@@ -819,13 +812,6 @@ const StorageKardex = () => {
   const [clientId, setClientId] = useState('')
   const [warehouseId, setWarehouseId] = useState('')
   const [stockMode, setStockMode] = useState('with_stock')
-  const [kardexRows, setKardexRows] = useState([])
-  const [kardexTotalCount, setKardexTotalCount] = useState(0)
-  const [kardexPage, setKardexPage] = useState(1)
-  const [kardexPageSize, setKardexPageSize] = useState(10)
-  const [kardexSearch, setKardexSearch] = useState('')
-  const [kardexSort, setKardexSort] = useState({ selector: 'last_movement_at', desc: true })
-  const [kardexLoading, setKardexLoading] = useState(false)
   const [monthlyKardexRow, setMonthlyKardexRow] = useState(null)
   const [monthlyKardexRows, setMonthlyKardexRows] = useState([])
   const [monthlyStartMonth, setMonthlyStartMonth] = useState('')
@@ -862,65 +848,12 @@ const StorageKardex = () => {
     loadOptions()
   }, [])
 
-  const buildKardexSearchFilter = useCallback(() => {
-    const text = kardexSearch.trim()
-    if (!text) return undefined
-
-    return [
-      ['inventory', 'contains', text],
-      'or',
-      ['lot', 'contains', text],
-      'or',
-      ['expiration_date', 'contains', text],
-      'or',
-      ['unit_label', 'contains', text],
-      'or',
-      ['location', 'contains', text],
-      'or',
-      ['warehouse_name', 'contains', text],
-    ]
-  }, [kardexSearch])
-
-  const buildKardexParams = useCallback((overrides = {}) => {
-    const filter = buildKardexSearchFilter()
-    return {
-      skip: (kardexPage - 1) * kardexPageSize,
-      take: kardexPageSize,
-      requireTotalCount: true,
-      section: 'kardex',
-      client_id: clientId || '',
-      warehouse_id: warehouseId || '',
-      stock_mode: stockMode || 'with_stock',
-      business_id: '',
-      business_branch_id: '',
-      laboratory_id: '',
-      article_id: '',
-      sort: kardexSort ? [kardexSort] : undefined,
-      ...(filter ? { filter } : {}),
-      ...overrides,
-    }
-  }, [buildKardexSearchFilter, clientId, kardexPage, kardexPageSize, kardexSort, stockMode, warehouseId])
-
-  const loadStorageKardexRows = useCallback(async () => {
-    if (activeTab !== 'kardex') return
-
-    setKardexLoading(true)
-    try {
-      const result = await kardexRest.paginate(buildKardexParams())
-      if (Number(result?.status ?? 200) >= 400) {
-        throw new Error(result?.message || 'No se pudo cargar el kardex')
-      }
-      setKardexRows(result?.data ?? [])
-      setKardexTotalCount(Number(result?.totalCount ?? result?.data?.length ?? 0))
-    } catch (error) {
-      if (error?.name !== 'AbortError') {
-        Swal.fire({ icon: 'error', title: 'Error', text: error.message || 'No se pudo cargar el kardex' })
-      }
-    } finally {
-      setKardexLoading(false)
-    }
-  }, [activeTab, buildKardexParams])
-
+  // Sincroniza el scope (section) del rest con la pestaña activa y, en la
+  // pestaña Kardex, con los filtros de Cliente/Almacen/Stock. El refresh()
+  // explicito cubre tanto el cambio de tab (el VdTable se remonta por su key)
+  // como el cambio de filtros sin cambiar de tab; el request-id interno de
+  // VdTable descarta cualquier fetch que haya quedado en vuelo con el filtro
+  // anterior, asi que no hay condicion de carrera con el mount del hijo.
   useEffect(() => {
     kardexRest.setFilters({
       section: activeTab,
@@ -932,28 +865,8 @@ const StorageKardex = () => {
       laboratory_id: '',
       article_id: '',
     })
-    if (activeTab !== 'kardex') setTimeout(() => refreshGrid(gridRef), 0)
+    tableRef.current?.refresh()
   }, [activeTab, clientId, warehouseId, stockMode])
-
-  useEffect(() => {
-    setKardexPage(1)
-  }, [clientId, warehouseId, stockMode, kardexSearch, kardexPageSize])
-
-  useEffect(() => {
-    loadStorageKardexRows()
-  }, [loadStorageKardexRows])
-
-  const kardexTotalPages = useMemo(() => Math.max(1, Math.ceil(kardexTotalCount / kardexPageSize)), [kardexTotalCount, kardexPageSize])
-  const kardexCurrentPage = Math.min(kardexPage, kardexTotalPages)
-  const kardexPageNumbers = useMemo(() => {
-    const start = Math.max(1, Math.min(kardexCurrentPage - 2, kardexTotalPages - 4))
-    const end = Math.min(kardexTotalPages, Math.max(1, start) + 4)
-    return Array.from({ length: Math.max(0, end - Math.max(1, start) + 1) }, (_, index) => Math.max(1, start) + index)
-  }, [kardexCurrentPage, kardexTotalPages])
-
-  useEffect(() => {
-    if (kardexPage > kardexTotalPages) setKardexPage(kardexTotalPages)
-  }, [kardexPage, kardexTotalPages])
 
   const defaultBusinessId = businesses[0]?.id ? `${businesses[0].id}` : ''
   const filteredBranches = useMemo(() => {
@@ -994,7 +907,7 @@ const StorageKardex = () => {
     if (!result) return
     $(warehouseModalRef.current).modal('hide')
     await loadOptions()
-    if (activeTab === 'warehouses') refreshGrid(gridRef)
+    if (activeTab === 'warehouses') tableRef.current?.refresh()
   }
 
   const saveLocation = async (event) => {
@@ -1003,7 +916,7 @@ const StorageKardex = () => {
     if (!result) return
     $(locationModalRef.current).modal('hide')
     await loadOptions()
-    if (activeTab === 'locations') refreshGrid(gridRef)
+    if (activeTab === 'locations') tableRef.current?.refresh()
   }
 
   const removeWarehouse = async (id) => {
@@ -1019,7 +932,7 @@ const StorageKardex = () => {
     const ok = await kardexRest.deleteStorageWarehouse(id)
     if (!ok) return
     await loadOptions()
-    refreshGrid(gridRef)
+    tableRef.current?.refresh()
   }
 
   const removeLocation = async (id) => {
@@ -1034,7 +947,7 @@ const StorageKardex = () => {
     if (!isConfirmed) return
     const ok = await kardexRest.deleteStorageLocation(id)
     if (!ok) return
-    refreshGrid(gridRef)
+    tableRef.current?.refresh()
   }
 
   const downloadLocationsReport = () => {
@@ -1059,18 +972,10 @@ const StorageKardex = () => {
     { caption: 'ALMACEN', value: row => row.warehouse_name ?? '' },
   ]
 
-  const loadAllStorageKardexRows = async () => {
-    const result = await kardexRest.paginate(buildKardexParams({
-      skip: 0,
-      take: 100000,
-      isLoadingAll: true,
-      requireTotalCount: false,
-    }))
-    if (Number(result?.status ?? 200) >= 400) {
-      throw new Error(result?.message || 'No se pudo exportar el kardex')
-    }
-    return result?.data ?? []
-  }
+  // Reutiliza el filtro/orden/busqueda ACTUAL del VdTable de Kardex (mismo
+  // patron que StandardKardex.exportKardex), asi la exportacion siempre
+  // coincide con lo que se ve en pantalla.
+  const loadAllStorageKardexRows = async () => (await tableRef.current?.loadAll()) ?? []
 
   const escapeHtml = (value) => String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -1242,186 +1147,171 @@ const StorageKardex = () => {
     doc.save('kardex-mensual.pdf')
   }
 
-  const statusBadge = (container, status) => {
-    const active = status === true || status === 1 || status === '1'
-    container.html(`<span class="badge ${active ? 'badge-soft-success' : 'badge-soft-secondary'}">${active ? 'Activo' : 'Inactivo'}</span>`)
-  }
-
-  const occupancyBadge = (container, status) => {
+  const isActiveStatus = (status) => status === true || status === 1 || status === '1'
+  const statusBadgeNode = (status) => (
+    <span className={`badge ${isActiveStatus(status) ? 'badge-soft-success' : 'badge-soft-secondary'}`}>
+      {isActiveStatus(status) ? 'Activo' : 'Inactivo'}
+    </span>
+  )
+  const occupancyBadgeNode = (status) => {
     const occupied = status === 'Ocupado'
-    container.html(`<span class="badge ${occupied ? 'badge-soft-warning' : 'badge-soft-success'}">${occupied ? 'Ocupado' : 'Libre'}</span>`)
+    return <span className={`badge ${occupied ? 'badge-soft-warning' : 'badge-soft-success'}`}>{occupied ? 'Ocupado' : 'Libre'}</span>
   }
 
   const storageClientLabel = (client) => [client.document_number, client.full_name].filter(Boolean).join(' - ') || client.full_name || ''
 
-  const changeKardexSort = (selector) => {
-    setKardexPage(1)
-    setKardexSort(prev => prev?.selector === selector
-      ? { selector, desc: !prev.desc }
-      : { selector, desc: false })
-  }
-
-  const sortableKardexHeader = (selector, label) => {
-    const active = kardexSort?.selector === selector
-    const icon = active ? (kardexSort.desc ? 'mdi-menu-down' : 'mdi-menu-up') : 'mdi-swap-vertical'
-    return (
-      <button type='button' className='btn btn-link p-0 text-uppercase text-muted fw-semibold text-decoration-none d-inline-flex align-items-center gap-1' onClick={() => changeKardexSort(selector)}>
-        <span>{label}</span>
-        <i className={`mdi ${icon}`}></i>
-      </button>
-    )
-  }
-
-  const kardexColumns = [
+  const kardexVdColumns = [
+    { key: 'inventory', label: 'Inventario', field: 'inventory', filter: { type: 'text' } },
+    { key: 'lot', label: 'Lote', field: 'lot', width: '120px', filter: { type: 'text' } },
+    { key: 'expiration_date', label: 'F.V.', field: 'expiration_date', width: '110px', render: (row) => formatDate(row.expiration_date) },
+    { key: 'unit_label', label: 'U. Medida', field: 'unit_label', width: '110px' },
     {
-      caption: 'Acciones',
-      width: 95,
-      allowFiltering: false,
-      allowSorting: false,
-      allowExporting: false,
-      cellTemplate: (container) => {
-        container.css('text-overflow', 'unset')
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Stock', icon: 'mdi mdi-format-list-bulleted', onClick: () => { } }))
-      }
+      key: 'system_stock', label: 'Stock Sistema', field: 'system_stock', width: '135px', align: 'right', nowrap: true,
+      render: (row) => formatQty(row.system_stock),
     },
-    { dataField: 'inventory', caption: 'Inventario', minWidth: 240 },
-    { dataField: 'lot', caption: 'Lote', minWidth: 110 },
-    {
-      dataField: 'expiration_date',
-      caption: 'F.V.',
-      minWidth: 110,
-      cellTemplate: (container, { data }) => container.text(formatDate(data.expiration_date))
-    },
-    { dataField: 'unit_label', caption: 'U. Medida', minWidth: 100 },
-    {
-      dataField: 'system_stock',
-      caption: 'Stock sistema',
-      minWidth: 130,
-      cellTemplate: (container, { data }) => container.text(formatQty(data.system_stock))
-    },
-    { dataField: 'location', caption: 'Ubicacion', minWidth: 120 },
-    { dataField: 'warehouse_name', caption: 'Almacen', minWidth: 160 },
+    { key: 'location', label: 'Ubicacion', field: 'location', width: '130px', filter: { type: 'text' } },
+    { key: 'warehouse_name', label: 'Almacen', field: 'warehouse_name', width: '170px', filter: { type: 'text' } },
   ]
 
-  const warehouseColumns = [
+  const warehouseVdColumns = [
     {
-      caption: 'Acciones',
-      width: 115,
-      allowFiltering: false,
-      allowSorting: false,
-      allowExporting: false,
-      cellTemplate: (container, { data }) => {
-        container.css('text-overflow', 'unset')
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-warning', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openWarehouseModal(data) }))
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => removeWarehouse(data.id) }))
-      }
+      key: 'status', label: 'Estado', field: 'status', width: '110px',
+      filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+      render: (row) => statusBadgeNode(row.status),
     },
+    { key: 'warehouse_name', label: 'Almacen', field: 'warehouse_name', filter: { type: 'text' } },
+    { key: 'branch_name', label: 'Sede', field: 'branch_name', filter: { type: 'text' } },
+    { key: 'business_name', label: 'Empresa', field: 'business_name', filter: { type: 'text' } },
+    { key: 'country', label: 'Pais', field: 'country', width: '100px' },
     {
-      dataField: 'status',
-      caption: 'Estado',
-      minWidth: 95,
-      cellTemplate: (container, { data }) => statusBadge(container, data.status)
+      key: 'created_at', label: 'Fecha registro', field: 'created_at', width: '165px', sortable: false,
+      render: (row) => formatDateTime(row.created_at),
     },
-    { dataField: 'warehouse_name', caption: 'Almacen', minWidth: 180 },
-    { dataField: 'branch_name', caption: 'Sede', minWidth: 160 },
-    { dataField: 'business_name', caption: 'Empresa', minWidth: 200 },
-    { dataField: 'country', caption: 'Pais', minWidth: 90 },
-    {
-      dataField: 'created_at',
-      caption: 'Fecha registro',
-      minWidth: 165,
-      allowFiltering: false,
-      cellTemplate: (container, { data }) => container.text(formatDateTime(data.created_at))
-    },
-    { dataField: 'creator_label', caption: 'Usuario registro', minWidth: 170 },
+    { key: 'creator_label', label: 'Usuario registro', field: 'creator_label', width: '170px' },
   ]
 
-  const locationColumns = [
+  const locationVdColumns = [
     {
-      caption: 'Acciones',
-      width: 115,
-      allowFiltering: false,
-      allowSorting: false,
-      allowExporting: false,
-      cellTemplate: (container, { data }) => {
-        container.css('text-overflow', 'unset')
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-warning', title: 'Editar', icon: 'mdi mdi-pencil', onClick: () => openLocationModal(data) }))
-        container.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => removeLocation(data.id) }))
-      }
+      key: 'status', label: 'Estado', field: 'status', width: '100px',
+      filter: { type: 'select', field: 'status', options: [{ value: 1, label: 'Activo' }, { value: 0, label: 'Inactivo' }] },
+      render: (row) => statusBadgeNode(row.status),
     },
     {
-      dataField: 'status',
-      caption: 'Estado',
-      minWidth: 95,
-      cellTemplate: (container, { data }) => statusBadge(container, data.status)
+      key: 'occupancy_status', label: 'Ocupacion', field: 'occupancy_status', width: '110px', sortable: false,
+      render: (row) => occupancyBadgeNode(row.occupancy_status),
+    },
+    { key: 'warehouse_name', label: 'Almacen', field: 'warehouse_name', width: '160px', filter: { type: 'text' } },
+    { key: 'client_name', label: 'Cliente asignado', field: 'client_name', width: '220px', filter: { type: 'text' } },
+    { key: 'code', label: 'Ubicacion', field: 'code', width: '120px', filter: { type: 'text' } },
+    { key: 'temperature_range', label: 'Temperatura', field: 'temperature_range', width: '130px' },
+    {
+      key: 'occupied_clients', label: 'Cliente ocupante', field: 'occupied_clients', width: '220px', sortable: false,
+      render: (row) => <span title={row.occupied_clients || '-'}>{row.occupied_clients || '-'}</span>,
     },
     {
-      dataField: 'occupancy_status',
-      caption: 'Ocupacion',
-      minWidth: 105,
-      cellTemplate: (container, { data }) => occupancyBadge(container, data.occupancy_status)
-    },
-    { dataField: 'warehouse_name', caption: 'Almacen', minWidth: 160 },
-    { dataField: 'client_name', caption: 'Cliente asignado', minWidth: 230 },
-    { dataField: 'code', caption: 'Ubicacion', minWidth: 120 },
-    { dataField: 'temperature_range', caption: 'Temperatura', minWidth: 130 },
-    {
-      dataField: 'occupied_clients',
-      caption: 'Cliente ocupante',
-      minWidth: 230,
-      cellTemplate: (container, { data }) => {
-        const text = data.occupied_clients || '-'
-        container.attr('title', text).text(text)
-      }
+      key: 'occupied_products', label: 'Productos ocupando', field: 'occupied_products', width: '300px', sortable: false,
+      render: (row) => <span title={row.occupied_products || '-'}>{row.occupied_products || '-'}</span>,
     },
     {
-      dataField: 'occupied_products',
-      caption: 'Productos ocupando',
-      minWidth: 320,
-      cellTemplate: (container, { data }) => {
-        const text = data.occupied_products || '-'
-        container.attr('title', text).text(text)
-      }
+      key: 'occupied_stock', label: 'Stock ocupado', field: 'occupied_stock', width: '125px', align: 'right', nowrap: true,
+      render: (row) => formatQty(row.occupied_stock),
     },
+    { key: 'occupied_from', label: 'Ocupado desde', field: 'occupied_from', width: '130px', render: (row) => formatDate(row.occupied_from) },
+    { key: 'occupied_until', label: 'Ocupado hasta', field: 'occupied_until', width: '130px', render: (row) => formatDate(row.occupied_until) },
     {
-      dataField: 'occupied_stock',
-      caption: 'Stock ocupado',
-      minWidth: 125,
-      cellTemplate: (container, { data }) => container.text(formatQty(data.occupied_stock))
+      key: 'created_at', label: 'Fecha registro', field: 'created_at', width: '165px', sortable: false,
+      render: (row) => formatDateTime(row.created_at),
     },
-    {
-      dataField: 'occupied_from',
-      caption: 'Ocupado desde',
-      minWidth: 130,
-      cellTemplate: (container, { data }) => container.text(formatDate(data.occupied_from))
-    },
-    {
-      dataField: 'occupied_until',
-      caption: 'Ocupado hasta',
-      minWidth: 130,
-      cellTemplate: (container, { data }) => container.text(formatDate(data.occupied_until))
-    },
-    {
-      dataField: 'created_at',
-      caption: 'Fecha registro',
-      minWidth: 165,
-      allowFiltering: false,
-      cellTemplate: (container, { data }) => container.text(formatDateTime(data.created_at))
-    },
-    { dataField: 'creator_label', caption: 'Usuario registro', minWidth: 170 },
+    { key: 'creator_label', label: 'Usuario registro', field: 'creator_label', width: '170px' },
   ]
 
-  const columnsByTab = {
-    kardex: kardexColumns,
-    warehouses: warehouseColumns,
-    locations: locationColumns,
-  }
+  const kardexActions = () => [
+    { icon: 'mdi mdi-swap-horizontal', title: 'Kardex mensual', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openMonthlyKardex(r) },
+  ]
 
-  const titlesByTab = {
-    kardex: 'Kárdex',
-    warehouses: 'Almacenes',
-    locations: 'Ubicaciones',
+  const warehouseActions = () => [
+    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => openWarehouseModal(r) },
+    { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => removeWarehouse(r.id) },
+  ]
+
+  const locationActions = () => [
+    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => openLocationModal(r) },
+    { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => removeLocation(r.id) },
+  ]
+
+  const kardexRenderCard = (row, actionButtons) => (
+    <div className='vdt-card'>
+      <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>{row.inventory}</p>
+          <small className='text-muted'>{[row.lot, formatDateIso(row.expiration_date) !== '-' ? formatDateIso(row.expiration_date) : null].filter(Boolean).join(' · ')}</small>
+        </div>
+        <span className='badge badge-soft-primary' style={{ whiteSpace: 'nowrap' }}>{formatQty(row.system_stock)} {row.unit_label}</span>
+      </div>
+      <small className='text-muted d-block mt-2'><i className='mdi mdi-map-marker me-1'></i>{[row.location, row.warehouse_name].filter(Boolean).join(' · ')}</small>
+      {actionButtons && <div className='d-flex mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+    </div>
+  )
+
+  const warehouseRenderCard = (row, actionButtons) => (
+    <div className='vdt-card'>
+      <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>{row.warehouse_name}</p>
+          <small className='text-muted'>{[row.business_name, row.branch_name].filter(Boolean).join(' · ')}</small>
+        </div>
+        {statusBadgeNode(row.status)}
+      </div>
+      <small className='text-muted d-block mt-2'><i className='mdi mdi-map me-1'></i>{row.country}</small>
+      {actionButtons && <div className='d-flex mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+    </div>
+  )
+
+  const locationRenderCard = (row, actionButtons) => (
+    <div className='vdt-card'>
+      <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>{row.code}</p>
+          <small className='text-muted'>{row.warehouse_name}</small>
+        </div>
+        {statusBadgeNode(row.status)}
+      </div>
+      <div className='d-flex flex-wrap align-items-center mt-2' style={{ gap: 8 }}>
+        {occupancyBadgeNode(row.occupancy_status)}
+        {row.temperature_range && <small className='text-muted'>{row.temperature_range}</small>}
+      </div>
+      {row.client_name && <small className='text-muted d-block mt-2'><i className='mdi mdi-account me-1'></i>{row.client_name}</small>}
+      {actionButtons && <div className='d-flex mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
+    </div>
+  )
+
+  const tableConfigByTab = {
+    kardex: {
+      icon: 'mdi mdi-clipboard-text-outline', title: 'Kárdex', unit: 'elementos',
+      columns: kardexVdColumns, actions: kardexActions, renderCard: kardexRenderCard,
+      searchFields: ['inventory', 'lot', 'expiration_date', 'unit_label', 'location', 'warehouse_name'],
+      searchPlaceholder: 'Buscar por inventario, lote, ubicación…',
+      emptyText: 'No existen elementos.',
+      defaultSort: { field: 'last_movement_at', desc: true },
+    },
+    warehouses: {
+      icon: 'mdi mdi-warehouse', title: 'Almacenes', unit: 'almacenes',
+      columns: warehouseVdColumns, actions: warehouseActions, renderCard: warehouseRenderCard,
+      searchFields: ['warehouse_name', 'branch_name', 'business_name', 'country'],
+      searchPlaceholder: 'Buscar por almacén, sede o empresa…',
+      emptyText: 'No se encontraron almacenes.',
+      defaultSort: { field: 'warehouse_name', desc: false },
+    },
+    locations: {
+      icon: 'mdi mdi-map-marker', title: 'Ubicaciones', unit: 'ubicaciones',
+      columns: locationVdColumns, actions: locationActions, renderCard: locationRenderCard,
+      searchFields: ['warehouse_name', 'client_name', 'code', 'temperature_range'],
+      searchPlaceholder: 'Buscar por almacén, cliente o ubicación…',
+      emptyText: 'No se encontraron ubicaciones.',
+      defaultSort: { field: 'code', desc: false },
+    },
   }
+  const activeTableConfig = tableConfigByTab[activeTab]
 
   return <>
     <div className='row g-3 mb-3' hidden={activeTab === 'kardex'}>
@@ -1461,32 +1351,34 @@ const StorageKardex = () => {
           ))}
         </ul>
 
-        {activeTab === 'kardex' && <div className='pt-4 pb-3'>
+        {activeTab === 'kardex' && <div className='pt-4 pb-2'>
           <div className='row g-3 align-items-end'>
-            <div className='col-12 col-lg-5'>
-              <label className='form-label'>Cliente</label>
-              <select className='form-select' value={clientId} onChange={(e) => setClientId(e.target.value)}>
-                <option value=''>Seleccione Cliente</option>
-                {clients.map(client => <option key={`storage-kardex-client-${client.id}`} value={client.id}>{storageClientLabel(client)}</option>)}
-              </select>
-            </div>
-            <div className='col-12 col-md-6 col-lg-5'>
-              <label className='form-label'>Almacen</label>
-              <select className='form-select' value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)}>
-                <option value=''>Todos</option>
-                {warehouses.map(warehouse => <option key={`storage-kardex-wh-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
-              </select>
-            </div>
-            <div className='col-12 col-md-6 col-lg-2'>
-              <label className='form-label'>Stock</label>
-              <select className='form-select' value={stockMode} onChange={(e) => setStockMode(e.target.value)}>
-                <option value='with_stock'>Con stock</option>
-                <option value='without_stock'>Sin stock</option>
-                <option value='all'>Todos</option>
-              </select>
-            </div>
+            <VdSelect
+              label='Cliente' col='col-12 col-lg-5'
+              value={clientId}
+              onChange={(value) => setClientId(value)}
+              options={clients.map(client => ({ value: `${client.id}`, label: storageClientLabel(client) }))}
+              placeholder='Seleccione Cliente'
+            />
+            <VdSelect
+              label='Almacen' col='col-12 col-md-6 col-lg-5'
+              value={warehouseId}
+              onChange={(value) => setWarehouseId(value)}
+              options={warehouses.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))}
+              placeholder='Todos'
+            />
+            <VdSelect
+              label='Stock' col='col-12 col-md-6 col-lg-2'
+              value={stockMode}
+              onChange={(value) => setStockMode(value || 'with_stock')}
+              options={[
+                { value: 'with_stock', label: 'Con stock' },
+                { value: 'without_stock', label: 'Sin stock' },
+                { value: 'all', label: 'Todos' },
+              ]}
+            />
             <div className='col-12 d-flex justify-content-center gap-2'>
-              <button type='button' className='btn btn-outline-primary text-uppercase' onClick={loadStorageKardexRows}>
+              <button type='button' className='btn btn-outline-primary text-uppercase' onClick={() => tableRef.current?.refresh()}>
                 <i className='mdi mdi-magnify me-1'></i>
                 Buscar artículos
               </button>
@@ -1497,101 +1389,38 @@ const StorageKardex = () => {
             </div>
           </div>
         </div>}
-
-        {activeTab === 'kardex' && <>
-          <hr className='my-3' />
-
-          <div className='d-flex flex-wrap gap-2 mb-4'>
-            <button type='button' className='btn btn-sm btn-light border' onClick={() => exportStorageKardex('copy')}>Copiar</button>
-            <button type='button' className='btn btn-sm btn-light border' onClick={() => exportStorageKardex('excel')}>Excel</button>
-            <button type='button' className='btn btn-sm btn-light border' onClick={() => exportStorageKardex('pdf')}>PDF</button>
-            <button type='button' className='btn btn-sm btn-light border' onClick={() => exportStorageKardex('print')}>Imprimir</button>
-          </div>
-
-          <div className='d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2'>
-            <label className='d-inline-flex align-items-center gap-2 mb-0'>
-              <span>Elementos :</span>
-              <select className='form-select form-select-sm' style={{ width: 72 }} value={kardexPageSize} onChange={(e) => { setKardexPageSize(Number(e.target.value)); setKardexPage(1) }}>
-                {[10, 25, 50, 100].map(size => <option key={`storage-kardex-size-${size}`} value={size}>{size}</option>)}
-              </select>
-            </label>
-            <label className='d-inline-flex align-items-center gap-2 mb-0'>
-              <span>Filtrar :</span>
-              <input className='form-control form-control-sm' style={{ width: 190 }} value={kardexSearch} onChange={(e) => { setKardexSearch(e.target.value); setKardexPage(1) }} />
-            </label>
-          </div>
-
-          <div className='table-responsive border'>
-            <table className='table table-sm table-hover mb-0'>
-              <thead>
-                <tr>
-                  <th className='text-center text-uppercase' style={{ width: 150 }}>Acciones</th>
-                  <th style={{ minWidth: 260 }}>{sortableKardexHeader('inventory', 'Inventario')}</th>
-                  <th style={{ minWidth: 110 }}>{sortableKardexHeader('lot', 'Lote')}</th>
-                  <th style={{ minWidth: 110 }}>{sortableKardexHeader('expiration_date', 'F.V.')}</th>
-                  <th style={{ minWidth: 120 }}>{sortableKardexHeader('unit_label', 'U. Medida')}</th>
-                  <th style={{ minWidth: 145 }}>{sortableKardexHeader('system_stock', 'Stock Sistema')}</th>
-                  <th style={{ minWidth: 130 }}>{sortableKardexHeader('location', 'Ubicacion')}</th>
-                  <th style={{ minWidth: 170 }}>{sortableKardexHeader('warehouse_name', 'Almacen')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {kardexLoading && <tr><td colSpan='8' className='text-center text-muted py-4'><i className='mdi mdi-spin mdi-loading me-1'></i> Cargando...</td></tr>}
-                {!kardexLoading && kardexRows.length === 0 && <tr><td colSpan='8' className='text-center text-muted py-4'>No existen elementos</td></tr>}
-                {!kardexLoading && kardexRows.map(row => (
-                  <tr key={row.id}>
-                    <td className='text-center'>
-                      <button type='button' className='btn btn-xs btn-outline-primary' title='Kardex mensual' onClick={() => openMonthlyKardex(row)}>
-                        <i className='mdi mdi-swap-horizontal'></i>
-                      </button>
-                    </td>
-                    <td>{row.inventory}</td>
-                    <td>{row.lot}</td>
-                    <td>{formatDateIso(row.expiration_date)}</td>
-                    <td>{row.unit_label}</td>
-                    <td className='text-end'>{formatQty(row.system_stock)}</td>
-                    <td>{row.location}</td>
-                    <td>{row.warehouse_name}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className='d-flex flex-wrap align-items-center justify-content-between gap-2 pt-3'>
-            <span className='text-muted'>
-              {kardexTotalCount} elementos (Pagina {kardexCurrentPage} de {kardexTotalPages})
-            </span>
-            <div className='btn-group btn-group-sm'>
-              <button type='button' className='btn btn-light border' disabled={kardexCurrentPage <= 1} onClick={() => setKardexPage(page => Math.max(1, page - 1))}>Anterior</button>
-              {kardexPageNumbers.map(page => (
-                <button key={`storage-kardex-page-${page}`} type='button' className={`btn border ${page === kardexCurrentPage ? 'btn-secondary' : 'btn-light'}`} onClick={() => setKardexPage(page)}>
-                  {page}
-                </button>
-              ))}
-              <button type='button' className='btn btn-light border' disabled={kardexCurrentPage >= kardexTotalPages} onClick={() => setKardexPage(page => Math.min(kardexTotalPages, page + 1))}>Siguiente</button>
-            </div>
-          </div>
-        </>}
       </div>
     </div>
 
-    {activeTab !== 'kardex' && <Table
-      key={`storage-kardex-table-${activeTab}`}
-      gridRef={gridRef}
-      title={titlesByTab[activeTab]}
+    <VdTable
+      key={`storage-kardex-vdtable-${activeTab}`}
+      ref={tableRef}
       rest={kardexRest}
-      pageSize={10}
-      exportable
-      toolBar={(container) => {
-        container.unshift({
-          widget: 'dxButton',
-          location: 'after',
-          options: { icon: 'refresh', hint: 'Refrescar tabla', onClick: () => refreshGrid(gridRef) }
-        })
-      }}
-      columns={columnsByTab[activeTab]}
-    />}
+      icon={activeTableConfig.icon}
+      title={activeTableConfig.title}
+      unit={activeTableConfig.unit}
+      defaultSort={activeTableConfig.defaultSort}
+      defaultPageSize={10}
+      searchFields={activeTableConfig.searchFields}
+      searchPlaceholder={activeTableConfig.searchPlaceholder}
+      emptyText={activeTableConfig.emptyText}
+      headerActions={<>
+        <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => tableRef.current?.refresh()}>
+          <i className='mdi mdi-refresh'></i>
+        </button>
+      </>}
+      toolbar={activeTab === 'kardex' ? (
+        <div className='d-flex flex-wrap' style={{ gap: 8 }}>
+          <button type='button' className='vdt-btn-soft' onClick={() => exportStorageKardex('copy')}><i className='mdi mdi-content-copy'></i> Copiar</button>
+          <button type='button' className='vdt-btn-soft' onClick={() => exportStorageKardex('excel')}><i className='mdi mdi-file-excel'></i> Excel</button>
+          <button type='button' className='vdt-btn-soft' onClick={() => exportStorageKardex('pdf')}><i className='mdi mdi-file-pdf-box'></i> PDF</button>
+          <button type='button' className='vdt-btn-soft' onClick={() => exportStorageKardex('print')}><i className='mdi mdi-printer'></i> Imprimir</button>
+        </div>
+      ) : null}
+      actions={activeTableConfig.actions}
+      columns={activeTableConfig.columns}
+      renderCard={activeTableConfig.renderCard}
+    />
 
     <Modal
       modalRef={monthlyKardexModalRef}
@@ -1678,37 +1507,36 @@ const StorageKardex = () => {
       bodyStyle={{ maxHeight: 'calc(100vh - 150px)', overflowY: 'auto', overflowX: 'hidden' }}
     >
       <div className='row g-3'>
-        <div className='col-12 col-lg-4'>
-          <label className='form-label'>Empresa</label>
-          <select className='form-select' value={warehouseForm.business_id} onChange={(e) => setWarehouseForm(prev => ({ ...prev, business_id: e.target.value, business_branch_id: '' }))}>
-            <option value=''>Seleccione empresa</option>
-            {businesses.map(business => <option key={`storage-wh-business-${business.id}`} value={business.id}>{business.name}</option>)}
-          </select>
-        </div>
-        <div className='col-12 col-lg-4'>
-          <label className='form-label'>Sede</label>
-          <select className='form-select' value={warehouseForm.business_branch_id} onChange={(e) => setWarehouseForm(prev => ({ ...prev, business_branch_id: e.target.value }))}>
-            <option value=''>Seleccione sede</option>
-            {filteredBranches.map(branch => <option key={`storage-wh-branch-${branch.id}`} value={branch.id}>{branch.name}</option>)}
-          </select>
-        </div>
-        <div className='col-12 col-lg-4'>
-          <label className='form-label'>Pais</label>
-          <select className='form-select' value={warehouseForm.country} onChange={(e) => setWarehouseForm(prev => ({ ...prev, country: e.target.value }))}>
-            <option value='Perú'>Perú</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Empresa' col='col-12 col-lg-4'
+          value={warehouseForm.business_id}
+          onChange={(value) => setWarehouseForm(prev => ({ ...prev, business_id: value, business_branch_id: '' }))}
+          options={businesses.map(business => ({ value: `${business.id}`, label: business.name }))}
+          placeholder='Seleccione empresa'
+        />
+        <VdSelect
+          label='Sede' col='col-12 col-lg-4'
+          value={warehouseForm.business_branch_id}
+          onChange={(value) => setWarehouseForm(prev => ({ ...prev, business_branch_id: value }))}
+          options={filteredBranches.map(branch => ({ value: `${branch.id}`, label: branch.name }))}
+          placeholder='Seleccione sede'
+        />
+        <VdSelect
+          label='Pais' col='col-12 col-lg-4'
+          value={warehouseForm.country}
+          onChange={(value) => setWarehouseForm(prev => ({ ...prev, country: value }))}
+          options={[{ value: 'Perú', label: 'Perú' }]}
+        />
         <div className='col-12 col-lg-8'>
           <label className='form-label'>Nombre almacén</label>
           <input className='form-control' value={warehouseForm.name} onChange={(e) => setWarehouseForm(prev => ({ ...prev, name: e.target.value }))} />
         </div>
-        <div className='col-12 col-lg-4'>
-          <label className='form-label'>Estado</label>
-          <select className='form-select' value={warehouseForm.status} onChange={(e) => setWarehouseForm(prev => ({ ...prev, status: e.target.value }))}>
-            <option value='1'>Activo</option>
-            <option value='0'>Inactivo</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Estado' col='col-12 col-lg-4'
+          value={warehouseForm.status}
+          onChange={(value) => setWarehouseForm(prev => ({ ...prev, status: value }))}
+          options={[{ value: '1', label: 'Activo' }, { value: '0', label: 'Inactivo' }]}
+        />
       </div>
     </Modal>
 
@@ -1721,38 +1549,38 @@ const StorageKardex = () => {
       bodyStyle={{ maxHeight: 'calc(100vh - 150px)', overflowY: 'auto', overflowX: 'hidden' }}
     >
       <div className='row g-3'>
-        <div className='col-12 col-md-6'>
-          <label className='form-label'>Almacén</label>
-          <select className='form-select' value={locationForm.warehouse_id} onChange={(e) => setLocationForm(prev => ({ ...prev, warehouse_id: e.target.value }))}>
-            <option value=''>Seleccione almacén</option>
-            {warehouses.map(warehouse => <option key={`storage-location-wh-${warehouse.id}`} value={warehouse.id}>{warehouse.name}</option>)}
-          </select>
-        </div>
-        <div className='col-12 col-md-6'>
-          <label className='form-label'>Cliente</label>
-          <select className='form-select' value={locationForm.client_id} disabled={!!locationForm.id && !!locationForm.client_id} onChange={(e) => setLocationForm(prev => ({ ...prev, client_id: e.target.value }))}>
-            <option value=''>Seleccione cliente</option>
-            {clients.map(client => <option key={`storage-location-client-${client.id}`} value={client.id}>{client.document_number ? `${client.document_number} | ` : ''}{client.full_name}</option>)}
-          </select>
-        </div>
-        <div className='col-12 col-md-6'>
-          <label className='form-label'>Temperatura</label>
-          <select className='form-select' value={locationForm.temperature_range} onChange={(e) => setLocationForm(prev => ({ ...prev, temperature_range: e.target.value }))}>
-            <option value=''>Seleccione</option>
-            {temperatures.map(temp => <option key={`storage-location-temp-${temp}`} value={temp}>{temp}</option>)}
-          </select>
-        </div>
+        <VdSelect
+          label='Almacén' col='col-12 col-md-6'
+          value={locationForm.warehouse_id}
+          onChange={(value) => setLocationForm(prev => ({ ...prev, warehouse_id: value }))}
+          options={warehouses.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))}
+          placeholder='Seleccione almacén'
+        />
+        <VdSelect
+          label='Cliente' col='col-12 col-md-6'
+          disabled={!!locationForm.id && !!locationForm.client_id}
+          value={locationForm.client_id}
+          onChange={(value) => setLocationForm(prev => ({ ...prev, client_id: value }))}
+          options={clients.map(client => ({ value: `${client.id}`, label: `${client.document_number ? `${client.document_number} | ` : ''}${client.full_name}` }))}
+          placeholder='Seleccione cliente'
+        />
+        <VdSelect
+          label='Temperatura' col='col-12 col-md-6'
+          value={locationForm.temperature_range}
+          onChange={(value) => setLocationForm(prev => ({ ...prev, temperature_range: value }))}
+          options={temperatures.map(temp => ({ value: temp, label: temp }))}
+          placeholder='Seleccione'
+        />
         <div className='col-12 col-md-6'>
           <label className='form-label'>Codificación</label>
           <input className='form-control' value={locationForm.code} onChange={(e) => setLocationForm(prev => ({ ...prev, code: e.target.value }))} />
         </div>
-        <div className='col-12 col-md-6'>
-          <label className='form-label'>Estado</label>
-          <select className='form-select' value={locationForm.status} onChange={(e) => setLocationForm(prev => ({ ...prev, status: e.target.value }))}>
-            <option value='1'>Activo</option>
-            <option value='0'>Inactivo</option>
-          </select>
-        </div>
+        <VdSelect
+          label='Estado' col='col-12 col-md-6'
+          value={locationForm.status}
+          onChange={(value) => setLocationForm(prev => ({ ...prev, status: value }))}
+          options={[{ value: '1', label: 'Activo' }, { value: '0', label: 'Inactivo' }]}
+        />
       </div>
     </Modal>
   </>

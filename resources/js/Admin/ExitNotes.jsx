@@ -1,4 +1,4 @@
-import React, { createRef, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
@@ -9,8 +9,7 @@ import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
-import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
-import SetSelectValue from '../Utils/SetSelectValue';
+import { Fetch } from 'sode-extend-react';
 import ExitNotesRest from '../Actions/Admin/ExitNotesRest';
 import { isStoragePath, scopedPermission } from '../Utils/permissionScope';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
@@ -137,8 +136,13 @@ const ExitNotes = () => {
   const documentSeriesRef = useRef()
   const documentSequenceRef = useRef()
   const documentDateRef = useRef()
-  const articleRefs = useRef({})
-  const batchRefs = useRef({})
+  // Cache de filas crudas devueltas por el loadOptions async de cada picker (por uid de fila).
+  // VdSelect en modo async solo entrega el `value` elegido en onChange (no el registro completo
+  // como hacia select2 con `.select2('data')`), asi que guardamos aqui lo ultimo que devolvio
+  // el backend para poder resolver relaciones (article, laboratory, activePrinciple, unit) al
+  // elegir una opcion, igual que antes.
+  const articleOptionsCacheRef = useRef({})
+  const batchOptionsCacheRef = useRef({})
 
   const [isEditing, setIsEditing] = useState(false)
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
@@ -165,16 +169,6 @@ const ExitNotes = () => {
   const [stockSearchPageSize, setStockSearchPageSize] = useState(20)
   const [stockSearchLoading, setStockSearchLoading] = useState(false)
 
-  const getArticleRef = (uid) => {
-    if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
-    return articleRefs.current[uid]
-  }
-
-  const getBatchRef = (uid) => {
-    if (!batchRefs.current[uid]) batchRefs.current[uid] = createRef()
-    return batchRefs.current[uid]
-  }
-
   useEffect(() => {
     if (!storageContext) return
     loadWarehouses()
@@ -188,28 +182,6 @@ const ExitNotes = () => {
     if (!storageContext) return
     tableRef.current?.refresh()
   }, [storageGridFilter])
-
-  useEffect(() => {
-    if (storageContext) return
-    items.forEach(item => {
-      const ref = getArticleRef(item.uid)
-      if (!ref.current || !item.article_id || !item.article_label) return
-      const current = $(ref.current).val()
-      if (`${current}` === `${item.article_id}`) return
-      SetSelectValue(ref.current, item.article_id, item.article_label)
-    })
-  }, [items])
-
-  useEffect(() => {
-    if (storageContext) return
-    items.forEach(item => {
-      const ref = getBatchRef(item.uid)
-      if (!ref.current || !item.batch_id || !item.batch_label) return
-      const current = $(ref.current).val()
-      if (`${current}` === `${item.batch_id}`) return
-      SetSelectValue(ref.current, item.batch_id, item.batch_label)
-    })
-  }, [items])
 
   const loadWarehouses = async () => {
     const warehousesData = await exitNotesRest.getWarehouses()
@@ -475,10 +447,12 @@ const ExitNotes = () => {
     }))
   }
 
-  const onItemBatchChanged = (uid, e) => {
-    const selected = $(e.target).select2('data')?.[0]
-    const batch = selected?.data ?? null
-    const batchId = e.target.value || ''
+  // Antes leia el registro elegido desde `$(e.target).select2('data')` (evento nativo de
+  // select2). VdSelect async solo entrega el `value` en su onChange, asi que resolvemos el
+  // mismo objeto crudo (con la relacion `article` y sus relaciones anidadas) desde el cache
+  // que llena el `loadOptions` del picker de esta fila.
+  const onItemBatchSelected = (uid, batchId) => {
+    const batch = batchId ? (batchOptionsCacheRef.current[uid]?.[batchId] ?? null) : null
 
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
@@ -501,9 +475,9 @@ const ExitNotes = () => {
         return {
           ...item,
           batch_id: batchId,
-          batch_label: selected?.text ?? batchId,
-          batch_code: selected?.text ?? batchId,
-          lot: selected?.text ?? batchId,
+          batch_label: batchId,
+          batch_code: batchId,
+          lot: batchId,
         }
       }
 
@@ -512,7 +486,7 @@ const ExitNotes = () => {
       return {
         ...item,
         batch_id: batchId,
-        batch_label: selected?.text ?? batch.lot ?? item.batch_label,
+        batch_label: batch.lot ?? item.batch_label,
         batch_code: batch.lot ?? item.batch_code,
         lot: batch.lot ?? item.lot,
         expiration_date: batch.expiration_date ? batch.expiration_date.toString().slice(0, 10) : item.expiration_date,
@@ -525,10 +499,10 @@ const ExitNotes = () => {
     }))
   }
 
-  const onItemArticleChanged = (uid, e) => {
-    const selected = $(e.target).select2('data')?.[0]
-    const article = selected?.data ?? null
-    const articleId = e.target.value || ''
+  // Igual que onItemBatchSelected: VdSelect async solo entrega el `value`, asi que resolvemos
+  // el articulo elegido desde el cache que llena el `loadOptions` del picker de esta fila.
+  const onItemArticleSelected = (uid, articleId) => {
+    const article = articleId ? (articleOptionsCacheRef.current[uid]?.[articleId] ?? null) : null
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
       if (!articleId) {
@@ -552,7 +526,7 @@ const ExitNotes = () => {
         batch_code: item.article_id && item.article_id !== articleId ? '' : item.batch_code,
         lot: item.article_id && item.article_id !== articleId ? '' : item.lot,
         article_id: articleId,
-        article_label: selected?.text ?? item.article_label,
+        article_label: article ? `${article.code ?? ''} - ${article.name ?? ''}`.trim() : (item.article_label || articleId),
         article_laboratory: article?.laboratory?.name ?? item.article_laboratory,
         article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? item.article_principle,
         article_unit: article?.unit?.symbol ?? article?.unit?.name ?? item.article_unit,
@@ -1183,14 +1157,36 @@ const ExitNotes = () => {
                         <td style={{ width: '20%' }}>
                           <div className='d-flex gap-1 align-items-center'>
                             <div style={{ flex: 1 }}>
-                              <SelectAPIFormGroup
-                                eRef={getBatchRef(item.uid)}
+                              <VdSelect
                                 col='col-12'
-                                searchAPI='/api/admin/batches/paginate'
-                                searchBy='lot'
-                                filter={batchFilter ?? undefined}
-                                dropdownParent='#exit-note-form-container'
-                                onChange={(e) => onItemBatchChanged(item.uid, e)}
+                                noMargin
+                                value={item.batch_id}
+                                valueLabel={item.batch_label || item.batch_code || item.lot || null}
+                                onChange={(value) => onItemBatchSelected(item.uid, value)}
+                                placeholder='Buscar lote…'
+                                loadOptions={async (q) => {
+                                  // Replica exacta del filtro de SelectAPIFormGroup: busqueda por
+                                  // `lot` combinada (AND) con el mismo `batchFilter` en cascada
+                                  // (business_id/article_id) que ya calcula esta fila arriba.
+                                  const searchClause = ['lot', 'contains', q || '']
+                                  const filter = batchFilter
+                                    ? (q ? [searchClause, 'and', batchFilter] : batchFilter)
+                                    : (q ? searchClause : undefined)
+                                  const { result } = await Fetch('/api/admin/batches/paginate', {
+                                    method: 'POST',
+                                    body: JSON.stringify({
+                                      sort: [{ selector: 'lot', desc: false }],
+                                      skip: 0,
+                                      take: 30,
+                                      filter,
+                                    }),
+                                  })
+                                  const rows = result?.data ?? []
+                                  const cache = {}
+                                  rows.forEach(b => { cache[`${b.id}`] = b })
+                                  batchOptionsCacheRef.current[item.uid] = cache
+                                  return rows.map(b => ({ value: `${b.id}`, label: b.lot }))
+                                }}
                               />
                             </div>
                             <button type='button' className='btn btn-xs btn-soft-success' title='Crear lote' onClick={() => onCreateBatchForItem(item.uid)}>
@@ -1199,14 +1195,33 @@ const ExitNotes = () => {
                           </div>
                         </td>
                         <td style={{ width: '20%' }}>
-                          <SelectAPIFormGroup
-                            eRef={getArticleRef(item.uid)}
+                          <VdSelect
                             col='col-12'
-                            searchAPI='/api/admin/articles/paginate'
-                            searchBy='name'
-                            extraParams={articleExtraParams}
-                            dropdownParent='#exit-note-form-container'
-                            onChange={(e) => onItemArticleChanged(item.uid, e)}
+                            noMargin
+                            value={item.article_id}
+                            valueLabel={item.article_label || null}
+                            onChange={(value) => onItemArticleSelected(item.uid, value)}
+                            placeholder='Buscar articulo…'
+                            loadOptions={async (q) => {
+                              // Replica exacta de SelectAPIFormGroup: busqueda por `name` +
+                              // mismo extraParams `picker_warehouse_id` (cascada de scope
+                              // comercial/magistrales/muestras segun el almacen de la fila).
+                              const { result } = await Fetch('/api/admin/articles/paginate', {
+                                method: 'POST',
+                                body: JSON.stringify({
+                                  sort: [{ selector: 'name', desc: false }],
+                                  skip: 0,
+                                  take: 30,
+                                  filter: q ? ['name', 'contains', q] : undefined,
+                                  ...(articleExtraParams || {}),
+                                }),
+                              })
+                              const rows = result?.data ?? []
+                              const cache = {}
+                              rows.forEach(a => { cache[`${a.id}`] = a })
+                              articleOptionsCacheRef.current[item.uid] = cache
+                              return rows.map(a => ({ value: `${a.id}`, label: `${a.code ?? ''} - ${a.name ?? ''}`.trim() }))
+                            }}
                           />
                         </td>
                         <td><small>{articleExtra}</small></td>

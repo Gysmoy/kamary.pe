@@ -1,14 +1,13 @@
-import React, { createRef, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Fetch } from 'sode-extend-react';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import VdTable from '../Components/Adminto/VdTable';
 import VdSelect from '../Components/Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
 import Swal from 'sweetalert2';
-import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
-import SetSelectValue from '../Utils/SetSelectValue';
 import Global from '../Utils/Global';
 import TakeOrdersRestClient from '../Actions/Admin/TakeOrdersRest';
 import { openTakeOrderPdf } from '../Utils/takeOrderPdf';
@@ -135,9 +134,6 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
 
   const idRef = useRef()
   const codeRef = useRef()
-  const clientRef = useRef()
-  const warehouseRef = useRef()
-  const priceListRef = useRef()
   const promisedDateRef = useRef()
   const deliveryAddressRef = useRef()
   const deliveryReferenceRef = useRef()
@@ -146,18 +142,27 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const purchaseOrderRef = useRef()
   const referralGuideRef = useRef()
   const observationsRef = useRef()
-  const articleRefs = useRef({})
-  const hydratingRef = useRef(false)
+
+  // Caches de los registros completos devueltos por los loadOptions async de VdSelect
+  // (VdSelect#onChange solo entrega el value; aquí resolvemos el registro embebido, igual
+  // que antes se leía $(e.target).select2('data')?.[0]?.data).
+  const clientCacheRef = useRef({})
+  const warehouseCacheRef = useRef({})
+  const priceListCacheRef = useRef({})
+  const articleCacheRef = useRef({})
 
   const [isEditing, setIsEditing] = useState(false)
   const [activeProfile, setActiveProfile] = useState('micro')
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
+  const [warehouseValueLabel, setWarehouseValueLabel] = useState('')
   const [selectedClientId, setSelectedClientId] = useState('')
+  const [clientValueLabel, setClientValueLabel] = useState('')
   const [selectedNetworkId, setSelectedNetworkId] = useState('')
   const [selectedDeliveryAddressId, setSelectedDeliveryAddressId] = useState('')
   const [selectedPriceListId, setSelectedPriceListId] = useState('')
+  const [priceListValueLabel, setPriceListValueLabel] = useState('')
   const [selectedCommercialChannel, setSelectedCommercialChannel] = useState('')
   const [selectedSegment, setSelectedSegment] = useState('')
   const [selectedDocumentType, setSelectedDocumentType] = useState('Factura')
@@ -208,21 +213,6 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     selectedSegment,
   ])
 
-  const getArticleRef = (uid) => {
-    if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
-    return articleRefs.current[uid]
-  }
-
-  useEffect(() => {
-    items.forEach(item => {
-      const ref = getArticleRef(item.uid)
-      if (!ref.current || !item.article_id || !item.article_label) return
-      const current = $(ref.current).val()
-      if (`${current}` === `${item.article_id}`) return
-      SetSelectValue(ref.current, item.article_id, item.article_label)
-    })
-  }, [items])
-
   const warehouseLabel = (warehouse) => {
     if (!warehouse) return ''
     const branchName = warehouse?.branch?.name ?? ''
@@ -233,7 +223,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const loadWarehouses = async (branchId, preferredId = null) => {
     if (!branchId) {
       setSelectedWarehouseId('')
-      if (warehouseRef.current) SetSelectValue(warehouseRef.current, null)
+      setWarehouseValueLabel('')
       return { warehouseId: '', warehouse: null }
     }
 
@@ -243,11 +233,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     const nextWarehouse = preferredWarehouse ?? rows[0] ?? null
     const nextWarehouseId = nextWarehouse?.id ? `${nextWarehouse.id}` : ''
     setSelectedWarehouseId(nextWarehouseId)
-
-    if (warehouseRef.current) {
-      if (nextWarehouse) SetSelectValue(warehouseRef.current, nextWarehouseId, warehouseLabel(nextWarehouse))
-      else SetSelectValue(warehouseRef.current, null)
-    }
+    setWarehouseValueLabel(nextWarehouse ? warehouseLabel(nextWarehouse) : '')
 
     return { warehouseId: nextWarehouseId, warehouse: nextWarehouse }
   }
@@ -421,7 +407,6 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
   const onModalOpen = async (data = null, profileKey = 'micro') => {
     setIsEditing(!!data?.id)
     setActiveProfile(data?.order_profile ?? profileKey)
-    hydratingRef.current = true
 
     if (idRef.current) idRef.current.value = data?.id ?? ''
     if (codeRef.current) codeRef.current.value = data?.code ?? 'Se genera al guardar'
@@ -448,26 +433,25 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     setSelectedSegment(data?.segment ?? data?.client?.segment ?? '')
 
     if (clientId && data?.client?.full_name) {
-      SetSelectValue(clientRef.current, clientId, `${data.client.document_number ?? ''} - ${data.client.full_name}`.trim())
+      setClientValueLabel(`${data.client.document_number ?? ''} - ${data.client.full_name}`.trim())
       setClientSnapshot(data.client)
     } else {
-      SetSelectValue(clientRef.current, null)
+      setClientValueLabel('')
     }
 
     if (priceListId && data?.price_list?.code) {
-      SetSelectValue(priceListRef.current, priceListId, data.price_list.code)
+      setPriceListValueLabel(data.price_list.code)
     } else {
-      SetSelectValue(priceListRef.current, null)
+      setPriceListValueLabel('')
     }
-    if (defaults.warehouseId && warehouseRef.current) {
+    if (defaults.warehouseId) {
       const warehouseLabelText = defaults.warehouse?.name
         ? warehouseLabel(defaults.warehouse)
         : (data?.warehouse?.name ?? defaults.warehouseId)
-      SetSelectValue(warehouseRef.current, defaults.warehouseId, warehouseLabelText)
-    } else if (warehouseRef.current) {
-      SetSelectValue(warehouseRef.current, null)
+      setWarehouseValueLabel(warehouseLabelText)
+    } else {
+      setWarehouseValueLabel('')
     }
-    hydratingRef.current = false
 
     const detail = (data?.items ?? []).map(row => {
       const article = row.article ?? null
@@ -602,18 +586,18 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     await saveOrder(false)
   }
 
-  const onClientChanged = async (e) => {
-    if (hydratingRef.current) return
-    const clientId = e.target.value || ''
-    const selected = $(e.target).select2('data')?.[0]?.data ?? null
+  const onClientChanged = async (value) => {
+    const clientId = value || ''
+    const selected = clientCacheRef.current[clientId] ?? null
     const clientChanged = `${selectedClientId || ''}` !== `${clientId}`
 
     setSelectedClientId(clientId)
+    setClientValueLabel(selected ? `${selected.document_number ?? ''} - ${selected.full_name ?? ''}`.trim() : '')
     setClientSnapshot(selected)
     if (clientChanged) {
       setItems([emptyItem()])
       setSelectedPriceListId('')
-      SetSelectValue(priceListRef.current, null)
+      setPriceListValueLabel('')
     }
 
     if (!clientId) {
@@ -642,19 +626,17 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     applyDeliveryAddressSnapshot(selected, clientSnapshot)
   }
 
-  const onPriceListChanged = async (e) => {
-    if (hydratingRef.current) return
-    const priceListId = e.target.value || ''
-    const selected = $(e.target).select2('data')?.[0]?.data ?? null
+  const onPriceListChanged = async (value) => {
+    const priceListId = value || ''
+    const selected = priceListCacheRef.current[priceListId] ?? null
     setSelectedPriceListId(priceListId)
+    setPriceListValueLabel(selected?.code ?? '')
 
     if (selected?.business_branch_id) setSelectedBranchId(`${selected.business_branch_id}`)
     if (selected?.warehouse_id) {
       const warehouseId = `${selected.warehouse_id}`
       setSelectedWarehouseId(warehouseId)
-      if (warehouseRef.current) {
-        SetSelectValue(warehouseRef.current, warehouseId, warehouseLabel(selected.warehouse ?? selected))
-      }
+      setWarehouseValueLabel(warehouseLabel(selected.warehouse ?? selected))
       await repriceAllItems(warehouseId)
       return
     }
@@ -662,36 +644,32 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
     await repriceAllItems()
   }
 
-  const onWarehouseChanged = async (e) => {
-    if (hydratingRef.current) return
-    const warehouseId = e.target.value || ''
-    const selected = $(e.target).select2('data')?.[0]?.data ?? null
+  const onWarehouseChanged = async (value) => {
+    const warehouseId = value || ''
+    const selected = warehouseCacheRef.current[warehouseId] ?? null
 
     setSelectedWarehouseId(warehouseId)
+    setWarehouseValueLabel(selected ? warehouseLabel(selected) : '')
     if (selected?.business_branch_id) setSelectedBranchId(`${selected.business_branch_id}`)
     await repriceAllItems(warehouseId)
   }
 
-  const onItemArticleChanged = async (uid, e) => {
-    if (!selectedClientId) {
-      SetSelectValue(e.target, null)
-      return
-    }
-    const selected = $(e.target).select2('data')?.[0]
-    const article = selected?.data ?? null
-    const articleId = e.target.value || ''
+  const onItemArticleChanged = async (uid, value) => {
+    if (!selectedClientId) return
+    const articleId = value || ''
 
     if (!articleId) {
       setItems(prev => prev.map(item => item.uid === uid ? { ...emptyItem(), uid: item.uid } : item))
       return
     }
 
-    const hydrated = article ?? await takeOrdersRest.getArticleById(articleId)
+    const cached = articleCacheRef.current[articleId] ?? null
+    const hydrated = cached ?? await takeOrdersRest.getArticleById(articleId)
     const presentations = (hydrated?.presentations ?? []).filter(p => p?.status !== false && p?.status !== 0)
     const defaultPresentation = presentations[0] ?? null
     const articleLabel = hydrated
       ? `${hydrated.code ?? ''} - ${hydrated.name ?? ''}`.trim()
-      : (selected?.text ?? articleId)
+      : articleId
 
     const draftItem = {
       article_id: articleId,
@@ -915,15 +893,26 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
           <div className='col-12 mb-2'>
             <div className='input-group'>
               <div className='flex-grow-1'>
-                <SelectAPIFormGroup
-                  eRef={clientRef}
-                  label=''
-                  searchAPI='/api/admin/clients/paginate'
-                  searchBy='full_name'
-                  selectBy='entity_id'
-                  dropdownParent='#take-orders-form-container'
-                  filter={['client_kind', '=', 'regular']}
+                <VdSelect
+                  noMargin
+                  value={selectedClientId}
+                  valueLabel={clientValueLabel}
                   onChange={onClientChanged}
+                  loadOptions={async (q) => {
+                    const { result } = await Fetch('/api/admin/clients/paginate', {
+                      method: 'POST',
+                      body: JSON.stringify({
+                        sort: [{ selector: 'full_name', desc: false }],
+                        skip: 0,
+                        take: 50,
+                        filter: [['full_name', 'contains', q || ''], 'and', ['client_kind', '=', 'regular']],
+                      }),
+                    })
+                    const rows = result?.data ?? []
+                    clientCacheRef.current = { ...clientCacheRef.current, ...Object.fromEntries(rows.map(x => [`${x.entity_id}`, x])) }
+                    return rows.map(x => ({ value: `${x.entity_id}`, label: x.full_name }))
+                  }}
+                  placeholder='Buscar cliente…'
                 />
               </div>
               <button type='button' className='btn btn-info text-white mb-2' title='Agregar cliente' onClick={() => window.open('/admin/clients', '_blank')}>
@@ -1063,27 +1052,53 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
           </div>
 
           <div className='col-md-6 mb-3'>
-            <SelectAPIFormGroup
-              eRef={warehouseRef}
+            <VdSelect
               label='Almacén'
-              searchAPI='/api/admin/warehouses/paginate'
-              searchBy='name'
-              dropdownParent='#take-orders-form-container'
-              filter={selectedBranchId ? [['business_branch_id', '=', Number(selectedBranchId)], 'and', ['status', '=', true]] : ['status', '=', true]}
+              value={selectedWarehouseId}
+              valueLabel={warehouseValueLabel}
               onChange={onWarehouseChanged}
+              loadOptions={async (q) => {
+                const branchFilter = selectedBranchId
+                  ? [['business_branch_id', '=', Number(selectedBranchId)], 'and', ['status', '=', true]]
+                  : ['status', '=', true]
+                const { result } = await Fetch('/api/admin/warehouses/paginate', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    sort: [{ selector: 'name', desc: false }],
+                    skip: 0,
+                    take: 50,
+                    filter: [['name', 'contains', q || ''], 'and', branchFilter],
+                  }),
+                })
+                const rows = result?.data ?? []
+                warehouseCacheRef.current = { ...warehouseCacheRef.current, ...Object.fromEntries(rows.map(x => [`${x.id}`, x])) }
+                return rows.map(x => ({ value: `${x.id}`, label: x.name }))
+              }}
+              placeholder='Buscar almacén…'
             />
           </div>
 
           <div className='col-12 text-center mb-2'>
             <label className='form-label d-block fw-bold'>Tarifario</label>
-            <SelectAPIFormGroup
-              eRef={priceListRef}
-              label=''
-              searchAPI='/api/admin/price-lists/paginate'
-              searchBy='code'
-              dropdownParent='#take-orders-form-container'
-              filter={['status', '=', true]}
+            <VdSelect
+              value={selectedPriceListId}
+              valueLabel={priceListValueLabel}
               onChange={onPriceListChanged}
+              loadOptions={async (q) => {
+                const { result } = await Fetch('/api/admin/price-lists/paginate', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    sort: [{ selector: 'code', desc: false }],
+                    skip: 0,
+                    take: 50,
+                    filter: [['code', 'contains', q || ''], 'and', ['status', '=', true]],
+                  }),
+                })
+                const rows = result?.data ?? []
+                priceListCacheRef.current = { ...priceListCacheRef.current, ...Object.fromEntries(rows.map(x => [`${x.id}`, x])) }
+                return rows.map(x => ({ value: `${x.id}`, label: x.code }))
+              }}
+              placeholder='Buscar tarifario…'
             />
           </div>
 
@@ -1118,14 +1133,27 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
                   {items.map((item) => (
                     <tr key={item.uid}>
                       <td>
-                        <SelectAPIFormGroup
-                          eRef={getArticleRef(item.uid)}
-                          label=''
-                          searchAPI={articleSearchAPI}
-                          searchBy='name'
-                          dropdownParent='#take-orders-form-container'
+                        <VdSelect
+                          noMargin
+                          value={item.article_id}
+                          valueLabel={item.article_label}
                           disabled={!selectedClientId}
-                          onChange={(e) => onItemArticleChanged(item.uid, e)}
+                          onChange={(value) => onItemArticleChanged(item.uid, value)}
+                          loadOptions={async (q) => {
+                            const { result } = await Fetch(articleSearchAPI, {
+                              method: 'POST',
+                              body: JSON.stringify({
+                                sort: [{ selector: 'name', desc: false }],
+                                skip: 0,
+                                take: 50,
+                                filter: ['name', 'contains', q || ''],
+                              }),
+                            })
+                            const rows = result?.data ?? []
+                            articleCacheRef.current = { ...articleCacheRef.current, ...Object.fromEntries(rows.map(x => [`${x.id}`, x])) }
+                            return rows.map(x => ({ value: `${x.id}`, label: `${x.code ?? ''} - ${x.name ?? ''}`.trim() }))
+                          }}
+                          placeholder='Buscar artículo…'
                         />
                         <small className='text-muted d-block text-start'>
                           {[item.article_laboratory, item.article_principle, item.article_unit].filter(Boolean).join(' | ')}

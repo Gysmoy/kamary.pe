@@ -1,4 +1,4 @@
-﻿import React, { createRef, useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 import BaseAdminto from '@Adminto/Base';
@@ -8,9 +8,8 @@ import VdTable from '@Adminto/VdTable';
 import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
 import Swal from 'sweetalert2';
-import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
+import { Fetch } from 'sode-extend-react';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
-import SetSelectValue from '../Utils/SetSelectValue';
 import BillingDocumentsRest from '../Actions/Admin/BillingDocumentsRest';
 import CommercialOrdersRest from '../Actions/Admin/CommercialOrdersRest';
 import DeliveryDelayReasonsRest from '../Actions/Admin/DeliveryDelayReasonsRest';
@@ -28,6 +27,40 @@ const billingDocumentsRest = new BillingDocumentsRest()
 const deliveryDelayReasonsRest = new DeliveryDelayReasonsRest()
 const referralGuidesRest = new ReferralGuidesRest()
 const regularClientFilter = ['client_kind', '=', 'regular']
+const creditNoteBaseFilter = [['document_type', '<>', 'Nota de credito'], 'and', ['source_type', '=', 'commercial_order']]
+
+// Reemplazo del AJAX de select2 (SelectAPIFormGroup) para VdSelect async.
+// Replica EXACTO el mismo endpoint y cuerpo (sort/skip/take + filter contains) que usaba
+// select2 y devuelve [{value,label}] mediante `map`. `filter` es el filtro adicional en
+// cascada (mismo formato dx) o null.
+const fetchPaginateOptions = async (url, searchBy, filter, term, map, take = 50) => {
+  const value = term ?? ''
+  try {
+    const { status, result } = await Fetch(url, {
+      method: 'POST',
+      body: JSON.stringify({
+        sort: [{ selector: searchBy, desc: false }],
+        skip: 0,
+        take,
+        filter: filter
+          ? [[searchBy, 'contains', value], 'and', filter]
+          : [searchBy, 'contains', value],
+      }),
+    })
+    if (!status) return []
+    return (result?.data ?? []).map(map)
+  } catch {
+    return []
+  }
+}
+
+// Etiqueta plana para el almacen (antes templateResult jQuery: nombre - sede (empresa)).
+const warehouseOptionLabel = (warehouse) => {
+  const name = warehouse?.name ?? ''
+  const branch = warehouse?.branch?.name
+  const business = warehouse?.branch?.business?.name
+  return [name, branch ? `- ${branch}` : '', business ? `(${business})` : ''].filter(Boolean).join(' ')
+}
 const lineDiscountOptions = [1, 2, 3, 4, 5]
 const paymentMethodOptions = [
   'EFECTIVO [CONTADO]',
@@ -385,6 +418,12 @@ const billingDocumentClientLabel = (row) => {
   const name = `${customer?.full_name ?? customer?.business_name ?? ''}`.trim()
   return [documentNumber, name].filter(Boolean).join(' | ') || '-'
 }
+// Etiqueta plana para el comprobante a anular (antes templateResult jQuery: N° · cliente).
+const billingDocOptionLabel = (document) => {
+  const num = [document?.series, document?.sequence].filter(Boolean).join('-') || document?.code || `#${document?.id}`
+  const client = billingDocumentClientLabel(document)
+  return client && client !== '-' ? `${num} · ${client}` : num
+}
 const currencyLabel = (value) => `${value ?? ''}`.toUpperCase() === 'USD' ? 'Dolares' : 'Soles'
 const billingDocumentSunatLabel = (row) => row?.external_reference || row?.external_id || row?.external_status || '-'
 const billingDocumentAffectedLabel = (row) => row?.referenceDocument?.code ?? row?.reference_document?.code ?? '-'
@@ -432,23 +471,6 @@ const normalizeSelectEntityId = (value) => {
   const text = `${value ?? ''}`.trim()
   const match = text.match(/^(client|eventual)-(\d+)$/)
   return match ? match[2] : text
-}
-const warehouseOptionTemplate = (option) => {
-  if (option.loading) return option.text
-  const warehouse = option.data ?? {}
-  const name = option.text || warehouse.name || ''
-  const branch = warehouse.branch?.name
-  const business = warehouse.branch?.business?.name
-  const container = $('<span>').text(name)
-  if (branch) container.append($('<small>').addClass('text-muted ms-1').text(`- ${branch}`))
-  if (business) container.append($('<small>').addClass('text-muted ms-1').text(`(${business})`))
-  return container
-}
-const clearSelectValue = (ref) => {
-  if (!ref?.current) return
-  const select = $(ref.current)
-  select.empty().val(null)
-  select.trigger(select.data('select2') ? 'change.select2' : 'change')
 }
 const presentationEmptyLabel = (item) => item.article_id ? 'Unidad base' : 'Sin presentacion'
 const presentationOptionLabel = (presentation, item) => {
@@ -955,16 +977,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const evidenceModalRef = useRef()
   const evidenceFileRef = useRef()
   const creditNoteModalRef = useRef()
-  const creditNoteDocRef = useRef()
   const creditNoteReasonRef = useRef()
 
   const idRef = useRef()
   const codeRef = useRef()
-  const businessRef = useRef()
-  const warehouseRef = useRef()
-  const clientRef = useRef()
-  const eventualClientRef = useRef()
-  const sellerRef = useRef()
   const doctorNameRef = useRef()
   const issueDateRef = useRef()
   const promisedDateRef = useRef()
@@ -984,7 +1000,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const dispatchContactNameRef = useRef()
   const dispatchContactPhoneRef = useRef()
   const observationsRef = useRef()
-  const articleRefs = useRef({})
+  const clientRecordsRef = useRef({})
+  const articleRecordsRef = useRef({})
 
   const [isEditing, setIsEditing] = useState(false)
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
@@ -992,6 +1009,14 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
   const [selectedClientId, setSelectedClientId] = useState('')
   const [selectedEventualClientId, setSelectedEventualClientId] = useState('')
+  const [selectedSellerId, setSelectedSellerId] = useState('')
+  const [businessLabel, setBusinessLabel] = useState('')
+  const [warehouseLabel, setWarehouseLabel] = useState('')
+  const [clientLabel, setClientLabel] = useState('')
+  const [eventualClientLabel, setEventualClientLabel] = useState('')
+  const [sellerLabel, setSellerLabel] = useState('')
+  const [creditNoteDocId, setCreditNoteDocId] = useState('')
+  const [formInstanceKey, setFormInstanceKey] = useState(0)
   const [selectedNetworkId, setSelectedNetworkId] = useState('')
   const [selectedDeliveryAddressId, setSelectedDeliveryAddressId] = useState('')
   const [mapPosition, setMapPosition] = useState({ lat: '', lng: '' })
@@ -1104,21 +1129,6 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       window.removeEventListener('scroll', closeMenu, true)
     }
   }, [discountMenu])
-
-  const getArticleRef = (uid) => {
-    if (!articleRefs.current[uid]) articleRefs.current[uid] = createRef()
-    return articleRefs.current[uid]
-  }
-
-  useEffect(() => {
-    items.forEach(item => {
-      const ref = getArticleRef(item.uid)
-      if (!ref.current || !item.article_id || !item.article_label) return
-      const current = $(ref.current).val()
-      if (`${current}` === `${item.article_id}`) return
-      SetSelectValue(ref.current, item.article_id, item.article_label)
-    })
-  }, [items])
 
   const loadBranches = async (businessId, preferredId = null) => {
     if (!businessId) {
@@ -1249,19 +1259,18 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const clearCustomerSelections = (type) => {
     if (type === 'regular') {
       setSelectedEventualClientId('')
-      clearSelectValue(eventualClientRef)
     } else if (type === 'eventual') {
       setSelectedClientId('')
       setNetworks([])
       setSelectedNetworkId('')
       setDeliveryAddresses([])
       setSelectedDeliveryAddressId('')
-      clearSelectValue(clientRef)
     }
   }
 
   const onModalOpen = async (data = null) => {
     setIsEditing(!!data?.id)
+    setFormInstanceKey(key => key + 1)
     setFormLockReason(commercialOrderEditLockReason(data))
 
     if (idRef.current) idRef.current.value = data?.id ?? ''
@@ -1302,16 +1311,15 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     setSelectedClientId(clientId)
     setSelectedEventualClientId(eventualClientId)
 
-    if (businessId && data?.business?.name) SetSelectValue(businessRef.current, businessId, data.business.name)
-    else clearSelectValue(businessRef)
-    if (warehouseId && data?.warehouse?.name) SetSelectValue(warehouseRef.current, warehouseId, data.warehouse.name)
-    else clearSelectValue(warehouseRef)
-    if (clientId && data?.client?.full_name) SetSelectValue(clientRef.current, clientId, `${data.client.document_number ?? ''} - ${data.client.full_name}`.trim())
-    else clearSelectValue(clientRef)
-    if (eventualClientId && data?.eventual_client?.business_name) SetSelectValue(eventualClientRef.current, eventualClientId, `${data.eventual_client.document_number ?? ''} - ${data.eventual_client.business_name}`.trim())
-    else clearSelectValue(eventualClientRef)
-    if (data?.seller_id && data?.seller) SetSelectValue(sellerRef.current, data.seller_id, formatAuditUser(data.seller))
-    else clearSelectValue(sellerRef)
+    clientRecordsRef.current = {}
+    articleRecordsRef.current = {}
+    setBusinessLabel(businessId && data?.business?.name ? data.business.name : '')
+    setWarehouseLabel(warehouseId && data?.warehouse?.name ? data.warehouse.name : '')
+    setClientLabel(clientId && data?.client?.full_name ? [data.client.document_number, data.client.full_name].filter(Boolean).join(' - ') : '')
+    setEventualClientLabel(eventualClientId && data?.eventual_client?.business_name ? [data.eventual_client.document_number, data.eventual_client.business_name].filter(Boolean).join(' - ') : '')
+    const sellerId = data?.seller_id ? `${data.seller_id}` : ''
+    setSelectedSellerId(sellerId)
+    setSellerLabel(sellerId && data?.seller ? formatAuditUser(data.seller) : '')
 
     const detail = (data?.items ?? []).map(row => {
       const article = row.article ?? null
@@ -1375,6 +1383,15 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       return
     }
 
+    if (!selectedBusinessId) {
+      Swal.fire({ icon: 'warning', title: 'Empresa requerida', text: 'Selecciona la empresa del pedido.' })
+      return
+    }
+    if (!selectedWarehouseId) {
+      Swal.fire({ icon: 'warning', title: 'Almacen requerido', text: 'Selecciona el almacen del pedido.' })
+      return
+    }
+
     const request = {
       id: idRef.current?.value || undefined,
       external_source: externalSource || undefined,
@@ -1383,7 +1400,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       warehouse_id: selectedWarehouseId || null,
       client_id: selectedClientId || null,
       eventual_client_id: selectedEventualClientId || null,
-      seller_id: sellerRef.current?.value || null,
+      seller_id: selectedSellerId || null,
       client_distribution_network_id: selectedNetworkId || null,
       client_delivery_address_id: selectedDeliveryAddressId || null,
       document_type: selectedDocumentType,
@@ -1457,11 +1474,11 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     $(modalRef.current).modal('hide')
   }
 
-  const onBusinessChanged = async (e) => {
-    const businessId = e.target.value || ''
+  const onBusinessChanged = async (value) => {
+    const businessId = value || ''
     setSelectedBusinessId(businessId)
     setSelectedWarehouseId('')
-    clearSelectValue(warehouseRef)
+    setWarehouseLabel('')
     await loadBranches(businessId, null)
   }
 
@@ -1469,18 +1486,18 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     const branchId = value || ''
     setSelectedBranchId(branchId)
     setSelectedWarehouseId('')
-    clearSelectValue(warehouseRef)
+    setWarehouseLabel('')
   }
 
-  const onWarehouseChanged = async (e) => {
-    const warehouseId = e.target.value || ''
+  const onWarehouseChanged = async (value) => {
+    const warehouseId = value || ''
     setSelectedWarehouseId(warehouseId)
     await repriceAllItems()
   }
 
-  const onClientChanged = async (e) => {
-    const clientId = normalizeSelectEntityId(e.target.value)
-    const selectedClient = $(e.target).select2('data')?.[0]?.data ?? null
+  const onClientChanged = async (value) => {
+    const clientId = normalizeSelectEntityId(value)
+    const selectedClient = clientRecordsRef.current[`${value}`] ?? null
     setSelectedClientId(clientId)
     clearCustomerSelections('regular')
     applyClientSnapshot(selectedClient)
@@ -1488,8 +1505,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     await repriceAllItems()
   }
 
-  const onEventualClientChanged = async (e) => {
-    const eventualClientId = normalizeSelectEntityId(e.target.value)
+  const onEventualClientChanged = async (value) => {
+    const eventualClientId = normalizeSelectEntityId(value)
     setSelectedEventualClientId(eventualClientId)
     clearCustomerSelections('eventual')
     await repriceAllItems()
@@ -1981,24 +1998,21 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     await loadDelayReasons()
   }
 
-  const onItemArticleChanged = async (uid, e) => {
-    if ($(e.target).data('select2')) $(e.target).select2('close')
-
-    const selected = $(e.target).select2('data')?.[0]
-    const article = selected?.data ?? null
-    const articleId = e.target.value || ''
+  const onItemArticleChanged = async (uid, value) => {
+    const articleId = value || ''
 
     if (!articleId) {
       setItems(prev => prev.map(item => item.uid === uid ? { ...emptyItem(), uid: item.uid } : item))
       return
     }
 
+    const article = articleRecordsRef.current[`${articleId}`] ?? null
     const hydrated = article ?? await commercialOrdersRest.getArticleById(articleId)
     const presentations = (hydrated?.presentations ?? []).filter(p => p?.status !== false && p?.status !== 0)
     const defaultPresentation = presentations[0] ?? null
     const articleLabel = hydrated
       ? `${hydrated.code ?? ''} - ${hydrated.name ?? ''}`.trim()
-      : (selected?.text ?? articleId)
+      : `${articleId}`
 
     const draftItem = {
       article_id: articleId,
@@ -2277,23 +2291,15 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     }
   }, [activeListingTab, hasDateRangeFilter])
 
-  const renderBillingDocOption = (item) => {
-    const x = item?.data
-    if (!x) return item?.text ?? ''
-    const num = [x.series, x.sequence].filter(Boolean).join('-') || x.code || `#${x.id}`
-    const client = billingDocumentClientLabel(x)
-    return $(`<span><b>${num}</b>${client && client !== '-' ? ' · ' + client : ''}</span>`)
-  }
-
   const onOpenCreateCreditNote = () => {
-    if (creditNoteDocRef.current) $(creditNoteDocRef.current).val(null).trigger('change')
+    setCreditNoteDocId('')
     if (creditNoteReasonRef.current) creditNoteReasonRef.current.value = 'Anulacion de la operacion'
     $(creditNoteModalRef.current).modal('show')
   }
 
   const onCreateCreditNoteSubmit = async (e) => {
     e.preventDefault()
-    const documentId = creditNoteDocRef.current?.value
+    const documentId = creditNoteDocId
     const reason = (creditNoteReasonRef.current?.value ?? '').trim()
     if (!documentId) {
       Swal.fire({ icon: 'warning', title: 'Selecciona un comprobante', text: 'Elige la factura o boleta a anular.' })
@@ -3263,9 +3269,18 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             <span>Datos del pedido</span>
           </div>
           <div className='row g-2'>
-            <div className='col-12 col-md-6 col-xl-4'>
-              <SelectAPIFormGroup eRef={businessRef} label='Empresa' required searchAPI='/api/admin/businesses/paginate' searchBy='name' dropdownParent='#commercial-orders-form-container' onChange={onBusinessChanged} />
-            </div>
+            <VdSelect
+              key={`co-business-${formInstanceKey}`}
+              col='col-12 col-md-6 col-xl-4'
+              label='Empresa'
+              required
+              disabled={isFormLocked}
+              value={selectedBusinessId}
+              valueLabel={businessLabel}
+              onChange={onBusinessChanged}
+              loadOptions={(q) => fetchPaginateOptions('/api/admin/businesses/paginate', 'name', null, q, (x) => ({ value: `${x.id}`, label: x.name }))}
+              placeholder='-- Seleccionar empresa --'
+            />
             <VdSelect
               col='col-12 col-md-6 col-xl-4'
               label='Sede'
@@ -3275,20 +3290,18 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               options={branches.map(branch => ({ value: `${branch.id}`, label: branch.name }))}
               placeholder='Sin sede'
             />
-            <div className='col-12 col-md-6 col-xl-4'>
-              <SelectAPIFormGroup
-                eRef={warehouseRef}
-                label='Almacen'
-                required
-                searchAPI='/api/admin/warehouses/paginate'
-                searchBy='name'
-                filter={warehouseFilter}
-                dropdownParent='#commercial-orders-form-container'
-                onChange={onWarehouseChanged}
-                templateResult={warehouseOptionTemplate}
-                templateSelection={warehouseOptionTemplate}
-              />
-            </div>
+            <VdSelect
+              key={`co-warehouse-${formInstanceKey}`}
+              col='col-12 col-md-6 col-xl-4'
+              label='Almacen'
+              required
+              disabled={isFormLocked}
+              value={selectedWarehouseId}
+              valueLabel={warehouseLabel}
+              onChange={onWarehouseChanged}
+              loadOptions={(q) => fetchPaginateOptions('/api/admin/warehouses/paginate', 'name', warehouseFilter, q, (x) => ({ value: `${x.id}`, label: warehouseOptionLabel(x) }))}
+              placeholder='-- Seleccionar almacen --'
+            />
             <VdSelect
               col='col-12 col-sm-6 col-lg-4 col-xl-3'
               label='Doc. venta'
@@ -3332,21 +3345,33 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
             <span>Cliente y entrega</span>
           </div>
           <div className='row g-2'>
-            <div className='col-12 col-xl-6'>
-              <SelectAPIFormGroup
-                eRef={clientRef}
-                label='Cliente regular'
-                searchAPI='/api/admin/clients/paginate'
-                searchBy='full_name'
-                selectBy='entity_id'
-                filter={regularClientFilter}
-                dropdownParent='#commercial-orders-form-container'
-                onChange={onClientChanged}
-              />
-            </div>
-            <div className='col-12 col-xl-6'>
-              <SelectAPIFormGroup eRef={eventualClientRef} label='Cliente eventual' searchAPI='/api/admin/eventual-clients/paginate' searchBy='business_name' dropdownParent='#commercial-orders-form-container' onChange={onEventualClientChanged} />
-            </div>
+            <VdSelect
+              key={`co-client-${formInstanceKey}`}
+              col='col-12 col-xl-6'
+              label='Cliente regular'
+              disabled={isFormLocked}
+              clearable
+              value={selectedClientId}
+              valueLabel={clientLabel}
+              onChange={onClientChanged}
+              loadOptions={(q) => fetchPaginateOptions('/api/admin/clients/paginate', 'full_name', regularClientFilter, q, (x) => {
+                clientRecordsRef.current[`${x.entity_id}`] = x
+                return { value: `${x.entity_id}`, label: [x.document_number, x.full_name].filter(Boolean).join(' - ') || x.full_name || `#${x.entity_id}` }
+              })}
+              placeholder='-- Seleccionar cliente --'
+            />
+            <VdSelect
+              key={`co-eventual-${formInstanceKey}`}
+              col='col-12 col-xl-6'
+              label='Cliente eventual'
+              disabled={isFormLocked}
+              clearable
+              value={selectedEventualClientId}
+              valueLabel={eventualClientLabel}
+              onChange={onEventualClientChanged}
+              loadOptions={(q) => fetchPaginateOptions('/api/admin/eventual-clients/paginate', 'business_name', null, q, (x) => ({ value: `${x.id}`, label: [x.document_number, x.business_name].filter(Boolean).join(' - ') || x.business_name || `#${x.id}` }))}
+              placeholder='-- Seleccionar cliente eventual --'
+            />
             <div className='col-12 col-md-6 col-xl-2'>
               <label className='form-label'>Orden de compra</label>
               <input ref={purchaseOrderRef} className='form-control' />
@@ -3387,7 +3412,18 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               <label className='form-label'>Celular contacto entrega</label>
               <input ref={dispatchContactPhoneRef} className='form-control' />
             </div>
-            <SelectAPIFormGroup eRef={sellerRef} label='Vendedor' col='col-12 col-md-6 col-xl-2' searchAPI='/api/admin/users/paginate' searchBy='fullname' dropdownParent='#commercial-orders-form-container' />
+            <VdSelect
+              key={`co-seller-${formInstanceKey}`}
+              col='col-12 col-md-6 col-xl-2'
+              label='Vendedor'
+              disabled={isFormLocked}
+              clearable
+              value={selectedSellerId}
+              valueLabel={sellerLabel}
+              onChange={(v) => setSelectedSellerId(v)}
+              loadOptions={(q) => fetchPaginateOptions('/api/admin/users/paginate', 'fullname', null, q, (x) => ({ value: `${x.id}`, label: x.fullname || [x.name, x.lastname].filter(Boolean).join(' ') || `#${x.id}` }))}
+              placeholder='-- Seleccionar vendedor --'
+            />
             <div className='col-12 col-md-6 col-xl-2'>
               <label className='form-label'>Medico</label>
               <input ref={doctorNameRef} className='form-control' />
@@ -3472,13 +3508,17 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                     <td><div className='commercial-order-readonly-cell'>{item.article_code || '-'}</div></td>
                     <td><div className='commercial-order-readonly-cell'>{item.article_lot || '-'}</div></td>
                     <td className='commercial-order-article-name'>
-                      <SelectAPIFormGroup
-                        eRef={getArticleRef(item.uid)}
-                        searchAPI={articleSearchAPI}
-                        searchBy='name'
-                        dropdownParent='#commercial-orders-form-container'
-                        disabled={!selectedWarehouseId}
-                        onChange={(e) => onItemArticleChanged(item.uid, e)}
+                      <VdSelect
+                        noMargin
+                        disabled={!selectedWarehouseId || isFormLocked}
+                        value={item.article_id}
+                        valueLabel={item.article_label}
+                        onChange={(value) => onItemArticleChanged(item.uid, value)}
+                        loadOptions={(q) => fetchPaginateOptions(articleSearchAPI, 'name', null, q, (x) => {
+                          articleRecordsRef.current[`${x.id}`] = x
+                          return { value: `${x.id}`, label: `${x.code ?? ''} - ${x.name ?? ''}`.trim() }
+                        })}
+                        placeholder='Buscar articulo...'
                       />
                     </td>
                     <td><div className='commercial-order-readonly-cell'>{item.article_laboratory || '-'}</div></td>
@@ -3822,16 +3862,14 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
     <Modal modalRef={creditNoteModalRef} title='Crear nota de credito' size='md' btnSubmitText='Generar nota de credito' onSubmit={onCreateCreditNoteSubmit}>
       <div className='row'>
-        <SelectAPIFormGroup
-          eRef={creditNoteDocRef}
-          label='Comprobante a anular (Factura / Boleta)'
+        <VdSelect
           col='col-12'
+          label='Comprobante a anular (Factura / Boleta)'
           required
-          searchAPI={'/api/admin/billing-documents/paginate'}
-          searchBy={'sequence'}
-          filter={[['document_type', '<>', 'Nota de credito'], 'and', ['source_type', '=', 'commercial_order']]}
-          templateResult={renderBillingDocOption}
-          templateSelection={renderBillingDocOption}
+          value={creditNoteDocId}
+          onChange={(v) => setCreditNoteDocId(v)}
+          loadOptions={(q) => fetchPaginateOptions('/api/admin/billing-documents/paginate', 'sequence', creditNoteBaseFilter, q, (x) => ({ value: `${x.id}`, label: billingDocOptionLabel(x) }))}
+          placeholder='-- Seleccionar comprobante --'
         />
         <TextareaFormGroup eRef={creditNoteReasonRef} label='Motivo de la anulacion' col='col-12' rows={3} required />
       </div>

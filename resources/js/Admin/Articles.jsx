@@ -10,8 +10,7 @@ import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
-import SelectAPIFormGroup from '@Adminto/form/SelectAPIFormGroup';
-import SetSelectValue from '../Utils/SetSelectValue';
+import { Fetch } from 'sode-extend-react';
 import { scopedPermission } from '../Utils/permissionScope';
 import ArticlesRest from '../Actions/Admin/ArticlesRest';
 import UnitsRest from '../Actions/Admin/UnitsRest';
@@ -382,7 +381,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const stockModalRef = useRef()
   const importModalRef = useRef()
   const importFileRef = useRef()
-  const importLaboratoryRef = useRef()
   const labManagerRef = useRef()
   const principleManagerRef = useRef()
   const unitManagerRef = useRef()
@@ -392,9 +390,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const codeRef = useRef()
   const nameRef = useRef()
   const compositionRef = useRef()
-  const magistralCategoryRef = useRef()
   const healthRegistrationRef = useRef()
-  const laboratoryRef = useRef()
   const volumeRef = useRef()
   const marginRuleRef = useRef()
   const igvRuleRef = useRef()
@@ -415,7 +411,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const purchasePriceForeignRef = useRef()
   const notesRef = useRef()
   const newManufacturerNameRef = useRef()
-  const suppressMagistralCategoryChangeRef = useRef(false)
   const subcategoryLoadSequenceRef = useRef(0)
 
   const [isEditing, setIsEditing] = useState(false)
@@ -428,11 +423,13 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
   const [selectedLaboratoryId, setSelectedLaboratoryId] = useState('')
+  const [selectedLaboratoryLabel, setSelectedLaboratoryLabel] = useState('')
   const [selectedPrincipleId, setSelectedPrincipleId] = useState('')
   const [selectedUnitId, setSelectedUnitId] = useState('')
   const [selectedEquivalenceUnitId, setSelectedEquivalenceUnitId] = useState('')
   const [selectedStorageClientId, setSelectedStorageClientId] = useState('')
   const [selectedMagistralCategoryId, setSelectedMagistralCategoryId] = useState('')
+  const [selectedMagistralCategoryLabel, setSelectedMagistralCategoryLabel] = useState('')
   const [selectedSubCategory, setSelectedSubCategory] = useState('')
   const [selectedMagistralPresentation, setSelectedMagistralPresentation] = useState('')
   const [magistralSubcategories, setMagistralSubcategories] = useState([])
@@ -568,9 +565,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     setIsLoadingSubcategories(false)
   }
 
-  const onMagistralCategoryChanged = async (e) => {
-    if (suppressMagistralCategoryChangeRef.current) return
-    await loadMagistralSubcategories(e.target.value)
+  const onMagistralCategoryChanged = async (value) => {
+    await loadMagistralSubcategories(value)
   }
 
   const onMagistralFilterChanged = (field, value) => {
@@ -688,15 +684,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
 
     const selectedCategoryIsAllowed = data?.magistral_category_id && data?.magistralCategory?.description && isAllowedMagistralCategory(data.magistralCategory.description)
     const preferredMagistralCategoryId = selectedCategoryIsAllowed ? data.magistral_category_id : null
-    if (magistralCategoryRef.current) {
-      suppressMagistralCategoryChangeRef.current = true
-      if (preferredMagistralCategoryId) {
-        SetSelectValue(magistralCategoryRef.current, data.magistral_category_id, data.magistralCategory.description)
-      } else {
-        $(magistralCategoryRef.current).empty().trigger('change')
-      }
-      suppressMagistralCategoryChangeRef.current = false
-    }
+    setSelectedMagistralCategoryLabel(preferredMagistralCategoryId ? (data?.magistralCategory?.description ?? '') : '')
     loadMagistralSubcategories(preferredMagistralCategoryId, data?.sub_category ?? '')
     setSelectedMagistralPresentation(getMagistralPresentationValue(data?.magistral_presentation ?? data?.magistralFormat?.description ?? ''))
 
@@ -717,11 +705,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       const laboratoryId = getArticleLaboratoryId(data)
       const laboratoryLabel = getArticleLaboratoryLabel(data)
       setSelectedLaboratoryId(laboratoryId)
-      if (laboratoryId && laboratoryLabel) {
-        SetSelectValue(laboratoryRef.current, laboratoryId, laboratoryLabel)
-      } else {
-        $(laboratoryRef.current).empty().trigger('change')
-      }
+      setSelectedLaboratoryLabel(laboratoryId ? laboratoryLabel : '')
     }
 
     const presentationRows = (data?.presentations ?? []).map(presentation => ({
@@ -757,7 +741,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       composition: compositionRef.current?.value?.trim() ?? '',
       article_type: isMagistrales ? normalizeMagistralArticleType(selectedArticleType) : '',
       administration_route: (selectedAdministrationRoute ?? '').toString().trim(),
-      magistral_category_id: magistralCategoryRef.current?.value || null,
+      magistral_category_id: selectedMagistralCategoryId || null,
       sub_category: (selectedSubCategory || '').trim(),
       magistral_presentation: selectedMagistralPresentation || null,
       health_registration: healthRegistrationRef.current?.value?.trim() ?? '',
@@ -881,11 +865,6 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     setMapping(emptyArticleImportMapping())
     if (importFileRef.current) importFileRef.current.value = ''
     $(importModalRef.current).modal('show')
-    setTimeout(() => {
-      if (importLaboratoryRef.current && $(importLaboratoryRef.current).data('select2')) {
-        $(importLaboratoryRef.current).val(null).trigger('change.select2')
-      }
-    }, 0)
   }
 
   const autoMapHeaders = (headers) => {
@@ -1074,11 +1053,53 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     })
   }
 
-  const onLaboratoryChanged = async (e) => {
-    const laboratoryId = e.target.value || ''
+  const onLaboratoryChanged = async (value) => {
+    const laboratoryId = value || ''
     setSelectedLaboratoryId(laboratoryId)
     if (isMagistrales) return
     await loadPrinciples(laboratoryId, null)
+  }
+
+  // Búsqueda remota de laboratorios (reemplaza el select2 AJAX). Devuelve {value:id, label:name}.
+  const loadLaboratoryOptions = async (query) => {
+    const { result } = await Fetch(articlesRest.laboratoriesPaginateApi(), {
+      method: 'POST',
+      body: JSON.stringify({
+        sort: [{ selector: articlesRest.laboratoriesSearchBy(), desc: false }],
+        skip: 0,
+        take: 50,
+        filter: [articlesRest.laboratoriesSearchBy(), 'contains', query || ''],
+      }),
+    })
+    return (result?.data ?? []).map(item => ({ value: `${item.id}`, label: item.name }))
+  }
+
+  // Igual que loadLaboratoryOptions pero el value es el NOMBRE (el import guarda el nombre, no el id).
+  const loadImportLaboratoryOptions = async (query) => {
+    const { result } = await Fetch(articlesRest.laboratoriesPaginateApi(), {
+      method: 'POST',
+      body: JSON.stringify({
+        sort: [{ selector: articlesRest.laboratoriesSearchBy(), desc: false }],
+        skip: 0,
+        take: 50,
+        filter: [articlesRest.laboratoriesSearchBy(), 'contains', query || ''],
+      }),
+    })
+    return (result?.data ?? []).map(item => ({ value: item.name, label: item.name }))
+  }
+
+  // Búsqueda remota de categorías magistrales (reemplaza el select2 AJAX). searchBy='description'.
+  const loadMagistralCategoryOptions = async (query) => {
+    const { result } = await Fetch('/api/admin/magistrales/categories/paginate', {
+      method: 'POST',
+      body: JSON.stringify({
+        sort: [{ selector: 'description', desc: false }],
+        skip: 0,
+        take: 50,
+        filter: ['description', 'contains', query || ''],
+      }),
+    })
+    return (result?.data ?? []).map(item => ({ value: `${item.id}`, label: item.description }))
   }
 
   const onPresentationUpdated = (uid, field, value) => {
@@ -1436,14 +1457,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
               <i className='mdi mdi-shape-outline me-1'></i> Clasificación
             </div>
             <div className='row g-3 magistrales-section-body'>
-              <SelectAPIFormGroup
-                eRef={magistralCategoryRef}
+              <VdSelect
                 label='Categoría'
                 col='col-md-4'
-                searchAPI='/api/admin/magistrales/categories/paginate'
-                searchBy='description'
-                dropdownParent='#article-form-container'
+                value={selectedMagistralCategoryId}
+                valueLabel={selectedMagistralCategoryLabel}
                 onChange={onMagistralCategoryChanged}
+                loadOptions={loadMagistralCategoryOptions}
+                placeholder='Seleccione'
               />
               <VdSelect
                 label='Subcategoría'
@@ -1478,15 +1499,15 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
                 options={magistralAdministrationRouteOptions.map(option => ({ value: option, label: option }))}
                 placeholder='Seleccione'
               />
-              <SelectAPIFormGroup
-                eRef={laboratoryRef}
+              <VdSelect
                 label='Laboratorio'
                 col='col-md-3'
                 required
-                searchAPI={articlesRest.laboratoriesPaginateApi()}
-                searchBy={articlesRest.laboratoriesSearchBy()}
-                dropdownParent='#article-form-container'
+                value={selectedLaboratoryId}
+                valueLabel={selectedLaboratoryLabel}
                 onChange={onLaboratoryChanged}
+                loadOptions={loadLaboratoryOptions}
+                placeholder='Seleccionar...'
               />
               <InputFormGroup eRef={healthRegistrationRef} label='R. Sanitario' col='col-md-3' />
             </div>
@@ -2221,17 +2242,22 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
         <InputFormGroup eRef={codeRef} label='Codigo de articulo' col='col-md-4' readOnly placeholder='Se genera al guardar' />
         <InputFormGroup eRef={nameRef} label='Nombre del articulo' col='col-md-4' required />
 
-        <SelectAPIFormGroup
-          eRef={laboratoryRef}
-          label='Laboratorio'
-          col='col-md-4'
-          required
-          searchAPI={articlesRest.laboratoriesPaginateApi()}
-          searchBy={articlesRest.laboratoriesSearchBy()}
-          dropdownParent='#article-form-container'
-          onChange={onLaboratoryChanged}
-          append={<button type='button' className='btn btn-success' title='Gestionar laboratorios' onClick={() => $(labManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button>}
-        />
+        <div className='form-group col-md-4 mb-2'>
+          <label className='form-label'>Laboratorio <b style={{ color: '#ff5b5b' }}>*</b></label>
+          <div className='d-flex' style={{ gap: 6 }}>
+            <VdSelect
+              col=''
+              noMargin
+              style={{ flex: 1 }}
+              value={selectedLaboratoryId}
+              valueLabel={selectedLaboratoryLabel}
+              onChange={onLaboratoryChanged}
+              loadOptions={loadLaboratoryOptions}
+              placeholder='Seleccionar...'
+            />
+            <button type='button' className='btn btn-success' title='Gestionar laboratorios' onClick={() => $(labManagerRef.current).modal('show')}><i className='mdi mdi-plus'></i></button>
+          </div>
+        </div>
 
         <div className='form-group col-md-4 mb-2'>
           <label className='form-label'>Principio activo <b style={{ color: '#ff5b5b' }}>*</b></label>
@@ -2414,18 +2440,18 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
               />
             </div>
           )}
-          <SelectAPIFormGroup
-            eRef={importLaboratoryRef}
-            label='Laboratorio'
-            col={!isStorageProduct && !isMagistrales ? 'col-md-6' : 'col-md-12'}
-            searchAPI={articlesRest.laboratoriesPaginateApi()}
-            searchBy={articlesRest.laboratoriesSearchBy()}
-            dropdownParent='#article-import-form-container'
-            onChange={(e) => {
-              const data = $(e.target).select2('data')?.[0]
-              setSelectedImportLaboratoryName(data?.text ?? '')
-            }}
-          />
+          <div className={!isStorageProduct && !isMagistrales ? 'col-md-6' : 'col-md-12'}>
+            <label className='form-label'>Laboratorio</label>
+            <VdSelect
+              col=''
+              noMargin
+              value={selectedImportLaboratoryName}
+              valueLabel={selectedImportLaboratoryName}
+              onChange={(value) => setSelectedImportLaboratoryName(value)}
+              loadOptions={loadImportLaboratoryOptions}
+              placeholder='Seleccionar...'
+            />
+          </div>
           <div className='col-md-6'>
             <label className='form-label'>Tipo de carga</label>
             <VdSelect
