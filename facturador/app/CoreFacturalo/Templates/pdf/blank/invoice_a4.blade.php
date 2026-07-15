@@ -645,7 +645,7 @@
 <table class="full-width">
     <tr>
         <td>
-            <strong>CONDICIÓN DE PAGO: {{ $document->payment_condition->name }} </strong>
+            <strong>CONDICIÓN DE PAGO: {{ $document->payment_condition_id === '02' ? 'Crédito' : 'Contado' }} </strong>
         </td>
     </tr>
 </table>
