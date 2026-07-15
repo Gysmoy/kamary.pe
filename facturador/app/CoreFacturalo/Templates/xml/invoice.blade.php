@@ -406,11 +406,8 @@
     <cac:LegalMonetaryTotal>
         <cbc:LineExtensionAmount currencyID="{{ $document->currency_type_id }}">{{ $document->total_value }}</cbc:LineExtensionAmount>
         {{-- no incluye cargos globales que no afectan a la base imponible --}}
-        @if($tot_charges > 0)
-        <cbc:TaxInclusiveAmount currencyID="{{ $document->currency_type_id }}">{{ $document->total - $tot_charges}}</cbc:TaxInclusiveAmount>
-        @else
-        <cbc:TaxInclusiveAmount currencyID="{{ $document->currency_type_id }}">{{ $document->subtotal }}</cbc:TaxInclusiveAmount>
-        @endif
+        {{-- La columna 'subtotal' no existe en la tabla documents (fork lite): usar total (importe con impuestos) --}}
+        <cbc:TaxInclusiveAmount currencyID="{{ $document->currency_type_id }}">{{ number_format($document->total - $tot_charges, 2, '.', '') }}</cbc:TaxInclusiveAmount>
         {{-- @if($document->total_discount > 0)
         <cbc:AllowanceTotalAmount currencyID="{{ $document->currency_type_id }}">{{ $document->total_discount }}</cbc:AllowanceTotalAmount>
         @endif --}}
