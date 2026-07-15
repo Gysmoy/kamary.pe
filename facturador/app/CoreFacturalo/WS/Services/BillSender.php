@@ -33,7 +33,14 @@ class BillSender extends BaseSunat
                 ->setCdrZip($cdrZip)
                 ->setSuccess(true);
         } catch (\SoapFault $e) {
-            $result->setError($this->getErrorFromFault($e));
+            $error = $this->getErrorFromFault($e);
+            // Diagnostico: adjunta la respuesta cruda de SUNAT al mensaje de error
+            $raw = $client->getLastResponse();
+            if (!empty($raw)) {
+                $snippet = mb_substr(preg_replace('/\s+/', ' ', $raw), 0, 1200);
+                $error->setMessage(trim($error->getMessage()) . ' | RAW_SUNAT: ' . $snippet);
+            }
+            $result->setError($error);
         }
 
         return $result;

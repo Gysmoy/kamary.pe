@@ -37,7 +37,22 @@ class WsClient
                                             ]);
         }
 
+        // Diagnostico: habilita traza para capturar la respuesta cruda de SUNAT ante faults
+        $parameters['trace'] = 1;
+
         $this->client = new SoapClient($wsdl, $parameters);
+    }
+
+    /**
+     * @return string|null Ultima respuesta SOAP cruda (para diagnostico de faults SUNAT).
+     */
+    public function getLastResponse()
+    {
+        try {
+            return $this->client->__getLastResponse();
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /**
