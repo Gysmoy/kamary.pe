@@ -229,8 +229,20 @@ const BillingSettings = ({ can }) => {
       latestBusiness = assets
     }
 
-    setSelectedFiscalBusiness(latestBusiness)
-    fillFiscalForm(latestBusiness)
+    // Auto-sincronizar con el facturador tras guardar (antes habia que darle "Sincronizar" a mano).
+    // Si falla por datos incompletos, se muestra el motivo y la empresa queda en "Pendiente" sin romper el guardado.
+    let finalBusiness = latestBusiness
+    try {
+      const synced = await businessesRest.syncFacturador(latestBusiness.id)
+      if (synced) finalBusiness = synced
+    } catch (e) { /* el error ya lo muestra el rest; queda pendiente */ }
+
+    setSelectedFiscalBusiness(finalBusiness)
+    fillFiscalForm(finalBusiness)
+    if (selectedBusiness?.id === finalBusiness.id) {
+      setSelectedBusiness(finalBusiness)
+      await loadBranches(finalBusiness.id)
+    }
     $(gridRef.current).dxDataGrid('instance').refresh()
     $(fiscalModalRef.current).modal('hide')
   }
