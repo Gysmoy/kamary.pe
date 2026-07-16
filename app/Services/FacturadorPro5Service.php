@@ -400,7 +400,7 @@ class FacturadorPro5Service
                 'correo_electronico' => $document->customer_email ?: ($customer?->email ?: null),
                 'telefono' => $customer?->phone ?: $source?->dispatch_contact_phone ?: null,
             ],
-            'totales' => $this->buildTotalsPayload($document),
+            'totales' => $this->buildTotalsPayload($document, $effectiveTaxRate),
             'items' => $this->buildItemsPayload($document, $effectiveTaxRate),
             'acciones' => [
                 'enviar_email' => false,
@@ -655,13 +655,17 @@ class FacturadorPro5Service
         ];
     }
 
-    private function buildTotalsPayload(BillingDocument $document): array
+    private function buildTotalsPayload(BillingDocument $document, float $effectiveTaxRate = 0.0): array
     {
         // SUNAT exige montos positivos tambien en notas de credito; el signo negativo es solo contable interno.
         $isCreditNote = $this->mapDocumentTypeId($document->document_type) === '07';
         $subtotal = round($isCreditNote ? abs((float) $document->subtotal) : (float) $document->subtotal, 2);
         $taxAmount = round($isCreditNote ? abs((float) $document->tax_amount) : (float) $document->tax_amount, 2);
         $total = round($isCreditNote ? abs((float) $document->total) : (float) $document->total, 2);
+
+        // Sin IGV (rate 0): el monto va al casillero exonerado, no al gravado; asi
+        // coincide con el codigo_tipo_afectacion_igv=20 de los items y SUNAT no rechaza.
+        $isTaxed = $effectiveTaxRate > 0;
 
         $totalPending = 0;
         $source = $document->source_type === 'commercial_order' ? $document->commercialOrder : $document->serviceOrder;
@@ -675,9 +679,9 @@ class FacturadorPro5Service
             'total_cargos' => 0,
             'total_exportacion' => 0,
             'total_operaciones_gratuitas' => 0,
-            'total_operaciones_gravadas' => $subtotal,
+            'total_operaciones_gravadas' => $isTaxed ? $subtotal : 0,
             'total_operaciones_inafectas' => 0,
-            'total_operaciones_exoneradas' => 0,
+            'total_operaciones_exoneradas' => $isTaxed ? 0 : $subtotal,
             'total_igv' => $taxAmount,
             'total_igv_operaciones_gratuitas' => 0,
             'total_base_isc' => 0,
