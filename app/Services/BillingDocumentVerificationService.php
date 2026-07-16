@@ -39,24 +39,28 @@ class BillingDocumentVerificationService
 
     public function providerXmlUrl(BillingDocument $document): ?string
     {
+        // Solo si el proveedor ya genero el XML fiscal.
         $payload = $this->decodePayload($document->response_payload);
-        $url = Arr::get($payload, 'links.xml')
+        $providerUrl = trim((string) (
+            Arr::get($payload, 'links.xml')
             ?: Arr::get($payload, 'response.links.xml')
             ?: Arr::get($payload, 'data.xml_url')
             ?: Arr::get($payload, 'data.xml')
             ?: Arr::get($payload, 'xml_url')
-            ?: Arr::get($payload, 'xml');
+            ?: Arr::get($payload, 'xml')
+        ));
 
-        $url = trim((string) $url);
-        if ($url === '') {
+        if ($providerUrl === '' || !$document->getKey()) {
             return null;
         }
 
-        if (preg_match('/^https?:\/\//i', $url)) {
-            return $url;
-        }
-
-        return url('/' . ltrim($url, '/'));
+        // La URL del proveedor (http://facturador-nginx/...) es interna del servidor y no
+        // es accesible desde el navegador; se expone una URL publica de Kamary que hace de proxy.
+        return route('billing-documents.file', [
+            'document' => $document->getKey(),
+            'token' => $this->verificationToken($document),
+            'type' => 'xml',
+        ], true);
     }
 
     private function signaturePayload(BillingDocument $document): string

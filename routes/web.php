@@ -100,6 +100,7 @@ Route::get('/confirmation/{token}', [AuthController::class, 'loginView'])->name(
 
 Route::get('/unsubscribe', [MailingController::class, 'reactView'])->name('Unsubscribe.jsx');
 Route::get('/v/{document}/{token}', [BillingDocumentVerificationController::class, 'show'])->name('billing-documents.verify');
+Route::get('/v/{document}/{token}/{type}', [BillingDocumentVerificationController::class, 'file'])->where('type', 'pdf|xml|cdr')->name('billing-documents.file');
 Route::view('/api-docs/storage', 'api-docs.storage')->name('api-docs.storage');
 
 Route::middleware('auth')->group(function () {
