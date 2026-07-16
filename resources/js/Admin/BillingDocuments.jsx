@@ -1086,6 +1086,23 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     return { label: getBillingDocumentStatusLabel(row?.local_status), className: 'badge bg-soft-secondary text-secondary' }
   }
 
+  // Estado SUNAT claro y con color para la tabla general
+  const sunatStatusBadge = (row) => {
+    const isDemo = (row?.provider_mode ?? '') === 'demo'
+    switch (row?.local_status) {
+      case 'accepted': return { label: isDemo ? 'Aceptada (demo)' : 'Aceptada', className: 'badge bg-soft-success text-success border border-success' }
+      case 'rejected': return { label: 'Rechazada', className: 'badge bg-soft-danger text-danger border border-danger' }
+      case 'observed': return { label: 'Observada', className: 'badge bg-soft-warning text-warning border border-warning' }
+      case 'sent': return { label: 'Enviada', className: 'badge bg-soft-info text-info border border-info' }
+      case 'cancelled': return { label: 'Anulada', className: 'badge bg-soft-danger text-danger border border-danger' }
+      case 'pending':
+        return hasPreparedVoucher(row)
+          ? { label: 'Por enviar', className: 'badge bg-soft-warning text-warning border border-warning' }
+          : { label: 'Borrador', className: 'badge bg-soft-secondary text-secondary border border-secondary' }
+      default: return { label: getBillingDocumentStatusLabel(row?.local_status) || 'Pendiente', className: 'badge bg-soft-secondary text-secondary border border-secondary' }
+    }
+  }
+
   // Exportacion a Excel del listado (reemplaza el export nativo de dxDataGrid); respeta filtros/orden actuales via tableRef.loadAll()
   const storageExportColumnsByTab = {
     prefactures: [
@@ -1228,6 +1245,23 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     { key: 'origen', label: 'Origen', field: 'source_type', width: '120px', filter: { type: 'text' }, render: (row) => getSourceTypeLabel(row.source_type) },
     { key: 'documento_origen', label: 'Documento origen', sortable: false, render: (row) => row.commercial_order?.code ?? row.commercialOrder?.code ?? row.service_order?.code ?? row.serviceOrder?.code ?? '-' },
     { key: 'comprobante', label: 'Comprobante', field: 'document_type', width: '120px', filter: { type: 'text' } },
+    {
+      key: 'estado_sunat', label: 'Estado SUNAT', field: 'local_status', width: '130px',
+      filter: {
+        type: 'select', field: 'local_status', options: [
+          { value: 'accepted', label: 'Aceptada' },
+          { value: 'rejected', label: 'Rechazada' },
+          { value: 'observed', label: 'Observada' },
+          { value: 'sent', label: 'Enviada' },
+          { value: 'pending', label: 'Pendiente' },
+          { value: 'cancelled', label: 'Anulada' },
+        ],
+      },
+      render: (row) => {
+        const meta = sunatStatusBadge(row)
+        return <span className={meta.className} title={row.external_status ?? ''}>{meta.label}</span>
+      },
+    },
     { key: 'referencia', label: 'Referencia', sortable: false, render: (row) => row.reference_document?.code ?? row.referenceDocument?.code ?? '-' },
     { key: 'serie', label: 'Serie', field: 'series', width: '80px', filter: { type: 'text' } },
     { key: 'numero', label: 'Número', field: 'sequence', width: '100px', filter: { type: 'text' } },
@@ -1245,8 +1279,6 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
         )
       },
     },
-    { key: 'estado_local', label: 'Estado local', field: 'local_status', width: '110px', filter: { type: 'text' }, render: (row) => getBillingDocumentStatusLabel(row.local_status) },
-    { key: 'estado_externo', label: 'Estado externo', field: 'external_status', width: '120px', filter: { type: 'text' }, render: (row) => getBillingDocumentStatusLabel(row.external_status) },
   ]
 
   // Botones de accion por fila (tabla regular): siempre visibles, coloreados segun disponibilidad;
