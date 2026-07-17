@@ -33,6 +33,20 @@ class ReferralGuidesRest extends BasicRest {
     }
   }
 
+  createManual = async (data) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/manual`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo crear la guia manual')
+      return result
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 4000, richColors: true })
+      return null
+    }
+  }
+
   getConnectorPayload = async (id) => {
     try {
       const { status, result } = await Fetch(`/api/${this.path}/${id}/connector-payload`)

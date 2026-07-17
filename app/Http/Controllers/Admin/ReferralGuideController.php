@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
+use App\Models\Business;
 use App\Models\CommercialOrder;
 use App\Models\Dispatch;
+use App\Models\Driver;
 use App\Models\ReferralGuide;
+use App\Models\Vehicle;
 use App\Services\FacturadorPro5Service;
 use App\Services\ReferralGuideService;
 use App\Support\BusinessScope;
@@ -18,7 +21,60 @@ use SoDe\Extend\Response;
 class ReferralGuideController extends BasicController
 {
     public $model = ReferralGuide::class;
+    public $reactView = 'Admin/ManualGuides';
     public $prefix4filter = 'referral_guides';
+
+    public function setReactViewProperties(Request $request)
+    {
+        $businesses = Business::query()
+            ->whereIn('business_key', BusinessScope::fixedKeys())
+            ->with(['branches' => fn($q) => $q->whereNotNull('status')->where('status', true)->orderBy('id')])
+            ->orderBy('id')
+            ->get();
+
+        $drivers = Driver::query()->whereNotNull('status')->where('status', true)
+            ->orderBy('full_name')->get(['id', 'business_id', 'full_name', 'document_type', 'document_number', 'license_number']);
+        $vehicles = Vehicle::query()->whereNotNull('status')->where('status', true)
+            ->orderBy('plate')->get(['id', 'business_id', 'plate', 'label']);
+
+        return [
+            'requiredPermission' => 'referral_guides',
+            'manualBusinesses' => $businesses->map(fn(Business $b) => [
+                'id' => $b->id,
+                'name' => $b->name,
+                'tax_number' => $b->tax_number,
+                'sync_ok' => ($b->facturador_sync_status ?? null) === 'success',
+                'branches' => $b->branches->map(fn($br) => [
+                    'id' => $br->id,
+                    'name' => $br->name,
+                    'establishment_code' => $br->establishment_code,
+                    'ubigeo' => $br->ubigeo,
+                    'address' => $br->address,
+                    'series_guia' => $br->series_guia,
+                    'synced' => (bool) $br->facturador_establishment_id,
+                ])->values(),
+            ])->values(),
+            'manualDrivers' => $drivers,
+            'manualVehicles' => $vehicles,
+        ];
+    }
+
+    public function createManual(Request $request): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+        try {
+            BusinessScope::findFixedBusinessForRequest($request->input('business_id'), $request);
+            $guide = app(ReferralGuideService::class)->createManual($request->all());
+            $response->status = 200;
+            $response->message = 'Guia manual creada correctamente';
+            $response->data = $guide;
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
 
     public function setPaginationInstance(string $model)
     {

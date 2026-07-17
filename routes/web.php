@@ -43,6 +43,7 @@ use App\Http\Controllers\Admin\TakeOrderController as AdminTakeOrderController;
 use App\Http\Controllers\Admin\DispatchController as AdminDispatchController;
 use App\Http\Controllers\Admin\DailySummaryController as AdminDailySummaryController;
 use App\Http\Controllers\Admin\DriverController as AdminDriverController;
+use App\Http\Controllers\Admin\ReferralGuideController as AdminReferralGuideController;
 use App\Http\Controllers\Admin\EntryNoteController as AdminEntryNoteController;
 use App\Http\Controllers\Admin\ExitNoteController as AdminExitNoteController;
 use App\Http\Controllers\Admin\GeneralController as AdminGeneralController;
@@ -180,6 +181,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/picking', [AdminPickingController::class, 'reactView']);
         Route::get('/dispatch', [AdminDispatchController::class, 'reactView']);
         Route::get('/vehicle-zone', [AdminVehicleZoneController::class, 'reactView']);
+        Route::get('/manual-guides', [AdminReferralGuideController::class, 'reactView']);
 
         // Servicios
         Route::get('/services-client', [AdminServiceClientController::class, 'reactView']);

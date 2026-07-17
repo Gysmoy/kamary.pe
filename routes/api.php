@@ -650,6 +650,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/dispatches/{id}/referral-guides/prepare', [AdminReferralGuideController::class, 'prepareFromDispatch']);
 
         Route::post('/referral-guides/paginate', [AdminReferralGuideController::class, 'paginate']);
+        Route::post('/referral-guides/manual', [AdminReferralGuideController::class, 'createManual']);
         Route::patch('/referral-guides/{field}', [AdminReferralGuideController::class, 'boolean']);
         Route::post('/referral-guides/commercial-orders/{id}/prepare', [AdminReferralGuideController::class, 'prepareFromCommercialOrder']);
         Route::get('/referral-guides/{id}/connector-payload', [AdminReferralGuideController::class, 'connectorPayload']);

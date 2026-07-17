@@ -53,6 +53,117 @@ class ReferralGuideService
         return DB::transaction(fn() => $this->prepareForOrder($order, null, true));
     }
 
+    /**
+     * Crea una guia de remision MANUAL (sin pedido/almacen), a partir de datos ingresados a mano.
+     * Sirve para empresas que no usan el flujo de inventario (ej. Kamary Medical). La emision
+     * reusa el mismo motor GRE 2.0 (issue()).
+     */
+    public function createManual(array $d): ReferralGuide
+    {
+        return DB::transaction(function () use ($d) {
+            $business = \App\Models\Business::findOrFail((int) ($d['business_id'] ?? 0));
+
+            $branch = null;
+            if (!empty($d['business_branch_id'])) {
+                $branch = \App\Models\BusinessBranch::where('business_id', $business->id)->find((int) $d['business_branch_id']);
+            }
+            if (!$branch) {
+                $branch = \App\Models\BusinessBranch::where('business_id', $business->id)
+                    ->whereNotNull('status')->where('status', true)->orderBy('id')->first();
+            }
+
+            $driver = !empty($d['driver_id']) ? \App\Models\Driver::find((int) $d['driver_id']) : null;
+            $vehicle = !empty($d['vehicle_id']) ? \App\Models\Vehicle::find((int) $d['vehicle_id']) : null;
+
+            $series = trim((string) ($d['series'] ?? '')) ?: trim((string) ($branch?->series_guia ?: config('facturadorpro5.series.guia', self::DEFAULT_SERIES)));
+            $series = $series !== '' ? $series : self::DEFAULT_SERIES;
+            $sequence = $this->nextSequence($series);
+            $issueDate = now('America/Lima')->toDateString();
+            $transferDate = trim((string) ($d['transfer_date'] ?? '')) ?: $issueDate;
+            if ($transferDate < $issueDate) {
+                $transferDate = $issueDate;
+            }
+
+            $items = collect($d['items'] ?? [])->filter(fn($it) => trim((string) ($it['description'] ?? '')) !== '');
+            if ($items->isEmpty()) {
+                throw new \Exception('Agrega al menos un item a la guia.');
+            }
+
+            $grossWeight = round((float) ($d['gross_weight'] ?? 0), 3);
+            if ($grossWeight <= 0) {
+                $grossWeight = round($items->sum(fn($it) => (float) ($it['gross_weight'] ?? 0)), 3);
+            }
+            if ($grossWeight <= 0) {
+                $grossWeight = 1;
+            }
+
+            $guide = new ReferralGuide();
+            $guide->fill([
+                'business_id' => $business->id,
+                'business_branch_id' => $branch?->id,
+                'driver_id' => $driver?->id,
+                'vehicle_id' => $vehicle?->id,
+                'document_type' => 'Guia de remision',
+                'series' => $series,
+                'sequence' => $sequence,
+                'external_reference' => $series . '-' . $this->normalizeSequence($sequence),
+                'issue_date' => $issueDate,
+                'transfer_date' => $transferDate,
+                'guide_status' => 'prepared',
+                'external_status' => 'pending',
+                'provider' => 'facturadorpro5',
+                'provider_endpoint' => $this->joinProviderUrl((string) config('facturadorpro5.dispatch_endpoint', '/api/dispatches')),
+                'origin_ubigeo' => trim((string) ($d['origin_ubigeo'] ?? '')) ?: $branch?->ubigeo,
+                'origin_address' => trim((string) ($d['origin_address'] ?? '')) ?: $branch?->address,
+                'destination_ubigeo' => trim((string) ($d['destination_ubigeo'] ?? '')) ?: null,
+                'destination_address' => trim((string) ($d['destination_address'] ?? '')) ?: null,
+                'recipient_name' => trim((string) ($d['recipient_name'] ?? '')) ?: null,
+                'recipient_document_type' => trim((string) ($d['recipient_document_type'] ?? '')) ?: null,
+                'recipient_document_number' => trim((string) ($d['recipient_document_number'] ?? '')) ?: null,
+                'recipient_phone' => trim((string) ($d['recipient_phone'] ?? '')) ?: null,
+                'driver_name' => $driver?->full_name ?: (trim((string) ($d['driver_name'] ?? '')) ?: null),
+                'driver_document_type' => $driver?->document_type ?: (trim((string) ($d['driver_document_type'] ?? '')) ?: null),
+                'driver_document_number' => $driver?->document_number ?: (trim((string) ($d['driver_document_number'] ?? '')) ?: null),
+                'driver_license_number' => $driver?->license_number ?: (trim((string) ($d['driver_license_number'] ?? '')) ?: null),
+                'vehicle_plate' => $vehicle?->plate ?: (trim((string) ($d['vehicle_plate'] ?? '')) ?: null),
+                'transfer_mode' => trim((string) ($d['transfer_mode'] ?? '')) ?: 'private',
+                'transfer_reason' => trim((string) ($d['transfer_reason'] ?? '')) ?: 'VENTA',
+                'package_count' => max(1, (int) ($d['package_count'] ?? 1)),
+                'gross_weight' => $grossWeight,
+                'metadata' => [
+                    'source' => 'manual',
+                    'business_name' => $business->name,
+                    'business_ruc' => $business->tax_number,
+                    'business_address' => $branch?->address,
+                ],
+                'observations' => trim((string) ($d['observations'] ?? '')) ?: null,
+                'code' => $this->nextCode(),
+                'created_by' => Auth::id(),
+                'updated_by' => Auth::id(),
+                'status' => true,
+            ]);
+            $guide->save();
+
+            foreach ($items as $it) {
+                $guide->items()->create([
+                    'item_code' => trim((string) ($it['item_code'] ?? '')) ?: null,
+                    'description' => trim((string) $it['description']),
+                    'unit' => trim((string) ($it['unit'] ?? '')) ?: 'NIU',
+                    'quantity' => max(0.001, (float) ($it['quantity'] ?? 1)),
+                    'gross_weight' => round((float) ($it['gross_weight'] ?? 0), 3),
+                    'status' => true,
+                ]);
+            }
+
+            $fresh = $this->loadGuide($guide->id);
+            $fresh->update([
+                'request_payload' => json_encode($this->buildProviderPayload($fresh), JSON_UNESCAPED_UNICODE),
+            ]);
+
+            return $this->loadGuide($guide->id);
+        });
+    }
+
     public function prepareForOrder(CommercialOrder $order, ?Dispatch $dispatch = null, bool $wrapTransaction = true): ReferralGuide
     {
         $callback = function () use ($order, $dispatch) {
