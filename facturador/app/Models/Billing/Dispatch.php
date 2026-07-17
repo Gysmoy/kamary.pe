@@ -54,6 +54,8 @@ class Dispatch extends ModelTenant
         'has_xml',
         'has_pdf',
         'has_cdr',
+        'ticket',
+        'gre_response',
     ];
 
     protected $casts = [

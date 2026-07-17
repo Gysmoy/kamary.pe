@@ -12,6 +12,7 @@ return [
     'login_endpoint' => env('FACTURADORPRO5_AUTH_LOGIN_ENDPOINT', '/api/auth/login'),
     'issue_endpoint' => env('FACTURADORPRO5_ISSUE_ENDPOINT', '/api/documents'),
     'dispatch_endpoint' => env('FACTURADORPRO5_DISPATCH_ENDPOINT', '/api/dispatches'),
+    'dispatch_status_endpoint' => env('FACTURADORPRO5_DISPATCH_STATUS_ENDPOINT', '/api/dispatches/status'),
     'dispatch_cancel_endpoint' => env('FACTURADORPRO5_DISPATCH_CANCEL_ENDPOINT') ?: '/api/dispatches/voided',
     'status_endpoint' => env('FACTURADORPRO5_STATUS_ENDPOINT', '/api/documents/status'),
     'cancel_endpoint' => env('FACTURADORPRO5_CANCEL_ENDPOINT', '/api/voided'),

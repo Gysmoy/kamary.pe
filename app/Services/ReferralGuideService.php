@@ -374,11 +374,12 @@ class ReferralGuideService
                 'numero_documento' => $guide->business?->tax_number ?: '00000000000',
                 'apellidos_y_nombres_o_razon_social' => $guide->business?->name ?: 'KAMARY',
             ],
-            'chofer' => [
+            'chofer' => array_merge([
                 'codigo_tipo_documento_identidad' => $this->mapIdentityDocumentTypeId($guide->driver_document_type),
                 'numero_documento' => $guide->driver_document_number ?: '00000000',
                 'licencia' => $guide->driver_license_number,
-            ],
+                'cargo' => 'Principal',
+            ], $this->splitDriverName($guide->driver_name)),
             'items' => $guide->items->where('status', true)->values()->map(function ($item) {
                 $quantity = round((float) $item->quantity, 3);
                 return [
@@ -416,6 +417,32 @@ class ReferralGuideService
         }
 
         return $body;
+    }
+
+    /**
+     * GRE 2.0 exige nombres y apellidos del conductor por separado (DriverPerson), pero el
+     * modelo Driver solo guarda el nombre completo. Se divide heuristicamente: los ultimos
+     * dos tokens se toman como apellidos y el resto como nombres. Ambos deben ir no vacios.
+     *
+     * @return array{nombres: string, apellidos: string}
+     */
+    private function splitDriverName(?string $fullName): array
+    {
+        $name = trim(preg_replace('/\s+/', ' ', (string) $fullName));
+        if ($name === '') {
+            return ['nombres' => '', 'apellidos' => ''];
+        }
+
+        $parts = explode(' ', $name);
+        if (count($parts) === 1) {
+            return ['nombres' => $parts[0], 'apellidos' => $parts[0]];
+        }
+        if (count($parts) === 2) {
+            return ['nombres' => $parts[0], 'apellidos' => $parts[1]];
+        }
+
+        $apellidos = array_splice($parts, -2);
+        return ['nombres' => implode(' ', $parts), 'apellidos' => implode(' ', $apellidos)];
     }
 
     public function loadGuide(int $id): ReferralGuide
@@ -466,6 +493,7 @@ class ReferralGuideService
         if (trim((string) $guide->vehicle_plate) === '') $productionFindings[] = 'Falta la placa del vehiculo.';
         if (trim((string) $guide->driver_document_number) === '') $productionFindings[] = 'Falta el documento del conductor.';
         if (trim((string) $guide->driver_license_number) === '') $productionFindings[] = 'Falta la licencia del conductor.';
+        if (trim((string) $guide->driver_name) === '') $productionFindings[] = 'Falta el nombre del conductor (GRE 2.0 exige nombres y apellidos).';
 
         if ($mode !== 'demo') {
             $errors = array_merge($errors, $productionFindings);

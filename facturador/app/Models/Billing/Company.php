@@ -33,7 +33,9 @@ class Company extends ModelTenant
         'cod_digemid',
         'integrated_query_client_id',
         'integrated_query_client_secret',
-        
+        'gre_client_id',
+        'gre_client_secret',
+
         'send_document_to_pse',
         'url_send_cdr_pse',
         'url_signature_pse',

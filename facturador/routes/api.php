@@ -26,6 +26,7 @@ Route::middleware($apiMiddleware)->group(function () {
     Route::post('documents', 'Billing\\Api\\DocumentController@store');
     Route::post('documents/status', 'Billing\\Api\\ServiceController@documentStatus');
     Route::post('dispatches', 'Billing\\Api\\DispatchController@store');
+    Route::post('dispatches/status', 'Billing\\Api\\DispatchController@status');
     Route::post('dispatches/voided', 'Billing\\Api\\DispatchVoidedController@store');
     Route::post('dispatches/voided/status', 'Billing\\Api\\DispatchVoidedController@status');
 

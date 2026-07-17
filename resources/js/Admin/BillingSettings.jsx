@@ -41,6 +41,8 @@ const BillingSettings = ({ can }) => {
   const soapTypeIdRef = useRef()
   const soapUsernameRef = useRef()
   const soapPasswordRef = useRef()
+  const greClientIdRef = useRef()
+  const greClientSecretRef = useRef()
   const detractionAccountRef = useRef()
   const paymentAccountsTitleRef = useRef()
   const paymentAccountsSubtitleRef = useRef()
@@ -150,6 +152,8 @@ const BillingSettings = ({ can }) => {
     soapTypeIdRef.current.value = business?.soap_type_id ?? '01'
     soapUsernameRef.current.value = business?.soap_username ?? ''
     soapPasswordRef.current.value = business?.soap_password ?? ''
+    if (greClientIdRef.current) greClientIdRef.current.value = business?.gre_client_id ?? ''
+    if (greClientSecretRef.current) greClientSecretRef.current.value = business?.gre_client_secret ?? ''
     detractionAccountRef.current.value = business?.detraction_account ?? ''
     const paymentAccounts = normalizePaymentAccounts(business?.payment_accounts)
     paymentAccountsTitleRef.current.value = paymentAccounts?.title ?? ''
@@ -198,6 +202,8 @@ const BillingSettings = ({ can }) => {
       soap_type_id: soapTypeIdRef.current.value,
       soap_username: soapUsernameRef.current.value.trim(),
       soap_password: soapPasswordRef.current.value.trim(),
+      gre_client_id: greClientIdRef.current?.value?.trim?.() ?? '',
+      gre_client_secret: greClientSecretRef.current?.value?.trim?.() ?? '',
       detraction_account: detractionAccountRef.current.value.trim(),
       payment_accounts: {
         title: paymentAccountsTitleRef.current.value.trim(),
@@ -586,6 +592,13 @@ const BillingSettings = ({ can }) => {
         <div className='col-md-4 mb-3'><label className='form-label'>Usuario SOL</label><input ref={soapUsernameRef} className='form-control' placeholder='RUC + usuario, ej. 20123456789USUARIO1' /><small className='text-muted'>Va con el RUC adelante, tal como se usa en SUNAT.</small></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Clave SOL</label><input ref={soapPasswordRef} className='form-control' /></div>
         <div className='col-md-4 mb-3'><label className='form-label'>Cuenta detracción</label><input ref={detractionAccountRef} className='form-control' /><small className='text-muted'>Solo si emites facturas con detracción.</small></div>
+        <div className='col-12'>
+          <hr className='my-2' />
+          <h5 className='mb-1'>Guías de remisión electrónica (GRE 2.0)</h5>
+          <small className='text-muted'>Credenciales de la API GRE de SUNAT (menú SOL → Credenciales de API SUNAT, servicio GRE). El usuario/clave SOL de arriba se reutilizan. Solo necesario para emitir guías.</small>
+        </div>
+        <div className='col-md-6 mb-3'><label className='form-label'>Client ID (API GRE)</label><input ref={greClientIdRef} className='form-control' placeholder='client_id de la credencial API GRE' /></div>
+        <div className='col-md-6 mb-3'><label className='form-label'>Client Secret (API GRE)</label><input ref={greClientSecretRef} type='password' className='form-control' autoComplete='new-password' /></div>
         <div className='col-12'>
           <hr className='my-2' />
           <h5 className='mb-1'>Facturador interno de esta empresa</h5>

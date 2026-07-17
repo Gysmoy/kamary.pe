@@ -93,6 +93,8 @@ class BusinessFacturadorSyncService
             'client_id_pse' => $business->client_id_pse,
             'integrated_query_client_id' => $business->integrated_query_client_id,
             'integrated_query_client_secret' => $business->integrated_query_client_secret,
+            'gre_client_id' => $business->gre_client_id,
+            'gre_client_secret' => $business->gre_client_secret,
         ];
     }
 

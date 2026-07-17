@@ -30,6 +30,8 @@ class Business extends Model
         'client_id_pse',
         'integrated_query_client_id',
         'integrated_query_client_secret',
+        'gre_client_id',
+        'gre_client_secret',
         'fiscal_logo_path',
         'fiscal_certificate_path',
         'fiscal_certificate_password',

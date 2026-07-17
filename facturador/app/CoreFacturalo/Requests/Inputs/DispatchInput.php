@@ -145,6 +145,7 @@ class DispatchInput
                 'identity_document_type_id' => $identity_document_type_id,
                 'number' => $number,
                 'name' => $name,
+                'mtc_registration' => Functions::valueKeyInArray($dispatcher, 'mtc_registration'),
             ];
         }
         return null;
@@ -162,6 +163,9 @@ class DispatchInput
                 'identity_document_type_id' => $identity_document_type_id,
                 'number' => $number,
                 'license' => $license,
+                'first_name' => Functions::valueKeyInArray($driver, 'first_name'),
+                'family_name' => Functions::valueKeyInArray($driver, 'family_name'),
+                'job_title' => Functions::valueKeyInArray($driver, 'job_title'),
             ];
         }
         return null;

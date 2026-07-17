@@ -151,6 +151,16 @@ class SetupController extends Controller
                 'string',
                 'max:255',
             ],
+            'gre_client_id' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'gre_client_secret' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
         ]);
 
         $validator->after(function ($validator) use ($request, $company) {
@@ -217,6 +227,8 @@ class SetupController extends Controller
             'client_id_pse',
             'integrated_query_client_id',
             'integrated_query_client_secret',
+            'gre_client_id',
+            'gre_client_secret',
         ];
 
         foreach ($fields as $field) {
@@ -393,6 +405,8 @@ class SetupController extends Controller
             'client_id_pse' => $company->client_id_pse,
             'integrated_query_client_id' => $company->integrated_query_client_id,
             'integrated_query_client_secret' => $company->integrated_query_client_secret,
+            'gre_client_id' => $company->gre_client_id,
+            'gre_client_secret' => $company->gre_client_secret,
             'config_system_env' => $configuration ? (bool)$configuration->config_system_env : false,
             'api_mode' => $this->resolveApiMode($company->soap_type_id),
         ];

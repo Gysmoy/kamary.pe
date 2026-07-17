@@ -37,6 +37,7 @@ use App\CoreFacturalo\Helpers\Storage\StorageDocument;
 use App\CoreFacturalo\WS\Validator\XmlErrorCodeProvider;
 use App\CoreFacturalo\Requests\Inputs\Functions;
 use App\CoreFacturalo\Services\Helpers\SendDocumentPse;
+use App\CoreFacturalo\Services\Gre\GreSender;
 
 
 /**
@@ -783,6 +784,14 @@ class Facturalo
             return;
         }
 
+        // Guias por la nueva plataforma GRE 2.0 (API REST). SUNAT dio de baja el SOAP de
+        // guias (codigo 1085); si la empresa tiene credenciales GRE configuradas, la guia
+        // se envia por REST en vez del BillSender SOAP. Los demas tipos siguen por SOAP.
+        if ($this->type === 'dispatch' && $this->greEnabled()) {
+            $this->senderGreDispatch();
+            return;
+        }
+
         $res = $this->senderXmlSigned();
 
         if ($res->isSuccess()) {
@@ -817,6 +826,76 @@ class Facturalo
 
             $this->validationCodeResponse($code, $message);
 
+        }
+    }
+
+    /**
+     * La empresa puede emitir guias por la API REST GRE 2.0 si tiene las credenciales
+     * de la API GRE configuradas (client_id/secret). En demo no aplica (no hay host beta REST).
+     */
+    private function greEnabled()
+    {
+        return !$this->isDemo
+            && !empty($this->company->gre_client_id)
+            && !empty($this->company->gre_client_secret);
+    }
+
+    /**
+     * Envia la guia por la nueva plataforma GRE 2.0 (REST + OAuth2 + ticket).
+     * Guarda el ticket y el CDR; marca el estado segun la respuesta de SUNAT.
+     */
+    private function senderGreDispatch()
+    {
+        $sender = new GreSender($this->company);
+        $result = $sender->process($this->document->filename, $this->xmlSigned);
+
+        $this->saveDispatchGre($result);
+
+        if (!empty($result['cdr_zip'])) {
+            $this->uploadFile($result['cdr_zip'], 'cdr');
+        }
+
+        $this->response = [
+            'sent' => true,
+            'code' => $result['code'],
+            'description' => $result['description'],
+            'ticket' => $result['ticket'] ?? null,
+            'notes' => [],
+        ];
+
+        if (!empty($result['accepted'])) {
+            $this->updateState(self::ACCEPTED);
+            return;
+        }
+
+        if (!empty($result['pending'])) {
+            // Aceptado el envio pero SUNAT aun procesa: se consulta luego con el ticket.
+            $this->updateState(self::SENT);
+            return;
+        }
+
+        // Rechazo (codRespuesta 99): igual que el flujo SOAP de guias, se lanza excepcion
+        // (revierte la transaccion y libera el correlativo para reintentar).
+        throw new Exception("Code: {$result['code']}; Description: {$result['description']}");
+    }
+
+    /**
+     * Persiste ticket y respuesta cruda del GRE en la guia (solo si existen las columnas).
+     */
+    private function saveDispatchGre(array $result)
+    {
+        $connection = $this->document->getConnectionName();
+        $schema = Schema::connection($connection);
+        $payload = [];
+
+        if (!empty($result['ticket']) && $schema->hasColumn('dispatches', 'ticket')) {
+            $payload['ticket'] = $result['ticket'];
+        }
+        if ($schema->hasColumn('dispatches', 'gre_response')) {
+            $payload['gre_response'] = json_encode($result, JSON_UNESCAPED_UNICODE);
+        }
+        if (!empty($payload)) {
+            $this->document->update($payload);
         }
     }
 

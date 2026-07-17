@@ -83,6 +83,8 @@ class BusinessController extends BasicController
         $body['client_id_pse'] = array_key_exists('client_id_pse', $body) ? $this->nullableTrim($body['client_id_pse']) : $existing?->client_id_pse;
         $body['integrated_query_client_id'] = array_key_exists('integrated_query_client_id', $body) ? $this->nullableTrim($body['integrated_query_client_id']) : $existing?->integrated_query_client_id;
         $body['integrated_query_client_secret'] = array_key_exists('integrated_query_client_secret', $body) ? $this->nullableTrim($body['integrated_query_client_secret']) : $existing?->integrated_query_client_secret;
+        $body['gre_client_id'] = array_key_exists('gre_client_id', $body) ? $this->nullableTrim($body['gre_client_id']) : $existing?->gre_client_id;
+        $body['gre_client_secret'] = array_key_exists('gre_client_secret', $body) ? $this->nullableTrim($body['gre_client_secret']) : $existing?->gre_client_secret;
         $body['facturador_base_url'] = array_key_exists('facturador_base_url', $body) ? $this->nullableTrim($body['facturador_base_url']) : $existing?->facturador_base_url;
         $body['facturador_auth_mode'] = array_key_exists('facturador_auth_mode', $body) ? $this->normalizeFacturadorAuthMode($body['facturador_auth_mode']) : $existing?->facturador_auth_mode;
         $body['facturador_token'] = array_key_exists('facturador_token', $body) ? $this->nullableTrim($body['facturador_token']) : $existing?->facturador_token;
@@ -636,7 +638,9 @@ class BusinessController extends BasicController
             || $existing->url_send_cdr_pse !== ($payload['url_send_cdr_pse'] ?? $existing->url_send_cdr_pse)
             || $existing->client_id_pse !== ($payload['client_id_pse'] ?? $existing->client_id_pse)
             || $existing->integrated_query_client_id !== ($payload['integrated_query_client_id'] ?? $existing->integrated_query_client_id)
-            || $existing->integrated_query_client_secret !== ($payload['integrated_query_client_secret'] ?? $existing->integrated_query_client_secret);
+            || $existing->integrated_query_client_secret !== ($payload['integrated_query_client_secret'] ?? $existing->integrated_query_client_secret)
+            || $existing->gre_client_id !== ($payload['gre_client_id'] ?? $existing->gre_client_id)
+            || $existing->gre_client_secret !== ($payload['gre_client_secret'] ?? $existing->gre_client_secret);
     }
 
     private function resolveScopeKeyForPagination(Request $request): ?string

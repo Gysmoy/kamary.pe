@@ -1,5 +1,7 @@
 /.phpunit.cache
 /node_modules
+/graphify-out
+/.claude/settings.local.json
 # /public/build
 /public/hot
 /public/storage
