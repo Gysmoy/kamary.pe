@@ -1521,14 +1521,14 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     `}</style>
     {isStorageBilling && <div className='row g-3 mb-3'>
       <div className='col-12 col-md-6 col-xl-3'>
-        <button type='button' className='btn w-100 d-flex align-items-center justify-content-between py-3 text-white' style={{ background: '#23264f' }} onClick={openBulkModal}>
+        <button type='button' className='btn btn-primary w-100 d-flex align-items-center justify-content-between py-3' onClick={openBulkModal}>
           <span><i className='mdi mdi-plus-circle-outline me-1'></i>Facturar en bloque</span>
           <i className='mdi mdi-file-outline fs-4'></i>
         </button>
       </div>
       <div className='col-12 col-md-6 col-xl-3'>
-        <button type='button' className='btn btn-success w-100 d-flex align-items-center justify-content-between py-3' onClick={openReportModal}>
-          <span><i className='mdi mdi-plus-circle-outline me-1'></i>Reporte Facturas Emitidas</span>
+        <button type='button' className='btn btn-outline-primary w-100 d-flex align-items-center justify-content-between py-3' onClick={openReportModal}>
+          <span><i className='mdi mdi-file-chart-outline me-1'></i>Reporte Facturas Emitidas</span>
           <i className='mdi mdi-file-outline fs-4'></i>
         </button>
       </div>
