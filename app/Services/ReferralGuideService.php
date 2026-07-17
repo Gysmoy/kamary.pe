@@ -95,7 +95,7 @@ class ReferralGuideService
             $series = $series !== '' ? $series : self::DEFAULT_SERIES;
             $sequence = $guide->sequence ?: $this->nextSequence($series);
             $externalReference = $series . '-' . $this->normalizeSequence($sequence);
-            $issueDate = $guide->issue_date ?: now()->toDateString();
+            $issueDate = $guide->issue_date ?: now('America/Lima')->toDateString();
             $transferDate = $dispatch?->scheduled_date
                 ? Carbon::parse($dispatch->scheduled_date)->toDateString()
                 : ($order->promised_delivery_at ? Carbon::parse($order->promised_delivery_at)->toDateString() : $issueDate);
@@ -324,8 +324,14 @@ class ReferralGuideService
     public function buildIssueRequestBody(ReferralGuide $guide): array
     {
         $guide->loadMissing(['business', 'branch', 'items', 'dispatch', 'commercialOrder']);
-        $issueDate = optional($guide->issue_date)->format('Y-m-d') ?: now()->format('Y-m-d');
+        // La emision debe ir en hora de Peru: el server corre en UTC (config app.timezone=UTC)
+        // y SUNAT rechaza con 2108 si la fecha/hora de emision es mayor a su hora de recepcion.
+        $lima = now('America/Lima');
+        $issueDate = $lima->format('Y-m-d');
         $transferDate = optional($guide->transfer_date)->format('Y-m-d') ?: $issueDate;
+        if ($transferDate < $issueDate) {
+            $transferDate = $issueDate;
+        }
         $weight = max(0.001, round((float) $guide->gross_weight, 3));
         $transferMode = $this->mapTransferMode($guide->transfer_mode);
         $reasonCode = $this->mapTransferReason($guide->transfer_reason);
@@ -334,7 +340,7 @@ class ReferralGuideService
             'serie_documento' => $guide->series ?: (string) config('facturadorpro5.series.guia', self::DEFAULT_SERIES),
             'numero_documento' => $this->normalizeSequenceForProvider($guide->sequence),
             'fecha_de_emision' => $issueDate,
-            'hora_de_emision' => now()->format('H:i:s'),
+            'hora_de_emision' => $lima->format('H:i:s'),
             'codigo_tipo_documento' => '09',
             'datos_del_emisor' => [
                 'codigo_del_domicilio_fiscal' => $guide->branch?->establishment_code ?: '0000',
