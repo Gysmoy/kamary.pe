@@ -57,7 +57,7 @@
         </td>
         <td width="40%" class="align-top" style="text-transform: uppercase; line-height: 20px;">
             @php
-                $district = \App\Models\Tenant\Catalogs\District::find($document->origin->location_id);
+                $district = \App\Models\Billing\Catalogs\District::find($document->origin->location_id);
             @endphp
             {{ $document->origin->location_id }} - {{ $document->origin->address }}. {{ $district->description }}, {{ $district->province->description }}, {{ $district->province->department->description }}.
         </td>
@@ -65,7 +65,7 @@
         </td>
         <td width="40%" class="align-top" style="text-transform: uppercase; line-height: 20px;">
             @php
-                $district = \App\Models\Tenant\Catalogs\District::find($document->delivery->location_id);
+                $district = \App\Models\Billing\Catalogs\District::find($document->delivery->location_id);
             @endphp
             {{ $document->delivery->location_id }} - {{ $document->delivery->address }}. {{ $district->description }}, {{ $district->province->description }}, {{ $district->province->department->description }}.
         </td>
