@@ -83,6 +83,14 @@ class ReferralGuideService
             $warehouse = $dispatch?->warehouse ?: $order->warehouse;
             $driver = $dispatch?->driver;
             $vehicle = $dispatch?->vehicle;
+            // Guias directas (sin despacho): usar el conductor/vehiculo por defecto de la empresa,
+            // asi se puede emitir una guia sin armar todo el flujo de despacho/stock.
+            if (!$driver && $business?->id) {
+                $driver = \App\Models\Driver::where('business_id', $business->id)->whereNotNull('status')->where('status', true)->orderBy('id')->first();
+            }
+            if (!$vehicle && $business?->id) {
+                $vehicle = \App\Models\Vehicle::where('business_id', $business->id)->whereNotNull('status')->where('status', true)->orderBy('id')->first();
+            }
             $series = trim((string) ($guide->series ?: $branch?->series_guia ?: config('facturadorpro5.series.guia', self::DEFAULT_SERIES)));
             $series = $series !== '' ? $series : self::DEFAULT_SERIES;
             $sequence = $guide->sequence ?: $this->nextSequence($series);
