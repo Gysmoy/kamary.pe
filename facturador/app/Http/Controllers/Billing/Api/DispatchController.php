@@ -25,7 +25,13 @@ class DispatchController extends Controller
             $facturalo->signXmlUnsigned();
             $facturalo->updateHash();
             $facturalo->updateQr();
-            $facturalo->createPdf();
+            // El PDF no debe bloquear la emision fiscal: si el template falla, se continua
+            // y el XML igual se firma y envia a SUNAT (el PDF se puede regenerar despues).
+            try {
+                $facturalo->createPdf();
+            } catch (\Throwable $e) {
+                \Log::warning('createPdf guia fallo (no bloqueante): ' . $e->getMessage());
+            }
             $facturalo->senderXmlSignedBill();
 
             return $facturalo;
