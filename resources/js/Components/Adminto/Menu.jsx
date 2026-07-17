@@ -282,6 +282,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
               {canAccess('storage-kardex') && <MenuItem href='/admin/storage-kardex' icon='ti ti-notebook'>Kardex</MenuItem>}
               {canAccess('storage-general-service') && <MenuItem href='/admin/storage-general-service' icon='ti ti-settings'>Servicio General</MenuItem>}
               {canAccess('storage-billing-control') && <MenuItem href='/admin/storage-billing-control' icon='ti ti-receipt-2'>Control de Facturación</MenuItem>}
+              {canAccess('storage-billing-control') && <MenuItem href='/admin/manual-guides' icon='ti ti-truck'>Guías de Remisión</MenuItem>}
               {canAccess('storage-general-service-orders') && <MenuItem href='/admin/storage-general-service-orders' icon='ti ti-list-details'>O. Servicio General</MenuItem>}
               {canAccess('storage-api-tokens') && <MenuItem href='/admin/storage-api-tokens' icon='ti ti-key'>Tokens acceso</MenuItem>}
             </MenuItemContainer>
