@@ -627,11 +627,21 @@ class ReferralGuideService
     private function normalizeUnitCode(?string $unit): string
     {
         $unit = strtoupper(trim((string) $unit));
-        if (preg_match('/^[A-Z0-9]{2,4}$/', $unit)) {
-            return $unit;
-        }
-
-        return 'NIU';
+        // Mapea codigos SUNAT validos (identidad) y nombres comunes en espanol a la unidad SUNAT (cat 03).
+        // Cualquier cosa no reconocida cae a NIU para no romper la FK unit_type_id del facturador.
+        $map = [
+            'NIU'=>'NIU','ZZ'=>'ZZ','BX'=>'BX','KGM'=>'KGM','GRM'=>'GRM','LTR'=>'LTR','MTR'=>'MTR','MLT'=>'MLT',
+            'TNE'=>'TNE','BG'=>'BG','PK'=>'PK','DZN'=>'DZN','SET'=>'SET','BJ'=>'BJ','BO'=>'BO','BLL'=>'BLL','GLL'=>'GLL','CEN'=>'CEN',
+            'CAJA'=>'BX','CJA'=>'BX','CJ'=>'BX',
+            'UNIDAD'=>'NIU','UND'=>'NIU','UNI'=>'NIU','UN'=>'NIU','U'=>'NIU',
+            'KILOGRAMO'=>'KGM','KILO'=>'KGM','KG'=>'KGM',
+            'GRAMO'=>'GRM','GR'=>'GRM','G'=>'GRM',
+            'LITRO'=>'LTR','LT'=>'LTR','L'=>'LTR',
+            'METRO'=>'MTR','MT'=>'MTR','M'=>'MTR',
+            'MILILITRO'=>'MLT','ML'=>'MLT',
+            'PAQUETE'=>'PK','PACK'=>'PK','DOCENA'=>'DZN','BOLSA'=>'BG','FRASCO'=>'BJ','BOTELLA'=>'BO','BLISTER'=>'BLL',
+        ];
+        return $map[$unit] ?? 'NIU';
     }
 
     private function customerName(CommercialOrder $order): ?string
