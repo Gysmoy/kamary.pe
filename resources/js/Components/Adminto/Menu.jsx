@@ -4,15 +4,6 @@ import MenuItem from './Menu/MenuItem'
 import MenuItemContainer from './Menu/MenuItemContainer'
 import LaravelSession from '../../Utils/LaravelSession'
 
-const BusinessHeading = ({ children, spaced = false }) => (
-  <li className={`side-nav-item menu-business-section ${spaced ? 'menu-business-section-spaced' : ''}`.trim()}>
-    <div className='side-nav-link menu-business-heading'>
-      <span className='menu-icon'></span>
-      <span className='menu-business-heading-text'>{children}</span>
-    </div>
-  </li>
-)
-
 const Menu = ({ can, hasRole, panel = null }) => {
   const mainRole = LaravelSession.roles?.[0] ?? { name: 'User' }
 
@@ -171,6 +162,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
         </div>
 
         <ul className='side-nav'>
+          <li className="side-nav-title mt-2">PANEL DE NAVEGACIÓN</li>
           {canAccess('dashboard') && <MenuItem href='/admin/home' icon='ti ti-home'>Inicio</MenuItem>}
 
           {canAccessAny('businesses', 'users', 'roles', 'generals') && (
@@ -183,7 +175,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
             </MenuItemContainer>
           )}
 
-          {canAccessAny(...kamaryPeruPermissions) && <BusinessHeading>KAMARY PERU SAC</BusinessHeading>}
+          {canAccessAny(...kamaryPeruPermissions) && <li className="side-nav-title mt-2">KAMARY PERU SAC</li>}
 
           {canAccessAny('businesses', 'articles', 'inventory', 'kardex', 'laboratories', 'batches', 'entry-note', 'exit-note', 'suppliers', 'units-of-measure') && (
             <MenuItemContainer title='Almacén' icon='ti ti-building-warehouse'>
@@ -267,7 +259,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
             </MenuItemContainer>
           )}
 
-          {canAccessAny(...kamaryMedicalPermissions) && <BusinessHeading spaced>KAMARY MEDICAL SAC</BusinessHeading>}
+          {canAccessAny(...kamaryMedicalPermissions) && <li className="side-nav-title mt-2">KAMARY MEDICAL SAC</li>}
 
           {canAccessAny(...kamaryMedicalPermissions) && (
             <MenuItemContainer title='Serv. Almacenamiento' icon='ti ti-building-warehouse'>
