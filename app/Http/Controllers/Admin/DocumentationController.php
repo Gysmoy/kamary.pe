@@ -6,7 +6,6 @@ use App\Http\Controllers\BasicController;
 use App\Support\ModulePermissions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class DocumentationController extends BasicController
 {
@@ -14,7 +13,10 @@ class DocumentationController extends BasicController
 
     /**
      * Manuales publicados. Para agregar uno nuevo basta con dejar el PDF en
-     * storage/app/docs y sumar una entrada aqui.
+     * resources/docs y sumar una entrada aqui.
+     *
+     * Los archivos viven en resources/docs (no en storage) porque en produccion
+     * storage es un volumen de Docker y taparia los archivos de la imagen.
      */
     private function manuals(): array
     {
@@ -25,7 +27,7 @@ class DocumentationController extends BasicController
                 'description' => 'Guia paso a paso del panel: como entrar, como se usa cada modulo y que se escribe en cada campo.',
                 'audience' => 'Todo el personal',
                 'version' => 'v2.0 · jul 2026',
-                'file' => 'docs/manual-uso.pdf',
+                'file' => 'manual-uso.pdf',
                 'adminOnly' => false,
             ],
             [
@@ -34,10 +36,21 @@ class DocumentationController extends BasicController
                 'description' => 'Documentacion tecnica: arquitectura, contratos de codigo, servicios, integraciones y despliegue.',
                 'audience' => 'Equipo de desarrollo',
                 'version' => 'v2.0 · jul 2026',
-                'file' => 'docs/manual-programador.pdf',
+                'file' => 'manual-programador.pdf',
                 'adminOnly' => true,
             ],
         ];
+    }
+
+    private function resolvePath(string $file): ?string
+    {
+        foreach ([resource_path("docs/{$file}"), storage_path("app/docs/{$file}")] as $path) {
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 
     private function availableManuals(): array
@@ -45,16 +58,16 @@ class DocumentationController extends BasicController
         $isAdmin = ModulePermissions::isSuperUser(Auth::user());
 
         return array_values(array_map(function (array $manual) {
+            $path = $this->resolvePath($manual['file']);
+
             return [
                 'key' => $manual['key'],
                 'title' => $manual['title'],
                 'description' => $manual['description'],
                 'audience' => $manual['audience'],
                 'version' => $manual['version'],
-                'available' => Storage::exists($manual['file']),
-                'size' => Storage::exists($manual['file'])
-                    ? round(Storage::size($manual['file']) / 1024 / 1024, 1)
-                    : null,
+                'available' => (bool) $path,
+                'size' => $path ? round(filesize($path) / 1024 / 1024, 1) : null,
             ];
         }, array_filter($this->manuals(), fn(array $manual) => !$manual['adminOnly'] || $isAdmin)));
     }
@@ -72,12 +85,14 @@ class DocumentationController extends BasicController
             ->first(fn(array $item) => $item['key'] === $manual && (!$item['adminOnly'] || $isAdmin));
 
         abort_unless($found, 404, 'El manual solicitado no existe.');
-        abort_unless(Storage::exists($found['file']), 404, 'El manual aun no ha sido publicado.');
+
+        $path = $this->resolvePath($found['file']);
+        abort_unless($path, 404, 'El manual aun no ha sido publicado.');
 
         $disposition = $request->boolean('download') ? 'attachment' : 'inline';
         $filename = "{$found['title']}.pdf";
 
-        return response(Storage::get($found['file']), 200, [
+        return response()->file($path, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => "{$disposition}; filename=\"{$filename}\"",
             'Cache-Control' => 'private, max-age=3600',
