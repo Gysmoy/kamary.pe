@@ -74,7 +74,7 @@ const Documentation = ({ manuals = [] }) => {
             {manual?.available
               ? <iframe
                 title={manual.title}
-                src={`/admin/docs/file/${manual.key}#view=FitH`}
+                src={`/admin/docs/file/${manual.key}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
                 style={{ width: '100%', height: 'calc(100vh - 230px)', minHeight: '520px', border: 0 }}
               />
               : <div className='text-center py-5'>
