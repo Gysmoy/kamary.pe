@@ -39,6 +39,15 @@ class DocumentationController extends BasicController
                 'file' => 'manual-programador.pdf',
                 'adminOnly' => true,
             ],
+            [
+                'key' => 'api-almacenamiento',
+                'title' => 'API de Almacenamiento',
+                'description' => 'Manual de integracion para clientes: consulta de stock y creacion de pedidos desde su propio sistema.',
+                'audience' => 'Clientes e integradores',
+                'version' => 'En linea',
+                'url' => '/api-docs/storage',
+                'adminOnly' => false,
+            ],
         ];
     }
 
@@ -58,7 +67,8 @@ class DocumentationController extends BasicController
         $isAdmin = ModulePermissions::isSuperUser(Auth::user());
 
         return array_values(array_map(function (array $manual) {
-            $path = $this->resolvePath($manual['file']);
+            $isPage = isset($manual['url']);
+            $path = $isPage ? null : $this->resolvePath($manual['file']);
 
             return [
                 'key' => $manual['key'],
@@ -66,7 +76,10 @@ class DocumentationController extends BasicController
                 'description' => $manual['description'],
                 'audience' => $manual['audience'],
                 'version' => $manual['version'],
-                'available' => (bool) $path,
+                'kind' => $isPage ? 'page' : 'pdf',
+                'available' => $isPage || (bool) $path,
+                'viewUrl' => $isPage ? $manual['url'] : "/admin/docs/file/{$manual['key']}",
+                'downloadUrl' => $isPage ? null : "/admin/docs/file/{$manual['key']}?download=1",
                 'size' => $path ? round(filesize($path) / 1024 / 1024, 1) : null,
             ];
         }, array_filter($this->manuals(), fn(array $manual) => !$manual['adminOnly'] || $isAdmin)));

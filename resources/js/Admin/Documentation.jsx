@@ -30,7 +30,7 @@ const Documentation = ({ manuals = [] }) => {
                 className={`btn w-100 text-start mb-1 ${item.key === current ? 'btn-primary' : 'btn-light'}`}
               >
                 <span className='d-flex align-items-start gap-2'>
-                  <i className='ti ti-file-text fs-18 mt-1'></i>
+                  <i className={`fs-18 mt-1 ti ${item.kind === 'page' ? 'ti-plug-connected' : 'ti-file-text'}`}></i>
                   <span>
                     <span className='d-block fw-semibold'>{item.title}</span>
                     <small className={item.key === current ? 'text-white-50' : 'text-muted'}>
@@ -49,20 +49,20 @@ const Documentation = ({ manuals = [] }) => {
             <p className='text-muted fs-13 mb-3'>{manual.description}</p>
             <div className='d-flex flex-column gap-2'>
               <a
-                href={`/admin/docs/file/${manual.key}`}
+                href={manual.viewUrl}
                 target='_blank'
                 rel='noreferrer'
                 className='btn btn-outline-primary btn-sm'
               >
                 <i className='ti ti-external-link me-1'></i> Abrir en pestana nueva
               </a>
-              <a
-                href={`/admin/docs/file/${manual.key}?download=1`}
+              {manual.downloadUrl && <a
+                href={manual.downloadUrl}
                 className='btn btn-outline-secondary btn-sm'
               >
                 <i className='ti ti-download me-1'></i> Descargar PDF
                 {manual.size ? <span className='text-muted ms-1'>({manual.size} MB)</span> : null}
-              </a>
+              </a>}
             </div>
           </div>
         </div>}
@@ -74,7 +74,9 @@ const Documentation = ({ manuals = [] }) => {
             {manual?.available
               ? <iframe
                 title={manual.title}
-                src={`/admin/docs/file/${manual.key}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                src={manual.kind === 'pdf'
+                  ? `${manual.viewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`
+                  : manual.viewUrl}
                 style={{ width: '100%', height: 'calc(100vh - 230px)', minHeight: '520px', border: 0 }}
               />
               : <div className='text-center py-5'>
