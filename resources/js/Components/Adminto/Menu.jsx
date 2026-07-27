@@ -165,6 +165,8 @@ const Menu = ({ can, hasRole, panel = null }) => {
           <li className="side-nav-title mt-2">PANEL DE NAVEGACIÓN</li>
           {canAccess('dashboard') && <MenuItem href='/admin/home' icon='ti ti-home'>Inicio</MenuItem>}
 
+          <MenuItem href='/admin/docs' icon='ti ti-book'>Documentación</MenuItem>
+
           {canAccessAny('businesses', 'users', 'roles', 'generals') && (
             <MenuItemContainer title='Sistemas' icon='ti ti-settings-cog'>
               {canAccess('businesses') && <MenuItem href='/admin/businesses' icon='ti ti-building'>Empresas</MenuItem>}

@@ -41,6 +41,7 @@ use App\Http\Controllers\Admin\CommercialOrderController as AdminCommercialOrder
 use App\Http\Controllers\Admin\EventualClientController as AdminEventualClientController;
 use App\Http\Controllers\Admin\TakeOrderController as AdminTakeOrderController;
 use App\Http\Controllers\Admin\DispatchController as AdminDispatchController;
+use App\Http\Controllers\Admin\DocumentationController as AdminDocumentationController;
 use App\Http\Controllers\Admin\DailySummaryController as AdminDailySummaryController;
 use App\Http\Controllers\Admin\DriverController as AdminDriverController;
 use App\Http\Controllers\Admin\ReferralGuideController as AdminReferralGuideController;
@@ -235,6 +236,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/users', [AdminUserController::class, 'reactView']);
         Route::get('/roles', [AdminRoleController::class, 'reactView']);
         Route::get('/businesses', [AdminBusinessController::class, 'reactView']);
+
+        // Documentacion
+        Route::get('/docs', [AdminDocumentationController::class, 'reactView']);
+        Route::get('/docs/file/{manual}', [AdminDocumentationController::class, 'file'])
+            ->where('manual', 'uso|programador');
 
         Route::get('/profile', [AdminProfileController::class, 'reactView'])->name('Admin/Profile.jsx');
         Route::get('/account', [AdminAccountController::class, 'reactView'])->name('Admin/Account.jsx');

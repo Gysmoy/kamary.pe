@@ -53,7 +53,7 @@ class EnsureAdminPermissionForPath
         $first = $segments[0] ?? '';
         $second = $segments[1] ?? '';
 
-        if (in_array($first, ['', 'account', 'profile', 'ubigeo'], true)) {
+        if (in_array($first, ['', 'account', 'profile', 'ubigeo', 'docs'], true)) {
             return null;
         }
 
