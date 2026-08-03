@@ -6,7 +6,9 @@ import CreateReactScript from '../Utils/CreateReactScript';
 import Global from '../Utils/Global';
 import VdTable from '@Adminto/VdTable';
 import VdSelect from '@Adminto/VdSelect';
+import VdUbigeoCascade from '@Adminto/VdUbigeoCascade';
 import Modal from '../Components/Adminto/Modal';
+import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
 import Swal from 'sweetalert2';
 import { Fetch } from 'sode-extend-react';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
@@ -27,6 +29,10 @@ const billingDocumentsRest = new BillingDocumentsRest()
 const deliveryDelayReasonsRest = new DeliveryDelayReasonsRest()
 const referralGuidesRest = new ReferralGuidesRest()
 const regularClientFilter = ['client_kind', '=', 'regular']
+// El pedido comercial pertenece al modulo de Kamary Peru. El scoping automatico del backend no
+// aplica aqui porque /admin/commercial-orders esta declarado como ruta neutra
+// (BusinessController::resolveScopeKeyForPagination), asi que se filtra de forma explicita.
+const kamaryPeruBusinessFilter = ['business_key', '=', 'kamary_peru']
 const creditNoteBaseFilter = [['document_type', '<>', 'Nota de credito'], 'and', ['source_type', '=', 'commercial_order']]
 
 // Reemplazo del AJAX de select2 (SelectAPIFormGroup) para VdSelect async.
@@ -996,7 +1002,6 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const taxAmountRef = useRef()
   const deliveryAddressRef = useRef()
   const deliveryReferenceRef = useRef()
-  const ubigeoRef = useRef()
   const dispatchContactNameRef = useRef()
   const dispatchContactPhoneRef = useRef()
   const observationsRef = useRef()
@@ -1004,6 +1009,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const articleRecordsRef = useRef({})
 
   const [isEditing, setIsEditing] = useState(false)
+  // Solo se persiste el codigo (columna commercial_orders.ubigeo); departamento/provincia/distrito
+  // se derivan del catalogo INEI al abrir el pedido.
+  const [deliveryUbigeo, setDeliveryUbigeo] = useState(EMPTY_UBIGEO_SELECTION)
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
@@ -1151,7 +1159,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     const address = clientAddressValue(client)
     const ubigeo = clientUbigeoValue(client)
     if (address && deliveryAddressRef.current) deliveryAddressRef.current.value = address
-    if (ubigeo && ubigeoRef.current) ubigeoRef.current.value = ubigeo
+    if (ubigeo) setDeliveryUbigeo({ ...EMPTY_UBIGEO_SELECTION, ubigeo })
     if (address) setMapSearchText(address)
   }
 
@@ -1206,7 +1214,12 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     if (!address) return
     if (deliveryAddressRef.current) deliveryAddressRef.current.value = textValue(address.address)
     if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = textValue(address.reference)
-    if (ubigeoRef.current) ubigeoRef.current.value = textValue(address.ubigeo)
+    setDeliveryUbigeo({
+      ubigeo: textValue(address.ubigeo),
+      department: textValue(address.department),
+      province: textValue(address.province),
+      district: textValue(address.district),
+    })
     if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = textValue(address.contact_name)
     if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = textValue(address.contact_phone)
     setMapSearchText(textValue(address.address))
@@ -1288,7 +1301,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     if (billingStatusRef.current) billingStatusRef.current.value = data?.billing_status ?? 'pending'
     if (deliveryAddressRef.current) deliveryAddressRef.current.value = textValue(data?.delivery_address)
     if (deliveryReferenceRef.current) deliveryReferenceRef.current.value = textValue(data?.delivery_reference)
-    if (ubigeoRef.current) ubigeoRef.current.value = textValue(data?.ubigeo)
+    setDeliveryUbigeo({ ...EMPTY_UBIGEO_SELECTION, ubigeo: textValue(data?.ubigeo) })
     if (dispatchContactNameRef.current) dispatchContactNameRef.current.value = textValue(data?.dispatch_contact_name)
     if (dispatchContactPhoneRef.current) dispatchContactPhoneRef.current.value = textValue(data?.dispatch_contact_phone)
     if (purchaseOrderRef.current) purchaseOrderRef.current.value = data?.purchase_order ?? ''
@@ -1421,7 +1434,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       tax_amount: orderTotals.taxAmount,
       delivery_address: deliveryAddressRef.current?.value?.trim() || '',
       delivery_reference: deliveryReferenceRef.current?.value?.trim() || '',
-      ubigeo: ubigeoRef.current?.value?.trim() || '',
+      ubigeo: deliveryUbigeo.ubigeo?.trim() || '',
       map_lat: formatCoordinate(mapPosition.lat) || null,
       map_lng: formatCoordinate(mapPosition.lng) || null,
       dispatch_contact_name: dispatchContactNameRef.current?.value?.trim() || '',
@@ -3240,6 +3253,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       bodyStyle={{ maxHeight: 'calc(100vh - 150px)', overflowY: 'auto', overflowX: 'hidden' }}
       btnSubmitText='Guardar'
       hideButtonSubmit={isFormLocked}
+      preventEnterSubmit
       onSubmit={onModalSubmit}
     >
       <div id='commercial-orders-form-container'>
@@ -3278,7 +3292,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               value={selectedBusinessId}
               valueLabel={businessLabel}
               onChange={onBusinessChanged}
-              loadOptions={(q) => fetchPaginateOptions('/api/admin/businesses/paginate', 'name', null, q, (x) => ({ value: `${x.id}`, label: x.name }))}
+              loadOptions={(q) => fetchPaginateOptions('/api/admin/businesses/paginate', 'name', kamaryPeruBusinessFilter, q, (x) => ({ value: `${x.id}`, label: x.name }))}
               placeholder='-- Seleccionar empresa --'
             />
             <VdSelect
@@ -3384,13 +3398,14 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               <label className='form-label'>Guia remision</label>
               <input ref={referralGuideRef} className='form-control' />
             </div>
-            <div className='col-12 col-md-6 col-xl-2'>
-              <label className='form-label'>Ubigeo</label>
-              <input ref={ubigeoRef} className='form-control' />
-            </div>
-            <div className='col-12 col-xl-4'>
+            <div className='col-12 col-xl-6'>
               <TextareaFormGroup eRef={deliveryAddressRef} label='Direccion de entrega' rows={2} />
             </div>
+            <VdUbigeoCascade
+              value={deliveryUbigeo}
+              onChange={setDeliveryUbigeo}
+              disabled={isFormLocked}
+            />
             <div className='col-12'>
               <DeliveryMapPicker
                 modalRef={modalRef}
@@ -3518,7 +3533,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                           articleRecordsRef.current[`${x.id}`] = x
                           return { value: `${x.id}`, label: `${x.code ?? ''} - ${x.name ?? ''}`.trim() }
                         })}
-                        placeholder='Buscar articulo...'
+                        placeholder={selectedWarehouseId ? 'Buscar articulo...' : 'Seleccione almacen primero'}
                       />
                     </td>
                     <td><div className='commercial-order-readonly-cell'>{item.article_laboratory || '-'}</div></td>

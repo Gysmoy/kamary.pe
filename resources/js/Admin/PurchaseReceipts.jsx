@@ -600,7 +600,7 @@ const PurchaseReceipts = () => {
       )}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar recepción de compra' : 'Agregar recepción de compra'} onSubmit={onModalSubmit} size='full-width'>
+    <Modal modalRef={modalRef} title={isEditing ? 'Editar recepción de compra' : 'Agregar recepción de compra'} onSubmit={onModalSubmit} size='full-width' preventEnterSubmit>
       <div className='row' id='purchase-receipt-form-container'>
         <input ref={idRef} type='hidden' />
 

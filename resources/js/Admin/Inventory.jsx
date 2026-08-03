@@ -34,24 +34,29 @@ const storageInventoryHeaders = ['ID', 'LOTE', 'F. VENCIMIENTO', 'ARTICULO', 'CL
 const safeExcelFileName = (value) => `${value || 'inventario'}`.replace(/[\\/:*?"<>|]+/g, '-')
 const warehouseName = (warehouse) => `${warehouse?.name ?? ''}`.trim()
 const warehouseNameKey = (warehouse) => warehouseName(warehouse).toLocaleLowerCase('es-PE')
-const uniqueWarehouseNameOptions = (warehouses = []) => {
-  const grouped = new Map()
+// Un almacen por opcion. Antes se agrupaban por nombre, de modo que dos almacenes distintos
+// llamados igual (p. ej. "Principal" en dos sedes) colapsaban en una sola entrada y el segundo
+// resultaba inseleccionable. Cuando el nombre se repite se desambigua con la sede.
+const warehouseSelectOptions = (warehouses = []) => {
+  const valid = warehouses.filter(warehouse => warehouseName(warehouse) && warehouse?.id != null)
 
-  warehouses.forEach(warehouse => {
-    const name = warehouseName(warehouse)
-    if (!name || warehouse?.id == null) return
-
+  const timesUsed = new Map()
+  valid.forEach(warehouse => {
     const key = warehouseNameKey(warehouse)
-    const current = grouped.get(key)
-    const ids = [...(current?.ids ?? []), `${warehouse.id}`]
-    grouped.set(key, {
-      ids,
-      name: current?.name ?? name,
-      value: ids.join(','),
-    })
+    timesUsed.set(key, (timesUsed.get(key) ?? 0) + 1)
   })
 
-  return Array.from(grouped.values()).sort((a, b) => a.name.localeCompare(b.name, 'es-PE'))
+  return valid
+    .map(warehouse => {
+      const name = warehouseName(warehouse)
+      const isDuplicated = (timesUsed.get(warehouseNameKey(warehouse)) ?? 0) > 1
+      const branch = `${warehouse?.branch?.name ?? ''}`.trim()
+      return {
+        value: `${warehouse.id}`,
+        name: isDuplicated ? [name, branch || `#${warehouse.id}`].join(' - ') : name,
+      }
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'es-PE'))
 }
 
 const mapStoredItem = (item) => ({
@@ -130,14 +135,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
   }, [filterWarehouseIds])
 
   const fixedBusinessLabel = (businessScopes?.[businessScopeKey] || 'KAMARY PERU').toUpperCase()
-  const filterWarehouseOptions = useMemo(() => uniqueWarehouseNameOptions(warehouses), [warehouses])
-  const modalWarehouseOptions = useMemo(() => {
-    const currentWarehouseId = `${warehouseId || ''}`
-    return filterWarehouseOptions.map(option => ({
-      ...option,
-      value: option.ids.includes(currentWarehouseId) ? currentWarehouseId : option.ids[0],
-    }))
-  }, [filterWarehouseOptions, warehouseId])
+  const filterWarehouseOptions = useMemo(() => warehouseSelectOptions(warehouses), [warehouses])
   const firstFilterWarehouseId = filterWarehouseIds.split(',').filter(Boolean)[0] || ''
   const selectedCountCode = selectedCount?.code ?? ''
   const selectedWarehouseName = selectedCount?.warehouse?.name || warehouses.find(warehouse => `${warehouse.id}` === `${warehouseId}`)?.name || ''
@@ -224,8 +222,11 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
     tableRef.current?.refresh()
   }
 
+  // El formato en blanco se puede bajar apenas hay listado, sin obligar a registrar antes el
+  // inventario: registrar crea un InventoryCount en base de datos y no deberia ser el precio a
+  // pagar por imprimir la hoja de conteo.
   const downloadFormat = () => {
-    if (!selectedCount?.id) return
+    if (rows.length === 0) return
     const worksheetRows = [
       [`Formato de inventario fisico - ${selectedWarehouseName || 'Almacen'}`],
       selectedLaboratoryName ? [`Laboratorio: ${selectedLaboratoryName}`] : [],
@@ -505,7 +506,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
           disabled={!!selectedCount}
           value={warehouseId}
           onChange={(value) => setWarehouseId(value)}
-          options={modalWarehouseOptions.map(warehouse => ({ value: warehouse.value, label: warehouse.name }))}
+          options={filterWarehouseOptions.map(warehouse => ({ value: warehouse.value, label: warehouse.name }))}
           placeholder='Seleccione almacen'
         />
         <VdSelect
@@ -526,10 +527,24 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
       </div>
 
       <div className='d-flex flex-wrap gap-4 storage-inventory-toolbar'>
-        <button type='button' className='btn btn-outline-success px-4' disabled={!selectedCount?.id} onClick={downloadFormat}>
+        <button
+          type='button'
+          className='btn btn-outline-success px-4'
+          disabled={rows.length === 0}
+          title={rows.length === 0 ? 'Genera primero el listado para descargar el formato' : 'Descargar el formato de conteo'}
+          onClick={downloadFormat}
+        >
           Descargar Excel
         </button>
-        <button type='button' className='btn btn-outline-success px-4' disabled={!selectedCount?.id || selectedCountApplied} onClick={() => fileRef.current?.click()}>
+        <button
+          type='button'
+          className='btn btn-outline-success px-4'
+          disabled={!selectedCount?.id || selectedCountApplied}
+          title={selectedCountApplied
+            ? 'Este inventario ya fue aplicado'
+            : (!selectedCount?.id ? 'Pulsa "Registrar" antes de subir el conteo' : 'Subir el formato con el stock real')}
+          onClick={() => fileRef.current?.click()}
+        >
           Subir Excel
         </button>
       </div>
@@ -745,8 +760,9 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
     tableRef.current?.refresh()
   }
 
+  // Mismo criterio que en el inventario estandar: el formato en blanco no exige registrar antes.
   const downloadFormat = () => {
-    if (!selectedCount?.id) return
+    if (rows.length === 0) return
     const warehouseName = selectedCount?.warehouse?.name
       || warehouses.find(warehouse => `${warehouse.id}` === `${warehouseId}`)?.name
       || 'Almacen'
@@ -1057,10 +1073,24 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       </div>
 
       <div className='d-flex flex-wrap gap-4 storage-inventory-toolbar'>
-        <button type='button' className='btn btn-outline-success px-4' disabled={!selectedCount?.id} onClick={downloadFormat}>
+        <button
+          type='button'
+          className='btn btn-outline-success px-4'
+          disabled={rows.length === 0}
+          title={rows.length === 0 ? 'Filtra primero para descargar el formato' : 'Descargar el formato de conteo'}
+          onClick={downloadFormat}
+        >
           Descargar Excel
         </button>
-        <button type='button' className='btn btn-outline-success px-4' disabled={!selectedCount?.id || selectedCountApplied} onClick={() => fileRef.current?.click()}>
+        <button
+          type='button'
+          className='btn btn-outline-success px-4'
+          disabled={!selectedCount?.id || selectedCountApplied}
+          title={selectedCountApplied
+            ? 'Este inventario ya fue aplicado'
+            : (!selectedCount?.id ? 'Pulsa "Registrar" antes de subir el conteo' : 'Subir el formato con el stock real')}
+          onClick={() => fileRef.current?.click()}
+        >
           Subir Excel
         </button>
       </div>

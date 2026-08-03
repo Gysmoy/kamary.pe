@@ -431,21 +431,6 @@ const EntryNotes = () => {
     tableRef.current?.refresh()
   }
 
-  const onDeleteClicked = async (id) => {
-    const { isConfirmed } = await Swal.fire({
-      title: 'Eliminar nota de entrada',
-      text: 'Estas seguro de eliminar esta nota de entrada? Esta accion no se puede revertir',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Si, eliminar',
-      cancelButtonText: 'Cancelar'
-    })
-    if (!isConfirmed) return
-    const result = await entryNotesRest.delete(id)
-    if (!result) return
-    tableRef.current?.refresh()
-  }
-
   const onWarehouseChanged = async (warehouseId) => {
     warehouseId = warehouseId || ''
     const sourceList = storageContext ? storageOptions.warehouses : warehouseOptions
@@ -1082,9 +1067,11 @@ const EntryNotes = () => {
     return list
   }
 
+  // Una nota de entrada ya aprobada suma stock real (ver InventoryController::incomingTotalsQuery).
+  // Borrarla lo haria desaparecer sin rastro en kardex, por eso aqui no se ofrece eliminar:
+  // la correccion se hace emitiendo una nota de salida.
   const standardRowActions = (row) => [
     { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
-    { icon: 'mdi mdi-delete', title: 'Eliminar nota de entrada', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
   ]
 
   const storageVdColumns = [
@@ -1374,6 +1361,7 @@ const EntryNotes = () => {
       title={isViewing ? 'Ver nota de entrada' : (storageContext ? 'Registrar nota de entrada' : (isEditing ? 'Editar nota de entrada' : 'Agregar nota de entrada'))}
       onSubmit={onModalSubmit}
       size='full-width'
+      preventEnterSubmit
       dialogClass={storageContext ? 'storage-entry-dialog modal-dialog-scrollable' : ''}
       contentClass={storageContext ? 'storage-entry-modal' : ''}
       headerClass={storageContext ? 'storage-entry-header' : ''}

@@ -927,6 +927,7 @@ const ExitNotes = () => {
         : (isEditing ? 'Editar nota de salida' : 'Agregar nota de salida')}
       onSubmit={onModalSubmit}
       size='full-width'
+      preventEnterSubmit
       hideFooter={storageContext}
       headerClass={storageContext ? 'storage-exit-modal-header' : ''}
       closeButtonClass={storageContext ? 'btn-close-white' : ''}

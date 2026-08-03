@@ -481,6 +481,14 @@ class EntryNoteController extends BasicController
     {
         $response = new Response();
         try {
+            // Fuera del modulo de almacenamiento la nota nace aprobada y suma stock real
+            // (InventoryController::incomingTotalsQuery filtra por status=1 y entry_status='approved').
+            // Darla de baja aqui restaria ese stock en silencio, sin movimiento de kardex y aunque
+            // la mercaderia ya se hubiera vendido: la correccion se hace con una nota de salida.
+            if (!$this->isStorageRequest($request)) {
+                throw new \Exception('Una nota de entrada no se puede eliminar. Registra una nota de salida para revertir el ingreso.');
+            }
+
             $updated = $this->scopedEntryNoteQuery($request)
                 ->where($this->identifier, $id)
                 ->update([

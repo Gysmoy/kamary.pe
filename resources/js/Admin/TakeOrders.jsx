@@ -876,6 +876,7 @@ const TakeOrders = ({ pageTitle = 'Toma pedido' }) => {
       title={<h4 className='modal-title'><i className='mdi mdi-menu me-2'></i>REGISTRAR PEDIDO</h4>}
       size='lg'
       hideFooter
+      preventEnterSubmit
       onSubmit={onModalSubmit}
     >
       <div id='take-orders-form-container' className='px-2 pb-2'>

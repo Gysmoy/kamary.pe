@@ -780,7 +780,7 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
       )}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar orden de compra' : 'Agregar orden de compra'} onSubmit={onModalSubmit} size='full-width'>
+    <Modal modalRef={modalRef} title={isEditing ? 'Editar orden de compra' : 'Agregar orden de compra'} onSubmit={onModalSubmit} size='full-width' preventEnterSubmit>
       <div className='row' id='purchase-order-form-container'>
         <input ref={idRef} type='hidden' />
 

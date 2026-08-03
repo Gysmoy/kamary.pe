@@ -32,7 +32,7 @@ const VdSelect = ({
 }) => {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 })
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0, placement: 'bottom', maxHeight: 260 })
   const [asyncResults, setAsyncResults] = useState([])
   const [loadingAsync, setLoadingAsync] = useState(false)
   const [pickedLabel, setPickedLabel] = useState(null) // etiqueta de lo último seleccionado por el usuario
@@ -71,12 +71,31 @@ const VdSelect = ({
 
   const hasValue = value !== '' && value != null
 
-  // Compute menu position from the trigger's bounding rect.
+  // Compute menu position from the trigger's bounding rect. Devuelve false si el trigger ya no
+  // esta visible (scrolleado fuera de su contenedor), para que quien llame decida cerrar.
   const computePosition = useCallback(() => {
     const el = triggerRef.current
-    if (!el) return
+    if (!el) return false
     const rect = el.getBoundingClientRect()
-    setPos({ top: rect.bottom + window.scrollY + 4, left: rect.left + window.scrollX, width: rect.width })
+    const viewportH = window.innerHeight || document.documentElement.clientHeight
+    const viewportW = window.innerWidth || document.documentElement.clientWidth
+
+    if (rect.bottom < 0 || rect.top > viewportH || rect.right < 0 || rect.left > viewportW) return false
+
+    // Si abajo no cabe y arriba hay mas sitio, el menu se ancla al borde superior del trigger y se
+    // desplaza con translateY(-100%): asi no hace falta conocer su altura real de antemano.
+    const spaceBelow = viewportH - rect.bottom - 8
+    const spaceAbove = rect.top - 8
+    const openUp = spaceBelow < 200 && spaceAbove > spaceBelow
+
+    setPos({
+      top: openUp ? rect.top + window.scrollY - 4 : rect.bottom + window.scrollY + 4,
+      left: rect.left + window.scrollX,
+      width: rect.width,
+      placement: openUp ? 'top' : 'bottom',
+      maxHeight: Math.max(140, Math.min(260, openUp ? spaceAbove : spaceBelow)),
+    })
+    return true
   }, [])
 
   const closeMenu = useCallback(() => {
@@ -126,20 +145,37 @@ const VdSelect = ({
       if (triggerRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return
       closeMenu()
     }
-    const onKeyDown = (e) => { if (e.key === 'Escape') { e.stopPropagation(); closeMenu() } }
-    const onResize = () => closeMenu()
-    const onScroll = () => closeMenu()
-    document.addEventListener('mousedown', onMouseDown)
-    document.addEventListener('keydown', onKeyDown)
-    window.addEventListener('resize', onResize)
-    window.addEventListener('scroll', onScroll, true)
-    return () => {
-      document.removeEventListener('mousedown', onMouseDown)
-      document.removeEventListener('keydown', onKeyDown)
-      window.removeEventListener('resize', onResize)
-      window.removeEventListener('scroll', onScroll, true)
+    // En FASE DE CAPTURA a proposito: dentro de un modal de Bootstrap el handler de Escape del
+    // modal esta enganchado al propio modal, que en burbujeo recibe el evento antes que document.
+    // Sin capturar aqui, un Escape para cerrar el desplegable cerraba el formulario entero.
+    const onKeyDown = (e) => {
+      if (e.key !== 'Escape') return
+      e.stopPropagation()
+      closeMenu()
     }
-  }, [open, closeMenu])
+    // El menu vive en un portal a document.body, asi que hay que reseguir al trigger cuando scrollea
+    // cualquier contenedor (cuerpo del modal, .table-responsive, la pagina). Cerrarlo en cada scroll
+    // hacia imposible elegir en formularios largos.
+    let frame = null
+    const sync = () => {
+      if (frame !== null) return
+      frame = window.requestAnimationFrame(() => {
+        frame = null
+        if (!computePosition()) closeMenu()
+      })
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('keydown', onKeyDown, true)
+    window.addEventListener('resize', sync)
+    window.addEventListener('scroll', sync, true)
+    return () => {
+      if (frame !== null) window.cancelAnimationFrame(frame)
+      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('keydown', onKeyDown, true)
+      window.removeEventListener('resize', sync)
+      window.removeEventListener('scroll', sync, true)
+    }
+  }, [open, closeMenu, computePosition])
 
   const handleSelect = (opt) => {
     setPickedLabel(opt.label)
@@ -165,7 +201,8 @@ const VdSelect = ({
   const menuStyle = {
     position: 'absolute', top: pos.top, left: pos.left, width: pos.width, zIndex: 20000,
     background: '#fff', borderRadius: '12px', boxShadow: '0 16px 40px rgba(30,30,45,.16)',
-    border: '1px solid #e2e2ea', maxHeight: '260px', overflowY: 'auto', padding: '6px',
+    border: '1px solid #e2e2ea', maxHeight: `${pos.maxHeight}px`, overflowY: 'auto', padding: '6px',
+    transform: pos.placement === 'top' ? 'translateY(-100%)' : 'none',
   }
 
   return (

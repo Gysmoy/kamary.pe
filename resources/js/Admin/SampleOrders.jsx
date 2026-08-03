@@ -1379,6 +1379,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       btnCancelText='Cerrar'
       btnSubmitText={form.id ? 'Guardar' : 'Registrar'}
       bodyStyle={{ maxHeight: 'calc(100vh - 210px)', overflow: 'auto' }}
+      preventEnterSubmit
       onSubmit={onSave}
     >
       <div className='sample-form-title'>Pedido N&deg;</div>

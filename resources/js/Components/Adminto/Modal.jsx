@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-const Modal = ({ id, modalRef, title = 'Modal', isStatic = false, size = 'md', children, bodyClass = '', dialogClass = '', contentClass = '', headerClass = '', closeButtonClass = '', btnCancelText, btnSubmitText, hideFooter = false, footerActions = null, footerClass = '', bodyStyle, zIndex, hideButtonSubmit, asForm = true, centered = true, onSubmit = (e) => { e.preventDefault(); $(modalRef.current).modal('hide') }, onClose = () => { } }) => {
+const Modal = ({ id, modalRef, title = 'Modal', isStatic = false, size = 'md', children, bodyClass = '', dialogClass = '', contentClass = '', headerClass = '', closeButtonClass = '', btnCancelText, btnSubmitText, hideFooter = false, footerActions = null, footerClass = '', bodyStyle, zIndex, hideButtonSubmit, asForm = true, centered = true, preventEnterSubmit = false, onSubmit = (e) => { e.preventDefault(); $(modalRef.current).modal('hide') }, onClose = () => { } }) => {
   const staticProp = isStatic ? { 'data-bs-backdrop': 'static' } : {}
   const contentStyle = {
     boxShadow: '0 0 10px rgba(0,0,0,0.25)',
@@ -26,8 +26,22 @@ const Modal = ({ id, modalRef, title = 'Modal', isStatic = false, size = 'md', c
     return () => $(modalRef.current).off('hidden.bs.modal')
   }, [])
 
+  // En formularios largos (varias secciones + tabla de detalle) un Enter accidental en cualquier
+  // input envia el modal completo y lo cierra. Con preventEnterSubmit el envio queda reservado al
+  // boton de guardar; se sigue permitiendo Enter en textareas y sobre botones (accesibilidad).
+  const onWrapperKeyDown = (e) => {
+    if (e.key !== 'Enter' || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return
+    const target = e.target
+    const tag = `${target?.tagName ?? ''}`.toLowerCase()
+    if (tag === 'textarea' || tag === 'button' || tag === 'a') return
+    if (target?.isContentEditable) return
+    e.preventDefault()
+  }
+
   const Wrapper = asForm ? 'form' : 'div'
-  const wrapperProps = asForm ? { onSubmit, autoComplete: 'off' } : {}
+  const wrapperProps = asForm
+    ? { onSubmit, autoComplete: 'off', ...(preventEnterSubmit ? { onKeyDown: onWrapperKeyDown } : {}) }
+    : {}
 
   return (<Wrapper id={id} className='modal fade' ref={modalRef} tabIndex='-1' aria-hidden='true' {...staticProp} {...wrapperProps} style={{ zIndex }}>
     <div className={`modal-dialog ${centered ? 'modal-dialog-centered' : ''} modal-${size ?? 'md'} ${dialogClass ?? ''}`}>
