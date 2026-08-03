@@ -91,6 +91,25 @@
             text-decoration: underline;
         }
 
+        /* Menu lateral: los textos largos se parten en dos lineas en vez de cortarse */
+        .sidenav-menu .side-nav .side-nav-link {
+            align-items: center;
+        }
+
+        .sidenav-menu .side-nav .side-nav-link .menu-icon,
+        .sidenav-menu .side-nav .side-nav-link .menu-arrow,
+        .sidenav-menu .side-nav .side-nav-link .badge {
+            flex: 0 0 auto;
+        }
+
+        .sidenav-menu .side-nav .side-nav-link .menu-text {
+            flex: 1 1 auto;
+            min-width: 0;
+            white-space: normal !important;
+            overflow-wrap: anywhere;
+            line-height: 1.2;
+        }
+
         .select2-container {
             width: 100% !important;
         }

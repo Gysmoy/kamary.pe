@@ -11,30 +11,6 @@
   opacity: 1;
 }
 
-/* Los textos largos del menu lateral se parten en 2 lineas en vez de cortarse */
-.sidenav-menu .side-nav .side-nav-link {
-  align-items: center;
-}
-
-.sidenav-menu .side-nav .side-nav-link .menu-icon,
-.sidenav-menu .side-nav .side-nav-link .menu-arrow,
-.sidenav-menu .side-nav .side-nav-link .badge {
-  flex: 0 0 auto;
-}
-
-.sidenav-menu .side-nav .side-nav-link .menu-text {
-  flex: 1 1 auto;
-  min-width: 0;
-  white-space: normal !important;
-  overflow-wrap: anywhere;
-  line-height: 1.2;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-}
-
 .sidenav-menu .side-nav .menu-business-section {
   margin: 22px 18px 10px 18px;
 }
