@@ -277,6 +277,13 @@ class InventoryController extends BasicController
             $updated = 0;
             $rowNumber = 0;
 
+            // Indice por contenido para reconocer lineas cuyo ID no corresponde a este inventario.
+            $itemsByKey = [];
+            foreach (InventoryCountItem::where('inventory_count_id', $count->id)->get() as $countItem) {
+                $key = $this->inventoryRowKey($countItem->lot, $countItem->article_name, $countItem->location);
+                if (!isset($itemsByKey[$key])) $itemsByKey[$key] = $countItem;
+            }
+
             DB::beginTransaction();
             while (($row = fgetcsv($handle)) !== false) {
                 $rowNumber++;
@@ -288,7 +295,6 @@ class InventoryController extends BasicController
                 }
 
                 $itemId = $this->toNullableInt($row[$headerMap['id']] ?? null);
-                if (!$itemId) continue;
 
                 $realStockRaw = trim((string)($row[$headerMap['real_stock']] ?? ''));
                 if ($realStockRaw === '') {
@@ -298,9 +304,19 @@ class InventoryController extends BasicController
                 $realStock = $this->toNullableDecimal($realStockRaw) ?? 0;
                 if ($realStock < 0) throw new \Exception("El stock real de la fila {$rowNumber} no puede ser negativo");
 
-                $item = InventoryCountItem::where('inventory_count_id', $count->id)
-                    ->whereKey($itemId)
-                    ->first();
+                $item = $itemId
+                    ? InventoryCountItem::where('inventory_count_id', $count->id)->whereKey($itemId)->first()
+                    : null;
+
+                // Respaldo por lote + articulo + ubicacion cuando el ID del archivo no es el de BD.
+                if (!$item && $headerMap['lot'] !== null && $headerMap['name'] !== null) {
+                    $key = $this->inventoryRowKey(
+                        $row[$headerMap['lot']] ?? '',
+                        $row[$headerMap['name']] ?? '',
+                        $headerMap['location'] !== null ? ($row[$headerMap['location']] ?? '') : ''
+                    );
+                    $item = $itemsByKey[$key] ?? null;
+                }
                 if (!$item) continue;
 
                 $difference = round($realStock - (float)$item->system_stock, 3);
@@ -854,10 +870,29 @@ class InventoryController extends BasicController
             return null;
         }
 
+        // Lote, nombre y ubicacion permiten reconocer la linea aunque el ID no coincida: el formato
+        // descargado antes de registrar numera 1..N, mientras que los items ya registrados llevan
+        // su id de base de datos.
+        $lotIndex = array_search('CODIGOLOTE', $normalized, true);
+        if ($lotIndex === false) $lotIndex = array_search('LOTE', $normalized, true);
+        $nameIndex = array_search('NOMBRE', $normalized, true);
+        if ($nameIndex === false) $nameIndex = array_search('ARTICULO', $normalized, true);
+        $locationIndex = array_search('UBICACION', $normalized, true);
+
         return [
             'id' => $idIndex,
             'real_stock' => $realStockIndex,
+            'lot' => $lotIndex === false ? null : $lotIndex,
+            'name' => $nameIndex === false ? null : $nameIndex,
+            'location' => $locationIndex === false ? null : $locationIndex,
         ];
+    }
+
+    /** Clave estable de una linea del formato: lote + articulo + ubicacion. */
+    private function inventoryRowKey($lot, $name, $location): string
+    {
+        $clean = fn($value) => preg_replace('/[^a-z0-9]/', '', strtolower(trim((string)$value))) ?? '';
+        return $clean($lot) . '|' . $clean($name) . '|' . $clean($location);
     }
 
     private function normalizeInventoryFormatHeader($value): string
