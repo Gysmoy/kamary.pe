@@ -436,6 +436,16 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const [isLoadingSubcategories, setIsLoadingSubcategories] = useState(false)
   const [manufacturerTargetLotUid, setManufacturerTargetLotUid] = useState('')
   const [storageClients, setStorageClients] = useState([])
+  // Alta masiva del catalogo de un cliente. Modal propio y simple: el import de articulos estandar
+  // maneja packs y catalogo corporativo, que aqui no aplican, y ademas no asigna cliente.
+  const stgImportModalRef = useRef()
+  const stgImportFileRef = useRef()
+  const [stgRows, setStgRows] = useState([])
+  const [stgHeaders, setStgHeaders] = useState([])
+  const [stgFileName, setStgFileName] = useState('')
+  const [stgClientId, setStgClientId] = useState('')
+  const [stgImporting, setStgImporting] = useState(false)
+  const [stgMapping, setStgMapping] = useState({ code: '', name: '', unit: '' })
   const [storageManufacturers, setStorageManufacturers] = useState([])
   const [storageLots, setStorageLots] = useState([emptyStorageLot()])
   const [isImporting, setIsImporting] = useState(false)
@@ -1001,6 +1011,71 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Articulos')
     XLSX.writeFile(workbook, isMagistrales ? 'articulos_magistrales.xlsx' : 'articulos_kamary_peru.xlsx')
+  }
+
+  // --- Alta masiva de productos de almacenamiento ---
+  const stgMappingOptions = [
+    { value: '', label: 'Seleccionar...' },
+    ...stgHeaders.map(h => ({ value: h, label: h })),
+  ]
+
+  const stgOpenImport = () => {
+    setStgRows([]); setStgHeaders([]); setStgFileName(''); setStgClientId('')
+    setStgMapping({ code: '', name: '', unit: '' })
+    if (stgImportFileRef.current) stgImportFileRef.current.value = ''
+    $(stgImportModalRef.current).modal('show')
+  }
+
+  const stgFileChanged = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    try {
+      const ext = (file.name.split('.').pop() || '').toLowerCase()
+      let rows = []
+      if (ext === 'json') {
+        const parsed = JSON.parse(await file.text())
+        rows = Array.isArray(parsed) ? parsed : (Object.values(parsed ?? {}).find(v => Array.isArray(v)) ?? [])
+      } else {
+        const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+        const sheet = wb.SheetNames?.[0]
+        if (!sheet) throw new Error('El archivo no tiene ninguna hoja')
+        rows = XLSX.utils.sheet_to_json(wb.Sheets[sheet], { defval: '' })
+      }
+      if (!Array.isArray(rows) || rows.length === 0) throw new Error('El archivo no tiene filas para importar')
+      const headers = Array.from(new Set(rows.flatMap(r => (r && typeof r === 'object') ? Object.keys(r) : [])))
+      const norm = (v) => `${v ?? ''}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
+      const find = (...c) => headers.find(h => c.some(x => norm(h).includes(x))) ?? ''
+      setStgRows(rows); setStgHeaders(headers); setStgFileName(file.name)
+      setStgMapping({
+        code: find('codigo', 'sku', 'code'),
+        name: find('nombre', 'producto', 'descripcion', 'articulo'),
+        unit: find('unidad', 'medida', 'umedida', 'unit'),
+      })
+    } catch (error) {
+      setStgRows([]); setStgHeaders([]); setStgFileName('')
+      await Swal.fire({ icon: 'error', title: 'No se pudo leer el archivo', text: error.message })
+    }
+  }
+
+  const stgImportSubmit = async (e) => {
+    e?.preventDefault?.()
+    if (!stgRows.length) { Swal.fire({ icon: 'warning', title: 'Falta el archivo', text: 'Primero sube el archivo con tus productos.' }); return }
+    if (!stgClientId) { Swal.fire({ icon: 'warning', title: 'Falta el cliente', text: 'Indica de que cliente son estos productos.' }); return }
+    if (!stgMapping.name) { Swal.fire({ icon: 'warning', title: 'Falta mapear', text: 'Indica que columna tiene el nombre del producto.' }); return }
+
+    setStgImporting(true)
+    const result = await articlesRest.importRows({ rows: stgRows, mapping: stgMapping, client_id: stgClientId })
+    setStgImporting(false)
+    if (!result) return
+
+    $(stgImportModalRef.current).modal('hide')
+    tableRef.current?.refresh()
+    await Swal.fire({
+      icon: 'success',
+      title: 'Productos creados',
+      html: `Se crearon <b>${result.created}</b> producto(s).<br/>Ya puedes cargarles stock desde <b>Nota de entrada &rsaquo; Importar stock</b>.`,
+      confirmButtonText: 'Entendido',
+    })
   }
 
   const onImportSubmit = async (e) => {
@@ -2027,6 +2102,7 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           <button type='button' className='vdt-btn-soft' onClick={() => onStorageProductExport('pdf')}><i className='mdi mdi-file-pdf-box'></i> PDF</button>
           <button type='button' className='vdt-btn-soft' onClick={() => onStorageProductExport('print')}><i className='mdi mdi-printer'></i> Imprimir</button>
           <button type='button' className='vdt-btn-soft' onClick={() => onStorageProductExport('copy')}><i className='mdi mdi-content-copy'></i> Copiar</button>
+          <button type='button' className='vdt-btn-soft' onClick={stgOpenImport}><i className='mdi mdi-upload'></i> Importar productos</button>
           <button type='button' className='vdt-btn-pri' onClick={() => onModalOpen()}><i className='mdi mdi-plus'></i> Nuevo articulo</button>
         </>}
       </>}
@@ -2417,6 +2493,65 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           options={[{ value: '1', label: 'Activo' }, { value: '0', label: 'Inactivo' }]}
         />
       </div>
+    </Modal>
+
+    <Modal
+      modalRef={stgImportModalRef}
+      title={<h4 className='modal-title'><i className='mdi mdi-upload me-2'></i>Importar productos del cliente</h4>}
+      size='xl'
+      preventEnterSubmit
+      btnSubmitText={stgImporting ? 'Creando...' : 'Crear productos'}
+      onSubmit={stgImportSubmit}
+    >
+      <div className='alert alert-info d-flex align-items-start gap-2'>
+        <i className='mdi mdi-information-outline fs-4 lh-1'></i>
+        <div>
+          <strong>Sube tu propio archivo, no hay plantilla que descargar.</strong>
+          <div className='mt-1'>
+            Esto crea el <b>catalogo</b> de productos del cliente (sin stock). Despues carga las
+            cantidades desde <b>Nota de entrada &rsaquo; Importar stock</b>.
+            Si una fila no trae codigo, el sistema le genera uno.
+          </div>
+        </div>
+      </div>
+
+      <div className='row g-2'>
+        <div className='col-12'>
+          <label className='form-label mb-1'>Archivo (XLSX, XLS, CSV o JSON)</label>
+          <input ref={stgImportFileRef} type='file' className='form-control' accept='.xlsx,.xls,.csv,.json' onChange={stgFileChanged} />
+          {stgFileName && <div className='mt-1'><small className='text-muted'>{stgFileName} — {stgRows.length} fila(s) leidas</small></div>}
+        </div>
+        <VdSelect
+          col='col-12' label='Cliente dueno de los productos' required
+          value={stgClientId} onChange={setStgClientId}
+          options={(storageClients ?? []).map(c => ({ value: `${c.entity_id ?? c.id}`, label: [c.document_number, c.full_name ?? c.display_name].filter(Boolean).join(' | ') }))}
+          placeholder='-- Seleccionar cliente --'
+        />
+      </div>
+
+      {stgHeaders.length > 0 && <>
+        <hr className='my-3' />
+        <div className='fw-semibold mb-2'><i className='mdi mdi-table-arrow-right me-1'></i>Indica que columna de tu archivo es cada dato</div>
+        <div className='row g-2'>
+          <VdSelect col='col-md-4' label='Nombre del producto' required value={stgMapping.name}
+            onChange={(v) => setStgMapping(p => ({ ...p, name: v }))} options={stgMappingOptions} placeholder='Seleccionar...' />
+          <VdSelect col='col-md-4' label='Codigo (opcional)' value={stgMapping.code}
+            onChange={(v) => setStgMapping(p => ({ ...p, code: v }))} options={stgMappingOptions} placeholder='Seleccionar...' />
+          <VdSelect col='col-md-4' label='Unidad de medida (opcional)' value={stgMapping.unit}
+            onChange={(v) => setStgMapping(p => ({ ...p, unit: v }))} options={stgMappingOptions} placeholder='Seleccionar...' />
+        </div>
+        <div className='table-responsive border rounded mt-3'>
+          <table className='table table-sm table-striped mb-0'>
+            <thead><tr>{stgHeaders.map(h => <th key={`stg-h-${h}`}>{h}</th>)}</tr></thead>
+            <tbody>
+              {stgRows.slice(0, 5).map((row, i) => (
+                <tr key={`stg-r-${i}`}>{stgHeaders.map(h => <td key={`stg-c-${i}-${h}`}>{`${row?.[h] ?? ''}`}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <small className='text-muted'>Vista previa de las primeras 5 filas de {stgRows.length}.</small>
+      </>}
     </Modal>
 
     <Modal
