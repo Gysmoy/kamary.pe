@@ -227,6 +227,39 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
     tableRef.current?.refresh()
   }
 
+  // Los botones de Excel nunca se dejan `disabled`: un boton apagado que no reacciona parece roto.
+  // Siempre responden al click y, si todavia no se puede, explican que falta.
+  const downloadBlockedReason = () => {
+    if (rows.length > 0) return null
+    if (!warehouseId) return 'Selecciona el almacen y pulsa "Generar listado" para cargar los articulos.'
+    if (!previewRan) return 'Pulsa "Generar listado" para cargar los articulos antes de descargar el formato.'
+    return 'El almacen seleccionado no tiene articulos para inventariar, no hay nada que descargar.'
+  }
+
+  const uploadBlockedReason = () => {
+    if (selectedCountApplied) return 'Este inventario ya fue aplicado, no se puede volver a subir el conteo.'
+    if (!selectedCount?.id) return 'Primero pulsa "Registrar" para crear el inventario. Despues podras subir el conteo.'
+    return null
+  }
+
+  const onDownloadClicked = async () => {
+    const motivo = downloadBlockedReason()
+    if (motivo) {
+      await Swal.fire({ icon: 'info', title: 'Aun no se puede descargar', text: motivo, confirmButtonText: 'Entendido' })
+      return
+    }
+    downloadFormat()
+  }
+
+  const onUploadClicked = async () => {
+    const motivo = uploadBlockedReason()
+    if (motivo) {
+      await Swal.fire({ icon: 'info', title: 'Aun no se puede subir', text: motivo, confirmButtonText: 'Entendido' })
+      return
+    }
+    fileRef.current?.click()
+  }
+
   // El formato en blanco se puede bajar apenas hay listado, sin obligar a registrar antes el
   // inventario: registrar crea un InventoryCount en base de datos y no deberia ser el precio a
   // pagar por imprimir la hoja de conteo.
@@ -543,23 +576,17 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
       <div className='d-flex flex-wrap gap-4 storage-inventory-toolbar'>
         <button
           type='button'
-          className='btn btn-outline-success px-4'
-          disabled={rows.length === 0}
-          title={rows.length > 0
-            ? 'Descargar el formato de conteo'
-            : (previewRan ? 'El almacen seleccionado no tiene articulos para inventariar' : 'Genera primero el listado para descargar el formato')}
-          onClick={downloadFormat}
+          className={`btn btn-outline-success px-4 ${downloadBlockedReason() ? 'opacity-50' : ''}`}
+          title={downloadBlockedReason() ?? 'Descargar el formato de conteo'}
+          onClick={onDownloadClicked}
         >
           Descargar Excel
         </button>
         <button
           type='button'
-          className='btn btn-outline-success px-4'
-          disabled={!selectedCount?.id || selectedCountApplied}
-          title={selectedCountApplied
-            ? 'Este inventario ya fue aplicado'
-            : (!selectedCount?.id ? 'Pulsa "Registrar" antes de subir el conteo' : 'Subir el formato con el stock real')}
-          onClick={() => fileRef.current?.click()}
+          className={`btn btn-outline-success px-4 ${uploadBlockedReason() ? 'opacity-50' : ''}`}
+          title={uploadBlockedReason() ?? 'Subir el formato con el stock real'}
+          onClick={onUploadClicked}
         >
           Subir Excel
         </button>
@@ -780,7 +807,38 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
     tableRef.current?.refresh()
   }
 
-  // Mismo criterio que en el inventario estandar: el formato en blanco no exige registrar antes.
+  // Mismo criterio que en el inventario estandar: los botones siempre responden y explican que falta.
+  const downloadBlockedReason = () => {
+    if (rows.length > 0) return null
+    if (!clientId) return 'Selecciona el cliente y pulsa "Filtrar" para cargar los articulos.'
+    if (!previewRan) return 'Pulsa "Filtrar" para cargar los articulos antes de descargar el formato.'
+    return 'No hay articulos para inventariar con estos filtros, no hay nada que descargar.'
+  }
+
+  const uploadBlockedReason = () => {
+    if (selectedCountApplied) return 'Este inventario ya fue aplicado, no se puede volver a subir el conteo.'
+    if (!selectedCount?.id) return 'Primero pulsa "Registrar" para crear el inventario. Despues podras subir el conteo.'
+    return null
+  }
+
+  const onDownloadClicked = async () => {
+    const motivo = downloadBlockedReason()
+    if (motivo) {
+      await Swal.fire({ icon: 'info', title: 'Aun no se puede descargar', text: motivo, confirmButtonText: 'Entendido' })
+      return
+    }
+    downloadFormat()
+  }
+
+  const onUploadClicked = async () => {
+    const motivo = uploadBlockedReason()
+    if (motivo) {
+      await Swal.fire({ icon: 'info', title: 'Aun no se puede subir', text: motivo, confirmButtonText: 'Entendido' })
+      return
+    }
+    fileRef.current?.click()
+  }
+
   const downloadFormat = () => {
     if (rows.length === 0) return
     const warehouseName = selectedCount?.warehouse?.name
@@ -1100,23 +1158,17 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       <div className='d-flex flex-wrap gap-4 storage-inventory-toolbar'>
         <button
           type='button'
-          className='btn btn-outline-success px-4'
-          disabled={rows.length === 0}
-          title={rows.length > 0
-            ? 'Descargar el formato de conteo'
-            : (previewRan ? 'No hay articulos para inventariar con estos filtros' : 'Filtra primero para descargar el formato')}
-          onClick={downloadFormat}
+          className={`btn btn-outline-success px-4 ${downloadBlockedReason() ? 'opacity-50' : ''}`}
+          title={downloadBlockedReason() ?? 'Descargar el formato de conteo'}
+          onClick={onDownloadClicked}
         >
           Descargar Excel
         </button>
         <button
           type='button'
-          className='btn btn-outline-success px-4'
-          disabled={!selectedCount?.id || selectedCountApplied}
-          title={selectedCountApplied
-            ? 'Este inventario ya fue aplicado'
-            : (!selectedCount?.id ? 'Pulsa "Registrar" antes de subir el conteo' : 'Subir el formato con el stock real')}
-          onClick={() => fileRef.current?.click()}
+          className={`btn btn-outline-success px-4 ${uploadBlockedReason() ? 'opacity-50' : ''}`}
+          title={uploadBlockedReason() ?? 'Subir el formato con el stock real'}
+          onClick={onUploadClicked}
         >
           Subir Excel
         </button>
