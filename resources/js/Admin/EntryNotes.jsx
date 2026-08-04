@@ -106,6 +106,8 @@ const EntryNotes = () => {
   const entryDateRef = useRef()
   const documentDateRef = useRef()
   const voidModalRef = useRef()
+  const importModalRef = useRef()
+  const importFileRef = useRef()
   const invoiceSeriesRef = useRef()
   const invoiceSequenceRef = useRef()
   const invoiceDateRef = useRef()
@@ -119,6 +121,14 @@ const EntryNotes = () => {
   // Anulacion por nota de salida: detalle a confirmar y estado del envio.
   const [voidTarget, setVoidTarget] = useState(null)
   const [voidLoading, setVoidLoading] = useState(false)
+  // Carga masiva de stock: mismo patron que Lotes/Articulos (subir archivo propio + mapear columnas).
+  const [importRows, setImportRows] = useState([])
+  const [importHeaders, setImportHeaders] = useState([])
+  const [importFileName, setImportFileName] = useState('')
+  const [importClientId, setImportClientId] = useState('')
+  const [importWarehouseId, setImportWarehouseId] = useState('')
+  const [isImporting, setIsImporting] = useState(false)
+  const [importMapping, setImportMapping] = useState({ article: '', lot: '', expiration_date: '', location: '', quantity: '', cost_unit: '' })
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
@@ -1090,6 +1100,89 @@ const EntryNotes = () => {
     return list
   }
 
+  // --- Carga masiva de stock (solo almacenamiento) ---
+  const importMappingOptions = [
+    { value: '', label: 'Seleccionar...' },
+    ...importHeaders.map(header => ({ value: header, label: header })),
+  ]
+
+  // Adivina el mapeo por el nombre de la columna para ahorrarle el trabajo al usuario.
+  const guessImportMapping = (headers) => {
+    const norm = (v) => `${v ?? ''}`.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '')
+    const find = (...claves) => headers.find(h => claves.some(c => norm(h).includes(c))) ?? ''
+    return {
+      article: find('articulo', 'producto', 'codigo', 'sku', 'item'),
+      lot: find('lote', 'batch'),
+      expiration_date: find('vencimiento', 'vence', 'expiracion', 'fvenc'),
+      location: find('ubicacion', 'location', 'posicion'),
+      quantity: find('cantidad', 'cant', 'quantity', 'stock'),
+      cost_unit: find('costo', 'precio', 'cost'),
+    }
+  }
+
+  const onImportModalOpen = () => {
+    setImportRows([]); setImportHeaders([]); setImportFileName('')
+    setImportClientId(''); setImportWarehouseId('')
+    setImportMapping({ article: '', lot: '', expiration_date: '', location: '', quantity: '', cost_unit: '' })
+    if (importFileRef.current) importFileRef.current.value = ''
+    $(importModalRef.current).modal('show')
+  }
+
+  const onImportFileChanged = async (event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    try {
+      const extension = (file.name.split('.').pop() || '').toLowerCase()
+      let rows = []
+      if (extension === 'json') {
+        const parsed = JSON.parse(await file.text())
+        rows = Array.isArray(parsed) ? parsed : (Object.values(parsed ?? {}).find(v => Array.isArray(v)) ?? [])
+      } else {
+        const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array' })
+        const firstSheet = workbook.SheetNames?.[0]
+        if (!firstSheet) throw new Error('El archivo no tiene ninguna hoja')
+        rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], { defval: '' })
+      }
+      if (!Array.isArray(rows) || rows.length === 0) throw new Error('El archivo no tiene filas para importar')
+
+      const headers = Array.from(new Set(rows.flatMap(r => (r && typeof r === 'object') ? Object.keys(r) : [])))
+      setImportRows(rows)
+      setImportHeaders(headers)
+      setImportFileName(file.name)
+      setImportMapping(guessImportMapping(headers))
+    } catch (error) {
+      setImportRows([]); setImportHeaders([]); setImportFileName('')
+      await Swal.fire({ icon: 'error', title: 'No se pudo leer el archivo', text: error.message })
+    }
+  }
+
+  const onImportSubmit = async (e) => {
+    e?.preventDefault?.()
+    if (!importRows.length) { Swal.fire({ icon: 'warning', title: 'Falta el archivo', text: 'Primero sube el archivo con el stock a cargar.' }); return }
+    if (!importClientId) { Swal.fire({ icon: 'warning', title: 'Falta el cliente', text: 'Indica de que cliente es la mercaderia.' }); return }
+    if (!importWarehouseId) { Swal.fire({ icon: 'warning', title: 'Falta el almacen', text: 'Indica en que almacen ingresa la mercaderia.' }); return }
+    if (!importMapping.article || !importMapping.quantity) { Swal.fire({ icon: 'warning', title: 'Falta mapear', text: 'Indica que columna es el articulo y cual la cantidad.' }); return }
+
+    setIsImporting(true)
+    const result = await entryNotesRest.importRows({
+      rows: importRows,
+      mapping: importMapping,
+      client_id: importClientId,
+      warehouse_id: importWarehouseId,
+    })
+    setIsImporting(false)
+    if (!result) return
+
+    $(importModalRef.current).modal('hide')
+    tableRef.current?.refresh()
+    await Swal.fire({
+      icon: 'success',
+      title: 'Stock cargado',
+      html: `Se creo la nota de entrada <b>${result.entry_note_code}</b> con <b>${result.imported}</b> linea(s).<br/>El stock ya esta disponible en Inventario y Kardex.`,
+      confirmButtonText: 'Entendido',
+    })
+  }
+
   const onVoidClicked = async (row) => {
     const preview = await entryNotesRest.getVoidPreview(row.id)
     if (!preview) return
@@ -1344,6 +1437,11 @@ const EntryNotes = () => {
       emptyText='No se encontraron notas de entrada.'
       baseFilter={storageContext ? storageGridFilter : null}
       headerActions={<>
+        {storageContext && (
+          <button type='button' className='vdt-btn-soft' onClick={onImportModalOpen}>
+            <i className='mdi mdi-upload'></i> Importar stock
+          </button>
+        )}
         <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => tableRef.current?.refresh()}>
           <i className='mdi mdi-refresh'></i>
         </button>
@@ -1835,6 +1933,79 @@ const EntryNotes = () => {
         </div>
       </div>
     </Modal>}
+
+    <Modal
+      modalRef={importModalRef}
+      title={<h4 className='modal-title'><i className='mdi mdi-upload me-2'></i>Cargar stock desde archivo</h4>}
+      size='xl'
+      preventEnterSubmit
+      btnSubmitText={isImporting ? 'Cargando...' : 'Cargar stock'}
+      onSubmit={onImportSubmit}
+    >
+      <div className='alert alert-info d-flex align-items-start gap-2'>
+        <i className='mdi mdi-information-outline fs-4 lh-1'></i>
+        <div>
+          <strong>Sube tu propio archivo, no hay plantilla que descargar.</strong>
+          <div className='mt-1'>
+            El sistema lee las columnas de tu archivo y abajo le indicas cual es cual. Con eso se crea
+            una <b>nota de entrada aprobada</b>, que es la unica forma de que el stock entre dejando
+            movimiento en el kardex. Los productos deben existir antes en <b>Creacion del producto</b>.
+          </div>
+        </div>
+      </div>
+
+      <div className='row g-2'>
+        <div className='col-12'>
+          <label className='form-label mb-1'>Archivo (XLSX, XLS, CSV o JSON)</label>
+          <input ref={importFileRef} type='file' className='form-control' accept='.xlsx,.xls,.csv,.json' onChange={onImportFileChanged} />
+          {importFileName && <div className='mt-1'><small className='text-muted'>{importFileName} — {importRows.length} fila(s) leidas</small></div>}
+        </div>
+
+        <VdSelect
+          col='col-md-6' label='Cliente dueno de la mercaderia' required
+          value={importClientId} onChange={setImportClientId}
+          options={(storageOptions.clients ?? []).map(c => ({ value: `${c.id}`, label: [c.document_number, c.full_name].filter(Boolean).join(' | ') }))}
+          placeholder='-- Seleccionar cliente --'
+        />
+        <VdSelect
+          col='col-md-6' label='Almacen de ingreso' required
+          value={importWarehouseId} onChange={setImportWarehouseId}
+          options={(storageOptions.warehouses ?? []).filter(w => w.status !== null).map(w => ({ value: `${w.id}`, label: w.name }))}
+          placeholder='-- Seleccionar almacen --'
+        />
+      </div>
+
+      {importHeaders.length > 0 && <>
+        <hr className='my-3' />
+        <div className='fw-semibold mb-2'><i className='mdi mdi-table-arrow-right me-1'></i>Indica que columna de tu archivo es cada dato</div>
+        <div className='row g-2'>
+          <VdSelect col='col-md-4' label='Articulo (codigo o nombre)' required value={importMapping.article}
+            onChange={(v) => setImportMapping(p => ({ ...p, article: v }))} options={importMappingOptions} placeholder='Seleccionar...' />
+          <VdSelect col='col-md-4' label='Cantidad' required value={importMapping.quantity}
+            onChange={(v) => setImportMapping(p => ({ ...p, quantity: v }))} options={importMappingOptions} placeholder='Seleccionar...' />
+          <VdSelect col='col-md-4' label='Lote' value={importMapping.lot}
+            onChange={(v) => setImportMapping(p => ({ ...p, lot: v }))} options={importMappingOptions} placeholder='Seleccionar...' />
+          <VdSelect col='col-md-4' label='Fecha de vencimiento' value={importMapping.expiration_date}
+            onChange={(v) => setImportMapping(p => ({ ...p, expiration_date: v }))} options={importMappingOptions} placeholder='Seleccionar...' />
+          <VdSelect col='col-md-4' label='Ubicacion' value={importMapping.location}
+            onChange={(v) => setImportMapping(p => ({ ...p, location: v }))} options={importMappingOptions} placeholder='Seleccionar...' />
+          <VdSelect col='col-md-4' label='Costo unitario' value={importMapping.cost_unit}
+            onChange={(v) => setImportMapping(p => ({ ...p, cost_unit: v }))} options={importMappingOptions} placeholder='Seleccionar...' />
+        </div>
+
+        <div className='table-responsive border rounded mt-3'>
+          <table className='table table-sm table-striped mb-0'>
+            <thead><tr>{importHeaders.map(h => <th key={`imp-h-${h}`}>{h}</th>)}</tr></thead>
+            <tbody>
+              {importRows.slice(0, 5).map((row, i) => (
+                <tr key={`imp-r-${i}`}>{importHeaders.map(h => <td key={`imp-c-${i}-${h}`}>{`${row?.[h] ?? ''}`}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <small className='text-muted'>Vista previa de las primeras 5 filas de {importRows.length}.</small>
+      </>}
+    </Modal>
 
     <Modal
       modalRef={voidModalRef}

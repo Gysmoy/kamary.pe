@@ -13,6 +13,22 @@ class EntryNotesRest extends BasicRest {
     return result ?? []
   }
 
+  // Carga masiva de stock: el archivo del usuario se convierte en una nota de entrada aprobada.
+  importRows = async (payload) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/import`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo importar el archivo')
+      toast.success('Importacion completada', { description: result.message, duration: 6000, richColors: true })
+      return result.data ?? true
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 8000, richColors: true })
+      return null
+    }
+  }
+
   // Detalle de lo que saldria al anular, para mostrarlo antes de confirmar. No crea nada.
   getVoidPreview = async (id) => {
     try {

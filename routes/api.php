@@ -428,6 +428,7 @@ Route::middleware('auth')->group(function () {
             });
 
             Route::middleware('module.permission:storage-entry-note')->group(function () {
+                Route::post('/entry-notes/import', [AdminStorageEntryNoteController::class, 'import']);
                 Route::post('/entry-notes', [AdminStorageEntryNoteController::class, 'save']);
                 Route::post('/entry-notes/paginate', [AdminStorageEntryNoteController::class, 'paginate']);
                 Route::patch('/entry-notes/{id}/entry-status', [AdminStorageEntryNoteController::class, 'entryStatus']);
