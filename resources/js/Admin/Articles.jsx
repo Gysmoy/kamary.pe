@@ -1037,7 +1037,17 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     worksheet['!cols'] = [{ wch: 16 }, { wch: 46 }, { wch: 14 }]
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Productos')
-    XLSX.writeFile(workbook, 'plantilla_productos.xlsx')
+    // Blob con MIME explicito: evita que el navegador etiquete mal la descarga.
+    const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.href = url
+    link.download = 'plantilla_productos.xlsx'
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
   }
 
   const stgOpenImport = () => {

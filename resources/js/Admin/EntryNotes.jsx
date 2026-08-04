@@ -1139,7 +1139,11 @@ const EntryNotes = () => {
     worksheet['!cols'] = [{ wch: 16 }, { wch: 38 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 10 }]
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Stock')
-    XLSX.writeFile(workbook, 'plantilla_carga_stock.xlsx')
+    // Blob con el MIME explicito en vez de XLSX.writeFile: es el mismo camino que usan los demas
+    // export del modulo y evita que el navegador etiquete mal la descarga.
+    const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    downloadStorageBlob(blob, 'plantilla_carga_stock.xlsx')
   }
 
   const onImportModalOpen = () => {
