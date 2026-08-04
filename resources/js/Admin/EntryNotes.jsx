@@ -1128,6 +1128,20 @@ const EntryNotes = () => {
     return () => clearTimeout(timer)
   }, [])
 
+  // Plantilla lista para llenar. Las cabeceras son exactamente las que el mapeo automatico
+  // reconoce, asi que al volver a subirla no hay que tocar nada.
+  const onImportTemplateDownload = () => {
+    const filas = [
+      { CODIGO: 'ART-001', NOMBRE: 'Ejemplo: Paracetamol 500mg', LOTE: 'L-2026-01', VENCIMIENTO: '2028-12-31', UBICACION: 'A-01', CANTIDAD: 100, COSTO: 2.50 },
+      { CODIGO: 'ART-002', NOMBRE: 'Ejemplo: Ibuprofeno 400mg', LOTE: 'L-2026-02', VENCIMIENTO: '2028-06-30', UBICACION: 'A-02', CANTIDAD: 50, COSTO: 3.80 },
+    ]
+    const worksheet = XLSX.utils.json_to_sheet(filas)
+    worksheet['!cols'] = [{ wch: 16 }, { wch: 38 }, { wch: 14 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 10 }]
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Stock')
+    XLSX.writeFile(workbook, 'plantilla_carga_stock.xlsx')
+  }
+
   const onImportModalOpen = () => {
     setImportRows([]); setImportHeaders([]); setImportFileName('')
     setImportClientId(''); setImportWarehouseId('')
@@ -1950,14 +1964,16 @@ const EntryNotes = () => {
     >
       <div className='alert alert-info d-flex align-items-start gap-2'>
         <i className='mdi mdi-information-outline fs-4 lh-1'></i>
-        <div>
-          <strong>Sube tu propio archivo, no hay plantilla que descargar.</strong>
+        <div className='flex-grow-1'>
+          <strong>Descarga la plantilla, llenala y subela.</strong>
           <div className='mt-1'>
-            El sistema lee las columnas de tu archivo y abajo le indicas cual es cual. Con eso se crea
-            una <b>nota de entrada aprobada</b>, que es la unica forma de que el stock entre dejando
-            movimiento en el kardex. Los articulos deben existir antes
-            en <b>{storageContext ? 'Creacion del producto' : 'Almacen › Articulos'}</b>.
+            La plantilla ya trae las columnas correctas y dos filas de ejemplo (borralas y pon las tuyas).
+            Tambien puedes subir tu propio archivo: el sistema lee tus columnas y abajo le indicas cual es cual.
+            Los articulos deben existir antes en <b>{storageContext ? 'Creacion del producto' : 'Almacen › Articulos'}</b>.
           </div>
+          <button type='button' className='btn btn-sm btn-primary mt-2' onClick={onImportTemplateDownload}>
+            <i className='mdi mdi-download me-1'></i>Descargar plantilla Excel
+          </button>
         </div>
       </div>
 

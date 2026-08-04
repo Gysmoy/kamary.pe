@@ -1027,6 +1027,19 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     return () => clearTimeout(timer)
   }, [isStorageProduct])
 
+  // Plantilla con las cabeceras que el mapeo automatico reconoce sin ajustes.
+  const stgTemplateDownload = () => {
+    const filas = [
+      { CODIGO: 'ART-001', NOMBRE: 'Ejemplo: Paracetamol 500mg', UNIDAD: 'UNIDAD' },
+      { CODIGO: '', NOMBRE: 'Ejemplo: sin codigo, el sistema le genera uno', UNIDAD: 'UNIDAD' },
+    ]
+    const worksheet = XLSX.utils.json_to_sheet(filas)
+    worksheet['!cols'] = [{ wch: 16 }, { wch: 46 }, { wch: 14 }]
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Productos')
+    XLSX.writeFile(workbook, 'plantilla_productos.xlsx')
+  }
+
   const stgOpenImport = () => {
     setStgRows([]); setStgHeaders([]); setStgFileName(''); setStgClientId('')
     setStgMapping({ code: '', name: '', unit: '' })
@@ -2513,13 +2526,16 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     >
       <div className='alert alert-info d-flex align-items-start gap-2'>
         <i className='mdi mdi-information-outline fs-4 lh-1'></i>
-        <div>
-          <strong>Sube tu propio archivo, no hay plantilla que descargar.</strong>
+        <div className='flex-grow-1'>
+          <strong>Descarga la plantilla, llenala y subela.</strong>
           <div className='mt-1'>
             Esto crea el <b>catalogo</b> de productos del cliente (sin stock). Despues carga las
             cantidades desde <b>Nota de entrada &rsaquo; Importar stock</b>.
             Si una fila no trae codigo, el sistema le genera uno.
           </div>
+          <button type='button' className='btn btn-sm btn-primary mt-2' onClick={stgTemplateDownload}>
+            <i className='mdi mdi-download me-1'></i>Descargar plantilla Excel
+          </button>
         </div>
       </div>
 
