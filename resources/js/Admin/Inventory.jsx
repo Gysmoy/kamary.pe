@@ -118,6 +118,9 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
   const [rows, setRows] = useState([])
   const [selectedCount, setSelectedCount] = useState(null)
   const [loadingRows, setLoadingRows] = useState(false)
+  // Distingue "todavia no generaste el listado" de "lo generaste y no habia nada": sin esto los
+  // botones quedaban apagados sin explicacion y parecian rotos.
+  const [previewRan, setPreviewRan] = useState(false)
   const [tablePageSize, setTablePageSize] = useState(10)
   const [tableSearch, setTableSearch] = useState('')
   const [tablePage, setTablePage] = useState(1)
@@ -174,6 +177,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
     setWarehouseId(nextWarehouseId)
     setLaboratoryId('')
     setRows([])
+    setPreviewRan(false)
     setTableSearch('')
     setTablePage(1)
   }
@@ -204,6 +208,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
       laboratory_id: laboratoryId || null,
     })
     setRows(data ?? [])
+    setPreviewRan(true)
     setLoadingRows(false)
   }
 
@@ -336,12 +341,6 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
             options={[{ value: '', label: 'Todos' }, ...filterWarehouseOptions.map(warehouse => ({ value: warehouse.value, label: warehouse.name }))]}
             placeholder='Todos'
           />
-          <div className='col-12 col-md-4'>
-            <button type='button' className='btn btn-primary d-inline-flex align-items-center gap-2' onClick={openNewModal}>
-              <i className='mdi mdi-plus-circle-outline'></i>
-              Registrar inventario
-            </button>
-          </div>
         </div>
       </div>
     </div>
@@ -526,12 +525,29 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
         </div>
       </div>
 
+      {previewRan && rows.length === 0 && !selectedCount && (
+        <div className='alert alert-warning d-flex align-items-start gap-2 mb-3'>
+          <i className='mdi mdi-alert-outline fs-4 lh-1'></i>
+          <div>
+            <strong>Este almacen no tiene articulos para inventariar.</strong>
+            <div className='mt-1'>
+              No se encontro stock ni articulos asignados a <strong>{selectedWarehouseName || 'el almacen seleccionado'}</strong>
+              {selectedLaboratoryName ? <> con el laboratorio <strong>{selectedLaboratoryName}</strong></> : null}.
+              Por eso los botones de Excel estan deshabilitados. Revisa que el almacen tenga notas de entrada aprobadas
+              o articulos asignados, o prueba con otro almacen.
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className='d-flex flex-wrap gap-4 storage-inventory-toolbar'>
         <button
           type='button'
           className='btn btn-outline-success px-4'
           disabled={rows.length === 0}
-          title={rows.length === 0 ? 'Genera primero el listado para descargar el formato' : 'Descargar el formato de conteo'}
+          title={rows.length > 0
+            ? 'Descargar el formato de conteo'
+            : (previewRan ? 'El almacen seleccionado no tiene articulos para inventariar' : 'Genera primero el listado para descargar el formato')}
           onClick={downloadFormat}
         >
           Descargar Excel
@@ -649,6 +665,8 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
   const [rows, setRows] = useState([])
   const [selectedCount, setSelectedCount] = useState(null)
   const [loadingRows, setLoadingRows] = useState(false)
+  // Mismo criterio que en el inventario estandar: saber si el filtro ya se ejecuto.
+  const [previewRan, setPreviewRan] = useState(false)
   const [tablePageSize, setTablePageSize] = useState(10)
   const [tableSearch, setTableSearch] = useState('')
   const [tablePage, setTablePage] = useState(1)
@@ -709,6 +727,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
     setLocation('')
     setClientId('')
     setRows([])
+    setPreviewRan(false)
     setTableSearch('')
     setTablePage(1)
   }
@@ -741,6 +760,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       client_id: clientId || null,
     })
     setRows(data ?? [])
+    setPreviewRan(true)
     setLoadingRows(false)
   }
 
@@ -866,15 +886,6 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
   }
 
   return <>
-    <div className='card mb-3'>
-      <div className='card-body'>
-        <button type='button' className='btn btn-primary d-inline-flex align-items-center gap-2' onClick={openNewModal}>
-          <i className='mdi mdi-plus-circle-outline'></i>
-          Registrar inventario
-        </button>
-      </div>
-    </div>
-
     <VdTable
       ref={tableRef}
       rest={inventoryRest}
@@ -1072,12 +1083,28 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         </div>
       </div>
 
+      {previewRan && rows.length === 0 && !selectedCount && (
+        <div className='alert alert-warning d-flex align-items-start gap-2 mb-3'>
+          <i className='mdi mdi-alert-outline fs-4 lh-1'></i>
+          <div>
+            <strong>No hay articulos para inventariar con estos filtros.</strong>
+            <div className='mt-1'>
+              No se encontro stock para el cliente{selectedClientName ? <> <strong>{selectedClientName}</strong></> : null} en
+              el almacen y ubicacion elegidos. Por eso los botones de Excel estan deshabilitados.
+              Revisa los filtros o que el cliente tenga notas de entrada aprobadas.
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className='d-flex flex-wrap gap-4 storage-inventory-toolbar'>
         <button
           type='button'
           className='btn btn-outline-success px-4'
           disabled={rows.length === 0}
-          title={rows.length === 0 ? 'Filtra primero para descargar el formato' : 'Descargar el formato de conteo'}
+          title={rows.length > 0
+            ? 'Descargar el formato de conteo'
+            : (previewRan ? 'No hay articulos para inventariar con estos filtros' : 'Filtra primero para descargar el formato')}
           onClick={downloadFormat}
         >
           Descargar Excel
