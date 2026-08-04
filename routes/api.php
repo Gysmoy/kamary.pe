@@ -212,6 +212,7 @@ Route::middleware('auth')->group(function () {
         Route::patch('/batches/{field}', [AdminBatchController::class, 'boolean']);
         Route::delete('/batches/{id}', [AdminBatchController::class, 'delete']);
 
+        Route::post('/entry-notes/import', [AdminEntryNoteController::class, 'import']);
         Route::post('/entry-notes', [AdminEntryNoteController::class, 'save']);
         Route::post('/entry-notes/paginate', [AdminEntryNoteController::class, 'paginate']);
         Route::patch('/entry-notes/{id}/entry-status', [AdminEntryNoteController::class, 'entryStatus']);

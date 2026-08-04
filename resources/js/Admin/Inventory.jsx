@@ -236,28 +236,38 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
     return 'El almacen seleccionado no tiene articulos para inventariar, no hay nada que descargar.'
   }
 
+  // Si no hay articulos NO se puede mandar a "Registrar": registrar tambien falla por lo mismo y
+  // el usuario queda dando vueltas entre los dos mensajes. Sin listado, el motivo es el de arriba.
   const uploadBlockedReason = () => {
     if (selectedCountApplied) return 'Este inventario ya fue aplicado, no se puede volver a subir el conteo.'
+    if (rows.length === 0) return downloadBlockedReason()
     if (!selectedCount?.id) return 'Primero pulsa "Registrar" para crear el inventario. Despues podras subir el conteo.'
     return null
   }
 
+  // El inventario audita stock existente, no lo carga: si el almacen esta vacio hay que explicarlo
+  // y decir donde se carga, en vez de dejar al usuario chocando con los botones.
+  const emptyWarehouseHelp = () => ({
+    icon: 'info',
+    title: 'Este almacen todavia no tiene stock',
+    html: 'El modulo de <b>Inventario</b> sirve para <b>contar</b> stock que ya existe, no para cargarlo.'
+      + '<br/><br/>Para cargar stock usa <b>Almacen &rsaquo; Nota de Entrada</b>, con el boton'
+      + ' <b>Importar stock</b> si tienes un archivo con muchos productos.',
+    confirmButtonText: 'Entendido',
+  })
+
   const onDownloadClicked = async () => {
     const motivo = downloadBlockedReason()
-    if (motivo) {
-      await Swal.fire({ icon: 'info', title: 'Aun no se puede descargar', text: motivo, confirmButtonText: 'Entendido' })
-      return
-    }
-    downloadFormat()
+    if (!motivo) { downloadFormat(); return }
+    if (previewRan && rows.length === 0) { await Swal.fire(emptyWarehouseHelp()); return }
+    await Swal.fire({ icon: 'info', title: 'Aun no se puede descargar', text: motivo, confirmButtonText: 'Entendido' })
   }
 
   const onUploadClicked = async () => {
     const motivo = uploadBlockedReason()
-    if (motivo) {
-      await Swal.fire({ icon: 'info', title: 'Aun no se puede subir', text: motivo, confirmButtonText: 'Entendido' })
-      return
-    }
-    fileRef.current?.click()
+    if (!motivo) { fileRef.current?.click(); return }
+    if (previewRan && rows.length === 0) { await Swal.fire(emptyWarehouseHelp()); return }
+    await Swal.fire({ icon: 'info', title: 'Aun no se puede subir', text: motivo, confirmButtonText: 'Entendido' })
   }
 
   // El formato en blanco se puede bajar apenas hay listado, sin obligar a registrar antes el
@@ -562,12 +572,15 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
         <div className='alert alert-warning d-flex align-items-start gap-2 mb-3'>
           <i className='mdi mdi-alert-outline fs-4 lh-1'></i>
           <div>
-            <strong>Este almacen no tiene articulos para inventariar.</strong>
+            <strong>Este almacen todavia no tiene stock que inventariar.</strong>
             <div className='mt-1'>
-              No se encontro stock ni articulos asignados a <strong>{selectedWarehouseName || 'el almacen seleccionado'}</strong>
+              No se encontro nada en <strong>{selectedWarehouseName || 'el almacen seleccionado'}</strong>
               {selectedLaboratoryName ? <> con el laboratorio <strong>{selectedLaboratoryName}</strong></> : null}.
-              Por eso los botones de Excel estan deshabilitados. Revisa que el almacen tenga notas de entrada aprobadas
-              o articulos asignados, o prueba con otro almacen.
+            </div>
+            <div className='mt-2'>
+              El inventario sirve para <strong>contar</strong> stock que ya existe, no para cargarlo.
+              Para cargar stock ve a <strong>Almacen &rsaquo; Nota de Entrada</strong>; si tienes un archivo con
+              muchos productos, usa alli el boton <strong>Importar stock</strong>.
             </div>
           </div>
         </div>

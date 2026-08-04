@@ -1159,7 +1159,7 @@ const EntryNotes = () => {
   const onImportSubmit = async (e) => {
     e?.preventDefault?.()
     if (!importRows.length) { Swal.fire({ icon: 'warning', title: 'Falta el archivo', text: 'Primero sube el archivo con el stock a cargar.' }); return }
-    if (!importClientId) { Swal.fire({ icon: 'warning', title: 'Falta el cliente', text: 'Indica de que cliente es la mercaderia.' }); return }
+    if (storageContext && !importClientId) { Swal.fire({ icon: 'warning', title: 'Falta el cliente', text: 'Indica de que cliente es la mercaderia.' }); return }
     if (!importWarehouseId) { Swal.fire({ icon: 'warning', title: 'Falta el almacen', text: 'Indica en que almacen ingresa la mercaderia.' }); return }
     if (!importMapping.article || !importMapping.quantity) { Swal.fire({ icon: 'warning', title: 'Falta mapear', text: 'Indica que columna es el articulo y cual la cantidad.' }); return }
 
@@ -1437,11 +1437,9 @@ const EntryNotes = () => {
       emptyText='No se encontraron notas de entrada.'
       baseFilter={storageContext ? storageGridFilter : null}
       headerActions={<>
-        {storageContext && (
-          <button type='button' className='vdt-btn-soft' onClick={onImportModalOpen}>
-            <i className='mdi mdi-upload'></i> Importar stock
-          </button>
-        )}
+        <button type='button' className='vdt-btn-soft' onClick={onImportModalOpen}>
+          <i className='mdi mdi-upload'></i> Importar stock
+        </button>
         <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={() => tableRef.current?.refresh()}>
           <i className='mdi mdi-refresh'></i>
         </button>
@@ -1949,7 +1947,8 @@ const EntryNotes = () => {
           <div className='mt-1'>
             El sistema lee las columnas de tu archivo y abajo le indicas cual es cual. Con eso se crea
             una <b>nota de entrada aprobada</b>, que es la unica forma de que el stock entre dejando
-            movimiento en el kardex. Los productos deben existir antes en <b>Creacion del producto</b>.
+            movimiento en el kardex. Los articulos deben existir antes
+            en <b>{storageContext ? 'Creacion del producto' : 'Almacen › Articulos'}</b>.
           </div>
         </div>
       </div>
@@ -1961,16 +1960,17 @@ const EntryNotes = () => {
           {importFileName && <div className='mt-1'><small className='text-muted'>{importFileName} — {importRows.length} fila(s) leidas</small></div>}
         </div>
 
-        <VdSelect
+        {/* En Kamary Peru la mercaderia es propia: no hay cliente al que asignarla. */}
+        {storageContext && <VdSelect
           col='col-md-6' label='Cliente dueno de la mercaderia' required
           value={importClientId} onChange={setImportClientId}
           options={(storageOptions.clients ?? []).map(c => ({ value: `${c.id}`, label: [c.document_number, c.full_name].filter(Boolean).join(' | ') }))}
           placeholder='-- Seleccionar cliente --'
-        />
+        />}
         <VdSelect
-          col='col-md-6' label='Almacen de ingreso' required
+          col={storageContext ? 'col-md-6' : 'col-md-12'} label='Almacen de ingreso' required
           value={importWarehouseId} onChange={setImportWarehouseId}
-          options={(storageOptions.warehouses ?? []).filter(w => w.status !== null).map(w => ({ value: `${w.id}`, label: w.name }))}
+          options={(storageContext ? (storageOptions.warehouses ?? []) : warehouseOptions).filter(w => w.status !== null).map(w => ({ value: `${w.id}`, label: w.name }))}
           placeholder='-- Seleccionar almacen --'
         />
       </div>
