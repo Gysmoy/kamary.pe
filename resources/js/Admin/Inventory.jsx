@@ -596,7 +596,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
           title={downloadBlockedReason() ?? 'Descargar el formato de conteo'}
           onClick={onDownloadClicked}
         >
-          Descargar Excel
+          Descargar hoja de conteo
         </button>
         <button
           type='button'
@@ -604,7 +604,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
           title={uploadBlockedReason() ?? 'Subir el formato con el stock real'}
           onClick={onUploadClicked}
         >
-          Subir Excel
+          Subir conteo lleno
         </button>
       </div>
 
@@ -1188,7 +1188,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           title={downloadBlockedReason() ?? 'Descargar el formato de conteo'}
           onClick={onDownloadClicked}
         >
-          Descargar Excel
+          Descargar hoja de conteo
         </button>
         <button
           type='button'
@@ -1196,7 +1196,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           title={uploadBlockedReason() ?? 'Subir el formato con el stock real'}
           onClick={onUploadClicked}
         >
-          Subir Excel
+          Subir conteo lleno
         </button>
       </div>
 
