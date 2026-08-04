@@ -1120,6 +1120,14 @@ const EntryNotes = () => {
     }
   }
 
+  // Permite llegar con el modal ya abierto desde el aviso de Inventario (?import=1), para que
+  // quien busca cargar stock no tenga que dar con el boton por su cuenta.
+  useEffect(() => {
+    if (!new URLSearchParams(window.location.search).has('import')) return
+    const timer = setTimeout(() => onImportModalOpen(), 600)
+    return () => clearTimeout(timer)
+  }, [])
+
   const onImportModalOpen = () => {
     setImportRows([]); setImportHeaders([]); setImportFileName('')
     setImportClientId(''); setImportWarehouseId('')

@@ -578,9 +578,12 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
               {selectedLaboratoryName ? <> con el laboratorio <strong>{selectedLaboratoryName}</strong></> : null}.
             </div>
             <div className='mt-2'>
-              El inventario sirve para <strong>contar</strong> stock que ya existe, no para cargarlo.
-              Para cargar stock ve a <strong>Almacen &rsaquo; Nota de Entrada</strong>; si tienes un archivo con
-              muchos productos, usa alli el boton <strong>Importar stock</strong>.
+              Esta pantalla <strong>cuenta</strong> stock que ya existe; para <strong>cargarlo</strong> usa el boton de abajo.
+            </div>
+            <div className='mt-3'>
+              <a className='btn btn-sm btn-primary' href='/admin/entry-note?import=1'>
+                <i className='mdi mdi-upload me-1'></i>Cargar stock desde Excel
+              </a>
             </div>
           </div>
         </div>
@@ -1158,11 +1161,21 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         <div className='alert alert-warning d-flex align-items-start gap-2 mb-3'>
           <i className='mdi mdi-alert-outline fs-4 lh-1'></i>
           <div>
-            <strong>No hay articulos para inventariar con estos filtros.</strong>
+            <strong>Este cliente todavia no tiene stock que inventariar.</strong>
             <div className='mt-1'>
-              No se encontro stock para el cliente{selectedClientName ? <> <strong>{selectedClientName}</strong></> : null} en
-              el almacen y ubicacion elegidos. Por eso los botones de Excel estan deshabilitados.
-              Revisa los filtros o que el cliente tenga notas de entrada aprobadas.
+              No se encontro stock para{selectedClientName ? <> <strong>{selectedClientName}</strong></> : ' el cliente'} en
+              el almacen y ubicacion elegidos.
+            </div>
+            <div className='mt-2'>
+              Esta pantalla <strong>cuenta</strong> stock que ya existe; para <strong>cargarlo</strong> usa los botones de abajo.
+            </div>
+            <div className='d-flex flex-wrap gap-2 mt-3'>
+              <a className='btn btn-sm btn-primary' href='/admin/storage-products?import=1'>
+                <i className='mdi mdi-package-variant me-1'></i>1. Cargar productos del cliente
+              </a>
+              <a className='btn btn-sm btn-outline-primary' href='/admin/storage-entry-note?import=1'>
+                <i className='mdi mdi-upload me-1'></i>2. Cargar stock desde Excel
+              </a>
             </div>
           </div>
         </div>

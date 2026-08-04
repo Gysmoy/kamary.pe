@@ -1019,6 +1019,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
     ...stgHeaders.map(h => ({ value: h, label: h })),
   ]
 
+  // Igual que en nota de entrada: se puede llegar con el modal abierto desde el aviso de Inventario.
+  useEffect(() => {
+    if (!isStorageProduct) return
+    if (!new URLSearchParams(window.location.search).has('import')) return
+    const timer = setTimeout(() => stgOpenImport(), 700)
+    return () => clearTimeout(timer)
+  }, [isStorageProduct])
+
   const stgOpenImport = () => {
     setStgRows([]); setStgHeaders([]); setStgFileName(''); setStgClientId('')
     setStgMapping({ code: '', name: '', unit: '' })
