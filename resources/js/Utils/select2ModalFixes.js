@@ -33,6 +33,21 @@ export const installSelect2ModalFixes = () => {
     event.preventDefault()
   }, true)
 
+  // Red de seguridad para el mismo conflicto por cualquier otra via: si mientras hay un
+  // desplegable abierto el focus trap se lleva el foco al propio modal, se lo devolvemos al
+  // buscador. Sin esto select2 interpreta que perdio el foco y cierra el desplegable.
+  document.addEventListener('focusin', (event) => {
+    const target = event.target
+    if (!target?.classList?.contains('modal')) return
+    const open = document.querySelector('.select2-container--open')
+    if (!open) return
+    const search = open.querySelector('.select2-search__field')
+      || document.querySelector('.select2-dropdown .select2-search__field')
+    if (!search) return
+    event.stopPropagation()
+    search.focus({ preventScroll: true })
+  }, true)
+
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return
     if (!document.querySelector('.select2-container--open')) return

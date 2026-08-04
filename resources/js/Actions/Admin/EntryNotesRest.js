@@ -13,6 +13,31 @@ class EntryNotesRest extends BasicRest {
     return result ?? []
   }
 
+  // Detalle de lo que saldria al anular, para mostrarlo antes de confirmar. No crea nada.
+  getVoidPreview = async (id) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${id}/void-preview`, { method: 'GET' })
+      if (!status) throw new Error(result?.message || 'No se pudo cargar el detalle de la anulacion')
+      return result.data ?? null
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
+      return null
+    }
+  }
+
+  // Anula la entrada creando la nota de salida espejo.
+  void = async (id) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${id}/void`, { method: 'POST' })
+      if (!status) throw new Error(result?.message || 'No se pudo anular la nota de entrada')
+      toast.success('Nota anulada', { description: result.message, duration: 4000, richColors: true })
+      return result.data ?? true
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 4000, richColors: true })
+      return null
+    }
+  }
+
   getStorageOptions = async () => {
     const result = await this.simpleGet('/api/admin/storage/kardex/options')
     return result ?? {

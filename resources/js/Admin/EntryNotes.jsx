@@ -105,6 +105,7 @@ const EntryNotes = () => {
   const providerDistributorRef = useRef()
   const entryDateRef = useRef()
   const documentDateRef = useRef()
+  const voidModalRef = useRef()
   const invoiceSeriesRef = useRef()
   const invoiceSequenceRef = useRef()
   const invoiceDateRef = useRef()
@@ -115,6 +116,9 @@ const EntryNotes = () => {
   const vehiclePlateRef = useRef()
 
   const [isEditing, setIsEditing] = useState(false)
+  // Anulacion por nota de salida: detalle a confirmar y estado del envio.
+  const [voidTarget, setVoidTarget] = useState(null)
+  const [voidLoading, setVoidLoading] = useState(false)
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedBranchId, setSelectedBranchId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
@@ -1068,11 +1072,41 @@ const EntryNotes = () => {
   }
 
   // Una nota de entrada ya aprobada suma stock real (ver InventoryController::incomingTotalsQuery).
-  // Borrarla lo haria desaparecer sin rastro en kardex, por eso aqui no se ofrece eliminar:
-  // la correccion se hace emitiendo una nota de salida.
-  const standardRowActions = (row) => [
-    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
-  ]
+  // Borrarla lo haria desaparecer sin rastro en kardex, por eso no se ofrece eliminar: se anula
+  // emitiendo una nota de salida espejo con las mismas cantidades.
+  const standardRowActions = (row) => {
+    const list = [
+      { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+    ]
+    if (!row?.voided_exit_note_id) {
+      list.push({
+        icon: 'mdi mdi-file-document-minus-outline',
+        title: 'Anular con nota de salida',
+        bg: '#fcebeb',
+        color: '#e24b4a',
+        onClick: (r) => onVoidClicked(r),
+      })
+    }
+    return list
+  }
+
+  const onVoidClicked = async (row) => {
+    const preview = await entryNotesRest.getVoidPreview(row.id)
+    if (!preview) return
+    setVoidTarget({ row, ...preview })
+    $(voidModalRef.current).modal('show')
+  }
+
+  const onVoidConfirmed = async () => {
+    if (!voidTarget?.row?.id || voidLoading) return
+    setVoidLoading(true)
+    const result = await entryNotesRest.void(voidTarget.row.id)
+    setVoidLoading(false)
+    if (!result) return
+    $(voidModalRef.current).modal('hide')
+    setVoidTarget(null)
+    tableRef.current?.refresh()
+  }
 
   const storageVdColumns = [
     {
@@ -1148,9 +1182,10 @@ const EntryNotes = () => {
       render: (row) => formatAuditUser(row.updater),
     },
     {
-      key: 'estado', label: 'Estado', field: 'status', width: '95px',
+      key: 'estado', label: 'Estado', field: 'status', width: '110px',
       render: (row) => {
         if (row.status === null) return ''
+        if (row.voided_exit_note_id) return <span className='badge bg-danger'>Anulada</span>
         return <SwitchFormGroup noMargin checked={row.status == 1} onChange={() => onBooleanChange({ id: row.id, field: 'status', value: !row.status })} />
       },
     },
@@ -1800,6 +1835,71 @@ const EntryNotes = () => {
         </div>
       </div>
     </Modal>}
+
+    <Modal
+      modalRef={voidModalRef}
+      title={<h4 className='modal-title'><i className='mdi mdi-file-document-minus-outline me-2 text-danger'></i>Anular nota de entrada</h4>}
+      size='lg'
+      asForm={false}
+      hideFooter
+    >
+      <div className='alert alert-warning d-flex align-items-start gap-2'>
+        <i className='mdi mdi-information-outline fs-4 lh-1'></i>
+        <div>
+          <strong>Se creara una nota de salida con los mismos datos.</strong>
+          <div className='mt-1'>
+            Una entrada no se elimina: se anula con una salida por la misma cantidad, para que el
+            movimiento quede registrado en el kardex. Si entraron 10 unidades, saldran 10 unidades.
+          </div>
+        </div>
+      </div>
+
+      <div className='row g-2 mb-3'>
+        <div className='col-md-6'>
+          <label className='form-label mb-1'>Nota de entrada</label>
+          <input className='form-control bg-light' value={voidTarget?.entry_note?.code ?? ''} readOnly />
+        </div>
+        <div className='col-md-6'>
+          <label className='form-label mb-1'>Almacen</label>
+          <input className='form-control bg-light' value={voidTarget?.entry_note?.warehouse_name ?? ''} readOnly />
+        </div>
+      </div>
+
+      <div className='table-responsive border rounded'>
+        <table className='table table-sm table-striped mb-0'>
+          <thead>
+            <tr>
+              <th>Articulo</th>
+              <th style={{ width: 160 }}>Lote</th>
+              <th style={{ width: 120 }} className='text-end'>Cantidad a salir</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(voidTarget?.items ?? []).length === 0 && (
+              <tr><td colSpan='3' className='text-center text-muted py-3'>Sin articulos</td></tr>
+            )}
+            {(voidTarget?.items ?? []).map((item, idx) => (
+              <tr key={`void-item-${idx}`}>
+                <td>{[item.article_code, item.article_name].filter(Boolean).join(' - ') || '-'}</td>
+                <td>{item.lot || '-'}</td>
+                <td className='text-end fw-semibold'>{Number(item.quantity ?? 0).toLocaleString('es-PE')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className='d-flex justify-content-end gap-2 mt-3'>
+        <button type='button' className='btn btn-light' data-bs-dismiss='modal' disabled={voidLoading}>
+          Cancelar
+        </button>
+        <button type='button' className='btn btn-danger' onClick={onVoidConfirmed} disabled={voidLoading || (voidTarget?.items ?? []).length === 0}>
+          {voidLoading
+            ? <><i className='mdi mdi-loading mdi-spin me-1'></i>Anulando...</>
+            : <><i className='mdi mdi-check me-1'></i>Si, anular y crear nota de salida</>}
+        </button>
+      </div>
+    </Modal>
 
     <Modal modalRef={createBatchModalRef} title='Crear lote' onSubmit={onCreateBatchModalSubmit} size='md'>
       <div className='row' id='entry-note-create-batch-container'>

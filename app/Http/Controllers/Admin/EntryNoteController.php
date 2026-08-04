@@ -6,6 +6,8 @@ use App\Http\Controllers\BasicController;
 use App\Models\Article;
 use App\Models\EntryNote;
 use App\Models\EntryNoteItem;
+use App\Models\ExitNote;
+use App\Models\ExitNoteItem;
 use App\Models\Laboratory;
 use App\Models\Warehouse;
 use App\Services\StockService;
@@ -16,6 +18,7 @@ use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Routing\ResponseFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\Response;
 
 class EntryNoteController extends BasicController
@@ -68,7 +71,7 @@ class EntryNoteController extends BasicController
 
     private function storageListColumns(): array
     {
-        return [
+        $columns = [
             'entry_notes.id',
             'entry_notes.code',
             'entry_notes.business_id',
@@ -86,6 +89,18 @@ class EntryNoteController extends BasicController
             'entry_notes.created_at',
             'entry_notes.updated_at',
         ];
+
+        // Tolera que el codigo llegue a un entorno donde la migracion aun no corrio.
+        if ($this->supportsVoidColumn()) {
+            $columns[] = 'entry_notes.voided_exit_note_id';
+        }
+
+        return $columns;
+    }
+
+    private function supportsVoidColumn(): bool
+    {
+        return Schema::hasColumn('entry_notes', 'voided_exit_note_id');
     }
 
     public function get(Request $request, string $id)
@@ -475,6 +490,163 @@ class EntryNoteController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    /**
+     * Devuelve el detalle que se usaria para anular la nota, sin crear nada. Alimenta el modal de
+     * confirmacion para que el usuario vea exactamente que va a salir y en que cantidad.
+     */
+    public function voidPreview(Request $request, string $id): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+        try {
+            $entryNote = $this->assertVoidableEntryNote($request, $id);
+            $items = $this->voidableItems($entryNote);
+
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = [
+                'entry_note' => [
+                    'id' => $entryNote->id,
+                    'code' => $entryNote->code,
+                    'warehouse_name' => $entryNote->warehouse?->name,
+                ],
+                'items' => $items->map(fn($item) => [
+                    'article_name' => $item->article?->name ?? '',
+                    'article_code' => $item->article?->code ?? '',
+                    'lot' => $this->effectiveLot($item),
+                    'quantity' => (float) $item->quantity,
+                ])->values(),
+            ];
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    /**
+     * Anula la nota de entrada creando una nota de salida espejo.
+     *
+     * La entrada NO se cancela ni se da de baja: sigue contando como ingreso aprobado y la salida
+     * descuenta la misma cantidad. Cancelarla ademas restaria el stock dos veces, porque
+     * InventoryController suma las entradas aprobadas y resta las salidas aprobadas por separado.
+     *
+     * Los items se copian con el mismo lote, vencimiento, ubicacion y almacen porque el stock se
+     * calcula agrupando por esa combinacion: si no coinciden, la salida no compensaria a la entrada.
+     */
+    public function void(Request $request, string $id): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+        try {
+            $entryNote = $this->assertVoidableEntryNote($request, $id);
+            $items = $this->voidableItems($entryNote);
+
+            DB::beginTransaction();
+
+            // Relee con bloqueo para que dos anulaciones simultaneas no creen dos notas de salida.
+            $locked = EntryNote::query()->whereKey($entryNote->id)->lockForUpdate()->first();
+            if ($locked?->voided_exit_note_id) {
+                throw new \Exception('Esta nota de entrada ya fue anulada');
+            }
+
+            $exitNote = ExitNote::create([
+                'business_id' => $entryNote->business_id,
+                'business_branch_id' => $entryNote->business_branch_id,
+                'warehouse_id' => $entryNote->warehouse_id,
+                'client_id' => null,
+                'motives' => ["Anulacion de la nota de entrada {$entryNote->code}"],
+                'exit_date' => now()->toDateString(),
+                'document_type' => 'Nota de salida',
+                'document_date' => now()->toDateString(),
+                'observations' => "Salida generada automaticamente para anular la nota de entrada {$entryNote->code}.",
+                'status' => true,
+                'exit_status' => 'approved',
+                'created_by' => Auth::id(),
+                'updated_by' => Auth::id(),
+            ]);
+            $exitNote->code = 'NS' . str_pad((string) $exitNote->id, 5, '0', STR_PAD_LEFT);
+            $exitNote->save();
+
+            foreach ($items as $item) {
+                ExitNoteItem::create([
+                    'exit_note_id' => $exitNote->id,
+                    'article_id' => $item->article_id,
+                    'warehouse_id' => $item->warehouse_id ?: $entryNote->warehouse_id,
+                    'batch_code' => $this->effectiveLot($item) ?: null,
+                    'expiration_date' => $item->expiration_date,
+                    'location' => $item->location,
+                    'stock' => (float) ($item->stock ?? 0),
+                    'quantity' => (float) $item->quantity,
+                    'total' => (float) ($item->total ?? 0),
+                    'status' => true,
+                ]);
+            }
+
+            $locked->voided_exit_note_id = $exitNote->id;
+            $locked->updated_by = Auth::id();
+            $locked->save();
+
+            DB::commit();
+
+            $response->status = 200;
+            $response->message = "Nota de entrada anulada con la nota de salida {$exitNote->code}";
+            $response->data = [
+                'exit_note_id' => $exitNote->id,
+                'exit_note_code' => $exitNote->code,
+            ];
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    /** El lote efectivo es el mismo que usa InventoryController para agrupar el stock entrante. */
+    private function effectiveLot(EntryNoteItem $item): string
+    {
+        return trim((string) $item->lot) ?: trim((string) $item->batch_code);
+    }
+
+    private function assertVoidableEntryNote(Request $request, string $id): EntryNote
+    {
+        if ($this->isStorageRequest($request)) {
+            throw new \Exception('Las notas de almacenamiento se anulan desde su propio modulo');
+        }
+
+        if (!$this->supportsVoidColumn()) {
+            throw new \Exception('La anulacion de notas de entrada aun no esta habilitada en este entorno. Ejecuta las migraciones pendientes.');
+        }
+
+        $entryNote = $this->scopedEntryNoteQuery($request)->with('warehouse:id,name')->find($id);
+        if (!$entryNote) throw new \Exception('Nota de entrada no encontrada');
+        if ($entryNote->voided_exit_note_id) throw new \Exception('Esta nota de entrada ya fue anulada');
+        if ($entryNote->status === null) throw new \Exception('Esta nota de entrada no esta disponible');
+        if ($entryNote->entry_status !== 'approved' || !$entryNote->status) {
+            throw new \Exception('Solo se puede anular una nota de entrada aprobada');
+        }
+
+        return $entryNote;
+    }
+
+    private function voidableItems(EntryNote $entryNote)
+    {
+        $items = EntryNoteItem::query()
+            ->with('article:id,code,name')
+            ->where('entry_note_id', $entryNote->id)
+            ->where('status', 1)
+            ->where('quantity', '>', 0)
+            ->orderBy('id')
+            ->get();
+
+        if ($items->isEmpty()) {
+            throw new \Exception('Esta nota de entrada no tiene articulos con cantidad para anular');
+        }
+
+        return $items;
     }
 
     public function delete(Request $request, string $id)

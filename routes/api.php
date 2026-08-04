@@ -215,6 +215,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/entry-notes', [AdminEntryNoteController::class, 'save']);
         Route::post('/entry-notes/paginate', [AdminEntryNoteController::class, 'paginate']);
         Route::patch('/entry-notes/{id}/entry-status', [AdminEntryNoteController::class, 'entryStatus']);
+        Route::get('/entry-notes/{id}/void-preview', [AdminEntryNoteController::class, 'voidPreview']);
+        Route::post('/entry-notes/{id}/void', [AdminEntryNoteController::class, 'void']);
         Route::patch('/entry-notes/status', [AdminEntryNoteController::class, 'status']);
         Route::patch('/entry-notes/{field}', [AdminEntryNoteController::class, 'boolean']);
         Route::delete('/entry-notes/{id}', [AdminEntryNoteController::class, 'delete']);

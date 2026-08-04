@@ -40,6 +40,7 @@ class EntryNote extends Model
         'guide_file',
         'status',
         'entry_status',
+        'voided_exit_note_id',
         'created_by',
         'updated_by',
     ];

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\BasicController;
 use App\Models\Article;
 use App\Models\Client;
+use App\Models\EntryNote;
 use App\Models\ExitNote;
 use App\Models\ExitNoteItem;
 use App\Models\Warehouse;
@@ -378,6 +379,14 @@ class ExitNoteController extends BasicController
     {
         $response = new Response();
         try {
+            // Si esta salida es la que anula una nota de entrada, darla de baja devolveria el stock
+            // (el calculo solo resta salidas con status=1) y la entrada quedaria marcada como
+            // anulada sin efecto real. La anulacion tiene que seguir siendo irreversible.
+            $voided = EntryNote::query()->where('voided_exit_note_id', $id)->first(['code']);
+            if ($voided) {
+                throw new \Exception("Esta nota de salida anula la nota de entrada {$voided->code} y no se puede eliminar.");
+            }
+
             $updated = $this->scopedExitNoteQuery($request)
                 ->where($this->identifier, $id)
                 ->update([
