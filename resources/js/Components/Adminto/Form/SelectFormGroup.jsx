@@ -2,6 +2,7 @@ import Tippy from "@tippyjs/react"
 import React, { useEffect, useRef, useState } from "react"
 import select2SpanishLanguage from "../../../Utils/select2SpanishLanguage"
 import { select2DropdownParentFor } from "../../../Utils/select2DropdownParent"
+import { installSelect2ModalFixes } from "../../../Utils/select2ModalFixes"
 
 const SelectFormGroup = ({ id, col, className, label, specification, eRef, value, required = false, children, dropdownParent, noMargin = false, multiple = false, disabled = false, onChange = () => { }, style,
   templateResult,
@@ -26,6 +27,7 @@ const SelectFormGroup = ({ id, col, className, label, specification, eRef, value
   }, [onChange])
 
   useEffect(() => {
+    installSelect2ModalFixes()
     const $select = $(eRef.current)
     if ($select.data('select2')) $select.select2('destroy')
 

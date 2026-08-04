@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from "react"
 import { JSON } from "sode-extend-react"
 import select2SpanishLanguage from "../../../Utils/select2SpanishLanguage"
 import { select2DropdownParentFor } from "../../../Utils/select2DropdownParent"
+import { installSelect2ModalFixes } from "../../../Utils/select2ModalFixes"
 import xsrfToken from "../../../Utils/xsrfToken"
 
 const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = false, disabled = false, dropdownParent, searchAPI, searchBy, selectBy = 'id', multiple = false, filter = null, extraParams = null, onChange = () => { },
@@ -22,6 +23,7 @@ const SelectAPIFormGroup = ({ id, col, label, specification, eRef, required = fa
   }, [onChange]);
 
   useEffect(() => {
+    installSelect2ModalFixes()
     const $select = $(eRef.current)
     if ($select.data('select2')) $select.select2('destroy')
 
