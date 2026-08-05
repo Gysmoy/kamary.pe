@@ -95,6 +95,19 @@ const inventoryStatusOptions = [
   { value: 'Con diferencias', label: 'Con diferencias' },
   { value: 'Aplicado', label: 'Aplicado' },
 ]
+// Resumen de lo que se va a ajustar, para confirmar con datos y no a ciegas.
+const applyConfirmHtml = (rows = []) => {
+  const faltan = rows.filter(row => Number(row.difference || 0) < -0.0001)
+  const sobran = rows.filter(row => Number(row.difference || 0) > 0.0001)
+  const total = (list) => list.reduce((sum, row) => sum + Math.abs(Number(row.difference || 0)), 0)
+  return `Se ajustara el stock para que quede igual a lo que contaste:`
+    + `<div class="mt-2 text-start" style="display:inline-block">`
+    + `<div>&bull; <b>${faltan.length}</b> linea(s) con <b>faltante</b> (salen ${formatQty(total(faltan))} unidades)</div>`
+    + `<div>&bull; <b>${sobran.length}</b> linea(s) con <b>sobrante</b> (entran ${formatQty(total(sobran))} unidades)</div>`
+    + `</div>`
+    + `<div class="mt-2 text-muted" style="font-size:13px">Se generaran notas de entrada y salida por esas diferencias. Quedan registradas en el kardex.</div>`
+}
+
 const inventoryStatusBadge = (status) => {
   const normalized = status || 'En espera'
   const className = {
@@ -164,6 +177,9 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
   }, [rows, tableSearch])
   const hasSelectedDifferences = rows.some(row => Math.abs(Number(row.difference || 0)) > 0.0001)
   const selectedCountApplied = selectedCount?.inventory_status === 'Aplicado'
+  // Recien registrado, todas las lineas valen 0 y "parecen" diferencias. Aplicar en ese punto
+  // vaciaria el almacen, asi que el boton no aparece hasta que se sube la hoja de conteo.
+  const countUploaded = !!selectedCount?.id && selectedCount?.inventory_status !== 'En espera'
   const tablePageCount = Math.max(1, Math.ceil(filteredRows.length / tablePageSize))
   const currentTablePage = Math.min(tablePage, tablePageCount)
   const paginatedRows = filteredRows.slice((currentTablePage - 1) * tablePageSize, currentTablePage * tablePageSize)
@@ -336,9 +352,13 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
 
   const applyInventory = async () => {
     if (!selectedCount?.id) return
+    if (!countUploaded) {
+      await Swal.fire({ icon: 'info', title: 'Falta subir el conteo', text: 'Sube la hoja con el stock real antes de aplicar el inventario.', confirmButtonText: 'Entendido' })
+      return
+    }
     const { isConfirmed } = await Swal.fire({
       title: 'Aplicar inventario',
-      text: 'Se crearan ajustes de entrada o salida para igualar el stock al conteo real.',
+      html: applyConfirmHtml(rows),
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Si, aplicar',
@@ -530,7 +550,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
           <i className='mdi mdi-close me-1'></i>
           Cerrar
         </button>
-        {selectedCount?.id && !selectedCountApplied && hasSelectedDifferences && <button type='button' className='btn btn-success' onClick={applyInventory}>
+        {countUploaded && !selectedCountApplied && hasSelectedDifferences && <button type="button" className="btn btn-success" onClick={applyInventory}>
           <i className='mdi mdi-check-circle-outline me-1'></i>
           Aplicar inventario
         </button>}
@@ -746,6 +766,9 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
   }, [rows, tableSearch])
   const hasSelectedDifferences = rows.some(row => Math.abs(Number(row.difference || 0)) > 0.0001)
   const selectedCountApplied = selectedCount?.inventory_status === 'Aplicado'
+  // Recien registrado, todas las lineas valen 0 y "parecen" diferencias. Aplicar en ese punto
+  // vaciaria el almacen, asi que el boton no aparece hasta que se sube la hoja de conteo.
+  const countUploaded = !!selectedCount?.id && selectedCount?.inventory_status !== 'En espera'
   const tablePageCount = Math.max(1, Math.ceil(filteredRows.length / tablePageSize))
   const currentTablePage = Math.min(tablePage, tablePageCount)
   const paginatedRows = filteredRows.slice((currentTablePage - 1) * tablePageSize, currentTablePage * tablePageSize)
@@ -927,9 +950,13 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
 
   const applyInventory = async () => {
     if (!selectedCount?.id) return
+    if (!countUploaded) {
+      await Swal.fire({ icon: 'info', title: 'Falta subir el conteo', text: 'Sube la hoja con el stock real antes de aplicar el inventario.', confirmButtonText: 'Entendido' })
+      return
+    }
     const { isConfirmed } = await Swal.fire({
       title: 'Aplicar inventario',
-      text: 'Se crearan ajustes de entrada o salida para que el stock quede igual al conteo real.',
+      html: applyConfirmHtml(rows),
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Si, aplicar',
@@ -1107,7 +1134,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           <i className='mdi mdi-close me-1'></i>
           Cerrar
         </button>
-        {selectedCount?.id && !selectedCountApplied && hasSelectedDifferences && <button type='button' className='btn btn-success' onClick={applyInventory}>
+        {countUploaded && !selectedCountApplied && hasSelectedDifferences && <button type="button" className="btn btn-success" onClick={applyInventory}>
           <i className='mdi mdi-check-circle-outline me-1'></i>
           Aplicar inventario
         </button>}

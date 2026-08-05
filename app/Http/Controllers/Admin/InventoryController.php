@@ -377,6 +377,12 @@ class InventoryController extends BasicController
 
             if (!$count->status) throw new \Exception('El inventario esta eliminado');
             if ($count->inventory_status === 'Aplicado') throw new \Exception('Este inventario ya fue aplicado');
+            // Al registrar, todas las lineas nacen con real_stock = 0. Aplicar sin haber subido el
+            // conteo equivaldria a declarar que no hay nada en el almacen y descontaria TODO el
+            // stock. El estado solo deja de ser "En espera" cuando se sube la hoja de conteo.
+            if ($count->inventory_status === 'En espera') {
+                throw new \Exception('Todavia no se subio el conteo. Sube la hoja con el stock real antes de aplicar el inventario.');
+            }
 
             $warehouse = $count->warehouse;
             if (!$warehouse || !$warehouse->business_branch_id) throw new \Exception('El inventario no tiene almacen valido');

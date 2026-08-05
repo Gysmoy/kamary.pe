@@ -361,6 +361,11 @@ class InventoryController extends BasicController
 
             if (!$count->status) throw new \Exception('El inventario esta eliminado');
             if ($count->inventory_status === 'Aplicado') throw new \Exception('Este inventario ya fue aplicado');
+            // Ver nota en InventoryController::apply: sin conteo subido, todas las lineas valen 0
+            // y aplicar vaciaria el stock del cliente.
+            if ($count->inventory_status === 'En espera') {
+                throw new \Exception('Todavia no se subio el conteo. Sube la hoja con el stock real antes de aplicar el inventario.');
+            }
             if (!$count->client_id) throw new \Exception('El inventario no tiene cliente asignado');
             StorageScope::assertClient((int)$count->client_id);
 
