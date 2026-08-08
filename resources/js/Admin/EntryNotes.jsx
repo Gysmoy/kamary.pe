@@ -1401,6 +1401,9 @@ const EntryNotes = () => {
   const createBatchArticleExtraParams = (!storageContext && createBatchArticlePickerWarehouseId)
     ? { picker_warehouse_id: Number(createBatchArticlePickerWarehouseId) }
     : undefined
+  // Si la linea ya tiene producto, el lote nuevo tiene que ser de ESE producto: cambiarlo aqui
+  // crearia el lote para otro articulo y ademas cambiaria el de la linea sin que se note.
+  const createBatchArticleLocked = !storageContext && !!createBatchTargetItem?.article_id
 
   const toggleLotSearchPage = (checked) => {
     const pageIds = lotSearchPageRows.map(row => row.id)
@@ -2181,13 +2184,22 @@ const EntryNotes = () => {
           label='Articulo'
           col='col-12'
           required
-          clearable
+          clearable={!createBatchArticleLocked}
+          disabled={createBatchArticleLocked}
           value={createBatchArticleId}
           valueLabel={createBatchArticleLabel}
           placeholder='-- Seleccionar articulo --'
           onChange={onCreateBatchArticleChanged}
           loadOptions={loadCreateBatchArticleOptions}
         />
+        {createBatchArticleLocked && (
+          <div className='col-12 mb-2'>
+            <small className='text-muted'>
+              <i className='mdi mdi-information-outline me-1'></i>
+              El lote se creara para el producto de la linea.
+            </small>
+          </div>
+        )}
         <InputFormGroup eRef={createBatchLotRef} label='Lote' col='col-12' required />
         <InputFormGroup eRef={createBatchExpirationRef} label='Fecha de vencimiento' col='col-12' type='date' required />
       </div>
