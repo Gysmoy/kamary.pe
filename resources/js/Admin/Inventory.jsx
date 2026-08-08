@@ -747,11 +747,11 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
               {selectedLaboratoryName ? <> con el laboratorio <strong>{selectedLaboratoryName}</strong></> : null}.
             </div>
             <div className='mt-2'>
-              Esta pantalla <strong>cuenta</strong> stock que ya existe; para <strong>cargarlo</strong> usa el boton de abajo.
+              Esta pantalla <strong>cuenta</strong> stock que ya existe; para <strong>ingresarlo</strong> registra una nota de entrada.
             </div>
             <div className='mt-3'>
-              <a className='btn btn-sm btn-primary' href='/admin/entry-note?import=1'>
-                <i className='mdi mdi-upload me-1'></i>Cargar stock desde Excel
+              <a className='btn btn-sm btn-primary' href='/admin/entry-note'>
+                <i className='mdi mdi-file-document-plus-outline me-1'></i>Ir a Notas de entrada
               </a>
             </div>
           </div>
@@ -1431,14 +1431,14 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
               el almacen y ubicacion elegidos.
             </div>
             <div className='mt-2'>
-              Esta pantalla <strong>cuenta</strong> stock que ya existe; para <strong>cargarlo</strong> usa los botones de abajo.
+              Esta pantalla <strong>cuenta</strong> stock que ya existe; para <strong>ingresarlo</strong> usa los pasos de abajo.
             </div>
             <div className='d-flex flex-wrap gap-2 mt-3'>
-              <a className='btn btn-sm btn-primary' href='/admin/storage-products?import=1'>
-                <i className='mdi mdi-package-variant me-1'></i>1. Cargar productos del cliente
+              <a className='btn btn-sm btn-primary' href='/admin/storage-products'>
+                <i className='mdi mdi-package-variant me-1'></i>1. Registrar productos del cliente
               </a>
-              <a className='btn btn-sm btn-outline-primary' href='/admin/storage-entry-note?import=1'>
-                <i className='mdi mdi-upload me-1'></i>2. Cargar stock desde Excel
+              <a className='btn btn-sm btn-outline-primary' href='/admin/storage-entry-note'>
+                <i className='mdi mdi-file-document-plus-outline me-1'></i>2. Registrar nota de entrada
               </a>
             </div>
           </div>

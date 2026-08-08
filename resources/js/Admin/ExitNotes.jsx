@@ -7,7 +7,6 @@ import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
-import InputFormGroup from '@Adminto/form/InputFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import { Fetch } from 'sode-extend-react';
 import ExitNotesRest from '../Actions/Admin/ExitNotesRest';
@@ -129,7 +128,7 @@ const ExitNotes = () => {
   const stockSearchTextRef = useRef()
 
   const idRef = useRef()
-  const clientNameRef = useRef()
+  const standardClientCacheRef = useRef({})
   const observationsRef = useRef()
   const motiveInputRef = useRef()
   const exitDateRef = useRef()
@@ -149,6 +148,10 @@ const ExitNotes = () => {
   const [selectedBranchId, setSelectedBranchId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
   const [selectedClientId, setSelectedClientId] = useState('')
+  // Cliente de la nota de salida estandar. Antes era texto libre; ahora se elige del padron de
+  // clientes. Se guardan los dos: el id (ficha real) y el nombre (lo que se ve en listados y PDF).
+  const [standardClientId, setStandardClientId] = useState('')
+  const [standardClientName, setStandardClientName] = useState('')
   const [branches, setBranches] = useState([])
   const [warehouses, setWarehouses] = useState([])
   const [storageClients, setStorageClients] = useState([])
@@ -243,7 +246,8 @@ const ExitNotes = () => {
     setIsEditing(!!data?.id)
 
     if (idRef.current) idRef.current.value = data?.id ?? ''
-    if (clientNameRef.current) clientNameRef.current.value = data?.client_name ?? ''
+    setStandardClientId(data?.client_id ? `${data.client_id}` : '')
+    setStandardClientName(data?.client_name ?? (data?.client ? clientLabel(data.client) : ''))
     if (observationsRef.current) observationsRef.current.value = data?.observations ?? ''
     if (exitDateRef.current) exitDateRef.current.value = toDateInput(data?.exit_date) || todayInput()
     setDocumentTypeValue(data?.document_type ?? '')
@@ -294,6 +298,31 @@ const ExitNotes = () => {
     $(modalRef.current).modal('show')
   }
 
+  // Padron de clientes de Kamary Peru. Se busca contra el servidor por nombre o documento: la
+  // lista puede ser larga y traerla entera al abrir el modal seria un gasto inutil.
+  const loadStandardClientOptions = async (query) => {
+    const term = query || ''
+    const { status, result } = await Fetch('/api/admin/clients/paginate', {
+      method: 'POST',
+      body: JSON.stringify({
+        sort: [{ selector: 'full_name', desc: false }],
+        take: 20,
+        filter: [['full_name', 'contains', term], 'or', ['document_number', 'contains', term]],
+      }),
+    })
+    if (!status) return []
+
+    const rows = result?.data ?? []
+    rows.forEach(row => { standardClientCacheRef.current[`${row.id}`] = clientLabel(row) })
+    return rows.map(row => ({ value: `${row.id}`, label: clientLabel(row) }))
+  }
+
+  const onStandardClientChanged = (value) => {
+    const clientId = value || ''
+    setStandardClientId(clientId)
+    setStandardClientName(clientId ? (standardClientCacheRef.current[clientId] ?? '') : '')
+  }
+
   const onModalSubmit = async (e) => {
     e.preventDefault()
 
@@ -337,9 +366,9 @@ const ExitNotes = () => {
       business_id: (storageContext || selectedBusinessId) ? (selectedBusinessId || null) : undefined,
       business_branch_id: selectedBranchId || null,
       warehouse_id: selectedWarehouseId || null,
-      client_id: storageContext ? currentClientId || null : undefined,
+      client_id: storageContext ? currentClientId || null : (standardClientId || null),
       client_document_number: storageContext ? (selectedClient ? clientDocumentNumber(selectedClient) : selectedDocumentNumber) || undefined : undefined,
-      client_name: storageContext ? selectedClientText : (clientNameRef.current.value ?? '').trim(),
+      client_name: storageContext ? selectedClientText : standardClientName.trim(),
       exit_date: storageContext ? exitDateRef.current?.value || null : undefined,
       document_type: storageContext ? documentTypeValue.trim() : undefined,
       document_series: storageContext ? (documentSeriesRef.current?.value ?? '').trim() : undefined,
@@ -1090,7 +1119,27 @@ const ExitNotes = () => {
             options={warehouses.map(warehouse => ({ value: `${warehouse.id}`, label: warehouse.name }))}
             placeholder='-- Seleccionar almacen --'
           />
-          <InputFormGroup eRef={clientNameRef} label='Cliente' col='col-md-4' />
+          <VdSelect
+            label='Cliente'
+            col='col-md-4'
+            clearable
+            value={standardClientId}
+            valueLabel={standardClientName}
+            placeholder='-- Seleccionar cliente --'
+            onChange={onStandardClientChanged}
+            loadOptions={loadStandardClientOptions}
+          />
+          {/* Notas viejas guardaban el cliente como texto libre, sin ficha. Se avisa en vez de
+              borrarlo en silencio al grabar. */}
+          {!standardClientId && standardClientName && (
+            <div className='col-12 mb-2'>
+              <small className='text-muted'>
+                <i className='mdi mdi-information-outline me-1'></i>
+                Cliente actual: <strong>{standardClientName}</strong> (texto libre, sin ficha de cliente).
+                Se conserva tal cual; elige uno del listado si quieres reemplazarlo.
+              </small>
+            </div>
+          )}
 
           <div className='form-group col-md-8 mb-2'>
             <label className='form-label'>Motivos</label>

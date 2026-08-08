@@ -836,7 +836,7 @@
     ]
   },
   "resources/js/Admin/EntryNotes.jsx": {
-    "file": "assets/EntryNotes-CJ7P4SWk.js",
+    "file": "assets/EntryNotes-1kSG5dBb.js",
     "name": "EntryNotes",
     "src": "resources/js/Admin/EntryNotes.jsx",
     "isEntry": true,
@@ -881,7 +881,7 @@
     ]
   },
   "resources/js/Admin/ExitNotes.jsx": {
-    "file": "assets/ExitNotes-C3rkEzZQ.js",
+    "file": "assets/ExitNotes-Cx3xcPGR.js",
     "name": "ExitNotes",
     "src": "resources/js/Admin/ExitNotes.jsx",
     "isEntry": true,
@@ -892,7 +892,6 @@
       "_VdSelect-7w6IJlnK.js",
       "_Modal-Bvr89IKj.js",
       "_SwitchFormGroup-CunZTacy.js",
-      "_InputFormGroup-B975TFs1.js",
       "_TextareaFormGroup-BzRWvtCz.js",
       "_BasicRest-CfowDrFz.js",
       "_permissionScope-DOiR_Kst.js",
@@ -1068,7 +1067,7 @@
     ]
   },
   "resources/js/Admin/Inventory.jsx": {
-    "file": "assets/Inventory-CUJ464D9.js",
+    "file": "assets/Inventory-DMg_hgLx.js",
     "name": "Inventory",
     "src": "resources/js/Admin/Inventory.jsx",
     "isEntry": true,
