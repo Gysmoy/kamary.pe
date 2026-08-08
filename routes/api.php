@@ -241,6 +241,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/inventory/{id}', [AdminInventoryController::class, 'get']);
         Route::get('/inventory/{id}/format', [AdminInventoryController::class, 'format']);
         Route::post('/inventory/{id}/import', [AdminInventoryController::class, 'import']);
+        Route::post('/inventory/{id}/items', [AdminInventoryController::class, 'updateItems']);
         Route::post('/inventory-report/paginate', [AdminInventoryReportController::class, 'paginate']);
         Route::post('/kardex/paginate', [AdminKardexController::class, 'paginate']);
         Route::post('/kardex/movements', [AdminKardexController::class, 'movements']);
@@ -374,6 +375,7 @@ Route::middleware('auth')->group(function () {
                 Route::get('/inventory/{id}', [AdminStorageInventoryController::class, 'get']);
                 Route::get('/inventory/{id}/format', [AdminStorageInventoryController::class, 'format']);
                 Route::post('/inventory/{id}/import', [AdminStorageInventoryController::class, 'import']);
+                Route::post('/inventory/{id}/items', [AdminStorageInventoryController::class, 'updateItems']);
                 Route::patch('/inventory/status', [AdminStorageInventoryController::class, 'status']);
                 Route::delete('/inventory/{id}', [AdminStorageInventoryController::class, 'delete']);
             });

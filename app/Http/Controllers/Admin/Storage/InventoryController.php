@@ -43,7 +43,7 @@ class InventoryController extends BasicController
                 'branch:id,name,business_id',
                 'warehouse:id,name,business_branch_id',
                 'client:id,document_type,document_number,full_name',
-                'items:id,storage_inventory_count_id,article_id,lot,expiration_date,article_name,client_name,unit_label,location,temperature_range,system_stock,real_stock,difference,status',
+                'items:id,storage_inventory_count_id,article_id,lot,expiration_date,article_name,client_name,unit_label,location,system_location,temperature_range,system_stock,real_stock,counted,difference,status',
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ])
@@ -191,9 +191,11 @@ class InventoryController extends BasicController
                     'client_name' => $row['client_name'] ?: null,
                     'unit_label' => $row['unit_label'] ?: null,
                     'location' => $row['location'] ?: null,
+                    'system_location' => (string)($row['location'] ?? ''),
                     'temperature_range' => $row['temperature_range'] ?: null,
                     'system_stock' => $systemStock,
                     'real_stock' => 0,
+                    'counted' => false,
                     'difference' => round(0 - $systemStock, 3),
                     'status' => true,
                 ]);
@@ -210,6 +212,90 @@ class InventoryController extends BasicController
                 'items',
                 'creator:id,name,lastname,username,fullname',
             ]);
+        } catch (\Throwable $th) {
+            if (DB::transactionLevel() > 0) DB::rollBack();
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    /**
+     * Guarda el conteo escrito directamente en la tabla del modal. Ver la nota equivalente en
+     * App\Http\Controllers\Admin\InventoryController::updateItems.
+     */
+    public function updateItems(Request $request, string $id): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+
+        try {
+            $count = $this->storageInventoryQuery()->findOrFail($id);
+            if (!$count->status) throw new \Exception('El inventario esta eliminado');
+            if ($count->inventory_status === 'Aplicado') {
+                throw new \Exception('Este inventario ya fue aplicado, no se puede editar el conteo');
+            }
+            if (!$count->client_id) throw new \Exception('El inventario no tiene cliente asignado');
+            StorageScope::assertClient((int)$count->client_id);
+
+            $lines = $request->input('items');
+            if (!is_array($lines) || count($lines) === 0) throw new \Exception('No hay lineas para guardar');
+
+            DB::beginTransaction();
+
+            $updated = 0;
+            foreach ($lines as $line) {
+                if (!is_array($line)) continue;
+                $itemId = $this->toNullableInt($line['id'] ?? null);
+                if (!$itemId) continue;
+
+                $item = StorageInventoryCountItem::where('storage_inventory_count_id', $count->id)
+                    ->whereNotNull('status')
+                    ->whereKey($itemId)
+                    ->first();
+                if (!$item) continue;
+
+                $changes = [];
+
+                if (array_key_exists('real_stock', $line)) {
+                    $realStock = $this->toNullableDecimal($line['real_stock']);
+                    if ($realStock === null) throw new \Exception('Debes escribir el stock real contado');
+                    if ($realStock < 0) throw new \Exception('El stock real no puede ser negativo');
+
+                    $changes['real_stock'] = $realStock;
+                    $changes['counted'] = true;
+                    $changes['difference'] = round($realStock - (float)$item->system_stock, 3);
+                }
+
+                if (array_key_exists('location', $line)) {
+                    $location = trim((string)($line['location'] ?? ''));
+                    // En almacenamiento la ubicacion no es texto libre: tiene que ser una de las
+                    // posiciones registradas para ese cliente en ese almacen.
+                    if ($location !== '') {
+                        $warehouseId = $this->toNullableInt($item->warehouse_id) ?? $this->toNullableInt($count->warehouse_id);
+                        if (!$warehouseId) throw new \Exception('La linea no tiene almacen para validar la ubicacion');
+                        $this->assertLocationBelongsToClient($warehouseId, $location, (int)$count->client_id);
+                    }
+                    $changes['location'] = $location !== '' ? $location : null;
+                }
+
+                if (count($changes) === 0) continue;
+                $item->update($changes);
+                $updated++;
+            }
+
+            if ($updated === 0) throw new \Exception('No se actualizo ninguna linea del inventario');
+
+            $count->update([
+                'inventory_status' => $this->countStatus((int)$count->id),
+                'updated_by' => Auth::id(),
+            ]);
+
+            DB::commit();
+
+            $response->status = 200;
+            $response->message = 'Conteo guardado';
+            $response->data = $this->countWithDetail((int)$count->id);
         } catch (\Throwable $th) {
             if (DB::transactionLevel() > 0) DB::rollBack();
             $response->status = 400;
@@ -310,6 +396,7 @@ class InventoryController extends BasicController
 
                 $item->update([
                     'real_stock' => $realStock,
+                    'counted' => true,
                     'difference' => round($realStock - (float)$item->system_stock, 3),
                 ]);
                 $updated++;
@@ -323,13 +410,8 @@ class InventoryController extends BasicController
                 throw new \Exception('No se actualizo ningun item del inventario');
             }
 
-            $hasDifferences = StorageInventoryCountItem::where('storage_inventory_count_id', $count->id)
-                ->whereNotNull('status')
-                ->whereRaw('ABS(COALESCE(difference, 0)) > 0.0001')
-                ->exists();
-
             $count->update([
-                'inventory_status' => $hasDifferences ? 'Con diferencias' : 'Sin diferencias',
+                'inventory_status' => $this->countStatus((int)$count->id),
                 'updated_by' => Auth::id(),
             ]);
             DB::commit();
@@ -361,10 +443,11 @@ class InventoryController extends BasicController
 
             if (!$count->status) throw new \Exception('El inventario esta eliminado');
             if ($count->inventory_status === 'Aplicado') throw new \Exception('Este inventario ya fue aplicado');
-            // Ver nota en InventoryController::apply: sin conteo subido, todas las lineas valen 0
-            // y aplicar vaciaria el stock del cliente.
-            if ($count->inventory_status === 'En espera') {
-                throw new \Exception('Todavia no se subio el conteo. Sube la hoja con el stock real antes de aplicar el inventario.');
+            // Ver nota en InventoryController::apply: las lineas sin contar valen 0 y ajustarlas
+            // vaciaria el stock del cliente, asi que se ignoran.
+            $countedItems = $count->items->filter(fn($item) => (bool)$item->counted)->values();
+            if ($countedItems->isEmpty()) {
+                throw new \Exception('Todavia no cuentas ninguna linea. Escribe el stock real en la tabla antes de aplicar el inventario.');
             }
             if (!$count->client_id) throw new \Exception('El inventario no tiene cliente asignado');
             StorageScope::assertClient((int)$count->client_id);
@@ -380,18 +463,24 @@ class InventoryController extends BasicController
             $stockService = app(StockService::class);
             $positiveRows = [];
             $negativeRows = [];
-            foreach ($count->items as $item) {
+            foreach ($countedItems as $item) {
                 if (!$item->article_id || !$item->warehouse_id) {
                     throw new \Exception("El item {$item->id} no tiene articulo o almacen valido");
                 }
                 StorageScope::assertArticleBelongsToClient((int)$item->article_id, (int)$count->client_id);
+
+                // La ubicacion se puede corregir durante el conteo: el stock del sistema se mide
+                // donde estaba (system_location) y la editada es donde se encontro el producto.
+                $originLocation = trim((string)($item->system_location ?? ''));
+                $targetLocation = trim((string)($item->location ?? ''));
+                $relocated = mb_strtolower($originLocation) !== mb_strtolower($targetLocation);
 
                 $currentStock = round($stockService->getAvailableStockByStorageKey(
                     (int)$item->article_id,
                     (int)$item->warehouse_id,
                     trim((string)($item->lot ?? '')),
                     $item->expiration_date ? $item->expiration_date->format('Y-m-d') : null,
-                    trim((string)($item->location ?? '')),
+                    $originLocation,
                     0,
                     (int)$business->id,
                     false,
@@ -412,9 +501,16 @@ class InventoryController extends BasicController
                     $item->difference = $difference;
                 }
 
-                if (abs($difference) <= 0.0001) continue;
-                if ($difference > 0) $positiveRows[] = $item;
-                else $negativeRows[] = $item;
+                // Si cambio de ubicacion sale todo lo que habia en la vieja y entra lo contado en la
+                // nueva, aunque la cantidad coincida: igual hay que mover el stock de sitio.
+                if ($relocated) {
+                    if ($currentStock > 0.0001) $negativeRows[] = $this->stockMovement($item, $currentStock, $originLocation);
+                    if ($realStock > 0.0001) $positiveRows[] = $this->stockMovement($item, $realStock, $targetLocation);
+                    continue;
+                }
+
+                if ($difference > 0.0001) $positiveRows[] = $this->stockMovement($item, $difference, $targetLocation);
+                elseif ($difference < -0.0001) $negativeRows[] = $this->stockMovement($item, abs($difference), $originLocation);
             }
 
             if (count($positiveRows) === 0 && count($negativeRows) === 0) {
@@ -678,6 +774,41 @@ class InventoryController extends BasicController
             ->whereHas('client', fn($query) => StorageScope::applyClientScope($query));
     }
 
+    /**
+     * Estado del inventario segun lo contado hasta ahora. Sin ninguna linea contada sigue
+     * "En espera": ese estado es lo que impide aplicar y vaciar el stock del cliente.
+     */
+    private function countStatus(int $countId): string
+    {
+        $items = StorageInventoryCountItem::where('storage_inventory_count_id', $countId)
+            ->whereNotNull('status')
+            ->get(['location', 'system_location', 'difference', 'counted']);
+
+        $counted = $items->filter(fn($item) => (bool)$item->counted);
+        if ($counted->isEmpty()) return 'En espera';
+
+        $hasChanges = $counted->contains(function ($item) {
+            if (abs((float)$item->difference) > 0.0001) return true;
+            return mb_strtolower(trim((string)($item->system_location ?? ''))) !== mb_strtolower(trim((string)($item->location ?? '')));
+        });
+
+        return $hasChanges ? 'Con diferencias' : 'Sin diferencias';
+    }
+
+    private function countWithDetail(int $countId): StorageInventoryCount
+    {
+        return $this->storageInventoryQuery()
+            ->with([
+                'branch:id,name,business_id',
+                'warehouse:id,name,business_branch_id',
+                'client:id,document_type,document_number,full_name',
+                'items' => fn($query) => $query->whereNotNull('status')->orderBy('id'),
+                'creator:id,name,lastname,username,fullname',
+                'updater:id,name,lastname,username,fullname',
+            ])
+            ->findOrFail($countId);
+    }
+
     private function nextCode(): string
     {
         $next = 1;
@@ -689,7 +820,13 @@ class InventoryController extends BasicController
         return 'AI' . str_pad((string)$next, 5, '0', STR_PAD_LEFT);
     }
 
-    private function createInventoryEntryAdjustment(StorageInventoryCount $count, array $items, int $businessId, int $branchId): EntryNote
+    /** Una linea del ajuste: que item, cuanto se mueve y en que ubicacion. */
+    private function stockMovement(StorageInventoryCountItem $item, float $quantity, string $location): array
+    {
+        return ['item' => $item, 'quantity' => round($quantity, 3), 'location' => $location];
+    }
+
+    private function createInventoryEntryAdjustment(StorageInventoryCount $count, array $movements, int $businessId, int $branchId): EntryNote
     {
         $today = now()->toDateString();
         $userId = Auth::id();
@@ -718,8 +855,9 @@ class InventoryController extends BasicController
         $entryNote->code = 'NE' . str_pad((string)$entryNote->id, 5, '0', STR_PAD_LEFT);
         $entryNote->save();
 
-        foreach ($items as $item) {
-            $quantity = round((float)$item->difference, 3);
+        foreach ($movements as $movement) {
+            $item = $movement['item'];
+            $quantity = $movement['quantity'];
             EntryNoteItem::create([
                 'entry_note_id' => $entryNote->id,
                 'batch_code' => $item->lot ?: null,
@@ -729,7 +867,7 @@ class InventoryController extends BasicController
                 'warehouse_id' => $item->warehouse_id,
                 'stock' => (float)$item->system_stock,
                 'cost_unit' => 0,
-                'location' => $item->location ?: null,
+                'location' => $movement['location'] ?: null,
                 'requested_quantity' => $quantity,
                 'received_quantity' => $quantity,
                 'quantity' => $quantity,
@@ -741,7 +879,7 @@ class InventoryController extends BasicController
         return $entryNote;
     }
 
-    private function createInventoryExitAdjustment(StorageInventoryCount $count, array $items, int $businessId, int $branchId): ExitNote
+    private function createInventoryExitAdjustment(StorageInventoryCount $count, array $movements, int $businessId, int $branchId): ExitNote
     {
         $userId = Auth::id();
         $today = now()->toDateString();
@@ -765,10 +903,11 @@ class InventoryController extends BasicController
         ]);
 
         $reservedStock = [];
-        foreach ($items as $item) {
-            $quantity = abs(round((float)$item->difference, 3));
+        foreach ($movements as $movement) {
+            $item = $movement['item'];
+            $quantity = $movement['quantity'];
             $lot = trim((string)($item->lot ?? ''));
-            $location = trim((string)($item->location ?? ''));
+            $location = trim((string)$movement['location']);
             $expirationDate = $item->expiration_date?->format('Y-m-d');
 
             $availableStock = app(StockService::class)->getAvailableStockByStorageKey(

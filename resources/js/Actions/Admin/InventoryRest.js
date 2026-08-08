@@ -121,22 +121,15 @@ class InventoryRest extends BasicRest {
     return await this.simpleGet(`/api/admin/inventory/${id}`)
   }
 
-  importStandardFormat = async (id, formData) => {
+  // Guardado del conteo escrito en la tabla. Sin toast de exito: se dispara al salir de cada
+  // celda y llenarle la pantalla de avisos al usuario seria insoportable.
+  saveStandardItems = async (id, items) => {
     try {
-      const res = await fetch(`/api/admin/inventory/${id}/import`, {
+      const { status, result } = await Fetch(`/api/admin/inventory/${id}/items`, {
         method: 'POST',
-        headers: {
-          'X-Xsrf-Token': xsrfToken()
-        },
-        body: formData
+        body: JSON.stringify({ items })
       })
-      const result = JSON.parseable(await res.text())
-      if (!res.ok) throw new Error(result?.message || 'No se pudo subir el formato')
-      toast.success("Correcto", {
-        description: result.message,
-        duration: 3000,
-        richColors: true,
-      });
+      if (!status) throw new Error(result?.message || 'No se pudo guardar el conteo')
       return result.data
     } catch (error) {
       toast.error("Error", {
@@ -222,22 +215,13 @@ class InventoryRest extends BasicRest {
     return await this.simpleGet(`/api/admin/storage/inventory/${id}`)
   }
 
-  importStorageFormat = async (id, formData) => {
+  saveStorageItems = async (id, items) => {
     try {
-      const res = await fetch(`/api/admin/storage/inventory/${id}/import`, {
+      const { status, result } = await Fetch(`/api/admin/storage/inventory/${id}/items`, {
         method: 'POST',
-        headers: {
-          'X-Xsrf-Token': xsrfToken()
-        },
-        body: formData
+        body: JSON.stringify({ items })
       })
-      const result = JSON.parseable(await res.text())
-      if (!res.ok) throw new Error(result?.message || 'No se pudo subir el formato')
-      toast.success("Correcto", {
-        description: result.message,
-        duration: 3000,
-        richColors: true,
-      });
+      if (!status) throw new Error(result?.message || 'No se pudo guardar el conteo')
       return result.data
     } catch (error) {
       toast.error("Error", {

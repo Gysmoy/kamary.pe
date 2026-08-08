@@ -50,7 +50,7 @@ class InventoryController extends BasicController
                 'branch:id,business_id,name',
                 'warehouse:id,business_branch_id,name',
                 'laboratory:id,name,code',
-                'items:id,inventory_count_id,article_id,warehouse_id,lot,expiration_date,article_code,article_name,laboratory_name,unit_label,location,system_stock,real_stock,difference,cost_unit,total_cost,status',
+                'items:id,inventory_count_id,article_id,warehouse_id,lot,expiration_date,article_code,article_name,laboratory_name,unit_label,location,system_location,system_stock,real_stock,counted,difference,cost_unit,total_cost,status',
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
             ])
@@ -195,8 +195,10 @@ class InventoryController extends BasicController
                     'laboratory_name' => $row['laboratory_name'] ?: null,
                     'unit_label' => $row['unit_label'] ?: null,
                     'location' => $row['location'] ?: null,
+                    'system_location' => (string)($row['location'] ?? ''),
                     'system_stock' => $systemStock,
                     'real_stock' => 0,
+                    'counted' => false,
                     'difference' => round(0 - $systemStock, 3),
                     'cost_unit' => $costUnit,
                     'total_cost' => round($systemStock * $costUnit, 2),
@@ -216,6 +218,84 @@ class InventoryController extends BasicController
                 'items',
                 'creator:id,name,lastname,username,fullname',
             ]);
+        } catch (\Throwable $th) {
+            if (DB::transactionLevel() > 0) DB::rollBack();
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    /**
+     * Guarda el conteo escrito directamente en la tabla del modal. Se llama una linea a la vez
+     * (al salir de la celda) pero acepta varias, para no perder nada si mas adelante se agrega
+     * un guardado masivo.
+     */
+    public function updateItems(Request $request, string $id): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+
+        try {
+            $count = $this->inventoryCountQuery()->findOrFail($id);
+            if (!$count->status) throw new \Exception('El inventario esta eliminado');
+            if ($count->inventory_status === 'Aplicado') {
+                throw new \Exception('Este inventario ya fue aplicado, no se puede editar el conteo');
+            }
+
+            $lines = $request->input('items');
+            if (!is_array($lines) || count($lines) === 0) throw new \Exception('No hay lineas para guardar');
+
+            DB::beginTransaction();
+
+            $updated = 0;
+            foreach ($lines as $line) {
+                if (!is_array($line)) continue;
+                $itemId = $this->toNullableInt($line['id'] ?? null);
+                if (!$itemId) continue;
+
+                $item = InventoryCountItem::where('inventory_count_id', $count->id)
+                    ->whereNotNull('status')
+                    ->whereKey($itemId)
+                    ->first();
+                if (!$item) continue;
+
+                $changes = [];
+
+                if (array_key_exists('real_stock', $line)) {
+                    $realStock = $this->toNullableDecimal($line['real_stock']);
+                    if ($realStock === null) throw new \Exception('Debes escribir el stock real contado');
+                    if ($realStock < 0) throw new \Exception('El stock real no puede ser negativo');
+
+                    $changes['real_stock'] = $realStock;
+                    $changes['counted'] = true;
+                    $changes['difference'] = round($realStock - (float)$item->system_stock, 3);
+                    $changes['total_cost'] = round($realStock * (float)$item->cost_unit, 2);
+                }
+
+                if (array_key_exists('location', $line)) {
+                    $location = trim((string)($line['location'] ?? ''));
+                    if (mb_strlen($location) > 200) throw new \Exception('La ubicacion es demasiado larga');
+                    $changes['location'] = $location !== '' ? $location : null;
+                }
+
+                if (count($changes) === 0) continue;
+                $item->update($changes);
+                $updated++;
+            }
+
+            if ($updated === 0) throw new \Exception('No se actualizo ninguna linea del inventario');
+
+            $count->update([
+                'inventory_status' => $this->countStatus((int)$count->id),
+                'updated_by' => Auth::id(),
+            ]);
+
+            DB::commit();
+
+            $response->status = 200;
+            $response->message = 'Conteo guardado';
+            $response->data = $this->countWithDetail((int)$count->id);
         } catch (\Throwable $th) {
             if (DB::transactionLevel() > 0) DB::rollBack();
             $response->status = 400;
@@ -322,6 +402,7 @@ class InventoryController extends BasicController
                 $difference = round($realStock - (float)$item->system_stock, 3);
                 $item->update([
                     'real_stock' => $realStock,
+                    'counted' => true,
                     'difference' => $difference,
                     'total_cost' => round($realStock * (float)$item->cost_unit, 2),
                 ]);
@@ -336,13 +417,8 @@ class InventoryController extends BasicController
                 throw new \Exception('No se actualizo ningun item del inventario');
             }
 
-            $hasDifferences = InventoryCountItem::where('inventory_count_id', $count->id)
-                ->whereNotNull('status')
-                ->whereRaw('ABS(COALESCE(difference, 0)) > 0.0001')
-                ->exists();
-
             $count->update([
-                'inventory_status' => $hasDifferences ? 'Con diferencias' : 'Sin diferencias',
+                'inventory_status' => $this->countStatus((int)$count->id),
                 'updated_by' => Auth::id(),
             ]);
             DB::commit();
@@ -377,11 +453,12 @@ class InventoryController extends BasicController
 
             if (!$count->status) throw new \Exception('El inventario esta eliminado');
             if ($count->inventory_status === 'Aplicado') throw new \Exception('Este inventario ya fue aplicado');
-            // Al registrar, todas las lineas nacen con real_stock = 0. Aplicar sin haber subido el
-            // conteo equivaldria a declarar que no hay nada en el almacen y descontaria TODO el
-            // stock. El estado solo deja de ser "En espera" cuando se sube la hoja de conteo.
-            if ($count->inventory_status === 'En espera') {
-                throw new \Exception('Todavia no se subio el conteo. Sube la hoja con el stock real antes de aplicar el inventario.');
+            // Al registrar, todas las lineas nacen con real_stock = 0 y sin contar. Ajustarlas asi
+            // equivaldria a declarar que no hay nada en el almacen y descontaria TODO el stock, por
+            // eso solo se tocan las lineas donde alguien escribio el stock real.
+            $countedItems = $count->items->filter(fn($item) => (bool)$item->counted)->values();
+            if ($countedItems->isEmpty()) {
+                throw new \Exception('Todavia no cuentas ninguna linea. Escribe el stock real en la tabla antes de aplicar el inventario.');
             }
 
             $warehouse = $count->warehouse;
@@ -393,12 +470,18 @@ class InventoryController extends BasicController
 
             $positiveRows = [];
             $negativeRows = [];
-            foreach ($count->items as $item) {
+            foreach ($countedItems as $item) {
                 if (!$item->article_id || !$item->warehouse_id) {
                     throw new \Exception("El item {$item->id} no tiene articulo o almacen valido");
                 }
 
-                $currentStock = round($this->currentStockForItem($item, (int)$business->id), 3);
+                // La ubicacion se puede corregir durante el conteo. El stock del sistema siempre se
+                // mide donde estaba (system_location); la editada es donde se encontro el producto.
+                $originLocation = trim((string)($item->system_location ?? ''));
+                $targetLocation = trim((string)($item->location ?? ''));
+                $relocated = mb_strtolower($originLocation) !== mb_strtolower($targetLocation);
+
+                $currentStock = round($this->currentStockForItem($item, (int)$business->id, $originLocation), 3);
                 $realStock = round((float)$item->real_stock, 3);
                 $difference = round($realStock - $currentStock, 3);
 
@@ -415,9 +498,16 @@ class InventoryController extends BasicController
                     $item->difference = $difference;
                 }
 
-                if (abs($difference) <= 0.0001) continue;
-                if ($difference > 0) $positiveRows[] = $item;
-                else $negativeRows[] = $item;
+                // Si cambio de ubicacion sale todo lo que habia en la vieja y entra lo contado en la
+                // nueva, aunque la cantidad coincida: igual hay que mover el stock de sitio.
+                if ($relocated) {
+                    if ($currentStock > 0.0001) $negativeRows[] = $this->stockMovement($item, $currentStock, $originLocation);
+                    if ($realStock > 0.0001) $positiveRows[] = $this->stockMovement($item, $realStock, $targetLocation);
+                    continue;
+                }
+
+                if ($difference > 0.0001) $positiveRows[] = $this->stockMovement($item, $difference, $targetLocation);
+                elseif ($difference < -0.0001) $negativeRows[] = $this->stockMovement($item, abs($difference), $originLocation);
             }
 
             if (count($positiveRows) === 0 && count($negativeRows) === 0) {
@@ -661,10 +751,10 @@ class InventoryController extends BasicController
         ];
     }
 
-    private function currentStockForItem(InventoryCountItem $item, int $businessId): float
+    private function currentStockForItem(InventoryCountItem $item, int $businessId, ?string $location = null): float
     {
         $lot = trim((string)($item->lot ?? ''));
-        $location = trim((string)($item->location ?? ''));
+        $location = trim((string)($location ?? $item->location ?? ''));
         $dateKey = $item->expiration_date ? $item->expiration_date->format('Y-m-d') : '1000-01-01';
 
         $entryQty = (float)DB::table('entry_note_items as entry_item')
@@ -711,7 +801,13 @@ class InventoryController extends BasicController
         return round($entryQty + $receiptQty - (float)$exitQuery->sum('exit_item.quantity'), 3);
     }
 
-    private function createInventoryEntryAdjustment(InventoryCount $count, array $items, int $businessId, int $branchId): EntryNote
+    /** Una linea del ajuste: que item, cuanto se mueve y en que ubicacion. */
+    private function stockMovement(InventoryCountItem $item, float $quantity, string $location): array
+    {
+        return ['item' => $item, 'quantity' => round($quantity, 3), 'location' => $location];
+    }
+
+    private function createInventoryEntryAdjustment(InventoryCount $count, array $movements, int $businessId, int $branchId): EntryNote
     {
         $today = now()->toDateString();
         $entryNote = EntryNote::create([
@@ -737,8 +833,9 @@ class InventoryController extends BasicController
         $entryNote->code = 'NE' . str_pad((string)$entryNote->id, 5, '0', STR_PAD_LEFT);
         $entryNote->save();
 
-        foreach ($items as $item) {
-            $quantity = round((float)$item->difference, 3);
+        foreach ($movements as $movement) {
+            $item = $movement['item'];
+            $quantity = $movement['quantity'];
             $costUnit = round((float)$item->cost_unit, 4);
             EntryNoteItem::create([
                 'entry_note_id' => $entryNote->id,
@@ -749,7 +846,7 @@ class InventoryController extends BasicController
                 'warehouse_id' => $item->warehouse_id,
                 'stock' => (float)$item->system_stock,
                 'cost_unit' => $costUnit,
-                'location' => $item->location ?: null,
+                'location' => $movement['location'] ?: null,
                 'requested_quantity' => $quantity,
                 'received_quantity' => $quantity,
                 'quantity' => $quantity,
@@ -761,7 +858,7 @@ class InventoryController extends BasicController
         return $entryNote;
     }
 
-    private function createInventoryExitAdjustment(InventoryCount $count, array $items, int $businessId, int $branchId): ExitNote
+    private function createInventoryExitAdjustment(InventoryCount $count, array $movements, int $businessId, int $branchId): ExitNote
     {
         $today = now()->toDateString();
         $exitNote = ExitNote::create([
@@ -782,8 +879,9 @@ class InventoryController extends BasicController
             'updated_by' => Auth::id(),
         ]);
 
-        foreach ($items as $item) {
-            $quantity = abs(round((float)$item->difference, 3));
+        foreach ($movements as $movement) {
+            $item = $movement['item'];
+            $quantity = $movement['quantity'];
             ExitNoteItem::create([
                 'exit_note_id' => $exitNote->id,
                 'batch_code' => $item->lot ?: null,
@@ -791,7 +889,7 @@ class InventoryController extends BasicController
                 'warehouse_id' => $item->warehouse_id,
                 'stock' => (float)$item->system_stock,
                 'expiration_date' => $item->expiration_date?->format('Y-m-d'),
-                'location' => $item->location ?: null,
+                'location' => $movement['location'] ?: null,
                 'destination_location' => null,
                 'quantity' => $quantity,
                 'total' => $quantity,
@@ -806,6 +904,42 @@ class InventoryController extends BasicController
     {
         return InventoryCount::query()
             ->whereHas('business', fn($business) => $business->where('business_key', BusinessScope::KAMARY_PERU));
+    }
+
+    /**
+     * Estado del inventario segun lo contado hasta ahora. Sin ninguna linea contada sigue
+     * "En espera": ese estado es lo que impide aplicar y vaciar el almacen por accidente.
+     */
+    private function countStatus(int $countId): string
+    {
+        $items = InventoryCountItem::where('inventory_count_id', $countId)
+            ->whereNotNull('status')
+            ->get(['location', 'system_location', 'difference', 'counted']);
+
+        $counted = $items->filter(fn($item) => (bool)$item->counted);
+        if ($counted->isEmpty()) return 'En espera';
+
+        $hasChanges = $counted->contains(function ($item) {
+            if (abs((float)$item->difference) > 0.0001) return true;
+            return mb_strtolower(trim((string)($item->system_location ?? ''))) !== mb_strtolower(trim((string)($item->location ?? '')));
+        });
+
+        return $hasChanges ? 'Con diferencias' : 'Sin diferencias';
+    }
+
+    private function countWithDetail(int $countId): InventoryCount
+    {
+        return $this->inventoryCountQuery()
+            ->with([
+                'business:id,name,business_key',
+                'branch:id,business_id,name',
+                'warehouse:id,business_branch_id,name',
+                'laboratory:id,name,code',
+                'items' => fn($query) => $query->whereNotNull('status')->orderBy('id'),
+                'creator:id,name,lastname,username,fullname',
+                'updater:id,name,lastname,username,fullname',
+            ])
+            ->findOrFail($countId);
     }
 
     private function kamaryPeruWarehouses()

@@ -20,9 +20,11 @@ class StorageInventoryCountItem extends Model
         'client_name',
         'unit_label',
         'location',
+        'system_location',
         'temperature_range',
         'system_stock',
         'real_stock',
+        'counted',
         'difference',
         'status',
     ];
@@ -31,6 +33,7 @@ class StorageInventoryCountItem extends Model
         'expiration_date' => 'date',
         'system_stock' => 'float',
         'real_stock' => 'float',
+        'counted' => 'boolean',
         'difference' => 'float',
         'status' => 'boolean',
     ];
