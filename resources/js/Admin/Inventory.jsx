@@ -35,6 +35,21 @@ const isRelocated = (row) => cleanLocation(row?.system_location) !== cleanLocati
 const isCounted = (row) => !!row?.counted
 const hasRowChanges = (row) => Math.abs(Number(row?.difference || 0)) > 0.0001 || isRelocated(row)
 
+// Lo escrito en la tabla vive en memoria hasta pulsar "Grabar". Guardar celda por celda obligaba a
+// esperar al servidor en cada dato y no encaja con contar un almacen entero de corrido.
+const draftLocation = (row, drafts) => drafts[row.id]?.location ?? row.location ?? ''
+const draftRealStock = (row, drafts) => {
+  const draft = drafts[row.id]
+  if (draft && draft.real_stock !== undefined) return draft.real_stock
+  return isCounted(row) ? Number(row.real_stock ?? 0) : null
+}
+const draftDifference = (row, drafts) => {
+  const real = draftRealStock(row, drafts)
+  if (real === null) return null
+  return Math.round((real - Number(row.system_stock ?? 0)) * 1000) / 1000
+}
+const isDirtyField = (row, drafts, field) => drafts[row.id]?.[field] !== undefined
+
 const warehouseName = (warehouse) => `${warehouse?.name ?? ''}`.trim()
 const warehouseNameKey = (warehouse) => warehouseName(warehouse).toLocaleLowerCase('es-PE')
 // Un almacen por opcion. Antes se agrupaban por nombre, de modo que dos almacenes distintos
@@ -132,9 +147,10 @@ const inventoryStatusBadge = (status) => {
   return <span className={`badge ${className}`}>{normalized}</span>
 }
 
-// Celda que se edita con un click. Cuando todavia no se puede editar no se apaga: responde igual
-// y explica que falta, siguiendo el mismo criterio que se usaba con los botones del formato.
-const EditableCell = ({ value, display, type = 'text', editable, blockedReason, listId, placeholder, saving, onSave }) => {
+// Celda que se edita con un click. Lo escrito queda en memoria hasta que se pulsa "Grabar", asi
+// que se marca con un punto para que se vea de un vistazo que hay algo sin guardar. Cuando todavia
+// no se puede editar no se apaga: responde igual y explica que falta.
+const EditableCell = ({ value, display, type = 'text', editable, blockedReason, listId, placeholder, dirty, onSave }) => {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const cancelled = useRef(false)
@@ -181,13 +197,13 @@ const EditableCell = ({ value, display, type = 'text', editable, blockedReason, 
   }
 
   return <span
-    className={`inventory-editable-cell ${editable ? '' : 'is-locked'}`}
-    title={editable ? 'Click para editar' : blockedReason}
+    className={`inventory-editable-cell ${editable ? '' : 'is-locked'} ${dirty ? 'is-dirty' : ''}`}
+    title={editable ? (dirty ? 'Sin grabar. Click para editar' : 'Click para editar') : blockedReason}
     onClick={startEditing}
   >
     <span>{display}</span>
-    {saving
-      ? <i className='mdi mdi-spin mdi-loading'></i>
+    {dirty
+      ? <i className='mdi mdi-circle inventory-dirty-dot' title='Sin grabar'></i>
       : <i className='mdi mdi-pencil-outline inventory-editable-icon'></i>}
   </span>
 }
@@ -207,10 +223,16 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
   // Distingue "todavia no generaste el listado" de "lo generaste y no habia nada": sin esto la
   // pantalla quedaba vacia sin explicacion y parecia rota.
   const [previewRan, setPreviewRan] = useState(false)
-  const [savingKey, setSavingKey] = useState(null)
+  const [drafts, setDrafts] = useState({})
+  const [savingCount, setSavingCount] = useState(false)
   const [tablePageSize, setTablePageSize] = useState(10)
   const [tableSearch, setTableSearch] = useState('')
   const [tablePage, setTablePage] = useState(1)
+  const draftsRef = useRef({})
+
+  useEffect(() => {
+    draftsRef.current = drafts
+  }, [drafts])
 
   useEffect(() => {
     inventoryRest.getStandardOptions().then(data => {
@@ -256,10 +278,11 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
   const countedRows = useMemo(() => rows.filter(isCounted), [rows])
   const hasCountedRows = !!selectedCount?.id && countedRows.length > 0
   const hasSelectedDifferences = countedRows.some(hasRowChanges)
-  const canEditCount = !!selectedCount?.id && !selectedCountApplied
-  const editBlockedReason = selectedCountApplied
-    ? 'Este inventario ya fue aplicado, el conteo no se puede modificar.'
-    : 'Primero pulsa "Registrar" para crear el inventario. Despues podras escribir el conteo aqui.'
+  // Se puede escribir apenas hay listado, sin registrar antes: "Grabar" crea el inventario y guarda
+  // el conteo de una vez, para no obligar a dos pasos por lo mismo.
+  const canEditCount = rows.length > 0 && !selectedCountApplied
+  const editBlockedReason = 'Este inventario ya fue aplicado, el conteo no se puede modificar.'
+  const dirtyCount = Object.keys(drafts).length
   const locationSuggestions = useMemo(() => {
     const seen = new Set()
     return locations
@@ -275,17 +298,44 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
   const currentTablePage = Math.min(tablePage, tablePageCount)
   const paginatedRows = filteredRows.slice((currentTablePage - 1) * tablePageSize, currentTablePage * tablePageSize)
 
-  // Ojo: no se resetea la pagina cuando cambian `rows`. Guardar una celda reemplaza las filas con
-  // las que devuelve el servidor y volver a la pagina 1 en pleno conteo seria insufrible.
+  // Ojo: no se resetea la pagina cuando cambian `rows`. Grabar reemplaza las filas con las que
+  // devuelve el servidor y volver a la pagina 1 en pleno conteo seria insufrible.
   useEffect(() => {
     setTablePage(1)
   }, [tablePageSize, tableSearch])
+
+  // Cerrar con el conteo a medias perderia todo lo escrito, asi que se avisa antes.
+  useEffect(() => {
+    const element = modalRef.current
+    if (!element) return
+    const onHide = (event) => {
+      if (Object.keys(draftsRef.current).length === 0) return
+      event.preventDefault()
+      Swal.fire({
+        icon: 'warning',
+        title: 'Tienes el conteo sin grabar',
+        text: 'Si cierras ahora se pierde lo que escribiste en la tabla.',
+        showCancelButton: true,
+        confirmButtonText: 'Salir sin grabar',
+        cancelButtonText: 'Seguir contando',
+      }).then(({ isConfirmed }) => {
+        if (!isConfirmed) return
+        draftsRef.current = {}
+        setDrafts({})
+        $(element).modal('hide')
+      })
+    }
+    $(element).on('hide.bs.modal', onHide)
+    return () => $(element).off('hide.bs.modal', onHide)
+  }, [])
 
   const resetModal = (nextWarehouseId = '') => {
     setSelectedCount(null)
     setWarehouseId(nextWarehouseId)
     setLaboratoryId('')
     setRows([])
+    setDrafts({})
+    draftsRef.current = {}
     setPreviewRan(false)
     setTableSearch('')
     setTablePage(1)
@@ -303,6 +353,8 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
     setWarehouseId(result.warehouse_id ? `${result.warehouse_id}` : '')
     setLaboratoryId(result.laboratory_id ? `${result.laboratory_id}` : '')
     setRows((result.items ?? []).map(mapStandardItem))
+    setDrafts({})
+    draftsRef.current = {}
     setTableSearch('')
     setTablePage(1)
     $(modalRef.current).modal('show')
@@ -319,57 +371,91 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
       laboratory_id: laboratoryId || null,
     })
     setRows(data ?? [])
+    setDrafts({})
+    draftsRef.current = {}
     setPreviewRan(true)
     setTablePage(1)
     setLoadingRows(false)
   }
 
-  const registerInventory = async () => {
-    if (!warehouseId) {
-      await Swal.fire({ icon: 'warning', title: 'Almacen requerido', text: 'Selecciona el almacen antes de registrar inventario.' })
-      return
-    }
-    const result = await inventoryRest.saveStandardInventory({
-      warehouse_id: warehouseId || null,
-      laboratory_id: laboratoryId || null,
-    })
-    if (!result) return
-    setSelectedCount(result)
-    setRows((result.items ?? []).map(mapStandardItem))
-    tableRef.current?.refresh()
-  }
+  // Anota el dato en el borrador. Nada viaja al servidor hasta pulsar "Grabar".
+  const editCell = async (row, field, rawValue) => {
+    if (!row?.id) return
 
-  // Guarda una celda del conteo. Se dispara al salir de la celda, con una sola linea por llamada.
-  const saveItemField = async (row, field, rawValue) => {
-    if (!selectedCount?.id || !row?.id) return
-
-    const line = { id: row.id }
+    let value
     if (field === 'real_stock') {
       const text = `${rawValue ?? ''}`.replace(',', '.').trim()
       if (text === '') return
-      const parsed = Number(text)
-      if (!Number.isFinite(parsed) || parsed < 0) {
+      value = Number(text)
+      if (!Number.isFinite(value) || value < 0) {
         await Swal.fire({ icon: 'warning', title: 'Cantidad invalida', text: 'El stock real debe ser un numero mayor o igual a 0.', confirmButtonText: 'Entendido' })
         return
       }
-      line.real_stock = parsed
     } else {
-      line.location = `${rawValue ?? ''}`.trim()
+      value = `${rawValue ?? ''}`.trim()
     }
 
-    setSavingKey(`${row.id}:${field}`)
-    const result = await inventoryRest.saveStandardItems(selectedCount.id, [line])
-    setSavingKey(null)
-    if (!result) return
+    setDrafts(current => ({ ...current, [row.id]: { ...current[row.id], [field]: value } }))
+  }
 
-    const statusChanged = result.inventory_status !== selectedCount.inventory_status
+  // Traduce el borrador a lineas para el servidor. Si el inventario se acaba de crear, las filas
+  // del listado tienen ids 1..N y hay que emparejarlas con los items reales por su source_key.
+  const draftLines = (count, wasRegistered) => {
+    const items = count?.items ?? []
+    const idBySource = new Map(items.filter(item => item.source_key).map(item => [`${item.source_key}`, item.id]))
+
+    return Object.entries(drafts).map(([rowId, changes]) => {
+      if (wasRegistered) return { id: Number(rowId), ...changes }
+      const index = rows.findIndex(row => `${row.id}` === `${rowId}`)
+      const row = rows[index]
+      const id = idBySource.get(`${row?.source_key ?? ''}`) ?? items[index]?.id
+      return id ? { id, ...changes } : null
+    }).filter(Boolean)
+  }
+
+  const saveCount = async () => {
+    if (rows.length === 0) {
+      await Swal.fire({ icon: 'info', title: 'No hay nada que grabar', text: 'Genera el listado del almacen antes de grabar el inventario.', confirmButtonText: 'Entendido' })
+      return
+    }
+
+    setSavingCount(true)
+    const wasRegistered = !!selectedCount?.id
+    let count = selectedCount
+
+    if (!wasRegistered) {
+      count = await inventoryRest.saveStandardInventory({
+        warehouse_id: warehouseId || null,
+        laboratory_id: laboratoryId || null,
+      })
+      if (!count) { setSavingCount(false); return }
+      setSelectedCount(count)
+      setRows((count.items ?? []).map(mapStandardItem))
+    }
+
+    const lines = draftLines(count, wasRegistered)
+    let result = count
+    if (lines.length > 0) {
+      result = await inventoryRest.saveStandardItems(count.id, lines)
+      // Si falla el conteo, el inventario ya quedo creado: se conserva y se dejan los borradores
+      // para que el usuario reintente sin volver a escribir todo.
+      if (!result) { setSavingCount(false); tableRef.current?.refresh(); return }
+    }
+
     setSelectedCount(result)
     setRows((result.items ?? []).map(mapStandardItem))
-    if (statusChanged) tableRef.current?.refresh()
+    setDrafts({})
+    draftsRef.current = {}
+    setSavingCount(false)
+    tableRef.current?.refresh()
   }
 
   const applyInventory = async () => {
     if (!selectedCount?.id) return
+    if (dirtyCount > 0) {
+      await Swal.fire({ icon: 'info', title: 'Falta grabar', text: 'Pulsa "Grabar inventario" antes de aplicar: hay datos escritos que todavia no se guardaron.', confirmButtonText: 'Entendido' })
+      return
+    }
     if (!hasCountedRows) {
       await Swal.fire({ icon: 'info', title: 'Falta contar', text: 'Escribe el stock real de al menos una linea antes de aplicar el inventario.', confirmButtonText: 'Entendido' })
       return
@@ -561,6 +647,14 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
         .inventory-editable-cell.is-locked:hover {
           background: #f1f1f5;
         }
+        .inventory-editable-cell.is-dirty {
+          background: #fff6e5;
+          font-weight: 600;
+        }
+        .inventory-dirty-dot {
+          color: #f5a623;
+          font-size: .5rem;
+        }
         .inventory-pending-cell {
           color: #98a2b3;
         }
@@ -591,11 +685,16 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
           vertical-align: middle;
         }
       `}</style>
-      <div className='d-flex flex-wrap justify-content-center gap-4 storage-inventory-modal-actions'>
-        {!selectedCount && <button type='button' className='btn btn-primary' onClick={registerInventory}>
-          <i className='mdi mdi-plus me-1'></i>
-          Registrar
+      <div className='d-flex flex-wrap justify-content-center align-items-center gap-3 storage-inventory-modal-actions'>
+        {rows.length > 0 && !selectedCountApplied && <button type='button' className='btn btn-primary' disabled={savingCount} onClick={saveCount}>
+          {savingCount
+            ? <><i className='mdi mdi-spin mdi-loading me-1'></i>Grabando…</>
+            : <><i className='mdi mdi-content-save-outline me-1'></i>Grabar inventario</>}
         </button>}
+        {dirtyCount > 0 && <span className='badge badge-soft-warning fs-13'>
+          <i className='mdi mdi-circle me-1' style={{ fontSize: '.5rem' }}></i>
+          {dirtyCount} linea(s) sin grabar
+        </span>}
         <button type='button' className='btn btn-light' data-bs-dismiss='modal'>
           <i className='mdi mdi-close me-1'></i>
           Cerrar
@@ -663,10 +762,8 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
         <div className='inventory-count-hint'>
           <i className='mdi mdi-cursor-default-click-outline me-1'></i>
           {canEditCount
-            ? <>Haz click en <strong>UBICACION</strong> o <strong>STOCK REAL</strong> para escribir el conteo. Cada dato se guarda al salir de la celda; las lineas que dejes sin contar no se tocan al aplicar.</>
-            : (selectedCountApplied
-              ? <>Este inventario ya fue aplicado: el conteo queda como historico y no se puede modificar.</>
-              : <>Pulsa <strong>Registrar</strong> para crear el inventario. Despues podras escribir la ubicacion y el stock real directamente en la tabla.</>)}
+            ? <>Haz click en <strong>UBICACION</strong> o <strong>STOCK REAL</strong> para escribir el conteo y pulsa <strong>Grabar inventario</strong> cuando termines. Las lineas que dejes sin contar no se tocan al aplicar.</>
+            : <>Este inventario ya fue aplicado: el conteo queda como historico y no se puede modificar.</>}
         </div>
       )}
 
@@ -720,8 +817,11 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
           </thead>
           <tbody>
             {filteredRows.length === 0 && <tr><td colSpan='12' className='text-center py-4'>No existen elementos</td></tr>}
-            {paginatedRows.map((row, index) => (
-              <tr key={`standard-inventory-detail-${row.id ?? index}`}>
+            {paginatedRows.map((row, index) => {
+              const location = draftLocation(row, drafts)
+              const realStock = draftRealStock(row, drafts)
+              const difference = draftDifference(row, drafts)
+              return <tr key={`standard-inventory-detail-${row.id ?? index}`}>
                 <td>{row.id ?? index + 1}</td>
                 <td>{row.lot || '-'}</td>
                 <td>{row.article_code || '-'}</td>
@@ -730,36 +830,36 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
                 <td>{row.unit_label || '-'}</td>
                 <td>
                   <EditableCell
-                    value={row.location}
-                    display={row.location || <span className='inventory-pending-cell'>Sin ubicacion</span>}
+                    value={location}
+                    display={location || <span className='inventory-pending-cell'>Sin ubicacion</span>}
                     editable={canEditCount}
                     blockedReason={editBlockedReason}
                     listId='standard-inventory-locations'
                     placeholder='Ubicacion'
-                    saving={savingKey === `${row.id}:location`}
-                    onSave={(value) => saveItemField(row, 'location', value)}
+                    dirty={isDirtyField(row, drafts, 'location')}
+                    onSave={(value) => editCell(row, 'location', value)}
                   />
                 </td>
                 <td>{formatQty(row.system_stock)}</td>
                 <td>
                   <EditableCell
                     type='number'
-                    value={isCounted(row) ? row.real_stock : ''}
-                    display={isCounted(row) ? formatQty(row.real_stock) : <span className='inventory-pending-cell'>Sin contar</span>}
+                    value={realStock ?? ''}
+                    display={realStock === null ? <span className='inventory-pending-cell'>Sin contar</span> : formatQty(realStock)}
                     editable={canEditCount}
                     blockedReason={editBlockedReason}
                     placeholder='0'
-                    saving={savingKey === `${row.id}:real_stock`}
-                    onSave={(value) => saveItemField(row, 'real_stock', value)}
+                    dirty={isDirtyField(row, drafts, 'real_stock')}
+                    onSave={(value) => editCell(row, 'real_stock', value)}
                   />
                 </td>
-                <td className={!isCounted(row) ? '' : (Number(row.difference || 0) === 0 ? '' : (Number(row.difference || 0) > 0 ? 'text-success fw-semibold' : 'text-danger fw-semibold'))}>
-                  {isCounted(row) ? formatQty(row.difference) : <span className='inventory-pending-cell'>-</span>}
+                <td className={difference === null || difference === 0 ? '' : (difference > 0 ? 'text-success fw-semibold' : 'text-danger fw-semibold')}>
+                  {difference === null ? <span className='inventory-pending-cell'>-</span> : formatQty(difference)}
                 </td>
                 <td>{formatMoney(row.cost_unit)}</td>
                 <td>{formatMoney(row.total_cost)}</td>
               </tr>
-            ))}
+            })}
           </tbody>
         </table>
       </div>
@@ -798,10 +898,16 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
   const [loadingRows, setLoadingRows] = useState(false)
   // Mismo criterio que en el inventario estandar: saber si el filtro ya se ejecuto.
   const [previewRan, setPreviewRan] = useState(false)
-  const [savingKey, setSavingKey] = useState(null)
+  const [drafts, setDrafts] = useState({})
+  const [savingCount, setSavingCount] = useState(false)
   const [tablePageSize, setTablePageSize] = useState(10)
   const [tableSearch, setTableSearch] = useState('')
   const [tablePage, setTablePage] = useState(1)
+  const draftsRef = useRef({})
+
+  useEffect(() => {
+    draftsRef.current = drafts
+  }, [drafts])
 
   useEffect(() => {
     inventoryRest.getStorageOptions().then(data => {
@@ -839,10 +945,11 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
   const countedRows = useMemo(() => rows.filter(isCounted), [rows])
   const hasCountedRows = !!selectedCount?.id && countedRows.length > 0
   const hasSelectedDifferences = countedRows.some(hasRowChanges)
-  const canEditCount = !!selectedCount?.id && !selectedCountApplied
-  const editBlockedReason = selectedCountApplied
-    ? 'Este inventario ya fue aplicado, el conteo no se puede modificar.'
-    : 'Primero pulsa "Registrar" para crear el inventario. Despues podras escribir el conteo aqui.'
+  // Se puede escribir apenas hay listado, sin registrar antes: "Grabar" crea el inventario y guarda
+  // el conteo de una vez, para no obligar a dos pasos por lo mismo.
+  const canEditCount = rows.length > 0 && !selectedCountApplied
+  const editBlockedReason = 'Este inventario ya fue aplicado, el conteo no se puede modificar.'
+  const dirtyCount = Object.keys(drafts).length
   const tablePageCount = Math.max(1, Math.ceil(filteredRows.length / tablePageSize))
   const currentTablePage = Math.min(tablePage, tablePageCount)
   const paginatedRows = filteredRows.slice((currentTablePage - 1) * tablePageSize, currentTablePage * tablePageSize)
@@ -873,11 +980,36 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
     setLocation('')
   }
 
-  // Ojo: no se resetea la pagina cuando cambian `rows`. Guardar una celda reemplaza las filas con
-  // las que devuelve el servidor y volver a la pagina 1 en pleno conteo seria insufrible.
+  // Ojo: no se resetea la pagina cuando cambian `rows`. Grabar reemplaza las filas con las que
+  // devuelve el servidor y volver a la pagina 1 en pleno conteo seria insufrible.
   useEffect(() => {
     setTablePage(1)
   }, [tablePageSize, tableSearch])
+
+  // Cerrar con el conteo a medias perderia todo lo escrito, asi que se avisa antes.
+  useEffect(() => {
+    const element = modalRef.current
+    if (!element) return
+    const onHide = (event) => {
+      if (Object.keys(draftsRef.current).length === 0) return
+      event.preventDefault()
+      Swal.fire({
+        icon: 'warning',
+        title: 'Tienes el conteo sin grabar',
+        text: 'Si cierras ahora se pierde lo que escribiste en la tabla.',
+        showCancelButton: true,
+        confirmButtonText: 'Salir sin grabar',
+        cancelButtonText: 'Seguir contando',
+      }).then(({ isConfirmed }) => {
+        if (!isConfirmed) return
+        draftsRef.current = {}
+        setDrafts({})
+        $(element).modal('hide')
+      })
+    }
+    $(element).on('hide.bs.modal', onHide)
+    return () => $(element).off('hide.bs.modal', onHide)
+  }, [])
 
   const resetModal = () => {
     setSelectedCount(null)
@@ -885,6 +1017,8 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
     setLocation('')
     setClientId('')
     setRows([])
+    setDrafts({})
+    draftsRef.current = {}
     setPreviewRan(false)
     setTableSearch('')
     setTablePage(1)
@@ -903,6 +1037,8 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
     setLocation(result.location ?? '')
     setClientId(result.client_id ? `${result.client_id}` : '')
     setRows((result.items ?? []).map(mapStoredItem))
+    setDrafts({})
+    draftsRef.current = {}
     setTableSearch('')
     setTablePage(1)
     $(modalRef.current).modal('show')
@@ -920,58 +1056,92 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       client_id: clientId || null,
     })
     setRows(data ?? [])
+    setDrafts({})
+    draftsRef.current = {}
     setPreviewRan(true)
     setTablePage(1)
     setLoadingRows(false)
   }
 
-  const registerInventory = async () => {
-    if (!clientId) {
-      await Swal.fire({ icon: 'warning', title: 'Cliente requerido', text: 'Selecciona el cliente antes de registrar inventario.' })
-      return
-    }
-    const result = await inventoryRest.saveStorageInventory({
-      warehouse_id: warehouseId || null,
-      location: location || null,
-      client_id: clientId || null,
-    })
-    if (!result) return
-    setSelectedCount(result)
-    setRows((result.items ?? []).map(mapStoredItem))
-    tableRef.current?.refresh()
-  }
+  // Anota el dato en el borrador. Nada viaja al servidor hasta pulsar "Grabar".
+  const editCell = async (row, field, rawValue) => {
+    if (!row?.id) return
 
-  // Guarda una celda del conteo. Se dispara al salir de la celda, con una sola linea por llamada.
-  const saveItemField = async (row, field, rawValue) => {
-    if (!selectedCount?.id || !row?.id) return
-
-    const line = { id: row.id }
+    let value
     if (field === 'real_stock') {
       const text = `${rawValue ?? ''}`.replace(',', '.').trim()
       if (text === '') return
-      const parsed = Number(text)
-      if (!Number.isFinite(parsed) || parsed < 0) {
+      value = Number(text)
+      if (!Number.isFinite(value) || value < 0) {
         await Swal.fire({ icon: 'warning', title: 'Cantidad invalida', text: 'El stock real debe ser un numero mayor o igual a 0.', confirmButtonText: 'Entendido' })
         return
       }
-      line.real_stock = parsed
     } else {
-      line.location = `${rawValue ?? ''}`.trim()
+      value = `${rawValue ?? ''}`.trim()
     }
 
-    setSavingKey(`${row.id}:${field}`)
-    const result = await inventoryRest.saveStorageItems(selectedCount.id, [line])
-    setSavingKey(null)
-    if (!result) return
+    setDrafts(current => ({ ...current, [row.id]: { ...current[row.id], [field]: value } }))
+  }
 
-    const statusChanged = result.inventory_status !== selectedCount.inventory_status
+  // Traduce el borrador a lineas para el servidor. Si el inventario se acaba de crear, las filas
+  // del listado tienen ids 1..N y hay que emparejarlas con los items reales por su source_key.
+  const draftLines = (count, wasRegistered) => {
+    const items = count?.items ?? []
+    const idBySource = new Map(items.filter(item => item.source_key).map(item => [`${item.source_key}`, item.id]))
+
+    return Object.entries(drafts).map(([rowId, changes]) => {
+      if (wasRegistered) return { id: Number(rowId), ...changes }
+      const index = rows.findIndex(row => `${row.id}` === `${rowId}`)
+      const row = rows[index]
+      const id = idBySource.get(`${row?.source_key ?? ''}`) ?? items[index]?.id
+      return id ? { id, ...changes } : null
+    }).filter(Boolean)
+  }
+
+  const saveCount = async () => {
+    if (rows.length === 0) {
+      await Swal.fire({ icon: 'info', title: 'No hay nada que grabar', text: 'Pulsa "Filtrar" para cargar el listado antes de grabar el inventario.', confirmButtonText: 'Entendido' })
+      return
+    }
+
+    setSavingCount(true)
+    const wasRegistered = !!selectedCount?.id
+    let count = selectedCount
+
+    if (!wasRegistered) {
+      count = await inventoryRest.saveStorageInventory({
+        warehouse_id: warehouseId || null,
+        location: location || null,
+        client_id: clientId || null,
+      })
+      if (!count) { setSavingCount(false); return }
+      setSelectedCount(count)
+      setRows((count.items ?? []).map(mapStoredItem))
+    }
+
+    const lines = draftLines(count, wasRegistered)
+    let result = count
+    if (lines.length > 0) {
+      result = await inventoryRest.saveStorageItems(count.id, lines)
+      // Si falla el conteo, el inventario ya quedo creado: se conserva y se dejan los borradores
+      // para que el usuario reintente sin volver a escribir todo.
+      if (!result) { setSavingCount(false); tableRef.current?.refresh(); return }
+    }
+
     setSelectedCount(result)
     setRows((result.items ?? []).map(mapStoredItem))
-    if (statusChanged) tableRef.current?.refresh()
+    setDrafts({})
+    draftsRef.current = {}
+    setSavingCount(false)
+    tableRef.current?.refresh()
   }
 
   const applyInventory = async () => {
     if (!selectedCount?.id) return
+    if (dirtyCount > 0) {
+      await Swal.fire({ icon: 'info', title: 'Falta grabar', text: 'Pulsa "Grabar inventario" antes de aplicar: hay datos escritos que todavia no se guardaron.', confirmButtonText: 'Entendido' })
+      return
+    }
     if (!hasCountedRows) {
       await Swal.fire({ icon: 'info', title: 'Falta contar', text: 'Escribe el stock real de al menos una linea antes de aplicar el inventario.', confirmButtonText: 'Entendido' })
       return
@@ -1145,6 +1315,14 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         .inventory-editable-cell.is-locked:hover {
           background: #f1f1f5;
         }
+        .inventory-editable-cell.is-dirty {
+          background: #fff6e5;
+          font-weight: 600;
+        }
+        .inventory-dirty-dot {
+          color: #f5a623;
+          font-size: .5rem;
+        }
         .inventory-pending-cell {
           color: #98a2b3;
         }
@@ -1179,11 +1357,16 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           .storage-inventory-template-body { padding: 0 1rem 1rem; }
         }
       `}</style>
-      <div className='d-flex flex-wrap justify-content-center gap-4 storage-inventory-modal-actions'>
-        {!selectedCount && <button type='button' className='btn btn-primary' onClick={registerInventory}>
-          <i className='mdi mdi-plus me-1'></i>
-          Registrar
+      <div className='d-flex flex-wrap justify-content-center align-items-center gap-3 storage-inventory-modal-actions'>
+        {rows.length > 0 && !selectedCountApplied && <button type='button' className='btn btn-primary' disabled={savingCount} onClick={saveCount}>
+          {savingCount
+            ? <><i className='mdi mdi-spin mdi-loading me-1'></i>Grabando…</>
+            : <><i className='mdi mdi-content-save-outline me-1'></i>Grabar inventario</>}
         </button>}
+        {dirtyCount > 0 && <span className='badge badge-soft-warning fs-13'>
+          <i className='mdi mdi-circle me-1' style={{ fontSize: '.5rem' }}></i>
+          {dirtyCount} linea(s) sin grabar
+        </span>}
         <button type='button' className='btn btn-light' data-bs-dismiss='modal'>
           <i className='mdi mdi-close me-1'></i>
           Cerrar
@@ -1266,10 +1449,8 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         <div className='inventory-count-hint'>
           <i className='mdi mdi-cursor-default-click-outline me-1'></i>
           {canEditCount
-            ? <>Haz click en <strong>UBICACION</strong> o <strong>STOCK REAL</strong> para escribir el conteo. Cada dato se guarda al salir de la celda; las lineas que dejes sin contar no se tocan al aplicar.</>
-            : (selectedCountApplied
-              ? <>Este inventario ya fue aplicado: el conteo queda como historico y no se puede modificar.</>
-              : <>Pulsa <strong>Registrar</strong> para crear el inventario. Despues podras escribir la ubicacion y el stock real directamente en la tabla.</>)}
+            ? <>Haz click en <strong>UBICACION</strong> o <strong>STOCK REAL</strong> para escribir el conteo y pulsa <strong>Grabar inventario</strong> cuando termines. Las lineas que dejes sin contar no se tocan al aplicar.</>
+            : <>Este inventario ya fue aplicado: el conteo queda como historico y no se puede modificar.</>}
         </div>
       )}
 
@@ -1319,8 +1500,11 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
           </thead>
           <tbody>
             {filteredRows.length === 0 && <tr><td colSpan='11' className='text-center py-4'>No existen elementos</td></tr>}
-            {paginatedRows.map((row, index) => (
-              <tr key={`storage-inventory-detail-${row.id ?? index}`}>
+            {paginatedRows.map((row, index) => {
+              const location = draftLocation(row, drafts)
+              const realStock = draftRealStock(row, drafts)
+              const difference = draftDifference(row, drafts)
+              return <tr key={`storage-inventory-detail-${row.id ?? index}`}>
                 <td>{row.id ?? index + 1}</td>
                 <td>{row.lot || '-'}</td>
                 <td>{formatDate(row.expiration_date)}</td>
@@ -1329,14 +1513,14 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
                 <td>{row.unit_label || '-'}</td>
                 <td>
                   <EditableCell
-                    value={row.location}
-                    display={row.location || <span className='inventory-pending-cell'>Sin ubicacion</span>}
+                    value={location}
+                    display={location || <span className='inventory-pending-cell'>Sin ubicacion</span>}
                     editable={canEditCount}
                     blockedReason={editBlockedReason}
                     listId='storage-inventory-locations'
                     placeholder='Ubicacion'
-                    saving={savingKey === `${row.id}:location`}
-                    onSave={(value) => saveItemField(row, 'location', value)}
+                    dirty={isDirtyField(row, drafts, 'location')}
+                    onSave={(value) => editCell(row, 'location', value)}
                   />
                 </td>
                 <td>{row.temperature_range || '-'}</td>
@@ -1344,20 +1528,20 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
                 <td>
                   <EditableCell
                     type='number'
-                    value={isCounted(row) ? row.real_stock : ''}
-                    display={isCounted(row) ? formatQty(row.real_stock) : <span className='inventory-pending-cell'>Sin contar</span>}
+                    value={realStock ?? ''}
+                    display={realStock === null ? <span className='inventory-pending-cell'>Sin contar</span> : formatQty(realStock)}
                     editable={canEditCount}
                     blockedReason={editBlockedReason}
                     placeholder='0'
-                    saving={savingKey === `${row.id}:real_stock`}
-                    onSave={(value) => saveItemField(row, 'real_stock', value)}
+                    dirty={isDirtyField(row, drafts, 'real_stock')}
+                    onSave={(value) => editCell(row, 'real_stock', value)}
                   />
                 </td>
-                <td className={!isCounted(row) ? '' : (Number(row.difference || 0) === 0 ? '' : (Number(row.difference || 0) > 0 ? 'text-success fw-semibold' : 'text-danger fw-semibold'))}>
-                  {isCounted(row) ? formatQty(row.difference) : <span className='inventory-pending-cell'>-</span>}
+                <td className={difference === null || difference === 0 ? '' : (difference > 0 ? 'text-success fw-semibold' : 'text-danger fw-semibold')}>
+                  {difference === null ? <span className='inventory-pending-cell'>-</span> : formatQty(difference)}
                 </td>
               </tr>
-            ))}
+            })}
           </tbody>
         </table>
       </div>

@@ -153,6 +153,14 @@ const VdSelect = ({
       e.stopPropagation()
       closeMenu()
     }
+    // El menu vive en un portal a document.body, o sea FUERA del .modal. El focus trap de Bootstrap
+    // escucha focusin en document y devuelve el foco al modal en cuanto lo recibe algo de fuera:
+    // el desplegable se podia abrir y elegir, pero el buscador perdia el foco a cada tecla y era
+    // imposible escribir. Se corta el focusin en captura (antes que Bootstrap) solo cuando el foco
+    // cae dentro de nuestro menu.
+    const onFocusIn = (e) => {
+      if (menuRef.current?.contains(e.target)) e.stopPropagation()
+    }
     // El menu vive en un portal a document.body, asi que hay que reseguir al trigger cuando scrollea
     // cualquier contenedor (cuerpo del modal, .table-responsive, la pagina). Cerrarlo en cada scroll
     // hacia imposible elegir en formularios largos.
@@ -166,12 +174,14 @@ const VdSelect = ({
     }
     document.addEventListener('mousedown', onMouseDown)
     document.addEventListener('keydown', onKeyDown, true)
+    document.addEventListener('focusin', onFocusIn, true)
     window.addEventListener('resize', sync)
     window.addEventListener('scroll', sync, true)
     return () => {
       if (frame !== null) window.cancelAnimationFrame(frame)
       document.removeEventListener('mousedown', onMouseDown)
       document.removeEventListener('keydown', onKeyDown, true)
+      document.removeEventListener('focusin', onFocusIn, true)
       window.removeEventListener('resize', sync)
       window.removeEventListener('scroll', sync, true)
     }
