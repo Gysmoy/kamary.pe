@@ -41,6 +41,8 @@ const warehouseBranchId = (warehouse) => warehouse?.business_branch_id || wareho
 const locationCodeFromValue = (value) => `${value ?? ''}`.split(',')[0].split('|')[0].trim()
 const storageLocationOptionLabel = (location) => [location?.temperature_range, location?.code].filter(Boolean).join(' - ')
 
+const articleOptionLabel = (article) => [article?.code, article?.name].filter(Boolean).join(' - ')
+
 const normalizeSearchText = (value) => `${value ?? ''}`
   .toLowerCase()
   .normalize('NFD')
@@ -98,6 +100,7 @@ const EntryNotes = () => {
   const guideFileRef = useRef()
   const articleRefs = useRef({})
   const batchOptionCacheRef = useRef({})
+  const articleOptionCacheRef = useRef({})
   const createBatchArticleCacheRef = useRef({})
   const createBatchLotRef = useRef()
   const createBatchExpirationRef = useRef()
@@ -494,6 +497,8 @@ const EntryNotes = () => {
 
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
+      // Quitar el lote no borra el articulo: el articulo se elige primero y manda sobre que lotes
+      // se pueden ver, asi que limpiarlo aqui dejaba la linea inservible.
       if (!batchId) {
         return {
           ...item,
@@ -501,12 +506,6 @@ const EntryNotes = () => {
           batch_label: '',
           batch_code: '',
           lot: '',
-          article_id: '',
-          article_label: '',
-          article_laboratory: '',
-          article_principle: '',
-          article_unit: '',
-          stock: 0,
           location: storageContext ? item.location : warehouseLabel,
         }
       }
@@ -549,19 +548,82 @@ const EntryNotes = () => {
     }
   }
 
+  // Picker de articulo de cada linea. Se elige antes que el lote porque un articulo tiene varios
+  // lotes: primero el producto, y despues solo se ofrecen los lotes de ese producto. El almacen
+  // decide si se ve el catalogo estandar o el de Magistrales (picker_warehouse_id, backend).
+  const loadItemArticleOptions = async (query, warehouseId) => {
+    const term = query || ''
+    const request = {
+      sort: [{ selector: 'name', desc: false }],
+      take: 20,
+      filter: [['name', 'contains', term], 'or', ['code', 'contains', term]],
+    }
+    if (warehouseId) request.picker_warehouse_id = Number(warehouseId)
+
+    const { status, result } = await Fetch('/api/admin/articles/paginate', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    })
+    if (!status) return []
+    const rows = result?.data ?? []
+    rows.forEach(row => { articleOptionCacheRef.current[`${row.id}`] = row })
+    return rows.map(row => ({ value: `${row.id}`, label: articleOptionLabel(row) }))
+  }
+
+  const onItemArticleChanged = async (uid, value) => {
+    const articleId = value || ''
+    let article = articleId ? (articleOptionCacheRef.current[articleId] ?? null) : null
+    if (articleId && !article) article = await entryNotesRest.getArticleById(articleId)
+
+    const currentItem = items.find(item => item.uid === uid)
+    const warehouseLabel = warehouseLocationLabel(selectedWarehouseId, currentItem?.location)
+
+    setItems(prev => prev.map(item => {
+      if (item.uid !== uid) return item
+      // Cambiar de articulo invalida el lote elegido: cada lote pertenece a un articulo concreto.
+      const withoutBatch = { ...item, batch_id: '', batch_label: '', batch_code: '', lot: '' }
+      if (!articleId) {
+        return {
+          ...withoutBatch,
+          article_id: '',
+          article_label: '',
+          article_laboratory: '',
+          article_principle: '',
+          article_unit: '',
+          stock: 0,
+          location: storageContext ? item.location : warehouseLabel,
+        }
+      }
+      return {
+        ...withoutBatch,
+        article_id: articleId,
+        article_label: article ? articleOptionLabel(article) : item.article_label,
+        article_laboratory: article?.laboratory?.name ?? '',
+        article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? '',
+        article_unit: article?.unit?.symbol ?? article?.unit?.name ?? '',
+        warehouse_id: selectedWarehouseId || item.warehouse_id,
+        location: storageContext ? item.location : warehouseLabel,
+      }
+    }))
+
+    await refreshItemStock(uid, articleId, selectedWarehouseId)
+  }
+
   // Picker de lote por item (antes select2 AJAX vía SelectAPIFormGroup). Mismo endpoint/campos
   // que usaba select2 (searchAPI '/api/admin/batches/paginate', searchBy 'lot', filter por
   // business_id). Cachea las filas completas (con .article) para que onItemBatchChanged pueda
   // resolver el articulo asociado sin depender de datos de select2.
-  const loadBatchOptions = async (query, filter) => {
+  const loadBatchOptions = async (query, conditions = []) => {
+    const extra = (Array.isArray(conditions) ? conditions : [conditions]).filter(Boolean)
+    const base = ['lot', 'contains', query || '']
+    const filter = extra.reduce((acc, condition) => [...acc, 'and', condition], [base])
+
     const { status, result } = await Fetch('/api/admin/batches/paginate', {
       method: 'POST',
       body: JSON.stringify({
         sort: [{ selector: 'lot', desc: false }],
         take: 20,
-        filter: filter
-          ? [['lot', 'contains', query || ''], 'and', filter]
-          : ['lot', 'contains', query || ''],
+        filter: extra.length === 0 ? base : filter,
       }),
     })
     if (!status) return []
@@ -1759,9 +1821,9 @@ const EntryNotes = () => {
             <table className='table table-sm table-striped mb-0'>
               <thead>
                 <tr>
+                  <th>Articulo</th>
                   <th>Codigo Lote</th>
                   <th>Lote</th>
-                  <th>Articulo</th>
                   <th>Laboratorio | Principio activo</th>
                   <th>Unidad</th>
                   <th>Stock actual</th>
@@ -1780,20 +1842,34 @@ const EntryNotes = () => {
                   const batchFilter = selectedBusinessId
                     ? ['business_id', '=', Number(selectedBusinessId)]
                     : null
+                  const articleLotFilter = item.article_id ? ['article_id', '=', Number(item.article_id)] : null
                   return (
                     <tr key={item.uid}>
-                      <td style={{ width: '20%' }}>
+                      <td style={{ width: '24%' }}>
+                        <VdSelect
+                          col='col-12'
+                          noMargin
+                          clearable
+                          value={item.article_id}
+                          valueLabel={item.article_label}
+                          placeholder='-- Seleccionar articulo --'
+                          onChange={(value) => onItemArticleChanged(item.uid, value)}
+                          loadOptions={(q) => loadItemArticleOptions(q, item.warehouse_id || selectedWarehouseId)}
+                        />
+                      </td>
+                      <td style={{ width: '18%' }}>
                         <div className='d-flex gap-1 align-items-center'>
                           <div style={{ flex: 1 }}>
                             <VdSelect
                               col='col-12'
                               noMargin
                               clearable
+                              disabled={!item.article_id}
                               value={item.batch_id}
                               valueLabel={item.batch_label}
-                              placeholder='-- Seleccionar lote --'
+                              placeholder={item.article_id ? '-- Seleccionar lote --' : 'Elige primero el articulo'}
                               onChange={(value) => onItemBatchChanged(item.uid, value)}
-                              loadOptions={(q) => loadBatchOptions(q, batchFilter)}
+                              loadOptions={(q) => loadBatchOptions(q, [batchFilter, articleLotFilter])}
                             />
                           </div>
                           <button type='button' className='btn btn-xs btn-soft-success' title='Crear lote' onClick={() => onCreateBatchForItem(item.uid)}>
@@ -1802,7 +1878,6 @@ const EntryNotes = () => {
                         </div>
                       </td>
                       <td><input className='form-control form-control-sm' value={item.lot} readOnly /></td>
-                      <td><input className='form-control form-control-sm' value={item.article_label} readOnly /></td>
                       <td><small>{articleExtra}</small></td>
                       <td><small>{unitLabel}</small></td>
                       <td><input className='form-control form-control-sm bg-light text-muted' type='number' min='0' step='0.001' value={Number(item.stock || 0).toFixed(3)} readOnly tabIndex='-1' /></td>
