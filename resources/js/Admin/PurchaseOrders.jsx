@@ -295,9 +295,19 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
   // catalogo estandar o el de Magistrales/Muestras (ver ArticleController::
   // pickerEffectiveModuleScope, backend). Antes esto viajaba como `extraParams` en cada
   // tecleo del select2; ahora recargamos el catalogo completo cuando cambia el almacen.
+  //
+  // Ademas se limita a los articulos de ESE almacen (articles.warehouse_id): comprar algo que
+  // no pertenece al almacen que va a recibir la mercaderia no tiene sentido, y mezclarlo todo
+  // obligaba a buscar entre articulos de otros almacenes. En Magistrales no se aplica porque
+  // ese modulo ya trae su propio catalogo completo por scope.
   useEffect(() => {
     const loadArticles = async () => {
-      const extra = (!isMagistrales && selectedWarehouseId) ? { picker_warehouse_id: Number(selectedWarehouseId) } : {}
+      const extra = (!isMagistrales && selectedWarehouseId)
+        ? {
+          picker_warehouse_id: Number(selectedWarehouseId),
+          filter: ['warehouse_id', '=', Number(selectedWarehouseId)],
+        }
+        : {}
       const data = await fetchCatalogAll(purchaseOrdersRest.articlesPaginateApi(), 'name', 3000, extra)
       setArticleCatalog(data)
     }
