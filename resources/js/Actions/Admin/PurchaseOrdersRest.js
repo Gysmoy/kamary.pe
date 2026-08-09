@@ -20,6 +20,22 @@ class PurchaseOrdersRest extends BasicRest {
     return result ?? []
   }
 
+  // Aprobar / rechazar desde el listado, sin abrir el formulario completo.
+  setApproval = async (id, approvalStatus) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${id}/approval`, {
+        method: 'PATCH',
+        body: JSON.stringify({ approval_status: approvalStatus }),
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo actualizar la aprobacion')
+      toast.success('Correcto', { description: result.message, duration: 3000, richColors: true })
+      return result.data ?? true
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 4000, richColors: true })
+      return null
+    }
+  }
+
   getArticleById = async (articleId) => {
     if (!articleId) return null
     try {

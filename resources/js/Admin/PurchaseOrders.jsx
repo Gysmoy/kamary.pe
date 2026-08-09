@@ -635,11 +635,44 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
     tableRef.current?.refresh()
   }, [listFilterValue])
 
-  const rowActions = (row) => ([
-    { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir PDF', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.purchaseOrder(r)) },
-    { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
-    { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
-  ])
+  // Aprobar / rechazar sin abrir la orden. Con recepciones ya registradas la aprobacion queda
+  // congelada: el backend tambien lo rechaza, aqui solo se evita ofrecer un boton que va a fallar.
+  const onApprovalClicked = async (row, target) => {
+    const isApprove = target === 'approved'
+    const { isConfirmed } = await Swal.fire({
+      title: isApprove ? 'Aprobar orden de compra' : 'Rechazar orden de compra',
+      html: isApprove
+        ? `Se aprobara la orden <b>${row.code ?? ''}</b> y quedara lista para recibir mercaderia.`
+        : `Se rechazara la orden <b>${row.code ?? ''}</b> y volvera a Borrador. No se podra recibir mercaderia contra ella.`,
+      icon: isApprove ? 'question' : 'warning',
+      showCancelButton: true,
+      confirmButtonText: isApprove ? 'Si, aprobar' : 'Si, rechazar',
+      cancelButtonText: 'Cancelar',
+    })
+    if (!isConfirmed) return
+
+    const result = await purchaseOrdersRest.setApproval(row.id, target)
+    if (!result) return
+    tableRef.current?.refresh()
+  }
+
+  const rowActions = (row) => {
+    const approval = row?.approval_status ?? 'pending'
+    const locked = ['partial', 'completed', 'cancelled'].includes(row?.order_status)
+    return [
+      ...(!locked && approval !== 'approved' ? [{
+        icon: 'mdi mdi-check-circle-outline', title: 'Aprobar orden', bg: '#e7f7ee', color: '#2fa36b',
+        onClick: (r) => onApprovalClicked(r, 'approved'),
+      }] : []),
+      ...(!locked && approval !== 'rejected' ? [{
+        icon: 'mdi mdi-close-circle-outline', title: 'Rechazar orden', bg: '#fdf1e3', color: '#e08a2e',
+        onClick: (r) => onApprovalClicked(r, 'rejected'),
+      }] : []),
+      { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir PDF', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.purchaseOrder(r)) },
+      { icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) },
+      { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r.id) },
+    ]
+  }
 
   return (<>
     {isMagistrales && (

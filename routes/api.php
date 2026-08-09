@@ -251,6 +251,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/purchase-orders', [AdminPurchaseOrderController::class, 'save']);
         Route::post('/purchase-orders/paginate', [AdminPurchaseOrderController::class, 'paginate']);
         Route::patch('/purchase-orders/status', [AdminPurchaseOrderController::class, 'status']);
+        Route::patch('/purchase-orders/{id}/approval', [AdminPurchaseOrderController::class, 'approval'])->whereNumber('id');
         Route::patch('/purchase-orders/{field}', [AdminPurchaseOrderController::class, 'boolean']);
         Route::delete('/purchase-orders/{id}', [AdminPurchaseOrderController::class, 'delete']);
         Route::get('/purchase-orders/businesses/{id}/branches', [AdminPurchaseOrderController::class, 'branches']);

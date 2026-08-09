@@ -345,6 +345,60 @@ class PurchaseOrderController extends BasicController
         }
     }
 
+    /**
+     * Aprobar o rechazar la orden de compra desde el listado, sin abrir el formulario completo.
+     * approval_status es lo que mira Recepcion de compra para decidir si la OC ya vale
+     * (ver PurchaseReceiptController), asi que order_status se mantiene alineado mientras no
+     * existan recepciones; en cuanto las hay, ese controlador lo recalcula solo.
+     */
+    public function approval(Request $request, string $id): HttpResponse|ResponseFactory
+    {
+        $response = new Response();
+        DB::beginTransaction();
+        try {
+            $target = $this->normalizeApprovalStatus($request->input('approval_status'));
+            if (!in_array($target, ['approved', 'rejected'], true)) {
+                throw new \Exception('Solo se puede aprobar o rechazar la orden de compra');
+            }
+
+            $purchaseOrder = $this->scopedPurchaseOrderMutationQuery($id)->firstOrFail();
+            if (!$purchaseOrder->status) throw new \Exception('La orden de compra esta eliminada');
+            if ($purchaseOrder->order_status === 'cancelled') {
+                throw new \Exception('La orden de compra esta anulada');
+            }
+            if ($purchaseOrder->approval_status === $target) {
+                throw new \Exception($target === 'approved'
+                    ? 'La orden de compra ya estaba aprobada'
+                    : 'La orden de compra ya estaba rechazada');
+            }
+            // Con mercaderia ya recibida, cambiar la aprobacion dejaria el ingreso sin respaldo.
+            if (in_array($purchaseOrder->order_status, ['partial', 'completed'], true)) {
+                throw new \Exception('La orden de compra ya tiene recepciones registradas: no se puede cambiar su aprobacion');
+            }
+
+            $purchaseOrder->update([
+                'approval_status' => $target,
+                'order_status' => $target === 'approved' ? 'approved' : 'draft',
+                'updated_by' => Auth::id(),
+            ]);
+
+            $this->syncAccountsPayable($purchaseOrder->fresh());
+
+            DB::commit();
+            $response->status = 200;
+            $response->message = $target === 'approved'
+                ? 'Orden de compra aprobada'
+                : 'Orden de compra rechazada';
+            $response->data = $purchaseOrder->fresh();
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
     public function status(Request $request)
     {
         $response = new Response();
