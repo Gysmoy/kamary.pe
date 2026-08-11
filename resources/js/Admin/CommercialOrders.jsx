@@ -1508,6 +1508,14 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     await repriceAllItems()
   }
 
+  // Valor y etiqueta del desplegable unico, derivados de cual de los dos clientes esta elegido.
+  const selectedCustomerValue = selectedClientId
+    ? `client-${selectedClientId}`
+    : (selectedEventualClientId ? `eventual-${selectedEventualClientId}` : '')
+  const selectedCustomerLabel = selectedClientId
+    ? clientLabel
+    : (selectedEventualClientId ? `${eventualClientLabel}${eventualClientLabel ? ' · Eventual' : ''}` : '')
+
   const onClientChanged = async (value) => {
     const clientId = normalizeSelectEntityId(value)
     const selectedClient = clientRecordsRef.current[`${value}`] ?? null
@@ -1523,6 +1531,42 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     setSelectedEventualClientId(eventualClientId)
     clearCustomerSelections('eventual')
     await repriceAllItems()
+  }
+
+  // Un solo desplegable de cliente. El pedido sigue guardando client_id o eventual_client_id por
+  // separado, asi que las opciones viajan con el prefijo que ya usa normalizeSelectEntityId para
+  // saber de que tipo es cada una.
+  const loadCustomerOptions = async (term) => {
+    const [regulares, eventuales] = await Promise.all([
+      fetchPaginateOptions('/api/admin/clients/paginate', 'full_name', regularClientFilter, term, (x) => {
+        clientRecordsRef.current[`${x.entity_id}`] = x
+        return {
+          value: `client-${x.entity_id}`,
+          label: [x.document_number, x.full_name].filter(Boolean).join(' - ') || x.full_name || `#${x.entity_id}`,
+        }
+      }, 25),
+      fetchPaginateOptions('/api/admin/eventual-clients/paginate', 'business_name', null, term, (x) => ({
+        value: `eventual-${x.id}`,
+        // Se marca el tipo: un mismo negocio puede estar en las dos listas y hay que poder elegir.
+        label: `${[x.document_number, x.business_name].filter(Boolean).join(' - ') || x.business_name || `#${x.id}`} · Eventual`,
+      }), 25),
+    ])
+
+    return [...(regulares ?? []), ...(eventuales ?? [])]
+  }
+
+  const onCustomerChanged = async (value) => {
+    const raw = `${value ?? ''}`.trim()
+    if (!raw) {
+      setSelectedEventualClientId('')
+      await onClientChanged('')
+      return
+    }
+    if (raw.startsWith('eventual-')) {
+      await onEventualClientChanged(raw)
+      return
+    }
+    await onClientChanged(normalizeSelectEntityId(raw))
   }
 
   const onNetworkChanged = async (e) => {
@@ -3360,31 +3404,16 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
           </div>
           <div className='row g-2'>
             <VdSelect
-              key={`co-client-${formInstanceKey}`}
-              col='col-12 col-xl-6'
-              label='Cliente regular'
+              key={`co-customer-${formInstanceKey}`}
+              col='col-12'
+              label='Cliente'
               disabled={isFormLocked}
               clearable
-              value={selectedClientId}
-              valueLabel={clientLabel}
-              onChange={onClientChanged}
-              loadOptions={(q) => fetchPaginateOptions('/api/admin/clients/paginate', 'full_name', regularClientFilter, q, (x) => {
-                clientRecordsRef.current[`${x.entity_id}`] = x
-                return { value: `${x.entity_id}`, label: [x.document_number, x.full_name].filter(Boolean).join(' - ') || x.full_name || `#${x.entity_id}` }
-              })}
+              value={selectedCustomerValue}
+              valueLabel={selectedCustomerLabel}
+              onChange={onCustomerChanged}
+              loadOptions={loadCustomerOptions}
               placeholder='-- Seleccionar cliente --'
-            />
-            <VdSelect
-              key={`co-eventual-${formInstanceKey}`}
-              col='col-12 col-xl-6'
-              label='Cliente eventual'
-              disabled={isFormLocked}
-              clearable
-              value={selectedEventualClientId}
-              valueLabel={eventualClientLabel}
-              onChange={onEventualClientChanged}
-              loadOptions={(q) => fetchPaginateOptions('/api/admin/eventual-clients/paginate', 'business_name', null, q, (x) => ({ value: `${x.id}`, label: [x.document_number, x.business_name].filter(Boolean).join(' - ') || x.business_name || `#${x.id}` }))}
-              placeholder='-- Seleccionar cliente eventual --'
             />
             <div className='col-12 col-md-6 col-xl-2'>
               <label className='form-label'>Orden de compra</label>
