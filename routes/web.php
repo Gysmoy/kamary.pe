@@ -106,7 +106,8 @@ Route::get('/v/{document}/{token}/{type}', [BillingDocumentVerificationControlle
 Route::view('/api-docs/storage', 'api-docs.storage')->name('api-docs.storage');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/comercial/tomapedido', [AdminTakeOrderController::class, 'reactView'])->middleware('module.permission:take-orders');
+    // Toma pedido se retiro del sistema: todo se maneja desde Pedido (/admin/commercial-orders).
+    // La pantalla ya no es accesible; el controlador y la API siguen en el repo por si hay que volver.
 
     // Admin routes
     Route::prefix('admin')->middleware('admin.permission')->group(function () {
@@ -154,8 +155,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/accounts-receivable', [AdminAccountsReceivableController::class, 'reactView']);
         Route::get('/commercial-orders', [AdminCommercialOrderController::class, 'reactView']);
         Route::get('/commercial-orders/multivende', [AdminCommercialOrderController::class, 'reactView']);
-        Route::get('/comercial/tomapedido', [AdminTakeOrderController::class, 'reactView']);
-        Route::get('/take-orders', [AdminTakeOrderController::class, 'reactView']);
         Route::get('/orders', [AdminOrderController::class, 'reactView']);
         Route::get('/pricing', [AdminPriceListController::class, 'reactView']);
         Route::get('/reports/sales', [AdminSalesReportController::class, 'reactView']);

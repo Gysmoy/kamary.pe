@@ -34,7 +34,6 @@ const Menu = ({ can, hasRole, panel = null }) => {
     'clients',
     'eventual-clients',
     'accounts-receivable',
-    'take-orders',
     'orders',
     'pricing',
     'sample-orders',
@@ -204,12 +203,12 @@ const Menu = ({ can, hasRole, panel = null }) => {
             </MenuItemContainer>
           )}
 
-          {canAccessAny('clients', 'eventual-clients', 'accounts-receivable', 'take-orders', 'orders', 'pricing', 'services-billing') && (
+          {/* Toma pedido se retiro: todo se maneja desde Pedido. */}
+          {canAccessAny('clients', 'eventual-clients', 'accounts-receivable', 'orders', 'pricing', 'services-billing') && (
             <MenuItemContainer title='Comercial' icon='ti ti-shopping-bag'>
               {canAccessAny('clients', 'eventual-clients') && <MenuItem href={canAccess('clients') ? '/admin/clients' : '/admin/eventual-clients'} icon='ti ti-user-square'>Cliente</MenuItem>}
               {canAccess('services-billing') && <MenuItem href='/admin/services-billing' icon='ti ti-file-invoice'>Facturación</MenuItem>}
               {canAccess('accounts-receivable') && <MenuItem href='/admin/accounts-receivable' icon='ti ti-cash-banknote'>Cuenta por Cobrar</MenuItem>}
-              {canAccess('take-orders') && <MenuItem href='/admin/comercial/tomapedido' icon='ti ti-clipboard-list'>Toma pedido</MenuItem>}
               {canAccess('orders') && <MenuItem href='/admin/commercial-orders' icon='ti ti-basket' exact>Pedido</MenuItem>}
               {canAccess('orders') && <MenuItem href='/admin/commercial-orders/multivende' icon='ti ti-plug-connected'>Pedidos Multivende</MenuItem>}
               {canAccess('pricing') && <MenuItem href='/admin/pricing' icon='ti ti-tags'>Tarifario</MenuItem>}
