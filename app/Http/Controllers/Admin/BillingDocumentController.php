@@ -275,6 +275,10 @@ class BillingDocumentController extends BasicController
                 'detraction_amount',
                 'detraction_code',
                 'detraction_payment_method_code',
+                'retention_enabled',
+                'retention_percent',
+                'retention_amount',
+                'retention_code',
             ]));
             DB::commit();
             $response->status = 200;

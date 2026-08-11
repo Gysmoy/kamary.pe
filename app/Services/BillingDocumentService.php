@@ -460,6 +460,12 @@ class BillingDocumentService
         $metadata = $this->buildDetractionMetadata($document, $options);
         if ($metadata !== null) {
             $updates['metadata'] = $metadata;
+            $document->metadata = $metadata;
+        }
+
+        $retentionMetadata = $this->buildRetentionMetadata($document, $options);
+        if ($retentionMetadata !== null) {
+            $updates['metadata'] = $retentionMetadata;
         }
 
         if (!$document->series) {
@@ -870,6 +876,52 @@ class BillingDocumentService
             'detraction_amount' => round($amount, 2),
             'detraction_code' => $code ?: '022',
             'detraction_payment_method_code' => $paymentMethodCode ?: '001',
+        ]);
+    }
+
+    /**
+     * Retencion de IGV. Se guarda igual que la detraccion y son excluyentes: marcar retencion
+     * apaga la detraccion, porque una operacion no puede estar sujeta a las dos.
+     */
+    private function buildRetentionMetadata(BillingDocument $document, array $options): ?array
+    {
+        $trackedKeys = ['retention_enabled', 'retention_percent', 'retention_amount', 'retention_code'];
+        $hasRetentionInput = false;
+        foreach ($trackedKeys as $key) {
+            if (array_key_exists($key, $options)) {
+                $hasRetentionInput = true;
+                break;
+            }
+        }
+
+        if (!$hasRetentionInput) return null;
+
+        $metadata = $document->metadata ?? [];
+        $enabled = $this->boolValue($options['retention_enabled'] ?? Arr::get($metadata, 'retention_enabled'), false);
+        $code = (string) ($options['retention_code'] ?? Arr::get($metadata, 'retention_code', '01'));
+
+        if (!$enabled) {
+            return array_merge($metadata, [
+                'retention_enabled' => false,
+                'retention_percent' => null,
+                'retention_amount' => null,
+                'retention_code' => $code ?: '01',
+            ]);
+        }
+
+        $percent = $this->decimalValue($options['retention_percent'] ?? Arr::get($metadata, 'retention_percent'));
+        if ($percent <= 0) $percent = 3;
+
+        $amount = $this->decimalValue($options['retention_amount'] ?? Arr::get($metadata, 'retention_amount'));
+        if ($amount <= 0) $amount = round(abs((float) $document->total) * $percent / 100, 2);
+
+        return array_merge($metadata, [
+            'retention_enabled' => true,
+            'retention_percent' => round($percent, 2),
+            'retention_amount' => round($amount, 2),
+            'retention_code' => $code ?: '01',
+            // Excluyentes por norma.
+            'detraction_enabled' => false,
         ]);
     }
 

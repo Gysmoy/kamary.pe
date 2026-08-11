@@ -377,6 +377,10 @@ class FacturadorPro5Service
         $detractionPayload = $documentTypeId !== '07' && $this->hasDetraction($document)
             ? $this->buildDetractionPayload($document)
             : null;
+        // Excluyentes: si la operacion lleva detraccion no se retiene, asi que la detraccion manda.
+        $retentionPayload = ($documentTypeId !== '07' && !$detractionPayload && $this->hasRetention($document))
+            ? $this->buildRetentionPayload($document)
+            : null;
 
         $payload = [
             'serie_documento' => $document->series ?: $this->resolveSeriesFromTypeId($documentTypeId),
@@ -417,6 +421,10 @@ class FacturadorPro5Service
             $payload['detraccion'] = $detractionPayload;
             $payload['totales']['total_detraccion'] = $detractionPayload['monto'];
             $payload['total_detraccion'] = $detractionPayload['monto'];
+        }
+
+        if ($retentionPayload) {
+            $payload['retencion'] = $retentionPayload;
         }
 
         if ($paymentConditionId === '01' && $documentTypeId !== '07') {
@@ -803,6 +811,32 @@ class FacturadorPro5Service
     {
         $enabled = filter_var(Arr::get($document->metadata ?? [], 'detraction_enabled'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
         return $enabled === true;
+    }
+
+    private function hasRetention(BillingDocument $document): bool
+    {
+        $enabled = filter_var(Arr::get($document->metadata ?? [], 'retention_enabled'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+        return $enabled === true;
+    }
+
+    /**
+     * Retencion de IGV. La forma sale del propio facturador (CoreFacturalo DocumentTransform::retention):
+     * espera la clave `retencion` con codigo, porcentaje, monto y base. El codigo 01 es el de
+     * "Retencion IGV tasa 3%" del catalogo 23 de SUNAT.
+     */
+    private function buildRetentionPayload(BillingDocument $document): array
+    {
+        $percent = $this->decimalValue(Arr::get($document->metadata ?? [], 'retention_percent'), 3);
+        $base = abs((float) $document->total);
+        $amount = $this->decimalValue(Arr::get($document->metadata ?? [], 'retention_amount'));
+        if ($amount <= 0) $amount = round($base * $percent / 100, 2);
+
+        return [
+            'codigo' => (string) Arr::get($document->metadata ?? [], 'retention_code', '01'),
+            'porcentaje' => round($percent, 2),
+            'monto' => round($amount, 2),
+            'base' => round($base, 2),
+        ];
     }
 
     private function buildDetractionPayload(BillingDocument $document): array

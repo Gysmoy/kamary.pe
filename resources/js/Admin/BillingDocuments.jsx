@@ -68,7 +68,10 @@ const formatDateTime = (value) => {
 }
 const currencyLabel = (value) => `${value ?? ''}`.toUpperCase() === 'USD' ? 'Dolares' : 'Soles'
 const monthNames = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SETIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE']
-const emptyBulkFilters = () => ({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false, detractionPercent: 12, detractionTypeId: '', detractionCode: '' })
+const emptyBulkFilters = () => ({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false, detractionPercent: 12, detractionTypeId: '', detractionCode: '', retention: false })
+
+// La retencion de IGV es 3% por norma.
+const RETENTION_PERCENT = 3
 
 // Detraccion configurada en el pedido comercial de origen, si el comprobante viene de uno.
 const orderDetraction = (row) => {
@@ -81,6 +84,12 @@ const orderDetraction = (row) => {
     code: order.detraction_code ?? '',
     percent: Number(order.detraction_percent ?? 0),
   }
+}
+
+// Retencion marcada en el pedido comercial de origen.
+const orderRetention = (row) => {
+  const order = row?.commercial_order ?? row?.commercialOrder ?? null
+  return !!order?.retention_enabled
 }
 const billingControlStatusOptions = [
   { value: 'pending', label: 'En espera' },
@@ -950,6 +959,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       detractionPercent,
       detractionTypeId: fromOrder?.typeId ?? '',
       detractionCode: fromOrder?.code ?? '',
+      retention: !fromOrder && (orderRetention(row) || Boolean(row?.metadata?.retention_enabled)),
     })
     setBulkRows(row ? [row] : [])
     setBulkSelected(row?.id ? [row.id] : [])
@@ -991,6 +1001,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
         detractionPercent: fromOrder?.percent || detractionPercent || prev.detractionPercent || 12,
         detractionTypeId: prev.detractionTypeId || fromOrder?.typeId || '',
         detractionCode: prev.detractionCode || fromOrder?.code || '',
+        retention: !fromOrder && (prev.retention || rows.some(orderRetention)),
       }))
     } catch (error) {
       await showBlockedAction('Error', error.message || 'No se pudieron cargar las prefacturas.')
@@ -1036,6 +1047,8 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
         // para no cambiar el comportamiento de quien no elija tipo.
         detraction_code: bulkFilters.detractionCode || '022',
         detraction_payment_method_code: '001',
+        retention_enabled: bulkFilters.retention,
+        retention_percent: bulkFilters.retention ? RETENTION_PERCENT : null,
       })
       if (!prepared) return
       const result = await billingDocumentsRest.issue(row.id)
@@ -1875,9 +1888,23 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
           <div>
           <label className='form-label d-block mb-1'>Detraccion</label>
           <div className='form-check form-switch'>
-            <input className='form-check-input' type='checkbox' checked={bulkFilters.detraction} onChange={(e) => setBulkFilters(prev => ({ ...prev, detraction: e.target.checked }))} id='billing-bulk-detraction' />
+            <input className='form-check-input' type='checkbox' checked={bulkFilters.detraction} onChange={(e) => setBulkFilters(prev => ({ ...prev, detraction: e.target.checked, retention: e.target.checked ? false : prev.retention }))} id='billing-bulk-detraction' />
             <label className='form-check-label' htmlFor='billing-bulk-detraction'>{bulkFilters.detraction ? 'SI' : 'NO'}</label>
           </div>
+          </div>
+          <div>
+            <label className='form-label d-block mb-1'>Retencion ({RETENTION_PERCENT}%)</label>
+            <div className='form-check form-switch'>
+              <input
+                className='form-check-input'
+                type='checkbox'
+                id='billing-bulk-retention'
+                checked={bulkFilters.retention}
+                disabled={bulkFilters.detraction}
+                onChange={(e) => setBulkFilters(prev => ({ ...prev, retention: e.target.checked, detraction: e.target.checked ? false : prev.detraction }))}
+              />
+              <label className='form-check-label' htmlFor='billing-bulk-retention'>{bulkFilters.retention ? 'SI' : 'NO'}</label>
+            </div>
           </div>
           {bulkFilters.detraction && <div style={{ minWidth: 320 }}>
             <label className='form-label'>Tipo de detraccion</label>
