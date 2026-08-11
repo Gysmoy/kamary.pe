@@ -24,6 +24,8 @@ class BillingDocumentsRest extends BasicRest {
   getBusinesses = async () => await loadAll('/api/admin/businesses/paginate')
   getClients = async () => await loadAll(isStoragePath() ? '/api/admin/storage/clients/paginate' : '/api/admin/clients/paginate')
   getCommercialOrders = async () => await loadAll('/api/admin/commercial-orders/paginate')
+  // Catalogo de tipos de detraccion: de ahi salen el codigo y el porcentaje que van a SUNAT.
+  getDetractionTypes = async () => await loadAll('/api/admin/detraction-types/paginate')
   getServiceOrders = async () => {
     if (!isStoragePath()) return await loadAll('/api/admin/service-orders/paginate')
 

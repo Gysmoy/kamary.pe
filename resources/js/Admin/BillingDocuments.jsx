@@ -68,7 +68,20 @@ const formatDateTime = (value) => {
 }
 const currencyLabel = (value) => `${value ?? ''}`.toUpperCase() === 'USD' ? 'Dolares' : 'Soles'
 const monthNames = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SETIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE']
-const emptyBulkFilters = () => ({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false, detractionPercent: 12 })
+const emptyBulkFilters = () => ({ clientId: '', documentType: 'Factura', currency: 'PEN', detraction: false, detractionPercent: 12, detractionTypeId: '', detractionCode: '' })
+
+// Detraccion configurada en el pedido comercial de origen, si el comprobante viene de uno.
+const orderDetraction = (row) => {
+  const order = row?.commercial_order ?? row?.commercialOrder ?? null
+  if (!order || !order.detraction_enabled) return null
+
+  return {
+    enabled: true,
+    typeId: order.detraction_type_id ? `${order.detraction_type_id}` : '',
+    code: order.detraction_code ?? '',
+    percent: Number(order.detraction_percent ?? 0),
+  }
+}
 const billingControlStatusOptions = [
   { value: 'pending', label: 'En espera' },
   { value: 'sent', label: 'Facturado' },
@@ -430,6 +443,7 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
   const [appliedStorageFilters, setAppliedStorageFilters] = useState(emptyFilters())
   const [modalReportFilters, setModalReportFilters] = useState(reportFilters())
   const [bulkFilters, setBulkFilters] = useState(emptyBulkFilters())
+  const [detractionTypes, setDetractionTypes] = useState([])
   const [bulkRows, setBulkRows] = useState([])
   const [bulkSelected, setBulkSelected] = useState([])
   const [bulkLoading, setBulkLoading] = useState(false)
@@ -444,11 +458,13 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       billingDocumentsRest.getServiceOrders(),
       billingDocumentsRest.getBusinesses(),
       billingDocumentsRest.getClients(),
-    ]).then(([commercial, services, businessRows, clientRows]) => {
+      billingDocumentsRest.getDetractionTypes(),
+    ]).then(([commercial, services, businessRows, clientRows, detractionRows]) => {
       setCommercialOrders((commercial ?? []).filter(row => row.status !== null))
       setServiceOrders((services ?? []).filter(row => row.status !== null))
       setBusinesses((businessRows ?? []).filter(row => row.status !== null))
       setClients((clientRows ?? []).filter(row => row.status !== null))
+      setDetractionTypes((detractionRows ?? []).filter(row => row.status !== null))
     })
   }, [])
 
@@ -922,13 +938,18 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     const rowClientId = row?.client_id ?? row?.client?.id ?? ''
     const defaultFilters = emptyBulkFilters()
     const rawDetractionPercent = row ? rowDetractionPercent(row) : 0
-    const detractionPercent = rawDetractionPercent || defaultFilters.detractionPercent
+    // Lo que se marco en el pedido comercial manda como valor inicial: si alli se dijo que la
+    // operacion lleva detraccion, no tiene sentido volver a decidirlo aqui desde cero.
+    const fromOrder = orderDetraction(row)
+    const detractionPercent = fromOrder?.percent || rawDetractionPercent || defaultFilters.detractionPercent
     setBulkFilters({
       clientId: row ? `${rowClientId}` : '',
       documentType: row?.document_type ?? defaultFilters.documentType,
       currency: row?.currency ?? defaultFilters.currency,
-      detraction: Boolean(row?.metadata?.detraction_enabled) || rawDetractionPercent > 0,
+      detraction: !!fromOrder?.enabled || Boolean(row?.metadata?.detraction_enabled) || rawDetractionPercent > 0,
       detractionPercent,
+      detractionTypeId: fromOrder?.typeId ?? '',
+      detractionCode: fromOrder?.code ?? '',
     })
     setBulkRows(row ? [row] : [])
     setBulkSelected(row?.id ? [row.id] : [])
@@ -959,9 +980,18 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       if (Number(response?.status ?? 200) >= 400) throw new Error(response?.message || 'No se pudieron cargar las prefacturas')
       const rows = response?.data ?? []
       const detractionPercent = rowsDetractionPercent(rows)
+      // Si los pedidos de origen ya traian tipo de detraccion, se toma el primero que aparezca en
+      // vez de dejar al usuario elegirlo otra vez.
+      const fromOrder = rows.map(orderDetraction).find(Boolean) ?? null
       setBulkRows(rows)
       setBulkSelected(rows.map(row => row.id))
-      setBulkFilters(prev => ({ ...prev, detraction: prev.detraction || detractionPercent > 0, detractionPercent: detractionPercent || prev.detractionPercent || 12 }))
+      setBulkFilters(prev => ({
+        ...prev,
+        detraction: prev.detraction || !!fromOrder || detractionPercent > 0,
+        detractionPercent: fromOrder?.percent || detractionPercent || prev.detractionPercent || 12,
+        detractionTypeId: prev.detractionTypeId || fromOrder?.typeId || '',
+        detractionCode: prev.detractionCode || fromOrder?.code || '',
+      }))
     } catch (error) {
       await showBlockedAction('Error', error.message || 'No se pudieron cargar las prefacturas.')
     } finally {
@@ -1002,7 +1032,9 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
         detraction_enabled: bulkFilters.detraction,
         detraction_percent: bulkFilters.detraction ? bulkDetractionPercent : null,
         detraction_amount: bulkFilters.detraction ? rowDetractionAmount(row, bulkDetractionPercent) : null,
-        detraction_code: '022',
+        // El codigo sale del tipo elegido en el catalogo; 022 solo queda como respaldo
+        // para no cambiar el comportamiento de quien no elija tipo.
+        detraction_code: bulkFilters.detractionCode || '022',
         detraction_payment_method_code: '001',
       })
       if (!prepared) return
@@ -1847,9 +1879,42 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
             <label className='form-check-label' htmlFor='billing-bulk-detraction'>{bulkFilters.detraction ? 'SI' : 'NO'}</label>
           </div>
           </div>
-          {bulkFilters.detraction && <div style={{ width: 140 }}>
+          {bulkFilters.detraction && <div style={{ minWidth: 320 }}>
+            <label className='form-label'>Tipo de detraccion</label>
+            <select
+              className='form-select'
+              value={bulkFilters.detractionTypeId}
+              onChange={(e) => {
+                const type = detractionTypes.find(row => `${row.id}` === `${e.target.value}`) ?? null
+                // El tipo manda: fija el codigo que viaja a SUNAT y el porcentaje que se aplica.
+                setBulkFilters(prev => ({
+                  ...prev,
+                  detractionTypeId: e.target.value,
+                  detractionCode: type?.code ?? '',
+                  detractionPercent: type ? Number(type.percent ?? 0) : prev.detractionPercent,
+                }))
+              }}
+            >
+              <option value=''>-- Sin tipo (usa {bulkFilters.detractionPercent}% y codigo 022) --</option>
+              {detractionTypes.map(type => (
+                <option key={`detraction-type-${type.id}`} value={type.id}>
+                  [{type.code}] {type.description} — {Number(type.percent ?? 0)}%
+                </option>
+              ))}
+            </select>
+          </div>}
+          {bulkFilters.detraction && <div style={{ width: 130 }}>
             <label className='form-label'>% detraccion</label>
-            <input type='number' min='0' step='0.01' className='form-control' value={bulkFilters.detractionPercent} onChange={(e) => setBulkFilters(prev => ({ ...prev, detractionPercent: e.target.value }))} />
+            <input
+              type='number'
+              min='0'
+              step='0.01'
+              className={`form-control ${bulkFilters.detractionTypeId ? 'bg-light text-muted' : ''}`}
+              value={bulkFilters.detractionPercent}
+              readOnly={!!bulkFilters.detractionTypeId}
+              title={bulkFilters.detractionTypeId ? 'Lo define el tipo elegido' : 'Sin tipo elegido se puede escribir a mano'}
+              onChange={(e) => setBulkFilters(prev => ({ ...prev, detractionPercent: e.target.value }))}
+            />
           </div>}
         </div>
         <div className='text-end'>

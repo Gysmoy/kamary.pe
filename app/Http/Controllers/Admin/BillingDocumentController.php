@@ -49,7 +49,7 @@ class BillingDocumentController extends BasicController
                 'warehouse:id,name',
                 'client:id,full_name,document_type,document_number,email,billing_email,phone,ubigeo,full_address',
                 'eventualClient:id,business_name,document_type,document_number,email,phone,address',
-                'commercialOrder:id,code,billing_status,dispatch_status,total,ubigeo,delivery_address,dispatch_contact_phone',
+                'commercialOrder:id,code,billing_status,dispatch_status,total,ubigeo,delivery_address,dispatch_contact_phone,detraction_enabled,detraction_type_id,detraction_code,detraction_percent,retention_enabled,retention_percent',
                 'serviceOrder:id,code,order_type,order_status,billing_status,total,issue_date,scheduled_at,created_at',
                 'referenceDocument:id,code,document_type,series,sequence,local_status,total',
                 'items:id,billing_document_id,commercial_order_item_id,service_order_item_id,item_type,item_code,description,quantity,unit_price,total,metadata,status',
