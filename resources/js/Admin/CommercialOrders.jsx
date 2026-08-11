@@ -3454,19 +3454,8 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
               onChange={setDeliveryUbigeo}
               disabled={isFormLocked}
             />
-            <div className='col-12'>
-              <DeliveryMapPicker
-                modalRef={modalRef}
-                position={mapPosition}
-                searchText={mapSearchText}
-                onSearchTextChange={setMapSearchText}
-                onPositionChange={setMapPosition}
-                onAddressSelected={(address) => {
-                  if (deliveryAddressRef.current) deliveryAddressRef.current.value = address
-                }}
-                disabled={isFormLocked}
-              />
-            </div>
+            {/* El mapa se retiro del formulario. Las coordenadas (map_lat/map_lng) se siguen
+                guardando y respetando: las que ya tienen los pedidos no se pierden ni se borran. */}
             <div className='col-12 col-md-6 col-xl-5'>
               <label className='form-label'>Nombre contacto entrega</label>
               <input ref={dispatchContactNameRef} className='form-control' />
