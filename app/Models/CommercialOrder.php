@@ -64,6 +64,14 @@ class CommercialOrder extends Model
         'subtotal',
         'tax_amount',
         'total',
+        'detraction_enabled',
+        'detraction_type_id',
+        'detraction_code',
+        'detraction_percent',
+        'detraction_amount',
+        'retention_enabled',
+        'retention_percent',
+        'retention_amount',
         'paid_amount',
         'balance_amount',
         'observations',
@@ -88,10 +96,21 @@ class CommercialOrder extends Model
         'subtotal' => 'float',
         'tax_amount' => 'float',
         'total' => 'float',
+        'detraction_enabled' => 'boolean',
+        'detraction_percent' => 'float',
+        'detraction_amount' => 'float',
+        'retention_enabled' => 'boolean',
+        'retention_percent' => 'float',
+        'retention_amount' => 'float',
         'paid_amount' => 'float',
         'balance_amount' => 'float',
         'status' => 'boolean',
     ];
+
+    public function detractionType()
+    {
+        return $this->belongsTo(DetractionType::class);
+    }
 
     public function business()
     {

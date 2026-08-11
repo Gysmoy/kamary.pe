@@ -1107,10 +1107,12 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     Promise.all([
       billingDocumentsRest.getBusinesses(),
       commercialOrdersRest.getLaboratories(),
-    ]).then(([businesses, laboratories]) => {
+      fetchPaginateOptions('/api/admin/detraction-types/paginate', 'description', null, '', (x) => x, 200),
+    ]).then(([businesses, laboratories, types]) => {
       if (!mounted) return
       setBusinessOptions(businesses)
       setLaboratoryOptions(laboratories)
+      setDetractionTypes(types ?? [])
     })
     return () => {
       mounted = false
@@ -1319,6 +1321,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
     const warehouseId = data?.warehouse_id ? `${data.warehouse_id}` : ''
     const clientId = data?.client_id ? `${data.client_id}` : ''
     const eventualClientId = data?.eventual_client_id ? `${data.eventual_client_id}` : ''
+    setDetractionEnabled(!!data?.detraction_enabled)
+    setSelectedDetractionTypeId(data?.detraction_type_id ? `${data.detraction_type_id}` : '')
+    setRetentionEnabled(!!data?.retention_enabled)
     setSelectedBusinessId(businessId)
     setSelectedWarehouseId(warehouseId)
     setSelectedClientId(clientId)
@@ -1432,6 +1437,9 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
       dispatch_status: dispatchStatusRef.current?.value || 'pending',
       billing_status: billingStatusRef.current?.value || 'pending',
       tax_amount: orderTotals.taxAmount,
+      detraction_enabled: detractionEnabled,
+      detraction_type_id: detractionEnabled ? (selectedDetractionTypeId || null) : null,
+      retention_enabled: retentionEnabled,
       delivery_address: deliveryAddressRef.current?.value?.trim() || '',
       delivery_reference: deliveryReferenceRef.current?.value?.trim() || '',
       ubigeo: deliveryUbigeo.ubigeo?.trim() || '',
@@ -2199,6 +2207,17 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
 
   const grossSubtotal = useMemo(() => items.reduce((acc, item) => acc + Number(item.total || 0), 0), [items])
   const orderTotals = useMemo(() => deriveDocumentTotals(grossSubtotal, selectedDocumentType), [grossSubtotal, selectedDocumentType])
+  // Detraccion y retencion se calculan sobre el total del pedido. El backend los vuelve a calcular
+  // al guardar; esto es solo lo que se ve mientras se arma el pedido.
+  const selectedDetractionType = useMemo(
+    () => detractionTypes.find(type => `${type.id}` === `${selectedDetractionTypeId}`) ?? null,
+    [detractionTypes, selectedDetractionTypeId]
+  )
+  const detractionPercent = detractionEnabled ? Number(selectedDetractionType?.percent ?? 0) : 0
+  const retentionPercent = retentionEnabled ? RETENTION_PERCENT : 0
+  const detractionAmount = round2(orderTotals.total * detractionPercent / 100)
+  const retentionAmount = round2(orderTotals.total * retentionPercent / 100)
+  const netTotal = round2(orderTotals.total - detractionAmount - retentionAmount)
   const isFormLocked = formLockReason !== ''
   const trackingRows = useMemo(() => buildTrackingRows(trackingOrder), [trackingOrder])
   const filteredDelayReasons = useMemo(() => {
@@ -3672,8 +3691,103 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
                   <th>{orderTotals.total.toFixed(2)}</th>
                   <th></th>
                 </tr>
+                {detractionEnabled && (
+                  <tr>
+                    <th colSpan='12' className='text-end'>Detraccion ({detractionPercent}%)</th>
+                    <th className='text-danger'>-{detractionAmount.toFixed(2)}</th>
+                    <th></th>
+                  </tr>
+                )}
+                {retentionEnabled && (
+                  <tr>
+                    <th colSpan='12' className='text-end'>Retencion ({retentionPercent}%)</th>
+                    <th className='text-danger'>-{retentionAmount.toFixed(2)}</th>
+                    <th></th>
+                  </tr>
+                )}
+                {(detractionEnabled || retentionEnabled) && (
+                  <tr>
+                    <th colSpan='12' className='text-end'>Total neto a pagar</th>
+                    <th>{netTotal.toFixed(2)}</th>
+                    <th></th>
+                  </tr>
+                )}
               </tfoot>
             </table>
+          </div>
+        </section>
+
+        <section className='commercial-order-form-section'>
+          <div className='commercial-order-section-title'>
+            <i className='mdi mdi-percent-outline'></i>
+            <span>Detraccion y retencion</span>
+          </div>
+          <div className='row g-2 align-items-end'>
+            {/* Switches controlados de Bootstrap y no SwitchFormGroup: ese es un checkbox no
+                controlado (defaultChecked + Switchery), asi que apagar uno desde el otro no se
+                veria reflejado en pantalla. */}
+            <div className='col-12 col-md-3'>
+              <label className='form-label mb-1 d-block'>¿Detraccion?</label>
+              <div className='form-check form-switch'>
+                <input
+                  id='commercial-order-detraction'
+                  className='form-check-input'
+                  type='checkbox'
+                  role='switch'
+                  checked={detractionEnabled}
+                  disabled={isFormLocked}
+                  onChange={(e) => {
+                    const next = e.target.checked
+                    setDetractionEnabled(next)
+                    // Excluyentes: una operacion sujeta a detraccion no lleva retencion.
+                    if (next) setRetentionEnabled(false)
+                    else setSelectedDetractionTypeId('')
+                  }}
+                />
+                <label className='form-check-label' htmlFor='commercial-order-detraction'>
+                  {detractionEnabled ? 'SI' : 'NO'}
+                </label>
+              </div>
+            </div>
+            <div className='col-12 col-md-3'>
+              <label className='form-label mb-1 d-block'>¿Retencion?</label>
+              <div className='form-check form-switch'>
+                <input
+                  id='commercial-order-retention'
+                  className='form-check-input'
+                  type='checkbox'
+                  role='switch'
+                  checked={retentionEnabled}
+                  disabled={isFormLocked || detractionEnabled}
+                  onChange={(e) => {
+                    const next = e.target.checked
+                    setRetentionEnabled(next)
+                    if (next) { setDetractionEnabled(false); setSelectedDetractionTypeId('') }
+                  }}
+                />
+                <label className='form-check-label' htmlFor='commercial-order-retention'>
+                  {retentionEnabled ? 'SI' : 'NO'}
+                </label>
+              </div>
+            </div>
+            <VdSelect
+              col='col-12 col-md-6'
+              label='Tipo de detraccion'
+              disabled={isFormLocked || !detractionEnabled}
+              value={selectedDetractionTypeId}
+              onChange={(value) => setSelectedDetractionTypeId(value || '')}
+              options={detractionTypes.map(type => ({ value: `${type.id}`, label: `[${type.code}] ${type.description} — ${Number(type.percent ?? 0)}%` }))}
+              placeholder={detractionEnabled ? '-- Seleccionar tipo --' : 'Marca la detraccion primero'}
+            />
+            <div className='col-12'>
+              <small className='text-muted'>
+                {detractionEnabled
+                  ? <>El porcentaje sale del tipo elegido y se puede cambiar en <strong>Sistemas › Tipos de detracción</strong>.</>
+                  : (retentionEnabled
+                    ? <>La retencion es siempre del {RETENTION_PERCENT}%.</>
+                    : <>Ambas son excluyentes: una operacion sujeta a detraccion no lleva retencion.</>)}
+              </small>
+            </div>
           </div>
         </section>
 

@@ -70,6 +70,7 @@ use App\Http\Controllers\Admin\ServiceOrderController as AdminServiceOrderContro
 use App\Http\Controllers\Admin\SampleOrderController as AdminSampleOrderController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Admin\UnitController as AdminUnitController;
+use App\Http\Controllers\Admin\DetractionTypeController as AdminDetractionTypeController;
 use App\Http\Controllers\Admin\VehicleZoneController as AdminVehicleZoneController;
 use App\Http\Controllers\Admin\WarehouseController as AdminWarehouseController;
 
@@ -133,6 +134,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/warehouses', [AdminWarehouseController::class, 'reactView']);
         Route::get('/suppliers', [AdminSupplierController::class, 'reactView']);
         Route::get('/categories', fn() => redirect('/admin/laboratories'));
+        Route::get('/detraction-types', [AdminDetractionTypeController::class, 'reactView']);
         Route::get('/units', [AdminUnitController::class, 'reactView']);
         Route::get('/units-of-measure', fn() => redirect('/admin/units'));
         Route::get('/magistrales/units', fn() => redirect('/admin/units'));

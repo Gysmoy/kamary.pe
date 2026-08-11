@@ -11,6 +11,7 @@ use App\Models\ClientDeliveryAddress;
 use App\Models\ClientDistributionNetwork;
 use App\Models\CommercialOrder;
 use App\Models\CommercialOrderItem;
+use App\Models\DetractionType;
 use App\Models\dxDataGrid;
 use App\Models\EventualClient;
 use App\Models\User;
@@ -277,6 +278,7 @@ class CommercialOrderController extends BasicController
         $body['subtotal'] = $this->toNullableDecimal($body['subtotal'] ?? null) ?? 0;
         $body['tax_amount'] = $this->toNullableDecimal($body['tax_amount'] ?? null) ?? 0;
         $body['total'] = $this->toNullableDecimal($body['total'] ?? null) ?? 0;
+        $body = $this->applyWithholdingFields($body);
         $body['paid_amount'] = $this->toNullableDecimal($body['paid_amount'] ?? null) ?? 0;
         $body['balance_amount'] = $this->toNullableDecimal($body['balance_amount'] ?? null) ?? 0;
         $body['payment_status'] = $this->normalizePaymentStatus($body['payment_status'] ?? 'pending');
@@ -430,7 +432,7 @@ class CommercialOrderController extends BasicController
                 'tax_amount' => $totals['tax_amount'],
                 'total' => $totals['total'],
                 'balance_amount' => round(max(0, (float) $totals['total'] - (float) $jpa->paid_amount), 2),
-            ]);
+            ] + $this->withholdingAmounts($jpa, (float) $totals['total']));
 
             app(AccountsReceivableService::class)->syncFromCommercialOrder($jpa->fresh([
                 'client',
@@ -819,6 +821,53 @@ class CommercialOrderController extends BasicController
     private function getAvailableStockByWarehouse(int $articleId, int $warehouseId): float
     {
         return app(StockService::class)->getAvailableStockByWarehouse($articleId, $warehouseId);
+    }
+
+    /**
+     * Detraccion y retencion del pedido. Se guardan los porcentajes junto al pedido, no solo el
+     * tipo: si SUNAT cambia una tasa despues, el pedido viejo debe seguir mostrando la que se uso.
+     * Son excluyentes entre si, asi que si llegan las dos marcadas manda la detraccion.
+     */
+    private function applyWithholdingFields(array $body): array
+    {
+        if (!Schema::hasColumn('commercial_orders', 'detraction_enabled')) return $body;
+
+        $detractionEnabled = filter_var($body['detraction_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $retentionEnabled = !$detractionEnabled && filter_var($body['retention_enabled'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        $type = null;
+        if ($detractionEnabled) {
+            $typeId = $this->toNullableInt($body['detraction_type_id'] ?? null);
+            $type = $typeId ? DetractionType::whereKey($typeId)->whereNotNull('status')->first() : null;
+            if (!$type) throw new \Exception('Selecciona el tipo de detraccion');
+        }
+
+        $body['detraction_enabled'] = $detractionEnabled;
+        $body['detraction_type_id'] = $type?->id;
+        $body['detraction_code'] = $type?->code;
+        $body['detraction_percent'] = $type ? round((float)$type->percent, 2) : 0;
+        $body['retention_enabled'] = $retentionEnabled;
+        $body['retention_percent'] = $retentionEnabled ? self::RETENTION_PERCENT : 0;
+        // Los montos se calculan en afterSave, cuando ya se conoce el total real de los items.
+        $body['detraction_amount'] = 0;
+        $body['retention_amount'] = 0;
+
+        return $body;
+    }
+
+    /** Montos de detraccion y retencion sobre el total del pedido. */
+    private function withholdingAmounts(CommercialOrder $order, float $total): array
+    {
+        if (!Schema::hasColumn('commercial_orders', 'detraction_enabled')) return [];
+
+        return [
+            'detraction_amount' => $order->detraction_enabled
+                ? round($total * ((float)$order->detraction_percent) / 100, 2)
+                : 0,
+            'retention_amount' => $order->retention_enabled
+                ? round($total * ((float)$order->retention_percent) / 100, 2)
+                : 0,
+        ];
     }
 
     private function toNullableDecimal($value): ?float

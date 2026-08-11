@@ -81,6 +81,7 @@ use App\Http\Controllers\Admin\ZoneController as AdminZoneController;
 use App\Http\Controllers\Admin\RoleController as AdminRoleController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\UnitController as AdminUnitController;
+use App\Http\Controllers\Admin\DetractionTypeController as AdminDetractionTypeController;
 use App\Http\Controllers\Admin\WarehouseController as AdminWarehouseController;
 use App\Http\Controllers\External\StorageApiController;
 use App\Http\Controllers\Integrations\EcomsurController;
@@ -177,6 +178,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/billing-settings/facturador-mode', [AdminBillingSettingsController::class, 'facturadorMode']);
         Route::patch('/billing-settings/facturador-mode', [AdminBillingSettingsController::class, 'updateFacturadorMode']);
 
+        Route::post('/detraction-types', [AdminDetractionTypeController::class, 'save']);
+        Route::post('/detraction-types/paginate', [AdminDetractionTypeController::class, 'paginate']);
+        Route::patch('/detraction-types/status', [AdminDetractionTypeController::class, 'status']);
+        Route::patch('/detraction-types/{field}', [AdminDetractionTypeController::class, 'boolean']);
+        Route::delete('/detraction-types/{id}', [AdminDetractionTypeController::class, 'delete']);
         Route::post('/units', [AdminUnitController::class, 'save']);
         Route::post('/units/import', [AdminUnitController::class, 'import']);
         Route::post('/units/paginate', [AdminUnitController::class, 'paginate']);
