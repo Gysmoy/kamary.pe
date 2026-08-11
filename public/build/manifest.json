@@ -16,17 +16,6 @@
     "file": "Base.css",
     "src": "_Base-!~{01M}~.js"
   },
-  "_Base-BxKCAHQi.js": {
-    "file": "assets/Base-BxKCAHQi.js",
-    "name": "Base",
-    "imports": [
-      "_CreateReactScript-Di1kuK03.js",
-      "_BasicRest-BX743yrP.js"
-    ],
-    "css": [
-      "Base.css"
-    ]
-  },
   "_Base-DzYPSZJ6.js": {
     "file": "assets/Base-DzYPSZJ6.js",
     "name": "Base",
@@ -35,6 +24,17 @@
       "_tippy-react.esm-Dl7v7VoT.js",
       "_BasicRest-BX743yrP.js",
       "_index-BKNjMPK8.js"
+    ]
+  },
+  "_Base-_90qtGTa.js": {
+    "file": "assets/Base-_90qtGTa.js",
+    "name": "Base",
+    "imports": [
+      "_CreateReactScript-Di1kuK03.js",
+      "_BasicRest-BX743yrP.js"
+    ],
+    "css": [
+      "Base.css"
     ]
   },
   "_BasicRest-BX743yrP.js": {
@@ -173,23 +173,23 @@
       "_CreateReactScript-Di1kuK03.js"
     ]
   },
-  "_SelectAPIFormGroup-jvheqiwg.js": {
-    "file": "assets/SelectAPIFormGroup-jvheqiwg.js",
+  "_SelectAPIFormGroup-BG-IlKtJ.js": {
+    "file": "assets/SelectAPIFormGroup-BG-IlKtJ.js",
     "name": "SelectAPIFormGroup",
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "_tippy-react.esm-Dl7v7VoT.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_select2ModalFixes-1VjZp5Um.js"
     ]
   },
-  "_SelectFormGroup-CWlWzLpb.js": {
-    "file": "assets/SelectFormGroup-CWlWzLpb.js",
+  "_SelectFormGroup-wknLnIP5.js": {
+    "file": "assets/SelectFormGroup-wknLnIP5.js",
     "name": "SelectFormGroup",
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "_tippy-react.esm-Dl7v7VoT.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_select2ModalFixes-1VjZp5Um.js"
     ]
   },
@@ -238,13 +238,13 @@
       "_CreateReactScript-Di1kuK03.js"
     ]
   },
-  "_UbigeoCascade-CLKx3Pp-.js": {
-    "file": "assets/UbigeoCascade-CLKx3Pp-.js",
+  "_UbigeoCascade-DgNOo-z8.js": {
+    "file": "assets/UbigeoCascade-DgNOo-z8.js",
     "name": "UbigeoCascade",
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "_ubigeoInei-D0FnAslC.js",
-      "_SelectFormGroup-CWlWzLpb.js"
+      "_SelectFormGroup-wknLnIP5.js"
     ]
   },
   "_UnitsRest-kiOPvZ74.js": {
@@ -370,14 +370,14 @@
     "isEntry": true
   },
   "resources/js/Admin/Account.jsx": {
-    "file": "assets/Account-BxKqxWsP.js",
+    "file": "assets/Account-D_DStZ4y.js",
     "name": "Account",
     "src": "resources/js/Admin/Account.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "_JSEncrypt-BceYZi2u.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_InputFormGroup-daAMDFnf.js",
       "_PasswordFormGroup-BTu79p99.js",
       "_BasicRest-BX743yrP.js",
@@ -385,13 +385,13 @@
     ]
   },
   "resources/js/Admin/AccountsPayable.jsx": {
-    "file": "assets/AccountsPayable-Ct0jdWvX.js",
+    "file": "assets/AccountsPayable-BF7AKggQ.js",
     "name": "AccountsPayable",
     "src": "resources/js/Admin/AccountsPayable.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -403,13 +403,13 @@
     ]
   },
   "resources/js/Admin/AccountsReceivable.jsx": {
-    "file": "assets/AccountsReceivable-BR6VENv3.js",
+    "file": "assets/AccountsReceivable-beCoGtw0.js",
     "name": "AccountsReceivable",
     "src": "resources/js/Admin/AccountsReceivable.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -420,14 +420,14 @@
     ]
   },
   "resources/js/Admin/Activities.jsx": {
-    "file": "assets/Activities-DhmodEtE.js",
+    "file": "assets/Activities-CY2p1wib.js",
     "name": "Activities",
     "src": "resources/js/Admin/Activities.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "node_modules/xlsx/xlsx.mjs",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_DxButton-CsjWvhyj.js",
@@ -439,13 +439,13 @@
     ]
   },
   "resources/js/Admin/Ads.jsx": {
-    "file": "assets/Ads-Cy2Ir4rt.js",
+    "file": "assets/Ads-DHZR0LvS.js",
     "name": "Ads",
     "src": "resources/js/Admin/Ads.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -460,14 +460,14 @@
     ]
   },
   "resources/js/Admin/Articles.jsx": {
-    "file": "assets/Articles-ELr3-D7P.js",
+    "file": "assets/Articles-C2Ko_o7Y.js",
     "name": "Articles",
     "src": "resources/js/Admin/Articles.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "node_modules/xlsx/xlsx.mjs",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -484,14 +484,14 @@
     ]
   },
   "resources/js/Admin/Batches.jsx": {
-    "file": "assets/Batches-C7zVM4ys.js",
+    "file": "assets/Batches-BcWWA8_N.js",
     "name": "Batches",
     "src": "resources/js/Admin/Batches.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "node_modules/xlsx/xlsx.mjs",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -504,13 +504,13 @@
     ]
   },
   "resources/js/Admin/BillingDocuments.jsx": {
-    "file": "assets/BillingDocuments-oHeo8whN.js",
+    "file": "assets/BillingDocuments-Z70Y1ycN.js",
     "name": "BillingDocuments",
     "src": "resources/js/Admin/BillingDocuments.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -521,47 +521,47 @@
     ]
   },
   "resources/js/Admin/BillingSettings.jsx": {
-    "file": "assets/BillingSettings-AfxqqoyP.js",
+    "file": "assets/BillingSettings-CrSESvfJ.js",
     "name": "BillingSettings",
     "src": "resources/js/Admin/BillingSettings.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_DxButton-CsjWvhyj.js",
       "_SwitchFormGroup-CoAAyo_L.js",
       "_InputFormGroup-daAMDFnf.js",
-      "_UbigeoCascade-CLKx3Pp-.js",
+      "_UbigeoCascade-DgNOo-z8.js",
       "_ubigeoInei-D0FnAslC.js",
       "_BusinessesRest-CQftSAQ5.js",
       "_statusLabels-BOXkE1Ll.js",
       "_permissionScope-DOiR_Kst.js",
       "_BasicRest-BX743yrP.js",
       "_tippy-react.esm-Dl7v7VoT.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_select2ModalFixes-1VjZp5Um.js"
     ]
   },
   "resources/js/Admin/Bundles.jsx": {
-    "file": "assets/Bundles-Bj53s00p.js",
+    "file": "assets/Bundles-vYiW21ZE.js",
     "name": "Bundles",
     "src": "resources/js/Admin/Bundles.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_ReactAppend-DoFYb-Jc.js",
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-iJHqgfLU.js",
       "_BasicRest-BX743yrP.js",
-      "_SelectAPIFormGroup-jvheqiwg.js",
+      "_SelectAPIFormGroup-BG-IlKtJ.js",
       "_SetSelectValue-DL-AgtMG.js",
       "_InputFormGroup-daAMDFnf.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_tippy-react.esm-Dl7v7VoT.js",
       "_ImageFormGroup-YTYmfrNv.js",
       "_statusLabels-BOXkE1Ll.js",
@@ -569,13 +569,13 @@
     ]
   },
   "resources/js/Admin/Businesses.jsx": {
-    "file": "assets/Businesses-lLM3C4BP.js",
+    "file": "assets/Businesses-C3QdMmAw.js",
     "name": "Businesses",
     "src": "resources/js/Admin/Businesses.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -586,13 +586,13 @@
     ]
   },
   "resources/js/Admin/Cards.jsx": {
-    "file": "assets/Cards-DZQGKfsU.js",
+    "file": "assets/Cards-BHOVwSEU.js",
     "name": "Cards",
     "src": "resources/js/Admin/Cards.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_BasicRest-BX743yrP.js",
       "_ReactAppend-DoFYb-Jc.js",
@@ -600,13 +600,13 @@
     ]
   },
   "resources/js/Admin/Categories.jsx": {
-    "file": "assets/Categories-xNaNvc15.js",
+    "file": "assets/Categories-CIfN8EYN.js",
     "name": "Categories",
     "src": "resources/js/Admin/Categories.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_ReactAppend-DoFYb-Jc.js",
@@ -620,64 +620,64 @@
     ]
   },
   "resources/js/Admin/ClientDistributionNetworks.jsx": {
-    "file": "assets/ClientDistributionNetworks-B0w-ubTl.js",
+    "file": "assets/ClientDistributionNetworks-DuQZwJrW.js",
     "name": "ClientDistributionNetworks",
     "src": "resources/js/Admin/ClientDistributionNetworks.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
-      "_SelectAPIFormGroup-jvheqiwg.js",
+      "_SelectAPIFormGroup-BG-IlKtJ.js",
       "_InputFormGroup-daAMDFnf.js",
       "_ReactAppend-DoFYb-Jc.js",
       "_SetSelectValue-DL-AgtMG.js",
       "_DxButton-CsjWvhyj.js",
       "_SwitchFormGroup-CoAAyo_L.js",
       "_BasicRest-BX743yrP.js",
-      "_UbigeoCascade-CLKx3Pp-.js",
+      "_UbigeoCascade-DgNOo-z8.js",
       "_ubigeoInei-D0FnAslC.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_statusLabels-BOXkE1Ll.js",
       "_tippy-react.esm-Dl7v7VoT.js",
       "_select2ModalFixes-1VjZp5Um.js",
-      "_SelectFormGroup-CWlWzLpb.js"
+      "_SelectFormGroup-wknLnIP5.js"
     ]
   },
   "resources/js/Admin/Clients.jsx": {
-    "file": "assets/Clients-CxyVsvIN.js",
+    "file": "assets/Clients-BATiYiZa.js",
     "name": "Clients",
     "src": "resources/js/Admin/Clients.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
       "_SwitchFormGroup-CoAAyo_L.js",
       "_InputFormGroup-daAMDFnf.js",
       "_TextareaFormGroup-iJHqgfLU.js",
-      "_UbigeoCascade-CLKx3Pp-.js",
+      "_UbigeoCascade-DgNOo-z8.js",
       "_ClientsRest-BIfh0iG8.js",
       "_UsersRest-4CuyvLq6.js",
       "_BasicRest-BX743yrP.js",
       "_ubigeoInei-D0FnAslC.js",
       "_tippy-react.esm-Dl7v7VoT.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_select2ModalFixes-1VjZp5Um.js",
       "_permissionScope-DOiR_Kst.js"
     ]
   },
   "resources/js/Admin/Colors.jsx": {
-    "file": "assets/Colors-CD0iRqHs.js",
+    "file": "assets/Colors-B_arzPLC.js",
     "name": "Colors",
     "src": "resources/js/Admin/Colors.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -691,24 +691,24 @@
     ]
   },
   "resources/js/Admin/ComingSoon.jsx": {
-    "file": "assets/ComingSoon-B-pIbWa_.js",
+    "file": "assets/ComingSoon-8MFLhfLV.js",
     "name": "ComingSoon",
     "src": "resources/js/Admin/ComingSoon.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_BasicRest-BX743yrP.js"
     ]
   },
   "resources/js/Admin/CommercialOrders.jsx": {
-    "file": "assets/CommercialOrders-dvFE6MIM.js",
+    "file": "assets/CommercialOrders-DXnqhGBz.js",
     "name": "CommercialOrders",
     "src": "resources/js/Admin/CommercialOrders.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_ubigeoInei-D0FnAslC.js",
@@ -724,13 +724,13 @@
     ]
   },
   "resources/js/Admin/Coupons.jsx": {
-    "file": "assets/Coupons-OJwmKXU7.js",
+    "file": "assets/Coupons-D__pkbkL.js",
     "name": "Coupons",
     "src": "resources/js/Admin/Coupons.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -738,7 +738,7 @@
       "_DxButton-CsjWvhyj.js",
       "_TextareaFormGroup-iJHqgfLU.js",
       "_SwitchFormGroup-CoAAyo_L.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_BasicRest-BX743yrP.js",
       "_statusLabels-BOXkE1Ll.js",
       "_tippy-react.esm-Dl7v7VoT.js",
@@ -746,50 +746,50 @@
     ]
   },
   "resources/js/Admin/DailySummary.jsx": {
-    "file": "assets/DailySummary-DMGmyN0x.js",
+    "file": "assets/DailySummary-C3fDpEPq.js",
     "name": "DailySummary",
     "src": "resources/js/Admin/DailySummary.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_BasicRest-BX743yrP.js"
     ]
   },
   "resources/js/Admin/DeliveryPoints.jsx": {
-    "file": "assets/DeliveryPoints-DkuXGhS7.js",
+    "file": "assets/DeliveryPoints-B_VMBRu2.js",
     "name": "DeliveryPoints",
     "src": "resources/js/Admin/DeliveryPoints.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
       "_DxButton-CsjWvhyj.js",
       "_BasicRest-BX743yrP.js",
       "_buildSchedule-QAY4ZbMf.js",
-      "_SelectAPIFormGroup-jvheqiwg.js",
+      "_SelectAPIFormGroup-BG-IlKtJ.js",
       "_SetSelectValue-DL-AgtMG.js",
-      "_UbigeoCascade-CLKx3Pp-.js",
+      "_UbigeoCascade-DgNOo-z8.js",
       "_ubigeoInei-D0FnAslC.js",
       "_statusLabels-BOXkE1Ll.js",
       "_tippy-react.esm-Dl7v7VoT.js",
       "_select2ModalFixes-1VjZp5Um.js",
-      "_SelectFormGroup-CWlWzLpb.js"
+      "_SelectFormGroup-wknLnIP5.js"
     ]
   },
   "resources/js/Admin/DetractionTypes.jsx": {
-    "file": "assets/DetractionTypes-HLcm3wig.js",
+    "file": "assets/DetractionTypes-BkOKwo-W.js",
     "name": "DetractionTypes",
     "src": "resources/js/Admin/DetractionTypes.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -798,14 +798,14 @@
     ]
   },
   "resources/js/Admin/Dispatches.jsx": {
-    "file": "assets/Dispatches-CjFUjDTj.js",
+    "file": "assets/Dispatches-CxVR48_9.js",
     "name": "Dispatches",
     "src": "resources/js/Admin/Dispatches.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "node_modules/xlsx/xlsx.mjs",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_DxButton-CsjWvhyj.js",
@@ -813,8 +813,8 @@
       "_BasicRest-BX743yrP.js",
       "_ReferralGuidesRest-BDCVhdty.js",
       "_ZonesRest-CdraGnEY.js",
-      "_UbigeoCascade-CLKx3Pp-.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_UbigeoCascade-DgNOo-z8.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_magistralesRecordPdf-BANh3ijj.js",
       "_ubigeoInei-D0FnAslC.js",
@@ -824,24 +824,24 @@
     ]
   },
   "resources/js/Admin/Documentation.jsx": {
-    "file": "assets/Documentation-CXZHQ4yB.js",
+    "file": "assets/Documentation-CyZapTIQ.js",
     "name": "Documentation",
     "src": "resources/js/Admin/Documentation.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_BasicRest-BX743yrP.js"
     ]
   },
   "resources/js/Admin/Drivers.jsx": {
-    "file": "assets/Drivers-DmXbmWWd.js",
+    "file": "assets/Drivers-LLnAZ3TL.js",
     "name": "Drivers",
     "src": "resources/js/Admin/Drivers.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_DxButton-CsjWvhyj.js",
@@ -850,14 +850,14 @@
     ]
   },
   "resources/js/Admin/EntryNotes.jsx": {
-    "file": "assets/EntryNotes-XpGp-phN.js",
+    "file": "assets/EntryNotes-DmLh8xyq.js",
     "name": "EntryNotes",
     "src": "resources/js/Admin/EntryNotes.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "node_modules/xlsx/xlsx.mjs",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -874,18 +874,18 @@
     ]
   },
   "resources/js/Admin/EventualClients.jsx": {
-    "file": "assets/EventualClients-BswYE4-j.js",
+    "file": "assets/EventualClients-brRJptjT.js",
     "name": "EventualClients",
     "src": "resources/js/Admin/EventualClients.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_DxButton-CsjWvhyj.js",
       "_InputFormGroup-daAMDFnf.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_BasicRest-BX743yrP.js",
       "_renderGridEditLink-D8NGEeKJ.js",
       "_statusLabels-BOXkE1Ll.js",
@@ -895,13 +895,13 @@
     ]
   },
   "resources/js/Admin/ExitNotes.jsx": {
-    "file": "assets/ExitNotes-DZOMT1dR.js",
+    "file": "assets/ExitNotes--Om5wWp8.js",
     "name": "ExitNotes",
     "src": "resources/js/Admin/ExitNotes.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -916,13 +916,13 @@
     ]
   },
   "resources/js/Admin/Expansions.jsx": {
-    "file": "assets/Expansions-B2-oaZ22.js",
+    "file": "assets/Expansions-CC1ciuPH.js",
     "name": "Expansions",
     "src": "resources/js/Admin/Expansions.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -930,7 +930,7 @@
       "_BasicRest-BX743yrP.js",
       "_ReactAppend-DoFYb-Jc.js",
       "_SwitchFormGroup-CoAAyo_L.js",
-      "_SelectAPIFormGroup-jvheqiwg.js",
+      "_SelectAPIFormGroup-BG-IlKtJ.js",
       "_SetSelectValue-DL-AgtMG.js",
       "_statusLabels-BOXkE1Ll.js",
       "_tippy-react.esm-Dl7v7VoT.js",
@@ -938,13 +938,13 @@
     ]
   },
   "resources/js/Admin/Faqs.jsx": {
-    "file": "assets/Faqs-Dkq8Mz72.js",
+    "file": "assets/Faqs-B_QFQqP2.js",
     "name": "Faqs",
     "src": "resources/js/Admin/Faqs.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_ReactAppend-DoFYb-Jc.js",
@@ -957,21 +957,21 @@
     ]
   },
   "resources/js/Admin/Formulas.jsx": {
-    "file": "assets/Formulas-CeVY13TF.js",
+    "file": "assets/Formulas-PJ0QAd4l.js",
     "name": "Formulas",
     "src": "resources/js/Admin/Formulas.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
       "_ReactAppend-DoFYb-Jc.js",
       "_DxButton-CsjWvhyj.js",
       "_BasicRest-BX743yrP.js",
-      "_SelectFormGroup-CWlWzLpb.js",
-      "_SelectAPIFormGroup-jvheqiwg.js",
+      "_SelectFormGroup-wknLnIP5.js",
+      "_SelectAPIFormGroup-BG-IlKtJ.js",
       "_SetSelectValue-DL-AgtMG.js",
       "_tippy-react.esm-Dl7v7VoT.js",
       "_statusLabels-BOXkE1Ll.js",
@@ -979,13 +979,13 @@
     ]
   },
   "resources/js/Admin/Fragrances.jsx": {
-    "file": "assets/Fragrances-Tuok9M1a.js",
+    "file": "assets/Fragrances-psfES8s9.js",
     "name": "Fragrances",
     "src": "resources/js/Admin/Fragrances.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1000,41 +1000,41 @@
     ]
   },
   "resources/js/Admin/Gallery.jsx": {
-    "file": "assets/Gallery-DsGhZth7.js",
+    "file": "assets/Gallery-RkSQNTAl.js",
     "name": "Gallery",
     "src": "resources/js/Admin/Gallery.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_BasicRest-BX743yrP.js"
     ]
   },
   "resources/js/Admin/Generals.jsx": {
-    "file": "assets/Generals-9llD26xl.js",
+    "file": "assets/Generals-TP5HaRsC.js",
     "name": "Generals",
     "src": "resources/js/Admin/Generals.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "_esm-DKHzvBm5.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_BasicRest-BX743yrP.js",
       "_TextareaFormGroup-iJHqgfLU.js",
       "_InputFormGroup-daAMDFnf.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_tippy-react.esm-Dl7v7VoT.js",
       "_select2ModalFixes-1VjZp5Um.js"
     ]
   },
   "resources/js/Admin/Gifts.jsx": {
-    "file": "assets/Gifts-DCRumgF2.js",
+    "file": "assets/Gifts-BrjH9EQ2.js",
     "name": "Gifts",
     "src": "resources/js/Admin/Gifts.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1050,24 +1050,24 @@
     ]
   },
   "resources/js/Admin/Home.jsx": {
-    "file": "assets/Home-C7wpgPgy.js",
+    "file": "assets/Home-clpm3AZ7.js",
     "name": "Home",
     "src": "resources/js/Admin/Home.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_BasicRest-BX743yrP.js"
     ]
   },
   "resources/js/Admin/Indicators.jsx": {
-    "file": "assets/Indicators-D9DOE3JZ.js",
+    "file": "assets/Indicators-BnQhD9Ws.js",
     "name": "Indicators",
     "src": "resources/js/Admin/Indicators.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1081,13 +1081,13 @@
     ]
   },
   "resources/js/Admin/Inventory.jsx": {
-    "file": "assets/Inventory-eDCfpXhR.js",
+    "file": "assets/Inventory-C7ruldvG.js",
     "name": "Inventory",
     "src": "resources/js/Admin/Inventory.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1096,26 +1096,26 @@
     ]
   },
   "resources/js/Admin/InventoryReport.jsx": {
-    "file": "assets/InventoryReport-DOhGYW0R.js",
+    "file": "assets/InventoryReport-CMMbg_uw.js",
     "name": "InventoryReport",
     "src": "resources/js/Admin/InventoryReport.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_BasicRest-BX743yrP.js"
     ]
   },
   "resources/js/Admin/Items.jsx": {
-    "file": "assets/Items-DOU4JAwW.js",
+    "file": "assets/Items-pp2j5lXk.js",
     "name": "Items",
     "src": "resources/js/Admin/Items.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1131,13 +1131,13 @@
     ]
   },
   "resources/js/Admin/Kardex.jsx": {
-    "file": "assets/Kardex-xf7h21DM.js",
+    "file": "assets/Kardex-C07Vrji-.js",
     "name": "Kardex",
     "src": "resources/js/Admin/Kardex.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1149,14 +1149,14 @@
     ]
   },
   "resources/js/Admin/Laboratories.jsx": {
-    "file": "assets/Laboratories-CWIawBhr.js",
+    "file": "assets/Laboratories-R8zjdzKZ.js",
     "name": "Laboratories",
     "src": "resources/js/Admin/Laboratories.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "node_modules/xlsx/xlsx.mjs",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1169,13 +1169,13 @@
     ]
   },
   "resources/js/Admin/Languages.jsx": {
-    "file": "assets/Languages-CXbvghD1.js",
+    "file": "assets/Languages-DnRtTv4n.js",
     "name": "Languages",
     "src": "resources/js/Admin/Languages.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1188,13 +1188,13 @@
     ]
   },
   "resources/js/Admin/Magistrales/Categories.jsx": {
-    "file": "assets/Categories-D3EVTkUC.js",
+    "file": "assets/Categories-DyBc5Fme.js",
     "name": "Categories",
     "src": "resources/js/Admin/Magistrales/Categories.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_DxButton-CsjWvhyj.js",
@@ -1207,24 +1207,24 @@
     ]
   },
   "resources/js/Admin/Magistrales/Dashboard.jsx": {
-    "file": "assets/Dashboard-BWQPdtpt.js",
+    "file": "assets/Dashboard-Cnd1ZMDy.js",
     "name": "Dashboard",
     "src": "resources/js/Admin/Magistrales/Dashboard.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_BasicRest-BX743yrP.js"
     ]
   },
   "resources/js/Admin/Magistrales/Formats.jsx": {
-    "file": "assets/Formats-Dj4Cyxbi.js",
+    "file": "assets/Formats-DuoUuawf.js",
     "name": "Formats",
     "src": "resources/js/Admin/Magistrales/Formats.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_Modal-DUZKQhYw.js",
       "_SwitchFormGroup-CoAAyo_L.js",
@@ -1234,13 +1234,13 @@
     ]
   },
   "resources/js/Admin/Magistrales/Formulas.jsx": {
-    "file": "assets/Formulas-BJkgMfQW.js",
+    "file": "assets/Formulas-BrupZqmC.js",
     "name": "Formulas",
     "src": "resources/js/Admin/Magistrales/Formulas.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1253,13 +1253,13 @@
     ]
   },
   "resources/js/Admin/Magistrales/ProductionOrders.jsx": {
-    "file": "assets/ProductionOrders-Dw2w9Q0e.js",
+    "file": "assets/ProductionOrders-DiFQ1dFH.js",
     "name": "ProductionOrders",
     "src": "resources/js/Admin/Magistrales/ProductionOrders.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1273,13 +1273,13 @@
     ]
   },
   "resources/js/Admin/Magistrales/Responsibles.jsx": {
-    "file": "assets/Responsibles-tgg3Yq41.js",
+    "file": "assets/Responsibles-D9oTLFXV.js",
     "name": "Responsibles",
     "src": "resources/js/Admin/Magistrales/Responsibles.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_Modal-DUZKQhYw.js",
       "_SwitchFormGroup-CoAAyo_L.js",
@@ -1290,13 +1290,13 @@
     ]
   },
   "resources/js/Admin/Magistrales/Sales.jsx": {
-    "file": "assets/Sales-D8vMkIie.js",
+    "file": "assets/Sales-DluYuTSU.js",
     "name": "Sales",
     "src": "resources/js/Admin/Magistrales/Sales.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1314,7 +1314,7 @@
     ]
   },
   "resources/js/Admin/MailingTemplates.jsx": {
-    "file": "assets/MailingTemplates-CM8Hdmju.js",
+    "file": "assets/MailingTemplates-fn9aSDyq.js",
     "name": "MailingTemplates",
     "src": "resources/js/Admin/MailingTemplates.jsx",
     "isEntry": true,
@@ -1324,48 +1324,48 @@
       "_Modal-DUZKQhYw.js",
       "_TextareaFormGroup-iJHqgfLU.js",
       "_SendingHistoryRest-nCIep4Lj.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_index-BKNjMPK8.js",
       "_BasicRest-BX743yrP.js",
       "_SwitchFormGroup-CoAAyo_L.js",
       "_Table-DlwwiBmM.js",
       "node_modules/xlsx/xlsx.mjs",
       "_InputFormGroup-daAMDFnf.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_tippy-react.esm-Dl7v7VoT.js",
       "_select2ModalFixes-1VjZp5Um.js",
       "_statusLabels-BOXkE1Ll.js"
     ]
   },
   "resources/js/Admin/ManualGuides.jsx": {
-    "file": "assets/ManualGuides-5JHxVI99.js",
+    "file": "assets/ManualGuides-Ce4DB-WD.js",
     "name": "ManualGuides",
     "src": "resources/js/Admin/ManualGuides.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_DxButton-CsjWvhyj.js",
-      "_UbigeoCascade-CLKx3Pp-.js",
+      "_UbigeoCascade-DgNOo-z8.js",
       "_ubigeoInei-D0FnAslC.js",
       "_ReferralGuidesRest-BDCVhdty.js",
       "_BasicRest-BX743yrP.js",
       "_statusLabels-BOXkE1Ll.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_tippy-react.esm-Dl7v7VoT.js",
       "_select2ModalFixes-1VjZp5Um.js"
     ]
   },
   "resources/js/Admin/Messages.jsx": {
-    "file": "assets/Messages-DVvJHFa7.js",
+    "file": "assets/Messages-DuHiXfso.js",
     "name": "Messages",
     "src": "resources/js/Admin/Messages.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_DxButton-CsjWvhyj.js",
       "_ReactAppend-DoFYb-Jc.js",
@@ -1375,22 +1375,22 @@
     ]
   },
   "resources/js/Admin/Orders.jsx": {
-    "file": "assets/Orders-CTjKgUoy.js",
+    "file": "assets/Orders-bcaUVW28.js",
     "name": "Orders",
     "src": "resources/js/Admin/Orders.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "_esm-DKHzvBm5.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_ReactAppend-DoFYb-Jc.js",
       "_DxButton-CsjWvhyj.js",
       "_SwitchFormGroup-CoAAyo_L.js",
       "_InputFormGroup-daAMDFnf.js",
-      "_SelectAPIFormGroup-jvheqiwg.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectAPIFormGroup-BG-IlKtJ.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_SetSelectValue-DL-AgtMG.js",
       "_BasicRest-BX743yrP.js",
       "_statusLabels-BOXkE1Ll.js",
@@ -1399,17 +1399,17 @@
     ]
   },
   "resources/js/Admin/PaymentMethods.jsx": {
-    "file": "assets/PaymentMethods-BUtvLxOZ.js",
+    "file": "assets/PaymentMethods-CVeGtDOP.js",
     "name": "PaymentMethods",
     "src": "resources/js/Admin/PaymentMethods.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_SwitchFormGroup-CoAAyo_L.js",
       "_DxButton-CsjWvhyj.js",
       "_ReactAppend-DoFYb-Jc.js",
@@ -1420,26 +1420,26 @@
     ]
   },
   "resources/js/Admin/Picking.jsx": {
-    "file": "assets/Picking-Grs9CJ2a.js",
+    "file": "assets/Picking-Cgdkv09S.js",
     "name": "Picking",
     "src": "resources/js/Admin/Picking.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_CommercialOrdersRest-Vj0uVLPr.js",
       "_SampleOrdersRest-BpwQkbU8.js",
       "_BasicRest-BX743yrP.js"
     ]
   },
   "resources/js/Admin/Pokemons.jsx": {
-    "file": "assets/Pokemons-BHFYaF06.js",
+    "file": "assets/Pokemons-Bw9V7VVH.js",
     "name": "Pokemons",
     "src": "resources/js/Admin/Pokemons.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1451,13 +1451,13 @@
     ]
   },
   "resources/js/Admin/Posts.jsx": {
-    "file": "assets/Posts-hYI2sqP6.js",
+    "file": "assets/Posts-CyZiAbbU.js",
     "name": "Posts",
     "src": "resources/js/Admin/Posts.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1465,7 +1465,7 @@
       "_DxButton-CsjWvhyj.js",
       "_ImageFormGroup-YTYmfrNv.js",
       "_BasicRest-BX743yrP.js",
-      "_SelectAPIFormGroup-jvheqiwg.js",
+      "_SelectAPIFormGroup-BG-IlKtJ.js",
       "_SetSelectValue-DL-AgtMG.js",
       "_statusLabels-BOXkE1Ll.js",
       "_tippy-react.esm-Dl7v7VoT.js",
@@ -1473,13 +1473,13 @@
     ]
   },
   "resources/js/Admin/PriceLists.jsx": {
-    "file": "assets/PriceLists-DvwWuUun.js",
+    "file": "assets/PriceLists-hbWN60dk.js",
     "name": "PriceLists",
     "src": "resources/js/Admin/PriceLists.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1493,27 +1493,27 @@
     ]
   },
   "resources/js/Admin/Profile.jsx": {
-    "file": "assets/Profile-DZlrUQFY.js",
+    "file": "assets/Profile-CX-MgCKV.js",
     "name": "Profile",
     "src": "resources/js/Admin/Profile.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "_tippy-react.esm-Dl7v7VoT.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_InputFormGroup-daAMDFnf.js",
       "_resizeImage-CAkDvg_q.js",
       "_BasicRest-BX743yrP.js"
     ]
   },
   "resources/js/Admin/PurchaseOrders.jsx": {
-    "file": "assets/PurchaseOrders-BVsBGThH.js",
+    "file": "assets/PurchaseOrders-Cg48C3OQ.js",
     "name": "PurchaseOrders",
     "src": "resources/js/Admin/PurchaseOrders.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1530,13 +1530,13 @@
     ]
   },
   "resources/js/Admin/PurchaseReceipts.jsx": {
-    "file": "assets/PurchaseReceipts-Dya_8DN_.js",
+    "file": "assets/PurchaseReceipts-BVWoKGeK.js",
     "name": "PurchaseReceipts",
     "src": "resources/js/Admin/PurchaseReceipts.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1552,13 +1552,13 @@
     ]
   },
   "resources/js/Admin/Regions.jsx": {
-    "file": "assets/Regions-FHCgCE-4.js",
+    "file": "assets/Regions-CaUJSI_A.js",
     "name": "Regions",
     "src": "resources/js/Admin/Regions.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1569,13 +1569,13 @@
     ]
   },
   "resources/js/Admin/Renewals.jsx": {
-    "file": "assets/Renewals-C4IE_zQ7.js",
+    "file": "assets/Renewals-R26Conmb.js",
     "name": "Renewals",
     "src": "resources/js/Admin/Renewals.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1588,13 +1588,13 @@
     ]
   },
   "resources/js/Admin/Roles.jsx": {
-    "file": "assets/Roles-BcSyf28V.js",
+    "file": "assets/Roles-CTDEi4Fj.js",
     "name": "Roles",
     "src": "resources/js/Admin/Roles.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1603,13 +1603,13 @@
     ]
   },
   "resources/js/Admin/SaleOrigins.jsx": {
-    "file": "assets/SaleOrigins-DKRtPTdw.js",
+    "file": "assets/SaleOrigins-CMfRnyGf.js",
     "name": "SaleOrigins",
     "src": "resources/js/Admin/SaleOrigins.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_ReactAppend-DoFYb-Jc.js",
@@ -1623,13 +1623,13 @@
     ]
   },
   "resources/js/Admin/Sales.jsx": {
-    "file": "assets/Sales-BNt1mp7O.js",
+    "file": "assets/Sales-Dnsq6-s1.js",
     "name": "Sales",
     "src": "resources/js/Admin/Sales.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_BasicRest-BX743yrP.js",
       "_Table-DlwwiBmM.js",
       "_ReactAppend-DoFYb-Jc.js",
@@ -1640,13 +1640,13 @@
     ]
   },
   "resources/js/Admin/SalesReport.jsx": {
-    "file": "assets/SalesReport-B7dd9vm_.js",
+    "file": "assets/SalesReport-BZFZoozV.js",
     "name": "SalesReport",
     "src": "resources/js/Admin/SalesReport.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_BasicRest-BX743yrP.js",
@@ -1654,13 +1654,13 @@
     ]
   },
   "resources/js/Admin/SampleOrders.jsx": {
-    "file": "assets/SampleOrders-DtomoPin.js",
+    "file": "assets/SampleOrders-DGtm-pVr.js",
     "name": "SampleOrders",
     "src": "resources/js/Admin/SampleOrders.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1673,14 +1673,14 @@
     ]
   },
   "resources/js/Admin/SendingHistory.jsx": {
-    "file": "assets/SendingHistory-C1QiyvaI.js",
+    "file": "assets/SendingHistory-_wG338On.js",
     "name": "SendingHistory",
     "src": "resources/js/Admin/SendingHistory.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "_Table-DlwwiBmM.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_SendingHistoryRest-nCIep4Lj.js",
       "_ReactAppend-DoFYb-Jc.js",
       "_Modal-DUZKQhYw.js",
@@ -1690,13 +1690,13 @@
     ]
   },
   "resources/js/Admin/Series.jsx": {
-    "file": "assets/Series-HMs4Mx3s.js",
+    "file": "assets/Series-X9pAvKFZ.js",
     "name": "Series",
     "src": "resources/js/Admin/Series.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1707,13 +1707,13 @@
     ]
   },
   "resources/js/Admin/ServiceCatalog.jsx": {
-    "file": "assets/ServiceCatalog-BfpV3LWV.js",
+    "file": "assets/ServiceCatalog-CH-4Euwc.js",
     "name": "ServiceCatalog",
     "src": "resources/js/Admin/ServiceCatalog.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1724,13 +1724,13 @@
     ]
   },
   "resources/js/Admin/ServiceOrders.jsx": {
-    "file": "assets/ServiceOrders-BFNHf9e-.js",
+    "file": "assets/ServiceOrders-CJ8PKfGx.js",
     "name": "ServiceOrders",
     "src": "resources/js/Admin/ServiceOrders.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1742,13 +1742,13 @@
     ]
   },
   "resources/js/Admin/Sliders.jsx": {
-    "file": "assets/Sliders-BE6Xa27v.js",
+    "file": "assets/Sliders-8OJDrcS3.js",
     "name": "Sliders",
     "src": "resources/js/Admin/Sliders.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1763,13 +1763,13 @@
     ]
   },
   "resources/js/Admin/Socials.jsx": {
-    "file": "assets/Socials-BeFl261M.js",
+    "file": "assets/Socials-DWNR5Tq4.js",
     "name": "Socials",
     "src": "resources/js/Admin/Socials.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_ReactAppend-DoFYb-Jc.js",
@@ -1778,20 +1778,20 @@
       "_SwitchFormGroup-CoAAyo_L.js",
       "_InputFormGroup-daAMDFnf.js",
       "_BasicRest-BX743yrP.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_statusLabels-BOXkE1Ll.js",
       "_tippy-react.esm-Dl7v7VoT.js",
       "_select2ModalFixes-1VjZp5Um.js"
     ]
   },
   "resources/js/Admin/Statuses.jsx": {
-    "file": "assets/Statuses-BB1AnfFv.js",
+    "file": "assets/Statuses-IAUPGQJl.js",
     "name": "Statuses",
     "src": "resources/js/Admin/Statuses.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_DxButton-CsjWvhyj.js",
@@ -1803,13 +1803,13 @@
     ]
   },
   "resources/js/Admin/StorageApiTokens.jsx": {
-    "file": "assets/StorageApiTokens-B_rtlQ_Y.js",
+    "file": "assets/StorageApiTokens-BjhSZsIh.js",
     "name": "StorageApiTokens",
     "src": "resources/js/Admin/StorageApiTokens.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1819,13 +1819,13 @@
     ]
   },
   "resources/js/Admin/Strengths.jsx": {
-    "file": "assets/Strengths-C4WbLFps.js",
+    "file": "assets/Strengths-CjcYhTbB.js",
     "name": "Strengths",
     "src": "resources/js/Admin/Strengths.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_ReactAppend-DoFYb-Jc.js",
@@ -1839,13 +1839,13 @@
     ]
   },
   "resources/js/Admin/Subscriptions.jsx": {
-    "file": "assets/Subscriptions-BxhOn2DG.js",
+    "file": "assets/Subscriptions-CXq0mcbB.js",
     "name": "Subscriptions",
     "src": "resources/js/Admin/Subscriptions.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_BasicRest-BX743yrP.js",
       "_Table-DlwwiBmM.js",
       "_DxButton-CsjWvhyj.js",
@@ -1856,14 +1856,14 @@
     ]
   },
   "resources/js/Admin/Suppliers.jsx": {
-    "file": "assets/Suppliers-BHsegp8v.js",
+    "file": "assets/Suppliers-f38JIjDP.js",
     "name": "Suppliers",
     "src": "resources/js/Admin/Suppliers.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "node_modules/xlsx/xlsx.mjs",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1875,13 +1875,13 @@
     ]
   },
   "resources/js/Admin/Supplies.jsx": {
-    "file": "assets/Supplies-ByUa2YBe.js",
+    "file": "assets/Supplies-DQjdmfyH.js",
     "name": "Supplies",
     "src": "resources/js/Admin/Supplies.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1895,13 +1895,13 @@
     ]
   },
   "resources/js/Admin/Tags.jsx": {
-    "file": "assets/Tags-CqRoGO4r.js",
+    "file": "assets/Tags-C-63_NHk.js",
     "name": "Tags",
     "src": "resources/js/Admin/Tags.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_ReactAppend-DoFYb-Jc.js",
@@ -1915,13 +1915,13 @@
     ]
   },
   "resources/js/Admin/TakeOrders.jsx": {
-    "file": "assets/TakeOrders-CrOiHN8_.js",
+    "file": "assets/TakeOrders-vPyY24dA.js",
     "name": "TakeOrders",
     "src": "resources/js/Admin/TakeOrders.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1931,13 +1931,13 @@
     ]
   },
   "resources/js/Admin/Testimonies.jsx": {
-    "file": "assets/Testimonies-CGucWLf8.js",
+    "file": "assets/Testimonies-DZ8p5VQk.js",
     "name": "Testimonies",
     "src": "resources/js/Admin/Testimonies.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_InputFormGroup-daAMDFnf.js",
@@ -1951,13 +1951,13 @@
     ]
   },
   "resources/js/Admin/TransactionCategories.jsx": {
-    "file": "assets/TransactionCategories-CdTFE7n8.js",
+    "file": "assets/TransactionCategories-C1eR3rRg.js",
     "name": "TransactionCategories",
     "src": "resources/js/Admin/TransactionCategories.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_ReactAppend-DoFYb-Jc.js",
@@ -1971,13 +1971,13 @@
     ]
   },
   "resources/js/Admin/Transactions.jsx": {
-    "file": "assets/Transactions-DbBdGPcS.js",
+    "file": "assets/Transactions-Bt5oArin.js",
     "name": "Transactions",
     "src": "resources/js/Admin/Transactions.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -1988,14 +1988,14 @@
     ]
   },
   "resources/js/Admin/Units.jsx": {
-    "file": "assets/Units-CP5AKbXa.js",
+    "file": "assets/Units-BhvSrQDl.js",
     "name": "Units",
     "src": "resources/js/Admin/Units.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
       "node_modules/xlsx/xlsx.mjs",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -2008,13 +2008,13 @@
     ]
   },
   "resources/js/Admin/Users.jsx": {
-    "file": "assets/Users-DsMz5rLA.js",
+    "file": "assets/Users-CJcY3z8A.js",
     "name": "Users",
     "src": "resources/js/Admin/Users.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -2027,34 +2027,34 @@
     ]
   },
   "resources/js/Admin/VehicleZones.jsx": {
-    "file": "assets/VehicleZones-TjokGqwj.js",
+    "file": "assets/VehicleZones-BT42uoQf.js",
     "name": "VehicleZones",
     "src": "resources/js/Admin/VehicleZones.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_Modal-DUZKQhYw.js",
       "_DxButton-CsjWvhyj.js",
       "_BasicRest-BX743yrP.js",
       "_ZonesRest-CdraGnEY.js",
-      "_UbigeoCascade-CLKx3Pp-.js",
+      "_UbigeoCascade-DgNOo-z8.js",
       "_ubigeoInei-D0FnAslC.js",
       "_statusLabels-BOXkE1Ll.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_tippy-react.esm-Dl7v7VoT.js",
       "_select2ModalFixes-1VjZp5Um.js"
     ]
   },
   "resources/js/Admin/Warehouses.jsx": {
-    "file": "assets/Warehouses-CbkFQ1Of.js",
+    "file": "assets/Warehouses-Ceztu91I.js",
     "name": "Warehouses",
     "src": "resources/js/Admin/Warehouses.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_VdTable-CTScXsa5.js",
       "_VdSelect-DJmfIhxq.js",
       "_Modal-DUZKQhYw.js",
@@ -2259,18 +2259,18 @@
     ]
   },
   "resources/js/Seller/Cards.jsx": {
-    "file": "assets/Cards-C1pSqyMI.js",
+    "file": "assets/Cards-D2ASUGic.js",
     "name": "Cards",
     "src": "resources/js/Seller/Cards.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_Table-DlwwiBmM.js",
       "_cards-rest-6c8PE9fW.js",
       "_Modal-DUZKQhYw.js",
       "_BasicRest-BX743yrP.js",
-      "_SelectFormGroup-CWlWzLpb.js",
+      "_SelectFormGroup-wknLnIP5.js",
       "_InputFormGroup-daAMDFnf.js",
       "_statusLabels-BOXkE1Ll.js",
       "_tippy-react.esm-Dl7v7VoT.js",
@@ -2278,13 +2278,13 @@
     ]
   },
   "resources/js/Seller/Home.jsx": {
-    "file": "assets/Home-EgD4xfiE.js",
+    "file": "assets/Home-DHEs-CCB.js",
     "name": "Home",
     "src": "resources/js/Seller/Home.jsx",
     "isEntry": true,
     "imports": [
       "_CreateReactScript-Di1kuK03.js",
-      "_Base-BxKCAHQi.js",
+      "_Base-_90qtGTa.js",
       "_BasicRest-BX743yrP.js"
     ]
   },

@@ -36,6 +36,11 @@ const Menu = ({ can, hasRole, panel = null }) => {
     'accounts-receivable',
     'orders',
     'pricing',
+    'dispatch',
+    'driver',
+    'vehicle-zone',
+    'activity',
+    'referral_guides',
     'sample-orders',
     'magistrales-dashboard',
     'magistrales-products',
@@ -213,6 +218,19 @@ const Menu = ({ can, hasRole, panel = null }) => {
               {canAccess('orders') && <MenuItem href='/admin/commercial-orders' icon='ti ti-basket' exact>Pedido</MenuItem>}
               {canAccess('orders') && <MenuItem href='/admin/commercial-orders/multivende' icon='ti ti-plug-connected'>Pedidos Multivende</MenuItem>}
               {canAccess('pricing') && <MenuItem href='/admin/pricing' icon='ti ti-tags'>Tarifario</MenuItem>}
+            </MenuItemContainer>
+          )}
+
+          {/* Despacho: las pantallas y los permisos existian desde antes, pero el menu se habia
+              quedado sin la seccion y solo se llegaba escribiendo la URL. */}
+          {canAccessAny('dispatch', 'driver', 'vehicle-zone', 'activity', 'referral_guides') && (
+            <MenuItemContainer title='Despacho' icon='ti ti-truck-delivery'>
+              {canAccess('dispatch') && <MenuItem href='/admin/picking' icon='ti ti-list-check'>Picking</MenuItem>}
+              {canAccess('dispatch') && <MenuItem href='/admin/dispatch' icon='ti ti-truck'>Despacho</MenuItem>}
+              {canAccess('activity') && <MenuItem href='/admin/activity' icon='ti ti-activity'>Actividad</MenuItem>}
+              {canAccess('driver') && <MenuItem href='/admin/driver' icon='ti ti-steering-wheel'>Choferes</MenuItem>}
+              {canAccess('vehicle-zone') && <MenuItem href='/admin/vehicle-zone' icon='ti ti-map-pin'>Zonas de vehiculo</MenuItem>}
+              {canAccess('referral_guides') && <MenuItem href='/admin/manual-guides' icon='ti ti-file-text'>Guias manuales</MenuItem>}
             </MenuItemContainer>
           )}
 
