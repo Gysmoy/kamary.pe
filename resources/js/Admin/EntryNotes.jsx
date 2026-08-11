@@ -43,6 +43,26 @@ const storageLocationOptionLabel = (location) => [location?.temperature_range, l
 
 const articleOptionLabel = (article) => [article?.code, article?.name].filter(Boolean).join(' - ')
 
+// Precio de compra configurado del articulo: el nacional para PEN y el extranjero para USD/EUR,
+// tomando la presentacion por defecto y cayendo al precio del articulo si no hay presentaciones.
+// Es la misma regla que ya aplica la orden de compra (resolvePresentationPrice en PurchaseOrders),
+// para que el costo no salga distinto segun por donde entre la mercaderia.
+const configuredPurchasePrice = (article, currency = 'PEN') => {
+  if (!article) return 0
+  const isForeign = currency === 'USD' || currency === 'EUR'
+  const priceOf = (row) => {
+    if (!row) return 0
+    const configured = isForeign ? row.purchase_price_foreign : row.purchase_price_national
+    return Number(configured ?? row.price ?? 0) || 0
+  }
+
+  const presentation = (article.presentations ?? [])
+    .filter(row => row?.status === 1 || row?.status === true || row?.status === '1')
+    .sort((a, b) => (Number(a.sort_order || 0) - Number(b.sort_order || 0)) || (Number(a.id || 0) - Number(b.id || 0)))[0]
+
+  return priceOf(presentation) || priceOf(article)
+}
+
 const normalizeSearchText = (value) => `${value ?? ''}`
   .toLowerCase()
   .normalize('NFD')
@@ -567,6 +587,9 @@ const EntryNotes = () => {
 
     const currentItem = items.find(item => item.uid === uid)
     const warehouseLabel = warehouseLocationLabel(selectedWarehouseId, currentItem?.location)
+    // El costo arranca con el precio de compra configurado en vez de en cero: escribirlo a mano en
+    // cada linea era la via facil para que el kardex quedara valorizado con cualquier numero.
+    const costUnit = configuredPurchasePrice(article, currency)
 
     setItems(prev => prev.map(item => {
       if (item.uid !== uid) return item
@@ -581,9 +604,12 @@ const EntryNotes = () => {
           article_principle: '',
           article_unit: '',
           stock: 0,
+          cost_unit: 0,
+          total: 0,
           location: storageContext ? item.location : warehouseLabel,
         }
       }
+      const quantity = Number(item.quantity || 0)
       return {
         ...withoutBatch,
         article_id: articleId,
@@ -591,6 +617,8 @@ const EntryNotes = () => {
         article_laboratory: article?.laboratory?.name ?? '',
         article_principle: article?.activePrinciple?.name ?? article?.active_principle?.name ?? '',
         article_unit: article?.unit?.symbol ?? article?.unit?.name ?? '',
+        cost_unit: costUnit,
+        total: Number.isFinite(quantity * costUnit) ? quantity * costUnit : 0,
         warehouse_id: selectedWarehouseId || item.warehouse_id,
         location: storageContext ? item.location : warehouseLabel,
       }
