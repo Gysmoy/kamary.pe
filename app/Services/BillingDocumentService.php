@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\Auth;
 
 class BillingDocumentService
 {
+    /** Retencion de IGV: tasa unica fijada por SUNAT, no es un valor a elegir. */
+    private const RETENTION_PERCENT = 3;
+
     public function prepareDocument(BillingDocument $document): BillingDocument
     {
         if ($document->reference_billing_document_id) {
@@ -909,8 +912,9 @@ class BillingDocumentService
             ]);
         }
 
-        $percent = $this->decimalValue($options['retention_percent'] ?? Arr::get($metadata, 'retention_percent'));
-        if ($percent <= 0) $percent = 3;
+        // La retencion de IGV es 3% por norma, no un valor a elegir: se fija aqui y se ignora lo
+        // que llegue en la peticion, para que no se pueda emitir con otra tasa ni por API.
+        $percent = self::RETENTION_PERCENT;
 
         $amount = $this->decimalValue($options['retention_amount'] ?? Arr::get($metadata, 'retention_amount'));
         if ($amount <= 0) $amount = round(abs((float) $document->total) * $percent / 100, 2);
