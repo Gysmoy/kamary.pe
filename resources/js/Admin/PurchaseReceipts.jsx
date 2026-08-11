@@ -721,28 +721,36 @@ const PurchaseReceipts = () => {
               <i className='mdi mdi-plus me-1'></i> Agregar línea
             </button>
           </div>
+          {/* Son 18 columnas: sin ancho minimo el navegador las apretaba hasta cortar los numeros
+              ("0.0("). Con ancho propio cada una se lee entera y la tabla scrollea en horizontal. */}
+          <style>{`
+            .purchase-receipt-lines { min-width: 2100px; }
+            .purchase-receipt-lines th { white-space: nowrap; vertical-align: middle; }
+            .purchase-receipt-lines td { vertical-align: middle; }
+            .purchase-receipt-lines .form-control-sm { min-width: 0; }
+          `}</style>
           <div className='table-responsive border rounded'>
-            <table className='table table-sm table-striped mb-0'>
+            <table className='table table-sm table-striped mb-0 purchase-receipt-lines'>
               <thead>
                 <tr>
-                  <th>Artículo</th>
-                  <th>Lab. | Principio</th>
-                  <th>Unidad</th>
-                  <th>Presentacion</th>
-                  <th>Solic.</th>
-                  <th>Ya rec.</th>
-                  <th>Pend.</th>
-                  <th>Cod. lote</th>
-                  <th>Lote</th>
-                  <th>F. venc.</th>
-                  <th>Stock ant.</th>
-                  <th>Und/caja</th>
-                  <th>Cajas</th>
-                  <th>P. costo</th>
-                  <th>Ubicación</th>
-                  <th>Cantidad</th>
-                  <th>Total</th>
-                  <th>Acciones</th>
+                  <th style={{ minWidth: 240 }}>Artículo</th>
+                  <th style={{ minWidth: 170 }}>Lab. | Principio</th>
+                  <th style={{ minWidth: 80 }}>Unidad</th>
+                  <th style={{ minWidth: 130 }}>Presentacion</th>
+                  <th style={{ minWidth: 100 }}>Solic.</th>
+                  <th style={{ minWidth: 100 }}>Ya rec.</th>
+                  <th style={{ minWidth: 100 }}>Pend.</th>
+                  <th style={{ minWidth: 120 }}>Cod. lote</th>
+                  <th style={{ minWidth: 120 }}>Lote</th>
+                  <th style={{ minWidth: 155 }}>F. venc.</th>
+                  <th style={{ minWidth: 110 }}>Stock ant.</th>
+                  <th style={{ minWidth: 105 }}>Und/caja</th>
+                  <th style={{ minWidth: 95 }}>Cajas</th>
+                  <th style={{ minWidth: 105 }}>P. costo</th>
+                  <th style={{ minWidth: 140 }}>Ubicación</th>
+                  <th style={{ minWidth: 110 }}>Cantidad</th>
+                  <th style={{ minWidth: 110 }}>Total</th>
+                  <th style={{ minWidth: 75 }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -768,9 +776,11 @@ const PurchaseReceipts = () => {
                       <small>{item.presentation_label || '-'}</small>
                       {item.presentation_units ? <small className='d-block text-muted'>{Number(item.presentation_units || 1).toFixed(3)} und.</small> : null}
                     </td>
-                    <td><input className='form-control form-control-sm' value={Number(item.ordered_quantity || 0).toFixed(3)} readOnly /></td>
-                    <td><input className='form-control form-control-sm' value={Number(item.already_received || 0).toFixed(3)} readOnly /></td>
-                    <td><input className='form-control form-control-sm' value={Number(item.pending_quantity || 0).toFixed(3)} readOnly /></td>
+                    {/* Vienen de la orden de compra, no se escriben: se pintan como calculadas
+                        para que no parezcan campos editables. */}
+                    <td><input className='form-control form-control-sm bg-light text-muted' value={Number(item.ordered_quantity || 0).toFixed(3)} readOnly tabIndex='-1' /></td>
+                    <td><input className='form-control form-control-sm bg-light text-muted' value={Number(item.already_received || 0).toFixed(3)} readOnly tabIndex='-1' /></td>
+                    <td><input className='form-control form-control-sm bg-light text-muted' value={Number(item.pending_quantity || 0).toFixed(3)} readOnly tabIndex='-1' /></td>
                     <td><input className='form-control form-control-sm' value={item.batch_code} onChange={(e) => onItemUpdated(item.uid, 'batch_code', e.target.value)} /></td>
                     <td><input className='form-control form-control-sm' value={item.lot} onChange={(e) => onItemUpdated(item.uid, 'lot', e.target.value)} /></td>
                     <td><input className='form-control form-control-sm' type='date' value={item.expiration_date} onChange={(e) => onItemUpdated(item.uid, 'expiration_date', e.target.value)} /></td>
@@ -780,7 +790,7 @@ const PurchaseReceipts = () => {
                     <td><input className='form-control form-control-sm' type='number' min='0' step='0.01' value={item.cost_unit} onChange={(e) => onItemUpdated(item.uid, 'cost_unit', e.target.value)} /></td>
                     <td><input className='form-control form-control-sm' value={item.location} onChange={(e) => onItemUpdated(item.uid, 'location', e.target.value)} /></td>
                     <td><input className='form-control form-control-sm' type='number' min='0.001' step='0.001' value={item.quantity} onChange={(e) => onItemUpdated(item.uid, 'quantity', e.target.value)} /></td>
-                    <td><input className='form-control form-control-sm' type='number' value={Number(item.total || 0).toFixed(2)} readOnly /></td>
+                    <td><input className='form-control form-control-sm bg-light text-muted' type='number' value={Number(item.total || 0).toFixed(2)} readOnly tabIndex='-1' /></td>
                     <td>
                       <button type='button' className='btn btn-xs btn-soft-danger' onClick={() => onItemRemoved(item.uid)}>
                         <i className='mdi mdi-delete'></i>
