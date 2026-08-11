@@ -561,15 +561,19 @@ class ClientController extends BasicController
 
         $token = trim((string)env('DEVEX_PEOPLE_API_TOKEN'));
         if ($token === '') {
-            throw new \Exception('No se ha configurado APIPERU_TOKEN ni DEVEX_PEOPLE_API_TOKEN en .env');
+            throw new \Exception('Falta configurar APIPERU_TOKEN en el .env del servidor para poder consultar DNI y RUC.');
         }
 
+        // Se llego aqui porque APIPERU_TOKEN vino vacio. Si el token si esta escrito en el .env,
+        // casi siempre es config cacheada: hace falta un php artisan config:clear.
         $baseUrl = rtrim(env('DEVEX_PEOPLE_API_BASE_URL', 'https://devex.pe/client-api/people'), '/');
         $apiResponse = $this->callLookupProvider(
             fn() => Http::acceptJson()
                 ->withToken($token)
                 ->timeout(15)
-                ->get("{$baseUrl}/{$documentType}/{$documentNumber}")
+                ->get("{$baseUrl}/{$documentType}/{$documentNumber}"),
+            'El servicio devex.pe (APIPERU_TOKEN esta vacio, por eso no se uso apiperu)',
+            'DEVEX_PEOPLE_API_TOKEN'
         );
         if ($apiResponse === null) return null;
 
@@ -584,12 +588,12 @@ class ClientController extends BasicController
      *
      * @return \Illuminate\Http\Client\Response|null null = no encontrado
      */
-    private function callLookupProvider(callable $request)
+    private function callLookupProvider(callable $request, string $provider, string $tokenVar)
     {
         try {
             $apiResponse = $request();
         } catch (\Throwable $th) {
-            throw new \Exception('No se pudo contactar al servicio de consulta de documentos. Revisa la conexion e intenta de nuevo.');
+            throw new \Exception("No se pudo contactar a {$provider}. Revisa la conexion del servidor e intenta de nuevo.");
         }
 
         if ($apiResponse->ok()) return $apiResponse;
@@ -599,13 +603,13 @@ class ClientController extends BasicController
         // creyera que su DNI no figuraba cuando en realidad el endpoint estaba caido.
         if ($apiResponse->status() === 404) {
             if (is_array($apiResponse->json())) return null;
-            throw new \Exception('La direccion del servicio de consulta ya no existe (404). Revisa APIPERU_BASE_URL o DEVEX_PEOPLE_API_BASE_URL en el .env.');
+            throw new \Exception("{$provider} ya no responde en esa direccion (404). El servicio de consulta cambio o dejo de existir.");
         }
 
         throw new \Exception(match ($apiResponse->status()) {
-            401, 403 => 'El servicio de consulta rechazo el token. Revisa APIPERU_TOKEN (o DEVEX_PEOPLE_API_TOKEN) en el .env.',
-            429 => 'El servicio de consulta agoto su cuota de consultas por ahora. Escribe los datos a mano o intenta mas tarde.',
-            default => "El servicio de consulta no respondio correctamente (HTTP {$apiResponse->status()}). Escribe los datos a mano.",
+            401, 403 => "{$provider} rechazo el token. Revisa {$tokenVar} en el .env del servidor.",
+            429 => "{$provider} agoto su cuota de consultas por ahora. Escribe los datos a mano o intenta mas tarde.",
+            default => "{$provider} no respondio correctamente (HTTP {$apiResponse->status()}). Escribe los datos a mano.",
         });
     }
 
@@ -620,7 +624,9 @@ class ClientController extends BasicController
             fn() => Http::acceptJson()
                 ->withToken($token)
                 ->timeout(15)
-                ->post("{$baseUrl}/{$documentType}", [$documentType => $documentNumber])
+                ->post("{$baseUrl}/{$documentType}", [$documentType => $documentNumber]),
+            'apiperu.dev',
+            'APIPERU_TOKEN'
         );
         if ($apiResponse === null) return null;
 
