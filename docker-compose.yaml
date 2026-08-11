@@ -80,7 +80,12 @@ services:
       - FACTURADORPRO5_SERIES_BOLETA=${FACTURADORPRO5_SERIES_BOLETA:-B001}
       - FACTURADORPRO5_SERIES_NOTA_CREDITO=${FACTURADORPRO5_SERIES_NOTA_CREDITO:-FC01}
       - DEVEX_PEOPLE_API_URL=${DEVEX_PEOPLE_API_URL:-}
+      - DEVEX_PEOPLE_API_BASE_URL=${DEVEX_PEOPLE_API_BASE_URL:-https://devex.pe/client-api/people}
       - DEVEX_PEOPLE_API_TOKEN=${DEVEX_PEOPLE_API_TOKEN:-}
+      # Consulta de DNI/RUC al crear clientes. Sin estas lineas el token del .env se queda en el
+      # host: el contenedor no lee ese archivo, solo las variables que se listan aqui.
+      - APIPERU_BASE_URL=${APIPERU_BASE_URL:-https://apiperu.dev/api}
+      - APIPERU_TOKEN=${APIPERU_TOKEN:-}
     depends_on:
       - db
     volumes:
