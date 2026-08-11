@@ -489,31 +489,7 @@ class ClientController extends BasicController
                 throw new \Exception('El cliente ya existe. Seleccionalo de la lista o usa otro documento');
             }
 
-            $token = env('DEVEX_PEOPLE_API_TOKEN');
-            if (!$token) {
-                throw new \Exception('No se ha configurado DEVEX_PEOPLE_API_TOKEN en .env');
-            }
-
-            $baseUrl = rtrim(env('DEVEX_PEOPLE_API_BASE_URL', 'https://devex.pe/client-api/people'), '/');
-            $url = "{$baseUrl}/{$documentType}/{$documentNumber}";
-
-            $apiResponse = Http::acceptJson()
-                ->withToken($token)
-                ->timeout(15)
-                ->get($url);
-
-            if (!$apiResponse->ok()) {
-                $response->status = 200;
-                $response->message = 'No se encontro informacion para este documento en el servicio externo';
-                $response->data = [
-                    'found' => false,
-                    'client' => null,
-                ];
-                return response($response->toArray(), $response->status);
-            }
-
-            $json = $apiResponse->json();
-            $person = $json['data'] ?? null;
+            $person = $this->fetchPersonFromLookupProvider($documentType, $documentNumber);
             if (!$person) {
                 $response->status = 200;
                 $response->message = 'No se encontro informacion para este documento en el servicio externo';
@@ -569,6 +545,81 @@ class ClientController extends BasicController
         } finally {
             return response($response->toArray(), $response->status);
         }
+    }
+
+    /**
+     * Consulta el documento en el proveedor configurado. Si hay APIPERU_TOKEN se usa apiperu.dev
+     * (su plan gratuito alcanza de sobra); si no, se mantiene devex.pe, que es el que habia.
+     * Ambos devuelven la persona con las mismas claves para no duplicar el mapeo de arriba.
+     */
+    private function fetchPersonFromLookupProvider(string $documentType, string $documentNumber): ?array
+    {
+        $apiPeruToken = trim((string)env('APIPERU_TOKEN'));
+        if ($apiPeruToken !== '') {
+            return $this->fetchPersonFromApiPeru($apiPeruToken, $documentType, $documentNumber);
+        }
+
+        $token = trim((string)env('DEVEX_PEOPLE_API_TOKEN'));
+        if ($token === '') {
+            throw new \Exception('No se ha configurado APIPERU_TOKEN ni DEVEX_PEOPLE_API_TOKEN en .env');
+        }
+
+        $baseUrl = rtrim(env('DEVEX_PEOPLE_API_BASE_URL', 'https://devex.pe/client-api/people'), '/');
+        $apiResponse = Http::acceptJson()
+            ->withToken($token)
+            ->timeout(15)
+            ->get("{$baseUrl}/{$documentType}/{$documentNumber}");
+
+        if (!$apiResponse->ok()) return null;
+
+        $person = $apiResponse->json()['data'] ?? null;
+        return is_array($person) ? $person : null;
+    }
+
+    /**
+     * apiperu.dev responde por POST y nombra los campos en espanol, distinto segun DNI o RUC.
+     * Se traduce a las claves que ya entiende el mapeo del cliente.
+     */
+    private function fetchPersonFromApiPeru(string $token, string $documentType, string $documentNumber): ?array
+    {
+        $baseUrl = rtrim(env('APIPERU_BASE_URL', 'https://apiperu.dev/api'), '/');
+        $apiResponse = Http::acceptJson()
+            ->withToken($token)
+            ->timeout(15)
+            ->post("{$baseUrl}/{$documentType}", [$documentType => $documentNumber]);
+
+        if (!$apiResponse->ok()) return null;
+
+        $json = $apiResponse->json();
+        if (!is_array($json) || ($json['success'] ?? false) !== true) return null;
+
+        $data = $json['data'] ?? null;
+        if (!is_array($data)) return null;
+
+        // DNI llega partido en nombres y apellidos; RUC trae la razon social en un solo campo.
+        $fullName = trim((string)($data['nombre_completo'] ?? $data['nombre_o_razon_social'] ?? ''));
+        if ($fullName === '') {
+            $fullName = trim(implode(' ', array_filter([
+                trim((string)($data['nombres'] ?? '')),
+                trim((string)($data['apellido_paterno'] ?? '')),
+                trim((string)($data['apellido_materno'] ?? '')),
+            ])));
+        }
+        if ($fullName === '') return null;
+
+        $address = trim((string)($data['direccion_completa'] ?? $data['direccion'] ?? '')) ?: null;
+
+        return [
+            'fullname' => $fullName,
+            'full_address' => $address,
+            'fiscal_address' => $address,
+            'departamento' => trim((string)($data['departamento'] ?? '')) ?: null,
+            'provincia' => trim((string)($data['provincia'] ?? '')) ?: null,
+            'distrito' => trim((string)($data['distrito'] ?? '')) ?: null,
+            'estado_contribuyente' => trim((string)($data['estado'] ?? '')) ?: null,
+            'condicion_domicilio' => trim((string)($data['condicion'] ?? '')) ?: null,
+            'ultima_actualizacion' => trim((string)($data['ultima_actualizacion'] ?? '')) ?: null,
+        ];
     }
 
     public function boolean(Request $request)
