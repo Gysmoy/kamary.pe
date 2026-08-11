@@ -593,7 +593,14 @@ class ClientController extends BasicController
         }
 
         if ($apiResponse->ok()) return $apiResponse;
-        if ($apiResponse->status() === 404) return null;
+
+        // Un 404 con cuerpo JSON es el proveedor diciendo "ese documento no existe". Un 404 con
+        // HTML es nginx: la ruta del servicio ya no esta, y confundirlos hacia que el usuario
+        // creyera que su DNI no figuraba cuando en realidad el endpoint estaba caido.
+        if ($apiResponse->status() === 404) {
+            if (is_array($apiResponse->json())) return null;
+            throw new \Exception('La direccion del servicio de consulta ya no existe (404). Revisa APIPERU_BASE_URL o DEVEX_PEOPLE_API_BASE_URL en el .env.');
+        }
 
         throw new \Exception(match ($apiResponse->status()) {
             401, 403 => 'El servicio de consulta rechazo el token. Revisa APIPERU_TOKEN (o DEVEX_PEOPLE_API_TOKEN) en el .env.',
