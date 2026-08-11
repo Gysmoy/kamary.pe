@@ -7,6 +7,7 @@ import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
+import { toast } from 'sonner';
 import InputFormGroup from '@Adminto/form/InputFormGroup';
 import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import UbigeoCascade from '@Adminto/form/UbigeoCascade';
@@ -508,9 +509,17 @@ const Clients = ({
     const result = await clientsRest.lookupByDocument(type, number, kind)
     setIsSearchingDocument(false)
 
+    // Si el servicio falla, lookupByDocument ya muestra el error. Aqui se avisa el otro caso:
+    // la consulta si corrio pero no hay datos. Sin este aviso el formulario se quedaba igual que
+    // si nunca hubiera buscado, y no habia forma de distinguirlo.
     if (!result) return
     if (!result.found || !result.client) {
       setIsDocumentDataLocked(false)
+      toast.info('Sin resultados', {
+        description: `No se encontro informacion para el ${type.toUpperCase()} ${number}. Escribe los datos a mano.`,
+        duration: 4000,
+        richColors: true,
+      })
       return
     }
 

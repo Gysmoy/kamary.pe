@@ -565,15 +565,41 @@ class ClientController extends BasicController
         }
 
         $baseUrl = rtrim(env('DEVEX_PEOPLE_API_BASE_URL', 'https://devex.pe/client-api/people'), '/');
-        $apiResponse = Http::acceptJson()
-            ->withToken($token)
-            ->timeout(15)
-            ->get("{$baseUrl}/{$documentType}/{$documentNumber}");
-
-        if (!$apiResponse->ok()) return null;
+        $apiResponse = $this->callLookupProvider(
+            fn() => Http::acceptJson()
+                ->withToken($token)
+                ->timeout(15)
+                ->get("{$baseUrl}/{$documentType}/{$documentNumber}")
+        );
+        if ($apiResponse === null) return null;
 
         $person = $apiResponse->json()['data'] ?? null;
         return is_array($person) ? $person : null;
+    }
+
+    /**
+     * Ejecuta la llamada al proveedor distinguiendo "documento no encontrado" de "el servicio
+     * fallo". Antes ambos casos devolvian lo mismo y el formulario se quedaba mudo: el usuario no
+     * podia saber si el DNI no existia o si el token estaba vencido.
+     *
+     * @return \Illuminate\Http\Client\Response|null null = no encontrado
+     */
+    private function callLookupProvider(callable $request)
+    {
+        try {
+            $apiResponse = $request();
+        } catch (\Throwable $th) {
+            throw new \Exception('No se pudo contactar al servicio de consulta de documentos. Revisa la conexion e intenta de nuevo.');
+        }
+
+        if ($apiResponse->ok()) return $apiResponse;
+        if ($apiResponse->status() === 404) return null;
+
+        throw new \Exception(match ($apiResponse->status()) {
+            401, 403 => 'El servicio de consulta rechazo el token. Revisa APIPERU_TOKEN (o DEVEX_PEOPLE_API_TOKEN) en el .env.',
+            429 => 'El servicio de consulta agoto su cuota de consultas por ahora. Escribe los datos a mano o intenta mas tarde.',
+            default => "El servicio de consulta no respondio correctamente (HTTP {$apiResponse->status()}). Escribe los datos a mano.",
+        });
     }
 
     /**
@@ -583,12 +609,13 @@ class ClientController extends BasicController
     private function fetchPersonFromApiPeru(string $token, string $documentType, string $documentNumber): ?array
     {
         $baseUrl = rtrim(env('APIPERU_BASE_URL', 'https://apiperu.dev/api'), '/');
-        $apiResponse = Http::acceptJson()
-            ->withToken($token)
-            ->timeout(15)
-            ->post("{$baseUrl}/{$documentType}", [$documentType => $documentNumber]);
-
-        if (!$apiResponse->ok()) return null;
+        $apiResponse = $this->callLookupProvider(
+            fn() => Http::acceptJson()
+                ->withToken($token)
+                ->timeout(15)
+                ->post("{$baseUrl}/{$documentType}", [$documentType => $documentNumber])
+        );
+        if ($apiResponse === null) return null;
 
         $json = $apiResponse->json();
         if (!is_array($json) || ($json['success'] ?? false) !== true) return null;
