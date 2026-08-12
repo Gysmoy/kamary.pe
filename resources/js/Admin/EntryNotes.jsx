@@ -1732,7 +1732,6 @@ const EntryNotes = () => {
                 <tr>
                   <th>Articulo</th>
                   <th>Codigo Lote</th>
-                  <th>Lote</th>
                   <th>Laboratorio | Principio activo</th>
                   <th>Unidad</th>
                   <th>Stock actual</th>
@@ -1786,7 +1785,9 @@ const EntryNotes = () => {
                           </button>
                         </div>
                       </td>
-                      <td><input className='form-control form-control-sm' value={item.lot} readOnly /></td>
+                      {/* La columna "Lote" era un campo de solo lectura que repetia el codigo ya
+                          visible en el select de al lado. Se quita: item.lot se sigue llenando en
+                          estado y viaja igual en el guardado. */}
                       <td><small>{articleExtra}</small></td>
                       <td><small>{unitLabel}</small></td>
                       <td><input className='form-control form-control-sm bg-light text-muted' type='number' min='0' step='0.001' value={Number(item.stock || 0).toFixed(3)} readOnly tabIndex='-1' /></td>
