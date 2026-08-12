@@ -75,14 +75,24 @@ const PortalDropdown = ({ options, value, placeholder, onChange, align = 'left',
   const selected = opts.find((o) => String(o.value) === String(value))
   const searchable = opts.length >= 8
 
+  // Cerrar siempre limpia la busqueda: si no, al volver a abrir el desplegable seguia filtrado por
+  // lo que se tecleo la vez anterior y parecia que faltaban opciones. Mismo criterio que VdSelect.
+  const close = () => { setOpen(false); setQuery('') }
+
+  // Devuelve false si el trigger ya no esta a la vista (se scrolleo fuera de su contenedor),
+  // para que quien llame decida cerrar.
   const place = () => {
     const el = triggerRef.current
-    if (!el) return
+    if (!el) return false
     const r = el.getBoundingClientRect()
+    const vh = window.innerHeight || document.documentElement.clientHeight
+    const vw = window.innerWidth || document.documentElement.clientWidth
+    if (r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) return false
     const w = menuWidth || Math.max(r.width, 180)
     let left = r.left + window.scrollX
     if (align === 'right') left = r.right + window.scrollX - w
     setPos({ top: r.bottom + window.scrollY + 4, left, width: w })
+    return true
   }
 
   useEffect(() => {
@@ -90,19 +100,38 @@ const PortalDropdown = ({ options, value, placeholder, onChange, align = 'left',
     place()
     const onDoc = (e) => {
       if (triggerRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return
-      setOpen(false)
+      close()
     }
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
-    const onScroll = () => setOpen(false)
+    const onKey = (e) => { if (e.key === 'Escape') close() }
+    // El menu vive en un portal a document.body, asi que hay que reseguir al trigger cuando
+    // scrollea cualquier contenedor. Antes esto cerraba el desplegable en cada scroll, y como el
+    // buscador solo sale a partir de 8 opciones (justo cuando la lista pasa de los 260px y hay
+    // que scrollearla), el propio scroll de las opciones lo cerraba: parecia que no se podia buscar.
+    let frame = null
+    const sync = (e) => {
+      // Un scroll DENTRO del menu no mueve al trigger: reposicionar ahi solo estorba.
+      if (e?.target?.nodeType === 1 && menuRef.current?.contains(e.target)) return
+      if (frame !== null) return
+      frame = window.requestAnimationFrame(() => {
+        frame = null
+        if (!place()) setOpen(false)
+      })
+    }
+    // Mismo motivo que en VdSelect: el focus trap del modal devuelve el foco al modal en cuanto lo
+    // recibe algo de fuera, y el buscador de este menu esta fuera del .modal por vivir en el portal.
+    const onFocusIn = (e) => { if (menuRef.current?.contains(e.target)) e.stopPropagation() }
     document.addEventListener('mousedown', onDoc)
     document.addEventListener('keydown', onKey)
-    window.addEventListener('scroll', onScroll, true)
-    window.addEventListener('resize', onScroll)
+    document.addEventListener('focusin', onFocusIn, true)
+    window.addEventListener('scroll', sync, true)
+    window.addEventListener('resize', sync)
     return () => {
+      if (frame !== null) window.cancelAnimationFrame(frame)
       document.removeEventListener('mousedown', onDoc)
       document.removeEventListener('keydown', onKey)
-      window.removeEventListener('scroll', onScroll, true)
-      window.removeEventListener('resize', onScroll)
+      document.removeEventListener('focusin', onFocusIn, true)
+      window.removeEventListener('scroll', sync, true)
+      window.removeEventListener('resize', sync)
     }
   }, [open])
 
@@ -110,7 +139,7 @@ const PortalDropdown = ({ options, value, placeholder, onChange, align = 'left',
 
   return (
     <>
-      <div ref={triggerRef} className="vdt-fdd" onClick={() => setOpen((v) => !v)}>
+      <div ref={triggerRef} className="vdt-fdd" onClick={() => (open ? close() : setOpen(true))}>
         <span className={selected ? '' : 'vdt-fdd-placeholder'} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {selected ? selected.label : (placeholder ?? 'Todos')}
         </span>
@@ -131,7 +160,7 @@ const PortalDropdown = ({ options, value, placeholder, onChange, align = 'left',
               />
             </div>
           )}
-          <button type="button" className={`vdt-fdd-item ${!selected ? 'active' : ''}`} onClick={() => { onChange(''); setOpen(false); setQuery('') }}>
+          <button type="button" className={`vdt-fdd-item ${!selected ? 'active' : ''}`} onClick={() => { onChange(''); close() }}>
             {placeholder ?? 'Todos'}
           </button>
           {filtered.map((o) => (
@@ -139,7 +168,7 @@ const PortalDropdown = ({ options, value, placeholder, onChange, align = 'left',
               type="button"
               key={`${o.value}`}
               className={`vdt-fdd-item ${String(o.value) === String(value) ? 'active' : ''}`}
-              onClick={() => { onChange(o.value); setOpen(false); setQuery('') }}
+              onClick={() => { onChange(o.value); close() }}
             >
               {o.label}
             </button>
