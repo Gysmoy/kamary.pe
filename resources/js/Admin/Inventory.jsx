@@ -150,7 +150,7 @@ const inventoryStatusBadge = (status) => {
 // Celda que se edita con un click. Lo escrito queda en memoria hasta que se pulsa "Grabar", asi
 // que se marca con un punto para que se vea de un vistazo que hay algo sin guardar. Cuando todavia
 // no se puede editar no se apaga: responde igual y explica que falta.
-const EditableCell = ({ value, display, type = 'text', editable, blockedReason, listId, placeholder, dirty, onSave }) => {
+const EditableCell = ({ value, display, type = 'text', editable, blockedReason, listId, placeholder, dirty, options = null, onSave }) => {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const cancelled = useRef(false)
@@ -175,6 +175,27 @@ const EditableCell = ({ value, display, type = 'text', editable, blockedReason, 
     }
     if (draft.trim() === original.trim()) return
     onSave(draft)
+  }
+
+  // Las ubicaciones se dan de alta en su propio mantenimiento, asi que aqui se eligen de una lista
+  // en vez de escribirse: un texto libre inventaria contra una ubicacion que no existe.
+  if (editing && options) {
+    return <select
+      autoFocus
+      className='form-select form-select-sm'
+      value={draft}
+      onChange={(e) => {
+        const next = e.target.value
+        setDraft(next)
+        setEditing(false)
+        if (next.trim() !== original.trim()) onSave(next)
+      }}
+      onBlur={() => setEditing(false)}
+      onKeyDown={(e) => { if (e.key === 'Escape') { cancelled.current = true; e.currentTarget.blur() } }}
+    >
+      <option value=''>-- Sin ubicacion --</option>
+      {options.map(option => <option key={`loc-${option}`} value={option}>{option}</option>)}
+    </select>
   }
 
   if (editing) {
@@ -294,6 +315,14 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
         return true
       })
   }, [locations, warehouseId])
+
+  // La ubicacion guardada puede no estar en el catalogo (se dio de baja, o venia de antes). Se
+  // agrega a la lista para que abrir el select no la borre en silencio.
+  const locationOptionsFor = (current) => {
+    const actual = `${current ?? ''}`.trim()
+    if (!actual || locationSuggestions.includes(actual)) return locationSuggestions
+    return [actual, ...locationSuggestions]
+  }
   const tablePageCount = Math.max(1, Math.ceil(filteredRows.length / tablePageSize))
   const currentTablePage = Math.min(tablePage, tablePageCount)
   const paginatedRows = filteredRows.slice((currentTablePage - 1) * tablePageSize, currentTablePage * tablePageSize)
@@ -768,11 +797,6 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
       )}
 
       <h3 className='storage-inventory-heading mb-4'>INVENTARIO Nro. {selectedCountCode}</h3>
-      {/* Sugiere las ubicaciones registradas del almacen sin obligar a usarlas: en Kamary Peru la
-          ubicacion de una nota de entrada es texto libre. */}
-      <datalist id='standard-inventory-locations'>
-        {locationSuggestions.map(code => <option key={`standard-location-${code}`} value={code} />)}
-      </datalist>
       <div className='d-flex flex-wrap justify-content-end gap-2 mb-2'>
         {selectedWarehouseName && <span className='badge badge-soft-secondary fs-14'>{selectedWarehouseName}</span>}
         {selectedLaboratoryName && <span className='badge badge-soft-info fs-14'>{selectedLaboratoryName}</span>}
@@ -834,8 +858,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
                     display={location || <span className='inventory-pending-cell'>Sin ubicacion</span>}
                     editable={canEditCount}
                     blockedReason={editBlockedReason}
-                    listId='standard-inventory-locations'
-                    placeholder='Ubicacion'
+                    options={locationOptionsFor(location)}
                     dirty={isDirtyField(row, drafts, 'location')}
                     onSave={(value) => editCell(row, 'location', value)}
                   />
@@ -974,6 +997,14 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
         return true
       })
   }, [locations, selectedCount, clientId, warehouseId])
+
+  // La ubicacion guardada puede no estar en el catalogo (se dio de baja, o venia de antes). Se
+  // agrega a la lista para que abrir el select no la borre en silencio.
+  const locationOptionsFor = (current) => {
+    const actual = `${current ?? ''}`.trim()
+    if (!actual || locationSuggestions.includes(actual)) return locationSuggestions
+    return [actual, ...locationSuggestions]
+  }
 
   const changeWarehouse = (value) => {
     setWarehouseId(value)
@@ -1455,11 +1486,6 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
       )}
 
       <h3 className='storage-inventory-heading mb-4'>INVENTARIO Nro. {selectedCountCode}</h3>
-      {/* En almacenamiento la ubicacion debe ser una posicion registrada del cliente: el backend
-          rechaza cualquier otra, asi que la lista es la referencia real de lo que se puede escribir. */}
-      <datalist id='storage-inventory-locations'>
-        {locationSuggestions.map(code => <option key={`storage-location-${code}`} value={code} />)}
-      </datalist>
       {selectedClientName && <div className='d-flex justify-content-end mb-2'><span className='badge badge-soft-secondary fs-14'>{selectedClientName}</span></div>}
       <div className='d-flex flex-wrap justify-content-between align-items-center gap-3 mb-2'>
         <label className='d-inline-flex align-items-center gap-2 mb-0'>
@@ -1517,8 +1543,7 @@ const StorageInventory = ({ moduleTitle = 'Serv. Almacenamiento - Inventario' })
                     display={location || <span className='inventory-pending-cell'>Sin ubicacion</span>}
                     editable={canEditCount}
                     blockedReason={editBlockedReason}
-                    listId='storage-inventory-locations'
-                    placeholder='Ubicacion'
+                    options={locationOptionsFor(location)}
                     dirty={isDirtyField(row, drafts, 'location')}
                     onSave={(value) => editCell(row, 'location', value)}
                   />
