@@ -37,6 +37,12 @@ const manifestTabs = [
 ]
 const pendingManifestStatuses = ['pending', 'preparing', 'dispatched', 'waiting', 'assigned']
 const approvedManifestStatuses = ['approved', 'in_route', 'delivered', 'closed']
+// Un manifiesto cancelado no es pendiente ni aprobado, pero tiene que verse en alguna pestana:
+// como el formulario deja elegir "Cancelado", al guardarlo desaparecia de las dos y el registro
+// quedaba inaccesible desde el modulo. Va en la primera, con su badge rojo.
+// Ojo: lista aparte de pendingManifestStatuses a proposito, porque esa manda sobre que acciones
+// se habilitan (editar, asignar, eliminar) y un cancelado no debe recuperarlas.
+const pendingTabStatuses = [...pendingManifestStatuses, 'cancelled']
 const manifestReportHeaders = [
   'ACCIONES',
   'ESTADO',
@@ -113,7 +119,7 @@ const guideResponsePayload = (guide) => {
 const guideProviderLink = (guide, type) => guideResponsePayload(guide)?.links?.[type]
 const orFilters = (filters) => filters.filter(Boolean).reduce((acc, filter) => acc ? [acc, 'or', filter] : filter, null)
 const andFilters = (filters) => filters.filter(Boolean).reduce((acc, filter) => acc ? [acc, 'and', filter] : filter, null)
-const manifestStatusFilter = (tab) => orFilters((tab === 'approved' ? approvedManifestStatuses : pendingManifestStatuses).map(status => ['dispatch_status', '=', status]))
+const manifestStatusFilter = (tab) => orFilters((tab === 'approved' ? approvedManifestStatuses : pendingTabStatuses).map(status => ['dispatch_status', '=', status]))
 const manifestStatus = (dispatch) => `${dispatch?.dispatch_status ?? ''}`.trim()
 const isPendingManifest = (dispatch) => pendingManifestStatuses.includes(manifestStatus(dispatch))
 const isClosedManifest = (dispatch) => manifestStatus(dispatch) === 'closed'
