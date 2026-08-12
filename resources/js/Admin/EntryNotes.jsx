@@ -6,6 +6,7 @@ import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import VdTable from '@Adminto/VdTable';
 import VdSelect from '@Adminto/VdSelect';
+import CollapsibleLines from '@Adminto/CollapsibleLines';
 import Modal from '../Components/Adminto/Modal';
 import SwitchFormGroup from '@Adminto/form/SwitchFormGroup';
 import Swal from 'sweetalert2';
@@ -1259,8 +1260,7 @@ const EntryNotes = () => {
           const label = [item?.lot || '-', article?.name || 'Articulo'].join(' - ')
           return `${label} | Cant. ${Number(item?.quantity || 0).toFixed(2)} | S/. ${Number(item?.total || 0).toFixed(2)}`
         })
-        if (lines.length === 0) return <small className='text-muted'>Sin detalle</small>
-        return <div>{lines.map((line, idx) => <div key={`entry-note-${row.id}-item-${idx}`}><small>{line}</small></div>)}</div>
+        return <CollapsibleLines lines={lines} visible={2} />
       },
     },
     {
