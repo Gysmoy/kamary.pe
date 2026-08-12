@@ -8,6 +8,20 @@ class ArticlesRest extends BasicRest {
     ? 'admin/magistrales/articles'
     : (isStoragePath() ? 'admin/storage/articles' : 'admin/articles')
 
+  // Parametros extra que viajan en cada paginate. picker_warehouse_id lo usa el backend para
+  // resolver el module_scope del almacen elegido (estandar, magistrales o muestras).
+  extraParams = {}
+
+  // En BasicRest, paginate es un campo de instancia y no un metodo del prototipo, asi que aqui se
+  // guarda la version heredada antes de reemplazarla (super.paginate no existe en ese caso).
+  basePaginate = this.paginate
+
+  setExtraParams = (params = {}) => {
+    this.extraParams = { ...params }
+  }
+
+  paginate = async (params) => await this.basePaginate({ ...params, ...this.extraParams })
+
   laboratoriesPath = () => 'admin/laboratories'
 
   laboratoriesSearchBy = () => 'name'

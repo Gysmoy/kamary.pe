@@ -36,6 +36,18 @@ class ArticleController extends BasicController
     private array $presentationsPayload = [];
     private array $storageLotsPayload = [];
 
+    /**
+     * Los almacenes fijos van a la pantalla para que el selector "Ver articulos de" sepa cuales
+     * pertenecen a otro modulo: Magistrales tiene su propia pantalla y Muestras su propio scope.
+     */
+    public function setReactViewProperties(Request $request)
+    {
+        return [
+            'magistralesWarehouse' => MagistralesWarehouse::idOrNull() ? MagistralesWarehouse::summary() : null,
+            'samplesWarehouse' => SamplesWarehouse::idOrNull() ? SamplesWarehouse::summary() : null,
+        ];
+    }
+
     private const IMPORT_TYPE_UPSERT = 'upsert';
     private const IMPORT_TYPE_PACK_COMPONENTS = 'pack_components';
     private const IMPORT_TYPE_CORPORATE_CATALOG = 'corporate_catalog';

@@ -361,19 +361,31 @@ const getStockByPresentation = (stockUnits, presentations) => {
     })
 }
 
-const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) => {
+const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey, magistralesWarehouse = null, samplesWarehouse = null }) => {
   const isMagistrales = moduleScope === 'magistrales'
   const isStorageProduct = moduleScope === 'storage'
   const importTypeOptions = !isStorageProduct && !isMagistrales
     ? standardArticleImportTypeOptions
     : articleImportTypeOptions
 
+  // Magistrales tiene pantalla y permisos propios, asi que elegir su almacen navega alla en vez de
+  // filtrar aqui. El resto se resuelve en esta misma pantalla: picker_warehouse_id le dice al
+  // backend que module_scope corresponde (estandar o muestras) y el filtro acota por almacen.
   const onArticleScopeChanged = (value) => {
-    if (value === 'magistrales' && !isMagistrales) {
-      window.location.href = '/admin/magistrales/articles'
-    } else if (value === 'standard' && isMagistrales) {
-      window.location.href = '/admin/articles'
+    const next = `${value ?? ''}`
+
+    if (next === 'magistrales') {
+      if (!isMagistrales) window.location.href = '/admin/magistrales/articles'
+      return
     }
+    if (isMagistrales) {
+      window.location.href = next ? `/admin/articles?warehouse=${next}` : '/admin/articles'
+      return
+    }
+
+    setScopeWarehouseId(next)
+    articlesRest.setExtraParams(next ? { picker_warehouse_id: Number(next) } : {})
+    tableRef.current?.refresh()
   }
 
   const tableRef = useRef()
@@ -420,6 +432,8 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
   const [presentations, setPresentations] = useState([emptyPresentation()])
   const [businesses, setBusinesses] = useState([])
   const [warehouses, setWarehouses] = useState([])
+  // '' = todos los articulos del catalogo general; si no, el id del almacen elegido.
+  const [scopeWarehouseId, setScopeWarehouseId] = useState('')
   const [selectedBusinessId, setSelectedBusinessId] = useState('')
   const [selectedWarehouseId, setSelectedWarehouseId] = useState('')
   const [selectedLaboratoryId, setSelectedLaboratoryId] = useState('')
@@ -1503,8 +1517,29 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
       standardAppliedFilters.laboratoryId ? ['laboratory_id', '=', Number(standardAppliedFilters.laboratoryId)] : null,
       standardAppliedFilters.principleId ? ['active_principle_id', '=', Number(standardAppliedFilters.principleId)] : null,
       standardAppliedFilters.code?.trim() ? ['code', 'contains', standardAppliedFilters.code.trim()] : null,
+      scopeWarehouseId ? ['warehouse_id', '=', Number(scopeWarehouseId)] : null,
     ], 'and')
-  }, [isStorageProduct, isMagistrales, standardAppliedFilters.laboratoryId, standardAppliedFilters.principleId, standardAppliedFilters.code])
+  }, [isStorageProduct, isMagistrales, standardAppliedFilters.laboratoryId, standardAppliedFilters.principleId, standardAppliedFilters.code, scopeWarehouseId])
+
+  // El selector lista los almacenes reales. El de Magistrales queda aparte porque manda a su
+  // pantalla; el resto filtra aqui mismo.
+  const articleScopeOptions = useMemo(() => {
+    const magistralesId = magistralesWarehouse?.id ? `${magistralesWarehouse.id}` : ''
+    const opciones = [{ value: '', label: 'Todos (catalogo general)' }]
+
+    warehouses
+      .filter(warehouse => `${warehouse.id}` !== magistralesId)
+      .forEach(warehouse => opciones.push({
+        value: `${warehouse.id}`,
+        label: `${warehouse.name}${`${warehouse.id}` === `${samplesWarehouse?.id ?? ''}` ? ' (muestras)' : ''}`,
+      }))
+
+    if (magistralesId) {
+      opciones.push({ value: 'magistrales', label: `${magistralesWarehouse.name} (otro modulo)` })
+    }
+
+    return opciones
+  }, [warehouses, magistralesWarehouse, samplesWarehouse])
   const articleFilterValue = isMagistrales ? magistralesFilterValue : standardFilterValue
 
   const didFilterMountRef = useRef(false)
@@ -2012,11 +2047,14 @@ const Articles = ({ moduleTitle = 'Articulos', moduleScope, businessScopeKey }) 
           <VdSelect
             col=''
             noMargin
-            style={{ minWidth: 260, maxWidth: 260 }}
-            value={isMagistrales ? 'magistrales' : 'standard'}
+            style={{ minWidth: 320, maxWidth: 320 }}
+            value={isMagistrales ? 'magistrales' : scopeWarehouseId}
             onChange={(value) => onArticleScopeChanged(value)}
-            options={[{ value: 'standard', label: 'Almacén general' }, { value: 'magistrales', label: 'Magistrales (almacén 11)' }]}
+            options={articleScopeOptions}
           />
+          {scopeWarehouseId !== '' && !isMagistrales && (
+            <small className='text-muted'>Solo los articulos asignados a este almacen.</small>
+          )}
         </div>
       </div>
     )}

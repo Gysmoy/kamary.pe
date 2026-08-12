@@ -3,8 +3,8 @@
     "file": "assets/ArrayJoin-2k6ba35P.js",
     "name": "ArrayJoin"
   },
-  "_ArticlesRest-BrZ5iN7y.js": {
-    "file": "assets/ArticlesRest-BrZ5iN7y.js",
+  "_ArticlesRest-DTz1EATM.js": {
+    "file": "assets/ArticlesRest-DTz1EATM.js",
     "name": "ArticlesRest",
     "imports": [
       "_BasicRest-CfowDrFz.js",
@@ -460,7 +460,7 @@
     ]
   },
   "resources/js/Admin/Articles.jsx": {
-    "file": "assets/Articles-CTTcERsu.js",
+    "file": "assets/Articles-DfHGUfjI.js",
     "name": "Articles",
     "src": "resources/js/Admin/Articles.jsx",
     "isEntry": true,
@@ -475,7 +475,7 @@
       "_InputFormGroup-B975TFs1.js",
       "_TextareaFormGroup-BzRWvtCz.js",
       "_permissionScope-DOiR_Kst.js",
-      "_ArticlesRest-BrZ5iN7y.js",
+      "_ArticlesRest-DTz1EATM.js",
       "_UnitsRest-CDcq-QHE.js",
       "_LaboratoriesRest-DAR9fdWj.js",
       "_setSwitchChecked-BcAIL3nj.js",
@@ -484,7 +484,7 @@
     ]
   },
   "resources/js/Admin/Batches.jsx": {
-    "file": "assets/Batches-CstjDwx8.js",
+    "file": "assets/Batches-B4FJl86R.js",
     "name": "Batches",
     "src": "resources/js/Admin/Batches.jsx",
     "isEntry": true,
@@ -498,7 +498,7 @@
       "_SwitchFormGroup-CunZTacy.js",
       "_InputFormGroup-B975TFs1.js",
       "_BasicRest-CfowDrFz.js",
-      "_ArticlesRest-BrZ5iN7y.js",
+      "_ArticlesRest-DTz1EATM.js",
       "_permissionScope-DOiR_Kst.js",
       "_tippy-react.esm-DNee90TV.js"
     ]
