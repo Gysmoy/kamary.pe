@@ -28,6 +28,10 @@ const commercialOrdersRest = new CommercialOrdersRest()
 const billingDocumentsRest = new BillingDocumentsRest()
 const deliveryDelayReasonsRest = new DeliveryDelayReasonsRest()
 const referralGuidesRest = new ReferralGuidesRest()
+const round2 = (value) => Math.round((Number(value) || 0) * 100) / 100
+// La retencion de IGV es 3% por norma: no se pide por pantalla para que nadie la altere.
+const RETENTION_PERCENT = 3
+
 const regularClientFilter = ['client_kind', '=', 'regular']
 // El pedido comercial pertenece al modulo de Kamary Peru. El scoping automatico del backend no
 // aplica aqui porque /admin/commercial-orders esta declarado como ruta neutra
@@ -1036,6 +1040,10 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
   const [selectedDocumentType, setSelectedDocumentType] = useState('Factura')
   const [selectedCurrency, setSelectedCurrency] = useState('PEN')
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('')
+  const [detractionTypes, setDetractionTypes] = useState([])
+  const [detractionEnabled, setDetractionEnabled] = useState(false)
+  const [selectedDetractionTypeId, setSelectedDetractionTypeId] = useState('')
+  const [retentionEnabled, setRetentionEnabled] = useState(false)
   const [delayReasonStatus, setDelayReasonStatus] = useState('1')
   const [discountMenu, setDiscountMenu] = useState(null)
   const [trackingOrder, setTrackingOrder] = useState(null)

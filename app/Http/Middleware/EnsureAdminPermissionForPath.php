@@ -120,6 +120,9 @@ class EnsureAdminPermissionForPath
             'services-client' => ['services-client'],
             'services-billing', 'billing-documents' => ['services-billing'],
             'billing-settings' => ['businesses', 'services-billing'],
+            // El catalogo de detracciones lo consulta Facturacion para llenar su desplegable, asi
+            // que leerlo tiene que estar permitido a quien factura, no solo a quien lo administra.
+            'detraction-types' => $readRoute ? ['businesses', 'services-billing', 'orders'] : ['businesses'],
             'services-service-order', 'service-orders' => ['services-service-order'],
             'services-services', 'services' => ['services-services'],
 

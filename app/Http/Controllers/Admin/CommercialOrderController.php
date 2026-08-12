@@ -33,6 +33,9 @@ use SoDe\Extend\Response;
 
 class CommercialOrderController extends BasicController
 {
+    /** Retencion de IGV: tasa unica fijada por SUNAT, no es un valor a elegir. */
+    private const RETENTION_PERCENT = 3;
+
     public $model = CommercialOrder::class;
     public $reactView = 'Admin/CommercialOrders';
     public $prefix4filter = 'commercial_orders';

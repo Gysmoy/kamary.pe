@@ -951,15 +951,17 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
     // operacion lleva detraccion, no tiene sentido volver a decidirlo aqui desde cero.
     const fromOrder = orderDetraction(row)
     const detractionPercent = fromOrder?.percent || rawDetractionPercent || defaultFilters.detractionPercent
+    const detraccionInicial = !!fromOrder?.enabled || Boolean(row?.metadata?.detraction_enabled) || rawDetractionPercent > 0
     setBulkFilters({
       clientId: row ? `${rowClientId}` : '',
       documentType: row?.document_type ?? defaultFilters.documentType,
       currency: row?.currency ?? defaultFilters.currency,
-      detraction: !!fromOrder?.enabled || Boolean(row?.metadata?.detraction_enabled) || rawDetractionPercent > 0,
+      detraction: detraccionInicial,
       detractionPercent,
       detractionTypeId: fromOrder?.typeId ?? '',
       detractionCode: fromOrder?.code ?? '',
-      retention: !fromOrder && (orderRetention(row) || Boolean(row?.metadata?.retention_enabled)),
+      // Excluyentes: si la detraccion ya quedo marcada, la retencion no puede activarse tambien.
+      retention: !detraccionInicial && (orderRetention(row) || Boolean(row?.metadata?.retention_enabled)),
     })
     setBulkRows(row ? [row] : [])
     setBulkSelected(row?.id ? [row.id] : [])
@@ -995,14 +997,18 @@ const BillingDocuments = ({ moduleTitle = 'Facturacion', requiredPermission, bil
       const fromOrder = rows.map(orderDetraction).find(Boolean) ?? null
       setBulkRows(rows)
       setBulkSelected(rows.map(row => row.id))
-      setBulkFilters(prev => ({
-        ...prev,
-        detraction: prev.detraction || !!fromOrder || detractionPercent > 0,
-        detractionPercent: fromOrder?.percent || detractionPercent || prev.detractionPercent || 12,
-        detractionTypeId: prev.detractionTypeId || fromOrder?.typeId || '',
-        detractionCode: prev.detractionCode || fromOrder?.code || '',
-        retention: !fromOrder && (prev.retention || rows.some(orderRetention)),
-      }))
+      setBulkFilters(prev => {
+        const conDetraccion = prev.detraction || !!fromOrder || detractionPercent > 0
+        return {
+          ...prev,
+          detraction: conDetraccion,
+          detractionPercent: fromOrder?.percent || detractionPercent || prev.detractionPercent || 12,
+          detractionTypeId: prev.detractionTypeId || fromOrder?.typeId || '',
+          detractionCode: prev.detractionCode || fromOrder?.code || '',
+          // Excluyentes: nunca pueden quedar las dos marcadas al inicializar.
+          retention: !conDetraccion && (prev.retention || rows.some(orderRetention)),
+        }
+      })
     } catch (error) {
       await showBlockedAction('Error', error.message || 'No se pudieron cargar las prefacturas.')
     } finally {
