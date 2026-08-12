@@ -24,6 +24,15 @@ import {
 
 const purchaseOrdersRest = new PurchaseOrdersRest()
 
+// Color por estado, para saber de un vistazo si una orden esta aprobada sin tener que abrirla ni
+// deducirlo por que botones aparecen. Las clases badge-soft-* son las del propio panel.
+const APPROVAL_TONES = { pending: 'warning', approved: 'success', rejected: 'danger' }
+const ORDER_TONES = { draft: 'secondary', approved: 'info', partial: 'warning', completed: 'success', cancelled: 'danger' }
+
+const StatusBadge = ({ tone, children }) => (
+  <span className={`badge badge-soft-${tone ?? 'secondary'}`} style={{ fontSize: '11.5px' }}>{children}</span>
+)
+
 const MAGISTRAL_ARTICLE_TYPES = [
   { value: 'INSUMOS Y ENVASES', label: 'Insumos y envases' },
   { value: 'PRODUCTOS COMERCIALES', label: 'Productos comerciales' },
@@ -746,6 +755,18 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
             </a>
           ),
         },
+        // Los dos estados van pegados al codigo a proposito: mas a la derecha quedaban fuera de
+        // pantalla y no habia forma de saber si una orden estaba aprobada sin abrirla.
+        {
+          key: 'aprobacion', label: isMagistrales ? 'Estado' : 'Aprobación', field: 'approval_status', width: '120px',
+          filter: { type: 'select', options: approvalStatusOptions },
+          render: (row) => <StatusBadge tone={APPROVAL_TONES[row.approval_status]}>{getApprovalStatusLabel(row.approval_status)}</StatusBadge>,
+        },
+        {
+          key: 'estado_oc', label: 'Estado OC', field: 'order_status', width: '120px',
+          filter: { type: 'select', options: purchaseOrderStatusOptions },
+          render: (row) => <StatusBadge tone={ORDER_TONES[row.order_status]}>{getPurchaseOrderStatusLabel(row.order_status)}</StatusBadge>,
+        },
         { key: 'emision', label: 'F. emisión', field: 'issue_date', width: '110px', filter: { type: 'date' }, render: (row) => dateOnly(row.issue_date) },
         { key: 'esperada', label: 'F. estimada', field: 'expected_date', width: '115px', filter: { type: 'date' }, render: (row) => dateOnly(row.expected_date) },
         ...(isMagistrales ? [{ key: 'maxima', label: 'F. máxima', field: 'max_delivery_date', width: '115px', filter: { type: 'date' }, render: (row) => dateOnly(row.max_delivery_date) }] : []),
@@ -759,16 +780,6 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
         { key: 'condicion', label: 'Condición', field: 'payment_condition', width: '110px', filter: { type: 'text' } },
         ...(isMagistrales ? [{ key: 'forma_pago', label: 'Forma pago', field: 'payment_method', width: '130px', filter: { type: 'text' } }] : []),
         ...(isMagistrales ? [{ key: 'tipo_doc', label: 'Documento', field: 'document_type', width: '110px', filter: { type: 'text' } }] : []),
-        {
-          key: 'aprobacion', label: isMagistrales ? 'Estado' : 'Aprobación', field: 'approval_status', width: '110px',
-          filter: { type: 'select', options: approvalStatusOptions },
-          render: (row) => getApprovalStatusLabel(row.approval_status),
-        },
-        {
-          key: 'estado_oc', label: 'Estado OC', field: 'order_status', width: '110px',
-          filter: { type: 'select', options: purchaseOrderStatusOptions },
-          render: (row) => getPurchaseOrderStatusLabel(row.order_status),
-        },
         { key: 'moneda', label: 'Moneda', field: 'currency', width: '90px', filter: { type: 'text' } },
         { key: 'total', label: 'Total', field: 'total', width: '110px', align: 'right', filter: { type: 'number' }, render: (row) => Number(row.total || 0).toFixed(2) },
         {
@@ -812,12 +823,12 @@ const PurchaseOrders = ({ moduleTitle = 'Ordenes de compra', moduleScope, fixedW
               <p className="fw-semibold mb-0" style={{ color: 'var(--vd-ink)' }}>{row.code}</p>
               <small className="text-muted">{[row.business?.name, row.supplier?.business_name].filter(Boolean).join(' · ')}</small>
             </div>
-            <span className="badge badge-soft-primary">{getPurchaseOrderStatusLabel(row.order_status)}</span>
+            <StatusBadge tone={ORDER_TONES[row.order_status]}>{getPurchaseOrderStatusLabel(row.order_status)}</StatusBadge>
           </div>
           <small className="text-muted d-block mt-2">
             <i className="mdi mdi-calendar me-1"></i>{dateOnly(row.issue_date)} · {row.currency} {Number(row.total || 0).toFixed(2)}
           </small>
-          <small className="text-muted d-block mt-1">{getApprovalStatusLabel(row.approval_status)}</small>
+          <div className="mt-1"><StatusBadge tone={APPROVAL_TONES[row.approval_status]}>{getApprovalStatusLabel(row.approval_status)}</StatusBadge></div>
           {actionButtons && <div className="d-flex mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
         </div>
       )}
