@@ -177,8 +177,9 @@ const EditableCell = ({ value, display, type = 'text', editable, blockedReason, 
     onSave(draft)
   }
 
-  // Las ubicaciones se dan de alta en su propio mantenimiento, asi que aqui se eligen de una lista
-  // en vez de escribirse: un texto libre inventaria contra una ubicacion que no existe.
+  // Con `options` la celda obliga a elegir del catalogo (Almacenamiento, donde la ubicacion es un
+  // dato controlado y el backend rechaza lo que no existe). Sin `options` queda como texto libre
+  // con sugerencias via `listId`, que es como se usa en Kamary Peru.
   if (editing && options) {
     return <select
       autoFocus
@@ -316,13 +317,6 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
       })
   }, [locations, warehouseId])
 
-  // La ubicacion guardada puede no estar en el catalogo (se dio de baja, o venia de antes). Se
-  // agrega a la lista para que abrir el select no la borre en silencio.
-  const locationOptionsFor = (current) => {
-    const actual = `${current ?? ''}`.trim()
-    if (!actual || locationSuggestions.includes(actual)) return locationSuggestions
-    return [actual, ...locationSuggestions]
-  }
   const tablePageCount = Math.max(1, Math.ceil(filteredRows.length / tablePageSize))
   const currentTablePage = Math.min(tablePage, tablePageCount)
   const paginatedRows = filteredRows.slice((currentTablePage - 1) * tablePageSize, currentTablePage * tablePageSize)
@@ -822,6 +816,9 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
         {loadingRows && <div className='position-absolute top-0 start-0 end-0 bottom-0 bg-white bg-opacity-75 d-flex align-items-center justify-content-center' style={{ zIndex: 1 }}>
           <i className='mdi mdi-spin mdi-loading mdi-36px'></i>
         </div>}
+        <datalist id='standard-inventory-locations'>
+          {locationSuggestions.map(option => <option key={`standard-loc-${option}`} value={option} />)}
+        </datalist>
         <table className='table table-sm table-striped mb-0 storage-inventory-table'>
           <thead>
             <tr>
@@ -831,7 +828,7 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
               <th style={{ minWidth: 260 }}>NOMBRE</th>
               <th style={{ minWidth: 180 }}>LABORATORIO</th>
               <th style={{ minWidth: 100 }}>U. MEDIDA</th>
-              <th style={{ minWidth: 120 }}>UBICACION</th>
+              <th style={{ minWidth: 120 }}>UBICACION <i className='mdi mdi-information-outline text-muted' title='Opcional. Sugiere las ubicaciones registradas del almacen, pero se puede escribir cualquier texto.'></i></th>
               <th style={{ minWidth: 130 }}>STOCK SISTEMA</th>
               <th style={{ minWidth: 120 }}>STOCK REAL</th>
               <th style={{ minWidth: 120 }}>DIFERENCIA</th>
@@ -841,6 +838,9 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
           </thead>
           <tbody>
             {filteredRows.length === 0 && <tr><td colSpan='12' className='text-center py-4'>No existen elementos</td></tr>}
+            {/* En Kamary Peru la ubicacion es una ayuda de gestion, no un dato controlado: se puede
+                escribir libre y esta lista solo sugiere las que ya estan registradas. El control
+                estricto contra el catalogo vive en Almacenamiento, que si lo necesita. */}
             {paginatedRows.map((row, index) => {
               const location = draftLocation(row, drafts)
               const realStock = draftRealStock(row, drafts)
@@ -858,7 +858,8 @@ const StandardInventory = ({ moduleTitle = 'Inventario Kamary Peru', businessSco
                     display={location || <span className='inventory-pending-cell'>Sin ubicacion</span>}
                     editable={canEditCount}
                     blockedReason={editBlockedReason}
-                    options={locationOptionsFor(location)}
+                    listId='standard-inventory-locations'
+                    placeholder='Ubicacion'
                     dirty={isDirtyField(row, drafts, 'location')}
                     onSave={(value) => editCell(row, 'location', value)}
                   />
