@@ -214,8 +214,8 @@ const Dispatches = ({ session }) => {
   const [selectedVehicleId, setSelectedVehicleId] = useState('')
   const [selectedZoneId, setSelectedZoneId] = useState('')
   const [activeManifestTab, setActiveManifestTab] = useState('pending')
-  const [manifestFilters, setManifestFilters] = useState({ businessId: '', startDate: '', endDate: '' })
-  const [appliedManifestFilters, setAppliedManifestFilters] = useState({ businessId: '', startDate: '', endDate: '' })
+  const [manifestFilters, setManifestFilters] = useState({ startDate: '', endDate: '' })
+  const [appliedManifestFilters, setAppliedManifestFilters] = useState({ startDate: '', endDate: '' })
   const [isExportingManifest, setIsExportingManifest] = useState(false)
   const [currentDispatchId, setCurrentDispatchId] = useState('')
   const [assignments, setAssignments] = useState([emptyAssignment()])
@@ -282,7 +282,6 @@ const Dispatches = ({ session }) => {
   ), [availableOrders, selectedAssignmentOrderIds, selectedWarehouseId])
   const dispatchGridFilter = useMemo(() => andFilters([
     manifestStatusFilter(activeManifestTab),
-    appliedManifestFilters.businessId ? ['business_id', '=', Number(appliedManifestFilters.businessId)] : null,
     appliedManifestFilters.startDate ? ['scheduled_date', '>=', appliedManifestFilters.startDate] : null,
     appliedManifestFilters.endDate ? ['scheduled_date', '<=', appliedManifestFilters.endDate] : null,
   ]), [activeManifestTab, appliedManifestFilters])
@@ -884,18 +883,10 @@ const Dispatches = ({ session }) => {
       </ul>
       <form className='mt-3' onSubmit={applyManifestFilters}>
         <div className='row g-3 align-items-end'>
-          <div className='col-12 col-lg-4'>
-            <label className='form-label'>Empresa</label>
-            <select
-              className='form-select'
-              value={manifestFilters.businessId}
-              onChange={(e) => setManifestFilters(prev => ({ ...prev, businessId: e.target.value }))}
-            >
-              <option value=''>Todas</option>
-              {businesses.map(row => <option key={`manifest-filter-business-${row.id}`} value={row.id}>{row.name}</option>)}
-            </select>
-          </div>
-          <div className='col-12 col-lg-4'>
+          {/* Sin filtro de empresa: el listado ya viene limitado a Kamary Peru por el alcance del
+              modulo (DispatchController lo aplica en la consulta), asi que el select solo podia
+              tener una opcion y elegirla no cambiaba nada. */}
+          <div className='col-12 col-lg-6'>
             <label className='form-label'>Fecha Inicio</label>
             <input
               type='date'
@@ -904,7 +895,7 @@ const Dispatches = ({ session }) => {
               onChange={(e) => setManifestFilters(prev => ({ ...prev, startDate: e.target.value }))}
             />
           </div>
-          <div className='col-12 col-lg-4'>
+          <div className='col-12 col-lg-6'>
             <label className='form-label'>Fecha Fin</label>
             <input
               type='date'
