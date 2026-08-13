@@ -598,6 +598,8 @@ const Activities = () => {
       rest={activitiesRest}
       pageSize={10}
       filterValue={activityGridFilter}
+      // Mismo caso que en Despacho: sin esto la tabla publica su filtro interno y deja borrarlo.
+      allowQueryBuilder={false}
       exportable
       toolBar={(items) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })

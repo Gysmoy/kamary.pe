@@ -1011,6 +1011,10 @@ const Dispatches = ({ session }) => {
       rest={dispatchesRest}
       pageSize={10}
       filterValue={dispatchGridFilter}
+      // El panel de filtro de la tabla mostraba en crudo el filtro interno de la pestana
+      // ("[ESTADO] Igual 'Pendiente' O ...") y ofrecia un "Limpiar filtro" que lo borraba: al
+      // pulsarlo las dos pestanas pasaban a listar lo mismo.
+      allowQueryBuilder={false}
       toolBar={(items) => {
         items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
         if (!isDriverSession && activeManifestTab === 'pending') {
