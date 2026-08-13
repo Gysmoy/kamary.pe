@@ -347,6 +347,16 @@ const Dispatches = ({ session }) => {
     setSelectedBranchId(preferred ? `${preferred}` : '')
   }
 
+  // Red de seguridad para la empresa unica: si el catalogo llega despues de que se abrio el modal,
+  // onModalOpen no tenia con que autoseleccionar y el campo, al estar oculto, dejaria el formulario
+  // sin empresa y sin manera de arreglarlo desde la pantalla.
+  useEffect(() => {
+    if (businesses.length !== 1 || selectedBusinessId) return
+    const onlyBusinessId = `${businesses[0].id}`
+    setSelectedBusinessId(onlyBusinessId)
+    loadBranches(onlyBusinessId, '')
+  }, [businesses, selectedBusinessId])
+
   const onModalOpen = async (data = null) => {
     setCurrentDispatchId(data?.id ? `${data.id}` : '')
     await loadCommercialOrders()
@@ -359,12 +369,16 @@ const Dispatches = ({ session }) => {
     manifestCodeRef.current.value = data?.manifest_code ?? ''
     dispatchStatusRef.current.value = data?.dispatch_status ?? 'dispatched'
     observationsRef.current.value = data?.observations ?? ''
-    setSelectedBusinessId(data?.business_id ? `${data.business_id}` : '')
+    // Si el modulo solo alcanza una empresa, se elige sola: el campo esta oculto y sin esto el
+    // formulario no se podria guardar (business_id es obligatorio en el backend).
+    const soleBusinessId = businesses.length === 1 ? `${businesses[0].id}` : ''
+    const businessId = data?.business_id ? `${data.business_id}` : soleBusinessId
+    setSelectedBusinessId(businessId)
     setSelectedWarehouseId(data?.warehouse_id ? `${data.warehouse_id}` : '')
     setSelectedDriverId(data?.driver_id ? `${data.driver_id}` : '')
     setSelectedVehicleId(data?.vehicle_id ? `${data.vehicle_id}` : '')
     setSelectedZoneId(data?.zone_id ? `${data.zone_id}` : '')
-    await loadBranches(data?.business_id ?? '', data?.business_branch_id ?? '')
+    await loadBranches(businessId, data?.business_branch_id ?? '')
     setAssignments((data?.assignments ?? []).map(row => ({ uid: crypto.randomUUID(), commercial_order_id: `${row.commercial_order_id}`, customer_name: row.customer_name ?? '', total: Number(row.total || 0) })) || [emptyAssignment()])
     $(modalRef.current).modal('show')
   }
@@ -1093,13 +1107,17 @@ const Dispatches = ({ session }) => {
           <input ref={codeRef} className='form-control' disabled />
           <input ref={idRef} hidden />
         </div>
-        <div className='col-md-3 mb-3'>
-          <label className='form-label'>Empresa</label>
-          <select className='form-control' value={selectedBusinessId} onChange={async (e) => { setSelectedBusinessId(e.target.value); await loadBranches(e.target.value, ''); }} required>
-            <option value=''>Seleccione</option>
-            {businesses.map(row => <option key={`dispatch-business-${row.id}`} value={row.id}>{row.name}</option>)}
-          </select>
-        </div>
+        {/* Con una sola empresa en el alcance del modulo el campo no se muestra: se autoselecciona
+            en onModalOpen. Si algun dia hay mas de una, el select vuelve solo. */}
+        {businesses.length !== 1 && (
+          <div className='col-md-3 mb-3'>
+            <label className='form-label'>Empresa</label>
+            <select className='form-control' value={selectedBusinessId} onChange={async (e) => { setSelectedBusinessId(e.target.value); await loadBranches(e.target.value, ''); }} required>
+              <option value=''>Seleccione</option>
+              {businesses.map(row => <option key={`dispatch-business-${row.id}`} value={row.id}>{row.name}</option>)}
+            </select>
+          </div>
+        )}
         <div className='col-md-3 mb-3'>
           <label className='form-label'>Sede</label>
           <select className='form-control' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)}>
