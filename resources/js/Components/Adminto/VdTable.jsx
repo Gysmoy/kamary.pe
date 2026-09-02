@@ -194,7 +194,6 @@ const VdTable = forwardRef(({
   pageSizes = [10, 25, 50, 100],
   searchFields = null,
   searchPlaceholder = 'Buscar…',
-  searchMobileOnly = false,
   baseFilter = null,
   rowOnClick = null,
   emptyText = 'No se encontraron registros.',
@@ -227,6 +226,10 @@ const VdTable = forwardRef(({
   const reloadRef = useRef(() => {})
 
   const visibleColumns = columns.filter((c) => !hidden[c.key])
+
+  // El buscador general duplicaba la fila de filtros de la cabecera, asi que en desktop se quita.
+  // Solo queda en movil, donde se listan tarjetas y esa fila de filtros no se ve.
+  const showSearch = !!renderCard && searchFields?.length > 0
 
   /* -------- construccion de loadOptions y carga -------- */
   const buildFilter = () => {
@@ -391,12 +394,12 @@ const VdTable = forwardRef(({
         {headerActions && <div className="d-flex align-items-center flex-wrap" style={{ gap: 8 }}>{headerActions}</div>}
       </div>
 
-      {/* toolbar: extras + columnas + buscador */}
-      {(toolbar || searchFields) && (
+      {/* toolbar: extras + columnas + buscador (solo en la vista de tarjetas, que no tiene fila de filtros) */}
+      {(toolbar || showSearch) && (
         <div className="d-flex align-items-center flex-wrap mt-3" style={{ gap: 8 }}>
           {toolbar}
-          {searchFields?.length > 0 && (
-            <div className={`position-relative ${searchMobileOnly ? 'd-md-none' : ''}`} style={{ flex: '1 1 220px', minWidth: 180 }}>
+          {showSearch && (
+            <div className="position-relative d-md-none" style={{ flex: '1 1 220px', minWidth: 180 }}>
               <i className="mdi mdi-magnify vdt-search-ico"></i>
               <input className="vdt-search" placeholder={searchPlaceholder} value={searchRaw} onChange={(e) => onSearchChange(e.target.value)} />
             </div>
