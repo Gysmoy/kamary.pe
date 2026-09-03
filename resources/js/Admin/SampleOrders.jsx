@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import VdTable from '../Components/Adminto/VdTable';
+import VdTable, { PortalDropdown } from '../Components/Adminto/VdTable';
 import VdSelect from '../Components/Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
 import Swal from 'sweetalert2';
@@ -39,16 +39,9 @@ const activeStatusOptions = [
   { value: '0', label: 'Inactivo' },
 ]
 
-// Motivos de retraso: mismas claves que App\Support\SampleDelayReasons en el backend.
-const delayReasonOptions = [
-  { value: 'customs', label: 'Demora en aduana' },
-  { value: 'traffic', label: 'Trafico vehicular' },
-  { value: 'logistics', label: 'Fallas logisticas' },
-  { value: 'stock', label: 'Falta de stock' },
-  { value: 'client', label: 'Cliente no disponible' },
-  { value: 'documentation', label: 'Documentacion incompleta' },
-  { value: 'other', label: 'Otro motivo' },
-]
+// Lo que se muestra cuando la entrega salio en fecha o antes: no lleva motivo.
+const ON_TIME_LABEL = 'Entrega conforme'
+const UNSPECIFIED_LABEL = 'Sin motivo registrado'
 
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -98,8 +91,8 @@ const emptyForm = () => ({
   delivery_reference: '',
   service_type: '',
   service_type_id: '',
-  delivered_at: today(),
-  delay_reason: '',
+  delivered_at: '',
+  delay_reason_id: '',
   delay_reason_notes: '',
   document_type: 'RUC',
   document_number: '',
@@ -111,6 +104,29 @@ const emptyForm = () => ({
   map_lng: '',
   evidence_url: '',
   evidence_notes: '',
+})
+
+// Datos que exige la guia de remision: sin esto el PDF sale en blanco.
+const emptyGuideForm = () => ({
+  id: '',
+  order_number: '',
+  referral_guide: '',
+  guide_issue_date: today(),
+  guide_transfer_date: today(),
+  transfer_reason: 'VENTA',
+  transfer_mode: 'PRIVADO',
+  origin_address: '',
+  carrier_name: '',
+  carrier_document: '',
+  driver_id: '',
+  driver_name: '',
+  driver_document_type: 'DNI',
+  driver_document_number: '',
+  driver_license_number: '',
+  vehicle_id: '',
+  vehicle_plate: '',
+  package_count: '',
+  delivery_address: '',
 })
 
 const normalizeText = (value) => (value ?? '').toString().trim()
@@ -134,7 +150,10 @@ const getStatusOption = (options, value, normalizer = value => value) => options
 const asDateText = (value) => normalizeText(value).slice(0, 10)
 const asDateTimeText = (value) => normalizeText(value).replace('T', ' ').slice(0, 19)
 const formatNumber = (value, digits = 2) => Number(value || 0).toFixed(digits)
-const delayReasonLabel = (value) => delayReasonOptions.find(option => option.value === value)?.label ?? ''
+const delayReasonLabel = (row) => row?.delay_reason?.description ?? ''
+// Los motivos los escribe el usuario desde el ABM, asi que no van crudos al HTML del Swal.
+const escapeHtml = (value) => (value ?? '').toString()
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 // Diferencia en dias entre la entrega y la fecha solicitada: positiva = se entrego tarde.
 const deliveryDiffDays = (row) => {
   const requested = asDateText(row.requested_at)
@@ -390,13 +409,14 @@ const SampleInput = ({ label, value, onChange, type = 'text', placeholder = '', 
 )
 
 // Pide motivo y detalle del retraso antes de dar el pedido por entregado.
-const askDelayReason = async (data, requestedAt) => {
+const askDelayReason = async (data, requestedAt, options = []) => {
   const { isConfirmed, value } = await Swal.fire({
     title: 'Motivo del retraso',
     html: `
       <p class="text-start mb-2">La entrega sale despues de la fecha solicitada (${requestedAt}).</p>
       <select id="sample-delay-reason" class="form-select mb-2">
-        ${delayReasonOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
+        <option value="">Sin motivo registrado</option>
+        ${options.map(option => `<option value="${option.value}">${escapeHtml(option.label)}</option>`).join('')}
       </select>
       <textarea id="sample-delay-notes" class="form-control" rows="2" placeholder="Detalle del retraso (opcional)"></textarea>
     `,
@@ -405,7 +425,7 @@ const askDelayReason = async (data, requestedAt) => {
     confirmButtonText: 'Registrar entrega',
     cancelButtonText: 'Cancelar',
     preConfirm: () => ({
-      delay_reason: document.getElementById('sample-delay-reason')?.value ?? '',
+      delay_reason_id: document.getElementById('sample-delay-reason')?.value ?? '',
       delay_reason_notes: document.getElementById('sample-delay-notes')?.value ?? '',
     }),
   })
@@ -413,9 +433,16 @@ const askDelayReason = async (data, requestedAt) => {
   return isConfirmed ? value : null
 }
 
-const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
+const SampleOrders = ({
+  moduleTitle = 'Muestras - Pedido',
+  delayReasonOptions = [],
+  guideCompany = {},
+  transferReasonOptions = [],
+  transferModeOptions = [],
+}) => {
   const tableRef = useRef()
   const modalRef = useRef()
+  const guideModalRef = useRef()
   const articleModalRef = useRef()
   const trackingModalRef = useRef()
   const evidenceModalRef = useRef()
@@ -441,6 +468,9 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const [salesChannels, setSalesChannels] = useState([])
   const [salesSubchannels, setSalesSubchannels] = useState([])
   const [serviceTypes, setServiceTypes] = useState([])
+  const [drivers, setDrivers] = useState([])
+  const [vehicles, setVehicles] = useState([])
+  const [guideForm, setGuideForm] = useState(emptyGuideForm())
   const [giroForm, setGiroForm] = useState({ id: '', name: '', status: '1' })
   const [subGiroForm, setSubGiroForm] = useState({ id: '', giro_id: '', name: '', status: '1' })
   const [reasonForm, setReasonForm] = useState({ id: '', name: '', status: '1' })
@@ -474,7 +504,9 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       sampleOrdersRest.getSalesChannels(),
       sampleOrdersRest.getSalesSubchannels(),
       sampleOrdersRest.getServiceTypes(),
-    ]).then(([clientRows, userRows, articleRows, giroRows, subGiroRows, reasonRows, channelRows, subchannelRows, serviceTypeRows]) => {
+      sampleOrdersRest.getDrivers(),
+      sampleOrdersRest.getVehicles(),
+    ]).then(([clientRows, userRows, articleRows, giroRows, subGiroRows, reasonRows, channelRows, subchannelRows, serviceTypeRows, driverRows, vehicleRows]) => {
       setClients((clientRows ?? []).filter(row => row.status !== null))
       // El modelo User oculta 'id' y lo expone como 'entity_id'; lo normalizamos a id
       setUsers((userRows ?? []).filter(row => row.status !== null).map(row => ({ ...row, id: row.entity_id ?? row.id })))
@@ -485,6 +517,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       setSalesChannels((channelRows ?? []).filter(row => row.status !== null))
       setSalesSubchannels((subchannelRows ?? []).filter(row => row.status !== null))
       setServiceTypes((serviceTypeRows ?? []).filter(row => row.status !== null))
+      setDrivers((driverRows ?? []).filter(row => row.status !== null))
+      setVehicles((vehicleRows ?? []).filter(row => row.status !== null))
     })
 
     getUbigeoCatalog()
@@ -508,6 +542,16 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const subchannelOptions = useMemo(() => salesSubchannels
     .filter(row => row.status && form.sales_channel_id && `${row.sales_channel_id}` === `${form.sales_channel_id}`)
     .map(row => ({ value: `${row.id}`, label: row.name })), [salesSubchannels, form.sales_channel_id])
+  const driverOptions = useMemo(() => drivers
+    .filter(row => row.status)
+    .map(row => ({ value: `${row.id}`, label: [row.full_name, row.document_number].filter(Boolean).join(' - ') })), [drivers])
+  const vehicleOptions = useMemo(() => vehicles
+    .filter(row => row.status)
+    .map(row => ({ value: `${row.id}`, label: [row.plate, row.label || row.brand].filter(Boolean).join(' - ') })), [vehicles])
+  const guideOptions = useMemo(() => ({
+    reasons: transferReasonOptions.map(value => ({ value, label: value })),
+    modes: transferModeOptions.map(value => ({ value, label: value })),
+  }), [transferReasonOptions, transferModeOptions])
   const giroOptions = useMemo(() => giros.filter(row => row.status).map(row => ({ value: `${row.id}`, label: row.name })), [giros])
   const subGiroOptions = useMemo(() => subGiros
     .filter(row => row.status && form.giro_id && `${row.giro_id}` === `${form.giro_id}`)
@@ -1036,8 +1080,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         order_status: normalizeOrderStatus(data.order_status ?? 'registered'),
         email_status: normalizeEmailStatus(data.email_status ?? 'delivered'),
         requested_at: asDateText(data.requested_at),
-        delivered_at: asDateText(data.delivered_at) || today(),
-        delay_reason: data.delay_reason ?? '',
+        delivered_at: asDateText(data.delivered_at),
+        delay_reason_id: data.delay_reason_id ? `${data.delay_reason_id}` : '',
         delay_reason_notes: data.delay_reason_notes ?? '',
         client_id: data.client_id ? `${data.client_id}` : '',
         supervisor_id: data.supervisor_id ? `${data.supervisor_id}` : '',
@@ -1122,6 +1166,101 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     $(evidenceModalRef.current).modal('show')
   }
 
+  const saveDelayReason = async (row, delayReasonId) => {
+    const saved = await sampleOrdersRest.saveDelayReason(row.id, { delay_reason_id: delayReasonId })
+    if (saved) refreshGrid()
+  }
+
+  const openGuideModal = (data) => {
+    setGuideForm({
+      ...emptyGuideForm(),
+      id: data.id,
+      order_number: data.order_number ?? '',
+      referral_guide: data.referral_guide ?? '',
+      guide_issue_date: asDateText(data.guide_issue_date) || today(),
+      // El traslado se propone para la fecha que pidio el cliente.
+      guide_transfer_date: asDateText(data.guide_transfer_date) || asDateText(data.requested_at) || today(),
+      transfer_reason: data.transfer_reason || 'VENTA',
+      transfer_mode: data.transfer_mode || 'PRIVADO',
+      origin_address: data.origin_address || guideCompany.business_address || '',
+      carrier_name: data.carrier_name || guideCompany.business_name || '',
+      carrier_document: data.carrier_document || guideCompany.business_ruc || '',
+      driver_id: data.driver_id ? `${data.driver_id}` : '',
+      driver_name: data.driver_name ?? '',
+      driver_document_type: data.driver_document_type || 'DNI',
+      driver_document_number: data.driver_document_number ?? '',
+      driver_license_number: data.driver_license_number ?? '',
+      vehicle_id: data.vehicle_id ? `${data.vehicle_id}` : '',
+      vehicle_plate: data.vehicle_plate ?? '',
+      package_count: data.package_count ?? '',
+      delivery_address: data.delivery_address ?? '',
+    })
+    $(guideModalRef.current).modal('show')
+  }
+
+  const setGuideField = (field, value) => setGuideForm(prev => ({ ...prev, [field]: value }))
+
+  // Al elegir del catalogo se copian documento y brevete, que igual quedan editables.
+  const onGuideDriverSelect = (value) => {
+    const driver = drivers.find(row => `${row.id}` === `${value}`)
+    setGuideForm(prev => ({
+      ...prev,
+      driver_id: value,
+      driver_name: driver?.full_name ?? prev.driver_name,
+      driver_document_type: (driver?.document_type || prev.driver_document_type || 'DNI').toUpperCase(),
+      driver_document_number: driver?.document_number ?? prev.driver_document_number,
+      driver_license_number: driver?.license_number ?? prev.driver_license_number,
+    }))
+  }
+
+  const onGuideVehicleSelect = (value) => {
+    const vehicle = vehicles.find(row => `${row.id}` === `${value}`)
+    setGuideForm(prev => ({
+      ...prev,
+      vehicle_id: value,
+      vehicle_plate: normalizeText(vehicle?.plate ?? prev.vehicle_plate).toUpperCase(),
+    }))
+  }
+
+  const onSaveGuide = async (e) => {
+    e.preventDefault()
+    if (!normalizeText(guideForm.referral_guide)) {
+      Swal.fire({ icon: 'warning', title: 'Falta el numero', text: 'Escribe el numero de la guia de remision.', confirmButtonText: 'Entendido' })
+      return
+    }
+    if (!normalizeText(guideForm.driver_name)) {
+      Swal.fire({ icon: 'warning', title: 'Falta el conductor', text: 'Elige el chofer o escribe su nombre.', confirmButtonText: 'Entendido' })
+      return
+    }
+    if (!normalizeText(guideForm.vehicle_plate)) {
+      Swal.fire({ icon: 'warning', title: 'Falta la placa', text: 'Elige el vehiculo o escribe la placa.', confirmButtonText: 'Entendido' })
+      return
+    }
+
+    const saved = await sampleOrdersRest.saveReferralGuide(guideForm.id, guideForm)
+    if (!saved) return
+    $(guideModalRef.current).modal('hide')
+    refreshGrid()
+    // Con los datos ya guardados la guia sale completa.
+    openMagistralesRecordPdf(buildMagistralesRows.sampleOrder(saved))
+  }
+
+  // El PDF necesita chofer, vehiculo y motivo: si no se genero la guia, salia en blanco.
+  const printReferralGuide = (row) => {
+    if (!normalizeText(row.referral_guide) || !normalizeText(row.driver_name) || !normalizeText(row.vehicle_plate)) {
+      Swal.fire({
+        icon: 'info',
+        title: 'La guia no tiene datos',
+        text: 'Primero genera la guia de remision para registrar el numero, el chofer y el vehiculo.',
+        confirmButtonText: 'Generar guia',
+        showCancelButton: true,
+        cancelButtonText: 'Cerrar',
+      }).then(({ isConfirmed }) => { if (isConfirmed) openGuideModal(row) })
+      return
+    }
+    openMagistralesRecordPdf(buildMagistralesRows.sampleOrder({ ...guideCompany, ...row }))
+  }
+
   const onEvidenceFileChange = (e) => {
     const file = e.target.files?.[0] ?? null
     setEvidenceFile(file)
@@ -1146,10 +1285,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
     // Al entregar despues de la fecha solicitada se pide el motivo: es lo que alimenta
     // el dashboard de muestras, asi que se captura en el momento y no despues.
-    let delay = { delay_reason: '', delay_reason_notes: '' }
+    let delay = { delay_reason_id: '', delay_reason_notes: '' }
     const requestedAt = asDateText(data.requested_at)
     if (nextStatus === 'delivered' && requestedAt && today() > requestedAt) {
-      const reason = await askDelayReason(data, requestedAt)
+      const reason = await askDelayReason(data, requestedAt, delayReasonOptions)
       if (!reason) return
       delay = reason
     }
@@ -1198,7 +1337,6 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       id: form.id || undefined,
       order_number: form.id ? form.order_number : '',
       requested_at: form.requested_at || today(),
-      delivered_at: form.delivered_at || null,
       total_gross_weight: Number(form.total_gross_weight || computedGrossWeight || 0),
       channel: form.sales_channel,
       document_type: form.document_type || 'RUC',
@@ -1241,7 +1379,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       { icon: 'mdi mdi-check-all', title: 'Entregado', bg: '#e9f9ef', color: '#2f9e44', onClick: (r) => changeOrderStatus(r, 'delivered', 'Marcar pedido entregado'), hidden: currentStatus !== 'in_route' },
       { icon: 'mdi mdi-eye', title: 'Ver evidencia', bg: '#e6f7fb', color: '#17a2b8', onClick: (r) => openEvidence(r), hidden: !approvedOrBeyond },
       { icon: 'mdi mdi-map-marker-path', title: 'Tracking pedido', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => openTracking(r), hidden: !approvedOrBeyond },
-      { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir guia de remision', bg: '#fdeee6', color: '#e2593f', onClick: (r) => openMagistralesRecordPdf(buildMagistralesRows.sampleOrder(r)), hidden: !approvedOrBeyond },
+      { icon: 'mdi mdi-file-document-edit-outline', title: 'Generar guia de remision', bg: '#eaf7ee', color: '#2f9e44', onClick: (r) => openGuideModal(r), hidden: !approvedOrBeyond },
+      { icon: 'mdi mdi-file-pdf-box', title: 'Imprimir guia de remision', bg: '#fdeee6', color: '#e2593f', onClick: (r) => printReferralGuide(r), hidden: !approvedOrBeyond },
       { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDelete(r) },
     ]
   }
@@ -1256,11 +1395,15 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     ['Cantidad', row => sampleQuantity(row)],
     ['Peso Unitario (Kg)', row => sampleUnitWeight(row)],
     ['Peso bruto total', row => formatNumber(sampleGrossWeight(row), 3)],
-    ['Fecha solicitada', row => asDateText(row.requested_at)],
+    ['Fecha solicitada de entrega', row => asDateText(row.requested_at)],
     ['Fecha aprobacion', row => row.approved_at ? asDateTimeText(row.approved_at) : ''],
-    ['Fecha entrega', row => asDateText(row.delivered_at)],
+    ['Fecha de entrega real', row => asDateText(row.delivered_at)],
     ['Diferencia de dias', row => deliveryDiffText(row)],
-    ['Motivo de retraso', row => (deliveryDiffDays(row) ?? 0) > 0 ? (delayReasonLabel(row.delay_reason) || 'Sin motivo registrado') : ''],
+    ['Motivo de retraso', row => {
+      const diff = deliveryDiffDays(row)
+      if (diff === null) return ''
+      return diff > 0 ? (delayReasonLabel(row) || UNSPECIFIED_LABEL) : ON_TIME_LABEL
+    }],
     ['Canal', row => row.sales_channel ?? row.channel ?? ''],
     ['Cliente', row => row.client_name ?? ''],
     ['Pedido completo', row => isOrderComplete(row) ? 'COMPLETO' : 'INCOMPLETO'],
@@ -1384,7 +1527,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           render: (row) => formatNumber(sampleGrossWeight(row), 3),
         },
         {
-          key: 'fecha_solicitada', label: 'Fecha solicitada', field: 'requested_at', width: '145px',
+          key: 'fecha_solicitada', label: 'F. solicitada entrega', field: 'requested_at', width: '165px',
           filter: { type: 'date' },
           render: (row) => asDateText(row.requested_at) || '-',
         },
@@ -1394,7 +1537,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           render: (row) => row.approved_at ? asDateTimeText(row.approved_at) : '-',
         },
         {
-          key: 'fecha_entrega', label: 'Fecha entrega', field: 'delivered_at', width: '130px',
+          key: 'fecha_entrega', label: 'F. entrega real', field: 'delivered_at', width: '140px',
           filter: { type: 'date' },
           render: (row) => asDateText(row.delivered_at) || '-',
         },
@@ -1408,11 +1551,26 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           },
         },
         {
-          key: 'motivo_retraso', label: 'Motivo de retraso', field: 'delay_reason', width: '190px',
-          filter: { type: 'select', field: 'delay_reason', options: delayReasonOptions },
+          key: 'motivo_retraso', label: 'Motivo de retraso', field: 'delay_reason_id', sortable: false, width: '230px',
+          filter: { type: 'select', field: 'delay_reason_id', options: delayReasonOptions },
           render: (row) => {
-            if ((deliveryDiffDays(row) ?? 0) <= 0) return '-'
-            return delayReasonLabel(row.delay_reason) || 'Sin motivo registrado'
+            const diff = deliveryDiffDays(row)
+            if (diff === null) return <span className='text-muted'>-</span>
+            // Sin desface no hay nada que justificar: el pedido va como conforme.
+            if (diff <= 0) return <span className='badge bg-success-subtle text-success border border-success'>{ON_TIME_LABEL}</span>
+            // Mismo desplegable que usan los filtros de la cabecera: vive en un portal,
+            // asi que el menu no lo corta el overflow de la tabla.
+            return (
+              <div onClick={e => e.stopPropagation()}>
+                <PortalDropdown
+                  options={delayReasonOptions}
+                  value={row.delay_reason_id ?? ''}
+                  placeholder={UNSPECIFIED_LABEL}
+                  menuWidth={300}
+                  onChange={value => saveDelayReason(row, value)}
+                />
+              </div>
+            )
           },
         },
         {
@@ -1449,7 +1607,7 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
             </div>
             <p className="text-muted mb-0 mt-2" style={{ fontSize: 12 }}>{sampleProducts(row) || 'Sin productos'}</p>
             <small className="text-muted d-block mt-2">
-              <i className="mdi mdi-calendar me-1"></i>Solicitado: {asDateText(row.requested_at) || '-'} &middot; Entrega: {asDateText(row.delivered_at) || '-'}
+              <i className="mdi mdi-calendar me-1"></i>Solicitado: {asDateText(row.requested_at) || '-'} &middot; Entregado: {asDateText(row.delivered_at) || '-'}
             </small>
             {actionButtons && <div className="d-flex flex-wrap mt-3 pt-3" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
           </div>
@@ -1500,11 +1658,10 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         <SampleInput label='Referencia' value={form.delivery_reference} onChange={value => setField('delivery_reference', value)} />
         <SampleSelect label='Tipo servicio' value={form.service_type_id} onChange={onServiceTypeSelect} options={serviceTypeOptions} addButton onAdd={openServiceTypeModal} />
 
-        <SampleInput label='Fecha solicitada' value={form.requested_at} onChange={value => setField('requested_at', value)} type='date' />
-        <SampleInput label='Fecha Entrega' value={form.delivered_at} onChange={value => setField('delivered_at', value)} type='date' />
+        <SampleInput label='Fecha solicitada de entrega' value={form.requested_at} onChange={value => setField('requested_at', value)} type='date' />
         {(deliveryDiffDays(form) ?? 0) > 0 && (
           <>
-            <SampleSelect label='Motivo de retraso' value={form.delay_reason} onChange={value => setField('delay_reason', value)} options={delayReasonOptions} placeholder='Seleccione el motivo' />
+            <SampleSelect label='Motivo de retraso' value={form.delay_reason_id} onChange={value => setField('delay_reason_id', value)} options={delayReasonOptions} placeholder='Seleccione el motivo' />
             <SampleInput label='Detalle del retraso' value={form.delay_reason_notes} onChange={value => setField('delay_reason_notes', value)} placeholder='Opcional' />
           </>
         )}
@@ -1752,6 +1909,112 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         ) : (
           <div className='text-muted py-4 text-center'>Sin evidencia registrada</div>
         )}
+      </div>
+    </Modal>
+
+    <Modal
+      modalRef={guideModalRef}
+      title={`Guia de remision${guideForm.order_number ? ` - ${guideForm.order_number}` : ''}`}
+      size='xl'
+      btnSubmitText='Guardar y generar'
+      onSubmit={onSaveGuide}
+    >
+      <div className='row'>
+        <div className='form-group col-md-4 mb-2'>
+          <label className='form-label mb-1'>N&deg; guia de remision <b className='text-danger'>*</b></label>
+          <input className='form-control' value={guideForm.referral_guide} placeholder='T001-00000123' onChange={e => setGuideField('referral_guide', e.target.value)} required />
+        </div>
+        <div className='form-group col-md-4 mb-2'>
+          <label className='form-label mb-1'>Fecha de emision</label>
+          <input className='form-control' type='date' value={guideForm.guide_issue_date} onChange={e => setGuideField('guide_issue_date', e.target.value)} />
+        </div>
+        <div className='form-group col-md-4 mb-2'>
+          <label className='form-label mb-1'>Fecha de traslado</label>
+          <input className='form-control' type='date' value={guideForm.guide_transfer_date} onChange={e => setGuideField('guide_transfer_date', e.target.value)} />
+        </div>
+
+        <VdSelect
+          label='Motivo del traslado' col='col-md-4'
+          value={guideForm.transfer_reason}
+          onChange={value => setGuideField('transfer_reason', value)}
+          options={guideOptions.reasons}
+          placeholder='Seleccione'
+        />
+        <VdSelect
+          label='Modalidad de traslado' col='col-md-4'
+          value={guideForm.transfer_mode}
+          onChange={value => setGuideField('transfer_mode', value)}
+          options={guideOptions.modes}
+          placeholder='Seleccione'
+        />
+        <div className='form-group col-md-4 mb-2'>
+          <label className='form-label mb-1'>N&deg; de bultos</label>
+          <input className='form-control' type='number' min='0' value={guideForm.package_count} onChange={e => setGuideField('package_count', e.target.value)} />
+        </div>
+
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Punto de partida</label>
+          <input className='form-control' value={guideForm.origin_address} onChange={e => setGuideField('origin_address', e.target.value)} />
+        </div>
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Punto de llegada <b className='text-danger'>*</b></label>
+          <input className='form-control' value={guideForm.delivery_address} onChange={e => setGuideField('delivery_address', e.target.value)} required />
+        </div>
+
+        <div className='col-12'>
+          <hr className='my-2' />
+          <h5 className='mb-2'>Transportista</h5>
+        </div>
+        <div className='form-group col-md-8 mb-2'>
+          <label className='form-label mb-1'>Razon social</label>
+          <input className='form-control' value={guideForm.carrier_name} onChange={e => setGuideField('carrier_name', e.target.value)} />
+        </div>
+        <div className='form-group col-md-4 mb-2'>
+          <label className='form-label mb-1'>RUC</label>
+          <input className='form-control' value={guideForm.carrier_document} onChange={e => setGuideField('carrier_document', e.target.value)} />
+        </div>
+
+        <div className='col-12'>
+          <hr className='my-2' />
+          <h5 className='mb-2'>Conductor y unidad de transporte</h5>
+        </div>
+        <VdSelect
+          label='Chofer registrado' col='col-md-6'
+          value={guideForm.driver_id}
+          onChange={onGuideDriverSelect}
+          options={driverOptions}
+          placeholder='Seleccione un chofer'
+        />
+        <div className='form-group col-md-6 mb-2'>
+          <label className='form-label mb-1'>Nombre del conductor <b className='text-danger'>*</b></label>
+          <input className='form-control' value={guideForm.driver_name} onChange={e => setGuideField('driver_name', e.target.value)} required />
+        </div>
+        <VdSelect
+          label='Tipo de documento' col='col-md-3'
+          value={guideForm.driver_document_type}
+          onChange={value => setGuideField('driver_document_type', value)}
+          options={[{ value: 'DNI', label: 'DNI' }, { value: 'CE', label: 'Carnet de extranjeria' }, { value: 'PAS', label: 'Pasaporte' }]}
+          placeholder='Seleccione'
+        />
+        <div className='form-group col-md-3 mb-2'>
+          <label className='form-label mb-1'>N&deg; documento</label>
+          <input className='form-control' value={guideForm.driver_document_number} onChange={e => setGuideField('driver_document_number', e.target.value)} />
+        </div>
+        <div className='form-group col-md-3 mb-2'>
+          <label className='form-label mb-1'>N&deg; brevete</label>
+          <input className='form-control' value={guideForm.driver_license_number} onChange={e => setGuideField('driver_license_number', e.target.value)} />
+        </div>
+        <VdSelect
+          label='Vehiculo registrado' col='col-md-3'
+          value={guideForm.vehicle_id}
+          onChange={onGuideVehicleSelect}
+          options={vehicleOptions}
+          placeholder='Seleccione un vehiculo'
+        />
+        <div className='form-group col-md-3 mb-2'>
+          <label className='form-label mb-1'>Placa <b className='text-danger'>*</b></label>
+          <input className='form-control text-uppercase' value={guideForm.vehicle_plate} onChange={e => setGuideField('vehicle_plate', e.target.value.toUpperCase())} required />
+        </div>
       </div>
     </Modal>
 

@@ -12,6 +12,7 @@ use App\Models\Sale;
 use App\Models\Social;
 use App\Models\User;
 use App\Support\BusinessScope;
+use App\Support\FriendlyError;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
@@ -43,6 +44,8 @@ class BasicController extends Controller
   public $ignorePrefix = [];
   public $with4get = [];
   public $booleanFields = [];
+  /** Mensajes por nombre de indice unico, para explicar un duplicado en terminos del negocio. */
+  public $duplicateMessages = [];
   public $ignoreStatusFilter = false;
   public $useIntervention = true;
   public $identifier = 'id';
@@ -260,7 +263,7 @@ class BasicController extends Controller
       $response->totalCount = $totalCount;
     } catch (\Throwable $th) {
       $response->status = 400;
-      $response->message = $th->getMessage() . ' Ln.' . $th->getLine();
+      $response->message = FriendlyError::message($th, $this->duplicateMessages);
     } finally {
       return response(
         $response->toArray(),
@@ -339,7 +342,7 @@ class BasicController extends Controller
     } catch (\Throwable $th) {
       if (DB::transactionLevel() > 0) DB::rollBack();
       $response->status = 400;
-      $response->message = $th->getMessage();
+      $response->message = FriendlyError::message($th, $this->duplicateMessages);
     } finally {
       return response(
         $response->toArray(),
@@ -366,7 +369,7 @@ class BasicController extends Controller
       $response->message = 'Operacion correcta';
     } catch (\Throwable $th) {
       $response->status = 400;
-      $response->message = $th->getMessage();
+      $response->message = FriendlyError::message($th, $this->duplicateMessages);
     } finally {
       return response(
         $response->toArray(),
@@ -394,7 +397,7 @@ class BasicController extends Controller
       $response->message = 'Operacion correcta';
     } catch (\Throwable $th) {
       $response->status = 400;
-      $response->message = $th->getMessage();
+      $response->message = FriendlyError::message($th, $this->duplicateMessages);
     } finally {
       return response(
         $response->toArray(),
@@ -460,7 +463,7 @@ class BasicController extends Controller
       $response->message = 'Operacion correcta';
     } catch (\Throwable $th) {
       $response->status = 400;
-      $response->message = $th->getMessage();
+      $response->message = FriendlyError::message($th, $this->duplicateMessages);
     } finally {
       return response(
         $response->toArray(),

@@ -279,10 +279,14 @@ const renderSampleReferralGuidePdf = async (doc, document) => {
   const companyName = data?.business_name || 'KAMARY PERU SAC'
   const companyAddress = data?.business_address || 'CAL.YEN ESCOBEDO GARRO NRO. 830\nURB. LA VINA LIMA - LIMA - SAN LUIS'
   const guideNumber = asText(data?.referral_guide || data?.order_number || data?.id)
-  const issueDate = asDate(data?.created_at || data?.requested_at || new Date().toISOString())
-  const transferDate = asDate(data?.delivered_at || data?.requested_at)
+  const issueDate = asDate(data?.guide_issue_date || data?.created_at)
+  // La guia declara su propia fecha de traslado: no es la entrega real ni la solicitada.
+  const transferDate = asDate(data?.guide_transfer_date || data?.requested_at)
+  const originAddress = asText(data?.origin_address, '') || companyAddress.replace(/\n/g, ' ')
   const destinationAddress = asText(data?.delivery_address, '')
   const customerDocument = asText(data?.document_number || data?.contact_document, '')
+  const carrierName = asText(data?.carrier_name, '') || companyName
+  const carrierDocument = asText(data?.carrier_document, '') || companyRuc
   const items = Array.isArray(data?.items) ? data.items : []
   let y = 52
 
@@ -309,12 +313,12 @@ const renderSampleReferralGuidePdf = async (doc, document) => {
     ['FECHA', issueDate, 54],
   ])
   drawGuideBox(doc, margin + halfWidth + halfGap, y, halfWidth, 31, 'FECHA DE TRASLADO', [
-    ['DIRECCION', transferDate, 58],
+    ['FECHA', transferDate, 54],
   ])
 
   y += 60
   drawGuideBox(doc, margin, y, halfWidth, 42, 'PUNTO DE PARTIDA', [
-    ['DIRECCION', companyAddress.replace(/\n/g, ' '), 58],
+    ['DIRECCION', originAddress, 58],
   ])
   drawGuideBox(doc, margin + halfWidth + halfGap, y, halfWidth, 42, 'PUNTO DE LLEGADA', [
     ['DIRECCION', destinationAddress, 58],
@@ -326,9 +330,10 @@ const renderSampleReferralGuidePdf = async (doc, document) => {
     ['R.U.C.', customerDocument, 58],
   ])
   drawGuideBox(doc, margin + halfWidth + halfGap, y, halfWidth, 51, 'UNIDAD DE TRANSPORTE / CONDUCTOR', [
-    ['PLACA', data?.vehicle_plate, 68],
-    ['CONDUCTOR', data?.driver_name, 68],
-    ['DOCUMENTO', data?.driver_document || data?.driver_license, 68],
+    ['PLACA', data?.vehicle_plate || nested(data, 'vehicle.plate'), 68],
+    ['CONDUCTOR', data?.driver_name || nested(data, 'driver.full_name'), 68],
+    ['DOCUMENTO', joinText(data?.driver_document_type, data?.driver_document_number || data?.driver_document), 68],
+    ['BREVETE', data?.driver_license_number || data?.driver_license, 68],
   ])
 
   y += 74
@@ -376,20 +381,24 @@ const renderSampleReferralGuidePdf = async (doc, document) => {
   })
 
   y = doc.lastAutoTable.finalY + 30
-  if (y + 172 > pageHeight - 20) {
+  // Lo que falta abajo: transportista/motivo 71 + contacto 86 + conformidad 51.
+  if (y + 208 > pageHeight - 20) {
     doc.addPage()
     y = 48
   }
 
-  drawGuideBox(doc, margin, y, halfWidth, 42, 'TRANSPORTISTA', [
-    ['NOMBRE', companyName, 62],
-    ['DOCUMENTO', companyRuc, 62],
+  drawGuideBox(doc, margin, y, halfWidth, 51, 'TRANSPORTISTA', [
+    ['NOMBRE', carrierName, 62],
+    ['DOCUMENTO', carrierDocument, 62],
+    ['MODALIDAD', data?.transfer_mode, 62],
   ])
-  drawGuideBox(doc, margin + halfWidth + halfGap, y, halfWidth, 42, 'MOTIVO DEL TRASLADO', [
-    ['MOTIVO', data?.request_reason || 'VENTA', 62],
+  drawGuideBox(doc, margin + halfWidth + halfGap, y, halfWidth, 51, 'MOTIVO DEL TRASLADO', [
+    ['MOTIVO', data?.transfer_reason || data?.request_reason || 'VENTA', 62],
+    ['BULTOS', data?.package_count, 62],
+    ['PESO (KG)', asQuantity(data?.total_gross_weight), 62],
   ])
 
-  y += 62
+  y += 71
   doc.rect(margin, y, contentWidth, 64)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(8)

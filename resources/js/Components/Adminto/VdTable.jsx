@@ -64,7 +64,7 @@ const paginationRange = (current, total) => {
 
 /* ------------------------------------------------- dropdown portal (filtros) */
 
-const PortalDropdown = ({ options, value, placeholder, onChange, align = 'left', menuWidth }) => {
+export const PortalDropdown = ({ options, value, placeholder, onChange, align = 'left', menuWidth }) => {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [pos, setPos] = useState(null)

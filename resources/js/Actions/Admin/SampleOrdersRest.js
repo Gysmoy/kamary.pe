@@ -37,6 +37,23 @@ class SampleOrdersRest extends BasicRest {
     }
   }
 
+  // Motivo de retraso editado desde la tabla.
+  saveDelayReason = async (id, request) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${id}/delay-reason`, {
+        method: 'PATCH',
+        body: JSON.stringify(request),
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo guardar el motivo')
+
+      toast.success('Correcto', { description: result.message, duration: 2500, richColors: true })
+      return true
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
+      return false
+    }
+  }
+
   // El dashboard trae su propio resumen ya calculado, sin toast de exito para no interrumpir.
   dashboard = async (filters = {}) => {
     try {
@@ -61,6 +78,25 @@ class SampleOrdersRest extends BasicRest {
   getSalesChannels = async () => await loadAll('/api/admin/sales-channels/paginate')
   getSalesSubchannels = async () => await loadAll('/api/admin/sales-subchannels/paginate')
   getServiceTypes = async () => await loadAll('/api/admin/service-types/paginate')
+  getDrivers = async () => await loadAll('/api/admin/drivers/paginate')
+  getVehicles = async () => await loadAll('/api/admin/vehicles/paginate')
+
+  // Guarda los datos de la guia de remision y devuelve el pedido con la cabecera del remitente.
+  saveReferralGuide = async (id, request) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/${id}/referral-guide`, {
+        method: 'POST',
+        body: JSON.stringify(request),
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo registrar la guia de remision')
+
+      toast.success('Correcto', { description: result.message, duration: 3000, richColors: true })
+      return result?.data ?? null
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
+      return null
+    }
+  }
 
   saveGiro = async (request) => await this.simplePost('/api/admin/giros', request)
   saveSubGiro = async (request) => await this.simplePost('/api/admin/sub-giros', request)

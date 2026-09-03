@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
+import KpiCard, { kpiBackground } from '@Adminto/KpiCard';
 
 const number = (value, digits = 0) => Number(value || 0).toLocaleString('es-PE', {
   minimumFractionDigits: digits,
@@ -159,12 +160,84 @@ const MetricTile = ({ label, value, hint, icon, color = 'primary' }) => (
   </div>
 );
 
+/**
+ * Cabecera de indicadores. Incluye el desglose comercial/servicios y el conteo de pedidos
+ * de cada uno, que el controlador ya devolvia pero la pantalla no mostraba.
+ */
+const KpiHeader = ({ summary = {}, dispatch = {}, rotation = {} }) => (
+  <div className='row'>
+    <KpiCard
+      label='Ventas del periodo'
+      value={money(summary.salesValue)}
+      hint={`${number(summary.ordersCount)} operaciones`}
+      icon='ti ti-cash'
+      background={kpiBackground.blue}
+    />
+    <KpiCard
+      label='Ventas comerciales'
+      value={money(summary.commercialSalesValue)}
+      hint={`${number(summary.commercialOrdersCount)} pedidos`}
+      icon='ti ti-shopping-bag'
+      background={kpiBackground.lightBlue}
+      href='/admin/commercial-orders'
+    />
+    <KpiCard
+      label='Ventas de servicios'
+      value={money(summary.serviceSalesValue)}
+      hint={`${number(summary.serviceOrdersCount)} ordenes`}
+      icon='ti ti-tools'
+      background={kpiBackground.teal}
+      href='/admin/services-service-order'
+    />
+    <KpiCard
+      label='Margen bruto'
+      value={pct(summary.grossMarginPct)}
+      hint={money(summary.grossProfit)}
+      icon='ti ti-chart-line'
+      background={kpiBackground.green}
+      href='#dashboard-profitability'
+    />
+
+    <KpiCard
+      label='Unidades vendidas'
+      value={number(summary.salesUnits, 3)}
+      hint={`Costo ${money(summary.salesCost)}`}
+      icon='ti ti-package'
+      background={kpiBackground.purple}
+    />
+    <KpiCard
+      label='Eficiencia de despacho'
+      value={pct(dispatch.efficiencyPct)}
+      hint={`${number(dispatch.onTimeDelivered)} de ${number(dispatch.totalDelivered)} a tiempo`}
+      icon='ti ti-truck-delivery'
+      background={kpiBackground.slate}
+      href='#dashboard-delays'
+    />
+    <KpiCard
+      label='Entregas con demora'
+      value={number(dispatch.delayedDelivered)}
+      hint={`${pct(dispatch.delayPct)} de las entregas`}
+      icon='ti ti-clock-exclamation'
+      background={kpiBackground.red}
+      href='#dashboard-delays'
+    />
+    <KpiCard
+      label='Stock valorizado'
+      value={money(rotation.totalValue)}
+      hint={`${number(rotation.totalItems)} items · ${number(rotation.totalUnits, 0)} und.`}
+      icon='ti ti-stack-2'
+      background={kpiBackground.orange}
+      href='#dashboard-rotation'
+    />
+  </div>
+);
+
 const SummaryPanel = ({ summary = {} }) => (
   <div id='dashboard-summary' className='card h-100'>
     <div className='card-body'>
       <SectionHeader title='Resumen comercial' />
       <div className='row'>
-        <MetricTile label='Ventas valor' value={money(summary.salesValue)} hint={`${summary.ordersCount || 0} operaciones`} icon='ti ti-cash' color='primary' />
+        <MetricTile label='Ventas valor' value={money(summary.salesValue)} hint={`Comercial ${money(summary.commercialSalesValue)} | Servicios ${money(summary.serviceSalesValue)}`} icon='ti ti-cash' color='primary' />
         <MetricTile label='Ventas unidades' value={number(summary.salesUnits, 3)} hint='Productos comerciales' icon='ti ti-package' color='info' />
         <MetricTile label='Costo ventas' value={money(summary.salesCost)} hint='Costo comercial' icon='ti ti-receipt-2' color='warning' />
         <MetricTile label='Margen bruto' value={pct(summary.grossMarginPct)} hint={money(summary.grossProfit)} icon='ti ti-chart-line' color='success' />
@@ -257,6 +330,12 @@ const Profitability = ({ data = {} }) => {
         <div className='row mb-3'>
           <div className='col-sm-6 col-xl-3 mb-2'>
             <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Unidades</small>
+              <strong>{number(totals.units, 3)}</strong>
+            </div>
+          </div>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
               <small className='text-muted d-block'>Venta total</small>
               <strong>{money(totals.salesValue)}</strong>
             </div>
@@ -277,6 +356,24 @@ const Profitability = ({ data = {} }) => {
             <div className='border rounded p-2 h-100'>
               <small className='text-muted d-block'>Rentabilidad</small>
               <strong>{pct(totals.profitPct)}</strong>
+            </div>
+          </div>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Precio venta prom.</small>
+              <strong>{money(totals.avgSalePrice)}</strong>
+            </div>
+          </div>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Precio costo prom.</small>
+              <strong>{money(totals.avgCostPrice)}</strong>
+            </div>
+          </div>
+          <div className='col-sm-6 col-xl-3 mb-2'>
+            <div className='border rounded p-2 h-100'>
+              <small className='text-muted d-block'>Diferencia unitaria</small>
+              <strong>{money(totals.unitProfitValue)}</strong>
             </div>
           </div>
         </div>
@@ -492,6 +589,7 @@ const InventoryRotationSummary = ({ data = {} }) => {
           <>
             <div className='row'>
               <RotationMetric label='Total items' count={data.totalItems} value={data.totalValue} color='#5dade2' />
+              <RotationMetric label='Total unidades' count={data.totalUnits} value={data.totalValue} color='#8e7cc3' />
               {rows.map(row => (
                 <RotationMetric
                   key={`rotation-metric-${row.status}`}
@@ -759,7 +857,6 @@ const DashboardHome = ({ catalogMetrics = [], salesDashboard = {} }) => {
           <div className='card-body'>
             <div className='d-flex flex-wrap justify-content-between align-items-center gap-3'>
               <div>
-                <h4 className='mb-1'>Dashboard comercial</h4>
                 <p className='text-muted mb-0'>{period.label || 'Periodo'}: {date(period.start)} - {date(period.end)}</p>
               </div>
               <div className='d-flex flex-wrap gap-2 justify-content-end'>
@@ -770,6 +867,10 @@ const DashboardHome = ({ catalogMetrics = [], salesDashboard = {} }) => {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className='col-12'>
+        <KpiHeader summary={summary} dispatch={dispatch} rotation={salesDashboard.inventoryRotation || {}} />
       </div>
 
       <div className='col-xl-8 mb-3'>

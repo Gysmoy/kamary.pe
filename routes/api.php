@@ -645,6 +645,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/services-client/document/{type}/{number}', [AdminServiceClientController::class, 'lookupByDocument']);
 
         Route::post('/sample-orders/{id}/evidence', [AdminSampleOrderController::class, 'evidence']);
+        Route::post('/sample-orders/{id}/referral-guide', [AdminSampleOrderController::class, 'referralGuide']);
+        Route::patch('/sample-orders/{id}/delay-reason', [AdminSampleOrderController::class, 'delayReason']);
         Route::get('/sample-orders/evidence-media/{filename}', [AdminSampleOrderController::class, 'evidenceMedia'])->where('filename', '.*');
         Route::post('/sample-orders/articles', [AdminSampleOrderController::class, 'articles']);
         Route::post('/sample-orders', [AdminSampleOrderController::class, 'save']);

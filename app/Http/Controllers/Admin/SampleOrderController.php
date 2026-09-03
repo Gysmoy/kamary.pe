@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Helpers\EmailConfig;
 use App\Http\Controllers\BasicController;
 use App\Models\Client;
+use App\Models\Driver;
 use App\Models\SampleOrder;
+use App\Models\Vehicle;
+use App\Models\DeliveryDelayReason;
 use App\Support\BusinessScope;
-use App\Support\SampleDelayReasons;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,11 +26,151 @@ class SampleOrderController extends BasicController
     public $reactView = 'Admin/SampleOrders';
     public $prefix4filter = 'sample_orders';
 
+    /** Motivos de traslado admitidos en la guia de remision. */
+    private const TRANSFER_REASONS = ['VENTA', 'MUESTRA', 'TRASLADO ENTRE ESTABLECIMIENTOS', 'CONSIGNACION', 'DEVOLUCION', 'OTROS'];
+
+    /** Modalidad de traslado: transporte propio o de un tercero. */
+    private const TRANSFER_MODES = ['PRIVADO', 'PUBLICO'];
+
+    /** Lo que se muestra cuando la entrega salio en fecha o antes: no lleva motivo. */
+    public const ON_TIME_LABEL = 'Entrega conforme';
+
     public function setReactViewProperties(Request $request)
     {
         return [
             'moduleTitle' => 'Muestras - Pedido',
             'requiredPermission' => 'sample-orders',
+            // Cabecera del remitente y opciones de la guia: el PDF las necesita para
+            // no salir en blanco, y sirven de default en el modal de la guia.
+            'delayReasonOptions' => $this->delayReasonOptions(),
+            'guideCompany' => $this->guideCompany(),
+            'transferReasonOptions' => self::TRANSFER_REASONS,
+            'transferModeOptions' => self::TRANSFER_MODES,
+        ];
+    }
+
+    /** Guarda los datos de la guia de remision del pedido (chofer, vehiculo, traslado). */
+    public function referralGuide(Request $request, string $id)
+    {
+        $response = new Response();
+
+        try {
+            $order = SampleOrder::query()->whereKey($id)->whereNotNull('status')->firstOrFail();
+            $company = BusinessScope::businessForKey(BusinessScope::KAMARY_PERU);
+
+            $driverId = $this->toNullableInt($request->driver_id);
+            $driver = $driverId ? Driver::query()->whereKey($driverId)->first() : null;
+            $vehicleId = $this->toNullableInt($request->vehicle_id);
+            $vehicle = $vehicleId ? Vehicle::query()->whereKey($vehicleId)->first() : null;
+
+            $guideNumber = trim((string) $request->referral_guide);
+            if ($guideNumber === '') throw new \Exception('El numero de la guia de remision es obligatorio');
+
+            $driverName = trim((string) ($request->driver_name ?: $driver?->full_name));
+            if ($driverName === '') throw new \Exception('El conductor es obligatorio para emitir la guia');
+
+            $plate = strtoupper(trim((string) ($request->vehicle_plate ?: $vehicle?->plate)));
+            if ($plate === '') throw new \Exception('La placa del vehiculo es obligatoria para emitir la guia');
+
+            $destination = trim((string) ($request->delivery_address ?: $order->delivery_address));
+            if ($destination === '') throw new \Exception('El punto de llegada es obligatorio para emitir la guia');
+
+            $order->update([
+                'referral_guide' => $guideNumber,
+                'guide_issue_date' => $this->normalizeDate($request->guide_issue_date) ?? now()->toDateString(),
+                'guide_transfer_date' => $this->normalizeDate($request->guide_transfer_date)
+                    ?? $this->normalizeDate($order->requested_at),
+                'transfer_reason' => $this->normalizeUpperOption($request->transfer_reason, self::TRANSFER_REASONS, 'VENTA'),
+                'transfer_mode' => $this->normalizeUpperOption($request->transfer_mode, self::TRANSFER_MODES, 'PRIVADO'),
+                'origin_address' => trim((string) $request->origin_address) ?: ($company?->fiscal_address ?: null),
+                'carrier_name' => trim((string) $request->carrier_name) ?: ($company?->name ?: null),
+                'carrier_document' => trim((string) $request->carrier_document) ?: ($company?->tax_number ?: null),
+                'driver_id' => $driver?->id,
+                'driver_name' => $driverName,
+                'driver_document_type' => mb_strtoupper(trim((string) ($request->driver_document_type ?: $driver?->document_type))) ?: 'DNI',
+                'driver_document_number' => trim((string) ($request->driver_document_number ?: $driver?->document_number)) ?: null,
+                'driver_license_number' => trim((string) ($request->driver_license_number ?: $driver?->license_number)) ?: null,
+                'vehicle_id' => $vehicle?->id,
+                'vehicle_plate' => $plate,
+                'package_count' => $this->toNullableInt($request->package_count),
+                'delivery_address' => $destination,
+                'updated_by' => Auth::id(),
+            ]);
+
+            $response->status = 200;
+            $response->message = 'Guia de remision registrada';
+            $response->data = array_merge($order->fresh()->toArray(), $this->guideCompany());
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    /**
+     * Fija el motivo de retraso desde la tabla. Solo se admite si la entrega real quedo
+     * despues de la solicitada; en fecha o antes el pedido va sin motivo.
+     */
+    public function delayReason(Request $request, string $id)
+    {
+        $response = new Response();
+
+        try {
+            $order = SampleOrder::query()->whereKey($id)->whereNotNull('status')->firstOrFail();
+
+            if (!$this->deliveredLate($order->requested_at, $order->delivered_at)) {
+                throw new \Exception('El pedido se entrego en fecha o antes: no lleva motivo de retraso.');
+            }
+
+            $order->update([
+                'delay_reason_id' => $this->normalizeDelayReasonId($request->delay_reason_id),
+                'delay_reason_notes' => trim((string) $request->delay_reason_notes) ?: null,
+                'updated_by' => Auth::id(),
+            ]);
+
+            $response->status = 200;
+            $response->message = 'Motivo de retraso actualizado';
+            $response->data = $order->fresh()->load('delayReason:id,description');
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    /** Solo se aceptan motivos activos del catalogo delivery_delay_reasons. */
+    private function normalizeDelayReasonId($value): ?int
+    {
+        $id = $this->toNullableInt($value);
+        if (!$id) return null;
+
+        return DeliveryDelayReason::query()
+            ->whereKey($id)
+            ->where('status', true)
+            ->value('id');
+    }
+
+    private function delayReasonOptions(): array
+    {
+        return DeliveryDelayReason::query()
+            ->where('status', true)
+            ->orderBy('description')
+            ->get(['id', 'description'])
+            ->map(fn($row) => ['value' => (string) $row->id, 'label' => $row->description])
+            ->all();
+    }
+
+    /** Datos del remitente que van en la cabecera de la guia. */
+    private function guideCompany(): array
+    {
+        $company = BusinessScope::businessForKey(BusinessScope::KAMARY_PERU);
+
+        return [
+            'business_name' => $company?->name,
+            'business_ruc' => $company?->tax_number,
+            'business_address' => $company?->fiscal_address,
         ];
     }
 
@@ -38,6 +180,7 @@ class SampleOrderController extends BasicController
             ->with([
                 'creator:id,name,lastname,username,fullname',
                 'updater:id,name,lastname,username,fullname',
+                'delayReason:id,description',
             ])
             ->leftJoin('users as creator', 'creator.id', '=', 'sample_orders.created_by')
             ->leftJoin('users as updater', 'updater.id', '=', 'sample_orders.updated_by');
@@ -103,18 +246,21 @@ class SampleOrderController extends BasicController
         $body['giro_id'] = trim((string)($body['giro_id'] ?? '')) ?: null;
         $body['sub_giro_id'] = trim((string)($body['sub_giro_id'] ?? '')) ?: null;
         $body['order_complete'] = $this->toBoolean($body['order_complete'] ?? false);
+        // requested_at es la fecha en que el cliente pide que se le entregue: eso si lo captura
+        // el formulario. delivered_at es la entrega real y ya no se escribe a mano; la fija el
+        // sistema al marcar el pedido como entregado, asi que al editar se conserva la guardada.
         $body['requested_at'] = $this->normalizeDate($body['requested_at'] ?? now()->toDateString());
-        $body['delivered_at'] = $this->normalizeDate($body['delivered_at'] ?? null);
+        $body['delivered_at'] = $this->normalizeDate(
+            $id ? SampleOrder::query()->whereKey($id)->value('delivered_at') : null
+        );
         if ($body['order_status'] === 'delivered' && !$body['delivered_at']) {
             $body['delivered_at'] = now()->toDateString();
         }
-        if (Schema::hasColumn('sample_orders', 'delay_reason')) {
-            // El motivo solo tiene sentido si la entrega salio despues de la fecha solicitada:
-            // si el pedido llego a tiempo se limpia para que no ensucie el dashboard.
-            $delayed = $this->deliveredLate($body['requested_at'] ?? null, $body['delivered_at'] ?? null);
-            $body['delay_reason'] = $delayed ? SampleDelayReasons::normalize($body['delay_reason'] ?? null) : null;
-            $body['delay_reason_notes'] = $delayed ? (trim((string)($body['delay_reason_notes'] ?? '')) ?: null) : null;
-        }
+        // El motivo solo tiene sentido si la entrega salio despues de la fecha solicitada.
+        // Si llego en fecha o antes se limpia: la pantalla muestra 'Entrega conforme'.
+        $delayed = $this->deliveredLate($body['requested_at'] ?? null, $body['delivered_at'] ?? null);
+        $body['delay_reason_id'] = $delayed ? $this->normalizeDelayReasonId($body['delay_reason_id'] ?? null) : null;
+        $body['delay_reason_notes'] = $delayed ? (trim((string)($body['delay_reason_notes'] ?? '')) ?: null) : null;
         $body['supervisor_name'] = trim((string)($body['supervisor_name'] ?? '')) ?: null;
         $body['cancellation_reason'] = trim((string)($body['cancellation_reason'] ?? '')) ?: null;
         $body['observations'] = trim((string)($body['observations'] ?? '')) ?: null;
@@ -285,10 +431,10 @@ class SampleOrderController extends BasicController
             if ($orderStatus === 'delivered' && !$order->delivered_at) {
                 $updates['delivered_at'] = now()->toDateString();
             }
-            if ($orderStatus === 'delivered' && Schema::hasColumn('sample_orders', 'delay_reason')) {
+            if ($orderStatus === 'delivered') {
                 $deliveredAt = $updates['delivered_at'] ?? $order->delivered_at;
                 $delayed = $this->deliveredLate($order->requested_at, $deliveredAt);
-                $updates['delay_reason'] = $delayed ? SampleDelayReasons::normalize($request->delay_reason) : null;
+                $updates['delay_reason_id'] = $delayed ? $this->normalizeDelayReasonId($request->delay_reason_id) : null;
                 $updates['delay_reason_notes'] = $delayed ? (trim((string)$request->delay_reason_notes) ?: null) : null;
             }
 
@@ -383,6 +529,17 @@ class SampleOrderController extends BasicController
 
         return Carbon::parse($deliveredAt)->startOfDay()
             ->greaterThan(Carbon::parse($requestedAt)->startOfDay());
+    }
+
+    /**
+     * Igual que normalizeOption pero conservando la mayuscula: estos valores se imprimen
+     * tal cual en la guia de remision.
+     */
+    private function normalizeUpperOption($value, array $allowed, string $fallback): string
+    {
+        $normalized = mb_strtoupper(trim((string) $value));
+
+        return in_array($normalized, $allowed, true) ? $normalized : $fallback;
     }
 
     private function normalizeOption($value, array $allowed, string $fallback): string

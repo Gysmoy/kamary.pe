@@ -3982,7 +3982,7 @@ const CommercialOrders = ({ requiredPermission = 'orders', externalSource = null
         </div>
         <div className='col-md-6 mb-3'>
           <label className='form-label'>Foto / evidencia</label>
-          <input ref={evidenceFileRef} className='form-control' type='file' accept='image/png,image/jpeg,image/webp,image/gif' capture='environment' onChange={onEvidenceFileChange} />
+          <input ref={evidenceFileRef} className='form-control' type='file' accept='image/png,image/jpeg,image/webp,image/gif' onChange={onEvidenceFileChange} />
         </div>
         <div className='col-md-6 mb-3'>
           <label className='form-label'>Latitud</label>

@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
+use App\Models\DeliveryDelayReason;
 use App\Models\SampleOrder;
-use App\Support\SampleDelayReasons;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Schema;
 use SoDe\Extend\Response;
 
 class SampleOrderDashboardController extends BasicController
@@ -36,8 +35,14 @@ class SampleOrderDashboardController extends BasicController
         'created_at' => 'Fecha de registro',
         'approved_at' => 'Fecha de aprobacion',
         'requested_at' => 'Fecha solicitada de entrega',
-        'delivered_at' => 'Fecha de entrega',
+        'delivered_at' => 'Fecha de entrega real',
     ];
+
+    /** Lo que se muestra cuando la entrega salio en fecha o antes: no lleva motivo. */
+    private const ON_TIME_LABEL = 'Entrega conforme';
+
+    /** Retraso al que nadie le puso motivo todavia. */
+    private const UNSPECIFIED_LABEL = 'Sin motivo registrado';
 
     private const MAX_ROWS = 500;
 
@@ -50,7 +55,7 @@ class SampleOrderDashboardController extends BasicController
             'requiredPermission' => 'sample-orders',
             'statusOptions' => $this->options(self::STATUS_LABELS),
             'dateFieldOptions' => $this->options(self::DATE_FIELDS),
-            'delayReasonOptions' => SampleDelayReasons::options(),
+            'delayReasonOptions' => $this->delayReasonOptions(),
             'clientOptions' => $this->clientOptions(),
             'initialFilters' => $filters,
             'initialDashboard' => $this->build($filters),
@@ -80,7 +85,7 @@ class SampleOrderDashboardController extends BasicController
 
     private function build(array $filters): array
     {
-        $rows = $this->query($filters)->get()
+        $rows = $this->query($filters)->with('delayReason:id,description')->get()
             ->map(fn($order) => $this->row($order))
             ->values();
 
@@ -119,8 +124,8 @@ class SampleOrderDashboardController extends BasicController
             $query->where('client_name', $filters['client_name']);
         }
 
-        if ($filters['delay_reason'] && Schema::hasColumn('sample_orders', 'delay_reason')) {
-            $query->where('delay_reason', $filters['delay_reason']);
+        if ($filters['delay_reason']) {
+            $query->where('delay_reason_id', $filters['delay_reason']);
         }
 
         if ($filters['only_delayed']) {
@@ -144,9 +149,7 @@ class SampleOrderDashboardController extends BasicController
             : null;
 
         $isDelayed = $diffDays !== null && $diffDays > 0;
-        $delayReason = Schema::hasColumn('sample_orders', 'delay_reason')
-            ? SampleDelayReasons::normalize($order->delay_reason)
-            : null;
+        $delayReason = $order->delay_reason_id;
 
         return [
             'id' => $order->id,
@@ -161,10 +164,11 @@ class SampleOrderDashboardController extends BasicController
             'diffDays' => $diffDays,
             'isDelayed' => $isDelayed,
             'delayReason' => $isDelayed ? $delayReason : null,
-            'delayReasonLabel' => $isDelayed ? SampleDelayReasons::label($delayReason) : null,
-            'delayReasonNotes' => Schema::hasColumn('sample_orders', 'delay_reason_notes')
-                ? $order->delay_reason_notes
-                : null,
+            // Si no hubo desface el pedido va como conforme, sin motivo que registrar.
+            'delayReasonLabel' => $isDelayed
+                ? ($order->delayReason?->description ?: self::UNSPECIFIED_LABEL)
+                : ($diffDays !== null ? self::ON_TIME_LABEL : null),
+            'delayReasonNotes' => $order->delay_reason_notes,
         ];
     }
 
@@ -265,14 +269,15 @@ class SampleOrderDashboardController extends BasicController
         $total = max(1, count($delayed));
         $reasons = [];
 
-        foreach (SampleDelayReasons::OPTIONS as $key => $label) {
-            $matched = array_values(array_filter($delayed, fn($row) => $row['delayReason'] === $key));
+        foreach ($this->delayReasonOptions() as $option) {
+            $key = (int) $option['value'];
+            $matched = array_values(array_filter($delayed, fn($row) => (int) $row['delayReason'] === $key));
             if (!$matched) continue;
 
             $days = array_column($matched, 'diffDays');
             $reasons[] = [
                 'key' => $key,
-                'label' => $label,
+                'label' => $option['label'],
                 'count' => count($matched),
                 'pct' => round((count($matched) / $total) * 100, 1),
                 'avgDays' => round(array_sum($days) / count($days), 1),
@@ -285,7 +290,7 @@ class SampleOrderDashboardController extends BasicController
             $days = array_column($withoutReason, 'diffDays');
             $reasons[] = [
                 'key' => 'unspecified',
-                'label' => SampleDelayReasons::UNSPECIFIED_LABEL,
+                'label' => self::UNSPECIFIED_LABEL,
                 'count' => count($withoutReason),
                 'pct' => round((count($withoutReason) / $total) * 100, 1),
                 'avgDays' => round(array_sum($days) / count($days), 1),
@@ -315,9 +320,27 @@ class SampleOrderDashboardController extends BasicController
             'end' => $end,
             'order_status' => $orderStatus,
             'client_name' => trim((string) $request->input('client_name')) ?: '',
-            'delay_reason' => SampleDelayReasons::normalize($request->input('delay_reason')) ?? '',
+            'delay_reason' => (string) ($this->nullableInt($request->input('delay_reason')) ?? ''),
             'only_delayed' => filter_var($request->input('only_delayed', false), FILTER_VALIDATE_BOOLEAN),
         ];
+    }
+
+    /** Catalogo real de motivos, el mismo que mantiene el negocio desde Pedidos. */
+    private function delayReasonOptions(): array
+    {
+        return DeliveryDelayReason::query()
+            ->where('status', true)
+            ->orderBy('description')
+            ->get(['id', 'description'])
+            ->map(fn($row) => ['value' => (string) $row->id, 'label' => $row->description])
+            ->all();
+    }
+
+    private function nullableInt($value): ?int
+    {
+        $id = filter_var($value, FILTER_VALIDATE_INT);
+
+        return $id === false || $id <= 0 ? null : $id;
     }
 
     private function clientOptions(): array
