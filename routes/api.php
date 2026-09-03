@@ -66,6 +66,7 @@ use App\Http\Controllers\Admin\ServiceClientController as AdminServiceClientCont
 use App\Http\Controllers\Admin\ServiceOrderController as AdminServiceOrderController;
 use App\Http\Controllers\Admin\SalesReportController as AdminSalesReportController;
 use App\Http\Controllers\Admin\SampleOrderController as AdminSampleOrderController;
+use App\Http\Controllers\Admin\SampleOrderDashboardController as AdminSampleOrderDashboardController;
 use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Admin\TransactionCategoryController as AdminTransactionCategoryController;
@@ -648,6 +649,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/sample-orders/articles', [AdminSampleOrderController::class, 'articles']);
         Route::post('/sample-orders', [AdminSampleOrderController::class, 'save']);
         Route::post('/sample-orders/paginate', [AdminSampleOrderController::class, 'paginate']);
+        Route::post('/sample-orders/dashboard', [AdminSampleOrderDashboardController::class, 'data']);
         Route::patch('/sample-orders/status', [AdminSampleOrderController::class, 'status']);
         Route::patch('/sample-orders/{field}', [AdminSampleOrderController::class, 'boolean']);
         Route::delete('/sample-orders/{id}', [AdminSampleOrderController::class, 'delete']);

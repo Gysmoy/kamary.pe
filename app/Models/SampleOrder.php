@@ -47,6 +47,8 @@ class SampleOrder extends Model
         'requested_at',
         'approved_at',
         'delivered_at',
+        'delay_reason',
+        'delay_reason_notes',
         'supervisor_name',
         'cancellation_reason',
         'observations',

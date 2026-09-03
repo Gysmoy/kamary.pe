@@ -7,6 +7,8 @@ use App\Http\Controllers\BasicController;
 use App\Models\Client;
 use App\Models\SampleOrder;
 use App\Support\BusinessScope;
+use App\Support\SampleDelayReasons;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -105,6 +107,13 @@ class SampleOrderController extends BasicController
         $body['delivered_at'] = $this->normalizeDate($body['delivered_at'] ?? null);
         if ($body['order_status'] === 'delivered' && !$body['delivered_at']) {
             $body['delivered_at'] = now()->toDateString();
+        }
+        if (Schema::hasColumn('sample_orders', 'delay_reason')) {
+            // El motivo solo tiene sentido si la entrega salio despues de la fecha solicitada:
+            // si el pedido llego a tiempo se limpia para que no ensucie el dashboard.
+            $delayed = $this->deliveredLate($body['requested_at'] ?? null, $body['delivered_at'] ?? null);
+            $body['delay_reason'] = $delayed ? SampleDelayReasons::normalize($body['delay_reason'] ?? null) : null;
+            $body['delay_reason_notes'] = $delayed ? (trim((string)($body['delay_reason_notes'] ?? '')) ?: null) : null;
         }
         $body['supervisor_name'] = trim((string)($body['supervisor_name'] ?? '')) ?: null;
         $body['cancellation_reason'] = trim((string)($body['cancellation_reason'] ?? '')) ?: null;
@@ -276,6 +285,12 @@ class SampleOrderController extends BasicController
             if ($orderStatus === 'delivered' && !$order->delivered_at) {
                 $updates['delivered_at'] = now()->toDateString();
             }
+            if ($orderStatus === 'delivered' && Schema::hasColumn('sample_orders', 'delay_reason')) {
+                $deliveredAt = $updates['delivered_at'] ?? $order->delivered_at;
+                $delayed = $this->deliveredLate($order->requested_at, $deliveredAt);
+                $updates['delay_reason'] = $delayed ? SampleDelayReasons::normalize($request->delay_reason) : null;
+                $updates['delay_reason_notes'] = $delayed ? (trim((string)$request->delay_reason_notes) ?: null) : null;
+            }
 
             $order->update($updates);
 
@@ -359,6 +374,15 @@ class SampleOrderController extends BasicController
         }
 
         return 'P' . str_pad((string)$next, 6, '0', STR_PAD_LEFT);
+    }
+
+    /** La entrega salio despues de la fecha solicitada. */
+    private function deliveredLate($requestedAt, $deliveredAt): bool
+    {
+        if (!$requestedAt || !$deliveredAt) return false;
+
+        return Carbon::parse($deliveredAt)->startOfDay()
+            ->greaterThan(Carbon::parse($requestedAt)->startOfDay());
     }
 
     private function normalizeOption($value, array $allowed, string $fallback): string

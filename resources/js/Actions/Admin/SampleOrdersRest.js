@@ -20,6 +20,38 @@ const loadAll = async (path) => {
 class SampleOrdersRest extends BasicRest {
   path = 'admin/sample-orders'
 
+  // Cambia el estado del pedido y, si se entrega tarde, arrastra el motivo del retraso.
+  changeOrderStatus = async ({ id, value, delay_reason = '', delay_reason_notes = '' }) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/boolean`, {
+        method: 'PATCH',
+        body: JSON.stringify({ id, field: 'order_status', value, delay_reason, delay_reason_notes }),
+      })
+      if (!status) throw new Error(result?.message ?? 'Ocurrio un error inesperado')
+
+      toast.success('Correcto', { description: result.message, duration: 3000, richColors: true })
+      return true
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
+      return false
+    }
+  }
+
+  // El dashboard trae su propio resumen ya calculado, sin toast de exito para no interrumpir.
+  dashboard = async (filters = {}) => {
+    try {
+      const { status, result } = await Fetch(`/api/${this.path}/dashboard`, {
+        method: 'POST',
+        body: JSON.stringify(filters),
+      })
+      if (!status) throw new Error(result?.message || 'No se pudo cargar el dashboard')
+      return result?.data ?? null
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
+      return null
+    }
+  }
+
   getClients = async () => await loadAll('/api/admin/clients/paginate')
   getUsers = async () => await loadAll('/api/admin/users/paginate')
   getArticles = async () => await loadAll('/api/admin/sample-orders/articles')

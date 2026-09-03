@@ -39,6 +39,17 @@ const activeStatusOptions = [
   { value: '0', label: 'Inactivo' },
 ]
 
+// Motivos de retraso: mismas claves que App\Support\SampleDelayReasons en el backend.
+const delayReasonOptions = [
+  { value: 'customs', label: 'Demora en aduana' },
+  { value: 'traffic', label: 'Trafico vehicular' },
+  { value: 'logistics', label: 'Fallas logisticas' },
+  { value: 'stock', label: 'Falta de stock' },
+  { value: 'client', label: 'Cliente no disponible' },
+  { value: 'documentation', label: 'Documentacion incompleta' },
+  { value: 'other', label: 'Otro motivo' },
+]
+
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -88,6 +99,8 @@ const emptyForm = () => ({
   service_type: '',
   service_type_id: '',
   delivered_at: today(),
+  delay_reason: '',
+  delay_reason_notes: '',
   document_type: 'RUC',
   document_number: '',
   contact_document: '',
@@ -121,6 +134,22 @@ const getStatusOption = (options, value, normalizer = value => value) => options
 const asDateText = (value) => normalizeText(value).slice(0, 10)
 const asDateTimeText = (value) => normalizeText(value).replace('T', ' ').slice(0, 19)
 const formatNumber = (value, digits = 2) => Number(value || 0).toFixed(digits)
+const delayReasonLabel = (value) => delayReasonOptions.find(option => option.value === value)?.label ?? ''
+// Diferencia en dias entre la entrega y la fecha solicitada: positiva = se entrego tarde.
+const deliveryDiffDays = (row) => {
+  const requested = asDateText(row.requested_at)
+  const delivered = asDateText(row.delivered_at)
+  if (!requested || !delivered) return null
+  const diff = (new Date(`${delivered}T00:00:00`) - new Date(`${requested}T00:00:00`)) / 86400000
+  return Number.isFinite(diff) ? Math.round(diff) : null
+}
+const deliveryDiffText = (row) => {
+  const diff = deliveryDiffDays(row)
+  if (diff === null) return '-'
+  if (diff === 0) return 'A tiempo'
+  const abs = Math.abs(diff)
+  return `${diff > 0 ? '+' : '-'}${abs} ${abs === 1 ? 'dia' : 'dias'}`
+}
 const isEvidenceImage = (value) => {
   const url = normalizeText(value)
   return url.startsWith('blob:')
@@ -359,6 +388,30 @@ const SampleInput = ({ label, value, onChange, type = 'text', placeholder = '', 
     </div>
   </div>
 )
+
+// Pide motivo y detalle del retraso antes de dar el pedido por entregado.
+const askDelayReason = async (data, requestedAt) => {
+  const { isConfirmed, value } = await Swal.fire({
+    title: 'Motivo del retraso',
+    html: `
+      <p class="text-start mb-2">La entrega sale despues de la fecha solicitada (${requestedAt}).</p>
+      <select id="sample-delay-reason" class="form-select mb-2">
+        ${delayReasonOptions.map(option => `<option value="${option.value}">${option.label}</option>`).join('')}
+      </select>
+      <textarea id="sample-delay-notes" class="form-control" rows="2" placeholder="Detalle del retraso (opcional)"></textarea>
+    `,
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Registrar entrega',
+    cancelButtonText: 'Cancelar',
+    preConfirm: () => ({
+      delay_reason: document.getElementById('sample-delay-reason')?.value ?? '',
+      delay_reason_notes: document.getElementById('sample-delay-notes')?.value ?? '',
+    }),
+  })
+
+  return isConfirmed ? value : null
+}
 
 const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
   const tableRef = useRef()
@@ -984,6 +1037,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
         email_status: normalizeEmailStatus(data.email_status ?? 'delivered'),
         requested_at: asDateText(data.requested_at),
         delivered_at: asDateText(data.delivered_at) || today(),
+        delay_reason: data.delay_reason ?? '',
+        delay_reason_notes: data.delay_reason_notes ?? '',
         client_id: data.client_id ? `${data.client_id}` : '',
         supervisor_id: data.supervisor_id ? `${data.supervisor_id}` : '',
         sales_channel: data.sales_channel ?? data.channel ?? '',
@@ -1088,7 +1143,18 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
       cancelButtonText: 'Cancelar',
     })
     if (!isConfirmed) return
-    const result = await sampleOrdersRest.boolean({ id: data.id, field: 'order_status', value: nextStatus })
+
+    // Al entregar despues de la fecha solicitada se pide el motivo: es lo que alimenta
+    // el dashboard de muestras, asi que se captura en el momento y no despues.
+    let delay = { delay_reason: '', delay_reason_notes: '' }
+    const requestedAt = asDateText(data.requested_at)
+    if (nextStatus === 'delivered' && requestedAt && today() > requestedAt) {
+      const reason = await askDelayReason(data, requestedAt)
+      if (!reason) return
+      delay = reason
+    }
+
+    const result = await sampleOrdersRest.changeOrderStatus({ id: data.id, value: nextStatus, ...delay })
     if (result) refreshGrid()
   }
 
@@ -1193,6 +1259,8 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
     ['Fecha solicitada', row => asDateText(row.requested_at)],
     ['Fecha aprobacion', row => row.approved_at ? asDateTimeText(row.approved_at) : ''],
     ['Fecha entrega', row => asDateText(row.delivered_at)],
+    ['Diferencia de dias', row => deliveryDiffText(row)],
+    ['Motivo de retraso', row => (deliveryDiffDays(row) ?? 0) > 0 ? (delayReasonLabel(row.delay_reason) || 'Sin motivo registrado') : ''],
     ['Canal', row => row.sales_channel ?? row.channel ?? ''],
     ['Cliente', row => row.client_name ?? ''],
     ['Pedido completo', row => isOrderComplete(row) ? 'COMPLETO' : 'INCOMPLETO'],
@@ -1331,6 +1399,23 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
           render: (row) => asDateText(row.delivered_at) || '-',
         },
         {
+          key: 'diferencia_dias', label: 'Diferencia de dias', field: 'delivered_at', sortable: false, align: 'right', width: '150px',
+          render: (row) => {
+            const diff = deliveryDiffDays(row)
+            if (diff === null) return '-'
+            const tone = diff > 0 ? 'text-danger' : diff < 0 ? 'text-primary' : 'text-success'
+            return <span className={`fw-semibold ${tone}`}>{deliveryDiffText(row)}</span>
+          },
+        },
+        {
+          key: 'motivo_retraso', label: 'Motivo de retraso', field: 'delay_reason', width: '190px',
+          filter: { type: 'select', field: 'delay_reason', options: delayReasonOptions },
+          render: (row) => {
+            if ((deliveryDiffDays(row) ?? 0) <= 0) return '-'
+            return delayReasonLabel(row.delay_reason) || 'Sin motivo registrado'
+          },
+        },
+        {
           key: 'canal', label: 'Canal', field: 'sales_channel', width: '110px', filter: { type: 'text' },
           render: (row) => row.sales_channel ?? row.channel ?? '',
         },
@@ -1417,6 +1502,12 @@ const SampleOrders = ({ moduleTitle = 'Muestras - Pedido' }) => {
 
         <SampleInput label='Fecha solicitada' value={form.requested_at} onChange={value => setField('requested_at', value)} type='date' />
         <SampleInput label='Fecha Entrega' value={form.delivered_at} onChange={value => setField('delivered_at', value)} type='date' />
+        {(deliveryDiffDays(form) ?? 0) > 0 && (
+          <>
+            <SampleSelect label='Motivo de retraso' value={form.delay_reason} onChange={value => setField('delay_reason', value)} options={delayReasonOptions} placeholder='Seleccione el motivo' />
+            <SampleInput label='Detalle del retraso' value={form.delay_reason_notes} onChange={value => setField('delay_reason_notes', value)} placeholder='Opcional' />
+          </>
+        )}
         <SampleInput label='Peso bruto total (Kg)' value={formatNumber(computedGrossWeight, 3)} onChange={() => { }} disabled />
         <SampleInput label='DNI' value={form.contact_document} onChange={value => setField('contact_document', value)} />
         <SampleInput label='Persona de contacto' value={form.contact_name} onChange={value => setField('contact_name', value)} />

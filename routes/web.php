@@ -68,6 +68,7 @@ use App\Http\Controllers\Admin\ServiceCatalogController as AdminServiceCatalogCo
 use App\Http\Controllers\Admin\ServiceClientController as AdminServiceClientController;
 use App\Http\Controllers\Admin\ServiceOrderController as AdminServiceOrderController;
 use App\Http\Controllers\Admin\SampleOrderController as AdminSampleOrderController;
+use App\Http\Controllers\Admin\SampleOrderDashboardController as AdminSampleOrderDashboardController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
 use App\Http\Controllers\Admin\UnitController as AdminUnitController;
 use App\Http\Controllers\Admin\DetractionTypeController as AdminDetractionTypeController;
@@ -195,6 +196,7 @@ Route::middleware('auth')->group(function () {
 
         // Muestras
         Route::get('/sample-orders', [AdminSampleOrderController::class, 'reactView']);
+        Route::get('/sample-orders/dashboard', [AdminSampleOrderDashboardController::class, 'reactView']);
 
         // Magistrales
         Route::get('/magistrales/dashboard', [AdminMagistralesDashboardController::class, 'reactView'])->middleware('module.permission:magistrales-dashboard');

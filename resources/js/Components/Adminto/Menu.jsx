@@ -236,7 +236,8 @@ const Menu = ({ can, hasRole, panel = null }) => {
 
           {canAccess('sample-orders') && (
             <MenuItemContainer title='Muestras' icon='ti ti-vaccine-bottle'>
-              <MenuItem href='/admin/sample-orders' icon='ti ti-basket'>Pedido</MenuItem>
+              <MenuItem href='/admin/sample-orders/dashboard' icon='ti ti-dashboard'>Dashboard</MenuItem>
+              <MenuItem href='/admin/sample-orders' icon='ti ti-basket' exact>Pedido</MenuItem>
             </MenuItemContainer>
           )}
 
