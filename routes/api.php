@@ -652,6 +652,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/sample-orders', [AdminSampleOrderController::class, 'save']);
         Route::post('/sample-orders/paginate', [AdminSampleOrderController::class, 'paginate']);
         Route::post('/sample-orders/dashboard', [AdminSampleOrderDashboardController::class, 'data']);
+        Route::post('/home/dashboard', [AdminHomeController::class, 'data']);
         Route::patch('/sample-orders/status', [AdminSampleOrderController::class, 'status']);
         Route::patch('/sample-orders/{field}', [AdminSampleOrderController::class, 'boolean']);
         Route::delete('/sample-orders/{id}', [AdminSampleOrderController::class, 'delete']);

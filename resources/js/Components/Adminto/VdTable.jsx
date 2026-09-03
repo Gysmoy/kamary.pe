@@ -64,7 +64,7 @@ const paginationRange = (current, total) => {
 
 /* ------------------------------------------------- dropdown portal (filtros) */
 
-export const PortalDropdown = ({ options, value, placeholder, onChange, align = 'left', menuWidth }) => {
+export const PortalDropdown = ({ options, value, placeholder, onChange, align = 'left', menuWidth, bordered = false, clearable = true }) => {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [pos, setPos] = useState(null)
@@ -139,7 +139,7 @@ export const PortalDropdown = ({ options, value, placeholder, onChange, align = 
 
   return (
     <>
-      <div ref={triggerRef} className="vdt-fdd" onClick={() => (open ? close() : setOpen(true))}>
+      <div ref={triggerRef} className={`vdt-fdd ${bordered ? 'vdt-fdd-bordered' : ''}`.trim()} onClick={() => (open ? close() : setOpen(true))}>
         <span className={selected ? '' : 'vdt-fdd-placeholder'} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {selected ? selected.label : (placeholder ?? 'Todos')}
         </span>
@@ -160,9 +160,11 @@ export const PortalDropdown = ({ options, value, placeholder, onChange, align = 
               />
             </div>
           )}
-          <button type="button" className={`vdt-fdd-item ${!selected ? 'active' : ''}`} onClick={() => { onChange(''); close() }}>
-            {placeholder ?? 'Todos'}
-          </button>
+          {clearable && (
+            <button type="button" className={`vdt-fdd-item ${!selected ? 'active' : ''}`} onClick={() => { onChange(''); close() }}>
+              {placeholder ?? 'Todos'}
+            </button>
+          )}
           {filtered.map((o) => (
             <button
               type="button"

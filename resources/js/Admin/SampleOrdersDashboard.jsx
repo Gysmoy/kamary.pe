@@ -4,6 +4,7 @@ import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import { PortalDropdown } from '../Components/Adminto/VdTable';
 import KpiCard, { kpiBackground } from '@Adminto/KpiCard';
+import PeriodFilter from '@Adminto/PeriodFilter';
 import SampleOrdersRest from '../Actions/Admin/SampleOrdersRest';
 
 const sampleOrdersRest = new SampleOrdersRest()
@@ -82,29 +83,18 @@ const FilterBar = ({
               value={filters.date_field}
               placeholder={`Filtrar por: ${dateFieldLabel}`}
               menuWidth={260}
+              bordered
+              clearable={false}
               onChange={value => onChange('date_field', value || 'requested_at')}
             />
           </div>
-          <input
-            type='date'
-            className='form-control'
-            style={{ flex: '0 1 150px', minWidth: 135 }}
-            value={filters.start}
-            onChange={(e) => onChange('start', e.target.value)}
-          />
-          <input
-            type='date'
-            className='form-control'
-            style={{ flex: '0 1 150px', minWidth: 135 }}
-            value={filters.end}
-            onChange={(e) => onChange('end', e.target.value)}
-          />
           <div style={{ flex: '1 1 150px', minWidth: 140 }}>
             <PortalDropdown
               options={statusOptions}
               value={filters.order_status}
               placeholder='Estado'
               menuWidth={200}
+              bordered
               onChange={value => onChange('order_status', value)}
             />
           </div>
@@ -114,6 +104,7 @@ const FilterBar = ({
               value={filters.client_name}
               placeholder='Cliente'
               menuWidth={320}
+              bordered
               onChange={value => onChange('client_name', value)}
             />
           </div>
@@ -123,6 +114,7 @@ const FilterBar = ({
               value={filters.delay_reason}
               placeholder='Motivo de retraso'
               menuWidth={320}
+              bordered
               onChange={value => onChange('delay_reason', value)}
             />
           </div>
@@ -345,6 +337,7 @@ const SampleOrdersDashboard = ({
   statusOptions = [],
   clientOptions = [],
   delayReasonOptions = [],
+  availableYears = [],
 }) => {
   const [filters, setFilters] = useState(initialFilters)
   const [dashboard, setDashboard] = useState(initialDashboard)
@@ -352,7 +345,11 @@ const SampleOrdersDashboard = ({
 
   const summary = dashboard.summary || {}
 
-  const onChange = (field, value) => setFilters(current => ({ ...current, [field]: value }))
+  const onChange = (field, value) => {
+    const next = { ...filters, [field]: value }
+    setFilters(next)
+    load(next)
+  }
 
   const load = async (nextFilters) => {
     setLoading(true)
@@ -366,6 +363,14 @@ const SampleOrdersDashboard = ({
 
   return (
     <>
+      <PeriodFilter
+        value={filters}
+        years={availableYears}
+        loading={loading}
+        onChange={setFilters}
+        onApply={(next) => load(next ?? filters)}
+      />
+
       <div className='row'>
         <KpiCard
           label='Pedidos en Preparación'

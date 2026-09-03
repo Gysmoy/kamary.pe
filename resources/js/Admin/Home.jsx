@@ -1,7 +1,12 @@
+import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
 import KpiCard, { kpiBackground } from '@Adminto/KpiCard';
+import PeriodFilter from '@Adminto/PeriodFilter';
+import HomeRest from '../Actions/Admin/HomeRest';
+
+const homeRest = new HomeRest()
 
 const number = (value, digits = 0) => Number(value || 0).toLocaleString('es-PE', {
   minimumFractionDigits: digits,
@@ -845,19 +850,47 @@ const CatalogMetrics = ({ rows = [] }) => {
   );
 };
 
-const DashboardHome = ({ catalogMetrics = [], salesDashboard = {} }) => {
+const DashboardHome = ({
+  catalogMetrics = [],
+  salesDashboard: initialDashboard = {},
+  initialFilters = {},
+  availableYears = [],
+}) => {
+  const [filters, setFilters] = useState(initialFilters);
+  const [salesDashboard, setSalesDashboard] = useState(initialDashboard);
+  const [loading, setLoading] = useState(false);
+
   const period = salesDashboard.period || {};
   const summary = salesDashboard.summary || {};
   const dispatch = salesDashboard.dispatch || {};
 
+  const load = async (nextFilters = filters) => {
+    setLoading(true);
+    const data = await homeRest.dashboard(nextFilters);
+    if (data) {
+      setFilters(data.filters);
+      setSalesDashboard(data.salesDashboard);
+    }
+    setLoading(false);
+  };
+
   return (
     <div className='row'>
+      <div className='col-12'>
+        <PeriodFilter
+          value={filters}
+          years={availableYears}
+          loading={loading}
+          onChange={setFilters}
+          onApply={(next) => load(next ?? filters)}
+        />
+      </div>
       <div className='col-12 mb-3'>
         <div className='card border-0 shadow-sm'>
           <div className='card-body'>
             <div className='d-flex flex-wrap justify-content-between align-items-center gap-3'>
               <div>
-                <p className='text-muted mb-0'>{period.label || 'Periodo'}: {date(period.start)} - {date(period.end)}</p>
+                <p className='text-muted mb-0'>Resumen de {period.label || 'el periodo'}: {date(period.start)} - {date(period.end)}</p>
               </div>
               <div className='d-flex flex-wrap gap-2 justify-content-end'>
                 {sectionLinks.map(link => (

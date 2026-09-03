@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\BasicController;
+use App\Support\DashboardPeriod;
 use App\Support\ModulePermissions;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use SoDe\Extend\Response;
 
 class HomeController extends BasicController
 {
@@ -20,10 +22,7 @@ class HomeController extends BasicController
             return redirect(ModulePermissions::homePathForUser($request->user()));
         }
 
-        $periodStart = now()->startOfMonth()->toDateString();
-        $periodEnd = now()->toDateString();
-        $rotationStart = now()->subDays(89)->toDateString();
-        $stockByWarehouse = $this->stockByWarehouse($rotationStart, $periodEnd);
+        $filters = DashboardPeriod::resolve($request);
 
         return [
             'catalogMetrics' => [
@@ -76,21 +75,70 @@ class HomeController extends BasicController
                     'color' => 'dark',
                 ],
             ],
-            'salesDashboard' => [
-                'period' => [
-                    'label' => 'Mes actual',
-                    'start' => $periodStart,
-                    'end' => $periodEnd,
-                    'rotationStart' => $rotationStart,
-                ],
-                'summary' => $this->salesSummary($periodStart, $periodEnd),
-                'warehouseSales' => $this->warehouseSales($periodStart, $periodEnd),
-                'stockByWarehouse' => $stockByWarehouse,
-                'inventoryRotation' => $this->inventoryRotationSummary($stockByWarehouse, $rotationStart, $periodEnd),
-                'profitability' => $this->profitability($periodStart, $periodEnd),
-                'dispatch' => $this->dispatchKpis($periodStart, $periodEnd),
-            ],
+            'availableYears' => $this->availableYears(),
+            'initialFilters' => $filters,
+            'salesDashboard' => $this->buildDashboard($filters),
         ];
+    }
+
+    /** Recalcula el dashboard para el periodo que elige la pantalla, sin recargar la pagina. */
+    public function data(Request $request)
+    {
+        $response = new Response();
+
+        try {
+            if (!ModulePermissions::userCan($request->user(), 'dashboard')) {
+                throw new \Exception('No tienes acceso al dashboard.');
+            }
+
+            $filters = DashboardPeriod::resolve($request);
+            $response->status = 200;
+            $response->message = 'Operacion correcta';
+            $response->data = [
+                'filters' => $filters,
+                'salesDashboard' => $this->buildDashboard($filters),
+            ];
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+        } finally {
+            return response($response->toArray(), $response->status);
+        }
+    }
+
+    private function buildDashboard(array $filters): array
+    {
+        $periodStart = $filters['start'];
+        $periodEnd = $filters['end'];
+        // La rotacion siempre mira los 90 dias previos al fin del periodo elegido.
+        $rotationStart = Carbon::parse($periodEnd)->subDays(89)->toDateString();
+        $stockByWarehouse = $this->stockByWarehouse($rotationStart, $periodEnd);
+
+        return [
+            'period' => [
+                'label' => $filters['label'],
+                'start' => $periodStart,
+                'end' => $periodEnd,
+                'rotationStart' => $rotationStart,
+            ],
+            'summary' => $this->salesSummary($periodStart, $periodEnd),
+            'warehouseSales' => $this->warehouseSales($periodStart, $periodEnd),
+            'stockByWarehouse' => $stockByWarehouse,
+            'inventoryRotation' => $this->inventoryRotationSummary($stockByWarehouse, $rotationStart, $periodEnd),
+            'profitability' => $this->profitability($periodStart, $periodEnd),
+            'dispatch' => $this->dispatchKpis($periodStart, $periodEnd),
+        ];
+    }
+
+    /** Años con movimiento comercial, para no ofrecer periodos vacios. */
+    private function availableYears(): array
+    {
+        return DashboardPeriod::availableYears([
+            'commercial_orders' => 'created_at',
+            'service_orders' => 'created_at',
+            'billing_documents' => 'created_at',
+            'dispatches' => 'created_at',
+        ]);
     }
 
     public function getSales(Request $request, string $type, string $filter)

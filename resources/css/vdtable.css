@@ -96,6 +96,14 @@
 }
 .vdt-fdd:hover { background: #f7f7fb; }
 .vdt-fdd-placeholder { color: #b6b6c2; }
+/* Variante para usar el desplegable fuera de la fila de filtros, donde no hay celda
+   que le ponga el borde. La altura iguala a .form-control para que alineen en una fila. */
+.vdt-fdd-bordered {
+  height: 38px; padding: 0 12px; background: #fff;
+  border: 1px solid #dfe3ea; border-radius: 6px; font-size: 13.5px;
+}
+.vdt-fdd-bordered:hover { background: #fff; border-color: #c9d0da; }
+.vdt-fdd-bordered:focus-visible { outline: none; border-color: var(--vd-primary); box-shadow: 0 0 0 .2rem rgba(255, 91, 91, .15); }
 .vdt-fdd-menu {
   width: 200px; max-height: 260px; overflow-y: auto; background: #fff; border: 1px solid #e2e2ea;
   border-radius: 12px; box-shadow: 0 16px 40px rgba(30, 30, 45, .16); padding: 6px;

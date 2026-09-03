@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\BasicController;
 use App\Models\DeliveryDelayReason;
 use App\Models\SampleOrder;
+use App\Support\DashboardPeriod;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use SoDe\Extend\Response;
@@ -57,6 +58,9 @@ class SampleOrderDashboardController extends BasicController
             'dateFieldOptions' => $this->options(self::DATE_FIELDS),
             'delayReasonOptions' => $this->delayReasonOptions(),
             'clientOptions' => $this->clientOptions(),
+            'availableYears' => DashboardPeriod::availableYears([
+                'sample_orders' => ['created_at', 'requested_at', 'delivered_at'],
+            ]),
             'initialFilters' => $filters,
             'initialDashboard' => $this->build($filters),
         ];
@@ -93,6 +97,7 @@ class SampleOrderDashboardController extends BasicController
             'period' => [
                 'start' => $filters['start'],
                 'end' => $filters['end'],
+                'label' => $filters['periodLabel'],
                 'dateField' => $filters['date_field'],
                 'dateFieldLabel' => self::DATE_FIELDS[$filters['date_field']],
             ],
@@ -307,17 +312,19 @@ class SampleOrderDashboardController extends BasicController
         $dateField = (string) $request->input('date_field', 'requested_at');
         if (!isset(self::DATE_FIELDS[$dateField])) $dateField = 'requested_at';
 
-        $start = $this->asDate($request->input('start')) ?? now()->startOfMonth()->toDateString();
-        $end = $this->asDate($request->input('end')) ?? now()->endOfMonth()->toDateString();
-        if ($start > $end) [$start, $end] = [$end, $start];
+        $period = DashboardPeriod::resolve($request);
 
         $orderStatus = $this->normalizeStatus($request->input('order_status'));
         if (!isset(self::STATUS_LABELS[$orderStatus])) $orderStatus = '';
 
         return [
             'date_field' => $dateField,
-            'start' => $start,
-            'end' => $end,
+            'mode' => $period['mode'],
+            'month' => $period['month'],
+            'year' => $period['year'],
+            'start' => $period['start'],
+            'end' => $period['end'],
+            'periodLabel' => $period['label'],
             'order_status' => $orderStatus,
             'client_name' => trim((string) $request->input('client_name')) ?: '',
             'delay_reason' => (string) ($this->nullableInt($request->input('delay_reason')) ?? ''),
