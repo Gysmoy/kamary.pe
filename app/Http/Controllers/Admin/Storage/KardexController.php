@@ -75,6 +75,7 @@ class KardexController extends BasicController
                     'occupancy_status',
                     'occupied_clients',
                     'occupied_products',
+                    'occupied_products_count',
                     'occupied_stock',
                     'occupied_from',
                     'occupied_until',
@@ -505,6 +506,11 @@ class KardexController extends BasicController
 
     private function locationsQuery()
     {
+        // La lista de productos por ubicacion se arma con GROUP_CONCAT, cuyo limite por defecto en
+        // MySQL es de 1024 bytes: con una ubicacion cargada el texto se cortaba a media palabra y el
+        // detalle quedaba incompleto sin avisar. Se amplia solo para esta sesion.
+        DB::statement('SET SESSION group_concat_max_len = 1000000');
+
         $base = DB::table('storage_locations as location')
             ->leftJoin('warehouses as warehouse', 'warehouse.id', '=', 'location.warehouse_id')
             ->leftJoin('business_branches as branch', 'branch.id', '=', 'warehouse.business_branch_id')
@@ -531,6 +537,7 @@ class KardexController extends BasicController
                 CASE WHEN COALESCE(occupancy.occupied_stock, 0) > 0 THEN 'Ocupado' ELSE 'Libre' END as occupancy_status,
                 COALESCE(occupancy.occupied_clients, '') as occupied_clients,
                 COALESCE(occupancy.occupied_products, '') as occupied_products,
+                COALESCE(occupancy.occupied_products_count, 0) as occupied_products_count,
                 COALESCE(occupancy.occupied_stock, 0) as occupied_stock,
                 occupancy.occupied_from,
                 occupancy.occupied_until,
@@ -636,7 +643,8 @@ class KardexController extends BasicController
                 MIN(current.occupied_from) as occupied_from,
                 MAX(current.occupied_until) as occupied_until,
                 GROUP_CONCAT(DISTINCT NULLIF(current.client_name, '') SEPARATOR ', ') as occupied_clients,
-                GROUP_CONCAT(DISTINCT current.product_label SEPARATOR '; ') as occupied_products
+                GROUP_CONCAT(DISTINCT current.product_label SEPARATOR '; ') as occupied_products,
+                COUNT(DISTINCT current.product_label) as occupied_products_count
             ")
             ->groupBy('current.warehouse_id', 'current.location', 'current.client_id');
     }

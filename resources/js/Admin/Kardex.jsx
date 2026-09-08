@@ -12,6 +12,26 @@ import Swal from 'sweetalert2';
 const kardexRest = new KardexRest()
 
 const formatUser = (user) => user?.fullname || [user?.name, user?.lastname].filter(Boolean).join(' ') || user?.username || ''
+// El backend une los productos de una ubicacion en un solo texto: cada uno viene como
+// "NOMBRE lote LOTE (CANTIDAD)" y se separan con "; ". Aqui se vuelve a partir en piezas para
+// poder contarlos y listarlos en una tabla en vez de escupir el texto entero en la celda.
+const parseOccupiedProducts = (value) => {
+  const raw = `${value ?? ''}`.trim()
+  if (!raw) return []
+  return raw.split('; ').map((part) => {
+    const match = part.match(/^(.*?)(?: lote (.*?))?\s*\(([-\d.]+)\)\s*$/)
+    if (!match) return { name: part.trim(), lot: '', quantity: null }
+    return { name: (match[1] ?? '').trim(), lot: (match[2] ?? '').trim(), quantity: Number(match[3]) }
+  }).filter((item) => item.name)
+}
+
+// El conteo viene calculado en SQL. Se cae al texto solo por si la fila es de una respuesta vieja.
+const occupiedProductsCount = (row) => {
+  const counted = Number(row?.occupied_products_count)
+  if (Number.isFinite(counted) && counted > 0) return counted
+  return parseOccupiedProducts(row?.occupied_products).length
+}
+
 const formatQty = (value) => Number(value ?? 0).toLocaleString('es-PE', { minimumFractionDigits: 0, maximumFractionDigits: 3 })
 const formatDate = (value) => {
   if (!value) return '-'
@@ -802,8 +822,10 @@ const StorageKardex = () => {
   const warehouseModalRef = useRef()
   const locationModalRef = useRef()
   const monthlyKardexModalRef = useRef()
+  const occupiedProductsModalRef = useRef()
 
   const [activeTab, setActiveTab] = useState('kardex')
+  const [occupiedProducts, setOccupiedProducts] = useState({ code: '', warehouse: '', client: '', items: [] })
   const [businesses, setBusinesses] = useState([])
   const [branches, setBranches] = useState([])
   const [warehouses, setWarehouses] = useState([])
@@ -887,6 +909,16 @@ const StorageKardex = () => {
       status: row?.status === false || row?.status === 0 ? '0' : '1',
     })
     $(warehouseModalRef.current).modal('show')
+  }
+
+  const openOccupiedProducts = (row) => {
+    setOccupiedProducts({
+      code: row?.code ?? '',
+      warehouse: row?.warehouse_name ?? '',
+      client: row?.occupied_clients || row?.client_name || '',
+      items: parseOccupiedProducts(row?.occupied_products),
+    })
+    $(occupiedProductsModalRef.current).modal('show')
   }
 
   const openLocationModal = (row = null) => {
@@ -1209,8 +1241,24 @@ const StorageKardex = () => {
       render: (row) => <span title={row.occupied_clients || '-'}>{row.occupied_clients || '-'}</span>,
     },
     {
-      key: 'occupied_products', label: 'Productos ocupando', field: 'occupied_products', width: '300px', sortable: false,
-      render: (row) => <span title={row.occupied_products || '-'}>{row.occupied_products || '-'}</span>,
+      // Antes se volcaba el texto entero y una ubicacion cargada estiraba la fila hasta hacer
+      // ilegible la tabla. Se muestra cuantos son y el detalle se abre en un modal.
+      key: 'occupied_products', label: 'Productos ocupando', field: 'occupied_products', width: '150px', sortable: false,
+      render: (row) => {
+        const total = occupiedProductsCount(row)
+        if (!total) return <span className='text-muted'>-</span>
+        return (
+          <button
+            type='button'
+            className='btn btn-link btn-sm p-0 text-decoration-none'
+            onClick={(e) => { e.stopPropagation(); openOccupiedProducts(row) }}
+            title='Ver el detalle'
+          >
+            <i className='mdi mdi-package-variant-closed me-1'></i>
+            {total} {total === 1 ? 'producto' : 'productos'}
+          </button>
+        )
+      },
     },
     {
       key: 'occupied_stock', label: 'Stock ocupado', field: 'occupied_stock', width: '125px', align: 'right', nowrap: true,
@@ -1537,6 +1585,56 @@ const StorageKardex = () => {
           onChange={(value) => setWarehouseForm(prev => ({ ...prev, status: value }))}
           options={[{ value: '1', label: 'Activo' }, { value: '0', label: 'Inactivo' }]}
         />
+      </div>
+    </Modal>
+
+    <Modal
+      modalRef={occupiedProductsModalRef}
+      title={occupiedProducts.code ? `Productos en la ubicación ${occupiedProducts.code}` : 'Productos en la ubicación'}
+      size='lg'
+      asForm={false}
+      hideFooter
+      bodyStyle={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto' }}
+    >
+      {(occupiedProducts.warehouse || occupiedProducts.client) && (
+        <p className='text-muted mb-3'>
+          {occupiedProducts.warehouse && <span><i className='mdi mdi-warehouse me-1'></i>{occupiedProducts.warehouse}</span>}
+          {occupiedProducts.warehouse && occupiedProducts.client && <span className='mx-2'>·</span>}
+          {occupiedProducts.client && <span><i className='mdi mdi-account-outline me-1'></i>{occupiedProducts.client}</span>}
+        </p>
+      )}
+      <div className='table-responsive'>
+        <table className='table table-sm table-striped mb-0'>
+          <thead>
+            <tr>
+              <th style={{ width: 50 }}>#</th>
+              <th>Producto</th>
+              <th style={{ width: 160 }}>Lote</th>
+              <th style={{ width: 120 }} className='text-end'>Cantidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            {occupiedProducts.items.length === 0 && (
+              <tr><td colSpan='4' className='text-center text-muted py-3'>Sin productos</td></tr>
+            )}
+            {occupiedProducts.items.map((item, index) => (
+              <tr key={`ocupa-${index}`}>
+                <td className='text-muted'>{index + 1}</td>
+                <td>{item.name}</td>
+                <td>{item.lot || '-'}</td>
+                <td className='text-end'>{item.quantity === null ? '-' : formatQty(item.quantity)}</td>
+              </tr>
+            ))}
+          </tbody>
+          {occupiedProducts.items.length > 0 && (
+            <tfoot>
+              <tr>
+                <th colSpan='3' className='text-end'>Total</th>
+                <th className='text-end'>{formatQty(occupiedProducts.items.reduce((sum, item) => sum + (item.quantity || 0), 0))}</th>
+              </tr>
+            </tfoot>
+          )}
+        </table>
       </div>
     </Modal>
 
