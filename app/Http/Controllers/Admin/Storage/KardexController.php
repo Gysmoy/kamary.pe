@@ -303,45 +303,32 @@ class KardexController extends BasicController
 
     public function locationsReport(Request $request)
     {
+        // Antes esto devolvia un CSV separado por comas. Excel con configuracion de Peru separa por
+        // punto y coma, asi que la fila entera caia en una sola columna, y el texto de productos
+        // (que une con "; ") terminaba de romper las celdas. Ahora se devuelven los datos y el
+        // navegador arma un .xlsx de verdad, con las columnas que pidio el cliente.
         $rows = $this->locationsQuery()->orderBy('warehouse_name')->orderBy('code')->get();
 
-        return response()->streamDownload(function () use ($rows) {
-            $output = fopen('php://output', 'w');
-            fwrite($output, "\xEF\xBB\xBF");
-            fputcsv($output, [
-                'ESTADO',
-                'OCUPACION',
-                'ALMACEN',
-                'CLIENTE_ASIGNADO',
-                'UBICACION',
-                'TEMPERATURA',
-                'CLIENTE_OCUPANTE',
-                'PRODUCTOS_OCUPANTES',
-                'STOCK_OCUPADO',
-                'OCUPADO_DESDE',
-                'OCUPADO_HASTA',
-                'FECHA_REGISTRO',
-                'USUARIO_REGISTRO',
-            ]);
-            foreach ($rows as $row) {
-                fputcsv($output, [
-                    $row->status ? 'Activo' : 'Inactivo',
-                    $row->occupancy_status,
-                    $row->warehouse_name,
-                    $row->client_name,
-                    $row->code,
-                    $row->temperature_range,
-                    $row->occupied_clients,
-                    $row->occupied_products,
-                    number_format((float) $row->occupied_stock, 3, '.', ''),
-                    $row->occupied_from,
-                    $row->occupied_until,
-                    $row->created_at,
-                    $row->creator_label,
-                ]);
-            }
-            fclose($output);
-        }, 'ubicaciones_almacenamiento.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
+        $data = $rows->map(function ($row) {
+            // El RUC solo se muestra si de verdad lo es: los clientes que llegaron del sistema
+            // anterior sin RUC quedaron con documento de catalogo (CAT-xxxx) y ahi va vacio.
+            $isRuc = strtolower(trim((string) $row->client_document_type)) === 'ruc';
+
+            return [
+                'ubicacion' => (string) $row->code,
+                'almacen' => (string) $row->warehouse_name,
+                'temperatura' => (string) $row->temperature_range,
+                'orden_servicio' => (string) $row->service_order_code,
+                'ruc' => $isRuc ? (string) $row->client_document_number : '',
+                'razon_social' => (string) $row->client_name,
+            ];
+        })->values();
+
+        return response([
+            'status' => 200,
+            'message' => 'Operacion correcta',
+            'data' => $data,
+        ], 200);
     }
 
     public function inventoryReport(Request $request)
@@ -532,6 +519,9 @@ class KardexController extends BasicController
                 warehouse.name as warehouse_name,
                 location.client_id,
                 COALESCE(assigned_client.full_name, '') as client_name,
+                COALESCE(assigned_client.document_type, '') as client_document_type,
+                COALESCE(assigned_client.document_number, '') as client_document_number,
+                COALESCE(location.service_order_code, '') as service_order_code,
                 location.code,
                 location.temperature_range,
                 CASE WHEN COALESCE(occupancy.occupied_stock, 0) > 0 THEN 'Ocupado' ELSE 'Libre' END as occupancy_status,

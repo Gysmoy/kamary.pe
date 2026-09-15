@@ -2,6 +2,7 @@ import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, use
 import { createRoot } from 'react-dom/client';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
+import * as XLSX from 'xlsx';
 import VdTable from '@Adminto/VdTable';
 import VdSelect from '@Adminto/VdSelect';
 import Modal from '../Components/Adminto/Modal';
@@ -45,6 +46,14 @@ const setRefChecked = (ref, value) => {
   ref.current.checked = !!value
 }
 const getRefChecked = (ref) => !!ref?.current?.checked
+
+// Los clientes que vinieron del sistema anterior traen el tipo en mayusculas ('RUC') o como 'CAT'
+// (estaban en el catalogo, sin RUC real). El formulario maneja minusculas, asi que sin normalizar
+// el desplegable salia vacio en los 282 importados y el guardado se rechazaba.
+const normalizeDocumentType = (value) => {
+  const normalized = `${value ?? ''}`.trim().toLowerCase()
+  return ['dni', 'ce', 'ruc'].includes(normalized) ? normalized : 'ruc'
+}
 const normalizePrefix = (value) => (value ?? '').toString().replace(/\D+/g, '')
 const normalizeDigits = (value) => (value ?? '').toString().replace(/\D+/g, '')
 const splitEmailList = (value) => (value ?? '').toString().split(/[,\n;]+/).map(email => email.trim()).filter(Boolean)
@@ -363,6 +372,7 @@ const Clients = ({
   const [isNotificationEditing, setIsNotificationEditing] = useState(false)
   const [clientKind, setClientKind] = useState(defaultClientKind)
   const [documentType, setDocumentType] = useState('dni')
+  const [isExportingClients, setIsExportingClients] = useState(false)
   const [isSearchingDocument, setIsSearchingDocument] = useState(false)
   const [isDocumentDataLocked, setIsDocumentDataLocked] = useState(false)
   const [lastLookedDocumentKey, setLastLookedDocumentKey] = useState('')
@@ -446,7 +456,7 @@ const Clients = ({
   }
 
   const applyApiClientData = (client = {}, kind = clientKind) => {
-    const clientDocumentType = client.document_type ?? documentType
+    const clientDocumentType = client.document_type ? normalizeDocumentType(client.document_type) : documentType
     const clientDocumentNumber = client.document_number ?? getRefValue(documentLookupRef) ?? ''
 
     if (clientDocumentType) {
@@ -533,6 +543,9 @@ const Clients = ({
     setRefValue(documentTypeRef, nextType)
     setIsDocumentDataLocked(false)
     setLastLookedDocumentKey('')
+    // Editando no se limpia nada: los clientes importados entran a corregir su documento y
+    // vaciarles la razon social les borraba el nombre que ya tenian.
+    if (isEditing) return
     setRefValue(documentNumberRef, '')
     setRefValue(fullNameRef, '')
   }
@@ -574,12 +587,11 @@ const Clients = ({
     setRefValue(dataSourceRef, data.data_source ?? (nextKind === 'eventual' ? 'eventual_client' : 'client'))
     setRefValue(clientKindRef, nextKind)
     setClientKind(nextKind)
-    setRefValue(documentTypeRef, data.document_type ?? 'dni')
+    setRefValue(documentTypeRef, normalizeDocumentType(data.document_type))
     setRefValue(documentNumberRef, data.document_number ?? '')
     setRefValue(documentLookupRef, data.document_number ?? '')
     setRefValue(fullNameRef, data.full_name ?? data.business_name ?? data.display_name ?? '')
     setRefChecked(hasStorageServiceRef, storageContext || !!data.has_storage_service)
-    setRefChecked(storageTariffEnabledRef, !!data.storage_tariff_enabled)
     setRefValue(contractDueDaysRef, data.contract_due_days ?? '')
     setRefValue(commercialChannelRef, data.commercial_channel ?? '')
     setRefValue(segmentRef, data.segment ?? '')
@@ -633,7 +645,7 @@ const Clients = ({
     setLastLookedDocumentKey('')
 
     if (data?.id || data?.entity_id) {
-      const nextType = data.document_type ?? 'dni'
+      const nextType = normalizeDocumentType(data.document_type)
       const currentType = documentType
       setDocumentType(nextType)
       if (nextType !== currentType) {
@@ -684,7 +696,6 @@ const Clients = ({
       document_number: normalizeDigits(getRefValue(documentNumberRef)),
       full_name: getRefValue(fullNameRef).trim(),
       has_storage_service: storageContext ? true : getRefChecked(hasStorageServiceRef),
-      storage_tariff_enabled: storageContext ? getRefChecked(storageTariffEnabledRef) : undefined,
       contract_due_days: storageContext ? '' : getRefValue(contractDueDaysRef).trim(),
       commercial_channel: storageContext ? '' : getRefValue(commercialChannelRef).trim(),
       segment: storageContext ? '' : getRefValue(segmentRef).trim(),
@@ -1191,7 +1202,39 @@ const Clients = ({
     refreshUsersGrid()
   }
 
-  const isIdentityBlocked = isEditing || (isDocumentDataLocked && ['dni', 'ruc'].includes(documentType))
+  // Exporta lo que el usuario esta viendo: loadAll respeta filtros, busqueda y orden de la tabla.
+  const onStorageClientsExport = async () => {
+    setIsExportingClients(true)
+    try {
+      const rows = (await tableRef.current?.loadAll()) ?? []
+      if (!rows.length) {
+        Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay clientes para exportar.' })
+        return
+      }
+      const headers = ['TIPO DOC.', 'NUMERO', 'RAZON SOCIAL', 'CODIGO CORTO', 'CORREO', 'CELULAR', 'DIRECCION', 'ESTADO']
+      const body = rows.map(row => [
+        `${row.document_type ?? ''}`.toUpperCase(),
+        `${row.document_number ?? ''}`,
+        row.display_name ?? row.full_name ?? '',
+        row.short_code ?? '',
+        row.email ?? '',
+        [row.phone_prefix ? `+${normalizePrefix(row.phone_prefix)}` : '', row.phone ?? ''].filter(Boolean).join(' ').trim(),
+        row.full_address ?? row.address ?? '',
+        row.status == 1 ? 'ACTIVO' : 'INACTIVO',
+      ])
+      const sheet = XLSX.utils.aoa_to_sheet([headers, ...body])
+      sheet['!cols'] = [{ wch: 10 }, { wch: 16 }, { wch: 45 }, { wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 40 }, { wch: 10 }]
+      const book = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(book, sheet, 'Clientes')
+      XLSX.writeFile(book, 'clientes-almacenamiento.xlsx')
+    } catch (error) {
+      Swal.fire({ icon: 'error', title: 'No se pudo exportar', text: 'Intentalo de nuevo.' })
+    } finally {
+      setIsExportingClients(false)
+    }
+  }
+
+  const isIdentityBlocked = (isEditing && !storageContext) || (isDocumentDataLocked && ['dni', 'ruc'].includes(documentType))
 
   return (<>
     <VdTable
@@ -1226,6 +1269,9 @@ const Clients = ({
         <button type="button" className="vdt-btn-soft vdt-btn-icon" title="Refrescar" onClick={refresh}>
           <i className="mdi mdi-refresh"></i>
         </button>
+        {storageContext && <button type="button" className="vdt-btn-soft" title="Exportar a Excel" onClick={onStorageClientsExport} disabled={isExportingClients}>
+          <i className={`mdi ${isExportingClients ? 'mdi-loading mdi-spin' : 'mdi-file-excel'} me-1`}></i> Exportar
+        </button>}
         <button type="button" className="vdt-btn-pri" onClick={() => onModalOpen(null, getCreateKindFromFilter(quickFilter, defaultClientKind))}>
           <i className="mdi mdi-plus"></i> Nuevo cliente {getCreateKindFromFilter(quickFilter, defaultClientKind) === 'eventual' ? 'eventual' : ''}
         </button>
@@ -1237,10 +1283,8 @@ const Clients = ({
         ]
         const list = [{ icon: 'mdi mdi-pencil', title: 'Editar', bg: '#e7f2fd', color: '#188ae2', onClick: (r) => onModalOpen(r) }]
         if (storageContext) {
-          list.push({ icon: 'mdi mdi-currency-usd', title: 'Tarifario', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onTariffModalOpen(r) })
           list.push({ icon: 'mdi mdi-file-document', title: 'Contrato cliente', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onContractsModalOpen(r) })
           list.push({ icon: 'mdi mdi-account-group', title: 'Mantenimiento usuarios', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onUsersModalOpen(r) })
-          list.push({ icon: 'mdi mdi-send', title: 'Notificaciones cliente', bg: '#eef0f4', color: '#5b69bc', onClick: (r) => onNotificationsModalOpen(r) })
         }
         list.push({ icon: 'mdi mdi-delete', title: 'Eliminar cliente', bg: '#fcebeb', color: '#e24b4a', onClick: (r) => onDeleteClicked(r) })
         return list
@@ -1292,17 +1336,21 @@ const Clients = ({
             </a>
           ),
         },
-        { key: 'compras', label: 'Compras', field: 'purchase_count', width: '95px', align: 'right', filter: { type: 'number' } },
-        {
-          key: 'habitual', label: 'Habitual', field: 'is_habitual', width: '110px', align: 'center', sortable: false,
-          render: (row) => row?.is_habitual
-            ? <span className="badge bg-success"><i className="mdi mdi-star me-1"></i>Habitual</span>
-            : <span className="badge bg-soft-secondary">—</span>,
-        },
-        {
-          key: 'ultima', label: 'Última compra', field: 'last_purchase_at', width: '120px', filter: { type: 'date' },
-          render: (row) => formatDate(row.last_purchase_at),
-        },
+        // Compras, Habitual y Ultima compra solo tienen datos en Kamary Peru; en almacenamiento el
+        // backend las devuelve siempre en cero, asi que ahi no se muestran.
+        ...(storageContext ? [] : [
+          { key: 'compras', label: 'Compras', field: 'purchase_count', width: '95px', align: 'right', filter: { type: 'number' } },
+          {
+            key: 'habitual', label: 'Habitual', field: 'is_habitual', width: '110px', align: 'center', sortable: false,
+            render: (row) => row?.is_habitual
+              ? <span className="badge bg-success"><i className="mdi mdi-star me-1"></i>Habitual</span>
+              : <span className="badge bg-soft-secondary">—</span>,
+          },
+          {
+            key: 'ultima', label: 'Última compra', field: 'last_purchase_at', width: '120px', filter: { type: 'date' },
+            render: (row) => formatDate(row.last_purchase_at),
+          },
+        ]),
         { key: 'correo', label: 'Correo', field: 'email', filter: { type: 'text' } },
         {
           key: 'celular', label: 'Celular', field: 'phone', width: '140px', sortable: false,
@@ -1350,13 +1398,13 @@ const Clients = ({
             {row.status !== null && <span className={`badge ${row.status == 1 ? 'badge-soft-success' : 'badge-soft-danger'}`}>{row.status == 1 ? 'Activo' : 'Inactivo'}</span>}
           </div>
           {row.email && <small className="text-muted d-block mt-2"><i className="mdi mdi-email-outline me-1"></i>{row.email}</small>}
-          {!serviceContext && <small className="text-muted d-block mt-1"><i className="mdi mdi-cart-outline me-1"></i>{row.purchase_count ?? 0} compras</small>}
+          {!serviceContext && !storageContext && <small className="text-muted d-block mt-1"><i className="mdi mdi-cart-outline me-1"></i>{row.purchase_count ?? 0} compras</small>}
           {actionButtons && <div className="d-flex mt-3 pt-3 flex-wrap" style={{ gap: 8, borderTop: '1px solid #f1f1f6' }} onClick={(e) => e.stopPropagation()}>{actionButtons}</div>}
         </div>
       )}
     />
 
-    <Modal modalRef={modalRef} title={serviceContext ? 'Cliente' : (storageContext ? 'Formulario cliente' : (isEditing ? `Editar cliente ${kindLabel}` : `Agregar cliente ${kindLabel}`))} onSubmit={onModalSubmit} size={storageContext || serviceContext ? 'xl' : 'lg'} btnSubmitText={serviceContext ? 'Registrar' : (storageContext ? 'Registrar cliente' : 'Guardar')}>
+    <Modal modalRef={modalRef} title={serviceContext ? 'Cliente' : (storageContext ? 'Formulario cliente' : (isEditing ? `Editar cliente ${kindLabel}` : `Agregar cliente ${kindLabel}`))} onSubmit={onModalSubmit} size={storageContext || serviceContext ? 'xl' : 'lg'} btnSubmitText={serviceContext ? 'Registrar' : (storageContext ? (isEditing ? 'Guardar cambios' : 'Registrar cliente') : 'Guardar')}>
       <div className='row'>
         <input ref={idRef} type='hidden' />
         <input ref={dataSourceRef} type='hidden' />
@@ -1476,14 +1524,6 @@ const Clients = ({
             onChange={(value) => { setStatusValue(value); setRefValue(statusRef, value) }}
             options={[{ value: '1', label: 'ACTIVO' }, { value: '0', label: 'INACTIVO' }]}
           />
-          <div className='form-group col-md-6 mb-2'>
-            <label className='form-label d-block'>
-              Tarifario por cliente <span className='text-danger'>(Referente al tarifario de servicio de almacen)</span>
-            </label>
-            <div className='form-check form-switch'>
-              <input ref={storageTariffEnabledRef} type='checkbox' className='form-check-input' />
-            </div>
-          </div>
         </>}
         {!storageContext && !serviceContext && !isEventual && (
           <UbigeoCascade

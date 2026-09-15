@@ -8,6 +8,7 @@ import Modal from '../Components/Adminto/Modal';
 import KardexRest from '../Actions/Admin/KardexRest';
 import { isMagistralesPath, isStoragePath, scopedPermission } from '../Utils/permissionScope';
 import Swal from 'sweetalert2';
+import * as XLSX from 'xlsx';
 
 const kardexRest = new KardexRest()
 
@@ -982,8 +983,34 @@ const StorageKardex = () => {
     tableRef.current?.refresh()
   }
 
-  const downloadLocationsReport = () => {
-    window.open('/api/admin/storage/kardex/locations-report', '_blank', 'noopener,noreferrer')
+  const downloadLocationsReport = async () => {
+    try {
+      const response = await fetch('/api/admin/storage/kardex/locations-report', { headers: { Accept: 'application/json' } })
+      const body = await response.json()
+      const rows = body?.data ?? []
+      if (!rows.length) {
+        Swal.fire({ icon: 'info', title: 'Sin datos', text: 'No hay ubicaciones para exportar.' })
+        return
+      }
+      const headers = ['UBICACION', 'ALMACEN', 'TEMPERATURA', 'ORDEN SERVICIO', 'RUC', 'RAZON SOCIAL']
+      // El RUC va como texto a proposito: como numero, Excel se come los ceros y lo pasa a notacion
+      // cientifica.
+      const matrix = rows.map(row => [
+        `${row.ubicacion ?? ''}`,
+        `${row.almacen ?? ''}`,
+        `${row.temperatura ?? ''}`,
+        `${row.orden_servicio ?? ''}`,
+        `${row.ruc ?? ''}`,
+        `${row.razon_social ?? ''}`,
+      ])
+      const sheet = XLSX.utils.aoa_to_sheet([headers, ...matrix])
+      sheet['!cols'] = [{ wch: 14 }, { wch: 22 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 45 }]
+      const book = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(book, sheet, 'Ubicaciones')
+      XLSX.writeFile(book, 'ubicaciones_almacenamiento.xlsx')
+    } catch (error) {
+      Swal.fire({ icon: 'error', title: 'No se pudo descargar', text: 'Intentalo de nuevo.' })
+    }
   }
 
   const downloadInventoryReport = () => {

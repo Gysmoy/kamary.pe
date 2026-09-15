@@ -292,7 +292,9 @@ const Menu = ({ can, hasRole, panel = null }) => {
               {canAccess('storage-entry-note') && <MenuItem href='/admin/storage-entry-note' icon='ti ti-file-import'>Nota de entrada</MenuItem>}
               {canAccess('storage-exit-note') && <MenuItem href='/admin/storage-exit-note' icon='ti ti-file-export'>Nota de salida</MenuItem>}
               {canAccess('storage-kardex') && <MenuItem href='/admin/storage-kardex' icon='ti ti-notebook'>Kardex</MenuItem>}
-              {canAccess('storage-general-service') && <MenuItem href='/admin/storage-general-service' icon='ti ti-settings'>Servicio General</MenuItem>}
+              {/* "Servicio General" (catalogo de servicios) se oculta a pedido del cliente. El permiso
+                  storage-general-service NO se quita: O. Servicio carga sus tipos de servicio desde ese
+                  mismo endpoint y sin el permiso responderia 403 al crear ordenes. */}
               {canAccess('storage-billing-control') && <MenuItem href='/admin/storage-billing-control' icon='ti ti-receipt-2'>Control de Facturación</MenuItem>}
               {canAccess('storage-billing-control') && <MenuItem href='/admin/manual-guides' icon='ti ti-truck'>Guías de Remisión</MenuItem>}
               {canAccess('storage-general-service-orders') && <MenuItem href='/admin/storage-general-service-orders' icon='ti ti-list-details'>O. Servicio General</MenuItem>}

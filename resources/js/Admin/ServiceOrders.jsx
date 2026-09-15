@@ -79,6 +79,16 @@ const addMonths = (dateValue, monthsValue, allowZero = false) => {
   result.setDate(Math.min(day, new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate()))
   return result.toISOString().slice(0, 10)
 }
+// Un periodo de un mes que empieza el 01/10 termina el 31/10, no el 01/11: el ultimo dia es el
+// anterior al mismo dia del mes siguiente. Antes se mostraba (y se facturaba) un dia de mas.
+const storagePeriodEnd = (dateValue, monthsValue) => {
+  const nextStart = addMonths(dateValue, monthsValue)
+  if (!nextStart) return ''
+  const date = new Date(`${nextStart}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return ''
+  date.setDate(date.getDate() - 1)
+  return date.toISOString().slice(0, 10)
+}
 const billingDateRows = (startDate, monthsValue) => {
   const months = Number.parseInt(monthsValue, 10)
   if (!startDate || !Number.isFinite(months) || months <= 0) return []
@@ -358,7 +368,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         location_labels: parsed.location_labels,
         start_date: parsed.start_date,
         months: parsed.months || '',
-        end_date: parsed.end_date || addMonths(parsed.start_date, parsed.months),
+        end_date: storagePeriodEnd(parsed.start_date, parsed.months) || parsed.end_date,
         billing_dates: billingDateRows(parsed.start_date, parsed.months),
         quantity_m3: parsed.quantity_m3 || Number(row.quantity || 0) || '',
         tariff: Number(row.unit_price || 0) || '',
@@ -400,7 +410,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
         next.location_label = next.location_labels.join(', ')
       }
       if ('start_date' in patch || 'months' in patch) {
-        next.end_date = addMonths(next.start_date, next.months)
+        next.end_date = storagePeriodEnd(next.start_date, next.months)
         next.billing_dates = billingDateRows(next.start_date, next.months)
       }
       if ('quantity_m3' in patch || 'tariff' in patch) {

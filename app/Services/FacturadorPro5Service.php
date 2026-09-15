@@ -1905,8 +1905,8 @@ class FacturadorPro5Service
             '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
             '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << ' . $resources . ' >> /Contents 4 0 R >> endobj',
             '4 0 obj << /Length ' . strlen($content) . " >> stream\n" . $content . 'endstream endobj',
-            '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
-            '6 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj',
+            '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> endobj',
+            '6 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> endobj',
         ];
         $objects = array_merge($objects, $imageObjects);
 
@@ -1946,7 +1946,7 @@ class FacturadorPro5Service
             '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
             '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >> endobj',
             '4 0 obj << /Length ' . strlen($content) . " >> stream\n" . $content . 'endstream endobj',
-            '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
+            '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> endobj',
         ];
 
         $pdf = "%PDF-1.4\n";
@@ -1972,7 +1972,12 @@ class FacturadorPro5Service
     private function pdfTextValue(string $value): string
     {
         $text = strip_tags($value);
-        $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+        // Las fuentes de este PDF se declaran con /WinAnsiEncoding, asi que el texto se convierte a
+        // CP1252 y ya no a ASCII. Con ASCII//TRANSLIT el glibc del servidor reemplazaba por "?" todo
+        // lo que no sabia transliterar: el grado salia "15?C", y lo mismo la enye y las tildes. En
+        // local no se notaba porque libiconv si los translitera.
+        $converted = @iconv('UTF-8', 'CP1252//TRANSLIT//IGNORE', $text);
+        if ($converted === false) $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
         return $converted !== false ? $converted : preg_replace('/[^\x20-\x7E]/', '', $text);
     }
 

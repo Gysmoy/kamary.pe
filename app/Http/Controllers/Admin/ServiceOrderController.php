@@ -443,6 +443,40 @@ class ServiceOrderController extends BasicController
         }
     }
 
+    /**
+     * Descripcion que sale impresa en el comprobante.
+     *
+     * La descripcion guardada en la orden lleva la ubicacion y la temperatura porque el sistema
+     * vuelve a leer ese texto para validar (ver assertStorageLocationsBelongToClient) y para
+     * reconstruir el formulario al editar: por eso NO se puede tocar en la orden. Aqui se arma una
+     * version limpia solo para la factura, sin ubicacion ni temperatura, con las fechas en dd/mm/aa
+     * y el periodo terminando el dia anterior (del 01/10 al 31/10 es un mes, no hasta el 01/11).
+     */
+    private function fiscalStorageDescription($item): string
+    {
+        $description = trim((string) ($item->description ?? ''));
+        $fallback = $item->service?->name ?: 'Servicio';
+        if ($description === '') return $fallback;
+
+        $parts = array_map('trim', explode(';', $description));
+        // Solo aplica al formato de almacenamiento (almacen; ubicacion; fechas; meses; m3).
+        if (count($parts) < 5) return $description;
+
+        $schedule = $this->parseStorageScheduleFromDescription($description);
+        $months = (int) ($schedule['months'] ?? 0);
+        if (empty($schedule['start_date']) || $months <= 0) return $description;
+
+        $start = Carbon::parse($schedule['start_date']);
+        $end = $start->copy()->addMonthsNoOverflow($months)->subDay();
+
+        return implode('; ', array_values(array_filter([
+            $parts[0],
+            $start->format('d/m/y') . ' - ' . $end->format('d/m/y'),
+            $months . ($months === 1 ? ' mes' : ' meses'),
+            $parts[4],
+        ], fn($value) => trim((string) $value) !== '')));
+    }
+
     private function parseStorageScheduleFromDescription($description): array
     {
         $parts = explode(';', (string) $description);
@@ -600,7 +634,7 @@ class ServiceOrderController extends BasicController
                     'service_order_item_id' => $serviceOrderItem->id,
                     'item_type' => 'service',
                     'item_code' => $serviceOrderItem->service?->code,
-                    'description' => $serviceOrderItem->description ?: ($serviceOrderItem->service?->name ?: 'Servicio'),
+                    'description' => $this->fiscalStorageDescription($serviceOrderItem),
                     'quantity' => $serviceOrderItem->quantity,
                     'unit_price' => $serviceOrderItem->unit_price,
                     'total' => $serviceOrderItem->total,
