@@ -33,6 +33,9 @@ mkdir -p storage/framework/cache/data
 mkdir -p bootstrap/cache
 touch storage/logs/laravel.log
 
+# Las carpetas se crean ANTES de dar permisos: mas abajo se creaban como root (0755) y en el
+# primer arranque con volumen nuevo php-fpm no podia escribir dentro, sin ningun error visible.
+mkdir -p storage/app/public storage/app/images
 chown -R www-data:www-data storage bootstrap/cache
 chmod -R 777 storage bootstrap/cache
 

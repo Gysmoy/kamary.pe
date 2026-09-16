@@ -1055,7 +1055,12 @@ const Clients = ({
 
   const onContractSubmit = async (e) => {
     e.preventDefault()
-    if (!selectedContractClientId) return
+    // Antes esto salia en silencio: el modal se quedaba abierto y parecia que el boton no hacia
+    // nada, indistinguible de un guardado fallido.
+    if (!selectedContractClientId) {
+      Swal.fire({ icon: 'warning', title: 'Cliente no identificado', text: 'Cierra el formulario y vuelve a abrir los contratos del cliente.' })
+      return
+    }
 
     const code = getRefValue(contractCodeRef).trim()
     const startsAt = getRefValue(contractStartRef)

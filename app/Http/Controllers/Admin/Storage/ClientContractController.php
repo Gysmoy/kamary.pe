@@ -314,9 +314,25 @@ class ClientContractController extends BasicController
             throw new \Exception('El tipo real del archivo no coincide con el formato permitido');
         }
 
-        $path = $file->store($folder, 'public');
+        // El disco 'public' esta configurado con throw=false (config/filesystems.php): si la
+        // escritura falla por permisos, carpeta inexistente o disco lleno, store() devuelve false
+        // sin lanzar excepcion y SIN dejar rastro en el log. Por eso este fallo era invisible y solo
+        // se veia un mensaje generico. Aqui se averigua el motivo y se registra.
+        try {
+            $path = $file->store($folder, 'public');
+        } catch (\Throwable $th) {
+            report($th);
+            throw new \Exception('No se pudo guardar el archivo cargado: ' . $th->getMessage());
+        }
+
         if (!$path) {
-            throw new \Exception('No se pudo guardar el archivo cargado');
+            $carpeta = Storage::disk('public')->path($folder);
+            $motivo = !is_dir($carpeta)
+                ? "no existe la carpeta {$carpeta} y no se pudo crear"
+                : (!is_writable($carpeta) ? "la carpeta {$carpeta} no tiene permiso de escritura" : 'motivo desconocido');
+            $mensaje = 'No se pudo guardar el archivo cargado: ' . $motivo;
+            report(new \RuntimeException($mensaje));
+            throw new \Exception($mensaje);
         }
 
         return [
