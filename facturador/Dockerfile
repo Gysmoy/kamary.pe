@@ -1,5 +1,9 @@
 FROM php:7.4-fpm
 
+# deb.debian.org dejo de entregar los paquetes de bullseye-security (404 al descargarlos);
+# security.debian.org si los tiene. Sin esto el build muere en apt-get install.
+RUN sed -i 's|deb.debian.org/debian-security|security.debian.org/debian-security|g' /etc/apt/sources.list
+
 RUN apt-get update && apt-get install -y \
     git unzip zip libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libonig-dev libxml2-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \

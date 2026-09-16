@@ -1,5 +1,9 @@
 FROM php:8.1-fpm
 
+# deb.debian.org dejo de entregar los paquetes de bullseye-security (404 al descargarlos);
+# security.debian.org si los tiene. Sin esto el build muere en apt-get install.
+RUN sed -i 's|deb.debian.org/debian-security|security.debian.org/debian-security|g' /etc/apt/sources.list
+
 # 1. Instalar dependencias
 RUN apt-get update && apt-get install -y \
   libpng-dev \
