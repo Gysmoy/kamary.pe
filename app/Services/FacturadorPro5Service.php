@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Services\StorageTaxSettings;
+
 use App\Models\BusinessBranch;
 use App\Models\BillingDocument;
 use App\Models\Business;
@@ -707,7 +709,13 @@ class FacturadorPro5Service
 
     private function buildItemsPayload(BillingDocument $document, float $effectiveTaxRate): array
     {
-        $pricesIncludeTax = $document->source_type === 'commercial_order' && $effectiveTaxRate > 0;
+        // En pedidos comerciales el precio SIEMPRE viene con IGV incluido. En ordenes de servicio
+        // (almacenamiento) depende de como este configurado: la misma tarifa de 400 puede facturarse
+        // como 400 desagregando el impuesto, o como 472 sumandolo. Ver StorageTaxSettings.
+        $pricesIncludeTax = $effectiveTaxRate > 0 && (
+            $document->source_type === 'commercial_order'
+            || app(StorageTaxSettings::class)->pricesIncludeTax()
+        );
         // SUNAT exige cantidades y montos positivos tambien en notas de credito.
         $isCreditNote = $this->mapDocumentTypeId($document->document_type) === '07';
 

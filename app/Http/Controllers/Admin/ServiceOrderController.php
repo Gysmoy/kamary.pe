@@ -10,6 +10,7 @@ use App\Models\ServiceCatalog;
 use App\Models\ServiceOrder;
 use App\Models\ServiceOrderItem;
 use App\Services\BillingDocumentService;
+use App\Services\StorageTaxSettings;
 use App\Support\BusinessScope;
 use App\Support\StoragePrefactureCode;
 use App\Support\StorageScope;
@@ -281,11 +282,17 @@ class ServiceOrderController extends BasicController
             if ($inserted === 0) throw new \Exception('Debes agregar al menos una linea de servicio');
 
             $subtotal = round($subtotal, 2);
-            $taxAmount = in_array($this->orderType(), ['storage_service', 'storage_general'], true)
-                ? $this->serviceTaxAmount($subtotal, $jpa->expected_document_type)
-                : round((float) ($request->input('tax_amount') ?? 0), 2);
-            $total = round($subtotal + $taxAmount, 2);
-            $jpa->update(['subtotal' => $subtotal, 'total' => $total, 'balance_amount' => $total]);
+            if (in_array($this->orderType(), ['storage_service', 'storage_general'], true)) {
+                // El IGV de almacenamiento es configurable: ver StorageTaxSettings.
+                $montos = app(StorageTaxSettings::class)->breakdown($subtotal, $jpa->expected_document_type);
+                $subtotal = $montos['subtotal'];
+                $taxAmount = $montos['tax_amount'];
+                $total = $montos['total'];
+            } else {
+                $taxAmount = round((float) ($request->input('tax_amount') ?? 0), 2);
+                $total = round($subtotal + $taxAmount, 2);
+            }
+            $jpa->update(['subtotal' => $subtotal, 'tax_amount' => $taxAmount, 'total' => $total, 'balance_amount' => $total]);
 
             if ($this->orderType() === 'storage_service') {
                 $createdPrefactures = $this->syncStoragePrefactures(
@@ -479,23 +486,6 @@ class ServiceOrderController extends BasicController
         ], fn($value) => trim((string) $value) !== '')));
     }
 
-    /**
-     * IGV de los servicios de almacenamiento.
-     *
-     * Las tarifas se guardan SIN IGV (a diferencia de los pedidos comerciales, donde el precio ya
-     * lo incluye: ver FacturadorPro5Service::buildItemsPayload, que solo desagrega cuando el origen
-     * es commercial_order). Por eso aqui el impuesto se suma sobre el subtotal.
-     *
-     * Antes esto quedaba en cero y el comprobante salia sin IGV, con afectacion "exonerado".
-     */
-    private function serviceTaxAmount(float $subtotal, ?string $documentType): float
-    {
-        $tipo = mb_strtolower(trim((string) ($documentType ?: 'Factura')));
-        if (!in_array($tipo, ['factura', 'boleta'], true)) return 0.0;
-
-        return round($subtotal * (float) config('facturadorpro5.igv_rate', 0.18), 2);
-    }
-
     private function parseStorageScheduleFromDescription($description): array
     {
         $parts = explode(';', (string) $description);
@@ -604,7 +594,7 @@ class ServiceOrderController extends BasicController
                 return $carry + (float) $line['item']->total;
             }, 0), 2);
             if ($subtotal <= 0) continue;
-            $taxAmount = $this->serviceTaxAmount($subtotal, $documentType);
+            $montos = app(StorageTaxSettings::class)->breakdown($subtotal, $documentType);
 
             $document = BillingDocument::create([
                 'code' => StoragePrefactureCode::next(),
@@ -630,9 +620,9 @@ class ServiceOrderController extends BasicController
                 'customer_email' => $order->client?->billing_email ?: $order->client?->email,
                 'provider_endpoint' => rtrim((string) config('facturadorpro5.base_url'), '/') . (string) config('facturadorpro5.issue_endpoint'),
                 'provider_mode' => config('facturadorpro5.mode', 'demo'),
-                'subtotal' => $subtotal,
-                'tax_amount' => $taxAmount,
-                'total' => round($subtotal + $taxAmount, 2),
+                'subtotal' => $montos['subtotal'],
+                'tax_amount' => $montos['tax_amount'],
+                'total' => $montos['total'],
                 'local_status' => 'pending',
                 'external_status' => 'draft',
                 'metadata' => [
