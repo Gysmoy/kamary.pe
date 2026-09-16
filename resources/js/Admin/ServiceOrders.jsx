@@ -1708,6 +1708,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
               <tr>
                 <th style={{ width: 48 }}>#</th>
                 <th>Servicio</th>
+                <th>Detalle</th>
                 <th style={{ width: 115 }}>Tarifa</th>
                 <th style={{ width: 115 }}>Cantidad</th>
                 <th style={{ width: 130 }}>Total</th>
@@ -1717,7 +1718,7 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
             <tbody>
               {items.length === 0 && (
                 <tr>
-                  <td colSpan='6' className='text-center text-muted py-4'>Agrega al menos un servicio.</td>
+                  <td colSpan='7' className='text-center text-muted py-4'>Agrega al menos un servicio.</td>
                 </tr>
               )}
               {items.map((row, index) => (
@@ -1737,6 +1738,15 @@ const ServiceOrders = ({ moduleTitle = 'Ordenes de servicio', serviceOrderType =
                         <i className='mdi mdi-plus'></i>
                       </button>
                     </div>
+                  </td>
+                  <td>
+                    <input
+                      className='form-control'
+                      value={row.gloss}
+                      onChange={(e) => onItemChange(row.uid, 'gloss', e.target.value)}
+                      placeholder='Lo que saldra impreso en la factura'
+                      title='Si se deja vacio sale el nombre del servicio'
+                    />
                   </td>
                   <td><input type='number' step='0.01' className='form-control text-end' value={row.unit_price} onChange={(e) => onItemChange(row.uid, 'unit_price', e.target.value)} /></td>
                   <td><input type='number' step='0.001' min='0' className='form-control text-end' value={row.quantity} onChange={(e) => onItemChange(row.uid, 'quantity', e.target.value)} /></td>

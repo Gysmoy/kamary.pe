@@ -281,7 +281,9 @@ class ServiceOrderController extends BasicController
             if ($inserted === 0) throw new \Exception('Debes agregar al menos una linea de servicio');
 
             $subtotal = round($subtotal, 2);
-            $taxAmount = round((float) ($request->input('tax_amount') ?? 0), 2);
+            $taxAmount = in_array($this->orderType(), ['storage_service', 'storage_general'], true)
+                ? $this->serviceTaxAmount($subtotal, $jpa->expected_document_type)
+                : round((float) ($request->input('tax_amount') ?? 0), 2);
             $total = round($subtotal + $taxAmount, 2);
             $jpa->update(['subtotal' => $subtotal, 'total' => $total, 'balance_amount' => $total]);
 
@@ -477,6 +479,23 @@ class ServiceOrderController extends BasicController
         ], fn($value) => trim((string) $value) !== '')));
     }
 
+    /**
+     * IGV de los servicios de almacenamiento.
+     *
+     * Las tarifas se guardan SIN IGV (a diferencia de los pedidos comerciales, donde el precio ya
+     * lo incluye: ver FacturadorPro5Service::buildItemsPayload, que solo desagrega cuando el origen
+     * es commercial_order). Por eso aqui el impuesto se suma sobre el subtotal.
+     *
+     * Antes esto quedaba en cero y el comprobante salia sin IGV, con afectacion "exonerado".
+     */
+    private function serviceTaxAmount(float $subtotal, ?string $documentType): float
+    {
+        $tipo = mb_strtolower(trim((string) ($documentType ?: 'Factura')));
+        if (!in_array($tipo, ['factura', 'boleta'], true)) return 0.0;
+
+        return round($subtotal * (float) config('facturadorpro5.igv_rate', 0.18), 2);
+    }
+
     private function parseStorageScheduleFromDescription($description): array
     {
         $parts = explode(';', (string) $description);
@@ -580,10 +599,12 @@ class ServiceOrderController extends BasicController
         $billingService = app(BillingDocumentService::class);
 
         foreach ($linesByDate as $billingDate => $lines) {
+            $documentType = $order->expected_document_type ?: 'Factura';
             $subtotal = round(array_reduce($lines, function ($carry, $line) {
                 return $carry + (float) $line['item']->total;
             }, 0), 2);
             if ($subtotal <= 0) continue;
+            $taxAmount = $this->serviceTaxAmount($subtotal, $documentType);
 
             $document = BillingDocument::create([
                 'code' => StoragePrefactureCode::next(),
@@ -610,8 +631,8 @@ class ServiceOrderController extends BasicController
                 'provider_endpoint' => rtrim((string) config('facturadorpro5.base_url'), '/') . (string) config('facturadorpro5.issue_endpoint'),
                 'provider_mode' => config('facturadorpro5.mode', 'demo'),
                 'subtotal' => $subtotal,
-                'tax_amount' => 0,
-                'total' => $subtotal,
+                'tax_amount' => $taxAmount,
+                'total' => round($subtotal + $taxAmount, 2),
                 'local_status' => 'pending',
                 'external_status' => 'draft',
                 'metadata' => [
