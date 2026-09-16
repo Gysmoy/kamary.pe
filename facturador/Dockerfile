@@ -1,9 +1,13 @@
 FROM php:7.4-fpm
 
-# deb.debian.org dejo de entregar los paquetes de bullseye-security (404 al descargarlos);
-# security.debian.org si los tiene. Se cubren los dos formatos de sources (el clasico y el
-# nuevo .sources) y termina en 'true' para que un archivo ausente jamas tumbe el build.
-RUN sh -c 'for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do [ -f "$f" ] && sed -i "s|deb.debian.org/debian-security|security.debian.org/debian-security|g" "$f"; done; true'
+# Debian 11 (bullseye) llego a fin de soporte: sus paquetes de seguridad ya no existen en ningun
+# mirror vivo (deb.debian.org, security.debian.org y archive.debian.org devuelven 404) y por eso
+# el build moria aqui. Se quita el repositorio de seguridad y se apunta al archivo historico de
+# Debian, que si conserva las versiones base. Probado contra esta misma imagen.
+RUN set -eux; \
+    sed -i '/-security/d' /etc/apt/sources.list; \
+    sed -i 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' /etc/apt/sources.list; \
+    echo 'Acquire::Check-Valid-Until "false";' > /etc/apt/apt.conf.d/99archive
 
 RUN apt-get update && apt-get install -y \
     git unzip zip libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libonig-dev libxml2-dev \
