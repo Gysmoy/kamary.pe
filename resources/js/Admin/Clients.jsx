@@ -1485,7 +1485,7 @@ const Clients = ({
           label={storageContext ? 'Tipo de Documento' : 'Tipo Doc.'}
           col={storageContext ? 'col-md-2' : 'col-md-4'}
           required
-          disabled={isEditing}
+          disabled={isEditing && !storageContext}
           value={documentType}
           onChange={onDocumentTypeChanged}
           options={[
@@ -1500,7 +1500,7 @@ const Clients = ({
           label={`${storageContext ? 'Nro Documento' : 'Documento'}${isSearchingDocument ? ' (consultando...)' : ''}`}
           col={storageContext ? 'col-md-4' : 'col-md-4'}
           required
-          disabled={isEditing}
+          disabled={isEditing && !storageContext}
           max={docMaxLength}
           onChange={onDocumentNumberChanged}
           onKeyDown={(e) => {
