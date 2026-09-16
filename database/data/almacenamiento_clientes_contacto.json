@@ -1,0 +1,2679 @@
+{
+ "_origen": "reporte.xlsx del L105, clientes de servicio de almacenamiento",
+ "_filas": 297,
+ "clientes": [
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610175890",
+   "razon_social": "MGK GROUP S.A.C.",
+   "email": "mgk.group.sac@megabotikas.com",
+   "celular": "",
+   "direccion": "AV. LOS PINOS NRO. 12 URB. VIRGEN DEL ROSARIO - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615561828",
+   "razon_social": "D'LIZANO HOLDING S.A.C.",
+   "email": "irvinaguilar@hotmail.com,fernando.sucantaype@dlizano.com",
+   "celular": "",
+   "direccion": "CAL. LOS JAZMINES LT. 15 MZ. G URB. LUIS FELIPE DE LAS CASAS - LIMA LIMA SAN JUAN DE MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614323133",
+   "razon_social": "MEDISUPPLY SOLUTIONS S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. MARIANO CORNEJO NRO. 715 DPTO. 1309 URB. LA ESPERANZA - LIMA LIMA PUEBLO LIBRE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607585947",
+   "razon_social": "PHARMACEUTICAL LOGISTICS SAC",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. PASEO DE LA REPUBLICA NRO. 6010 INT. 603 - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20604277559",
+   "razon_social": "CORPORACION TECNOMEDICA RAYNABE S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. ALICANTE NRO. 388 DPTO. 2 URB. JAVIER PRADO ET. CUATRO - LIMA LIMA SAN LUIS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20512243453",
+   "razon_social": "AMERICA NATURE EXPORT S.A.C.",
+   "email": "americadirecciontecnica@gmail.com",
+   "celular": "",
+   "direccion": "CAL. ALEMANIA LT. 12 MZ. T APV. FORTALEZA DE VITARTE - LIMA LIMA SANTA ANITA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611008709",
+   "razon_social": "IMPOTACION Y EXPORTACIONES JOSEPH Y MARIELA S.A.C.",
+   "email": "ventasjym2024@hotmail.com,irvinaguilar@hotmail.com",
+   "celular": "942737709",
+   "direccion": "AV. VIDAURRAZGA LT. 11 MZ. H - AREQUIPA AREQUIPA JOSE LUIS BUSTAMANTE Y RIVERO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20616062353",
+   "razon_social": "CORPORACION KIREI PHARMA SOLUTION S.A.C.",
+   "email": "rosariovalencia9231@gmail.com",
+   "celular": "956166373",
+   "direccion": "AV. ROGEL VIDAL LT. 13 MZ. D OTR. A H M STA. ANITA - LIMA LIMA SANTA ANITA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20553309990",
+   "razon_social": "JOH. C. HENSCHEN PERU S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. CORONEL JOSE JOAQUIN INCL NRO. 235 INT. 504 URB. SURQUILLO - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20521691191",
+   "razon_social": "CICLOTRON PERU S.A.",
+   "email": "rleon@ciclotronperu.com",
+   "celular": "",
+   "direccion": "CAL. LUIS VARELA Y ORBEGOZO NRO. 537 - LIMA LIMA SURQUILLO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615051391",
+   "razon_social": "HALCOURIER COMPANY S.A.C.",
+   "email": "halcouriercompany@gmail.com,dt.lima@halcourier.pe,halcourier2010@gmail.com",
+   "celular": "946776363",
+   "direccion": "JR. PARRA DEL RIEGO NRO. 211 DPTO. 2 - JUNIN HUANCAYO HUANCAYO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20602236553",
+   "razon_social": "NAKARI MEDICAL E.I.R.L.",
+   "email": "mminayaro@yahoo.es,ventas@nakarimedical.com",
+   "celular": "925212840",
+   "direccion": "AV. TACNA NRO. 329 DPTO. 501 ---- CERCADO DE LIMA - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614309653",
+   "razon_social": "BIENESTAR SEGURO E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. CURAZAO LT. 17 MZ. 1 URB. STA. PATRICIA 1 ETAPA - LIMA LIMA LA MOLINA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "10756696080",
+   "razon_social": "ALVAREZ AGUILAR BRYAN",
+   "email": "pisfiler5qf@gmail.com",
+   "celular": "",
+   "direccion": "CAL. LUIS ESPEJO 921 URB. SANTA CATALINA - LA VICTORIA - LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20603286899",
+   "razon_social": "B Y B FARMA S.A.C",
+   "email": "flozano@bybfarma.com,yvegas@bybfarma.com,felipeveran@gmail.com,ccastro@bybfarma.com,canguloaranibar@gmail.com",
+   "celular": "946521905",
+   "direccion": "AV. ALMIRANTE MIGUEL GRAU NRO. 1350 INT. 402 URB. LA VIÑITA - LIMA LIMA BARRANCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601336279",
+   "razon_social": "J & S SAMER SOCIEDAD ANONIMA CERRADA",
+   "email": "",
+   "celular": "",
+   "direccion": "LT. 7 MZ. A URB. LAS CASUARINAS - LIMA LIMA PUENTE PIEDRA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613081659",
+   "razon_social": "ESTELA VIA SOCIEDAD ANONIMA CERRADA",
+   "email": "direcciontecnica.estelavia@gmail.com,estelaviasac@gmail.com",
+   "celular": "953799578",
+   "direccion": "AV. JORGE BASADRE GROHMANN NRO. 255 DPTO. 1102 URB. FUNDO CONDE DE SAN ISIDRO - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20616098552",
+   "razon_social": "BIOSER PHARMA S.A.C.",
+   "email": "",
+   "celular": "940610047",
+   "direccion": "AV. MARIANO CORNEJO NRO. 1225 DPTO. 402 URB. SAN MARTIN - LIMA LIMA PUEBLO LIBRE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20524688337",
+   "razon_social": "PHARMASYSTEMS REGULATORY AFFAIRS S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. VENEZUELA NRO. 1113 DPTO. UI 1 URB. CIUDAD DEL PESCADOR - PROV. CONST. DEL CALLAO PROV.CONST.DEL CALLAO BELLAVISTA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20616020286",
+   "razon_social": "DROGUERIA STARK S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "JR. LOS CHASQUIS NRO. 572 - LIMA LIMA SAN JUAN DE LURIGANCHO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611391006",
+   "razon_social": "HEALTH CARE REGULATION & EDUCATION SUPPORT S.A.C.",
+   "email": "drmanrique@hcreds.com",
+   "celular": "",
+   "direccion": "CAL. BERLIN NRO. 1025 DPTO. 201 URB. SANTA CRUZ - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611649801",
+   "razon_social": "E & A GLOBAL MEDICAL S.A.C.",
+   "email": "eyaglobmedical@hotmail.com,eyaglobalmedical@gmail.com",
+   "celular": "",
+   "direccion": "JR. GALDEANO Y MENDOZA NRO. 638 INT. 15 DPTO. 101 - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614448947",
+   "razon_social": "H & L HENMER PERU E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. BELLO HORIZONTE NRO. 1449 URB. PERU - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613564498",
+   "razon_social": "WEDEL MEDICAL S.A.C.",
+   "email": "",
+   "celular": "993473296",
+   "direccion": "AV. LAS FLORES NRO. 234 DPTO. 250 - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615673049",
+   "razon_social": "CORPORACION UNIMEDIK S.A.C.",
+   "email": "finanzas.unimedik@gmail.com,Dirtec.unimedik@gmail.com",
+   "celular": "998347953",
+   "direccion": "AV. ALMIRANTE MIGUEL GRAU NRO. 217 ---- CERCADO DE LIMA - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609717379",
+   "razon_social": "MUNDO DERMA S.A.C.",
+   "email": "raulv@reviderm.pe",
+   "celular": "",
+   "direccion": "CAL. PINEROLO NRO. 149 DPTO. 104 URB. MONTERRICO CHICO - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615877035",
+   "razon_social": "ODONTO 3D S.A.C.",
+   "email": "Odonto3dperu@gmail.com",
+   "celular": "",
+   "direccion": "CAL. LOS AGROLOGOS NRO. 233 URB. LAS ACACIAS - LIMA LIMA LA MOLINA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20563641887",
+   "razon_social": "ADVANCE SCIENTIF MEDIC S.A.C. - ASCMEDIC S.A.C.",
+   "email": "adv.scientif@gmail.com,advancedirecciontecnica@gmail.com",
+   "celular": "999590391",
+   "direccion": "JR. PISAGUA NRO. 270 INT. 201 URB. LOS NISPEROS - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609845776",
+   "razon_social": "VAYOLETSQ SOCIEDAD ANONIMA CERRADA",
+   "email": "irvinaguilar@hotmail.com",
+   "celular": "949206768",
+   "direccion": "CAL. ESMERALDA 3ER PISO NRO. 243 DPTO. 101 - LIMA LIMA VILLA MARIA DEL TRIUNFO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605248919",
+   "razon_social": "GOLD ESTHETIC PERU E.I.R.L.",
+   "email": "Marisita.dlce@gmail.com,yorkve@hotmail.com",
+   "celular": "",
+   "direccion": "AV. LA PAZ NRO. 356 DPTO. 204 - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607109606",
+   "razon_social": "AYLU PHARMACEUTICALS CORPORATION S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. MICAELA BASTIDAS NRO. 230 URB. MARANGA ET. DOS - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615243036",
+   "razon_social": "CONSORCIO INIBO PERU",
+   "email": "l.cerna@pharmasolutions.com.pe",
+   "celular": "",
+   "direccion": "CAL. 21 NRO. 950 DPTO. 200 URB. CORPAC - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612070769",
+   "razon_social": "J & P DROGUERIA FARMACEUTICA S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "LT. 21 MZ. I ASC. EL UNIVERSO - LIMA LIMA SAN JUAN DE MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614979608",
+   "razon_social": "AMENITIES & MORE HOTEL SUPLLY CENTER S.A.C.",
+   "email": "mariaconsuelo@amore.com.pe",
+   "celular": "",
+   "direccion": "AV. SAN BORJA SUR NRO. 863 DPTO. 903 URB. SAN BORJA SUR - LIMA LIMA SAN BORJA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613599216",
+   "razon_social": "SRG MULTISERVICIOS E.I.R.L.",
+   "email": "",
+   "celular": "961524330",
+   "direccion": "CAL. 9 LT. 28 MZ. F - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615284212",
+   "razon_social": "NCL NUTRACORE LABS S.A.C.",
+   "email": "Contacto@nutracorelabsperu.com",
+   "celular": "987832134",
+   "direccion": "PJ. ARTURO DURAY NRO. 223 INT. 401 URB. LAS ORQUIDEAS - LIMA LIMA SURQUILLO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20600666119",
+   "razon_social": "FARMACEUTICA IMPERIO DEL SOL SOCIEDAD COMERCIAL DE RESPONSABILIDAD LIMITADA",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. A.V MARINA NRO. 141 DPTO. A - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614562901",
+   "razon_social": "ADVANCED EQUIPMENTS & SUPPLIES S.A.C.",
+   "email": "admi.vitalsafe@gmail.com",
+   "celular": "987337221",
+   "direccion": "JR. JOSE MANUEL ITURREGUI NRO. 1235 DPTO. A - LIMA LIMA SURQUILLO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20604598835",
+   "razon_social": "BIOTECNOMICA S.A.C.",
+   "email": "lmacedo@biotecnomica.com.pe,gerencia@biotecnomica.com.pe",
+   "celular": "973747924",
+   "direccion": "AV. JOSE GALVEZ BARRENECHEA NRO. 566 INT. 202 URB. CORPAC - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20481555702",
+   "razon_social": "AGROINDUSTRIAL ESTANISLAO DEL CHIMU S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAR. PANAMERICANA NRO. 724 A.H. SEBASTOPOL - LA LIBERTAD CHEPEN PACANGA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601908761",
+   "razon_social": "NATGEN S.A.C.",
+   "email": "gilmar@natgensac.com",
+   "celular": "994414562",
+   "direccion": "CAL. LAS ANEMONAS NRO. 880 COO. LAS FLORES - LIMA LIMA SAN JUAN DE LURIGANCHO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615564592",
+   "razon_social": "DROGUERIA MEDIGLOBAL PHARMACEUTICAL S.A.C.",
+   "email": "m.p.gamarraperez@gmail.com",
+   "celular": "",
+   "direccion": "AV. ANDRES AVELINO CACERES UV INT. 3 LT. 7 COM. HUAYCAN - LIMA LIMA ATE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615301524",
+   "razon_social": "TRAUMA CORPORATION S.A.C.",
+   "email": "trauma.corporation2@gmail.com",
+   "celular": "",
+   "direccion": "CAL.LOS GLADIOLOS NRO. 257 URB. LOS JARDINES DE SALAMANCA LIMA - LIMA - ATE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615050947",
+   "razon_social": "VITAL-PHARMA CORPORATION S.A.C.",
+   "email": "vitalpharmacorp@gmail.com",
+   "celular": "922446041",
+   "direccion": "CAL. SANTA ISABEL NRO. 340 URB. ARMENDARIZ - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20600534883",
+   "razon_social": "CORPORACION GANAJUR S.A.C.",
+   "email": "corporacionganajur@hotmail.com",
+   "celular": "947744919",
+   "direccion": "JR. ANCASH NRO. 1412 ---- BARRIOS ALTOS - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615383636",
+   "razon_social": "LOGISTICA BIOMEDICA DEL PERU S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "OTR. 0 NRO. 510 URB. PLAZOLETA RECOLETA - CUSCO CUSCO CUSCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20604122491",
+   "razon_social": "REPRESENTACIONES GENERALES MASEL E.I.R.L.",
+   "email": "drogueriabiomedix@gmail.com",
+   "celular": "",
+   "direccion": "CAL. 4 LT. 15 MZ. G URB. VILLA LAS FLORES - LIMA LIMA VILLA EL SALVADOR",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615073050",
+   "razon_social": "INVERSIONES SAVA'S & K S.A.C.",
+   "email": "jantoniosalazarvasquez@gmail.com",
+   "celular": "904543480",
+   "direccion": "AV. MANANTIALES NRO. 356 - LIMA LIMA EL AGUSTINO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "10733215165",
+   "razon_social": "GUERRERO VILLANUEVA MILAGROS GESSAEL",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL.YEN ESCOBEDO GARRO 830 URB. LA VIA'A LIMA-LIMA-SAN LUIS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614791838",
+   "razon_social": "LABORATORIO Y REACTIVOS S.A.C.",
+   "email": "gerencia@laboratorioyreactivos.com,Quimico@laboratorioyreactivos.com",
+   "celular": "971705265",
+   "direccion": "CAL. SAN LUCAS NRO. 149 URB. SOL DE LIMA - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20461642706",
+   "razon_social": "AGRICOLA CERRO PRIETO S.A.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. DEAN VALDIVIA NRO. 111 INT. 601 - LIMA LIMA SAN ISIDRO",
+   "estado": "Inactivo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20546349781",
+   "razon_social": "GRUPO DE CONTRATISTAS INTERNACIONALES S.A.C. - GRUCOIN S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. PASTOR SEVILLA NRO. S/N - LIMA LIMA SAN JUAN DE MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605985182",
+   "razon_social": "GROUP SOLFARMA PERU S.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. TUPAC  AMARU NRO. 684 SEC. MORRO SOLAR ALTO - CAJAMARCA JAEN JAEN",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614989158",
+   "razon_social": "COMPAÑIA TEXTIL ARAGON S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. ESTRADA MARTHEY NRO. 191 URB. SANTA ANITA 1ER SECTOR - LIMA LIMA SANTA ANITA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20555081945",
+   "razon_social": "BIOPROCESOS INDUSTRIALES CONSULTORES SOCIEDAD ANONIMA CERRADA",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. 5 LT. 7 DPTO. 201 MZ. H APV. LOS JARDINES DEL NARANJAL - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20101362702",
+   "razon_social": "CONFECCIONES TEXTIMAX S A",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. HUAROCHIRI NRO. 151 Z.I. ZONA INDUSTRIAL STA ANITA - LIMA LIMA SANTA ANITA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20566420211",
+   "razon_social": "SOCIEDAD MINERA RELIQUIAS S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. EL DERBY NRO. 254 INT. 1803 URB. EL DERBY DE MONTERRICO - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610091289",
+   "razon_social": "RENOVA MEDIC SALUD E.I.R.L",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. JUAN DE ALIAGA NRO. 550 DPTO. 1104 URB. SAN FELIPE - LIMA LIMA MAGDALENA DEL MAR",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613822209",
+   "razon_social": "LIMPAC FARMA S.A.C.",
+   "email": "limpacfarma@gmail.com",
+   "celular": "",
+   "direccion": "AV. RICARDO PALMA LT. 11 DPTO. 401 MZ. D OTR. PROG. DE VIV. LA VIRREYNA - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606145188",
+   "razon_social": "FARMACEUTICA PERU S.A.C",
+   "email": "directortecnico@farmaceuticaperu.com.pe",
+   "celular": "932162849",
+   "direccion": "AV. REPUBLICA DE PANAMA NRO. 6574 INT. 2 - LIMA LIMA BARRANCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601146046",
+   "razon_social": "TEXTILES ATE S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. ESTRADA MARTHNEY NRO. 191 - LIMA LIMA SANTA ANITA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20340584237",
+   "razon_social": "CAMPOSOL S.A.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. EL DERBY NRO. 250 INT. 401 URB. EL DERBY - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20552491051",
+   "razon_social": "GRUPO GINEMED S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. JOSE SANTO CHOCANO NRO. 108 URB. CARMEN DE LA LEGUA - PROV. CONST. DEL CALLAO PROV.CONST.DEL CALLAO CARMEN DE LA LEGUA REYNOSO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20557530160",
+   "razon_social": "BLUEBERRIES PERU S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. MANUEL OLGUIN NRO. 335 INT. 1202 URB. LOS GRANADOS - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20546676553",
+   "razon_social": "BEGGIE PERÚ S.A.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. MANUEL OLGUIN NRO. 335 INT. 1202 URB. LOS GRANADOS - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20543083454",
+   "razon_social": "ARATO PERU S.A.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. MANUEL OLGUIN NRO. 335 INT. 1202 URB. LOS GRANADOS - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615158071",
+   "razon_social": "PHARMEX GROUP S.A.C.",
+   "email": "pharmexgroupregistros@gmail.com",
+   "celular": "",
+   "direccion": "LT. 1A MZ. C SEC. VI HEROES DE SAN JUAN - LIMA LIMA SAN JUAN DE MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613045709",
+   "razon_social": "ABOLAB E.I.R.L.",
+   "email": "direcciontecnicaas@gmail.com",
+   "celular": "977116946",
+   "direccion": "INT. 201 LT. 7 MZ. Y URB. PROGRESIVA DE LOMAS DE ZA - LIMA LIMA PUENTE PIEDRA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605461183",
+   "razon_social": "IMPORTER EVOLUTION -  SALUD S.A.C.",
+   "email": "Impoterevolutionsalud01@gmail.com",
+   "celular": "976597140",
+   "direccion": "AV. ALAMEDA LT. 61 MZ. B5 URB. SANTA MARIA VI ETAPA - LIMA LIMA CARABAYLLO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "10107638496",
+   "razon_social": "VELASQUEZ FLORES CLAUDIA MARIA",
+   "email": "",
+   "celular": "",
+   "direccion": "JR. CHALACO 141 U.V. SANTISIMA IMACULADA RIMAC – LIMA - LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614763320",
+   "razon_social": "CORPORATION LEXA E.I.R.L.",
+   "email": "corporationdoc.10@gmail.com",
+   "celular": "956741550",
+   "direccion": "AV. 2 DE OCTUBRE LT. 20 MZ. H3 - LIMA LIMA LOS OLIVOS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612208914",
+   "razon_social": "COMERCIAL GLOBEX PERU S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. ENRIQUE PALACIOS NRO. 335 INT. 204 - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20600349911",
+   "razon_social": "INVERSIONES Y COMUNICACIONES ARIEL S.A.C.",
+   "email": "invariel11@gmail.com,qfvillafranca@gmail.com",
+   "celular": "926734773",
+   "direccion": "AV. NICOLAS DE PIEROLA NRO. 611 INT. 401 - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614879298",
+   "razon_social": "DROGUERIA ZENITH PHARMA S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "JR. MORRO SOLAR NRO. 336 URB. URB. MORRO SOLAR - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601542600",
+   "razon_social": "KAMARY PERU S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. YEN ESCOBEDO GARRO NRO. 830 URB. LA VIÑA - LIMA LIMA SAN LUIS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611434015",
+   "razon_social": "ARONAMEDIC E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "LT. 25 MZ. D A.H. SEC. 20 DE OCTUBRE - PROY - LIMA LIMA PACHACAMAC",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615088910",
+   "razon_social": "STARD MEDICAL GROUP S.A.C.",
+   "email": "jlozanopastor3@gmail.com",
+   "celular": "",
+   "direccion": "JR. LOS CLAVELES NRO. 700 URB. JARDIN - LIMA LIMA VILLA MARIA DEL TRIUNFO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611923351",
+   "razon_social": "BRETTON PHARMA S.A.C.",
+   "email": "brettonpharma@hotmail.com",
+   "celular": "",
+   "direccion": "JR. PUERTO ETEN NRO. 190 DPTO. 108 FND. TALANA - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613006886",
+   "razon_social": "MARLAB GROUP S.A.C.",
+   "email": "gcomercial.marlabgroup@gmail.com",
+   "celular": "913730775",
+   "direccion": "CAL. MARIA TERESA LT. 16 MZ. H URB. ASOCIACIÓN VIVIENDA LAS L - LIMA LIMA PACHACAMAC",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614695391",
+   "razon_social": "NEUROVASCARE S.A.C.",
+   "email": "NEUROVASCARE@gmail.com,neurovascare@gmail.com",
+   "celular": "",
+   "direccion": "CAL. 2 NRO. 205 DPTO. 1102 - LIMA LIMA COMAS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20615096114",
+   "razon_social": "FRANCO & PINTO CAPITAL S.A.C.",
+   "email": "josbaby77@gmail.com,marco_26_rb@hotmail.com",
+   "celular": "",
+   "direccion": "PJ. LEONCIO PRADO NRO. 172 A.H. VILLA VIOLETA - LIMA LIMA COMAS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607619345",
+   "razon_social": "BOTANIX PHARMACEUTICALS S.A.C.",
+   "email": "usuario.botanixpharma@outlook.com",
+   "celular": "993518539",
+   "direccion": "PRO. CALLE SAN FERNANDO NRO. 165 INT. 3B URB. EL CONDOR - LIMA LIMA SURQUILLO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20608542869",
+   "razon_social": "ALMACENES VERDE S.A.C.",
+   "email": "usurio.almacenesverde@outlook.com",
+   "celular": "994970676",
+   "direccion": "JR. MANUELA MOREY NRO. 549 - SAN MARTIN SAN MARTIN TARAPOTO",
+   "estado": "Inactivo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611959967",
+   "razon_social": "JENIFER GRUND S.A.C.",
+   "email": "cramos@jenifergrund.com",
+   "celular": "998107177",
+   "direccion": "AV. DEL PINAR NRO. 108 INT. 1104 URB. CHACARILLA DEL ESTANQUE - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611113341",
+   "razon_social": "ALIVE PHARMACEUTICAL S.A.C.",
+   "email": "asaravia@alivepharma.com.pe,contactos@alivepharma.com.pe",
+   "celular": "946840114",
+   "direccion": "AV. CIRCUNVALACIÓN DEL CLUB GOLF LOS INCAS NRO. 170 INT. SR8 (TORRE A – TORRE DEL GOLF) LIMA - LIMA - SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20554778764",
+   "razon_social": "LUMEDIC S.A.C.",
+   "email": "fmenacho@lumedicsac.com,freddy.menacho.river@gmail.com",
+   "celular": "953313082",
+   "direccion": "LT. 1 MZ. B ---- PROVIV. LAS DALIAS ETAPA - PROV. CONST. DEL CALLAO PROV.CONST.DEL CALLAO CALLAO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20552297599",
+   "razon_social": "CLICK DENTAL E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "JR. MOQUEGUA NRO. 270 ---- LIMA - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614814561",
+   "razon_social": "LABCARE DIAGNOSTICA S.A.C.",
+   "email": "Luckasguerrero@hotmail.com,adm.labcarediagnostica@gmail.com,ventas.labcarediagnostica@gmail.com",
+   "celular": "",
+   "direccion": "JR. LAS ESTRELLAS NRO. 257 URB. LA ALBORADA - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606934425",
+   "razon_social": "VALMED CARE S.A.C.",
+   "email": "administracion@valmedcare.net.pe,regencia.qf@valmedcare.net.pe",
+   "celular": "",
+   "direccion": "AV. ERNESTO DIEZ CANSECO NRO. 521 INT. B DPTO. 302 URB. MIRAFLORES - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607299804",
+   "razon_social": "IRIS GLOBAL PERU SOCIEDAD COMERCIAL DE RESPONSABILIDAD LIMITADA",
+   "email": "dzapata@irisgra.com",
+   "celular": "",
+   "direccion": "JR. RIO TUMBES NRO. 257 INT. 2A-1 URB. LAS MORAS - LIMA LIMA SAN LUIS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609245574",
+   "razon_social": "IMPORTACIONES BEDOK E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. MANCO II NRO. 840 DPTO. 502 URB. MARANGA ET. TRES - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613734423",
+   "razon_social": "DROGUERIA ATIPAQ S.A.C.",
+   "email": "direcciontecnica.atipaq@hotmail.com,gsvgroup.peru@gmail.com",
+   "celular": "972828161",
+   "direccion": "CAL. PERSEO NRO. 164 INT. 104 DPTO. B URB. LA CAMPIÑA ZONA DOS - LIMA LIMA CHORRILLOS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612692077",
+   "razon_social": "GEORGINA PHARMA S.A.C.",
+   "email": "argeorginapharmasac@gmail.com",
+   "celular": "941481783",
+   "direccion": "JR. POCITOS NRO. 333 URB. BARRIO OBRERO - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613959204",
+   "razon_social": "DROGUERIA Y DISTRIBUIDORA VALRIFAR S.A.C.",
+   "email": "valrifar.sac@gmail.com",
+   "celular": "999966515",
+   "direccion": "AV. PADRE URRACA NRO. 121 DPTO. 801 - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614019035",
+   "razon_social": "DISTRIBUIDORA DROGUERIA MYM PERU MEDIC E.I.R.L.",
+   "email": "gerencia@ddmymperu.pe",
+   "celular": "928141744",
+   "direccion": "CAL. VIRREY HURTADO DE MENDOZA NRO. 260 URB. LA COLONIAL - PROV. CONST. DEL CALLAO PROV.CONST.DEL CALLAO CALLAO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611245361",
+   "razon_social": "SERVICIOS INTEGRALES INFINITY S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. LOS LABRADORES NRO. 343 URB. MATELLINE - LIMA LIMA CHORRILLOS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601439795",
+   "razon_social": "MATPHARMA S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. CIRCUNVALACION NRO. 2402 URB. VILLA JARDIN - LIMA LIMA SAN LUIS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614589834",
+   "razon_social": "SRG MEDICAL S.A.C.",
+   "email": "ventas@srgmedical.pe",
+   "celular": "977597125",
+   "direccion": "CAL. PEDRO PAULET NRO. 146 URB. INGENIERIA - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613333470",
+   "razon_social": "SOLUMET-SOLUCIONES METROLOGICAS S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. LA MADRILEÑA NRO. 234 URB. VILLA JARDIN - LIMA LIMA SAN LUIS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20525005161",
+   "razon_social": "F45 E.I.R.L",
+   "email": "gturpo@f45.com.pe,cquinones@f45.com.pe",
+   "celular": "997800950",
+   "direccion": "CAL. GERMAN SCHREIBER NRO. 276 - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606391367",
+   "razon_social": "DROPAIV S.A.C.",
+   "email": "logistica@dropaiv.com",
+   "celular": "",
+   "direccion": "AV. EL EJERCITO CDRA. 2 NRO. S/N INT. 2 - SAN MARTIN SAN MARTIN TARAPOTO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601480451",
+   "razon_social": "LBO S.A.C.",
+   "email": "Rgarbin@mattina.pe",
+   "celular": "980787139",
+   "direccion": "CAL. RICARDO ANGULO RAMIREZ NRO. 724 INT. 103 URB. CORPAC - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20511213682",
+   "razon_social": "YANA COSMETICS SAC",
+   "email": "vbarbier@mishkiperu.com",
+   "celular": "943686667",
+   "direccion": "CAL. PEDRO VENTURO NRO. 136 INT. 401 - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601224250",
+   "razon_social": "SIGMALAB S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. LA ENCALADA NRO. 1615 INT. 408 - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20501932257",
+   "razon_social": "SCOP DEL PERU S.A.",
+   "email": "lorihuela3@yahoo.es",
+   "celular": "997586116",
+   "direccion": "JR. RIO TUMBES NRO. 257 INT. 2 A URB. LAS MORAS - LIMA LIMA SAN LUIS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614048981",
+   "razon_social": "AURA WELLNESS S.A.C.",
+   "email": "jadedemelomalaga@gmail.com,Info@aurawellness.pe",
+   "celular": "995558150",
+   "direccion": "AV. LOS PRECURSORES NRO. 511 DPTO. 102 URB. VALLE HERMOSO OESTE - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614265761",
+   "razon_social": "ORION SURGICAL S.R.L.",
+   "email": "greysrt@hotmail.com",
+   "celular": "975071027",
+   "direccion": "AV. PRIMAVERA NRO. 152 URB. PRIMAVERA - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614157233",
+   "razon_social": "MEDS360 S.A.C.",
+   "email": "endosurg360@gmail.com",
+   "celular": "994179843",
+   "direccion": "AV. MARISCAL JOSE DE LA MAR NRO. 1263 INT. 408 URB. SANTA CRUZ - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609928281",
+   "razon_social": "INVERSIONES FUEGO SOCIEDAD ANONIMA CERRADA",
+   "email": "marcelo@ardetodo.com,Alejandro@ardetodo.com",
+   "celular": "",
+   "direccion": "CAL. LOS CEDROS NRO. 143 FND. BOCANEGRA - PROV. CONST. DEL CALLAO PROV.CONST.DEL CALLAO CALLAO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605887784",
+   "razon_social": "DIAGLOBAL S.A.C.",
+   "email": "diaglobal.direcciontecnica@gmail.com,drogueriadiaglobal@gmail.com",
+   "celular": "978596145",
+   "direccion": "CAL. 2 LT. 16 MZ. D ---- P.V. RESIDENCIAL LAS BEGO - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612851671",
+   "razon_social": "MALVINA CORP S.A.C.",
+   "email": "lindaloyola2022@gmail.com",
+   "celular": "",
+   "direccion": "CAL. GENERAL TRINIDAD MORAN NRO. 231 - LIMA LIMA LINCE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613316966",
+   "razon_social": "UMBRELLA MEDICAL IMPORT E.I.R.L.",
+   "email": "admin@uscientificperu.com",
+   "celular": "958098960",
+   "direccion": "JR. MARISCAL RAMON CASTILLA NRO. 520 - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614221128",
+   "razon_social": "PEONIA E.I.R.L.",
+   "email": "lpilarp@hotmail.com",
+   "celular": "986612313",
+   "direccion": "JR. CUSCO NRO. 592 INT. 366 URB. BARRIOS ALTOS - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614059215",
+   "razon_social": "LM HEALTH SOLUTIONS E.I.R.L.",
+   "email": "lmhealthperu@gmail.com",
+   "celular": "994759401",
+   "direccion": "JR. AUGUSTO WIESE NRO. 1040 DPTO. 602 URB. VISTA ALEGRE - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20600737687",
+   "razon_social": "ALMAR GROUP PERU E.I.R.L.",
+   "email": "algregh@sciexpressperu.com,marcelach@sciexpressperu.com",
+   "celular": "961078894",
+   "direccion": "CAL. AYACUCHO NRO. 234 INT. 3ER. DPTO. 09 - LIMA LIMA MAGDALENA DEL MAR",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20614263513",
+   "razon_social": "LEAD BRANDS PERU S.A.C.",
+   "email": "importaciones@guillenperu.com",
+   "celular": "949374364",
+   "direccion": "AV. JAVIER PRADO ESTE NRO. 560 INT. 2302 URB. JARDÍN - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609453584",
+   "razon_social": "GRUPO MEDICO MEDINA E.I.R.L.",
+   "email": "grupomedicomedina@gmail.com",
+   "celular": "968690053",
+   "direccion": "AV. ALFONSO UGARTE NRO. 1020 URB. CHACRA COLORADA - LIMA LIMA BREÑA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20556995266",
+   "razon_social": "PANESAL S.A.C",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. LOS ROMANCES NRO. 284 URB. SANTA FELICIA 1RA ET - LIMA LIMA LA MOLINA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20557788841",
+   "razon_social": "CORPORACION JEM BIOS E.I.R.L.",
+   "email": "",
+   "celular": "977116946",
+   "direccion": "INT. 303 LT. 4 MZ. V A.H. JUAN PABLO II - LIMA LIMA CARABAYLLO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613645323",
+   "razon_social": "BK PHARMA S.A.C.",
+   "email": "bk_pharma123@hotmail.com",
+   "celular": "968710049",
+   "direccion": "CAL. LOS EUCALIPTOS NRO. 285 INT. 103 URB. SAN FELIPE - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606874945",
+   "razon_social": "GRICA PHARMACARE GROUP S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. REYNALDO SAAVEDRA PIÑON NRO. 2657 DPTO. 201 URB. ELIO - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601973431",
+   "razon_social": "INVERSIONES IÑAN Q'ORI E.I.R.L.",
+   "email": "importsqori@gmail.com",
+   "celular": "",
+   "direccion": "JR. CAHUIDE LT. 3 MZ. A - CUSCO CUSCO WANCHAQ",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606418346",
+   "razon_social": "REPRESENTACIONES BMIC S.A.C.",
+   "email": "rbmicsac.ventas@gmail.com",
+   "celular": "940751185",
+   "direccion": "CAL. JOSE CARLOS MARIATEGUI NRO. 275 A.H. MARIANO MELGAR - LIMA LIMA VILLA MARIA DEL TRIUNFO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "10741189971",
+   "razon_social": "FUENTES PEREZ VALENTINA ASTRID",
+   "email": "valentinafuentes030@gmail.com",
+   "celular": "940751185",
+   "direccion": "Av. Tomas Valle Nro. 1250, Dpto. 301, COO. Carrizal Del Carmen Edif. 12, distrito de Los Olivos, Lima.",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613363549",
+   "razon_social": "MULBERRY INTERNATIONAL S.A.C.",
+   "email": "la17zou@gmail.com",
+   "celular": "",
+   "direccion": "AV. CAYETANO HEREDIA NRO. 925 - LIMA LIMA JESUS MARIA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606323230",
+   "razon_social": "ANDINOTECH E.I.R.L.",
+   "email": "Sandra24_60@hotmail.com",
+   "celular": "990104852",
+   "direccion": "AV. VISTA ALEGRE LT. 39 MZ. M1 URB. PORTALES DE JAVIER PRADO - LIMA LIMA ATE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613381580",
+   "razon_social": "GAP FARMA S.A.C.",
+   "email": "aldo.roman@gapfarma.com",
+   "celular": "997885855",
+   "direccion": "AV. JOSE GALVEZ BARRENECHEA NRO. 492 INT. 305 URB. CORPAC LIMA - LIMA - SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613167146",
+   "razon_social": "LIFE MEDIC E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. RICALDO PALMA LT. 12 MZ. C A.H. VISTA ALEGRE DE VILLA - LIMA LIMA CHORRILLOS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20545643848",
+   "razon_social": "TIL HEALTHCARE LTD S.A.C.",
+   "email": "contabilidad@mklab.pe,abhishek@tilhealthcare.com,Peruregulatory@tilhealthcare.com",
+   "celular": "946787765",
+   "direccion": "JR. VICTOR MANTILLA NRO. 237 INT. E URB. SURQUILLO - LIMA LIMA SURQUILLO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611690402",
+   "razon_social": "INVERSIONES HECORT E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. JUNIO LT. 12A MZ. D1 URB. 24 DE JUNIO - LIMA LIMA CHORRILLOS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611168188",
+   "razon_social": "PHARMADAN S.A.C.",
+   "email": "rafo_dangiolillo@hotmail.com",
+   "celular": "994212545",
+   "direccion": "JR. JR. MAXIMILIANO VELARDE NRO. 171 INT. E2 DPTO. 504 URB. BOLICHERA - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20602009395",
+   "razon_social": "IMPORTACIONES MEDICAR S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. SIMON CONDORI NRO. 116 DPTO. 301 - LIMA LIMA PUEBLO LIBRE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613868535",
+   "razon_social": "RÜGEN S.A.C.",
+   "email": "jorge@rugenlabs.com",
+   "celular": "999021867",
+   "direccion": "CAL. 4 NRO. 194 URB. SAN JUAN MASIAS - LIMA LIMA SAN BORJA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20602460470",
+   "razon_social": "HNOS DIAZ & ASOCIADOS S.A.C.",
+   "email": "hnos.diazd@gmail.com",
+   "celular": "980669718",
+   "direccion": "CAL. LOS OIDORES NRO. 194 URB. EL MANZANO - LIMA LIMA RIMAC",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609640881",
+   "razon_social": "CORPORACION BESLER FARMA S.A.C.",
+   "email": "besler.farma@gmail.com",
+   "celular": "997382761",
+   "direccion": "LT. 22 MZ. X URB. SANTA CRUZ - PROV. CONST. DEL CALLAO PROV.CONST.DEL CALLAO CALLAO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612921921",
+   "razon_social": "DLN CAPITAL S.A.C.",
+   "email": "Ventas@dln.pe",
+   "celular": "925071488",
+   "direccion": "AV. SANTA ROSA NRO. 870 URB. COLLIQUE ZONA TRES - LIMA LIMA COMAS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613695614",
+   "razon_social": "VITACURE PERU S.A.C.",
+   "email": "msaavedra@vitacureperu.com,acampana@vitacureperu.com",
+   "celular": "968773412",
+   "direccion": "CAL. MANUEL DEL PINO NRO. 222 INT. 302 URB. SANTA BEATRIZ - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20608554476",
+   "razon_social": "EDAL MEDIC S.A.C.",
+   "email": "a.portillo@edalmed.pe",
+   "celular": "987180413",
+   "direccion": "CAL. CAMPIÑA NRO. 195 URB. PORTADA DEL SOL 1RA ETAPA - LIMA LIMA LA MOLINA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607397229",
+   "razon_social": "ALYJE FARMA S.A.C.",
+   "email": "jpachecoqf@gmail.com",
+   "celular": "956349307",
+   "direccion": "CAL. 28 LT. 13 MZ. K A.H. LOS JAZMINES DEL NARANJAL - LIMA LIMA LOS OLIVOS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613568701",
+   "razon_social": "MK CORPOORATION GROUP S.A.C.",
+   "email": "gerencia@mkcorpooration.com,contablidad@mkcorpooration.com,administracion@mkcorpooration.com,direcciontecnica@mkcorpooration.com",
+   "celular": "949283305",
+   "direccion": "CAL. CATALUÑA NRO. 138 INT. A URB. MAYORAZGO III ETAPA - LIMA LIMA ATE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612076295",
+   "razon_social": "SARAHMED E.I.R.L.",
+   "email": "sarahmed.gg.lp@gmail.com",
+   "celular": "980507738",
+   "direccion": "MZA. E LOTE 21 SECTOR 2, GRUPO 9 VILLA EL SALVADOR",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20549704809",
+   "razon_social": "CORPORACION PEREZ DIAZ S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. MIGUEL BASTIDAS PUMACAHUA NRO. 1920 URB. EL TREBOL ET. CUATRO - LIMA LIMA LOS OLIVOS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610379363",
+   "razon_social": "CORPORACION MEDICA GOYFA SOCIEDAD ANONIMA CERRADA",
+   "email": "corporaciongoyfasac@gmail.com",
+   "celular": "964810702",
+   "direccion": "AV. OSCAR R. BENAVIDES NRO. 806 - ICA CHINCHA PUEBLO NUEVO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613599763",
+   "razon_social": "RGR IMPORT E.I.R.L.",
+   "email": "rgrimporteirl@gmail.com",
+   "celular": "981416957",
+   "direccion": "JR. ABRAHAM VALDELOMAR NRO. 526 - LIMA LIMA PUEBLO LIBRE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20544979036",
+   "razon_social": "GOVI PERU S.A.C.",
+   "email": "oestrada@goviperu.com",
+   "celular": "990011042",
+   "direccion": "CAL. CAPPA NRO. 170 INT. 302 URB. PARQUE INTERNACIONAL DE I - PROV. CONST. DEL CALLAO PROV.CONST.DEL CALLAO CALLAO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20608726846",
+   "razon_social": "CONSORCIO IPS PERU S.A.C.",
+   "email": "rgrimporteirl@gmail.com",
+   "celular": "981 416 95",
+   "direccion": "AV. GRAU NRO. 1292 P.J. LA LIBERTAD - LIMA LIMA COMAS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613519221",
+   "razon_social": "VID LAB S.A.C.",
+   "email": "vidlabsac@gmail.com",
+   "celular": "923796484",
+   "direccion": "JR. LORETO NRO. 617 URB. CHACRA COLORADA - LIMA LIMA BREÑA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20565254082",
+   "razon_social": "GLOBAL MIX FARMA SOCIEDAD ANONIMA CERRADA",
+   "email": "asistentedt2@globalmedfarma.com,tesoreria@globalmixfarma.com",
+   "celular": "992838988",
+   "direccion": "CAL. LOS ANTARES NRO. 320 INT. A DPTO. 804 URB. LA ALBORADA - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20562940821",
+   "razon_social": "SALUMED S.A. SUCURSAL LIMA - PERU",
+   "email": "administracion@salumed.pe,asistente@salumed.pe,finanzas@salumed.pe",
+   "celular": "932332426",
+   "direccion": "CAL. CANTUARIAS NRO. 160 INT. 701 URB. TELLO - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612951765",
+   "razon_social": "TIANMEN PHARMA E.I.R.L.",
+   "email": "tianmen788@gmail.com",
+   "celular": "991835357",
+   "direccion": "JR. MOQUEGUA NRO. 336 INT. 106 ---- CERCADO DE LIMA - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20549197940",
+   "razon_social": "DRV DISTRIBUCIONES SOCIEDAD ANONIMA CERRADA.",
+   "email": "director.tecnico@drvdistribuciones.com,gisella.toso@drvdistribuciones.com",
+   "celular": "923 701 21",
+   "direccion": "CAL. EL BOULEVARD NRO. 162 DPTO. 803 - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611223871",
+   "razon_social": "MEDICAP SPORT E.I.R.L.",
+   "email": "adm.medicap@gmail.com",
+   "celular": "980539838",
+   "direccion": "AV. IGNACIO MERINO NRO. 1976 INT. 103 ---- -- - LIMA LIMA LINCE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612823384",
+   "razon_social": "GLOBAL MEDICAL COMPANY S.R.L.",
+   "email": "jmcorcuera19@gmail.com,maleyva15@gmail.com",
+   "celular": "975071027",
+   "direccion": "AV. ALFREDO BENAVIDES NRO. 1238 DPTO. 903 URB. AURORA - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613391909",
+   "razon_social": "OSTEO MEDIC JYA S.A.C.",
+   "email": "osteomedicjya@gmail.com",
+   "celular": "984 859 34",
+   "direccion": "AV. JOSE BALTA NRO. 147 URB. SALAMANCA - LIMA LIMA ATE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20604986266",
+   "razon_social": "HILART SOCIEDAD ANONIMA CERRADA - HILART S.A.C.",
+   "email": "luiscatano36@hotmail.com",
+   "celular": "952325141",
+   "direccion": "CAL. JUAN POLAR NRO. 202 - LIMA LIMA MAGDALENA DEL MAR",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20604290997",
+   "razon_social": "HELMAN SALUD S.A.C.",
+   "email": "administracion@helman.com.pe",
+   "celular": "",
+   "direccion": "CAL. GERMAN SCHREIBER NRO. 276 INT. 240 URB. SANTA ANA - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20546852629",
+   "razon_social": "BIOTECH MEDICAL E.I.R.L.",
+   "email": "alejandro.arciniega@biotechmedical.com.pe,carmen.quintana@biotechmedical.com.pe",
+   "celular": "998919262",
+   "direccion": "AV. SAN LUIS NRO. 2025 DPTO. 401 URB. SAN BORJA NORTE - LIMA LIMA SAN BORJA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611712520",
+   "razon_social": "SENSEBEN BY OMC S.A.C.",
+   "email": "Ivanaminan@gmail.com",
+   "celular": "984760672",
+   "direccion": "JR. TARAPOTO NRO. 1133 - LIMA LIMA BREÑA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20383961026",
+   "razon_social": "E E S.R.LTDA",
+   "email": "jbaluis@eemednuclear.com",
+   "celular": "950 512 14",
+   "direccion": "AV. BENAVIDES NRO. 245 INT. 804 - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613035070",
+   "razon_social": "INVERSIONES VILLEPONS SOCIEDAD ANONIMA CERRADA",
+   "email": "poncehu@gmail.com",
+   "celular": "993649354",
+   "direccion": "CAL.ROQUE SAENZ PEÑA NRO. 415 URB. LOS FICUS LIMA - LIMA - SANTA ANITA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610284508",
+   "razon_social": "LOGISSA SOCIEDAD ANONIMA CERRADA",
+   "email": "",
+   "celular": "950 147 92",
+   "direccion": "JR. VILLA CARRILLO NRO. 340 URB. RESIDENCIAL HIGUERETA - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610260536",
+   "razon_social": "CORPORACION TINICACHI S.A.C.",
+   "email": "corporaciontinicachisac@gmail.com",
+   "celular": "972772579",
+   "direccion": "JR. PARURO NRO. 926 INT. 2019 URB. BARRIOS ALTOS - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20472397029",
+   "razon_social": "PHARMA-C SOCIEDAD ANONIMA CERRADA",
+   "email": "",
+   "celular": "953596693",
+   "direccion": "CAL. LA CORUñA SMZ U2 LT. 5 MZ. F URB. LA CAPILLA - LIMA LIMA LA MOLINA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612474011",
+   "razon_social": "MASI PHARMA SOCIEDAD ANONIMA CERRADA",
+   "email": "tesoreria@masipharma.com,Direcciontecnica@masipharma.com",
+   "celular": "980507738",
+   "direccion": "CAL. LOS ANTARES NRO. 320 INT. 705 URB. LA ALBORADA - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610293159",
+   "razon_social": "ALKA PHARMA E.I.R.L.",
+   "email": "alkapharma@hotmail.com",
+   "celular": "993421719",
+   "direccion": "JR. MANCO CAPAC NRO. 990 INT. B URB. SAN GABRIEL - LIMA LIMA VILLA MARIA DEL TRIUNFO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20600544901",
+   "razon_social": "BIOANALITICA DEL PERU E.I.R.L.",
+   "email": "logistica.bioanalitica@gmail.com,contabilidad.bioanalitica@gmail.com",
+   "celular": "965394146",
+   "direccion": "AV. TACNA NRO. 765 ---- CERCADO DE LIMA - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613002805",
+   "razon_social": "DROGUERIA ADRICOR E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "LT. 10 MZ. G A.H. 21 DE MARZO - LIMA LIMA ANCON",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20492914852",
+   "razon_social": "PROVEES INVESTMENTS E.I.R.L.",
+   "email": "dt@provees.pe",
+   "celular": "956308373",
+   "direccion": "AV. MONSEÑOR ROCA Y BOLOGNA NRO. 117 URB. MIRAFLORES - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612320650",
+   "razon_social": "TRANSPORTES MARICIELO LF EXPRESS S.A.C.",
+   "email": "drogueriamlfmedicalsac@gmail.com",
+   "celular": "935281460",
+   "direccion": "NRO. 018 CAS. VISTA ALEGRE - LA LIBERTAD SANCHEZ CARRION HUAMACHUCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612823805",
+   "razon_social": "ORTHOLIFE PERU S.A.C.",
+   "email": "vfarromequediaz@gmail.com",
+   "celular": "965364793",
+   "direccion": "AV. ZORRITOS NRO. 1399 DPTO. 203 - LIMA LIMA JESUS MARIA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20548010501",
+   "razon_social": "IMPORTACIONES ORELIZ MEDIC S.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. CALLE 14 LT. 42 MZ. A ---- ASOC CRUZ DE MOTUPE - LIMA LIMA VILLA EL SALVADOR",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605946764",
+   "razon_social": "ORTHOLIFE S.A.C.",
+   "email": "vfarromequediaz@gmail.com",
+   "celular": "965364793",
+   "direccion": "AV. JOSE DE LA RIVAGUERO NRO. 240 INT. 201 URB. PANDO - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605081569",
+   "razon_social": "SD DIAGNOSTICS PERU S.A.C.",
+   "email": "ventas@sddiagnostics.com",
+   "celular": "975 221 75",
+   "direccion": "JR. PROGRESO LT. 40 MZ. 2X - LIMA LIMA CARABAYLLO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610622306",
+   "razon_social": "DEVICE PHARMA & CONSULTING S.A.C.",
+   "email": "",
+   "celular": "942 861 34",
+   "direccion": "AV. BOLIVAR NRO. 345 DPTO. 10 - LIMA LIMA PUEBLO LIBRE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612701904",
+   "razon_social": "PRAGA MEDICAL IMPORT S.A.C.",
+   "email": "gerencia@pragaperu.com,Asistenciacontable1@rcbcomser.com,asistenteadministrativo@dropaiv.com",
+   "celular": "967834932",
+   "direccion": "AV. EL EJERCITO NRO. S/N - SAN MARTIN SAN MARTIN TARAPOTO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20604667918",
+   "razon_social": "CFALAB PERU S.A.C.",
+   "email": "vcarrasco@cfalabperu.com.pe,administracion@cfalabperu.com.pe",
+   "celular": "928 064 77",
+   "direccion": "AV. REVOLUCION NRO. 2471 URB. COLLIQUE ZONA CUATRO - LIMA LIMA COMAS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20545038146",
+   "razon_social": "RUTA ESTRATEGICA EMPRESARIAL SOCIEDAD ANONIMA CERRADA",
+   "email": "rutamedica23@gmail.com",
+   "celular": "930783306",
+   "direccion": "Jr. Los Zafiros 1875 Urb. Las Flores 78 San Juan de Lurigancho - Lima",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20494270421",
+   "razon_social": "PERLONGMEDIC E.I.R.L.",
+   "email": "permedic18@yahoo.es",
+   "celular": "99838497",
+   "direccion": "AV. UNIVERSITARIA NRO. 854 DPTO. 203 URB. PANDO - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612618390",
+   "razon_social": "ARYMEDIC PERU S.A.C.S",
+   "email": "",
+   "celular": "963020760",
+   "direccion": "CAL. SAN MARTIN NRO. 126 INT. B DPTO. 902 URB. MIRAMAR - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609866811",
+   "razon_social": "MEDGAL E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. BATAGRANDE LT. 03 MZ. S8 URB. PORTADA DEL SOL - LIMA LIMA LA MOLINA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20608716611",
+   "razon_social": "DROGUERIA LIMAPHARMA S.A.C.",
+   "email": "droguerialimapharma@gmail.com",
+   "celular": "",
+   "direccion": "CAL. GUILLERMO MOORE NRO. 245 INT. 101 URB. FICUS - LIMA LIMA SANTA ANITA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601065691",
+   "razon_social": "RAPIDIAGNOSTICS S.A.C.",
+   "email": "Direcciontecnicarpd@gmail.com,rpdasistente22@gmail.com,administracion@rapidiagnostics.pe,asistente_contabilidad@rapidiagnostics.pe,fiorella_c@rapidiagnostics.pe",
+   "celular": "921512920",
+   "direccion": "CAL. CORONEL INCLÁN NRO. 237 - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20603084170",
+   "razon_social": "COMMERCECON E.I.R.L.",
+   "email": "commerceconeirl@gmail.com",
+   "celular": "949735524",
+   "direccion": "CAL.EVANGELISTA TORRICELLI NRO. 265 INT. 102 URB. SAN BORJA SUR LIMA - LIMA - SAN BORJA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607960748",
+   "razon_social": "GRUPO FARMACEUTICO CRESFARMA S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. PEDRO RUIZ GALLO LT. 8 MZ. N A.V. CIVIL MILITAR MY. EP MARK - LIMA LIMA ANCON",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607074705",
+   "razon_social": "VUA COSMETICS S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. 54 NRO. 196 URB. CORPAC - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20600477481",
+   "razon_social": "ARI FARMA S.A.C.",
+   "email": "gerencia@arifarmasac.com",
+   "celular": "913486958",
+   "direccion": "AV. SAN HILARION ESTE SECCION INT. 2 LT. 17 MZ. Z APV. JORGE BASADRE - LIMA LIMA SAN JUAN DE LURIGANCHO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612299375",
+   "razon_social": "CORPORACION MEDIC E & A S.A.C.",
+   "email": "qf.yuly.clemente@gmail.com",
+   "celular": "965394146",
+   "direccion": "JR. CAILLOMA NRO. 540 ---- CERCADO DE LIMA - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20546950396",
+   "razon_social": "GRUPO D Y S S.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. LAS MIMOSAS INT. A LT. 36 MZ. G1 URB. LA CAPITANA - LIMA LIMA LURIGANCHO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20608347683",
+   "razon_social": "DROMED ROMA S.A.C.",
+   "email": "contabilidad@medicalroma.com.pe",
+   "celular": "946363152",
+   "direccion": "AV. LOS EUCALIPTOS NRO. 438 INT. 401 URB. CANTO BELLO - LIMA LIMA SAN JUAN DE LURIGANCHO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20566444586",
+   "razon_social": "DROGUERIA KRISOR SOCIEDAD ANONIMA CERRADA - DROGUERIA KRISOR S.A.C.",
+   "email": "ventascorporativas@drogueriakrisor.com,ventasprocesos@drogueriakrisor.com",
+   "celular": "974635911",
+   "direccion": "LT. 3 MZ. D2 URB. TERCER MUNDO - LIMA CAÑETE SAN VICENTE DE CAÑETE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605897330",
+   "razon_social": "BENMEDIC GROUP S.A.C.",
+   "email": "benmedicgroup@gmail.com",
+   "celular": "982 660 63",
+   "direccion": "JR. LAS AMATISTAS NRO. 142 DPTO. 301 URB. SAN HILARION - LIMA LIMA SAN JUAN DE LURIGANCHO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611113782",
+   "razon_social": "AL ADWIA PHARMA E.I.R.L.",
+   "email": "marianela.rodriguez@aladwiapharma.com",
+   "celular": "936 518 45",
+   "direccion": "AV. MIGUEL DE UNAMUNO NRO. 277 URB. SANTA FLORENCIA - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611512105",
+   "razon_social": "AHJ PHARMA E.I.R.L.",
+   "email": "administracion@ahjpharma.com",
+   "celular": "907 266 37",
+   "direccion": "AV. LOS RUISEÑORES NRO. 840 INT. 402 LIMA-LIMA -SANTA ANITA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20612132187",
+   "razon_social": "RBS HEALTH E.I.R.L.",
+   "email": "rbshealth24@gmail.com",
+   "celular": "933105806",
+   "direccion": "AV. AVIACION NRO. 304 C.P. LA TINGUIÑA ZN. B - ICA ICA LA TINGUIÑA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20600934873",
+   "razon_social": "DROGUERIA MK LAB S.A.C.",
+   "email": "Tesoreria@mklab.pe",
+   "celular": "972828161",
+   "direccion": "JR. VICTOR MANTILLA NRO. 237 INT. P1Y3 URB. BARRIO MEDICO - LIMA LIMA SURQUILLO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610558284",
+   "razon_social": "CORPORACION RSFARMED S.A.C.",
+   "email": "corporacionrsfarmed@gmail.com,facturacionrsfarmed@gmail.com",
+   "celular": "966712766",
+   "direccion": "CAL. SIN NOMBRE LT. 11 MZ. P ASC. EL PROGRESO - LIMA LIMA SAN JUAN DE MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20604482560",
+   "razon_social": "E-MEDICA ELECTROMEDICINA-REFRIGERACION Y SERVICIOS GENERALES S.A.C.",
+   "email": "logistica@emedica-peru.com",
+   "celular": "",
+   "direccion": "AV. LOS PINOS LT. T DPTO. 14 ASC. DE VIV.CHILLON - LIMA LIMA PUENTE PIEDRA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607179671",
+   "razon_social": "CORPORACION OXA CARE SOCIEDAD COMERCIAL DE RESPONSABILIDAD LIMITADA",
+   "email": "oxa-care@hotmail.com",
+   "celular": "",
+   "direccion": "PJ. EL SOL NRO. 397 INT. R DPTO. 201 URB. PARQUE INDUSTRIAL - PROV. CONST. DEL CALLAO PROV.CONST.DEL CALLAO CALLAO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20516809524",
+   "razon_social": "MEDIO AMBIENTE SALUD Y EDUCACION REPRESENTACIONES S.A.C.",
+   "email": "tesoreria@masedperu.com,asantos@masedperu.com,direcciontecnica@masedperu.com",
+   "celular": "927 077 80",
+   "direccion": "AV. UNIVERSITARIA SUR NRO. 1091 - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20515490311",
+   "razon_social": "SERVICIOS MEDICOS REPROMEDIC S.A.C.",
+   "email": "Repromedicsac@hotmail.com,contabilidad.repromedic@hotmail.com",
+   "celular": "981 898 75",
+   "direccion": "JR. GNRL. MAXIMO ABRIL NRO. 585 - LIMA LIMA JESUS MARIA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20555923229",
+   "razon_social": "QUALITY INSTITUTE ERROCH S.A.C.",
+   "email": "direccion.tecnica@qie.com.pe",
+   "celular": "994150975",
+   "direccion": "CAL.FRAY MARTÌN DE MURUA NRO. 187 URB. MARANGA (C.C 7TMA ETAPA MARANGA-TERCER PISO) LIMA - LIMA - SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20556689491",
+   "razon_social": "IMED ORPHAN S.A.C.",
+   "email": "dtimedorphanfv@imedicinesgroup.com,hmedina@imedicinesgroup.com,icorrea@imedicinesgroup.com,yfontalba@imedicinesgroup.com",
+   "celular": "945106405",
+   "direccion": "AV. LA ENCALADA NRO. 1010 INT. 605 URB. CENTRO COMERCIAL MONTERRI - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610827757",
+   "razon_social": "IMPORTAQP E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. CHULLO NRO. 819 - AREQUIPA AREQUIPA YANAHUARA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611118032",
+   "razon_social": "NETSETLAB S.A.C.",
+   "email": "ricardo.navarrete@netsetlab.com,rnavarrete@neslab.com.pe",
+   "celular": "908823521",
+   "direccion": "AV. PARQUE 27 DE NOVIEMBRE NRO. 460 URB. CHACARILLA - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606189312",
+   "razon_social": "TEST PHARMA MEDICAL S.A.C.",
+   "email": "kriveros@testpharma.pe,testpharma@testpharma.pe",
+   "celular": "912672999",
+   "direccion": "CAL. SANTANDER NRO. 120 - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610600094",
+   "razon_social": "BELCOL MEDICAL S.A.C.",
+   "email": "belcolmedicalsac@gmail.com",
+   "celular": "963020760",
+   "direccion": "AV. GENERAL JOSE DE SAN MARTI NRO. 126 INT. B DPTO. 902 URB. SAN MIGUEL - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610485112",
+   "razon_social": "GLOBAL MEDICAL PHARMACEUTICAL S.A.C.",
+   "email": "m.p.gamarraperez@gmail.com",
+   "celular": "923412136",
+   "direccion": "AV. ANDRES AVELINO CACERES UV LT. 7 A.H. HUAYCAN - LIMA LIMA ATE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611739266",
+   "razon_social": "DISTRIBUIDORA MRA S.A.C.",
+   "email": "drogueriamrasac@gmail.com",
+   "celular": "982266298",
+   "direccion": "JR. FRAY ANGELICO NRO. 233 DPTO. 403 URB. SAN BORJA SUR - LIMA LIMA SAN BORJA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20603365080",
+   "razon_social": "UMBRELLA GENOMICS COMPANY S.A.C.",
+   "email": "gerencia@ugenomics.pe,contabilidad@ugenomics.pe",
+   "celular": "925708785",
+   "direccion": "CAL. EMILIO ALTHAUS NRO. 576 - LIMA LIMA LINCE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610643427",
+   "razon_social": "LUVAL IMPORTACIONES Y EXPORTACIONES S.A.C.",
+   "email": "gcipriani@fisaccorp.com,logistica@luvalcorp.com",
+   "celular": "970188857",
+   "direccion": "AV. AREQUIPA NRO. 1480 DPTO. 810 URB. SANTA BEATRIZ LIMA - LIMA - LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605395512",
+   "razon_social": "ROLOPOM PERU S.A.C.",
+   "email": "facturacion.peru@rolopom.com,logistica.peru@rolopom.com",
+   "celular": "",
+   "direccion": "AV. RICARDO RIVERA NAVARRETE NRO. 515 INT. 1801 URB. JARDIN LIMA - LIMA - SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610914625",
+   "razon_social": "OPERADOR LOGISTICO DICEL E.I.R.L.",
+   "email": "oldicel.eirl@gmail.com",
+   "celular": "",
+   "direccion": "CAL. PROLONGACIÓN CAROLINA NRO. 360 ---- ZONA 4TO SECTOR DE URRUNA - LAMBAYEQUE CHICLAYO JOSE LEONARDO ORTIZ",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20602819737",
+   "razon_social": "CIMEX CONSULTORA & CONSTRUCTORA SRL",
+   "email": "Cimexlozada@gmail.com",
+   "celular": "",
+   "direccion": "CAL. CAROLINA IV SECTOR NRO. 360 P.J. URRUNAGA - LAMBAYEQUE CHICLAYO JOSE LEONARDO ORTIZ",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605046127",
+   "razon_social": "UNIVERSO CIENTIFICO S.A.C.",
+   "email": "ucientifico.contabilidad@gmail.com",
+   "celular": "997529664",
+   "direccion": "CAL. GERMAN SCHEREIBER NRO. 210 INT. 320 URB. SANTA ANA - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20603028202",
+   "razon_social": "ALFIL COURIER SOCIEDAD ANÓNIMA CERRADA",
+   "email": "tesoreriaalfil@gmail.com",
+   "celular": "976211775",
+   "direccion": "OTR. PARCELA C-16 LOT PREDIO L INT. 2 LT. 3 OTR. UNIDAD CATASTRAL 10651 - LIMA LIMA LURIN",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20557193732",
+   "razon_social": "REMEDIOS NATURALES SELVATICOS SOCIEDAD ANONIMA CERRADA - RENASE S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. LOS FRUTALES NRO. 363 URB. PRADERA DE STA.ANITA II - LIMA LIMA EL AGUSTINO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610032886",
+   "razon_social": "AYRO CORP S.A.C.",
+   "email": "mfigueroa@ayrocorp.com,raylas@ayrocorp.com,contabilidad1@ayrocorp.com",
+   "celular": "942465036",
+   "direccion": "AV. LOS ANGELES MZA. L LOTE. 30 URB. LOS ANGELES DE VITARTE U.I. NRO. 2 PISO 1 LIMA - LIMA - ATE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610258809",
+   "razon_social": "SOLUCIONES CIXTRAUMA S.A.C.",
+   "email": "",
+   "celular": "990459378",
+   "direccion": "PJ. LA MAR NRO. 313 P.J. SIMON BOLIVAR - LAMBAYEQUE CHICLAYO CHICLAYO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609684705",
+   "razon_social": "EK DEPOR PERU S.R.L.",
+   "email": "eklusmann@gmail.com",
+   "celular": "993157512",
+   "direccion": "AV. ALAMEDA DEL CORREGIDOR NRO. 1410 DPTO. 301 URB. ISLAS DEL SOL - LIMA LIMA LA MOLINA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611443511",
+   "razon_social": "DROGUERIA & DISTRIBUIDORA SARFARMA S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "---- SECTOR 008 ZONA 02 - TERC INT. 301 LT. 29-B MZ. G A.V. LOS CLAVELES - LIMA LIMA ATE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607757462",
+   "razon_social": "SIBA MEDICAL ELECTRONIC S.A.C.",
+   "email": "rpdsac@gmail.com,admrpdperu@gmail.com",
+   "celular": "976736738",
+   "direccion": "CAL. TINTA NRO. 436 URB. TUPAC AMARU - LIMA LIMA SAN LUIS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609215748",
+   "razon_social": "GRUPO RYS SUPPLY S.A.C.",
+   "email": "rys.supply@gmail.com",
+   "celular": "992923549",
+   "direccion": "PJ. EMILIO CASTELAR NRO. 245 URB. AYACUCHO - LIMA LIMA SAN JUAN DE LURIGANCHO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605138188",
+   "razon_social": "MARG PERU S.A.C.",
+   "email": "rvega@margperu.com,mruiz@margperu.com",
+   "celular": "949 609 33",
+   "direccion": "JR. MARQUEZ DE MANCERA LT. 7 MZ. B URB. ALAMEDAS DE SURCO - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611070102",
+   "razon_social": "INNAPHARM S.A.C.",
+   "email": "contabilidad@meyerhof.pe",
+   "celular": "933698899",
+   "direccion": "AV. LARCO NRO. 880 INT. 509 URB. LEURO - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20521185814",
+   "razon_social": "MEDICAL PRODUCTS DEL PERU S.A.C.",
+   "email": "gerencia@medicalproductsdelperu.com",
+   "celular": "991 959 63",
+   "direccion": "AV. ARENALES NRO. 395 DPTO. 303 - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20611022795",
+   "razon_social": "SAMEND MEDICAL DEVICES E.I.R.L.",
+   "email": "Gerencia@samendmedical.com",
+   "celular": "905 436 49",
+   "direccion": "CAL. 2 NRO. 205 DPTO. 1102 URB. PARQUES DE COMAS - LIMA LIMA COMAS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601088259",
+   "razon_social": "FARMA ITALIA SOCIEDAD ANONIMA CERRADA.",
+   "email": "gcipriani@fisaccorp.com,srodriguez@fisaccorp.com",
+   "celular": "970188857",
+   "direccion": "AV. AREQUIPA NRO. 1492 INT. 810 URB. SANTA BEATRIZ - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609825368",
+   "razon_social": "DROGUERIA DISTRIBUCIONES G & S ASOCIADOS S.A.C.",
+   "email": "drogueriagysasociados@gmail.com",
+   "celular": "915179445",
+   "direccion": "CAL. TAHUANTINSUYO NRO. 322 URB. ZARATE - LIMA LIMA SAN JUAN DE LURIGANCHO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20610382739",
+   "razon_social": "WEFEM GROUP S.A.C.",
+   "email": "wefem.pe@gmail.com",
+   "celular": "",
+   "direccion": "CAL. AUDIENCIA NRO. 196 DPTO. 720 URB. JARDIN - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20543208419",
+   "razon_social": "SERVICIOS GENERALES WEF DEL PERU SOCIEDAD ANONIMA CERRADA-WEF PERU S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "JR. DINAMARCA NRO. 1429 URB. CHACRA RIOS NORTE - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20608211358",
+   "razon_social": "INVERSIONES KHILLAY MAKI PERU E.I.R.L.",
+   "email": "oestrada@khillaymaki.com",
+   "celular": "990011042",
+   "direccion": "INT. 201 LT. 17 MZ. A APV. MONTERRICO - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20266352337",
+   "razon_social": "SOFTYS PERU S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "Patio Panorama",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606257776",
+   "razon_social": "3D GROUP S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. LAS ENCINAS INT. 1 LT. 3 MZ. H URB. LOS JARDINES - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20604718237",
+   "razon_social": "KAMARY MEDICAL S.A.C.",
+   "email": "kvargas@kamaryfarma.com",
+   "celular": "999999999",
+   "direccion": "CAL.YEN ESCOBEDO GARRO NRO. 800 URB. LA VIÑA (ALT. CUADRA 17 DE AV. DEL AIRE) LIMA - LIMA - SAN LUIS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20543363902",
+   "razon_social": "LEALTO E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. 8 DE OCTUBRE NRO. 271 DPTO. 503 URB. SANTA CRUZ - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606569123",
+   "razon_social": "UMBRELLA SCIENTIFIC S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. LA LIBERTAD NRO. 147 INT. B URB. SAN MIGUEL - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606351136",
+   "razon_social": "DROGUERIA FABMEDICAL S.A.C",
+   "email": "drogueriafabmedical@gmail.com,fav9104@gmail.com",
+   "celular": "",
+   "direccion": "INT. 2 LT. 13 MZ. E URB. COVI RIMAC - LIMA LIMA RIMAC",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607187844",
+   "razon_social": "WELLNESS PHARMA S.A.C.",
+   "email": "jadedemelomalaga@gmail.com",
+   "celular": "",
+   "direccion": "CAL. JACARANDA NRO. 789 INT. P.2 URB. VALLE HERMOSO MONTERRICO - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601136415",
+   "razon_social": "ANSILANS MEDICAL S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. 03 LT. 05 DPTO. 01 MZ. C URB. EL RETABLO - LIMA LIMA COMAS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20393001411",
+   "razon_social": "GUILLEN & COMPAÑIA S.A.C.",
+   "email": "importaciones@guillenperu.com",
+   "celular": "949374364",
+   "direccion": "AV. CIRCUNVALACION CLUB GOLF NRO. 206 INT. 1 DPTO. 602B URB. CLUB GOLF LOS INCAS - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20492425495",
+   "razon_social": "ALSEB PHARMA S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. ROSA MERINO NRO. 396 DPTO. 301 URB. MARANGA ET. TRES - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20536758756",
+   "razon_social": "ANDEAN IMPORTS E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "---- ALMERIA NRO. 460 ---- HIGUERETA - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609873010",
+   "razon_social": "MPS DROGUERIA E.I.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "JR. SIMON BOLIVAR NRO. 235 INT. 401 URB. SAN MIGUEL - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20600502744",
+   "razon_social": "ORTUS IMPORT & EXPORT S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. DEAN SAAVEDRA NRO. 142 URB. MARANGA ETAPA 1 - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607124087",
+   "razon_social": "DASLIT DRUGSTORE S.A.C.",
+   "email": "cjuskca@gmail.com",
+   "celular": "",
+   "direccion": "CAL. LOS ALBARICOQUES NRO. 274 URB. RESIDENCIAL MONTERRICO - LIMA LIMA LA MOLINA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20543871487",
+   "razon_social": "CORPORACION LUXOR S.R.L.",
+   "email": "",
+   "celular": "",
+   "direccion": "JR. RUFINO TORRICO NRO. 624 INT. 108 ---- CERCADO DE LIMA - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609885816",
+   "razon_social": "AEA COMPANY S.A.C.",
+   "email": "",
+   "celular": "953 196 38",
+   "direccion": "CAL. J LT. 6 KM. 104 URB. ALBORADA DE LOS PORTALES - LIMA CAÑETE ASIA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20602003605",
+   "razon_social": "GALILEI PHARMA S.A.C",
+   "email": "",
+   "celular": "",
+   "direccion": "ALM. SAN LORENZO NRO. 708 INT. B URB. LOS CEDROS DE VILLA - LIMA LIMA CHORRILLOS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609741237",
+   "razon_social": "CORPORACION DROGUE LIFE SOCIEDAD ANÓNIMA CERRADA",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. CIRCUNVALACION NRO. 415 - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20603483503",
+   "razon_social": "A & M INSTRUMENTS LAB MEDIC S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "JR. CAHUIDE NRO. 2268 URB. LAS MORERAS - PROV. CONST. DEL CALLAO PROV.CONST.DEL CALLAO LA PERLA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607212636",
+   "razon_social": "I.E SOLUCIONES MEDICAS S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. BERTELLO LT. 8 MZ. A URB. 7 DE AGOSTO II ETAPA - PROV. CONST. DEL CALLAO PROV.CONST.DEL CALLAO CALLAO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606112921",
+   "razon_social": "LABIOTECH S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. GENERAL CESAR CANEVARO NRO. 116 INT. 1105 - LIMA LIMA LINCE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20600739531",
+   "razon_social": "BRAPIFARMA SOCIEDAD ANONIMA CERRADA",
+   "email": "trinidadjohana7@gmail.com",
+   "celular": "987760537",
+   "direccion": "JR. ANTONIO MIRO QUESADA NRO. 806 INT. 203 URB. BARRIOS ALTOS - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606217910",
+   "razon_social": "AMARISFARMA S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "JR. CUSCO NRO. 841 INT. 402 URB. BARRIOS ALTOS - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20603218672",
+   "razon_social": "DIOHM S.A.C.",
+   "email": "diohm.peru@gmail.com",
+   "celular": "967 307 02",
+   "direccion": "AV. JAVIER PRADO ESTE INT. 3 LT. 17 MZ. J1 URB. MAYORAZGO ET. DOS - LIMA LIMA ATE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606140666",
+   "razon_social": "NODISLAB S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. ALFREDO BENAVIDES NRO. 1944 URB. EL ROSEDAL - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606006773",
+   "razon_social": "S.O.S. MEDICAL PRIME S.A.C.",
+   "email": "gabrielasorados@sosmedical.pe,contador@arthrosalud.pe",
+   "celular": "981900459",
+   "direccion": "CAL. SANCHEZ PINILLOS NRO. 188 INT. 201 - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20487346692",
+   "razon_social": "DROGUERIA - DISTRIBUIDORA MEDICO DENTAL DISODENT S.A.C.",
+   "email": "Disodentsac@gmail.com",
+   "celular": "969380324",
+   "direccion": "JR. CAILLOMA NRO. 439 - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20475106947",
+   "razon_social": "MEGA MEDICAL S.A.C.",
+   "email": "gerencia@megamedicalperu.com,finanzas@megamedicalperu.com",
+   "celular": "991959635",
+   "direccion": "AV. ARENALES NRO. 395 DPTO. 303 - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20603440111",
+   "razon_social": "GIA DAMED S.A.C.",
+   "email": "comercial.giadamed@gmail.com",
+   "celular": "919448682",
+   "direccion": "AV. UNIVERSITARIA NRO. 619 DPTO. 103 - LIMA LIMA SAN MIGUEL",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607873861",
+   "razon_social": "DISTRIBUIDORA LERNI FARMA S.A.C.",
+   "email": "",
+   "celular": "944554745",
+   "direccion": "JR. PARURO NRO. 900 INT. B221 URB. BARRIOS ALTOS - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606104040",
+   "razon_social": "CREACIONES Y SOLUCIONES S.A.C.",
+   "email": "ventas@cysmedic.com",
+   "celular": "994269895",
+   "direccion": "PJ. SALAZAR NRO. 142 URB. SAN IGNACIO - LIMA LIMA BARRANCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20534206306",
+   "razon_social": "INVERSIONES Y REPRESENTACIONES V & G E.I.R.L.",
+   "email": "",
+   "celular": "966039980",
+   "direccion": "---- TAYACAJA NRO. 122 - LIMA LIMA EL AGUSTINO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20479928771",
+   "razon_social": "TECNOLOGY CARE S.R.L.",
+   "email": "",
+   "celular": "978726670",
+   "direccion": "CAL. CABO NICOLAS GUTARRA NRO. 711 INT. 301 - LIMA LIMA PUEBLO LIBRE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20550399092",
+   "razon_social": "FARMASALUD INVERSIONES FARMACEUTICAS S.A.C.",
+   "email": "jtuesta@farmasaludinversiones.com",
+   "celular": "977153080",
+   "direccion": "AV. ALFONSO UGARTE NRO. 986 URB. HUERTA LA VIRREYNA - LIMA LIMA BREÑA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606579412",
+   "razon_social": "CORFE MEDICAL E.I.R.L.",
+   "email": "",
+   "celular": "966039980",
+   "direccion": "AV. VÍA EVITAMIENTO LT. 24 MZ. B KM. 6.5 ---- CANTAGALLO - LIMA LIMA RIMAC",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20557219634",
+   "razon_social": "VIASTARA MEDICAL E.I.R.L.",
+   "email": "",
+   "celular": "994423300",
+   "direccion": "CAL. DANIEL CRUZ NRO. 167 URB. LA CALERA DE LA MERCED - LIMA LIMA SURQUILLO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20602621392",
+   "razon_social": "L&F MEDICAL S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. AVIACION NRO. 4258 URB. CAPEBCO - LIMA LIMA SURQUILLO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20608628810",
+   "razon_social": "IMPORTACIONES Y EXPORTACIONES BRANDING E.I.R.L.",
+   "email": "",
+   "celular": "960236814",
+   "direccion": "AV. PROLONGACION GUARDIA CIVI INT. 401 LT. 7 MZ. B URB. SANTA ROSA - LIMA LIMA CHORRILLOS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607921840",
+   "razon_social": "DROGUERIA MIYA SOCIEDAD ANONIMA CERRADA",
+   "email": "viviane_mirella@hotmail.com",
+   "celular": "953723067",
+   "direccion": "JR. LA PAZ NRO. 275 DPTO. 401 URB. SANTA PATRICIA 1RA ETAPA - LIMA LIMA LA MOLINA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20602767958",
+   "razon_social": "BEAUTY CARE IMPORT E.I.R.L.",
+   "email": "pcampos@bcigroup.com.pe",
+   "celular": "943019266",
+   "direccion": "CAL. LOMA BLANCA NRO. 248 DPTO. 201 URB. PROLONGACION BENAVIDES - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609000555",
+   "razon_social": "DRUGSTORE S.A.C.",
+   "email": "",
+   "celular": "970411361",
+   "direccion": "LT. 1B MZ. H7 SEC. PRIMERO DE MAYO PJ PAMPLO - LIMA LIMA SAN JUAN DE MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601067600",
+   "razon_social": "GIVALGE SOCIEDAD ANONIMA CERRADA",
+   "email": "givalge67sac@hotmail.com",
+   "celular": "915245909",
+   "direccion": "LT. 29 MZ. B URB. SANTA RAQUEL ET. TERCERA - LIMA LIMA ATE",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20600373472",
+   "razon_social": "DISTRIBUIDORA MEDICA DIMED E.I.R.L.",
+   "email": "",
+   "celular": "941088350",
+   "direccion": "JR. TARMA NRO. 119 DPTO. 1104 ---- CERCADO DE LIMA - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20527722064",
+   "razon_social": "IMEEDCO S.R.L.",
+   "email": "imeedco@hotmail.com",
+   "celular": "937453091",
+   "direccion": "OVL. CONSTANCIA NRO. L-5 URB. CONSTANCIA - CUSCO CUSCO WANCHAQ",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20492382311",
+   "razon_social": "MACH IMPORT PERU S.A.C.",
+   "email": "contabilidad@machperumedical.com",
+   "celular": "956194643",
+   "direccion": "JR. TORRES PAZ NRO. 1472 URB. SANTA BEATRIZ - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601407656",
+   "razon_social": "DROGUERIA A Y T S.A.C.",
+   "email": "",
+   "celular": "949735524",
+   "direccion": "AV. SANTA ANA INT. 101A LT. 40 MZ. A31 URB. PRIMAVERA - LIMA LIMA SANTA ANITA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20454967241",
+   "razon_social": "CORPORACION YIN'S PERU INVERSIONES E.I.R.L.",
+   "email": "secretaria@grandtai.com.pe",
+   "celular": "931743943",
+   "direccion": "CAL. LIMA NRO. 201 OTR. MIGUEL GRAU PAUCARPATA - AREQUIPA AREQUIPA AREQUIPA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20506710970",
+   "razon_social": "QUIROMEDICA SOCIEDAD ANONIMA CERRADA",
+   "email": "facturas@quiromedica.com,rolf.soldtwedel.r@quiromedica.com,rocio.rospigliosi@quiromedica.com",
+   "celular": "991885329",
+   "direccion": "AV. LAS FLORES NRO. 234 DPTO. 200 - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20601185611",
+   "razon_social": "AURA TRADING E.I.R.L.",
+   "email": "lau.jc@pucp.pe",
+   "celular": "993536600",
+   "direccion": "CAL. LOMA PONCIANA NRO. 290 - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605022295",
+   "razon_social": "LENOVA E.I.R.L.",
+   "email": "lenovaeirl@gmail.com",
+   "celular": "989115462",
+   "direccion": "CAL. ARQUITECTO JUAN BENITEZ D NRO. 289 INT. 401 ---- LAS TORRES DE LIMATAMBO - LIMA LIMA SAN BORJA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20602186785",
+   "razon_social": "STEAM MEDICAL PERU S.A.C.",
+   "email": "e.alegria@steammedical.com.pe",
+   "celular": "979768922",
+   "direccion": "JR. SODIO NRO. 175 URB. INDUSTRIAL INFANTAS - LIMA LIMA LOS OLIVOS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20602445527",
+   "razon_social": "ELIMYR SOLUCIONES Y REPRESENTACIONES S.A.C.",
+   "email": "ealvarado@drogueriaelimyr.com",
+   "celular": "940163397",
+   "direccion": "CAL. TACNA NRO. 295 DPTO. 201 URB. SURQUILLO - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605586415",
+   "razon_social": "GROUP KCE PERU E.I.R.L.",
+   "email": "group.kceperu@hotmail.com",
+   "celular": "966039980",
+   "direccion": "JR. ANDAHUAYLAS NRO. 170 INT. 222 - LIMA LIMA LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605450564",
+   "razon_social": "BEAUTY GANG COMPANY S.A.C.",
+   "email": "",
+   "celular": "980690193",
+   "direccion": "AV. JOSE LARCO NRO. 101 COM. SAN MIGUEL DE MIRAFLORES - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20552379307",
+   "razon_social": "MAGELLAN TRADING PERU S.A.C.",
+   "email": "carlos.flores@mgglobalcorp.com",
+   "celular": "962381734",
+   "direccion": "CAL. OCHARAN NRO. 410 INT. 201 - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20605225285",
+   "razon_social": "MEDICAL INSIGHT SOCIEDAD ANONIMA CERRADA - MEDICAL INSIGHT S.A.C.",
+   "email": "",
+   "celular": "XXXXXXXXX",
+   "direccion": "CAL. TARAPACA NRO. 140 URB. MIRAFLORES - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20602979882",
+   "razon_social": "GRAND TAI LATIN AMERICA S.A.C.",
+   "email": "finanzas@grandtai.com.pe",
+   "celular": "997 358 17",
+   "direccion": "AV. LOS FRUTALES NRO. 1030 URB. CAMINO REAL - LIMA LIMA LA MOLINA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20609797038",
+   "razon_social": "SKINSCIENCE S.A.C.",
+   "email": "administracion@skin.pe,hpatino@skin.pe,logistica@skin.pe",
+   "celular": "966892443",
+   "direccion": "Calle Arica N.° 849, Oficina 101 Miraflores",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "DNI",
+   "n_documento": "74816487",
+   "razon_social": "CALDERON CABRERA KERLY JOSEFINA",
+   "email": "",
+   "celular": "936981893",
+   "direccion": "San borja, andreas vesalio 191, departamento 201 Referencia: cerca a la clínica vesalio",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20522333051",
+   "razon_social": "PHARMACEUTICAL DISTOLOZA S.A.",
+   "email": "",
+   "celular": "",
+   "direccion": "AV. SAN LORENZO NRO. 708 INT. A B URB. CEDROS DE VILLA - LIMA LIMA CHORRILLOS",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607917699",
+   "razon_social": "INVERSIONES MALUMI EMPRESA INDIVIDUAL DE RESPONSABILIDAD LIMITADA",
+   "email": "administracion@malumi.pe,viviane_mirella@hotmail.com,jessicabissovaldez@gmail.com",
+   "celular": "989194853",
+   "direccion": "CAL. CESAR VALLEJO 230 URB. LA ARBOLEDA DE MARANGA - SAN MIGUEL LIMA - LIMA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20604908397",
+   "razon_social": "GLOBAL GREEN POWER S.A.C.",
+   "email": "jessicah@mercatosanno.com",
+   "celular": "981092066",
+   "direccion": "AV. ARAMBURU NRO. 878 - LIMA LIMA SURQUILLO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20608184091",
+   "razon_social": "MEYERHOF PERU S.A.C.",
+   "email": "contabilidad@meyerhof.pe,espec.admin1@meyerhof.pe",
+   "celular": "931 653 89",
+   "direccion": "CAL. OCHARAN NRO. 233 DPTO. 304 URB. PETIT JEAN OCHARAN - LIMA LIMA MIRAFLORES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20607101915",
+   "razon_social": "DROGUERIA LS S.A.C.",
+   "email": "",
+   "celular": "",
+   "direccion": "CAL. EL RECUERDO NRO. 195 DPTO. C101 URB. EL SAUSALITO - LIMA LIMA SANTIAGO DE SURCO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "DNI",
+   "n_documento": "45931212",
+   "razon_social": "WILMER RAMOS PAZ",
+   "email": "",
+   "celular": "",
+   "direccion": "Chiclayo",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20554152261",
+   "razon_social": "CORPORACION PHARMA SOLUTIONS PERU S.A.C.",
+   "email": "drivera@pharmasolutions.com.pe,l.cerna@pharmasolutions.com.pe,jaraujo@pharmasolutions.com.pe",
+   "celular": "940 605 76",
+   "direccion": "CAL. 21 NRO. 950 INT. 202 URB. CORPAC - LIMA LIMA SAN ISIDRO",
+   "estado": "Activo"
+  }
+ ]
+}
