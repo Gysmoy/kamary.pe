@@ -1,8 +1,9 @@
 FROM php:7.4-fpm
 
 # deb.debian.org dejo de entregar los paquetes de bullseye-security (404 al descargarlos);
-# security.debian.org si los tiene. Sin esto el build muere en apt-get install.
-RUN sed -i 's|deb.debian.org/debian-security|security.debian.org/debian-security|g' /etc/apt/sources.list
+# security.debian.org si los tiene. Se cubren los dos formatos de sources (el clasico y el
+# nuevo .sources) y termina en 'true' para que un archivo ausente jamas tumbe el build.
+RUN sh -c 'for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.list /etc/apt/sources.list.d/*.sources; do [ -f "$f" ] && sed -i "s|deb.debian.org/debian-security|security.debian.org/debian-security|g" "$f"; done; true'
 
 RUN apt-get update && apt-get install -y \
     git unzip zip libzip-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libonig-dev libxml2-dev \
