@@ -107,8 +107,31 @@ class BusinessController extends BasicController
         return $body;
     }
 
+
+    /**
+     * Cuando una edicion deja la empresa "pendiente de sincronizar", se vuelve a sincronizar sola.
+     *
+     * Antes el unico camino de vuelta a "sincronizada" era el boton manual de Sedes y facturacion:
+     * bastaba editar una sede o sus series para que dejara de poder emitirse cualquier comprobante,
+     * sin que nadie se enterara. Corre despues del commit para no dejar abierta una transaccion
+     * mientras se habla con el facturador, y nunca tumba el guardado.
+     */
+    private function resincronizarTrasGuardar($businessId): void
+    {
+        DB::afterCommit(function () use ($businessId) {
+            $business = Business::with('branches')->find($businessId);
+            // Alta de una empresa nueva sigue siendo manual: cada instancia del facturador atiende a
+            // una sola empresa y conviene que alguien lo revise.
+            if (!$business || !$business->facturador_company_id) return;
+
+            app(BusinessFacturadorSyncService::class)->trySync($business, Auth::id());
+        });
+    }
+
     public function afterSave(Request $request, object $jpa, bool $isNew)
     {
+        $this->resincronizarTrasGuardar($jpa->id);
+
         return Business::with([
             'creator:id,name,lastname,username,fullname',
             'updater:id,name,lastname,username,fullname',
@@ -315,6 +338,7 @@ class BusinessController extends BasicController
                 ]);
             }
 
+            $this->resincronizarTrasGuardar($id);
             $response->status = 200;
             $response->message = 'Operacion correcta';
             $response->data = $branch->fresh();
@@ -347,6 +371,7 @@ class BusinessController extends BasicController
                     'updated_by' => Auth::id(),
                 ]));
 
+            $this->resincronizarTrasGuardar($id);
             $response->status = 200;
             $response->message = 'Operacion correcta';
         } catch (\Throwable $th) {
@@ -433,6 +458,7 @@ class BusinessController extends BasicController
             $business->updated_by = Auth::id();
             $business->save();
 
+            $this->resincronizarTrasGuardar($id);
             $response->status = 200;
             $response->message = 'Archivos fiscales guardados correctamente';
             $response->data = $business->fresh(['creator:id,name,lastname,username,fullname', 'updater:id,name,lastname,username,fullname']);
@@ -486,6 +512,7 @@ class BusinessController extends BasicController
             $business->updated_by = Auth::id();
             $business->save();
 
+            $this->resincronizarTrasGuardar($id);
             $response->status = 200;
             $response->message = 'Archivo fiscal eliminado correctamente';
             $response->data = $business->fresh(['creator:id,name,lastname,username,fullname', 'updater:id,name,lastname,username,fullname']);

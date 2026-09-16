@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Models\Business;
 use App\Models\BusinessBranch;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class BusinessFacturadorSyncService
@@ -236,5 +238,116 @@ class BusinessFacturadorSyncService
         }
 
         return Crypt::decryptString($business->fiscal_certificate_password);
+    }
+
+    /**
+     * Sincroniza y ademas guarda el resultado. Es lo que hacia el controlador; al vivir aqui se
+     * puede llamar desde cualquier lado (al guardar una sede, al emitir) y no solo desde el boton.
+     *
+     * Es idempotente: el facturador actualiza la empresa, empareja los establecimientos por codigo
+     * y usa firstOrNew en las series, asi que repetirlo no duplica nada.
+     */
+    public function syncAndPersist(Business $business, ?int $userId = null): Business
+    {
+        try {
+            $sync = $this->sync($business);
+
+            DB::transaction(function () use ($business, $sync, $userId) {
+                $record = $sync['record']['data'] ?? [];
+                $business->update([
+                    'facturador_company_id' => $record['id'] ?? $business->facturador_company_id,
+                    'facturador_sync_status' => 'success',
+                    'facturador_sync_message' => 'Configuracion sincronizada correctamente',
+                    'facturador_last_sync_at' => now(),
+                    'facturador_logo_synced_at' => isset($sync['logo']) ? now() : $business->facturador_logo_synced_at,
+                    'facturador_certificate_synced_at' => isset($sync['certificate']) ? now() : $business->facturador_certificate_synced_at,
+                    'updated_by' => $userId ?? $business->updated_by,
+                ]);
+
+                $sincronizadas = collect($sync['establishments']['data'] ?? [])
+                    ->keyBy(fn($item) => strtoupper(trim((string) ($item['code'] ?? ''))));
+                if ($sincronizadas->isEmpty()) return;
+
+                foreach ($business->branches()->get() as $branch) {
+                    $codigo = strtoupper(trim((string) ($branch->establishment_code ?? '')));
+                    $encontrada = $codigo === '' ? null : $sincronizadas->get($codigo);
+                    if (!$encontrada) continue;
+
+                    $branch->update([
+                        'facturador_establishment_id' => $encontrada['id'] ?? $branch->facturador_establishment_id,
+                        'facturador_sync_status' => 'success',
+                        'facturador_sync_message' => 'Sucursal sincronizada correctamente',
+                        'facturador_last_sync_at' => now(),
+                        'updated_by' => $userId ?? $branch->updated_by,
+                    ]);
+                }
+            });
+
+            Cache::forget($this->claveFreno($business));
+        } catch (\Throwable $th) {
+            // El estado de error se guarda FUERA de cualquier transaccion del que llama: si el
+            // llamador hace rollback, igual queda constancia de por que fallo.
+            Business::whereKey($business->id)->update([
+                'facturador_sync_status' => 'error',
+                'facturador_sync_message' => $th->getMessage(),
+            ]);
+            // Freno: con el facturador caido, no se reintenta en cada intento de emision.
+            Cache::put($this->claveFreno($business), $th->getMessage(), now()->addMinutes(10));
+            throw $th;
+        }
+
+        return $business->fresh(['branches']);
+    }
+
+    /**
+     * Deja la empresa lista para emitir, sincronizando sola si hace falta.
+     *
+     * El sistema marca la empresa como "pendiente" cada vez que se edita algo fiscal (una sede, sus
+     * series, el logo). Hasta ahora lo unico que la devolvia a "sincronizada" era un boton manual,
+     * y mientras tanto no se podia emitir ningun comprobante.
+     */
+    public function ensureSynced(Business $business): void
+    {
+        if ($this->pareceSincronizada($business)) return;
+
+        // Solo se sincroniza sola una empresa que YA estuvo sincronizada antes (tiene identificador
+        // en el facturador). Dar de alta una empresa nueva sigue siendo manual, porque cada
+        // instancia del facturador atiende a una sola empresa y conviene que alguien lo mire.
+        if (!$business->facturador_company_id) {
+            throw new \RuntimeException('La empresa no esta sincronizada con el facturador interno. Sincronizala desde Sedes y facturacion.');
+        }
+
+        if ($motivo = Cache::get($this->claveFreno($business))) {
+            throw new \RuntimeException('No se pudo sincronizar automaticamente con el facturador: ' . $motivo);
+        }
+
+        $this->syncAndPersist($business);
+    }
+
+    /** Intenta sincronizar sin romper lo que el usuario estaba haciendo. */
+    public function trySync(Business $business, ?int $userId = null): void
+    {
+        try {
+            $this->syncAndPersist($business, $userId);
+        } catch (\Throwable $th) {
+            report($th);   // el motivo queda en facturador_sync_message y a la vista en el grid
+        }
+    }
+
+    private function pareceSincronizada(Business $business): bool
+    {
+        if (($business->facturador_sync_status ?? null) !== 'success') return false;
+        if (!$business->facturador_company_id) return false;
+
+        $business->loadMissing('branches');
+
+        return !$business->branches
+            ->filter(fn($b) => $b->status !== null)
+            ->contains(fn($b) => $b->facturador_sync_status !== 'success' || !$b->facturador_establishment_id);
+    }
+
+    private function claveFreno(Business $business): string
+    {
+        return 'facturador-autosync-block:' . $business->id;
     }
 }

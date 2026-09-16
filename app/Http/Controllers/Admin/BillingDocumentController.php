@@ -10,6 +10,7 @@ use App\Models\CommercialOrder;
 use App\Models\ServiceOrder;
 use App\Models\Warehouse;
 use App\Services\BillingDocumentService;
+use App\Services\BusinessFacturadorSyncService;
 use App\Services\FacturadorPro5Service;
 use App\Support\BusinessScope;
 use Illuminate\Http\Request;
@@ -243,9 +244,34 @@ class BillingDocumentController extends BasicController
         }
     }
 
+    /**
+     * Deja la empresa lista para emitir. Si una edicion la dejo "pendiente de sincronizar", la
+     * sincroniza sola en vez de bloquear la emision hasta que alguien pulse el boton manual.
+     *
+     * Se llama FUERA de la transaccion a proposito: si la emision falla y hace rollback, el estado
+     * de sincronizado recien guardado no debe perderse.
+     */
+    private function asegurarSincronizacionFiscal($document): void
+    {
+        if (config('facturadorpro5.mode') !== 'production') return;
+        if (!$document || !$document->business) return;
+
+        app(BusinessFacturadorSyncService::class)->ensureSynced($document->business);
+    }
+
     public function issue(Request $request, string $id): HttpResponse|ResponseFactory
     {
         $response = new Response();
+
+        // Si la empresa quedo pendiente por una edicion, se sincroniza sola antes de emitir.
+        try {
+            $this->asegurarSincronizacionFiscal($this->findBillingDocumentForRequest($request, $id));
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+            return response($response->toArray(), $response->status);
+        }
+
         DB::beginTransaction();
         try {
             $document = $this->findBillingDocumentForRequest($request, $id);
@@ -316,6 +342,16 @@ class BillingDocumentController extends BasicController
     public function creditNote(Request $request, string $id): HttpResponse|ResponseFactory
     {
         $response = new Response();
+
+        // Si la empresa quedo pendiente por una edicion, se sincroniza sola antes de emitir.
+        try {
+            $this->asegurarSincronizacionFiscal($this->findBillingDocumentForRequest($request, $id));
+        } catch (\Throwable $th) {
+            $response->status = 400;
+            $response->message = $th->getMessage();
+            return response($response->toArray(), $response->status);
+        }
+
         DB::beginTransaction();
         try {
             $document = $this->findBillingDocumentForRequest($request, $id);
