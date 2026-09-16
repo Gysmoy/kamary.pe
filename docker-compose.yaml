@@ -92,6 +92,12 @@ services:
       - storage:/var/www/html/storage
       - cache:/var/www/html/bootstrap/cache
       - ./docker-compose/php/local.ini:/usr/local/etc/php/conf.d/local.ini
+      # El panel se compila a archivos con un codigo en el nombre, y ese nombre puede cambiar entre
+      # compilaciones aunque el codigo sea el mismo. Antes la aplicacion leia su copia (la horneada
+      # en la imagen) mientras nginx entregaba la del disco: si una se quedaba atras, el navegador
+      # pedia archivos inexistentes y el panel salia en blanco. Montando la misma carpeta que sirve
+      # nginx, las dos leen lo mismo y esa desincronizacion deja de ser posible.
+      - ./public/build:/var/www/html/public/build
     networks:
       - app-network-kamary
       - billing-network
