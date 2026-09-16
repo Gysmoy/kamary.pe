@@ -384,7 +384,8 @@ const Clients = ({
   const [selectedClientForNotifications, setSelectedClientForNotifications] = useState(null)
   const [selectedClientForTariff, setSelectedClientForTariff] = useState(null)
   const [selectedClientForContracts, setSelectedClientForContracts] = useState(null)
-  const [isContractEditing, setIsContractEditing] = useState(false)
+  const [isContractEditing, setIsContractEditing] = useState(false)
+  const [isSavingContract, setIsSavingContract] = useState(false)
   const [contractEditingData, setContractEditingData] = useState(null)
   const [contractAnnexFiles, setContractAnnexFiles] = useState([])
   const [userStatus, setUserStatus] = useState('1')
@@ -1097,7 +1098,16 @@ const Clients = ({
     if (file) request.append('file', file)
     annexFiles.forEach((annex) => request.append('annexes[]', annex))
 
-    const result = await storageClientContractsRest.save(request)
+    // Sin este candado, pulsar "Actualizar" varias veces mandaba una copia del anexo por cada
+    // clic: como el boton no daba ninguna senal de estar trabajando, se pulsaba de nuevo.
+    if (isSavingContract) return
+    setIsSavingContract(true)
+    let result
+    try {
+      result = await storageClientContractsRest.save(request)
+    } finally {
+      setIsSavingContract(false)
+    }
     if (!result) return
 
     $(contractFormModalRef.current).modal('hide')
@@ -1677,7 +1687,7 @@ const Clients = ({
         modalRef={contractFormModalRef}
         title={isContractEditing ? 'Editar contrato' : 'Registrar contrato'}
         size='lg'
-        btnSubmitText={isContractEditing ? 'Actualizar' : 'Registrar'}
+        btnSubmitText={isSavingContract ? 'Guardando...' : (isContractEditing ? 'Actualizar' : 'Registrar')}
         onSubmit={onContractSubmit}
         onClose={clearContractForm}
         zIndex={1065}
