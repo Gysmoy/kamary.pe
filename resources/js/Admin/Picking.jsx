@@ -5,6 +5,7 @@ import CreateReactScript from '../Utils/CreateReactScript';
 import Swal from 'sweetalert2';
 import CommercialOrdersRest from '../Actions/Admin/CommercialOrdersRest';
 import SampleOrdersRest from '../Actions/Admin/SampleOrdersRest';
+import '../../css/vdtable.css';
 
 const commercialOrdersRest = new CommercialOrdersRest()
 const sampleOrdersRest = new SampleOrdersRest()
@@ -16,6 +17,7 @@ const boardStatuses = [
     description: 'Pedido en cola para ser preparado.',
     accent: '#0acf97',
     action: 'Preparar',
+    icon: 'mdi mdi-play',
     nextStatus: 'preparing',
   },
   {
@@ -24,6 +26,7 @@ const boardStatuses = [
     description: 'Pedido en preparacion.',
     accent: '#f9bc0b',
     action: 'Listo',
+    icon: 'mdi mdi-check',
     nextStatus: 'dispatched',
   },
 ]
@@ -71,75 +74,72 @@ const orderKey = (order) => `${order?.source_type ?? 'commercial'}:${order?.id ?
 const PreparationCard = ({ order, status, onMove, updatingId, onDragStart }) => {
   const items = order?.items ?? []
   const isUpdating = `${updatingId ?? ''}` === orderKey(order)
-  const compact = status === 'pending'
+  const compact = status.value === 'pending'
   const isSampleOrder = order?.source_type === 'sample'
   const warehouseName = order?.warehouse?.name ?? order?.items?.find?.(item => item?.warehouse)?.warehouse ?? '-'
+  const contact = [order.dispatch_contact_name, order.dispatch_contact_phone].filter(Boolean).join(' · ')
 
   return (
     <article
-      className={`preparation-card ${isUpdating ? 'is-updating' : ''}`}
+      className={`vdt-card preparation-card ${isUpdating ? 'is-updating' : ''}`}
       draggable={!isUpdating}
       onDragStart={(event) => onDragStart(event, order)}
     >
-      <div className='preparation-card-header'>
-        <div className='preparation-code'>
-          <strong>{order.code ?? order.order_number ?? `Pedido ${order.id}`}</strong>
-          {isSampleOrder && <small className='preparation-source'>Muestras</small>}
-          <span>{formatDate(order.promised_delivery_at || order.issue_date)}</span>
+      <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <div className='d-flex align-items-center flex-wrap' style={{ gap: 6 }}>
+            <span className='fw-semibold' style={{ color: 'var(--vd-ink)' }}>{order.code ?? order.order_number ?? `Pedido ${order.id}`}</span>
+            {isSampleOrder && <span className='badge badge-soft-info'>Muestras</span>}
+          </div>
+          <small className='text-muted'><i className='mdi mdi-calendar-blank-outline me-1'></i>{formatDate(order.promised_delivery_at || order.issue_date) || 'Sin fecha'}</small>
         </div>
         <button
           type='button'
-          className='btn btn-sm btn-primary'
+          className='vdt-btn-pri preparation-action'
           disabled={isUpdating}
           onClick={() => onMove(order, status.nextStatus)}
         >
-          {isUpdating ? '...' : status.action}
+          {isUpdating ? <i className='mdi mdi-loading mdi-spin'></i> : <><i className={status.icon}></i> {status.action}</>}
         </button>
       </div>
 
       <div className='preparation-meta'>
-        <div><span>Cliente:</span> {customerName(order)}</div>
-        <div><span>Almacen:</span> {warehouseName}</div>
-        {!compact && <div><span>Direccion:</span> {textValue(order.delivery_address, '-')}</div>}
-        {!compact && <div><span>Contacto:</span> {[order.dispatch_contact_name, order.dispatch_contact_phone].filter(Boolean).join(' | ') || '-'}</div>}
+        <div className='text-truncate' title={customerName(order)}><i className='mdi mdi-account-outline'></i>{customerName(order)}</div>
+        <div className='text-truncate'><i className='mdi mdi-warehouse'></i>{warehouseName}</div>
+        {!compact && <div className='text-truncate' title={textValue(order.delivery_address, '')}><i className='mdi mdi-map-marker-outline'></i>{textValue(order.delivery_address, '-')}</div>}
+        {!compact && contact && <div className='text-truncate'><i className='mdi mdi-phone-outline'></i>{contact}</div>}
       </div>
 
       {!compact && (
-        <div className='preparation-detail'>
-          <div>
-            <span>Documento:</span> {order.document_type ?? '-'}
-          </div>
-          <div>
-            <span>Entrega:</span> {formatDate(order.promised_delivery_at || order.delivered_at) || '-'}
-          </div>
-          <div>
-            <span>Total:</span> {Number(order.total || order.total_gross_weight || 0).toFixed(2)}
-          </div>
+        <div className='d-flex flex-wrap mt-2' style={{ gap: 6 }}>
+          <span className='badge badge-soft-secondary'>{order.document_type ?? 'Sin documento'}</span>
+          <span className='badge badge-soft-secondary'>Total {Number(order.total || order.total_gross_weight || 0).toFixed(2)}</span>
         </div>
       )}
 
       <div className='preparation-items'>
-        {items.length === 0 && <div className='preparation-item muted'>Sin detalle</div>}
+        {items.length === 0 && <div className='preparation-item text-muted'>Sin detalle</div>}
         {items.map((item) => (
           <div className='preparation-item' key={`preparation-order-${order.source_type ?? 'commercial'}-${order.id}-item-${item.id ?? item.stock_key ?? item.code ?? item.name}`}>
-            <div>
-              <strong>{itemName(item)}</strong>
-              {itemPresentation(item) && <small>{itemPresentation(item)}</small>}
+            <div style={{ minWidth: 0 }}>
+              <div className='text-truncate' title={itemName(item)}>{itemName(item)}</div>
+              {itemPresentation(item) && <small className='text-muted'>{itemPresentation(item)}</small>}
             </div>
-            <strong>x{itemQuantity(item)}</strong>
+            <span className='preparation-qty'>x{itemQuantity(item)}</span>
           </div>
         ))}
       </div>
 
       {status.value === 'preparing' && !isSampleOrder && (
-        <div className='preparation-card-footer'>
+        <div className='mt-2 pt-2' style={{ borderTop: '1px solid #f1f1f6' }}>
           <button
             type='button'
-            className='btn btn-xs btn-outline-secondary'
+            className='vdt-btn-soft'
+            style={{ height: 32 }}
             disabled={isUpdating}
             onClick={() => onMove(order, 'pending')}
           >
-            Regresar a cola
+            <i className='mdi mdi-undo'></i> Regresar a cola
           </button>
         </div>
       )}
@@ -147,23 +147,25 @@ const PreparationCard = ({ order, status, onMove, updatingId, onDragStart }) => 
   )
 }
 
-const PreparationColumn = ({ status, orders, onMove, updatingId, onDropOrder, onDragStart }) => (
+const PreparationColumn = ({ status, orders, onMove, updatingId, onDropOrder, onDragStart, hiddenOnMobile }) => (
   <section
-    className='preparation-column'
-    style={{ '--preparation-accent': status.accent }}
+    className={`preparation-column ${hiddenOnMobile ? 'd-none d-lg-flex' : 'd-flex'}`}
     onDragOver={(event) => event.preventDefault()}
     onDrop={(event) => onDropOrder(event, status.value)}
   >
     <div className='preparation-column-header'>
-      <div>
-        <h4>{status.title}</h4>
-        <p>{status.description}</p>
+      <div className='d-flex align-items-center' style={{ gap: 8 }}>
+        <span className='preparation-dot' style={{ background: status.accent }}></span>
+        <div>
+          <div className='fw-semibold' style={{ color: 'var(--vd-ink)' }}>{status.title}</div>
+          <small className='text-muted'>{status.description}</small>
+        </div>
       </div>
-      <span>{orders.length} pedidos</span>
+      <span className='preparation-count'>{orders.length}</span>
     </div>
 
     <div className='preparation-list'>
-      {orders.length === 0 && <div className='preparation-empty'>No hay pedidos en este estado.</div>}
+      {orders.length === 0 && <p className='vdt-empty mb-0'>No hay pedidos en este estado.</p>}
       {orders.map((order) => (
         <PreparationCard
           key={`preparation-order-${order.source_type ?? 'commercial'}-${order.id}`}
@@ -182,13 +184,21 @@ const Picking = () => {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(false)
   const [updatingId, setUpdatingId] = useState(null)
+  const [search, setSearch] = useState('')
+  const [mobileStatus, setMobileStatus] = useState('pending')
 
-  const groupedOrders = useMemo(() => (
-    boardStatuses.reduce((carry, status) => ({
+  const groupedOrders = useMemo(() => {
+    // Busqueda local por codigo, cliente, almacen o producto
+    const needle = search.trim().toLowerCase()
+    const matches = (order) => !needle || [
+      order.code, order.order_number, customerName(order), order?.warehouse?.name,
+      ...(order.items ?? []).map(itemName),
+    ].filter(Boolean).some(value => `${value}`.toLowerCase().includes(needle))
+    return boardStatuses.reduce((carry, status) => ({
       ...carry,
-      [status.value]: orders.filter((order) => order.dispatch_status === status.value),
+      [status.value]: orders.filter((order) => order.dispatch_status === status.value && matches(order)),
     }), {})
-  ), [orders])
+  }, [orders, search])
 
   const loadOrders = async () => {
     setLoading(true)
@@ -282,177 +292,108 @@ const Picking = () => {
     moveOrder(order, nextStatus)
   }
 
+  const totalOrders = boardStatuses.reduce((sum, status) => sum + (groupedOrders[status.value]?.length ?? 0), 0)
+
   return (
     <>
       <style>{`
-        .preparation-page {
-          min-height: calc(100vh - 175px);
-        }
-        .preparation-toolbar {
-          align-items: center;
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 18px;
-        }
-        .preparation-toolbar h3 {
-          color: #263238;
-          font-size: 1.15rem;
-          font-weight: 700;
-          margin: 0;
-        }
         .preparation-board {
           display: grid;
-          gap: 22px;
-          grid-template-columns: minmax(320px, 0.95fr) minmax(420px, 1.55fr);
+          gap: 16px;
+          grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.4fr);
+          margin-top: 16px;
         }
         .preparation-column {
-          border-left: 4px solid var(--preparation-accent);
+          background: #f8f9fb;
+          border: 1px solid #eeeef4;
+          border-radius: 14px;
+          flex-direction: column;
           min-width: 0;
-          padding-left: 10px;
+          padding: 12px;
         }
         .preparation-column-header {
-          align-items: start;
+          align-items: center;
           display: flex;
           gap: 12px;
           justify-content: space-between;
-          margin-bottom: 14px;
-        }
-        .preparation-column-header h4 {
-          color: #263238;
-          font-size: 1.15rem;
-          font-weight: 700;
-          margin: 0;
-        }
-        .preparation-column-header p {
-          color: #6c7a86;
-          margin: 2px 0 0;
-        }
-        .preparation-column-header span {
-          color: #98a6ad;
-          font-size: 0.9rem;
-          white-space: nowrap;
-        }
-        .preparation-list {
-          display: grid;
-          gap: 8px;
-        }
-        .preparation-card {
-          background: #fff;
-          border: 1px solid #edf1f4;
-          border-radius: 5px;
-          box-shadow: 0 1px 2px rgba(31, 45, 61, 0.04);
-          cursor: grab;
-          padding: 13px 14px;
-        }
-        .preparation-card.is-updating {
-          opacity: 0.65;
-          pointer-events: none;
-        }
-        .preparation-card-header {
-          align-items: start;
-          display: flex;
-          gap: 12px;
-          justify-content: space-between;
-          margin-bottom: 8px;
-        }
-        .preparation-code {
-          align-items: baseline;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-          min-width: 0;
-        }
-        .preparation-code strong {
-          color: #313a46;
-          font-size: 0.98rem;
-        }
-        .preparation-code span {
-          color: #98a6ad;
-          font-size: 0.82rem;
-        }
-        .preparation-source {
-          background: #e8f3ff;
-          border: 1px solid #b8dcff;
-          border-radius: 999px;
-          color: #1473c9;
-          font-size: 0.72rem;
-          font-weight: 700;
-          padding: 1px 7px;
-        }
-        .preparation-meta {
-          color: #6c7a86;
-          display: grid;
-          gap: 3px;
           margin-bottom: 12px;
         }
-        .preparation-meta span,
-        .preparation-detail span {
-          color: #98a6ad;
-          font-weight: 600;
-        }
-        .preparation-detail {
-          border: 1px solid #dfe6ed;
-          border-radius: 4px;
-          color: #6c7a86;
-          display: grid;
-          gap: 4px;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          margin-bottom: 8px;
-          padding: 10px 12px;
-        }
-        .preparation-items {
-          display: grid;
-        }
-        .preparation-item {
-          align-items: center;
-          border-top: 1px solid #eef2f5;
-          color: #313a46;
-          display: flex;
-          gap: 10px;
-          justify-content: space-between;
-          min-height: 32px;
-        }
-        .preparation-item:first-child {
-          border-top: 0;
-        }
-        .preparation-item strong {
-          font-size: 0.95rem;
-        }
-        .preparation-item small {
-          color: #98a6ad;
-          display: block;
-          font-size: 0.78rem;
-        }
-        .preparation-item.muted {
-          color: #98a6ad;
-        }
-        .preparation-card-footer {
-          margin-top: 10px;
-        }
-        .preparation-empty {
-          background: rgba(255, 255, 255, 0.65);
-          border: 1px dashed #cfd8df;
-          border-radius: 5px;
-          color: #7f8c96;
-          padding: 18px;
+        .preparation-dot { border-radius: 50%; flex-shrink: 0; height: 10px; width: 10px; }
+        .preparation-count {
+          background: #fff;
+          border: 1px solid #eeeef4;
+          border-radius: 999px;
+          color: var(--vd-ink);
+          font-size: 12px;
+          font-weight: 700;
+          min-width: 32px;
+          padding: 3px 10px;
           text-align: center;
         }
+        .preparation-list { display: grid; gap: 10px; }
+        .preparation-card { cursor: grab; }
+        .preparation-card.is-updating { opacity: .6; pointer-events: none; }
+        .preparation-action { height: 34px; padding: 0 12px; flex-shrink: 0; }
+        .preparation-meta { color: #6b6b7b; display: grid; font-size: 12.5px; gap: 3px; margin-top: 10px; }
+        .preparation-meta i { color: #b6b6c2; margin-right: 6px; }
+        .preparation-items { margin-top: 10px; }
+        .preparation-item {
+          align-items: center;
+          border-top: 1px solid #f1f1f6;
+          display: flex;
+          font-size: 13px;
+          gap: 10px;
+          justify-content: space-between;
+          padding: 6px 0;
+        }
+        .preparation-item:first-child { border-top: 0; }
+        .preparation-qty {
+          background: var(--vd-secondary-soft);
+          border-radius: 8px;
+          color: var(--vd-secondary);
+          flex-shrink: 0;
+          font-weight: 700;
+          padding: 2px 8px;
+        }
+        .preparation-tabs { display: none; }
         @media (max-width: 991.98px) {
-          .preparation-board {
-            grid-template-columns: 1fr;
-          }
-          .preparation-detail {
-            grid-template-columns: 1fr;
-          }
+          .preparation-board { grid-template-columns: 1fr; }
+          .preparation-tabs { display: flex; }
         }
       `}</style>
-      <div className='preparation-page'>
-        <div className='preparation-toolbar'>
-          <h3>Preparacion</h3>
-          <button type='button' className='btn btn-sm btn-outline-primary' onClick={loadOrders} disabled={loading}>
-            <i className='mdi mdi-refresh me-1'></i>{loading ? 'Actualizando...' : 'Actualizar'}
+      <div className='vd-card vd-panel vd-fade-up' style={{ padding: 16 }}>
+        <div className='d-flex align-items-center justify-content-between flex-wrap' style={{ gap: 12 }}>
+          <div className='d-flex align-items-center' style={{ gap: 12 }}>
+            <span className='vdt-chip'><i className='mdi mdi-package-variant-closed'></i></span>
+            <div>
+              <h4 className='mb-0' style={{ fontSize: 16, fontWeight: 700, color: 'var(--vd-ink)' }}>Picking</h4>
+              <small style={{ color: 'var(--vd-muted)' }}>{totalOrders} pedidos por preparar</small>
+            </div>
+          </div>
+          <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Actualizar' onClick={loadOrders} disabled={loading}>
+            <i className={`mdi mdi-refresh ${loading ? 'mdi-spin' : ''}`}></i>
           </button>
         </div>
+
+        <div className='d-flex align-items-center flex-wrap mt-3' style={{ gap: 8 }}>
+          <div className='position-relative' style={{ flex: '1 1 260px', maxWidth: 420 }}>
+            <i className='mdi mdi-magnify vdt-search-ico'></i>
+            <input className='vdt-search' placeholder='Buscar por pedido, cliente o producto…' value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <div className='preparation-tabs flex-wrap' style={{ gap: 8 }}>
+            {boardStatuses.map((status) => (
+              <button
+                key={`preparation-tab-${status.value}`}
+                type='button'
+                className={mobileStatus === status.value ? 'vdt-btn-acc' : 'vdt-btn-soft'}
+                onClick={() => setMobileStatus(status.value)}
+              >
+                {status.title} <span className='badge bg-white text-dark ms-1'>{groupedOrders[status.value]?.length ?? 0}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className='preparation-board'>
           {boardStatuses.map((status) => (
             <PreparationColumn
@@ -463,6 +404,7 @@ const Picking = () => {
               updatingId={updatingId}
               onDropOrder={onDropOrder}
               onDragStart={onDragStart}
+              hiddenOnMobile={mobileStatus !== status.value}
             />
           ))}
         </div>

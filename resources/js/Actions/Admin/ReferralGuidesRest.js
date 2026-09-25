@@ -47,6 +47,18 @@ class ReferralGuidesRest extends BasicRest {
     }
   }
 
+  getWarehouseArticles = async ({ businessId, warehouseId, search = '' }) => {
+    try {
+      const params = new URLSearchParams({ business_id: businessId, warehouse_id: warehouseId, search })
+      const { status, result } = await Fetch(`/api/${this.path}/warehouse-articles?${params}`)
+      if (!status) throw new Error(result?.message || 'No se pudieron cargar los productos')
+      return result?.data ?? []
+    } catch (error) {
+      toast.error('Error', { description: error.message, duration: 3000, richColors: true })
+      return []
+    }
+  }
+
   getConnectorPayload = async (id) => {
     try {
       const { status, result } = await Fetch(`/api/${this.path}/${id}/connector-payload`)

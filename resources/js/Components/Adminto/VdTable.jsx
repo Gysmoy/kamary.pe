@@ -366,7 +366,7 @@ const VdTable = forwardRef(({
         style={{ background: a.bg || '#f2f2f6', color: a.color || '#555' }}
         onClick={(e) => { e.stopPropagation(); a.onClick?.(row) }}
       >
-        <i className={a.icon}></i>{variant === 'card' && a.title ? <span>{a.title}</span> : null}
+        <i className={a.icon}></i>{variant === 'card' && (a.label || a.title) ? <span>{a.label || a.title}</span> : null}
       </button>
     ))
   }

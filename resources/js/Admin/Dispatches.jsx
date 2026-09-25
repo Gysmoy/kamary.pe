@@ -3,17 +3,17 @@ import { createRoot } from 'react-dom/client';
 import * as XLSX from 'xlsx';
 import BaseAdminto from '@Adminto/Base';
 import CreateReactScript from '../Utils/CreateReactScript';
-import Table from '../Components/Adminto/Table';
+import VdTable from '@Adminto/VdTable';
+import VdSelect from '@Adminto/VdSelect';
+import VdUbigeoCascade from '@Adminto/VdUbigeoCascade';
+import InputFormGroup from '@Adminto/form/InputFormGroup';
+import TextareaFormGroup from '@Adminto/form/TextareaFormGroup';
 import Modal from '../Components/Adminto/Modal';
-import DxButton from '../Components/dx/DxButton';
 import Swal from 'sweetalert2';
 import CommercialOrdersRest from '../Actions/Admin/CommercialOrdersRest';
 import DispatchesRest from '../Actions/Admin/DispatchesRest';
 import ReferralGuidesRest from '../Actions/Admin/ReferralGuidesRest';
 import ZonesRest from '../Actions/Admin/ZonesRest';
-import UbigeoCascade from '../Components/Adminto/form/UbigeoCascade';
-import SelectFormGroup from '../Components/Adminto/form/SelectFormGroup';
-import renderGridEditLink from '../Utils/renderGridEditLink';
 import { buildMagistralesRows, openMagistralesRecordPdf } from '../Utils/magistralesRecordPdf';
 import { EMPTY_UBIGEO_SELECTION } from '../Utils/ubigeoInei';
 import {
@@ -22,7 +22,6 @@ import {
   getShiftLabel,
   getReferralGuideStatusLabel,
   shiftOptions,
-  toLookup,
 } from '../Utils/statusLabels';
 
 const dispatchesRest = new DispatchesRest()
@@ -151,19 +150,28 @@ const manifestDrivers = (dispatch) => {
 const manifestZone = (dispatch) => dispatch?.zone_master?.name ?? dispatch?.zoneMaster?.name ?? dispatch?.zone ?? '-'
 const manifestStatusMeta = (status) => {
   if (['waiting', 'assigned', 'pending', 'preparing', 'dispatched'].includes(status)) {
-    return { label: 'En espera', className: 'badge border border-warning text-warning bg-warning-subtle' }
+    return { label: 'En espera', className: 'badge badge-soft-warning' }
   }
   if (['approved', 'in_route', 'delivered'].includes(status)) {
-    return { label: 'Aprobado', className: 'badge border border-success text-success bg-success-subtle' }
+    return { label: 'Aprobado', className: 'badge badge-soft-success' }
   }
   if (status === 'closed') {
-    return { label: 'Cerrado', className: 'badge border border-info text-info bg-info-subtle' }
+    return { label: 'Cerrado', className: 'badge badge-soft-info' }
   }
   if (status === 'cancelled') {
-    return { label: 'Cancelado', className: 'badge border border-danger text-danger bg-danger-subtle' }
+    return { label: 'Cancelado', className: 'badge badge-soft-danger' }
   }
-  return { label: getDispatchStatusLabel(status), className: 'badge border border-secondary text-secondary bg-light' }
+  return { label: getDispatchStatusLabel(status), className: 'badge badge-soft-secondary' }
 }
+const optionsOf = (rows, label) => (rows ?? []).map(row => ({ value: `${row.id}`, label: label(row) }))
+const todayLima = () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' })
+const DispatchSection = ({ icon, title, children, aside = null }) => <section className='dispatch-form-section'>
+  <div className='d-flex justify-content-between align-items-start gap-2'>
+    <div className='dispatch-form-section-title'><i className={icon}></i><span>{title}</span></div>
+    {aside}
+  </div>
+  <div className='row g-2'>{children}</div>
+</section>
 const googleMapsRouteUrl = (dispatch) => {
   const stops = [...new Set(dispatchAssignments(dispatch)
     .map((assignment) => orderDeliveryAddress(assignmentOrder(assignment)))
@@ -178,7 +186,7 @@ const googleMapsRouteUrl = (dispatch) => {
 }
 
 const Dispatches = ({ session }) => {
-  const gridRef = useRef()
+  const tableRef = useRef()
   const modalRef = useRef()
   const zoneModalRef = useRef()
   const guideModalRef = useRef()
@@ -188,13 +196,10 @@ const Dispatches = ({ session }) => {
   const idRef = useRef()
   const codeRef = useRef()
   const scheduledDateRef = useRef()
-  const shiftRef = useRef()
   const copilotNameRef = useRef()
   const manifestCodeRef = useRef()
-  const dispatchStatusRef = useRef()
   const observationsRef = useRef()
   const zoneIdRef = useRef()
-  const zoneBusinessRef = useRef()
   const zoneNameRef = useRef()
   const zoneReferenceRef = useRef()
   const zoneObservationsRef = useRef()
@@ -213,6 +218,9 @@ const Dispatches = ({ session }) => {
   const [selectedDriverId, setSelectedDriverId] = useState('')
   const [selectedVehicleId, setSelectedVehicleId] = useState('')
   const [selectedZoneId, setSelectedZoneId] = useState('')
+  const [shift, setShift] = useState('Manana')
+  const [dispatchStatus, setDispatchStatus] = useState('dispatched')
+  const [zoneBusinessId, setZoneBusinessId] = useState('')
   const [activeManifestTab, setActiveManifestTab] = useState('pending')
   const [manifestFilters, setManifestFilters] = useState({ startDate: '', endDate: '' })
   const [appliedManifestFilters, setAppliedManifestFilters] = useState({ startDate: '', endDate: '' })
@@ -293,8 +301,7 @@ const Dispatches = ({ session }) => {
   }
 
   const refreshGrid = async () => {
-    const instance = gridRef.current ? $(gridRef.current).dxDataGrid('instance') : null
-    if (instance) await instance.refresh()
+    await tableRef.current?.refresh()
   }
 
   const normalizeDispatchOrders = (orderList = []) => (
@@ -363,11 +370,11 @@ const Dispatches = ({ session }) => {
     setIsEditing(!!data?.id)
     idRef.current.value = data?.id ?? ''
     codeRef.current.value = data?.code ?? 'Se genera al guardar'
-    scheduledDateRef.current.value = data?.scheduled_date?.toString?.().slice?.(0, 10) ?? new Date().toISOString().slice(0, 10)
-    shiftRef.current.value = data?.shift ?? 'Manana'
+    scheduledDateRef.current.value = data?.scheduled_date?.toString?.().slice?.(0, 10) ?? todayLima()
+    setShift(data?.shift ?? 'Manana')
     copilotNameRef.current.value = data?.copilot_name ?? ''
     manifestCodeRef.current.value = data?.manifest_code ?? ''
-    dispatchStatusRef.current.value = data?.dispatch_status ?? 'dispatched'
+    setDispatchStatus(data?.dispatch_status ?? 'dispatched')
     observationsRef.current.value = data?.observations ?? ''
     // Si el modulo solo alcanza una empresa, se elige sola: el campo esta oculto y sin esto el
     // formulario no se podria guardar (business_id es obligatorio en el backend).
@@ -379,7 +386,8 @@ const Dispatches = ({ session }) => {
     setSelectedVehicleId(data?.vehicle_id ? `${data.vehicle_id}` : '')
     setSelectedZoneId(data?.zone_id ? `${data.zone_id}` : '')
     await loadBranches(businessId, data?.business_branch_id ?? '')
-    setAssignments((data?.assignments ?? []).map(row => ({ uid: crypto.randomUUID(), commercial_order_id: `${row.commercial_order_id}`, customer_name: row.customer_name ?? '', total: Number(row.total || 0) })) || [emptyAssignment()])
+    const currentAssignments = (data?.assignments ?? []).map(row => ({ uid: crypto.randomUUID(), commercial_order_id: `${row.commercial_order_id}`, customer_name: row.customer_name ?? '', total: Number(row.total || 0) }))
+    setAssignments(currentAssignments.length ? currentAssignments : [emptyAssignment()])
     $(modalRef.current).modal('show')
   }
 
@@ -407,8 +415,8 @@ const Dispatches = ({ session }) => {
       const matchedZone = zones.find(zone => `${zone?.ubigeo ?? ''}`.trim() !== '' && `${zone.ubigeo}` === `${order.ubigeo}`)
       if (matchedZone) setSelectedZoneId(`${matchedZone.id}`)
     }
-    if (order?.dispatch_status === 'dispatched' && ['pending', 'preparing'].includes(dispatchStatusRef.current?.value)) {
-      dispatchStatusRef.current.value = 'dispatched'
+    if (order?.dispatch_status === 'dispatched' && ['pending', 'preparing'].includes(dispatchStatus)) {
+      setDispatchStatus('dispatched')
     }
     setAssignments(prev => prev.map(row => row.uid === uid ? {
       ...row,
@@ -428,14 +436,6 @@ const Dispatches = ({ session }) => {
     assignments.some(row => row.uid !== uid && `${row.commercial_order_id}` === `${orderId}`)
   )
 
-  const assignmentSelectEffectKey = useMemo(() => (
-    [
-      selectedWarehouseId,
-      availableOrders.map(order => order.id).join(','),
-      assignments.map(row => `${row.uid}:${row.commercial_order_id}`).join('|'),
-    ].join('::')
-  ), [assignments, availableOrders, selectedWarehouseId])
-
   const onVehicleChange = (value) => {
     setSelectedVehicleId(value)
     const vehicle = vehicleMap[value]
@@ -445,7 +445,7 @@ const Dispatches = ({ session }) => {
   const openZoneModal = (zone = null) => {
     setIsEditingZone(!!zone?.id)
     zoneIdRef.current.value = zone?.id ?? ''
-    zoneBusinessRef.current.value = zone?.business_id ?? selectedBusinessId ?? ''
+    setZoneBusinessId(`${zone?.business_id ?? selectedBusinessId ?? ''}`)
     zoneNameRef.current.value = zone?.name ?? ''
     zoneReferenceRef.current.value = zone?.reference ?? ''
     zoneObservationsRef.current.value = zone?.observations ?? ''
@@ -468,7 +468,7 @@ const Dispatches = ({ session }) => {
     e.preventDefault()
     const request = {
       id: zoneIdRef.current.value || undefined,
-      business_id: zoneBusinessRef.current.value || null,
+      business_id: zoneBusinessId || null,
       name: zoneNameRef.current.value.trim(),
       ubigeo: zoneLocation.ubigeo.trim(),
       department: zoneLocation.department.trim(),
@@ -602,7 +602,7 @@ const Dispatches = ({ session }) => {
       business_id: dispatch.business_id,
       business_branch_id: dispatch.business_branch_id,
       warehouse_id: dispatch.warehouse_id,
-      scheduled_date: dispatch.scheduled_date?.toString?.().slice?.(0, 10) ?? new Date().toISOString().slice(0, 10),
+      scheduled_date: dispatch.scheduled_date?.toString?.().slice?.(0, 10) ?? todayLima(),
       shift: dispatch.shift ?? '',
       driver_id: dispatch.driver_id ?? null,
       copilot_name: dispatch.copilot_name ?? '',
@@ -776,13 +776,13 @@ const Dispatches = ({ session }) => {
       business_branch_id: selectedBranchId || null,
       warehouse_id: selectedWarehouseId || null,
       scheduled_date: scheduledDateRef.current.value,
-      shift: shiftRef.current.value,
+      shift,
       driver_id: selectedDriverId || null,
       copilot_name: copilotNameRef.current.value.trim(),
       vehicle_id: selectedVehicleId || null,
       zone_id: selectedZoneId || null,
       manifest_code: manifestCodeRef.current.value.trim(),
-      dispatch_status: dispatchStatusRef.current.value,
+      dispatch_status: dispatchStatus,
       observations: observationsRef.current.value.trim(),
       assignments: selectedOrderIds.map(orderId => ({ commercial_order_id: orderId }))
     }
@@ -874,401 +874,260 @@ const Dispatches = ({ session }) => {
   const currentDriver = driverMap[selectedDriverId]
   const currentVehicle = vehicleMap[selectedVehicleId]
   const currentZone = zoneMap[selectedZoneId]
-  const manifestListTitle = (
-    <div className='dispatch-manifest-list-header'>
-      <div className='d-flex justify-content-between align-items-center'>
-        <h4 className='header-title mb-0'>Listado</h4>
-      </div>
-      <ul className='nav nav-tabs nav-bordered mt-3 flex-nowrap overflow-auto'>
+  const manifestTabsToolbar = (
+    <div className='d-flex flex-wrap align-items-end w-100' style={{ gap: 8 }}>
+      <div className='d-flex flex-wrap' style={{ gap: 8 }}>
         {manifestTabs.map((tab) => (
-          <li className='nav-item' key={`dispatch-manifest-tab-${tab.value}`}>
-            <a
-              href='#'
-              className={`nav-link ${activeManifestTab === tab.value ? 'active' : ''}`}
-              onClick={(e) => {
-                e.preventDefault()
-                setActiveManifestTab(tab.value)
-              }}
-            >
-              {tab.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-      <form className='mt-3' onSubmit={applyManifestFilters}>
-        <div className='row g-3 align-items-end'>
-          {/* Sin filtro de empresa: el listado ya viene limitado a Kamary Peru por el alcance del
-              modulo (DispatchController lo aplica en la consulta), asi que el select solo podia
-              tener una opcion y elegirla no cambiaba nada. */}
-          <div className='col-12 col-lg-6'>
-            <label className='form-label'>Fecha Inicio</label>
-            <input
-              type='date'
-              className='form-control'
-              value={manifestFilters.startDate}
-              onChange={(e) => setManifestFilters(prev => ({ ...prev, startDate: e.target.value }))}
-            />
-          </div>
-          <div className='col-12 col-lg-6'>
-            <label className='form-label'>Fecha Fin</label>
-            <input
-              type='date'
-              className='form-control'
-              value={manifestFilters.endDate}
-              onChange={(e) => setManifestFilters(prev => ({ ...prev, endDate: e.target.value }))}
-            />
-          </div>
-        </div>
-        <div className='d-flex justify-content-center mt-3'>
-          <button type='submit' className='btn btn-outline-primary px-4'>
-            <i className='mdi mdi-magnify me-1'></i>Filtrar
+          <button
+            key={`dispatch-manifest-tab-${tab.value}`}
+            type='button'
+            className={activeManifestTab === tab.value ? 'vdt-btn-acc' : 'vdt-btn-soft'}
+            onClick={() => setActiveManifestTab(tab.value)}
+          >
+            {tab.value === 'approved' ? <i className='mdi mdi-check-decagram'></i> : <i className='mdi mdi-clipboard-list-outline'></i>}
+            <span className='d-none d-md-inline'>{tab.label}</span>
+            <span className='d-md-none'>{tab.value === 'approved' ? 'Aprobados' : 'Pendientes'}</span>
           </button>
-        </div>
-      </form>
-      <div className='d-flex flex-wrap gap-2 mt-4'>
-        <button type='button' className='btn btn-sm btn-light border' onClick={copyManifestRows}>
-          Copiar
-        </button>
-        <button type='button' className='btn btn-sm btn-light border' onClick={exportManifestExcel} disabled={isExportingManifest}>
-          {isExportingManifest ? 'Generando...' : 'Excel'}
-        </button>
+        ))}
       </div>
+      <form className='d-flex flex-wrap align-items-end ms-lg-auto dispatch-filter-form' style={{ gap: 8 }} onSubmit={applyManifestFilters}>
+        <div className='dispatch-filter-date'>
+          <small className='text-muted d-block'>Desde</small>
+          <input type='date' className='form-control' style={{ height: 40, borderRadius: 12 }} value={manifestFilters.startDate} onChange={(e) => setManifestFilters(prev => ({ ...prev, startDate: e.target.value }))} />
+        </div>
+        <div className='dispatch-filter-date'>
+          <small className='text-muted d-block'>Hasta</small>
+          <input type='date' className='form-control' style={{ height: 40, borderRadius: 12 }} value={manifestFilters.endDate} onChange={(e) => setManifestFilters(prev => ({ ...prev, endDate: e.target.value }))} />
+        </div>
+        <button type='submit' className='vdt-btn-soft'><i className='mdi mdi-filter-variant'></i> Filtrar</button>
+        <button type='button' className='vdt-btn-soft' onClick={copyManifestRows}><i className='mdi mdi-content-copy'></i> Copiar</button>
+        <button type='button' className='vdt-btn-soft' onClick={exportManifestExcel} disabled={isExportingManifest}>
+          <i className='mdi mdi-file-excel'></i> {isExportingManifest ? 'Generando...' : 'Excel'}
+        </button>
+      </form>
     </div>
   )
 
+  const rowActions = (data) => {
+    if (isClosedManifest(data)) {
+      return [{ icon: 'mdi mdi-file-pdf-box', title: 'Previsualizar o imprimir manifiesto PDF', label: 'PDF', bg: '#fcebeb', color: '#e24b4a', onClick: openDispatchManifestPdf }]
+    }
+    const pending = isPendingManifest(data)
+    return [
+      { icon: 'mdi mdi-pencil', title: 'Editar manifiesto', label: 'Editar', bg: '#e7f2fd', color: '#188ae2', hidden: !(pending && !isDriverSession), onClick: (r) => onModalOpen(r) },
+      { icon: 'mdi mdi-map-marker-path', title: 'Abrir ruta en mapa', label: 'Ruta', bg: '#e6f4f8', color: '#35b8e0', hidden: !(pending || isDriverSession), onClick: onOpenRoute },
+      { icon: 'mdi mdi-check', title: 'Aprobar manifiesto y poner en ruta', label: 'En ruta', bg: '#e6f6ef', color: '#10b981', hidden: !(pending && !isDriverSession), onClick: onStartRoute },
+      { icon: 'mdi mdi-file-document', title: dispatchGuides(data).length ? 'Ver guias' : 'Generar guias', label: 'Guias', bg: '#fff5e0', color: '#f9a825', hidden: !(pending && !isDriverSession), onClick: onShowGuides },
+      { icon: 'mdi mdi-check-decagram', title: 'Dar conformidad de manifiesto', label: 'Conformidad', bg: '#e6f6ef', color: '#10b981', hidden: !(canConfirmManifest(data) && !isDriverSession), onClick: onConfirmManifestConformity },
+      { icon: 'mdi mdi-file-pdf-box', title: 'Previsualizar o imprimir manifiesto PDF', label: 'PDF', bg: '#fcebeb', color: '#e24b4a', onClick: openDispatchManifestPdf },
+      { icon: 'mdi mdi-camera', title: 'Registrar o ver evidencias de entrega', label: 'Evidencias', bg: '#eef0f4', color: '#5b69bc', hidden: !(pending || isDriverSession), onClick: onShowEvidences },
+      { icon: 'mdi mdi-delete', title: 'Eliminar', bg: '#fcebeb', color: '#e24b4a', hidden: !(pending && !isDriverSession), onClick: (r) => onDelete(r.id) },
+    ]
+  }
+
+  const assignmentOrderOptions = (uid) => availableOrders.map(order => {
+    const taken = isOrderSelectedInOtherAssignment(order.id, uid)
+    return { value: `${order.id}`, label: `${orderOptionLabel(order)}${taken ? ' (ya seleccionado)' : ''}` }
+  })
+
   return <>
     <style>{`
-      #dispatch-form-container .dispatch-assignment-summary {
-        color: var(--ct-gray-600);
-        font-size: 0.82rem;
+      .dispatch-form-section {
+        border: 1px solid #eef0f4;
+        border-radius: 10px;
+        padding: 12px 14px 6px;
+        margin-bottom: 12px;
       }
-      #dispatch-form-container .dispatch-assignment-list {
+      .dispatch-form-section-title {
         display: flex;
-        flex-direction: column;
-        gap: 12px;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 10px;
+        color: #6c757d;
+        font-size: .75rem;
+        font-weight: 700;
+        letter-spacing: .03em;
+        text-transform: uppercase;
       }
-      #dispatch-form-container .dispatch-assignment-row {
+      .dispatch-form-section-title i { color: var(--vd-primary, #e24b4a); font-size: 16px; }
+      .dispatch-assignment-row {
         align-items: end;
+        border-bottom: 1px dashed #eef0f4;
         display: grid;
-        gap: 12px 16px;
-        grid-template-columns: minmax(360px, 1fr) minmax(210px, 250px) minmax(120px, 160px) 68px;
+        gap: 8px 12px;
+        grid-template-columns: minmax(0, 1fr) 120px 40px;
+        padding-bottom: 8px;
+        margin-bottom: 8px;
       }
-      #dispatch-form-container .dispatch-assignment-field,
-      #dispatch-form-container .dispatch-assignment-order-field {
-        min-width: 0;
-      }
-      #dispatch-form-container .dispatch-assignment-row .form-label {
-        line-height: 1.2;
-        margin-bottom: 6px;
-      }
-      #dispatch-form-container .dispatch-assignment-row .form-control,
-      #dispatch-form-container .dispatch-assignment-row .select2-container .select2-selection--single {
-        min-height: 38px;
-      }
-      #dispatch-form-container .dispatch-assignment-row .select2-container {
-        width: 100% !important;
-      }
-      #dispatch-form-container .dispatch-assignment-row .select2-container .select2-selection--single {
-        align-items: center;
-        border-color: var(--ct-border-color);
-        display: flex;
-      }
-      #dispatch-form-container .dispatch-assignment-row .select2-container .select2-selection__rendered {
-        line-height: 36px;
-        padding-left: 12px;
-        padding-right: 28px;
-      }
-      #dispatch-form-container .dispatch-assignment-row .select2-container .select2-selection__arrow {
-        height: 36px;
-      }
-      #dispatch-form-container .select2-dropdown {
-        z-index: 1065;
-      }
-      #dispatch-form-container .dispatch-assignment-remove {
-        height: 38px;
-      }
-      .dispatch-grid-actions {
-        align-items: center;
-        display: flex;
-        flex-wrap: nowrap;
-        gap: 4px;
-        min-width: max-content;
-      }
-      .dispatch-grid-actions .dx-button {
-        flex: 0 0 auto;
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-      }
-      @media (max-width: 991.98px) {
-        #dispatch-form-container .dispatch-assignment-row {
-          grid-template-columns: 1fr 1fr;
-        }
-      }
+      .dispatch-assignment-row > :first-child { grid-column: 1 / -1; }
       @media (max-width: 575.98px) {
-        #dispatch-form-container .dispatch-assignment-row {
-          grid-template-columns: 1fr;
-        }
+        .dispatch-filter-form { width: 100%; }
+        .dispatch-filter-date { flex: 1 1 calc(50% - 4px); min-width: 0; }
+        .dispatch-filter-form > button { flex: 1 1 auto; }
       }
     `}</style>
-    <Table
-      gridRef={gridRef}
-      title={manifestListTitle}
+    <VdTable
+      key={`dispatch-vdtable-${activeManifestTab}`}
+      ref={tableRef}
       rest={dispatchesRest}
-      pageSize={10}
-      filterValue={dispatchGridFilter}
-      // El panel de filtro de la tabla mostraba en crudo el filtro interno de la pestana
-      // ("[ESTADO] Igual 'Pendiente' O ...") y ofrecia un "Limpiar filtro" que lo borraba: al
-      // pulsarlo las dos pestanas pasaban a listar lo mismo.
-      allowQueryBuilder={false}
-      toolBar={(items) => {
-        items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'refresh', onClick: () => $(gridRef.current).dxDataGrid('instance').refresh() } })
-        if (!isDriverSession && activeManifestTab === 'pending') {
-          items.unshift({ widget: 'dxButton', location: 'after', options: { icon: 'add', onClick: () => onModalOpen() } })
-        }
-      }}
+      icon='mdi mdi-truck-fast'
+      title='Despachos'
+      unit='manifiestos'
+      defaultSort={{ field: 'scheduled_date', desc: true }}
+      defaultPageSize={25}
+      baseFilter={dispatchGridFilter}
+      searchFields={['code', 'manifest_code', 'driver_name', 'vehicle_plate', 'zone']}
+      searchPlaceholder='Buscar por codigo, manifiesto, conductor o placa…'
+      emptyText='No hay manifiestos en esta pestaña.'
+      headerActions={<>
+        <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Refrescar' onClick={refreshGrid}>
+          <i className='mdi mdi-refresh'></i>
+        </button>
+        {!isDriverSession && activeManifestTab === 'pending' && (
+          <button type='button' className='vdt-btn-pri' onClick={() => onModalOpen()}>
+            <i className='mdi mdi-plus'></i> Nuevo despacho
+          </button>
+        )}
+      </>}
+      toolbar={manifestTabsToolbar}
+      actions={rowActions}
       columns={[
-        { caption: 'ACCIONES', width: isDriverSession ? 120 : 260, fixed: true, fixedPosition: 'left', allowFiltering: false, allowExporting: false, cellTemplate: (container, { data }) => {
-          container.css({ overflow: 'visible', textOverflow: 'unset' })
-          const actions = $('<div>').addClass('dispatch-grid-actions')
-
-          if (isClosedManifest(data)) {
-            actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Previsualizar o imprimir manifiesto PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openDispatchManifestPdf(data) }))
-            container.append(actions)
-            return
-          }
-
-          if (isPendingManifest(data) && !isDriverSession) {
-            actions.append(DxButton({ className: 'btn btn-xs btn-soft-primary', title: 'Editar manifiesto', icon: 'mdi mdi-pencil', onClick: () => onModalOpen(data) }))
-          }
-          if (isPendingManifest(data) || isDriverSession) {
-            actions.append(DxButton({ className: 'btn btn-xs btn-soft-info', title: 'Abrir ruta en mapa', icon: 'mdi mdi-map-marker-path', onClick: () => onOpenRoute(data) }))
-          }
-          if (isPendingManifest(data) && !isDriverSession) {
-            actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Aprobar manifiesto y poner en ruta', icon: 'mdi mdi-check', onClick: () => onStartRoute(data) }))
-          }
-          if (isPendingManifest(data) && !isDriverSession) {
-            actions.append(DxButton({ className: 'btn btn-xs btn-soft-warning', title: dispatchGuides(data).length ? 'Ver guias' : 'Generar guias', icon: 'mdi mdi-file-document', onClick: () => onShowGuides(data) }))
-          }
-          if (canConfirmManifest(data) && !isDriverSession) {
-            actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Dar conformidad de manifiesto', icon: 'mdi mdi-check-decagram', onClick: () => onConfirmManifestConformity(data) }))
-          }
-          actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Previsualizar o imprimir manifiesto PDF', icon: 'mdi mdi-file-pdf-box', onClick: () => openDispatchManifestPdf(data) }))
-          if (isPendingManifest(data) || isDriverSession) {
-            actions.append(DxButton({ className: 'btn btn-xs btn-soft-success', title: 'Registrar o ver evidencias de entrega', icon: 'mdi mdi-camera', onClick: () => onShowEvidences(data) }))
-          }
-          if (isPendingManifest(data) && !isDriverSession) {
-            actions.append(DxButton({ className: 'btn btn-xs btn-soft-danger', title: 'Eliminar', icon: 'mdi mdi-delete', onClick: () => onDelete(data.id) }))
-          }
-          container.append(actions)
-        } },
+        { key: 'id', label: 'ID', field: 'id', visible: false },
         {
-          dataField: 'dispatch_status',
-          caption: 'ESTADO',
-          width: 130,
-          lookup: toLookup(dispatchStatusOptions),
-          cellTemplate: (container, { data }) => {
-            const meta = manifestStatusMeta(data?.dispatch_status)
-            container.append($('<span>').addClass(meta.className).text(meta.label))
-          }
+          key: 'manifest_code', label: 'Codigo', field: 'manifest_code', width: '140px',
+          filter: { type: 'text', fields: ['manifest_code', 'code'] },
+          render: (row) => (isDriverSession || !isPendingManifest(row))
+            ? <span className='fw-semibold'>{manifestCode(row)}</span>
+            : <a className='admin-grid-edit-link' style={{ cursor: 'pointer', fontWeight: 600 }} title='Editar manifiesto' onClick={() => onModalOpen(row)}>{manifestCode(row)}</a>,
         },
         {
-          dataField: 'manifest_code',
-          caption: 'CODIGO',
-          width: 125,
-          calculateCellValue: manifestCode,
-          cellTemplate: (container, { data }) => {
-            if (isDriverSession || !isPendingManifest(data)) {
-              container.text(manifestCode(data))
-              return
-            }
-            renderGridEditLink(container, manifestCode(data), () => onModalOpen(data), 'Editar manifiesto')
-          }
+          key: 'dispatch_status', label: 'Estado', field: 'dispatch_status', width: '120px',
+          render: (row) => { const meta = manifestStatusMeta(row?.dispatch_status); return <span className={meta.className}>{meta.label}</span> },
         },
-        { dataField: 'scheduled_date', caption: 'FECHA ENTREGA', dataType: 'date', width: 140 },
-        { dataField: 'shift', caption: 'TURNO', width: 100, calculateCellValue: manifestShift },
-        { caption: 'VEHICULO', minWidth: 185, calculateCellValue: manifestVehicle },
-        { caption: 'CONDUCTORES', minWidth: 250, calculateCellValue: manifestDrivers },
-        { caption: 'ZONA', minWidth: 150, calculateCellValue: manifestZone },
-        { dataField: 'creator.fullname', caption: 'USUARIO REGISTRO', width: 170, cellTemplate: (container, { data }) => container.text(formatAuditUser(data.creator) || '-') },
+        { key: 'scheduled_date', label: 'Fecha entrega', field: 'scheduled_date', width: '130px', filter: { type: 'date' }, render: (row) => formatDateText(row.scheduled_date) || '-' },
+        { key: 'shift', label: 'Turno', field: 'shift', width: '100px', render: manifestShift },
+        { key: 'vehicle', label: 'Vehiculo', field: 'vehicle_plate', filter: { type: 'text', fields: ['vehicle_plate', 'vehicle_label'] }, render: manifestVehicle },
+        { key: 'drivers', label: 'Conductores', field: 'driver_name', filter: { type: 'text', fields: ['driver_name', 'copilot_name'] }, render: manifestDrivers },
+        { key: 'zone', label: 'Zona', field: 'zone', filter: { type: 'text' }, render: manifestZone },
         {
-          dataField: 'created_at',
-          caption: 'FECHA REGISTRO',
-          dataType: 'datetime',
-          width: 170,
-          cellTemplate: (container, { data }) => container.text(formatDateText(data?.created_at, true) || '-')
-        }
+          key: 'orders', label: 'Pedidos', field: 'assignments', sortable: false,
+          render: (row) => {
+            const codes = dispatchAssignments(row).map(a => assignmentOrder(a)?.code ?? a?.commercial_order_code).filter(Boolean)
+            return codes.length ? <div className='d-flex gap-1 flex-wrap'>{codes.map(code => <span key={code} className='badge badge-soft-secondary'>{code}</span>)}</div> : '-'
+          },
+        },
+        { key: 'creator', label: 'Usuario registro', field: 'creator.fullname', sortable: false, render: (row) => formatAuditUser(row.creator) || '-' },
+        { key: 'created_at', label: 'Fecha registro', field: 'created_at', width: '160px', render: (row) => formatDateText(row?.created_at, true) || '-' },
       ]}
+      renderCard={(row, actionButtons) => {
+        const meta = manifestStatusMeta(row?.dispatch_status)
+        return <div className='vdt-card'>
+          <div className='d-flex justify-content-between align-items-start' style={{ gap: 8 }}>
+            <div style={{ minWidth: 0 }}>
+              <p className='fw-semibold mb-0' style={{ color: 'var(--vd-ink)' }}>{manifestCode(row)}</p>
+              <small className='text-muted'>{formatDateText(row.scheduled_date)} · {manifestShift(row)}</small>
+            </div>
+            <span className={meta.className}>{meta.label}</span>
+          </div>
+          <small className='text-muted d-block mt-2'><i className='mdi mdi-truck me-1'></i>{manifestVehicle(row)}</small>
+          <small className='text-muted d-block'><i className='mdi mdi-account me-1'></i>{manifestDrivers(row)}</small>
+          <small className='text-muted d-block'><i className='mdi mdi-map-marker me-1'></i>{manifestZone(row)}</small>
+          {actionButtons && <div className='d-flex flex-wrap mt-3 pt-3' style={{ gap: 8, borderTop: '1px solid #f1f1f6' }}>{actionButtons}</div>}
+        </div>
+      }}
     />
 
-    <Modal modalRef={modalRef} title={isEditing ? 'Editar despacho' : 'Agregar despacho'} size='xl' onSubmit={onSave}>
-      <div id='dispatch-form-container' className='row'>
-        <div className='col-md-3 mb-3'>
-          <label className='form-label'>Codigo</label>
-          <input ref={codeRef} className='form-control' disabled />
-          <input ref={idRef} hidden />
-        </div>
-        {/* Con una sola empresa en el alcance del modulo el campo no se muestra: se autoselecciona
-            en onModalOpen. Si algun dia hay mas de una, el select vuelve solo. */}
-        {businesses.length !== 1 && (
-          <div className='col-md-3 mb-3'>
-            <label className='form-label'>Empresa</label>
-            <select className='form-control' value={selectedBusinessId} onChange={async (e) => { setSelectedBusinessId(e.target.value); await loadBranches(e.target.value, ''); }} required>
-              <option value=''>Seleccione</option>
-              {businesses.map(row => <option key={`dispatch-business-${row.id}`} value={row.id}>{row.name}</option>)}
-            </select>
+    <Modal modalRef={modalRef} title={isEditing ? 'Editar despacho' : 'Nuevo despacho'} size='lg' preventEnterSubmit onSubmit={onSave}>
+      <div id='dispatch-form-container'>
+        <input ref={idRef} hidden />
+        <DispatchSection icon='mdi mdi-warehouse' title='Origen'>
+          <InputFormGroup eRef={codeRef} col='col-md-4' label='Codigo' disabled />
+          {/* Con una sola empresa en el alcance del modulo el campo no se muestra: se autoselecciona
+              en onModalOpen. Si algun dia hay mas de una, el select vuelve solo. */}
+          {businesses.length !== 1 && (
+            <VdSelect col='col-md-8' label='Empresa' required value={selectedBusinessId}
+              onChange={async (value) => { setSelectedBusinessId(value); await loadBranches(value, '') }}
+              options={optionsOf(businesses, row => row.name)} placeholder='-- Seleccionar empresa --' />
+          )}
+          <VdSelect col='col-md-4' label='Sede' value={selectedBranchId} onChange={setSelectedBranchId}
+            options={optionsOf(branches, row => row.name)} placeholder='-- Seleccionar sede --' clearable />
+          <VdSelect col='col-md-4' label='Almacen' required value={selectedWarehouseId} onChange={setSelectedWarehouseId}
+            options={optionsOf(warehouses, row => row.name)} placeholder='-- Seleccionar almacen --' />
+        </DispatchSection>
+
+        <DispatchSection icon='mdi mdi-calendar-clock' title='Programacion'>
+          <InputFormGroup eRef={scheduledDateRef} col='col-md-4' label='Fecha programada' type='date' required />
+          <VdSelect col='col-md-4' label='Turno' value={shift} onChange={setShift} options={shiftOptions} />
+          <VdSelect col='col-md-4' label='Estado' value={dispatchStatus} onChange={setDispatchStatus}
+            options={dispatchStatusOptions.filter((option) => operationalDispatchStatuses.includes(option.value))} />
+          <InputFormGroup eRef={manifestCodeRef} col='col-md-4' label='Manifiesto' placeholder='Se genera al poner en ruta' />
+        </DispatchSection>
+
+        <DispatchSection icon='mdi mdi-truck' title='Conductor, vehiculo y zona'>
+          <VdSelect col='col-md-6' label='Conductor' value={selectedDriverId} onChange={setSelectedDriverId} clearable
+            options={optionsOf(drivers, row => `${row.code} - ${row.full_name}`)} placeholder='Sin conductor' />
+          <InputFormGroup col='col-md-3' label='Licencia' value={currentDriver?.license_number ?? ''} disabled />
+          <InputFormGroup eRef={copilotNameRef} col='col-md-3' label='Copiloto' />
+          <VdSelect col='col-md-6' label='Vehiculo' value={selectedVehicleId} onChange={onVehicleChange} clearable
+            options={optionsOf(vehicles, row => `${row.plate} - ${row.label ?? row.code}`)} placeholder='Sin vehiculo' />
+          <InputFormGroup col='col-md-3' label='Placa' value={currentVehicle?.plate ?? ''} disabled />
+          <div className='col-md-3' />
+          <VdSelect col='col-md-6' label='Zona' value={selectedZoneId} onChange={setSelectedZoneId} clearable
+            options={optionsOf(zones, row => `${row.code} - ${row.name}`)} placeholder='Sin zona' />
+          <InputFormGroup col='col-md-3' label='Distrito zona' value={currentZone?.district ?? ''} disabled />
+          <div className='col-md-3 d-flex align-items-end mb-2' style={{ gap: 6 }}>
+            <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Nueva zona' onClick={() => openZoneModal()}><i className='mdi mdi-plus'></i></button>
+            <button type='button' className='vdt-btn-soft vdt-btn-icon' title='Editar zona' onClick={onOpenSelectedZone} disabled={!selectedZoneId}><i className='mdi mdi-pencil'></i></button>
           </div>
-        )}
-        <div className='col-md-3 mb-3'>
-          <label className='form-label'>Sede</label>
-          <select className='form-control' value={selectedBranchId} onChange={(e) => setSelectedBranchId(e.target.value)}>
-            <option value=''>Seleccione</option>
-            {branches.map(row => <option key={`dispatch-branch-${row.id}`} value={row.id}>{row.name}</option>)}
-          </select>
-        </div>
-        <div className='col-md-3 mb-3'>
-          <label className='form-label'>Almacen</label>
-          <select className='form-control' value={selectedWarehouseId} onChange={(e) => setSelectedWarehouseId(e.target.value)} required>
-            <option value=''>Seleccione</option>
-            {warehouses.map(row => <option key={`dispatch-warehouse-${row.id}`} value={row.id}>{row.name}</option>)}
-          </select>
-        </div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Fecha programada</label><input ref={scheduledDateRef} type='date' className='form-control' required /></div>
-        <div className='col-md-3 mb-3'>
-          <label className='form-label'>Turno</label>
-          <select ref={shiftRef} className='form-control'>
-            {shiftOptions.map((option) => (
-              <option key={`dispatch-shift-${option.value}`} value={option.value}>{option.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className='col-md-3 mb-3'>
-          <label className='form-label'>Conductor</label>
-          <select className='form-control' value={selectedDriverId} onChange={(e) => setSelectedDriverId(e.target.value)}>
-            <option value=''>Sin conductor</option>
-            {drivers.map(row => <option key={`dispatch-driver-${row.id}`} value={row.id}>{row.code} - {row.full_name}</option>)}
-          </select>
-        </div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Copiloto</label><input ref={copilotNameRef} className='form-control' /></div>
-        <div className='col-md-4 mb-3'>
-          <label className='form-label'>Vehiculo</label>
-          <select className='form-control' value={selectedVehicleId} onChange={(e) => onVehicleChange(e.target.value)}>
-            <option value=''>Sin vehiculo</option>
-            {vehicles.map(row => <option key={`dispatch-vehicle-${row.id}`} value={row.id}>{row.plate} - {row.label ?? row.code}</option>)}
-          </select>
-        </div>
-        <div className='col-md-4 mb-3'>
-          <label className='form-label'>Zona</label>
-          <select className='form-control' value={selectedZoneId} onChange={(e) => setSelectedZoneId(e.target.value)}>
-            <option value=''>Sin zona</option>
-            {zones.map(row => <option key={`dispatch-zone-${row.id}`} value={row.id}>{row.code} - {row.name}</option>)}
-          </select>
-          <div className='d-flex gap-2 mt-2'>
-            <button type='button' className='btn btn-sm btn-outline-primary' onClick={() => openZoneModal()}>
-              Nueva zona
-            </button>
-            <button type='button' className='btn btn-sm btn-outline-secondary' onClick={onOpenSelectedZone} disabled={!selectedZoneId}>
-              Editar zona
-            </button>
-          </div>
-        </div>
-        <div className='col-md-4 mb-3'><label className='form-label'>Manifiesto</label><input ref={manifestCodeRef} className='form-control' /></div>
-        <div className='col-md-3 mb-3'>
-          <label className='form-label'>Estado</label>
-          <select ref={dispatchStatusRef} className='form-control'>
-            {dispatchStatusOptions
-              .filter((option) => operationalDispatchStatuses.includes(option.value))
-              .map((option) => (
-                <option key={`dispatch-status-${option.value}`} value={option.value}>{option.label}</option>
-              ))}
-          </select>
-        </div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Licencia</label><input className='form-control' value={currentDriver?.license_number ?? ''} disabled /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Placa</label><input className='form-control' value={currentVehicle?.plate ?? ''} disabled /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Zona final</label><input className='form-control' value={currentZone?.name ?? ''} disabled /></div>
-        <div className='col-md-3 mb-3'><label className='form-label'>Distrito zona</label><input className='form-control' value={currentZone?.district ?? ''} disabled /></div>
-        <div className='col-12 mb-3'>
-          <div className='d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2'>
-            <div>
-              <label className='form-label mb-0'>Pedidos asignados</label>
-              <div className='dispatch-assignment-summary'>
-                {!selectedWarehouseId
-                  ? 'Selecciona un almacen para listar sus pedidos disponibles.'
-                  : availableOrders.length > 0
-                    ? `${availableOrders.length} pedido(s) disponible(s) del almacen seleccionado. ${selectedAvailableOrderCount} ya seleccionado(s).`
-                    : 'No hay pedidos disponibles para este almacen. Revisa que el pedido tenga el mismo almacen y no este entregado/cancelado.'}
-              </div>
-            </div>
-            <button type='button' className='btn btn-sm btn-outline-secondary' onClick={loadCommercialOrders} disabled={isLoadingOrders}>
-              {isLoadingOrders ? 'Cargando pedidos...' : 'Recargar pedidos'}
+        </DispatchSection>
+
+        <DispatchSection
+          icon='mdi mdi-package-variant-closed'
+          title='Pedidos asignados'
+          aside={<button type='button' className='vdt-btn-soft' style={{ height: 32 }} onClick={loadCommercialOrders} disabled={isLoadingOrders}>
+            <i className='mdi mdi-refresh'></i> {isLoadingOrders ? 'Cargando...' : 'Recargar'}
+          </button>}
+        >
+          <div className='col-12'>
+            <small className='text-muted d-block mb-2'>
+              {!selectedWarehouseId
+                ? 'Selecciona un almacen para listar sus pedidos disponibles.'
+                : availableOrders.length > 0
+                  ? `${availableOrders.length} pedido(s) disponible(s) del almacen seleccionado. ${selectedAvailableOrderCount} ya seleccionado(s).`
+                  : 'No hay pedidos listos para este almacen. Revisa que el pedido este en "Listo" en picking y tenga el mismo almacen.'}
+            </small>
+            {assignments.map(row => <div key={row.uid} className='dispatch-assignment-row'>
+              <VdSelect noMargin label='Pedido' value={`${row.commercial_order_id ?? ''}`} onChange={(value) => onAssignmentChange(row.uid, value ?? '')} clearable
+                options={assignmentOrderOptions(row.uid)} placeholder={isLoadingOrders ? 'Cargando pedidos...' : (availableOrders.length ? '-- Seleccionar pedido --' : 'Sin pedidos disponibles')} />
+              <InputFormGroup col='mb-0' label='Cliente' value={row.customer_name} disabled />
+              <InputFormGroup col='mb-0' label='Total' value={Number(row.total || 0).toFixed(2)} disabled />
+              <button
+                type='button'
+                className='vdt-btn-soft vdt-btn-icon mb-2'
+                style={{ color: '#e24b4a' }}
+                title='Quitar pedido'
+                onClick={() => setAssignments(prev => prev.length === 1 ? [emptyAssignment()] : prev.filter(item => item.uid !== row.uid))}
+              >
+                <i className='mdi mdi-delete'></i>
+              </button>
+            </div>)}
+            <button type='button' className='vdt-btn-soft mb-2' style={{ height: 34 }} onClick={() => setAssignments(prev => [...prev, emptyAssignment()])} disabled={!canAddAssignment}>
+              <i className='mdi mdi-plus'></i> Agregar pedido
             </button>
           </div>
-          <div className='border rounded p-2'>
-            <div className='dispatch-assignment-list'>
-              {assignments.map(row => <div key={row.uid} className='dispatch-assignment-row'>
-                <SelectFormGroup
-                  col='dispatch-assignment-order-field'
-                  label='Pedido'
-                  value={row.commercial_order_id}
-                  dropdownParent='#dispatch-form-container'
-                  noMargin
-                  effectWith={[assignmentSelectEffectKey]}
-                  onChange={(e) => onAssignmentChange(row.uid, e.target.value)}
-                >
-                  <option value=''>{isLoadingOrders ? 'Cargando pedidos...' : 'Seleccione'}</option>
-                  {!isLoadingOrders && availableOrders.length === 0 && <option value='' disabled>Sin pedidos disponibles</option>}
-                  {availableOrders.map(order => {
-                    const selectedInOtherRow = isOrderSelectedInOtherAssignment(order.id, row.uid)
-                    return (
-                      <option key={`dispatch-order-${order.id}`} value={order.id} disabled={selectedInOtherRow}>
-                        {`${orderOptionLabel(order)}${selectedInOtherRow ? ' (ya seleccionado)' : ''}`}
-                      </option>
-                    )
-                  })}
-                </SelectFormGroup>
-                <div className='dispatch-assignment-field'>
-                  <label className='form-label'>Cliente</label>
-                  <input className='form-control' value={row.customer_name} disabled />
-                </div>
-                <div className='dispatch-assignment-field'>
-                  <label className='form-label'>Total</label>
-                  <input className='form-control' value={Number(row.total || 0).toFixed(2)} disabled />
-                </div>
-                <div className='dispatch-assignment-field'>
-                  <button
-                    type='button'
-                    className='btn btn-outline-danger w-100 dispatch-assignment-remove'
-                    title='Eliminar pedido asignado'
-                    onClick={() => setAssignments(prev => prev.length === 1 ? [emptyAssignment()] : prev.filter(item => item.uid !== row.uid))}
-                  >
-                    <i className='mdi mdi-delete'></i>
-                  </button>
-                </div>
-              </div>)}
-            </div>
-            <button type='button' className='btn btn-sm btn-outline-primary mt-2' onClick={() => setAssignments(prev => [...prev, emptyAssignment()])} disabled={!canAddAssignment}>
-              Agregar pedido
-            </button>
-          </div>
-        </div>
-        <div className='col-12 mb-1'><label className='form-label'>Observaciones</label><textarea ref={observationsRef} className='form-control' rows='3' /></div>
+        </DispatchSection>
+
+        <TextareaFormGroup eRef={observationsRef} col='col-12' label='Observaciones' rows={2} />
       </div>
     </Modal>
 
     <Modal modalRef={zoneModalRef} title={isEditingZone ? 'Editar zona' : 'Nueva zona'} size='lg' onSubmit={onSaveZone}>
       <div className='row'>
         <input ref={zoneIdRef} hidden />
-        <div className='col-md-4 mb-3'>
-          <label className='form-label'>Empresa</label>
-          <select ref={zoneBusinessRef} className='form-control'>
-            <option value=''>Global</option>
-            {businesses.map(row => <option key={`dispatch-zone-business-${row.id}`} value={row.id}>{row.name}</option>)}
-          </select>
-        </div>
-        <div className='col-md-8 mb-3'>
-          <label className='form-label'>Nombre</label>
-          <input ref={zoneNameRef} className='form-control' placeholder='Ej. Lima Norte' required />
-        </div>
-        <UbigeoCascade
+        <VdSelect col='col-md-4' label='Empresa' value={zoneBusinessId} onChange={(value) => setZoneBusinessId(value ?? '')} clearable
+          options={optionsOf(businesses, row => row.name)} placeholder='Global' />
+        <InputFormGroup eRef={zoneNameRef} col='col-md-8' label='Nombre' placeholder='Ej. Lima Norte' required />
+        <VdUbigeoCascade
           value={zoneLocation}
           onChange={setZoneLocation}
           showUbigeo={false}
@@ -1277,14 +1136,8 @@ const Dispatches = ({ session }) => {
           districtCol='col-md-4'
           required
         />
-        <div className='col-12 mb-3'>
-          <label className='form-label'>Referencia</label>
-          <textarea ref={zoneReferenceRef} className='form-control' rows='2' />
-        </div>
-        <div className='col-12'>
-          <label className='form-label'>Observaciones</label>
-          <textarea ref={zoneObservationsRef} className='form-control' rows='2' />
-        </div>
+        <TextareaFormGroup eRef={zoneReferenceRef} col='col-12' label='Referencia' rows={2} />
+        <TextareaFormGroup eRef={zoneObservationsRef} col='col-12' label='Observaciones' rows={2} />
       </div>
     </Modal>
 
@@ -1353,15 +1206,8 @@ const Dispatches = ({ session }) => {
           <label className='form-label'>Recibido por</label>
           <input className='form-control' value={evidenceForm.recipient_name} onChange={(e) => onEvidenceFieldChange('recipient_name', e.target.value)} />
         </div>
-        <div className='col-md-3 mb-3'>
-          <label className='form-label'>Tipo doc.</label>
-          <select className='form-control' value={evidenceForm.recipient_document_type} onChange={(e) => onEvidenceFieldChange('recipient_document_type', e.target.value)}>
-            <option value='DNI'>DNI</option>
-            <option value='RUC'>RUC</option>
-            <option value='CE'>CE</option>
-            <option value='OTRO'>Otro</option>
-          </select>
-        </div>
+        <VdSelect col='col-md-3 mb-2' label='Tipo doc.' value={evidenceForm.recipient_document_type} onChange={(value) => onEvidenceFieldChange('recipient_document_type', value)}
+          options={[{ value: 'DNI', label: 'DNI' }, { value: 'RUC', label: 'RUC' }, { value: 'CE', label: 'CE' }, { value: 'OTRO', label: 'Otro' }]} />
         <div className='col-md-3 mb-3'>
           <label className='form-label'>Numero</label>
           <input className='form-control' value={evidenceForm.recipient_document_number} onChange={(e) => onEvidenceFieldChange('recipient_document_number', e.target.value)} />

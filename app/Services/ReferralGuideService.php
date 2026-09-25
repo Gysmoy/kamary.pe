@@ -54,13 +54,14 @@ class ReferralGuideService
     }
 
     /**
-     * Crea una guia de remision MANUAL (sin pedido/almacen), a partir de datos ingresados a mano.
-     * Sirve para empresas que no usan el flujo de inventario (ej. Kamary Medical). La emision
-     * reusa el mismo motor GRE 2.0 (issue()).
+     * Crea una guia de remision MANUAL a partir de datos ingresados a mano. Si viene el pedido
+     * (creado desde la guia con productos del almacen), la guia queda amarrada a ese pedido,
+     * toma sus items y se emite cuando el pedido sale de preparacion (issueManualForOrder()).
+     * La emision reusa el mismo motor GRE 2.0 (issue()).
      */
-    public function createManual(array $d): ReferralGuide
+    public function createManual(array $d, ?CommercialOrder $order = null): ReferralGuide
     {
-        return DB::transaction(function () use ($d) {
+        return DB::transaction(function () use ($d, $order) {
             $business = \App\Models\Business::findOrFail((int) ($d['business_id'] ?? 0));
 
             $branch = null;
@@ -84,14 +85,19 @@ class ReferralGuideService
                 $transferDate = $issueDate;
             }
 
-            $items = collect($d['items'] ?? [])->filter(fn($it) => trim((string) ($it['description'] ?? '')) !== '');
+            $order?->loadMissing(['items.article.unit', 'items.presentation']);
+            $items = $order
+                ? $order->items->where('status', true)->values()
+                : collect($d['items'] ?? [])->filter(fn($it) => trim((string) ($it['description'] ?? '')) !== '');
             if ($items->isEmpty()) {
                 throw new \Exception('Agrega al menos un item a la guia.');
             }
 
             $grossWeight = round((float) ($d['gross_weight'] ?? 0), 3);
             if ($grossWeight <= 0) {
-                $grossWeight = round($items->sum(fn($it) => (float) ($it['gross_weight'] ?? 0)), 3);
+                $grossWeight = $order
+                    ? round($items->sum(fn($item) => (float) $item->quantity * max(1, (float) ($item->presentation_units ?: 1)) * (float) ($item->article?->unit_weight ?? 0)), 3)
+                    : round($items->sum(fn($it) => (float) ($it['gross_weight'] ?? 0)), 3);
             }
             if ($grossWeight <= 0) {
                 $grossWeight = 1;
@@ -101,6 +107,8 @@ class ReferralGuideService
             $guide->fill([
                 'business_id' => $business->id,
                 'business_branch_id' => $branch?->id,
+                'warehouse_id' => $order?->warehouse_id,
+                'commercial_order_id' => $order?->id,
                 'driver_id' => $driver?->id,
                 'vehicle_id' => $vehicle?->id,
                 'document_type' => 'Guia de remision',
@@ -132,6 +140,7 @@ class ReferralGuideService
                 'gross_weight' => $grossWeight,
                 'metadata' => [
                     'source' => 'manual',
+                    'commercial_order_code' => $order?->code,
                     'business_name' => $business->name,
                     'business_ruc' => $business->tax_number,
                     'business_address' => $branch?->address,
@@ -144,7 +153,12 @@ class ReferralGuideService
             ]);
             $guide->save();
 
-            foreach ($items as $it) {
+            if ($order) {
+                $this->syncItems($guide, $order);
+                app(CommercialOrderTrackingService::class)->recordReferralGuide($order->fresh(), $guide);
+            }
+
+            foreach ($order ? [] : $items as $it) {
                 $guide->items()->create([
                     'item_code' => trim((string) ($it['item_code'] ?? '')) ?: null,
                     'description' => trim((string) $it['description']),
@@ -180,6 +194,16 @@ class ReferralGuideService
 
             if (!$order->status || in_array($order->order_status, ['draft', 'cancelled'], true)) {
                 throw new \Exception("El pedido {$order->code} no esta disponible para guia");
+            }
+
+            // Pedido nacido de una guia manual: esa guia es la del pedido, no se arma otra en el despacho
+            $manualGuide = $this->findManualGuide($order);
+            if ($manualGuide) {
+                // Se amarra al despacho para que salga en su manifiesto y en "Ver guias"
+                if ($dispatch && !$manualGuide->dispatch_id) {
+                    $manualGuide->update(['dispatch_id' => $dispatch->id, 'updated_by' => Auth::id()]);
+                }
+                return $this->loadGuide($manualGuide->id);
             }
 
             $guide = $this->findReusableGuide($order, $dispatch);
@@ -619,6 +643,38 @@ class ReferralGuideService
         $errors = array_values(array_unique(array_filter($errors)));
         if (!empty($errors)) {
             throw new \Exception(implode(' ', $errors));
+        }
+    }
+
+    public function findManualGuide(CommercialOrder $order): ?ReferralGuide
+    {
+        return ReferralGuide::query()
+            ->where('commercial_order_id', $order->id)
+            ->where('metadata->source', 'manual')
+            ->whereNotNull('status')
+            ->where('guide_status', '!=', 'cancelled')
+            ->latest('id')
+            ->first();
+    }
+
+    /**
+     * Emite la guia manual del pedido cuando termina la preparacion. Devuelve null si el pedido
+     * no viene de una guia manual o si ya estaba emitida.
+     */
+    public function issueManualForOrder(CommercialOrder $order): ?ReferralGuide
+    {
+        $guide = $this->findManualGuide($order);
+        if (!$guide || $guide->guide_status === 'accepted') return null;
+
+        // Los items de la guia salen de lo que realmente quedo en el pedido
+        $order->load(['items.article.unit', 'items.presentation']);
+        $this->syncItems($guide, $order);
+
+        try {
+            return $this->issue($guide);
+        } catch (\Throwable $th) {
+            $guide->update(['error_message' => $th->getMessage(), 'updated_by' => Auth::id()]);
+            throw $th;
         }
     }
 

@@ -20,6 +20,7 @@ use App\Services\AccountsReceivableService;
 use App\Services\CommercialOrderTrackingService;
 use App\Services\CommercialOrderStockService;
 use App\Services\PriceListResolverService;
+use App\Services\ReferralGuideService;
 use App\Services\StockService;
 use App\Support\BusinessScope;
 use Illuminate\Http\Request;
@@ -741,6 +742,16 @@ class CommercialOrderController extends BasicController
             DB::commit();
             $response->status = 200;
             $response->message = 'Operacion correcta';
+
+            // Pedido nacido de una guia manual: al terminar la preparacion se emite su guia
+            if ($field === 'dispatch_status' && ($payload[$field] ?? null) === 'dispatched') {
+                try {
+                    $guide = app(ReferralGuideService::class)->issueManualForOrder($order->fresh());
+                    if ($guide) $response->message = 'Guia ' . ($guide->external_reference ?: $guide->code) . ' emitida';
+                } catch (\Throwable $th) {
+                    $response->message = 'Pedido listo, pero la guia no se pudo emitir: ' . $th->getMessage() . '. Emitela desde Guias manuales.';
+                }
+            }
         } catch (\Throwable $th) {
             DB::rollBack();
             $response->status = 400;
