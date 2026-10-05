@@ -58,10 +58,10 @@ else
     echo "Skipping startup Magistrales seed."
 fi
 
-# TEMPORAL: poblar "Almacen Muestras" con articulos de prueba para validar estados.
-# Quitar este bloque cuando termine la validacion. El seeder es idempotente.
-echo "Seeding Muestras test stock (temporal)..."
-php artisan db:seed --class=SamplesTestStockSeeder --force || true
+# El stock de prueba de Muestras (SamplesTestStockSeeder) ya no se siembra al arrancar: el cliente
+# empieza a usar el sistema con el almacen limpio, y el seeder volvia a crear la nota
+# NE-MUESTRAS-TEST en cada reinicio. Si se necesita para probar, se corre a mano:
+#   php artisan db:seed --class=SamplesTestStockSeeder
 
 # 2. Clear Caches
 echo "Clearing caches..."
