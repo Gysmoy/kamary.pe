@@ -35,6 +35,11 @@ use Illuminate\Support\Facades\Schema;
  *      billing_documents.client_id se pone en nulo (dejaria pre-facturas sin dueño). Por eso se
  *      borran los hijos primero, en orden.
  *
+ *   3. Datos de prueba del modulo Muestras (--muestras-demo): los 20 productos MUESTRA-001 a
+ *      MUESTRA-020 y la nota NE-MUESTRAS-TEST que sembraba SamplesTestStockSeeder en cada
+ *      arranque del contenedor. Se crearon con module_scope 'standard', asi que aparecian en la
+ *      lista de Articulos de Kamary Peru junto a los reales.
+ *
  * Las ubicaciones de almacen NO se borran: son infraestructura, no datos del cliente. Solo se
  * liberan (se les quita el cliente y la orden de servicio) para poder reasignarlas.
  */
@@ -45,6 +50,7 @@ class LimpiarDatosParaArranqueCommand extends Command
         {--empresa=kamary_peru : Empresa cuyos movimientos se limpian. "todas" incluye Serv. Almacenamiento}
         {--clientes-almacenamiento : OJO: borra los clientes importados del sistema anterior. No se hace solo}
         {--cliente= : Borra un solo cliente de almacenamiento, por id o por numero de documento}
+        {--muestras-demo : Borra los 20 productos de prueba del modulo Muestras y su nota}
         {--aplicar : Borra de verdad. Sin esta opcion solo muestra lo que haria}
         {--sin-confirmar : No pide escribir la palabra de confirmacion}';
 
@@ -58,6 +64,20 @@ class LimpiarDatosParaArranqueCommand extends Command
         'purchase_receipts' => 'Recepciones de compra (+ sus items)',
         'commercial_order_stock_movements' => 'Reservas de stock de pedidos',
     ];
+
+    /**
+     * Productos de prueba que sembraba SamplesTestStockSeeder en cada arranque del contenedor.
+     * Se crearon con module_scope 'standard', asi que salen en la lista de Articulos de Kamary
+     * Peru mezclados con los reales. Los de verdad son MUESTRAS000001 en adelante, sin guion.
+     */
+    private const ARTICULOS_DEMO = [
+        'MUESTRA-001', 'MUESTRA-002', 'MUESTRA-003', 'MUESTRA-004', 'MUESTRA-005',
+        'MUESTRA-006', 'MUESTRA-007', 'MUESTRA-008', 'MUESTRA-009', 'MUESTRA-010',
+        'MUESTRA-011', 'MUESTRA-012', 'MUESTRA-013', 'MUESTRA-014', 'MUESTRA-015',
+        'MUESTRA-016', 'MUESTRA-017', 'MUESTRA-018', 'MUESTRA-019', 'MUESTRA-020',
+    ];
+
+    private const NOTA_DEMO = 'NE-MUESTRAS-TEST';
 
     /** Lo que cuelga de un cliente de almacenamiento, en orden de borrado. */
     private const TABLAS_CLIENTE = [
@@ -83,7 +103,8 @@ class LimpiarDatosParaArranqueCommand extends Command
         // importaron del sistema anterior del cliente: no se tocan salvo que se pidan a proposito
         // con --clientes-almacenamiento.
         $clientes = (bool) $this->option('clientes-almacenamiento') || $this->option('cliente') !== null;
-        $kardex = (bool) $this->option('kardex') || !$clientes;
+        $demo = (bool) $this->option('muestras-demo');
+        $kardex = (bool) $this->option('kardex') || (!$clientes && !$demo);
 
         $this->newLine();
         $this->line('<options=bold>LIMPIEZA DE ARRANQUE</>');
@@ -121,6 +142,12 @@ class LimpiarDatosParaArranqueCommand extends Command
             }
         }
 
+        if ($demo) {
+            $this->line('<options=bold>3. Datos de prueba del modulo Muestras</>');
+            $plan[] = ['Muestras', 'Nota de prueba ' . self::NOTA_DEMO . ' (+ sus items)', $this->notasDemo()->count()];
+            $plan[] = ['Muestras', 'Productos de prueba MUESTRA-001 a MUESTRA-020', $this->articulosDemo()->count()];
+        }
+
         $this->newLine();
         $this->table(
             ['Area', 'Que se borra', 'Filas'],
@@ -156,7 +183,7 @@ class LimpiarDatosParaArranqueCommand extends Command
         }
 
         try {
-            $borradas = DB::transaction(function () use ($kardex, $clientes, $idsClientes, $idsEmpresas) {
+            $borradas = DB::transaction(function () use ($kardex, $clientes, $demo, $idsClientes, $idsEmpresas) {
                 $cuenta = 0;
 
                 if ($kardex) {
@@ -185,6 +212,14 @@ class LimpiarDatosParaArranqueCommand extends Command
                     }
                 }
 
+                if ($demo) {
+                    $notas = $this->notasDemo()->delete();
+                    $articulos = $this->articulosDemo()->delete();
+                    $cuenta += $notas + $articulos;
+                    $this->line('   borrado:  ' . str_pad('Nota de prueba ' . self::NOTA_DEMO, 48) . number_format($notas));
+                    $this->line('   borrado:  ' . str_pad('Productos de prueba de Muestras', 48) . number_format($articulos));
+                }
+
                 return $cuenta;
             });
         } catch (\Throwable $e) {
@@ -198,6 +233,7 @@ class LimpiarDatosParaArranqueCommand extends Command
         $this->info('Listo. Filas borradas: ' . number_format($borradas));
         if ($kardex) $this->line('El kardex y el stock de ' . $this->nombreDelAlcance() . ' quedan en cero.');
         if ($clientes) $this->line('Las ubicaciones siguen creadas, sin cliente asignado.');
+        if ($demo) $this->line('El modulo Muestras queda solo con los productos reales.');
 
         return self::SUCCESS;
     }
@@ -295,6 +331,24 @@ class LimpiarDatosParaArranqueCommand extends Command
             $this->table(['Tipo', 'Almacen', 'Empresa', 'Notas'], $fuera);
             $this->line('<fg=green>Esas sostienen la mercaderia que los clientes tienen en custodia.</>');
         }
+    }
+
+    /** La nota que sembraba el seeder de prueba. Normalmente ya no existe. */
+    private function notasDemo()
+    {
+        return DB::table('entry_notes')->where('code', self::NOTA_DEMO);
+    }
+
+    /** Los 20 productos de prueba, por codigo exacto para no rozar los reales. */
+    private function articulosDemo()
+    {
+        $query = DB::table('articles')->whereIn('code', self::ARTICULOS_DEMO);
+
+        if (Schema::hasColumn('articles', 'module_scope')) {
+            $query->where('module_scope', 'standard');
+        }
+
+        return $query;
     }
 
     /** Empresas cuyos movimientos se van a limpiar. Por defecto, solo Kamary Peru. */

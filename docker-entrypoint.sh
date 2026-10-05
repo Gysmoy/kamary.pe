@@ -58,10 +58,9 @@ else
     echo "Skipping startup Magistrales seed."
 fi
 
-# El stock de prueba de Muestras (SamplesTestStockSeeder) ya no se siembra al arrancar: el cliente
-# empieza a usar el sistema con el almacen limpio, y el seeder volvia a crear la nota
-# NE-MUESTRAS-TEST en cada reinicio. Si se necesita para probar, se corre a mano:
-#   php artisan db:seed --class=SamplesTestStockSeeder
+# Aqui se sembraba stock de prueba en el Almacen Muestras (SamplesTestStockSeeder) en cada
+# arranque del contenedor. Se quito junto con el seeder: el cliente ya esta usando el sistema y
+# cada reinicio volvia a crear la nota NE-MUESTRAS-TEST con 20 productos falsos.
 
 # 2. Clear Caches
 echo "Clearing caches..."
