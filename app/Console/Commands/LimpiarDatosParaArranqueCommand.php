@@ -19,8 +19,13 @@ use Illuminate\Support\Facades\Schema;
  *   1. Movimientos de stock (--kardex): notas de entrada, notas de salida, recepciones de compra,
  *      despachos y reservas de pedidos. El kardex y el stock no se guardan en ninguna tabla propia:
  *      se calculan sumando entry_note_items + purchase_receipt_items - exit_note_items (ver
- *      StockService). Borrando esas notas el kardex queda vacio y el stock en cero solo, tanto el de
- *      Kamary Peru y Muestras como el de Serv. Almacenamiento, que comparten las mismas tablas.
+ *      StockService). Borrando esas notas el kardex queda vacio y el stock en cero solo.
+ *
+ *      Va acotado por empresa, y por defecto SOLO Kamary Peru (que incluye el Almacen Muestras).
+ *      Serv. Almacenamiento queda afuera a proposito: sus notas de entrada sostienen la mercaderia
+ *      que los clientes tienen en custodia, y se cargaron de golpe el 2026-07-07. Borrarlas seria
+ *      borrar el stock real de 33 clientes. Comparten tabla con las de Kamary Peru, asi que sin
+ *      este filtro se irian todas juntas.
  *
  *   2. Clientes de Serv. Almacenamiento: SOLO si se pide con --clientes-almacenamiento. Esos
  *      clientes se importaron del sistema anterior del cliente, asi que no entran en la limpieza
@@ -37,6 +42,7 @@ class LimpiarDatosParaArranqueCommand extends Command
 {
     protected $signature = 'kamary:limpiar-para-arranque
         {--kardex : Movimientos de stock. Es lo que se limpia por defecto}
+        {--empresa=kamary_peru : Empresa cuyos movimientos se limpian. "todas" incluye Serv. Almacenamiento}
         {--clientes-almacenamiento : OJO: borra los clientes importados del sistema anterior. No se hace solo}
         {--aplicar : Borra de verdad. Sin esta opcion solo muestra lo que haria}
         {--sin-confirmar : No pide escribir la palabra de confirmacion}';
@@ -86,13 +92,19 @@ class LimpiarDatosParaArranqueCommand extends Command
         $this->newLine();
 
         $idsClientes = $clientes ? $this->idsClientesAlmacenamiento() : collect();
+        $idsEmpresas = $kardex ? $this->idsEmpresas() : collect();
+        if ($kardex && $idsEmpresas->isEmpty()) {
+            $this->error('No encontre la empresa "' . $this->option('empresa') . '". Revisa el business_key.');
+            return self::FAILURE;
+        }
+
         $plan = [];
 
         if ($kardex) {
-            $this->line('<options=bold>1. Movimientos de stock (kardex, notas, despachos)</>');
+            $this->line('<options=bold>1. Movimientos de stock de ' . $this->nombreDelAlcance() . '</>');
             foreach (self::TABLAS_KARDEX as $tabla => $etiqueta) {
                 if (!Schema::hasTable($tabla)) continue;
-                $plan[] = ['Kardex', $etiqueta, DB::table($tabla)->count()];
+                $plan[] = ['Kardex', $etiqueta, DB::table($tabla)->whereIn('business_id', $idsEmpresas)->count()];
             }
         }
 
@@ -117,7 +129,7 @@ class LimpiarDatosParaArranqueCommand extends Command
         $totalFilas = array_sum(array_column($plan, 2));
         $this->line('Filas a borrar: <options=bold>' . number_format($totalFilas) . '</>');
 
-        if ($kardex) $this->mostrarDesgloseDeNotas();
+        if ($kardex) $this->mostrarDesgloseDeNotas($idsEmpresas);
         $this->mostrarEfectosColaterales($idsClientes, $kardex, $clientes);
 
         if (!$aplicar) {
@@ -143,13 +155,13 @@ class LimpiarDatosParaArranqueCommand extends Command
         }
 
         try {
-            $borradas = DB::transaction(function () use ($kardex, $clientes, $idsClientes) {
+            $borradas = DB::transaction(function () use ($kardex, $clientes, $idsClientes, $idsEmpresas) {
                 $cuenta = 0;
 
                 if ($kardex) {
                     foreach (self::TABLAS_KARDEX as $tabla => $etiqueta) {
                         if (!Schema::hasTable($tabla)) continue;
-                        $filas = DB::table($tabla)->delete();
+                        $filas = DB::table($tabla)->whereIn('business_id', $idsEmpresas)->delete();
                         $cuenta += $filas;
                         $this->line('   borrado:  ' . str_pad($etiqueta, 48) . number_format($filas));
                     }
@@ -211,33 +223,67 @@ class LimpiarDatosParaArranqueCommand extends Command
      * en custodia: las notas con cliente de almacenamiento son las que sostienen ese stock. Si ahi
      * aparecen muchas, conviene revisarlas antes de borrar.
      */
-    private function mostrarDesgloseDeNotas(): void
+    private function mostrarDesgloseDeNotas($idsEmpresas): void
     {
-        $filas = [];
+        $dentro = [];
+        $fuera = [];
+        $clavesEnAlcance = DB::table('businesses')->whereIn('id', $idsEmpresas)->pluck('business_key')->all();
 
         foreach (['entry_notes' => 'Notas de entrada', 'exit_notes' => 'Notas de salida'] as $tabla => $nombre) {
             if (!Schema::hasTable($tabla)) continue;
 
-            $total = DB::table($tabla)->count();
-            $deAlmacenamiento = Schema::hasColumn($tabla, 'client_id')
-                ? DB::table($tabla)->whereNotNull('client_id')->count()
-                : 0;
+            $porAlmacen = DB::table($tabla . ' as nota')
+                ->leftJoin('warehouses as almacen', 'almacen.id', '=', 'nota.warehouse_id')
+                ->leftJoin('businesses as empresa', 'empresa.id', '=', 'nota.business_id')
+                ->selectRaw('COALESCE(almacen.name, ?) as almacen, empresa.business_key as empresa, COUNT(*) as notas', ['(sin almacen)'])
+                ->groupBy('almacen.name', 'empresa.business_key')
+                ->orderByDesc('notas')
+                ->get();
 
-            $filas[] = [
-                $nombre,
-                number_format($total),
-                number_format($deAlmacenamiento),
-                number_format($total - $deAlmacenamiento),
-            ];
+            foreach ($porAlmacen as $fila) {
+                $linea = [$nombre, $fila->almacen, $fila->empresa ?: '-', number_format($fila->notas)];
+
+                if (in_array($fila->empresa, $clavesEnAlcance, true)) {
+                    $dentro[] = $linea;
+                } else {
+                    $fuera[] = $linea;
+                }
+            }
         }
 
-        if (!$filas) return;
+        if ($dentro) {
+            $this->newLine();
+            $this->line('<options=bold>Notas que se borran, por almacen:</>');
+            $this->table(['Tipo', 'Almacen', 'Empresa', 'Notas'], $dentro);
+        }
 
-        $this->newLine();
-        $this->line('<options=bold>De donde viene cada nota:</>');
-        $this->table(['', 'Total', 'Con cliente de almacenamiento', 'Kamary Peru / Muestras'], $filas);
-        $this->line('<fg=yellow>Si la columna del medio no es cero, esas notas son las que sostienen la mercaderia');
-        $this->line('en custodia de sus clientes. Revisalas antes de aplicar.</>');
+        if ($fuera) {
+            $this->newLine();
+            $this->line('<fg=green;options=bold>Notas que NO se tocan (fuera del alcance):</>');
+            $this->table(['Tipo', 'Almacen', 'Empresa', 'Notas'], $fuera);
+            $this->line('<fg=green>Esas sostienen la mercaderia que los clientes tienen en custodia.</>');
+        }
+    }
+
+    /** Empresas cuyos movimientos se van a limpiar. Por defecto, solo Kamary Peru. */
+    private function idsEmpresas()
+    {
+        $pedida = trim((string) $this->option('empresa'));
+
+        if ($pedida === '' || mb_strtolower($pedida) === 'todas') {
+            return DB::table('businesses')->pluck('id');
+        }
+
+        return DB::table('businesses')->where('business_key', $pedida)->pluck('id');
+    }
+
+    private function nombreDelAlcance(): string
+    {
+        $pedida = trim((string) $this->option('empresa'));
+
+        return ($pedida === '' || mb_strtolower($pedida) === 'todas')
+            ? 'TODAS las empresas'
+            : $pedida;
     }
 
     /** Lo que no se borra pero cambia, para que no sorprenda despues. */
