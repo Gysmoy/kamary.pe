@@ -196,7 +196,8 @@ class LimpiarDatosParaArranqueCommand extends Command
 
         $this->newLine();
         $this->info('Listo. Filas borradas: ' . number_format($borradas));
-        $this->line('El kardex y el stock quedan en cero. Las ubicaciones siguen creadas, sin cliente asignado.');
+        if ($kardex) $this->line('El kardex y el stock de ' . $this->nombreDelAlcance() . ' quedan en cero.');
+        if ($clientes) $this->line('Las ubicaciones siguen creadas, sin cliente asignado.');
 
         return self::SUCCESS;
     }
