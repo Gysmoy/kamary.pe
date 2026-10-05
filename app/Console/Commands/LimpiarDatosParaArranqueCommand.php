@@ -22,7 +22,9 @@ use Illuminate\Support\Facades\Schema;
  *      StockService). Borrando esas notas el kardex queda vacio y el stock en cero solo, tanto el de
  *      Kamary Peru y Muestras como el de Serv. Almacenamiento, que comparten las mismas tablas.
  *
- *   2. Clientes de Serv. Almacenamiento (--clientes-almacenamiento): los clientes y todo lo que
+ *   2. Clientes de Serv. Almacenamiento: SOLO si se pide con --clientes-almacenamiento. Esos
+ *      clientes se importaron del sistema anterior del cliente, asi que no entran en la limpieza
+ *      por defecto. Si se pide, se borran los clientes y todo lo que
  *      cuelga de ellos. No alcanza con borrar la fila del cliente: service_orders.client_id y
  *      orders.client_id son llaves foraneas sin borrado en cascada (la base lo rechaza), y
  *      billing_documents.client_id se pone en nulo (dejaria pre-facturas sin dueño). Por eso se
@@ -34,8 +36,8 @@ use Illuminate\Support\Facades\Schema;
 class LimpiarDatosParaArranqueCommand extends Command
 {
     protected $signature = 'kamary:limpiar-para-arranque
-        {--kardex : Solo los movimientos de stock}
-        {--clientes-almacenamiento : Solo los clientes de Serv. Almacenamiento}
+        {--kardex : Movimientos de stock. Es lo que se limpia por defecto}
+        {--clientes-almacenamiento : OJO: borra los clientes importados del sistema anterior. No se hace solo}
         {--aplicar : Borra de verdad. Sin esta opcion solo muestra lo que haria}
         {--sin-confirmar : No pide escribir la palabra de confirmacion}';
 
@@ -69,9 +71,12 @@ class LimpiarDatosParaArranqueCommand extends Command
     public function handle(): int
     {
         $aplicar = (bool) $this->option('aplicar');
-        $kardex = (bool) $this->option('kardex');
+
+        // Por defecto se limpian SOLO los movimientos de stock. Los clientes de almacenamiento se
+        // importaron del sistema anterior del cliente: no se tocan salvo que se pidan a proposito
+        // con --clientes-almacenamiento.
         $clientes = (bool) $this->option('clientes-almacenamiento');
-        if (!$kardex && !$clientes) $kardex = $clientes = true;
+        $kardex = (bool) $this->option('kardex') || !$clientes;
 
         $this->newLine();
         $this->line('<options=bold>LIMPIEZA DE ARRANQUE</>');
