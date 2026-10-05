@@ -44,6 +44,7 @@ class LimpiarDatosParaArranqueCommand extends Command
         {--kardex : Movimientos de stock. Es lo que se limpia por defecto}
         {--empresa=kamary_peru : Empresa cuyos movimientos se limpian. "todas" incluye Serv. Almacenamiento}
         {--clientes-almacenamiento : OJO: borra los clientes importados del sistema anterior. No se hace solo}
+        {--cliente= : Borra un solo cliente de almacenamiento, por id o por numero de documento}
         {--aplicar : Borra de verdad. Sin esta opcion solo muestra lo que haria}
         {--sin-confirmar : No pide escribir la palabra de confirmacion}';
 
@@ -81,7 +82,7 @@ class LimpiarDatosParaArranqueCommand extends Command
         // Por defecto se limpian SOLO los movimientos de stock. Los clientes de almacenamiento se
         // importaron del sistema anterior del cliente: no se tocan salvo que se pidan a proposito
         // con --clientes-almacenamiento.
-        $clientes = (bool) $this->option('clientes-almacenamiento');
+        $clientes = (bool) $this->option('clientes-almacenamiento') || $this->option('cliente') !== null;
         $kardex = (bool) $this->option('kardex') || !$clientes;
 
         $this->newLine();
@@ -211,6 +212,36 @@ class LimpiarDatosParaArranqueCommand extends Command
             $query->where('has_storage_service', true);
         } else {
             return collect();
+        }
+
+        // Un solo cliente: se acepta el id o el numero de documento, que es con lo que uno lo tiene
+        // a mano cuando mira la pantalla.
+        $uno = $this->option('cliente');
+        if ($uno !== null) {
+            $buscado = trim((string) $uno);
+            $soloDigitos = preg_replace('/\D+/', '', $buscado);
+            if ($soloDigitos === '') {
+                $this->error('El valor de --cliente tiene que ser un id o un numero de documento.');
+                return collect();
+            }
+
+            $query->where(function ($inner) use ($buscado, $soloDigitos) {
+                $inner->where('document_number', $soloDigitos);
+                if (ctype_digit($buscado)) $inner->orWhere('id', (int) $buscado);
+            });
+
+            $encontrados = $query->get(['id', 'full_name', 'document_number']);
+            if ($encontrados->isEmpty()) {
+                $this->error('No encontre ningun cliente de almacenamiento con "' . $buscado . '".');
+                return collect();
+            }
+
+            $this->newLine();
+            foreach ($encontrados as $cliente) {
+                $this->line(sprintf('   cliente a borrar: #%s  %s  (%s)', $cliente->id, $cliente->full_name, $cliente->document_number));
+            }
+
+            return $encontrados->pluck('id');
         }
 
         return $query->pluck('id');
