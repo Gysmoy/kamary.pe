@@ -117,6 +117,7 @@ class LimpiarDatosParaArranqueCommand extends Command
         $totalFilas = array_sum(array_column($plan, 2));
         $this->line('Filas a borrar: <options=bold>' . number_format($totalFilas) . '</>');
 
+        if ($kardex) $this->mostrarDesgloseDeNotas();
         $this->mostrarEfectosColaterales($idsClientes, $kardex, $clientes);
 
         if (!$aplicar) {
@@ -201,6 +202,42 @@ class LimpiarDatosParaArranqueCommand extends Command
         }
 
         return $query->pluck('id');
+    }
+
+    /**
+     * De donde sale cada nota, antes de borrarlas.
+     *
+     * Importa porque no es lo mismo una nota de prueba que una con la que se cargo mercaderia real
+     * en custodia: las notas con cliente de almacenamiento son las que sostienen ese stock. Si ahi
+     * aparecen muchas, conviene revisarlas antes de borrar.
+     */
+    private function mostrarDesgloseDeNotas(): void
+    {
+        $filas = [];
+
+        foreach (['entry_notes' => 'Notas de entrada', 'exit_notes' => 'Notas de salida'] as $tabla => $nombre) {
+            if (!Schema::hasTable($tabla)) continue;
+
+            $total = DB::table($tabla)->count();
+            $deAlmacenamiento = Schema::hasColumn($tabla, 'client_id')
+                ? DB::table($tabla)->whereNotNull('client_id')->count()
+                : 0;
+
+            $filas[] = [
+                $nombre,
+                number_format($total),
+                number_format($deAlmacenamiento),
+                number_format($total - $deAlmacenamiento),
+            ];
+        }
+
+        if (!$filas) return;
+
+        $this->newLine();
+        $this->line('<options=bold>De donde viene cada nota:</>');
+        $this->table(['', 'Total', 'Con cliente de almacenamiento', 'Kamary Peru / Muestras'], $filas);
+        $this->line('<fg=yellow>Si la columna del medio no es cero, esas notas son las que sostienen la mercaderia');
+        $this->line('en custodia de sus clientes. Revisalas antes de aplicar.</>');
     }
 
     /** Lo que no se borra pero cambia, para que no sorprenda despues. */
