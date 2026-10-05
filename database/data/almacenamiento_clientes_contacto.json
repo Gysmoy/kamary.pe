@@ -1,7 +1,43 @@
 {
- "_origen": "reporte.xlsx del L105, clientes de servicio de almacenamiento",
- "_filas": 297,
+ "_origen": "CLIENTES KM.xlsx, lista filtrada de clientes de Kamary Medical (entregada 2026-10-05)",
+ "_filas": 301,
  "clientes": [
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20613362453",
+   "razon_social": "TECSOL GROUP S.A.C.",
+   "email": "avrodriguez0726@gmail.com",
+   "celular": "956696439",
+   "direccion": "AV. HONORIO DELGADO NRO. 291 - LIMA LIMA SAN MARTIN DE PORRES",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20600205014",
+   "razon_social": "SERVICIOS GENERALES JANNET S.A.C.",
+   "email": "jarevalo@serviciosgeneralesjannet.com,ventas@serviciosgeneralesjannet.com",
+   "celular": "",
+   "direccion": "PJ. DUEÑAS LT. 8 MZ. D - CUSCO LA CONVENCION SANTA ANA",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20616225074",
+   "razon_social": "CMED GROUP S.A.C.",
+   "email": "cmedgroup2026@gmail.com",
+   "celular": "931743943",
+   "direccion": "CAL. MAZANA C LT. 02 MZ. C A.H. AA.FF. CAMPAMENTO DE DIOS - LIMA LIMA SAN JUAN DE LURIGANCHO",
+   "estado": "Activo"
+  },
+  {
+   "tipo_documento": "RUC",
+   "n_documento": "20606440481",
+   "razon_social": "KENGCORP PERU S.A.C.",
+   "email": "keng@kengcor.com",
+   "celular": "",
+   "direccion": "CAL. FRANCISCO GRAÑA NRO. 630 INT. 706 URB. SAN FELIPE - LIMA LIMA MAGDALENA DEL MAR",
+   "estado": "Activo"
+  },
   {
    "tipo_documento": "RUC",
    "n_documento": "20610175890",
@@ -1482,7 +1518,7 @@
    "tipo_documento": "RUC",
    "n_documento": "20610293159",
    "razon_social": "ALKA PHARMA E.I.R.L.",
-   "email": "alkapharma@hotmail.com",
+   "email": "alkapharma@hotmail.com,Alkapharma@hotmail.com",
    "celular": "993421719",
    "direccion": "JR. MANCO CAPAC NRO. 990 INT. B URB. SAN GABRIEL - LIMA LIMA VILLA MARIA DEL TRIUNFO",
    "estado": "Activo"
@@ -1833,7 +1869,7 @@
    "tipo_documento": "RUC",
    "n_documento": "20611118032",
    "razon_social": "NETSETLAB S.A.C.",
-   "email": "ricardo.navarrete@netsetlab.com,rnavarrete@neslab.com.pe",
+   "email": "ricardo.navarrete@netsetlab.com,rnavarrete@neslab.com.pe,mmoreno@neslab.com.pe",
    "celular": "908823521",
    "direccion": "AV. PARQUE 27 DE NOVIEMBRE NRO. 460 URB. CHACARILLA - LIMA LIMA SAN ISIDRO",
    "estado": "Activo"
@@ -2087,7 +2123,7 @@
    "razon_social": "SOFTYS PERU S.A.C.",
    "email": "",
    "celular": "",
-   "direccion": "Patio Panorama",
+   "direccion": "Patio panorama",
    "estado": "Activo"
   },
   {
@@ -2481,7 +2517,7 @@
    "tipo_documento": "RUC",
    "n_documento": "20492382311",
    "razon_social": "MACH IMPORT PERU S.A.C.",
-   "email": "contabilidad@machperumedical.com",
+   "email": "contabilidad@machperumedical.com,ventasmachimport_19@hotmail.com",
    "celular": "956194643",
    "direccion": "JR. TORRES PAZ NRO. 1472 URB. SANTA BEATRIZ - LIMA LIMA LIMA",
    "estado": "Activo"
