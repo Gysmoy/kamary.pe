@@ -330,7 +330,22 @@ const Picking = () => {
           padding: 3px 10px;
           text-align: center;
         }
-        .preparation-list { display: grid; gap: 10px; }
+        /* Cada columna scrollea por su cuenta: la cabecera queda fija y la pagina no crece */
+        .preparation-list {
+          align-content: start;
+          display: grid;
+          gap: 10px;
+          height: calc(100vh - 330px);
+          min-height: 320px;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          padding-right: 4px;
+        }
+        .preparation-list::-webkit-scrollbar { width: 6px; }
+        .preparation-list::-webkit-scrollbar-thumb { background: #d9d9e3; border-radius: 6px; }
+        @media (max-width: 991.98px) {
+          .preparation-list { height: calc(100vh - 290px); }
+        }
         .preparation-card { cursor: grab; }
         .preparation-card.is-updating { opacity: .6; pointer-events: none; }
         .preparation-action { height: 34px; padding: 0 12px; flex-shrink: 0; }

@@ -1,1 +1,0 @@
-var r=Object.defineProperty;var i=(e,s,a)=>s in e?r(e,s,{enumerable:!0,configurable:!0,writable:!0,value:a}):e[s]=a;var t=(e,s,a)=>(i(e,typeof s!="symbol"?s+"":s,a),a);import{B as m}from"./BasicRest-DKNLE_pE.js";class c extends m{constructor(){super(...arguments);t(this,"path","admin/users")}}export{c as U};

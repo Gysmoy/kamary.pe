@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Web\WebPageController;
 
 // Admin
 use App\Http\Controllers\Admin\HomeController as AdminHomeController;
@@ -94,7 +95,25 @@ use App\Support\ModulePermissions;
 */
 
 // Public routes
-Route::get('/', fn() => auth()->check() ? redirect()->to(ModulePermissions::homePathForUser(auth()->user())) : redirect()->to('/login'));
+// Web pública de Kamary Farma
+Route::get('/', [WebPageController::class, 'home'])->name('web.home');
+Route::get('/tienda', [WebPageController::class, 'shop'])->name('web.shop');
+Route::get('/categoria-producto/{slug}', [WebPageController::class, 'shop'])->name('web.category');
+Route::get('/producto/{slug}', [WebPageController::class, 'product'])->name('web.product');
+Route::get('/carrito', [WebPageController::class, 'cart'])->name('web.cart');
+Route::get('/preparados-magistrales', [WebPageController::class, 'magistrales'])->name('web.magistrales');
+Route::get('/ventas-corporativas', fn() => app(WebPageController::class)->service('ventas-corporativas'));
+Route::get('/operador-logistico', fn() => app(WebPageController::class)->service('operador-logistico'));
+Route::get('/distribucion-y-transporte', fn() => app(WebPageController::class)->service('distribucion-y-transporte'));
+Route::get('/importacion-de-medicamentos', fn() => app(WebPageController::class)->service('importacion-de-medicamentos'));
+Route::get('/bc2', fn() => app(WebPageController::class)->service('almacen'));
+Route::get('/almacen-de-medicamentos', fn() => app(WebPageController::class)->service('almacen'));
+Route::get('/asesoria-tecnica-y-comercial', fn() => app(WebPageController::class)->service('asesoria-tecnica-y-comercial'));
+Route::get('/nosotros', [WebPageController::class, 'about'])->name('web.about');
+Route::get('/contacto', [WebPageController::class, 'contact'])->name('web.contact');
+Route::get('/libro-de-reclamaciones', [WebPageController::class, 'complaints'])->name('web.complaints');
+Route::get('/politicas-de-privacidad', [WebPageController::class, 'privacy'])->name('web.privacy');
+Route::get('/farmacia', fn() => redirect('/tienda', 301));
 
 // Authentication Routes
 Route::get('/login', [LoginController::class, 'reactView'])->name('Login.jsx');

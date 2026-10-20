@@ -81,7 +81,7 @@ const Menu = ({ can, hasRole, panel = null }) => {
 
   return (
     <div className='sidenav-menu'>
-      <a href='/' className='logo'>
+      <a href='/admin' className='logo'>
         <span className='logo-light'>
           <span className='logo-lg'><img src='/assets/img/logo.svg' alt='logo' /></span>
           <span className='logo-sm'><img src='/assets/img/icon.svg' alt='small logo' /></span>

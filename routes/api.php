@@ -91,6 +91,7 @@ use App\Http\Controllers\Integrations\MultivendeWebhookController;
 // Public
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\Web\WebFormController;
 
 /*
 |--------------------------------------------------------------------------
@@ -104,6 +105,12 @@ use App\Http\Controllers\LoginController;
 */
 
 Route::post('/login', [LoginController::class, 'login']);
+
+// Formularios publicos de la web (sin auth, con limite de 10 envios por minuto)
+Route::middleware('throttle:10,1')->group(function () {
+    Route::post('/web/inquiries', [WebFormController::class, 'inquiries']);
+    Route::post('/web/complaints', [WebFormController::class, 'complaints']);
+});
 
 Route::prefix('integrations')->group(function () {
     Route::post('/ecomsur/logistic-orders', [EcomsurController::class, 'logisticOrders']);
