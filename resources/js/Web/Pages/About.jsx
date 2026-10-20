@@ -13,9 +13,10 @@ const { about } = content
 
 // Imágenes del hero (collage rotativo con las fotos de equipo y laboratorio)
 const HERO_IMAGES = [
+  { src: '/web/extra/banners/nosotros.webp', alt: 'Interior de una farmacia moderna con atención farmacéutica', caption: 'Farmacia', position: 'object-[45%_50%]' },
   { src: '/web/slider/Imag-Home-3.webp', alt: 'Equipo de Kamary Perú', caption: 'Nuestro equipo', position: 'object-[50%_45%]' },
+  { src: '/web/extra/banners/band-valores.webp', alt: 'Profesionales farmacéuticos trabajando en equipo', caption: 'Profesionales', position: 'object-[55%_30%]' },
   { src: '/web/services/Img-Nosotros-Kamary.webp', alt: 'Equipo comercial de Kamary Perú', caption: 'Kamary Perú', position: 'object-[50%_30%]' },
-  { src: '/web/slider/slider-Farmacia.webp', alt: 'Farmacia y laboratorio', caption: 'Farmacia y laboratorio', position: 'object-center' },
 ]
 
 // Bloques de valor (textos tomados de la página Nosotros del sitio actual)
@@ -68,7 +69,7 @@ const Story = () => (
       <Reveal className="lg:col-span-7">
         <div className="relative pb-[16%] pr-[6%]">
           <ImageFrame src="/web/services/Img-Nosotros-Kamary.webp" alt="Equipo comercial de Kamary Perú" ratio="aspect-[4/3]" radius="rounded-[32px] rounded-tr-[120px]" position="object-[50%_40%]" />
-          <ImageFrame src="/web/services/Farmacia.webp" alt="Químico farmacéutico de Kamary" ratio="aspect-[4/3]" radius="rounded-[24px]" position="object-[70%_30%]"
+          <ImageFrame src="/web/extra/negocio/tienda.webp" alt="Química farmacéutica" ratio="aspect-[4/3]" radius="rounded-[24px]" position="object-[50%_22%]"
             className="absolute bottom-0 right-0 w-[44%] border-[6px] border-kf-sand shadow-[0_24px_50px_-20px_rgba(15,19,31,0.35)]" />
         </div>
       </Reveal>
@@ -99,13 +100,21 @@ const Approach = () => (
         </StaggerItem>
       ))}
     </Stagger>
+    <Reveal className="mt-14 md:mt-20">
+      <ImageFrame src="/web/extra/banners/band-valores.webp" alt="Equipo de profesionales con tableta en la farmacia" ratio="aspect-[16/10] md:aspect-[21/9]" radius="rounded-[28px] md:rounded-[32px]" position="object-[50%_30%]" />
+    </Reveal>
   </Section>
 )
 
 /* ---------- Compromiso + Misión / Visión editoriales ---------- */
 const Commitment = () => (
   <Section tone="surface">
-    <EditorialSplit reverse image={<ImageFrame src="/web/services/Img-Nosotros-Kamary-1.jpg" alt="Equipo de Kamary Perú" ratio="aspect-[4/3]" radius="rounded-[32px] rounded-br-[110px]" position="object-[50%_40%]" />}>
+    <EditorialSplit reverse image={
+      <div className="relative pb-[14%] pl-[6%]">
+        <ImageFrame src="/web/extra/nosotros/nosotros-1.jpg" alt="Equipo de Grupo Kamary" ratio="aspect-[4/3]" radius="rounded-[32px] rounded-br-[110px]" position="object-[50%_40%]" />
+        <ImageFrame src="/web/extra/nosotros/envios-delivery.jpg" alt="Equipo de reparto de Kamary Perú" ratio="aspect-[4/3]" radius="rounded-[24px]" position="object-[50%_60%]"
+          className="absolute bottom-0 left-0 w-[44%] border-[6px] border-kf-sand shadow-[0_24px_50px_-20px_rgba(15,19,31,0.35)]" />
+      </div>}>
       <Eyebrow n="03">Compromiso</Eyebrow>
       <Heading size="lg">{about.trust.title}</Heading>
       <p className="mt-6 text-lg leading-relaxed">{about.trust.text}</p>
@@ -129,7 +138,7 @@ const MissionVision = () => (
       </Container>
     </section>
     <section className="kf-noise relative isolate overflow-hidden bg-kf-navy-deep py-24 text-white md:py-32">
-      <img src="/web/services/Bg-elegirnos.webp" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover object-right opacity-40" />
+      <img src="/web/extra/banners/razones.webp" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_55%] opacity-45" />
       <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-kf-navy-deep via-kf-navy-deep/80 to-kf-navy-deep/30" />
       <Container>
         <div className="grid gap-8 lg:grid-cols-12 lg:gap-16">
@@ -256,7 +265,8 @@ const About = () => (
     <Certifications />
     <Partners />
     <CTABand
-      image="/web/slider/Imag-home-4.webp"
+      image="/web/extra/banners/tienda.webp"
+      imagePosition="object-[50%_55%]"
       eyebrow="Contacto"
       title={<>Conversemos sobre tu <Serif className="text-white">necesidad</Serif></>}
       text="Nuestro equipo te orienta según tu sector: ventas corporativas, operador logístico o preparados magistrales."

@@ -13,8 +13,12 @@ import content from '../data/content'
 const META = {
   'ventas-corporativas': {
     accent: 'Corporativa', type: 'corporativas',
-    hero: [{ src: '/web/services/Ventas-corporativas.webp', alt: 'Equipo de ventas corporativas de Kamary', position: 'object-right' }],
-    photo: { src: '/web/services/Farmacia.webp', alt: 'Químico farmacéutico de Kamary', position: 'object-[70%_30%]' },
+    hero: [
+      { src: '/web/extra/banners/ventas.webp', alt: 'Almacén farmacéutico con control de inventario', position: 'object-[60%_40%]' },
+      { src: '/web/extra/banners/band-ventas.webp', alt: 'Ejecutiva revisando el abastecimiento de productos', position: 'object-[50%_35%]' },
+      { src: '/web/services/Ventas-corporativas.webp', alt: 'Equipo de ventas corporativas de Kamary', position: 'object-right' },
+    ],
+    photo: { src: '/web/extra/negocio/ventas-corporativas.webp', alt: 'Ejecutivo de cuentas corporativas', position: 'object-[50%_20%]' },
     specTitle: 'Ficha del servicio',
     spec: [
       { k: 'Atiende a', v: 'Clínicas y empresas', note: 'Consultorios, instituciones y organizaciones' },
@@ -24,7 +28,11 @@ const META = {
   },
   'operador-logistico': {
     accent: 'sin esfuerzo', type: 'logistico',
-    hero: [{ src: '/web/services/Operador-logistico.webp', alt: 'Operador logístico de Kamary', position: 'object-right' }],
+    hero: [
+      { src: '/web/extra/banners/band-operador.webp', alt: 'Entrega de medicamentos en caja térmica', position: 'object-[50%_45%]' },
+      { src: '/web/extra/banners/logistica.webp', alt: 'Flota de furgonetas lista para el despacho', position: 'object-[70%_50%]' },
+      { src: '/web/services/Operador-logistico.webp', alt: 'Operador logístico de Kamary', position: 'object-right' },
+    ],
     photo: { src: '/web/services/Bg-operador-logistico-1.png', alt: 'Entrega, monitoreo y transporte refrigerado', position: 'object-center', wide: true },
     specTitle: 'Ficha del servicio',
     spec: [
@@ -36,10 +44,12 @@ const META = {
   'distribucion-y-transporte': {
     accent: 'Transporte', type: 'distribucion',
     hero: [
-      { src: '/web/services/Operador-logistico.webp', alt: 'Equipo de distribución y transporte', position: 'object-right' },
+      { src: '/web/extra/banners/logistica.webp', alt: 'Furgonetas de distribución cargando pedidos', position: 'object-[70%_50%]' },
+      { src: '/web/extra/nosotros/envios-delivery.jpg', alt: 'Equipo de reparto de Kamary Perú con motos', position: 'object-[50%_55%]' },
       { src: '/web/services/Bg-operador-logistico-1.png', alt: 'Transporte refrigerado de medicamentos', position: 'object-right' },
     ],
-    photo: { src: '/web/services/Bg-operador-logistico-1.png', alt: 'Transporte refrigerado de medicamentos', position: 'object-center', wide: true },
+    // Fotos reales de la flota de Grupo Kamary
+    photo: { src: '/web/extra/negocio/distribucion.webp', alt: 'Flota de Grupo Kamary: vehículos y cámara con cajas térmicas', position: 'object-center', wide: true, ratio: 'aspect-[1173/397]' },
     specTitle: 'Ficha técnica',
     spec: [
       { k: 'Servicio desde', v: '07/08/2020' },
@@ -50,6 +60,7 @@ const META = {
   'importacion-de-medicamentos': {
     accent: 'Importación', type: 'importacion',
     hero: [
+      { src: '/web/extra/banners/ventas.webp', alt: 'Almacén con estanterías de medicamentos', position: 'object-[60%_40%]' },
       { src: '/web/services/Bg-operador-logistico-1.png', alt: 'Logística e importación de medicamentos', position: 'object-right' },
       { src: '/web/slider/slider-Farmacia.webp', alt: 'Laboratorio y farmacia', position: 'object-center' },
     ],
@@ -64,8 +75,9 @@ const META = {
   almacen: {
     accent: 'Medicamentos', type: 'almacen',
     hero: [
-      { src: '/web/slider/slider-Farmacia.webp', alt: 'Laboratorio y farmacia de Kamary', position: 'object-[70%_50%]' },
+      { src: '/web/extra/banners/ventas.webp', alt: 'Almacén farmacéutico con estanterías ordenadas', position: 'object-[62%_40%]' },
       { src: '/web/slider/Imag-Home-3.webp', alt: 'Equipo de Kamary Perú', position: 'object-[50%_45%]' },
+      { src: '/web/slider/slider-Farmacia.webp', alt: 'Laboratorio y farmacia de Kamary', position: 'object-[70%_50%]' },
     ],
     photo: { src: '/web/slider/Imag-Home-3.webp', alt: 'Equipo de almacén de Kamary', position: 'object-[50%_45%]' },
     specTitle: 'Ficha técnica',
@@ -77,10 +89,11 @@ const META = {
   'asesoria-tecnica-y-comercial': {
     accent: 'Comercial', type: 'asesoria',
     hero: [
+      { src: '/web/extra/banners/band-valores.webp', alt: 'Equipo de profesionales revisando información en una tableta', position: 'object-[50%_30%]' },
       { src: '/web/services/Farmacia.webp', alt: 'Asesoría técnica de Kamary', position: 'object-right' },
       { src: '/web/services/Img-Nosotros-Kamary.webp', alt: 'Equipo de Kamary Perú', position: 'object-[50%_30%]' },
     ],
-    photo: { src: '/web/services/Img-Nosotros-Kamary-1.jpg', alt: 'Asesor de Kamary Perú', position: 'object-[50%_40%]' },
+    photo: { src: '/web/extra/negocio/tienda.webp', alt: 'Química farmacéutica asesora', position: 'object-[50%_22%]' },
     specTitle: 'Ficha técnica',
     spec: [
       { k: 'Registros', v: 'Sanitarios', note: 'Medicamentos, cosméticos y dispositivos médicos' },
@@ -182,7 +195,7 @@ const ServiceDetail = ({ serviceKey }) => {
           </div>
           {meta.photo.wide && (
             <Reveal className="mt-16">
-              <ImageFrame src={meta.photo.src} alt={meta.photo.alt} ratio="aspect-[1254/448]" radius="rounded-[28px]" parallax={false} />
+              <ImageFrame src={meta.photo.src} alt={meta.photo.alt} ratio={meta.photo.ratio || 'aspect-[1254/448]'} radius="rounded-[28px]" parallax={false} />
             </Reveal>
           )}
         </Section>

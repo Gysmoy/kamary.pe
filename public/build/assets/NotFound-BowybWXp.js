@@ -1,1 +1,0 @@
-import{C as e,c as a,j as t}from"./CreateReactScript-BhVwmM-I.js";import{L as s}from"./Layout-BqPx4xhP.js";import{N as m}from"./NotFoundContent-fsbupOTT.js";import"./arrow-up-right-DWW0RljO.js";e((o,r)=>{a(o).render(t.jsx(s,{children:t.jsx(m,{...r})}))});

@@ -176,6 +176,14 @@ const Shop = ({ category = null }) => {
     <>
       {/* Hero editorial con imagen de colección */}
       <section className="kf-noise relative isolate overflow-hidden bg-kf-navy-deep pb-14 pt-10 text-white md:pb-20 md:pt-14">
+        {/* Foto de la farmacia a la derecha, fundida con el navy para dar legibilidad */}
+        {!cat && (
+          <>
+            <img src="/web/extra/banners/tienda.webp" alt="" className="absolute inset-y-0 right-0 -z-10 h-full w-full object-cover object-[70%_50%] lg:w-[72%]" />
+            <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-kf-navy-deep via-kf-navy-deep/85 to-kf-navy-deep/30 lg:via-kf-navy-deep/70 lg:to-transparent" />
+            <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-kf-navy-deep/80 via-transparent to-kf-navy-deep/40" />
+          </>
+        )}
         <GridPattern />
         <Container className="relative">
           <nav aria-label="Migas de pan" className="mb-10 flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-white/60">

@@ -330,9 +330,10 @@ export const TrustStrip = ({ className, dark }) => (
 )
 
 /** Banda CTA navy con grano; `image` opcional como fondo fotográfico */
-export const CTABand = ({ eyebrow, title, text, children, image }) => (
+export const CTABand = ({ eyebrow, title, text, children, image, imagePosition = 'object-center' }) => (
   <section className="kf-noise relative isolate overflow-hidden bg-kf-navy-deep py-24 md:py-32">
-    {image && <img src={image} alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover opacity-30" />}
+    {image && <img src={image} alt="" loading="lazy" className={cx('absolute inset-0 -z-10 h-full w-full object-cover opacity-40', imagePosition)} />}
+    <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-kf-navy-deep/85 via-kf-navy-deep/60 to-kf-navy-deep/30" />
     <GridPattern />
     <Container className="relative flex flex-col items-start gap-10 md:flex-row md:items-end md:justify-between">
       <div className="max-w-3xl">

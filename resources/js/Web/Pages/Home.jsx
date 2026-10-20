@@ -14,11 +14,12 @@ import categories from '../data/categories'
 import benefits from '../data/benefits'
 import products from '../data/products'
 
-// Imágenes del slider original (public/web/slider)
+// Hero: foto de banco de la farmacéutica primero, mezclada con fotos reales de Kamary (laboratorio y equipo)
 const HERO_IMAGES = [
+  { src: '/web/extra/hero/hero-farmacia.webp', alt: 'Química farmacéutica en una farmacia moderna', caption: 'Farmacia', position: 'object-[50%_28%]' },
   { src: '/web/slider/Imag-home-4.webp', alt: 'Zona de producción de preparados magistrales', caption: 'Preparados magistrales', position: 'object-[50%_35%]' },
+  { src: '/web/extra/banners/nosotros.webp', alt: 'Interior de una farmacia con atención personalizada', caption: 'Atención farmacéutica', position: 'object-[40%_50%]' },
   { src: '/web/slider/Imag-Home-3.webp', alt: 'Equipo de Kamary Perú', caption: 'Nuestro equipo', position: 'object-[50%_40%]' },
-  { src: '/web/slider/slider-Farmacia.webp', alt: 'Farmacia y laboratorio', caption: 'Farmacia', position: 'object-center' },
 ]
 
 const WHY = [
@@ -157,19 +158,19 @@ const Home = () => {
         <SectionHead n="01" eyebrow="Servicios" lines={['Una sola empresa,', <><Serif>tres</Serif> soluciones</>]} title={null}
           action={<Button href="/ventas-corporativas" variant="ghost">Ventas corporativas <ArrowRight size={16} /></Button>} />
         <Bento>
-          <BentoTile href="/preparados-magistrales" image="/web/services/Preparados-Magistrales.jpg" position="object-[30%_40%]" span="col-span-12 md:col-span-7" minH="min-h-[420px] md:min-h-[600px]">
+          <BentoTile href="/preparados-magistrales" image="/web/extra/banners/band-magistrales.webp" position="object-[42%_30%]" span="col-span-12 md:col-span-7" minH="min-h-[420px] md:min-h-[600px]">
             <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/70">01 — Magistrales</p>
             <h3 className="mt-3 font-display text-3xl font-semibold tracking-[-0.03em] md:text-4xl">Preparados magistrales</h3>
             <p className="mt-3 max-w-md text-white/80">Formulaciones personalizadas bajo estrictos estándares de calidad, con químicos farmacéuticos especializados.</p>
             <span className="mt-6 inline-flex items-center gap-2 text-sm font-medium">Más información <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" /></span>
           </BentoTile>
           <div className="col-span-12 grid gap-4 md:col-span-5 md:gap-5">
-            <BentoTile href="/ventas-corporativas" image="/web/services/Ventas-corporativas.webp" position="object-right" span="" minH="min-h-[300px]">
+            <BentoTile href="/ventas-corporativas" image="/web/extra/negocio/ventas-corporativas.webp" position="object-[50%_20%]" span="" minH="min-h-[300px]">
               <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/70">02 — B2B</p>
               <h3 className="mt-2 max-w-[15rem] font-display text-2xl font-semibold tracking-[-0.03em] md:text-3xl">Ventas corporativas</h3>
               <p className="mt-2 max-w-[17rem] text-sm text-white/80">Abastecimiento de productos farmacéuticos, dispositivos médicos y productos sanitarios para empresas e instituciones.</p>
             </BentoTile>
-            <BentoTile href="/operador-logistico" image="/web/services/Operador-logistico.webp" position="object-right" span="" minH="min-h-[300px]">
+            <BentoTile href="/operador-logistico" image="/web/extra/banners/band-operador.webp" position="object-[50%_35%]" span="" minH="min-h-[300px]">
               <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-white/70">03 — Logística</p>
               <h3 className="mt-2 max-w-[15rem] font-display text-2xl font-semibold tracking-[-0.03em] md:text-3xl">Operador logístico</h3>
               <p className="mt-2 max-w-[17rem] text-sm text-white/80">Salud en movimiento: abastecimiento programado, trazabilidad completa y cadena de frío.</p>
@@ -304,14 +305,18 @@ const Home = () => {
             </div>
           </Reveal>
         </div>
-        <Reveal className="mt-16 md:mt-20">
-          <ImageFrame src="/web/services/Bg-operador-logistico-1.png" alt="Entrega, monitoreo y transporte refrigerado" ratio="aspect-[1254/448]" radius="rounded-[28px]" parallax={false} />
+        <Reveal className="mt-16 grid gap-4 md:mt-20 md:grid-cols-12 md:gap-5">
+          <ImageFrame src="/web/extra/banners/logistica.webp" alt="Flota de furgonetas cargando pedidos en el almacén" ratio="aspect-[16/10]" radius="rounded-[28px]" position="object-[65%_50%]" className="md:col-span-7" parallax={false} />
+          <div className="grid grid-cols-2 gap-4 md:col-span-5 md:grid-cols-1 md:gap-5">
+            <ImageFrame src="/web/extra/nosotros/envios-delivery.jpg" alt="Equipo de reparto de Kamary Perú con motos" ratio="aspect-[4/3] md:aspect-auto md:h-full" radius="rounded-[28px] rounded-br-[90px]" position="object-[50%_60%]" parallax={false} />
+            <ImageFrame src="/web/extra/banners/band-operador.webp" alt="Entrega de medicamentos en caja térmica" ratio="aspect-[4/3] md:aspect-auto md:h-full" radius="rounded-[28px]" position="object-[50%_45%]" parallax={false} className="hidden md:block" />
+          </div>
         </Reveal>
       </Section>
 
       {/* Preparados magistrales — banda fotográfica */}
       <section className="kf-noise relative isolate overflow-hidden bg-kf-navy-deep py-24 text-white md:py-32">
-        <img src="/web/services/Bg-preparados.webp" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover opacity-70" />
+        <img src="/web/extra/banners/magistrales.webp" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover object-[75%_40%] opacity-90" />
         <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-kf-navy-deep via-kf-navy-deep/70 to-transparent" />
         <Container className="grid items-end gap-10 lg:grid-cols-[1.4fr_1fr]">
           <Reveal>
@@ -325,8 +330,8 @@ const Home = () => {
 
       {/* 08 Por qué elegirnos */}
       <section className="kf-noise relative isolate overflow-hidden bg-kf-navy-deep py-24 text-white md:py-32">
-        <img src="/web/services/Bg-elegirnos.webp" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover object-right" />
-        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-kf-navy-deep/55 lg:bg-gradient-to-r lg:from-kf-navy-deep/60 lg:via-transparent lg:to-transparent" />
+        <img src="/web/extra/banners/razones.webp" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_60%]" />
+        <div aria-hidden="true" className="absolute inset-0 -z-10 bg-kf-navy-deep/75 lg:bg-gradient-to-r lg:from-kf-navy-deep/90 lg:via-kf-navy-deep/55 lg:to-kf-navy-deep/15" />
         <Container>
           <Reveal className="mb-14 max-w-3xl">
             <Eyebrow light n="08">Somos tu socio estratégico en el sector farmacéutico</Eyebrow>
@@ -367,7 +372,7 @@ const Home = () => {
         </div>
       </Section>
 
-      <CTABand image="/web/slider/Imag-Home-3.webp" eyebrow="Asesoría" title={<>¿Necesitas ayuda para <Serif className="text-white">elegir</Serif>?</>} text="Escríbenos por WhatsApp y te asesoramos con tu pedido.">
+      <CTABand image="/web/extra/banners/band-valores.webp" imagePosition="object-[50%_30%]" eyebrow="Asesoría" title={<>¿Necesitas ayuda para <Serif className="text-white">elegir</Serif>?</>} text="Escríbenos por WhatsApp y te asesoramos con tu pedido.">
         <Button variant="whatsapp" href={waLink} target="_blank" rel="noopener noreferrer"><MessageCircle size={18} /> Escribir por WhatsApp</Button>
         <Button variant="ghostLight" href="/contacto">Contáctanos</Button>
       </CTABand>

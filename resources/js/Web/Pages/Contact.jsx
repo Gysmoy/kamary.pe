@@ -77,9 +77,12 @@ const Hero = () => (
           <Button variant="ghost" href="#formularios">Enviar consulta <ArrowRight size={16} /></Button>
         </div>
       </div>
-      <Reveal delay={0.1} className="lg:col-span-6">
+      <Reveal delay={0.1} className="relative lg:col-span-6">
         <ImageFrame src={contact.location.image} alt="Fachada de la sede de Farmacia Kamary Perú en Yen Escobedo Garro 830" ratio="aspect-[4/5] lg:aspect-[5/4]"
           radius="rounded-[32px] rounded-tr-[120px]" position="object-[50%_60%]" eager />
+        {/* Foto de atención en mostrador superpuesta */}
+        <ImageFrame src="/web/extra/banners/contacto.webp" alt="Atención farmacéutica personalizada en mostrador" ratio="aspect-[4/3]" radius="rounded-[24px]" position="object-[78%_40%]" parallax={false}
+          className="absolute -bottom-12 -left-4 hidden w-[42%] border-[6px] border-kf-canvas shadow-[0_24px_50px_-20px_rgba(15,19,31,0.35)] md:block" />
         <p className="mt-4 flex flex-wrap justify-between gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-kf-muted">
           <span>Sede central</span><span>Yen Escobedo Garro 830 · Lima</span>
         </p>
