@@ -66,6 +66,8 @@ use App\Http\Controllers\Admin\ServiceClientController as AdminServiceClientCont
 use App\Http\Controllers\Admin\ServiceOrderController as AdminServiceOrderController;
 use App\Http\Controllers\Admin\SalesReportController as AdminSalesReportController;
 use App\Http\Controllers\Admin\SampleOrderController as AdminSampleOrderController;
+use App\Http\Controllers\Admin\WebInquiryController as AdminWebInquiryController;
+use App\Http\Controllers\Admin\WebComplaintController as AdminWebComplaintController;
 use App\Http\Controllers\Admin\SampleOrderDashboardController as AdminSampleOrderDashboardController;
 use App\Http\Controllers\Admin\SupplierController as AdminSupplierController;
 use App\Http\Controllers\Admin\TransactionController as AdminTransactionController;
@@ -155,6 +157,15 @@ Route::middleware('auth')->group(function () {
 
             return response()->json($rows);
         });
+
+        // Web publica: bandejas de consultas y libro de reclamaciones
+        Route::get('/web-pending', [AdminWebInquiryController::class, 'pending']);
+        Route::post('/web-inquiries/paginate', [AdminWebInquiryController::class, 'paginate']);
+        Route::get('/web-inquiries/{id}/file', [AdminWebInquiryController::class, 'file']);
+        Route::patch('/web-inquiries/{id}', [AdminWebInquiryController::class, 'updateInquiry']);
+        Route::post('/web-complaints/paginate', [AdminWebComplaintController::class, 'paginate']);
+        Route::get('/web-complaints/{id}/file', [AdminWebComplaintController::class, 'file']);
+        Route::patch('/web-complaints/{id}', [AdminWebComplaintController::class, 'updateComplaint']);
 
         Route::post('/users', [AdminUserController::class, 'save']);
         Route::post('/users/paginate', [AdminUserController::class, 'paginate']);

@@ -23,7 +23,7 @@ export default function ProductCard({ product, className }) {
     <article className={cx('group flex h-full flex-col', className)}>
       <div className="relative aspect-square overflow-hidden rounded-[24px] bg-kf-sand">
         <a href={href} className="block h-full w-full" aria-label={product.name}>
-          <img src={product.image} alt={product.name} loading="lazy"
+          <img src={product.image} alt={product.name} loading="lazy" decoding="async"
             className="h-full w-full object-contain p-8 mix-blend-multiply transition-transform duration-[900ms] ease-out group-hover:scale-[1.05] md:p-10" />
         </a>
         {(offer || soldOut) && (

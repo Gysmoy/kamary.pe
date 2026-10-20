@@ -24,6 +24,7 @@ class WebInquiry extends Model
         'ip',
         'user_agent',
         'status',
+        'internal_notes',
     ];
 
     protected $casts = [

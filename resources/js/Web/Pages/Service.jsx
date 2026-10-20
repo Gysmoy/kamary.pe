@@ -33,7 +33,7 @@ const META = {
       { src: '/web/extra/banners/logistica.webp', alt: 'Flota de furgonetas lista para el despacho', position: 'object-[70%_50%]' },
       { src: '/web/services/Operador-logistico.webp', alt: 'Operador logístico de Kamary', position: 'object-right' },
     ],
-    photo: { src: '/web/services/Bg-operador-logistico-1.png', alt: 'Entrega, monitoreo y transporte refrigerado', position: 'object-center', wide: true },
+    photo: { src: '/web/services/Bg-operador-logistico-1.webp', alt: 'Entrega, monitoreo y transporte refrigerado', position: 'object-center', wide: true },
     specTitle: 'Ficha del servicio',
     spec: [
       { k: 'Modalidades', v: 'B2C y B2B' },
@@ -45,8 +45,8 @@ const META = {
     accent: 'Transporte', type: 'distribucion',
     hero: [
       { src: '/web/extra/banners/logistica.webp', alt: 'Furgonetas de distribución cargando pedidos', position: 'object-[70%_50%]' },
-      { src: '/web/extra/nosotros/envios-delivery.jpg', alt: 'Equipo de reparto de Kamary Perú con motos', position: 'object-[50%_55%]' },
-      { src: '/web/services/Bg-operador-logistico-1.png', alt: 'Transporte refrigerado de medicamentos', position: 'object-right' },
+      { src: '/web/extra/nosotros/envios-delivery.webp', alt: 'Equipo de reparto de Kamary Perú con motos', position: 'object-[50%_55%]' },
+      { src: '/web/services/Bg-operador-logistico-1.webp', alt: 'Transporte refrigerado de medicamentos', position: 'object-right' },
     ],
     // Fotos reales de la flota de Grupo Kamary
     photo: { src: '/web/extra/negocio/distribucion.webp', alt: 'Flota de Grupo Kamary: vehículos y cámara con cajas térmicas', position: 'object-center', wide: true, ratio: 'aspect-[1173/397]' },
@@ -61,7 +61,7 @@ const META = {
     accent: 'Importación', type: 'importacion',
     hero: [
       { src: '/web/extra/banners/ventas.webp', alt: 'Almacén con estanterías de medicamentos', position: 'object-[60%_40%]' },
-      { src: '/web/services/Bg-operador-logistico-1.png', alt: 'Logística e importación de medicamentos', position: 'object-right' },
+      { src: '/web/services/Bg-operador-logistico-1.webp', alt: 'Logística e importación de medicamentos', position: 'object-right' },
       { src: '/web/slider/slider-Farmacia.webp', alt: 'Laboratorio y farmacia', position: 'object-center' },
     ],
     photo: { src: '/web/slider/Imag-home-4.webp', alt: 'Zona de laboratorio de Kamary', position: 'object-[40%_40%]' },
@@ -257,7 +257,7 @@ const ServiceDetail = ({ serviceKey }) => {
               <StaggerItem key={c.title}>
                 <figure className={`flex h-full flex-col rounded-[28px] p-6 md:p-8 ${s.highlights.length > 0 ? 'bg-kf-sand' : 'bg-kf-canvas'} ${s.certificate === c.image ? 'ring-1 ring-kf-red/40' : ''}`}>
                   <div className="flex flex-1 items-center justify-center py-4">
-                    <img src={c.image} alt={c.title} loading="lazy" className="max-h-56 w-auto max-w-full object-contain" />
+                    <img src={c.image} alt={c.title} loading="lazy" decoding="async" className="max-h-56 w-auto max-w-full object-contain" />
                   </div>
                   <figcaption className="mt-6 border-t border-kf-ink/15 pt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-kf-ink">{c.title}</figcaption>
                 </figure>
@@ -294,7 +294,7 @@ const ServiceDetail = ({ serviceKey }) => {
 
           <Reveal delay={0.1}>
             <div className="kf-noise relative isolate h-full overflow-hidden rounded-[32px] bg-kf-navy-deep p-8 text-white md:p-10">
-              <img src="/web/services/Ubicacion-local.webp" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover opacity-25" />
+              <img src="/web/services/Ubicacion-local.webp" alt="" loading="lazy" decoding="async" className="absolute inset-0 -z-10 h-full w-full object-cover opacity-25" />
               <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-b from-kf-navy-deep/70 to-kf-navy-deep" />
               <Eyebrow light>Contacto directo</Eyebrow>
               <Heading level={3} size="lg" light>Habla con nuestro <Serif className="text-white">equipo</Serif></Heading>

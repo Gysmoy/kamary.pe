@@ -3,8 +3,8 @@
 export default {
   name: 'Farmacia Kamary Perú',
   tagline: 'Productos farmacéuticos y cosméticos, de primera calidad.',
-  logo: '/web/brand/logo.png',
-  logoWhite: '/web/brand/logo-white.png',
+  logo: '/web/brand/logo.webp',
+  logoWhite: '/web/brand/logo-white.webp',
   favicon: '/web/brand/favicon.png',
 
   address: {
@@ -40,20 +40,20 @@ export default {
   // Certificaciones mencionadas en el sitio (sin RUC).
   certifications: ['DIGEMID', 'BPA', 'BPDyT'],
   certificates: [
-    { title: 'Certificado de Distribución y Transporte', image: '/web/certificates/Certificado-Distribucion.png' },
-    { title: 'Certificado de Almacenamiento', image: '/web/certificates/Certificado-Almacenamiento.png' },
+    { title: 'Certificado de Distribución y Transporte', image: '/web/certificates/Certificado-Distribucion.webp' },
+    { title: 'Certificado de Almacenamiento', image: '/web/certificates/Certificado-Almacenamiento.webp' },
   ],
 
   // Logos de clientes/socios mostrados como "Proveedor homologado" y "Marcas líderes".
-  partnersImage: '/web/partners/Nuestros-Socios.jpg',
+  partnersImage: '/web/partners/Nuestros-Socios.webp',
   partners: [
-    { name: 'ACP', image: '/web/partners/ACP.jpg' },
-    { name: 'Aptus', image: '/web/partners/Aptus.jpg' },
-    { name: 'Concentrix', image: '/web/partners/Concentrix.jpg' },
-    { name: 'Consorcio Minero', image: '/web/partners/Consorcio-Minero.jpg' },
-    { name: 'Decameron', image: '/web/partners/Decameron.jpg' },
-    { name: 'Pharmaris', image: '/web/partners/Pharmaris.jpg' },
-    { name: 'Real Plaza', image: '/web/partners/Real-Plaza.jpg' },
+    { name: 'ACP', image: '/web/partners/ACP.webp' },
+    { name: 'Aptus', image: '/web/partners/Aptus.webp' },
+    { name: 'Concentrix', image: '/web/partners/Concentrix.webp' },
+    { name: 'Consorcio Minero', image: '/web/partners/Consorcio-Minero.webp' },
+    { name: 'Decameron', image: '/web/partners/Decameron.webp' },
+    { name: 'Pharmaris', image: '/web/partners/Pharmaris.webp' },
+    { name: 'Real Plaza', image: '/web/partners/Real-Plaza.webp' },
   ],
   homologationDisclaimer:
     'Los procesos de homologación corresponden a evaluaciones internas de cada empresa y no constituyen certificaciones regulatorias ni avales de autoridad sanitaria.',

@@ -13,7 +13,7 @@ const M = content.magistrales
 // Foto de banco del laboratorio primero; luego las fotos reales de la zona de producción de Kamary
 const HERO_IMAGES = [
   { src: '/web/extra/banners/band-magistrales.webp', alt: 'Químico farmacéutico pesando una fórmula magistral', caption: 'Formulación magistral', position: 'object-[45%_30%]' },
-  { src: '/web/services/Preparados-Magistrales.jpg', alt: 'Laboratorio de preparados magistrales de Kamary Perú', caption: 'Zona de producción', position: 'object-[30%_45%]' },
+  { src: '/web/services/Preparados-Magistrales.webp', alt: 'Laboratorio de preparados magistrales de Kamary Perú', caption: 'Zona de producción', position: 'object-[30%_45%]' },
   { src: '/web/extra/banners/magistrales.webp', alt: 'Química farmacéutica en el laboratorio', caption: 'Control de calidad', position: 'object-[65%_40%]' },
   { src: '/web/services/Bg-preparados.webp', alt: 'Elaboración de preparados en laboratorio', caption: 'Elaboración', position: 'object-[60%_50%]' },
 ]
@@ -101,8 +101,8 @@ const Areas = () => (
         return (
           <Reveal key={a.label} delay={k * 0.08} className={span}>
             <div className={`group relative isolate flex h-full min-h-[260px] flex-col justify-between overflow-hidden rounded-[28px] p-8 md:min-h-[340px] md:p-10 ${dark ? 'bg-kf-navy-deep text-white' : 'bg-kf-canvas text-kf-ink'}`}>
-              {a.tone === 'navy' && <img src="/web/extra/nosotros/bg-magistrales.webp" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover opacity-70 transition-transform duration-[1400ms] group-hover:scale-[1.04]" />}
-              {a.tone === 'photo' && <img src="/web/services/Preparados-Magistrales.jpg" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_40%] opacity-35 transition-transform duration-[1400ms] group-hover:scale-[1.04]" />}
+              {a.tone === 'navy' && <img src="/web/extra/nosotros/bg-magistrales.webp" alt="" loading="lazy" decoding="async" className="absolute inset-0 -z-10 h-full w-full object-cover opacity-70 transition-transform duration-[1400ms] group-hover:scale-[1.04]" />}
+              {a.tone === 'photo' && <img src="/web/services/Preparados-Magistrales.webp" alt="" loading="lazy" decoding="async" className="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_40%] opacity-35 transition-transform duration-[1400ms] group-hover:scale-[1.04]" />}
               {dark && <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-t from-kf-navy-deep/90 via-kf-navy-deep/40 to-kf-navy-deep/20" />}
               <p className={`font-mono text-[11px] uppercase tracking-[0.16em] ${dark ? 'text-white/70' : 'text-kf-muted'}`}><span className={dark ? 'text-white' : 'text-kf-red'}>0{k + 1}</span> — Área {k + 1}</p>
               <h3 className="font-serif text-6xl italic leading-none tracking-[-0.01em] md:text-8xl">{a.label}</h3>
@@ -188,7 +188,7 @@ const Channels = () => {
   ]
   return (
     <section className="kf-noise relative isolate overflow-hidden bg-kf-navy-deep py-24 text-white md:py-32">
-      <img src="/web/extra/banners/band-magistrales.webp" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover object-[60%_30%] opacity-50" />
+      <img src="/web/extra/banners/band-magistrales.webp" alt="" loading="lazy" decoding="async" className="absolute inset-0 -z-10 h-full w-full object-cover object-[60%_30%] opacity-50" />
       <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-kf-navy-deep via-kf-navy-deep/80 to-kf-navy-deep/40" />
       <Container className="grid gap-12 lg:grid-cols-[1fr_1.3fr] lg:gap-20">
         <Reveal>

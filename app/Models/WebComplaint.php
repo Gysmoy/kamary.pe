@@ -33,9 +33,12 @@ class WebComplaint extends Model
         'ip',
         'user_agent',
         'status',
+        'response_text',
+        'responded_at',
     ];
 
     protected $casts = [
         'payload' => 'array',
+        'responded_at' => 'datetime',
     ];
 }

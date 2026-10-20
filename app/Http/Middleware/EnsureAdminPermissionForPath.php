@@ -128,6 +128,11 @@ class EnsureAdminPermissionForPath
 
             'sample-orders' => ['sample-orders'],
 
+            'web-inquiries' => ['web-inquiries'],
+            'web-complaints' => ['web-complaints'],
+            // Contador de pendientes del menu: basta con poder ver cualquiera de las dos bandejas.
+            'web-pending' => ['web-inquiries', 'web-complaints'],
+
             'magistrales-dashboard' => ['magistrales-dashboard'],
             'magistrales-articles' => ['magistrales-products', 'magistrales-articles'],
             'magistrales-category' => ['magistrales-category', 'magistrales-products'],

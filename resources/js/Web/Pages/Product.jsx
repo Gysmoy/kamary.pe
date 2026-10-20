@@ -71,7 +71,7 @@ const Detail = ({ product }) => {
                 {gallery.map((src, i) => (
                   <button key={src} type="button" onClick={() => setActive(i)} aria-label={`Ver imagen ${i + 1}`} aria-current={i === active}
                     className={cx('h-20 w-20 shrink-0 overflow-hidden rounded-2xl border bg-kf-sand transition-colors', i === active ? 'border-kf-ink' : 'border-transparent hover:border-kf-ink/30')}>
-                    <img src={src} alt="" loading="lazy" className="h-full w-full object-contain p-2 mix-blend-multiply" />
+                    <img src={src} alt="" loading="lazy" decoding="async" className="h-full w-full object-contain p-2 mix-blend-multiply" />
                   </button>
                 ))}
               </div>

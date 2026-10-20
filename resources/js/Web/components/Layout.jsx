@@ -74,7 +74,7 @@ export const ProductSearch = ({ className, autoFocus, onPick, large }) => {
         <div className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-2xl border border-kf-line bg-white shadow-[0_8px_30px_rgba(15,19,31,0.10)]">
           {results.length ? results.map(p => (
             <a key={p.id} href={`/producto/${p.slug}`} onClick={onPick} className="flex items-center gap-3 px-4 py-3 hover:bg-kf-surface">
-              <img src={p.image} alt="" className="h-11 w-11 rounded-lg bg-kf-surface object-contain p-1" />
+              <img src={p.image} alt="" loading="lazy" decoding="async" className="h-11 w-11 rounded-lg bg-kf-surface object-contain p-1" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-medium text-kf-ink">{p.name}</span>
                 <span className="block truncate font-mono text-[10px] uppercase tracking-[0.1em] text-kf-muted">{p.brand}</span>
@@ -116,7 +116,7 @@ const MegaMenu = ({ onClose }) => (
         <div className="grid grid-cols-3 gap-3">
           {COLLECTIONS.map(c => (
             <a key={c.name} href={c.href} onClick={onClose} className="group relative block aspect-[3/4] overflow-hidden rounded-2xl">
-              <img src={c.image} alt={c.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />
+              <img src={c.image} alt={c.name} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-[1200ms] group-hover:scale-105" />
               <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-kf-navy-deep/90 to-transparent p-3 pt-10 font-mono text-[10px] uppercase tracking-[0.12em] text-white">{c.name}</span>
             </a>
           ))}
@@ -239,7 +239,7 @@ const Footer = () => {
         </p>
         <div className="mt-16 grid gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1.2fr]">
           <div>
-            <img src={site.logoWhite} alt={site.name} className="h-11 w-auto" />
+            <img src={site.logoWhite} alt={site.name} loading="lazy" decoding="async" className="h-11 w-auto" />
             <div className="mt-6 flex gap-2">
               {(site.socials || []).map(s => {
                 const I = social[`${s.name}`.toLowerCase()] || MessageCircle

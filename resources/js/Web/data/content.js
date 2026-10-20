@@ -158,7 +158,7 @@ export default {
     paragraphs: [
       'Cada formulación es elaborada por químicos farmacéuticos especializados, utilizando insumos certificados y cumpliendo estrictamente con las normas vigentes.',
     ],
-    image: '/web/services/Preparados-Magistrales.jpg',
+    image: '/web/services/Preparados-Magistrales.webp',
     blocks: [
       {
         title: 'Químicos Farmacéuticos Especializados',
@@ -242,7 +242,7 @@ export default {
       bullets: [],
       highlights: [],
       image: null,
-      certificate: '/web/certificates/Certificado-Distribucion.png',
+      certificate: '/web/certificates/Certificado-Distribucion.webp',
       contact: { phone: '01 3079982 / 932 831 242', email: 'ventas@kamaryfarma.com' },
       formType: 'distribucion',
     },
@@ -277,7 +277,7 @@ export default {
         { label: 'Temperatura controlada', range: '15°C a 25°C' },
       ],
       image: null,
-      certificate: '/web/certificates/Certificado-Almacenamiento.png',
+      certificate: '/web/certificates/Certificado-Almacenamiento.webp',
       contact: { phone: '01 3079982 / 932 831 242', email: 'ventas@kamaryfarma.com' },
       formType: 'almacen',
     },

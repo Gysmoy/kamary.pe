@@ -5,6 +5,8 @@ use App\Http\Controllers\Web\WebPageController;
 
 // Admin
 use App\Http\Controllers\Admin\HomeController as AdminHomeController;
+use App\Http\Controllers\Admin\WebInquiryController as AdminWebInquiryController;
+use App\Http\Controllers\Admin\WebComplaintController as AdminWebComplaintController;
 use App\Http\Controllers\Admin\ProfileController as AdminProfileController;
 use App\Http\Controllers\Admin\AccountsPayableController as AdminAccountsPayableController;
 use App\Http\Controllers\Admin\PurchaseOrderController as AdminPurchaseOrderController;
@@ -254,6 +256,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/magistrales-unit', fn() => redirect('/admin/units'));
         Route::get('/magistrales/sales', [AdminMagistralesSaleController::class, 'reactView'])->middleware($magistralesBilling);
         Route::get('/magistrales-sales', [AdminMagistralesSaleController::class, 'reactView'])->middleware($magistralesBilling);
+
+        // Web publica: bandejas de consultas y libro de reclamaciones
+        Route::get('/web-inquiries', [AdminWebInquiryController::class, 'reactView']);
+        Route::get('/web-complaints', [AdminWebComplaintController::class, 'reactView']);
 
         Route::get('/users', [AdminUserController::class, 'reactView']);
         Route::get('/roles', [AdminRoleController::class, 'reactView']);

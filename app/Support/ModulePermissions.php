@@ -70,6 +70,9 @@ class ModulePermissions
 
             'sample-orders' => 'Muestras - Pedido',
 
+            'web-inquiries' => 'Web - Consultas',
+            'web-complaints' => 'Web - Libro de reclamaciones',
+
             'magistrales-dashboard' => 'Magistrales - Dashboard',
             'magistrales-products' => 'Magistrales - Productos',
             'magistrales-procurement' => 'Magistrales - Proveedores y Compras',
@@ -151,6 +154,9 @@ class ModulePermissions
             ['permission' => 'services-services', 'web' => '/admin/services-services', 'label' => 'Servicios'],
 
             ['permission' => 'sample-orders', 'web' => '/admin/sample-orders', 'label' => 'Pedido muestras'],
+
+            ['permission' => 'web-inquiries', 'web' => '/admin/web-inquiries', 'label' => 'Consultas web'],
+            ['permission' => 'web-complaints', 'web' => '/admin/web-complaints', 'label' => 'Libro de reclamaciones'],
 
             ['permission' => 'magistrales-dashboard', 'web' => '/admin/magistrales/dashboard', 'label' => 'Dashboard Magistrales'],
             ['permission' => 'magistrales-products', 'web' => '/admin/magistrales/articles', 'label' => 'Productos Magistrales'],

@@ -146,7 +146,7 @@ const MapBlock = () => (
       </Reveal>
       <Reveal delay={0.08} className="lg:col-span-8">
         <div className="overflow-hidden rounded-[32px] border border-kf-ink/10 bg-white shadow-[0_24px_60px_-30px_rgba(27,34,96,0.25)]">
-          <iframe title="Mapa de ubicación de Farmacia Kamary Perú" src={mapEmbed} loading="lazy" referrerPolicy="no-referrer-when-downgrade"
+          <iframe title="Mapa de ubicación de Farmacia Kamary Perú" src={mapEmbed} loading="lazy" decoding="async" referrerPolicy="no-referrer-when-downgrade"
             className="block h-80 w-full md:h-[480px]" style={{ border: 0 }} allowFullScreen />
         </div>
       </Reveal>

@@ -204,7 +204,8 @@ export const Stat = ({ value, prefix, suffix, label, sub, light, className }) =>
 )
 
 /** Marco de imagen: radio grande, zoom lento al hover y parallax sutil. Props: src, alt, ratio, radius, parallax, overlay('navy'), position */
-export const ImageFrame = ({ src, alt = '', ratio = 'aspect-[4/5]', radius = 'rounded-[28px]', parallax = true, overlay, position = 'object-center', className, children, eager }) => {
+// priority: imagen del primer pantallazo (carga inmediata y con prioridad alta); eager se mantiene por compatibilidad
+export const ImageFrame = ({ src, alt = '', ratio = 'aspect-[4/5]', radius = 'rounded-[28px]', parallax = true, overlay, position = 'object-center', className, children, eager, priority }) => {
   const ref = useRef(null)
   const reduce = useReducedMotion()
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
@@ -212,7 +213,7 @@ export const ImageFrame = ({ src, alt = '', ratio = 'aspect-[4/5]', radius = 'ro
   return (
     <div ref={ref} className={cx('group isolate overflow-hidden bg-kf-sand', className?.includes('absolute') ? '' : 'relative', ratio, radius, className)}>
       <motion.div className="absolute inset-0 scale-[1.12]" style={parallax && !reduce ? { y } : undefined}>
-        <img src={src} alt={alt} loading={eager ? 'eager' : 'lazy'} className={cx('h-full w-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.03]', position)} />
+        <img src={src} alt={alt} loading={eager || priority ? 'eager' : 'lazy'} decoding="async" fetchPriority={priority ? 'high' : undefined} className={cx('h-full w-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.03]', position)} />
       </motion.div>
       {overlay === 'navy' && <div className="absolute inset-0 bg-gradient-to-t from-kf-navy-deep/85 via-kf-navy-deep/20 to-transparent" />}
       {overlay === 'navy-left' && <div className="absolute inset-0 bg-gradient-to-r from-kf-navy-deep/90 via-kf-navy-deep/55 to-transparent" />}
@@ -235,7 +236,7 @@ export const FullBleedHero = ({ images, interval = 6500, children, className }) 
       <div className="absolute inset-y-0 right-0 w-full lg:w-[76%]">
         <AnimatePresence initial={false}>
           <motion.div key={i} className="absolute inset-0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.4, ease: 'easeInOut' }}>
-            <img src={images[i].src} alt={images[i].alt} className={cx('h-full w-full object-cover', !reduce && 'animate-kf-kenburns', images[i].position || 'object-center')} />
+            <img src={images[i].src} alt={images[i].alt} loading={i === 0 ? 'eager' : 'lazy'} decoding="async" fetchPriority={i === 0 ? 'high' : undefined} className={cx('h-full w-full object-cover', !reduce && 'animate-kf-kenburns', images[i].position || 'object-center')} />
           </motion.div>
         </AnimatePresence>
       </div>
@@ -276,7 +277,7 @@ export const BentoTile = ({ span = 'col-span-12 md:col-span-4', href, image, pos
   const Tag = href ? 'a' : 'div'
   return (
     <Tag href={href} className={cx('group relative isolate flex overflow-hidden rounded-[28px]', minH, span, dark || image ? 'bg-kf-navy-deep text-white' : 'bg-kf-sand text-kf-ink', className)}>
-      {image && <img src={image} alt="" loading="lazy" className={cx('absolute inset-0 -z-10 h-full w-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.04]', position)} />}
+      {image && <img src={image} alt="" loading="lazy" decoding="async" className={cx('absolute inset-0 -z-10 h-full w-full object-cover transition-transform duration-[1400ms] ease-out group-hover:scale-[1.04]', position)} />}
       {image && overlay && <div className="absolute inset-0 -z-10 bg-gradient-to-t from-kf-navy-deep/90 via-kf-navy-deep/30 to-transparent" />}
       <div className="relative flex w-full flex-col justify-end p-7 md:p-9">{children}</div>
     </Tag>
@@ -332,7 +333,7 @@ export const TrustStrip = ({ className, dark }) => (
 /** Banda CTA navy con grano; `image` opcional como fondo fotográfico */
 export const CTABand = ({ eyebrow, title, text, children, image, imagePosition = 'object-center' }) => (
   <section className="kf-noise relative isolate overflow-hidden bg-kf-navy-deep py-24 md:py-32">
-    {image && <img src={image} alt="" loading="lazy" className={cx('absolute inset-0 -z-10 h-full w-full object-cover opacity-40', imagePosition)} />}
+    {image && <img src={image} alt="" loading="lazy" decoding="async" className={cx('absolute inset-0 -z-10 h-full w-full object-cover opacity-40', imagePosition)} />}
     <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-kf-navy-deep/85 via-kf-navy-deep/60 to-kf-navy-deep/30" />
     <GridPattern />
     <Container className="relative flex flex-col items-start gap-10 md:flex-row md:items-end md:justify-between">

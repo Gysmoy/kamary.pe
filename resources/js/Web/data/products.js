@@ -278,9 +278,9 @@ export default [
     name: 'Prodegel C – Gel regenerador',
     price: 40,
     regularPrice: null,
-    image: '/web/products/prodegel-c-gel-regenerador.jpg',
+    image: '/web/products/prodegel-c-gel-regenerador.webp',
     gallery: [
-      '/web/products/prodegel-c-gel-regenerador.jpg',
+      '/web/products/prodegel-c-gel-regenerador.webp',
     ],
     categories: ['antioxidantes'],
     tags: [
@@ -298,9 +298,9 @@ export default [
     name: 'Gerialife Vainilla',
     price: 85,
     regularPrice: null,
-    image: '/web/products/gerialife-vainilla.jpg',
+    image: '/web/products/gerialife-vainilla.webp',
     gallery: [
-      '/web/products/gerialife-vainilla.jpg',
+      '/web/products/gerialife-vainilla.webp',
     ],
     categories: ['antioxidantes'],
     tags: [
@@ -318,9 +318,9 @@ export default [
     name: 'Gerialife DB',
     price: 85,
     regularPrice: null,
-    image: '/web/products/gerialife-db.jpg',
+    image: '/web/products/gerialife-db.webp',
     gallery: [
-      '/web/products/gerialife-db.jpg',
+      '/web/products/gerialife-db.webp',
     ],
     categories: ['antioxidantes'],
     tags: [
@@ -338,9 +338,9 @@ export default [
     name: 'Gerialife Chocolate',
     price: 85,
     regularPrice: null,
-    image: '/web/products/gerialife-chocolate.jpg',
+    image: '/web/products/gerialife-chocolate.webp',
     gallery: [
-      '/web/products/gerialife-chocolate.jpg',
+      '/web/products/gerialife-chocolate.webp',
     ],
     categories: ['antioxidantes'],
     tags: [
@@ -358,9 +358,9 @@ export default [
     name: 'Cere B Complex',
     price: 28,
     regularPrice: null,
-    image: '/web/products/cere-b-complex.jpg',
+    image: '/web/products/cere-b-complex.webp',
     gallery: [
-      '/web/products/cere-b-complex.jpg',
+      '/web/products/cere-b-complex.webp',
     ],
     categories: ['antioxidantes'],
     tags: [
@@ -379,9 +379,9 @@ export default [
     name: 'Flexicolag Colágeno Hidrolizado',
     price: 85,
     regularPrice: null,
-    image: '/web/products/flexicolag-colageno-hidrolizado.jpg',
+    image: '/web/products/flexicolag-colageno-hidrolizado.webp',
     gallery: [
-      '/web/products/flexicolag-colageno-hidrolizado.jpg',
+      '/web/products/flexicolag-colageno-hidrolizado.webp',
     ],
     categories: ['antioxidantes'],
     tags: [
@@ -400,9 +400,9 @@ export default [
     name: 'Colamedic Colágeno Hidrolizado',
     price: 85,
     regularPrice: null,
-    image: '/web/products/colamedic-colageno-hidrolizado.jpg',
+    image: '/web/products/colamedic-colageno-hidrolizado.webp',
     gallery: [
-      '/web/products/colamedic-colageno-hidrolizado.jpg',
+      '/web/products/colamedic-colageno-hidrolizado.webp',
     ],
     categories: ['antioxidantes'],
     tags: [
@@ -421,9 +421,9 @@ export default [
     name: 'Colágeno Hidrolizado & Camu Camu',
     price: 85,
     regularPrice: null,
-    image: '/web/products/colageno-hidrolizado-camu-camu.jpg',
+    image: '/web/products/colageno-hidrolizado-camu-camu.webp',
     gallery: [
-      '/web/products/colageno-hidrolizado-camu-camu.jpg',
+      '/web/products/colageno-hidrolizado-camu-camu.webp',
     ],
     categories: ['antioxidantes'],
     tags: [
@@ -442,9 +442,9 @@ export default [
     name: 'Beauty Collage colágeno hidrolizado',
     price: 85,
     regularPrice: null,
-    image: '/web/products/beauty-collage-colageno-hidrolizado.jpg',
+    image: '/web/products/beauty-collage-colageno-hidrolizado.webp',
     gallery: [
-      '/web/products/beauty-collage-colageno-hidrolizado.jpg',
+      '/web/products/beauty-collage-colageno-hidrolizado.webp',
     ],
     categories: ['antioxidantes'],
     tags: [

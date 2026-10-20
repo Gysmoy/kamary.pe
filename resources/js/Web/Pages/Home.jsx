@@ -30,9 +30,9 @@ const WHY = [
 
 // Banners panorámicos de producto (1351x352)
 const PANORAMAS = [
-  { src: '/web/slider/Slider-Collagen-3000.jpg', alt: 'Collagen 3000 Plus Sticks', href: '/producto/collagen-3000-plus-sticks' },
-  { src: '/web/slider/Slider-extracto.jpg', alt: 'Extracto de Saw Palmetto, Pygeum y Ortiga', href: '/producto/pharmaris-extracto-de-saw-palmetto-pygeum-ortiga' },
-  { src: '/web/slider/Slider-garcinia-1.jpg', alt: 'Garcinia Cambogia, Té verde y Vinagre de manzana', href: '/producto/garcinia-cambogia-te-verde-vinagre-de-manzana' },
+  { src: '/web/slider/Slider-Collagen-3000.webp', alt: 'Collagen 3000 Plus Sticks', href: '/producto/collagen-3000-plus-sticks' },
+  { src: '/web/slider/Slider-extracto.webp', alt: 'Extracto de Saw Palmetto, Pygeum y Ortiga', href: '/producto/pharmaris-extracto-de-saw-palmetto-pygeum-ortiga' },
+  { src: '/web/slider/Slider-garcinia-1.webp', alt: 'Garcinia Cambogia, Té verde y Vinagre de manzana', href: '/producto/garcinia-cambogia-te-verde-vinagre-de-manzana' },
 ]
 
 const waLink = `https://wa.me/${site.whatsapp.number}?text=${encodeURIComponent('Hola Kamary Perú, requiero más información.')}`
@@ -90,7 +90,7 @@ const Panoramas = () => {
       <div ref={box} className="kf-hide-scroll flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth">
         {PANORAMAS.map(p => (
           <a key={p.src} href={p.href} className="group relative block w-[88%] shrink-0 snap-start overflow-hidden rounded-[24px] md:w-[78%] lg:w-[70%]">
-            <img src={p.src} alt={p.alt} loading="lazy" className="aspect-[1351/352] w-full object-cover transition-transform duration-[1400ms] group-hover:scale-[1.03]" />
+            <img src={p.src} alt={p.alt} loading="lazy" decoding="async" className="aspect-[1351/352] w-full object-cover transition-transform duration-[1400ms] group-hover:scale-[1.03]" />
             <span className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-white text-kf-ink opacity-0 transition-opacity group-hover:opacity-100"><ArrowUpRight size={18} /></span>
           </a>
         ))}
@@ -112,7 +112,7 @@ const FeaturedProduct = ({ product }) => {
     <article className="group relative flex h-full flex-col overflow-hidden rounded-[32px] bg-kf-sand">
       <a href={`/producto/${product.slug}`} className="relative flex flex-1 items-center justify-center" aria-label={product.name}>
         <div className="flex aspect-square w-full items-center justify-center p-10 md:p-14 lg:aspect-auto lg:min-h-[480px]">
-          <img src={product.image} alt={product.name} loading="lazy" className="max-h-[420px] w-full object-contain mix-blend-multiply transition-transform duration-[1200ms] group-hover:scale-[1.04]" />
+          <img src={product.image} alt={product.name} loading="lazy" decoding="async" className="max-h-[420px] w-full object-contain mix-blend-multiply transition-transform duration-[1200ms] group-hover:scale-[1.04]" />
         </div>
         <span className="absolute left-7 top-7 font-mono text-[11px] uppercase tracking-[0.16em] text-kf-red">Selección Kamary</span>
       </a>
@@ -187,7 +187,7 @@ const Home = () => {
               <ImageFrame src="/web/slider/Imag-Home-3.webp" alt="Equipo de Kamary Perú" ratio="aspect-[5/4]" radius="rounded-[32px] rounded-tr-[120px]" position="object-[50%_45%]" />
               <ImageFrame src="/web/services/Farmacia.webp" alt="Químico farmacéutico" ratio="aspect-[4/3]" radius="rounded-[24px]" position="object-[70%_30%]"
                 className="absolute bottom-0 right-0 w-[46%] border-[6px] border-kf-canvas shadow-[0_24px_50px_-20px_rgba(15,19,31,0.35)]" />
-              <ImageFrame src="/web/services/Img-Nosotros-Kamary-1.jpg" alt="Equipo comercial de Kamary" ratio="aspect-[3/4]" radius="rounded-[24px]" position="object-[75%_55%]"
+              <ImageFrame src="/web/services/Img-Nosotros-Kamary-1.webp" alt="Equipo comercial de Kamary" ratio="aspect-[3/4]" radius="rounded-[24px]" position="object-[75%_55%]"
                 className="absolute -bottom-0 left-[6%] hidden w-[26%] border-[6px] border-kf-canvas shadow-[0_24px_50px_-20px_rgba(15,19,31,0.35)] md:block" />
             </div>
           </Reveal>
@@ -298,7 +298,7 @@ const Home = () => {
             <div className="mt-10 flex items-center gap-6">
               {(site.certificates || []).map(c => (
                 <figure key={c.image} className="flex items-center gap-4">
-                  <img src={c.image} alt={c.title} loading="lazy" className="h-24 w-24 object-contain" />
+                  <img src={c.image} alt={c.title} loading="lazy" decoding="async" className="h-24 w-24 object-contain" />
                   <figcaption className="max-w-[9rem] font-mono text-[10px] uppercase leading-relaxed tracking-[0.12em] text-white/70">{c.title}</figcaption>
                 </figure>
               ))}
@@ -308,7 +308,7 @@ const Home = () => {
         <Reveal className="mt-16 grid gap-4 md:mt-20 md:grid-cols-12 md:gap-5">
           <ImageFrame src="/web/extra/banners/logistica.webp" alt="Flota de furgonetas cargando pedidos en el almacén" ratio="aspect-[16/10]" radius="rounded-[28px]" position="object-[65%_50%]" className="md:col-span-7" parallax={false} />
           <div className="grid grid-cols-2 gap-4 md:col-span-5 md:grid-cols-1 md:gap-5">
-            <ImageFrame src="/web/extra/nosotros/envios-delivery.jpg" alt="Equipo de reparto de Kamary Perú con motos" ratio="aspect-[4/3] md:aspect-auto md:h-full" radius="rounded-[28px] rounded-br-[90px]" position="object-[50%_60%]" parallax={false} />
+            <ImageFrame src="/web/extra/nosotros/envios-delivery.webp" alt="Equipo de reparto de Kamary Perú con motos" ratio="aspect-[4/3] md:aspect-auto md:h-full" radius="rounded-[28px] rounded-br-[90px]" position="object-[50%_60%]" parallax={false} />
             <ImageFrame src="/web/extra/banners/band-operador.webp" alt="Entrega de medicamentos en caja térmica" ratio="aspect-[4/3] md:aspect-auto md:h-full" radius="rounded-[28px]" position="object-[50%_45%]" parallax={false} className="hidden md:block" />
           </div>
         </Reveal>
@@ -316,7 +316,7 @@ const Home = () => {
 
       {/* Preparados magistrales — banda fotográfica */}
       <section className="kf-noise relative isolate overflow-hidden bg-kf-navy-deep py-24 text-white md:py-32">
-        <img src="/web/extra/banners/magistrales.webp" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover object-[75%_40%] opacity-90" />
+        <img src="/web/extra/banners/magistrales.webp" alt="" loading="lazy" decoding="async" className="absolute inset-0 -z-10 h-full w-full object-cover object-[75%_40%] opacity-90" />
         <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-kf-navy-deep via-kf-navy-deep/70 to-transparent" />
         <Container className="grid items-end gap-10 lg:grid-cols-[1.4fr_1fr]">
           <Reveal>
@@ -330,7 +330,7 @@ const Home = () => {
 
       {/* 08 Por qué elegirnos */}
       <section className="kf-noise relative isolate overflow-hidden bg-kf-navy-deep py-24 text-white md:py-32">
-        <img src="/web/extra/banners/razones.webp" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_60%]" />
+        <img src="/web/extra/banners/razones.webp" alt="" loading="lazy" decoding="async" className="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_60%]" />
         <div aria-hidden="true" className="absolute inset-0 -z-10 bg-kf-navy-deep/75 lg:bg-gradient-to-r lg:from-kf-navy-deep/90 lg:via-kf-navy-deep/55 lg:to-kf-navy-deep/15" />
         <Container>
           <Reveal className="mb-14 max-w-3xl">
@@ -341,7 +341,7 @@ const Home = () => {
             {WHY.map((w, k) => (
               <StaggerItem key={w.title}>
                 <div className="flex gap-6 border-t border-white/25 py-7 md:gap-8">
-                  <img src={w.icon} alt="" loading="lazy" className="h-14 w-14 shrink-0 object-contain md:h-16 md:w-16" />
+                  <img src={w.icon} alt="" loading="lazy" decoding="async" className="h-14 w-14 shrink-0 object-contain md:h-16 md:w-16" />
                   <div>
                     <p className="font-mono text-xs text-white/60">0{k + 1}</p>
                     <h3 className="mt-1 font-display text-xl font-semibold tracking-[-0.02em] md:text-2xl">{w.title}</h3>
@@ -356,7 +356,7 @@ const Home = () => {
 
       {/* 09 Socios */}
       <Section tone="surface">
-        <EditorialSplit reverse image={<ImageFrame src="/web/partners/Nuestros-Socios.jpg" alt="Equipo de Grupo Kamary" ratio="aspect-[4/3]" radius="rounded-[32px] rounded-bl-[110px]" position="object-[50%_60%]" />}>
+        <EditorialSplit reverse image={<ImageFrame src="/web/partners/Nuestros-Socios.webp" alt="Equipo de Grupo Kamary" ratio="aspect-[4/3]" radius="rounded-[32px] rounded-bl-[110px]" position="object-[50%_60%]" />}>
           <Eyebrow n="09">Marcas líderes que confían en Kamary</Eyebrow>
           <Heading size="lg">Somos proveedor <Serif>homologado</Serif> por</Heading>
           <p className="mt-6 text-lg leading-relaxed">Trabajamos con clientes que confían en la calidad de nuestros productos y en nuestro compromiso con el bienestar y la salud.</p>
@@ -365,9 +365,9 @@ const Home = () => {
         <div className="mt-20">
           <Marquee speed={45} itemClassName="gap-6 pr-6">
             {(site.partners || []).map(p => (
-              <span key={p.name} className="flex h-20 w-44 shrink-0 items-center justify-center rounded-2xl bg-white p-3 md:h-24 md:w-52"><img src={p.image} alt={p.name} loading="lazy" className="max-h-full max-w-full object-contain grayscale transition-all duration-500 hover:grayscale-0" /></span>
+              <span key={p.name} className="flex h-20 w-44 shrink-0 items-center justify-center rounded-2xl bg-white p-3 md:h-24 md:w-52"><img src={p.image} alt={p.name} loading="lazy" decoding="async" className="max-h-full max-w-full object-contain grayscale transition-all duration-500 hover:grayscale-0" /></span>
             ))}
-            <span className="flex h-20 w-44 shrink-0 items-center justify-center rounded-2xl bg-white p-3 md:h-24 md:w-52"><img src="/web/slider/MEGA.webp" alt="MEGA, proveedor homologado" loading="lazy" className="max-h-full max-w-full object-contain grayscale transition-all duration-500 hover:grayscale-0" /></span>
+            <span className="flex h-20 w-44 shrink-0 items-center justify-center rounded-2xl bg-white p-3 md:h-24 md:w-52"><img src="/web/slider/MEGA.webp" alt="MEGA, proveedor homologado" loading="lazy" decoding="async" className="max-h-full max-w-full object-contain grayscale transition-all duration-500 hover:grayscale-0" /></span>
           </Marquee>
         </div>
       </Section>

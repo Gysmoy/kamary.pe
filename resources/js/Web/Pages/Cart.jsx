@@ -52,7 +52,7 @@ const Cart = () => {
             {items.map(({ product: p, qty }, k) => (
               <li key={p.id} className="flex gap-4 border-b border-kf-ink/15 py-7 md:gap-7">
                 <a href={`/producto/${p.slug}`} className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-[20px] bg-kf-sand md:h-36 md:w-36">
-                  <img src={p.image} alt={p.name} className="h-full w-full object-contain p-3 mix-blend-multiply" />
+                  <img src={p.image} alt={p.name} loading="lazy" decoding="async" className="h-full w-full object-contain p-3 mix-blend-multiply" />
                 </a>
                 <div className="flex min-w-0 flex-1 flex-col">
                   <div className="flex justify-between gap-3">

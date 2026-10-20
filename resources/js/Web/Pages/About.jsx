@@ -111,8 +111,8 @@ const Commitment = () => (
   <Section tone="surface">
     <EditorialSplit reverse image={
       <div className="relative pb-[14%] pl-[6%]">
-        <ImageFrame src="/web/extra/nosotros/nosotros-1.jpg" alt="Equipo de Grupo Kamary" ratio="aspect-[4/3]" radius="rounded-[32px] rounded-br-[110px]" position="object-[50%_40%]" />
-        <ImageFrame src="/web/extra/nosotros/envios-delivery.jpg" alt="Equipo de reparto de Kamary Perú" ratio="aspect-[4/3]" radius="rounded-[24px]" position="object-[50%_60%]"
+        <ImageFrame src="/web/extra/nosotros/nosotros-1.webp" alt="Equipo de Grupo Kamary" ratio="aspect-[4/3]" radius="rounded-[32px] rounded-br-[110px]" position="object-[50%_40%]" />
+        <ImageFrame src="/web/extra/nosotros/envios-delivery.webp" alt="Equipo de reparto de Kamary Perú" ratio="aspect-[4/3]" radius="rounded-[24px]" position="object-[50%_60%]"
           className="absolute bottom-0 left-0 w-[44%] border-[6px] border-kf-sand shadow-[0_24px_50px_-20px_rgba(15,19,31,0.35)]" />
       </div>}>
       <Eyebrow n="03">Compromiso</Eyebrow>
@@ -138,7 +138,7 @@ const MissionVision = () => (
       </Container>
     </section>
     <section className="kf-noise relative isolate overflow-hidden bg-kf-navy-deep py-24 text-white md:py-32">
-      <img src="/web/extra/banners/razones.webp" alt="" loading="lazy" className="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_55%] opacity-45" />
+      <img src="/web/extra/banners/razones.webp" alt="" loading="lazy" decoding="async" className="absolute inset-0 -z-10 h-full w-full object-cover object-[50%_55%] opacity-45" />
       <div aria-hidden="true" className="absolute inset-0 -z-10 bg-gradient-to-r from-kf-navy-deep via-kf-navy-deep/80 to-kf-navy-deep/30" />
       <Container>
         <div className="grid gap-8 lg:grid-cols-12 lg:gap-16">
@@ -220,7 +220,7 @@ const Certifications = () => (
           <StaggerItem key={c.title}>
             <figure className="flex h-full flex-col rounded-[28px] bg-kf-canvas p-6 md:p-8">
               <div className="flex flex-1 items-center justify-center py-4">
-                <img src={c.image} alt={c.title} loading="lazy" className="max-h-64 w-auto max-w-full object-contain" />
+                <img src={c.image} alt={c.title} loading="lazy" decoding="async" className="max-h-64 w-auto max-w-full object-contain" />
               </div>
               <figcaption className="mt-6 border-t border-kf-ink/15 pt-4 font-mono text-[11px] uppercase tracking-[0.14em] text-kf-ink">{c.title}</figcaption>
             </figure>
@@ -234,7 +234,7 @@ const Certifications = () => (
 /* ---------- Socios ---------- */
 const Partners = () => (
   <Section>
-    <EditorialSplit reverse image={<ImageFrame src="/web/partners/Nuestros-Socios.jpg" alt="Equipo de Grupo Kamary" ratio="aspect-[4/3]" radius="rounded-[32px] rounded-bl-[110px]" position="object-[50%_60%]" />}>
+    <EditorialSplit reverse image={<ImageFrame src="/web/partners/Nuestros-Socios.webp" alt="Equipo de Grupo Kamary" ratio="aspect-[4/3]" radius="rounded-[32px] rounded-bl-[110px]" position="object-[50%_60%]" />}>
       <Eyebrow n="09">{about.partners.title}</Eyebrow>
       <Heading size="lg">Somos proveedor <Serif>homologado</Serif> por</Heading>
       <p className="mt-6 text-lg leading-relaxed">{about.partners.text}</p>
@@ -244,7 +244,7 @@ const Partners = () => (
       <Marquee speed={45} itemClassName="gap-6 pr-6">
         {site.partners.map(p => (
           <span key={p.name} className="flex h-20 w-44 shrink-0 items-center justify-center rounded-2xl bg-white p-3 md:h-24 md:w-52">
-            <img src={p.image} alt={p.name} loading="lazy" className="max-h-full max-w-full object-contain grayscale transition-all duration-500 hover:grayscale-0" />
+            <img src={p.image} alt={p.name} loading="lazy" decoding="async" className="max-h-full max-w-full object-contain grayscale transition-all duration-500 hover:grayscale-0" />
           </span>
         ))}
       </Marquee>

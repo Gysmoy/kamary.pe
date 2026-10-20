@@ -1,4 +1,5 @@
 import 'tippy.js/dist/tippy.css'
+import { useEffect, useState } from 'react'
 import Logout from '../../Actions/Logout'
 import MenuItem from './Menu/MenuItem'
 import MenuItemContainer from './Menu/MenuItemContainer'
@@ -14,6 +15,17 @@ const Menu = ({ can, hasRole, panel = null }) => {
   const canAccessAny = (...permissions) => {
     return permissions.some(permission => canAccess(permission))
   }
+
+  // Pendientes (estado "nuevo") de las bandejas web, para el contador del menu.
+  const [webPending, setWebPending] = useState({ inquiries: 0, complaints: 0 })
+  const showWeb = canAccessAny('web-inquiries', 'web-complaints')
+  useEffect(() => {
+    if (!showWeb) return
+    fetch('/api/admin/web-pending', { headers: { Accept: 'application/json' } })
+      .then(res => res.ok ? res.json() : null)
+      .then(res => { if (res?.data) setWebPending(res.data) })
+      .catch(() => { })
+  }, [])
 
   const kamaryPeruPermissions = [
     'businesses',
@@ -42,6 +54,8 @@ const Menu = ({ can, hasRole, panel = null }) => {
     'activity',
     'referral_guides',
     'sample-orders',
+    'web-inquiries',
+    'web-complaints',
     'magistrales-dashboard',
     'magistrales-products',
     'magistrales-procurement',
@@ -238,6 +252,13 @@ const Menu = ({ can, hasRole, panel = null }) => {
             <MenuItemContainer title='Muestras' icon='ti ti-vaccine-bottle'>
               <MenuItem href='/admin/sample-orders/dashboard' icon='ti ti-dashboard'>Dashboard</MenuItem>
               <MenuItem href='/admin/sample-orders' icon='ti ti-basket' exact>Pedido</MenuItem>
+            </MenuItemContainer>
+          )}
+
+          {showWeb && (
+            <MenuItemContainer title='Web' icon='ti ti-world'>
+              {canAccess('web-inquiries') && <MenuItem href='/admin/web-inquiries' icon='ti ti-message-circle' badge={webPending.inquiries > 0 ? webPending.inquiries : null} badgeColor='danger'>Consultas</MenuItem>}
+              {canAccess('web-complaints') && <MenuItem href='/admin/web-complaints' icon='ti ti-book-2' badge={webPending.complaints > 0 ? webPending.complaints : null} badgeColor='danger'>Libro de reclamaciones</MenuItem>}
             </MenuItemContainer>
           )}
 

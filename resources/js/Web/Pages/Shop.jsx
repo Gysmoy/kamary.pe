@@ -208,7 +208,7 @@ const Shop = ({ category = null }) => {
           </div>
           {!cat && (
             <Reveal className="mt-12 md:mt-16">
-              <ImageFrame src="/web/slider/Slider-Collagen-3000.jpg" alt="Collagen 3000 Plus Sticks" ratio="aspect-[1351/352]" radius="rounded-[24px] md:rounded-[32px]" parallax={false} eager />
+              <ImageFrame src="/web/slider/Slider-Collagen-3000.webp" alt="Collagen 3000 Plus Sticks" ratio="aspect-[1351/352]" radius="rounded-[24px] md:rounded-[32px]" parallax={false} eager />
             </Reveal>
           )}
         </Container>
