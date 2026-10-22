@@ -1,4 +1,4 @@
-FROM php:8.1-fpm
+FROM php:8.2-fpm
 
 # deb.debian.org dejo de entregar los paquetes de bullseye-security (404 al descargarlos);
 # security.debian.org si los tiene. Se cubren los dos formatos de sources (el clasico y el
